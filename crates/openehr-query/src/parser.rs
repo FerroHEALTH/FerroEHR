@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! AQL parser — a `chumsky` parser transcribed from `AqlParser.g4`, turning the
 //! [`crate::lexer`] token stream into an [`crate::ast::SelectQuery`].

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Capture build-time provenance for `/management/info` and the
-//! `ferroehr_build_info` gauge: the git commit, the build timestamp, the
-//! `rustc` version, and the release date the support period runs from. All are best-effort — a checkout without git, or a build
+//! `ferroehr_build_info` gauge: the git commit, the version the server
+//! reports, the build timestamp, the `rustc` version, and the release date the support period runs from. All are best-effort — a checkout without git, or a build
 //! from a tarball, degrades to `unknown` rather than failing the build.
 
 use std::process::Command;
@@ -34,6 +34,21 @@ fn main() {
         })
         .unwrap_or_else(|| "unknown".to_owned());
     println!("cargo:rustc-env=REVISION={revision}");
+
+    // The version the server reports: the package version for a release build,
+    // which the release lanes mark by naming the tag they build in
+    // FERROEHR_RELEASE_TAG, and the package version with the commit as SemVer
+    // build metadata for every other build, so a report from a build of `main`
+    // never reads as the release it follows (SemVer 2.0.0 §10).
+    let package = std::env::var("CARGO_PKG_VERSION").unwrap_or_default();
+    let release = std::env::var("FERROEHR_RELEASE_TAG")
+        .is_ok_and(|tag| tag.strip_prefix('v') == Some(package.as_str()));
+    let server_version = if release {
+        package
+    } else {
+        format!("{package}+dev.{revision}")
+    };
+    println!("cargo:rustc-env=FERROEHR_SERVER_VERSION={server_version}");
 
     // Build timestamp (epoch seconds), honouring SOURCE_DATE_EPOCH for
     // reproducible builds; rendered to an ISO-8601 string at runtime (jiff).
@@ -83,6 +98,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../../CHANGELOG.md");
 
     println!("cargo:rerun-if-env-changed=REVISION");
+    println!("cargo:rerun-if-env-changed=FERROEHR_RELEASE_TAG");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
     println!("cargo:rerun-if-changed=../../.git/HEAD");
     println!("cargo:rerun-if-changed=../../.git/refs");

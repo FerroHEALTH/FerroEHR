@@ -2509,7 +2509,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2955,15 +2955,19 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.5.4"
+version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6243a76ad1714441c93b65f511777a08f4e811b83e533400d3fdb8853de62d1a"
+checksum = "cb21239233ca94af5ea2ca3b180a6e76653061a8b69f32f63ca0c5393e2d82b2"
 dependencies = [
+ "axum",
  "fluent-templates",
+ "form_urlencoded",
+ "http",
  "intl-memoizer",
  "leptos",
  "leptos_router",
  "serde",
+ "tower",
  "wasm-bindgen-futures",
  "web-sys",
 ]
@@ -4426,9 +4430,9 @@ dependencies = [
 
 [[package]]
 name = "jsonschema"
-version = "0.59.0"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b320ad34c177093d21622edc9215bb608294c2333ff296672c0c8265a5ee60c"
+checksum = "a42a11b47492e6a2cc76e9c7bcc8077776cb31dac444e0795d7f61bcc6441c08"
 dependencies = [
  "ahash",
  "bytecount",
@@ -4457,23 +4461,24 @@ dependencies = [
 
 [[package]]
 name = "jsonschema-regex"
-version = "0.59.0"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1472f7be79026f79e01a9b172263311e829d7c210d57b39cb57037abc0ce0500"
+checksum = "107aeb6ff14b8deb5610096a8ce5c554ec89806b521147eaeb3cae05b07edb7a"
 dependencies = [
  "regex-syntax",
 ]
 
 [[package]]
 name = "jsonschema-value"
-version = "0.59.0"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5a7550a7a84787e715ead0b47e01fa8c6bb7c3413630f91a8f2094c06c2078a"
+checksum = "e281d6b177bb4834f2ffd6f92aa0443cffe29c996b251c8d94eb6f456186feba"
 dependencies = [
  "ahash",
  "bytecount",
  "fraction",
  "getrandom 0.3.4",
+ "memchr",
  "num-cmp",
  "num-traits",
  "serde_json",
@@ -5500,7 +5505,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5516,7 +5521,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "openehr-base",
  "openehr-lang",
@@ -5526,7 +5531,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "serde",
  "serde_json",
@@ -5546,7 +5551,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "async-trait",
  "axum",
@@ -5581,7 +5586,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5595,7 +5600,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "chumsky",
  "logos",
@@ -5604,7 +5609,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5622,7 +5627,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5645,7 +5650,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.115"
+version = "0.0.118"
 dependencies = [
  "openehr-base",
  "roxmltree",
@@ -6598,7 +6603,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6862,9 +6867,9 @@ dependencies = [
 
 [[package]]
 name = "referencing"
-version = "0.59.0"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "473f4dcca28ead7ee0f8e5b5d0bbae2549f4fc4c958fb20af328961b6c174be3"
+checksum = "f42818036d3b37cda6bd4c494543158a36e431cb717015ef7c93acc6ba214d3b"
 dependencies = [
  "ahash",
  "fluent-uri",
@@ -7109,7 +7114,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -7183,7 +7188,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8366,7 +8371,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8608,9 +8613,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.53.3"
+version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "bytes",
  "libc",
@@ -9598,7 +9603,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

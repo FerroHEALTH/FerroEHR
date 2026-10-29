@@ -29,6 +29,14 @@ pub const fn lang_for(profile: crate::config::profile::SpecProfile) -> &'static 
     profile.lang().spec_version()
 }
 
+/// The version this server reports.
+///
+/// `--version` and `server_version` on `GET /ferroehr/rest/status` carry it:
+/// the package version for a release build, and the package version with
+/// `+dev.<commit>` for any other build (`build.rs`). The boot banner and
+/// `/management/info` name the package version and the commit apart.
+pub const SERVER_VERSION: &str = env!("FERROEHR_SERVER_VERSION");
+
 /// The openEHR ITS-REST contract version this server implements.
 ///
 /// The released `Release-1.1.0`, 19-Jul-2026; the vendored `-codegen` OAS at
@@ -104,5 +112,21 @@ mod tests {
         // (#1943) — pinned here so a table edit is a visible identity change.
         assert_eq!(openehr_rm::Generation::V1_1.spec_version(), "1.1.0");
         assert_eq!(openehr_base::Generation::V1_2.spec_version(), "1.2.0");
+    }
+
+    /// A build no release lane marked reports its commit beside the package
+    /// version, so a report from a build of `main` never reads as the release
+    /// it follows (#4380); a release build reports the bare version.
+    #[test]
+    fn a_non_release_build_names_its_commit() {
+        let package = env!("CARGO_PKG_VERSION");
+        let release = option_env!("FERROEHR_RELEASE_TAG")
+            .is_some_and(|tag| tag.strip_prefix('v') == Some(package));
+        let expected = if release {
+            package.to_owned()
+        } else {
+            format!("{package}+dev.{}", env!("REVISION"))
+        };
+        assert_eq!(SERVER_VERSION, expected);
     }
 }

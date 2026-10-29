@@ -89,13 +89,17 @@ jobs:
       # page's SBOM never travelled with it
       # (https://github.com/rust-secure-code/cargo-auditable).
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-auditable@0.7.5
       - name: Build server
         # `ferroehr-server` is the binary-producing crate (bin name stays
         # `ferroehr`) since the crate consolidation; `-p ferroehr` is the
         # platform library and yields no binary.
+        # FERROEHR_RELEASE_TAG marks this a release build, so the binary
+        # reports the bare release version rather than `+dev.<commit>`.
+        env:
+          FERROEHR_RELEASE_TAG: ${{ inputs.tag }}
         run: cargo auditable build --release --locked -p ferroehr-server
       - name: Package
         shell: bash
@@ -138,7 +142,7 @@ jobs:
       # Generated from the release commit's own `Cargo.lock` with `--locked`, so
       # it describes the graph that was actually built, not one resolved later.
       - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-cyclonedx@0.5.9
       - name: Generate the dependency SBOM

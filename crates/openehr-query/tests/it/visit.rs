@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! The AST visitors: they reach every node of every corpus query, an override
 //! that changes nothing changes nothing, and a rewrite through `VisitMut`

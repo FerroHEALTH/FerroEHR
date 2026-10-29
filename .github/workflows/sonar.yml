@@ -167,7 +167,7 @@ jobs:
           components: llvm-tools-preview
           cache-shared-key: sonar
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-llvm-cov,cargo-nextest
       # The shard index reaches the command through `env:`, never interpolated
@@ -205,7 +205,7 @@ jobs:
           components: llvm-tools-preview
           cache-shared-key: sonar-viewer
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-llvm-cov,cargo-nextest
       - run: cargo llvm-cov --no-report nextest --locked -p ferroehr-viewer --no-tests=pass --profile ci

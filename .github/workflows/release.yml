@@ -56,11 +56,13 @@
 # green no-op on an already-cut version, the sandbox deploy is a pull-and-
 # recreate the box repeats harmlessly, and the crates leg treats an
 # already-published version as done.
-# The ONE leg that is not is the chart: a published chart version is immutable,
-# so a failure after `helm push` means the fix ships as the next chart version
-# (that lane says so at the point of failure). A crates.io version is immutable
-# too, but it can be YANKED and superseded, so its recovery is a version bump
-# rather than a wedged pipeline.
+# The chart leg is idempotent too (#4331): a published chart version is never
+# pushed again, and when the version is published already with the same files
+# the leg skips the push and signs and attests the published digest, so a
+# failure after `helm push` is finished by a re-run. A tag cut before that
+# recovery existed is recovered with publish-chart.yml dispatched from main.
+# A crates.io version is immutable, but it can be YANKED and superseded, so its
+# recovery is a version bump rather than a wedged pipeline.
 #
 # `workflow_dispatch` re-runs the pipeline for an existing tag, and must be
 # dispatched AT the tag (`gh workflow run Release --ref vX.Y.Z -f tag=vX.Y.Z`).
@@ -253,7 +255,7 @@ jobs:
       # supplier, component name, version, other unique identifiers (purl),
       # dependency relationships, SBOM author and timestamp
       # (https://www.cisa.gov/sbom).
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: syft@1.50.0
       - name: Generate the repository SPDX SBOM
@@ -404,7 +406,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-cyclonedx@0.5.9
       - name: The archive the SBOM describes, and the SBOM
@@ -698,7 +700,7 @@ jobs:
       # docker/Dockerfile and release-build.yml; the action fetches the
       # prebuilt binary and installs curl and jq into the slim container itself.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-auditable@0.7.5
 
@@ -710,8 +712,11 @@ jobs:
         # release commit here (an env, never interpolated into a shell) makes the
         # provenance explicit and does not depend on git being present in the
         # slim job container (it is not). Empty/absent degrades to `unknown`.
+        # FERROEHR_RELEASE_TAG marks this a release build, so the binary
+        # reports the bare release version rather than `+dev.<commit>`.
         env:
           REVISION: ${{ github.sha }}
+          FERROEHR_RELEASE_TAG: ${{ needs.plan.outputs.tag }}
         run: cargo auditable build --release --locked -p ferroehr-server
 
       - name: Strip
@@ -820,7 +825,7 @@ jobs:
       # The viewer binary carries its dependency list too (#3675): the same
       # pinned `cargo auditable` as the app binary job above.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-auditable@0.7.5
 
@@ -864,7 +869,7 @@ jobs:
         if: matrix.platform == 'amd64'
         run: apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: matrix.platform == 'amd64'
         with:
           tool: cargo-leptos@0.3.11,wasm-bindgen@0.2.129
@@ -1226,6 +1231,7 @@ jobs:
       cancel-in-progress: false
     uses: ./.github/workflows/build-chart.yml
     with:
+      publish: true
       release-tag: ${{ needs.plan.outputs.tag }}
       sha: ${{ github.sha }}
 

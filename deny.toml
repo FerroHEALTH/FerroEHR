@@ -125,11 +125,11 @@ exceptions = [
   { allow = ["BUSL-1.1"], crate = "testkit" },
   { allow = ["BUSL-1.1"], crate = "docs-meta" },
   { allow = ["BUSL-1.1"], crate = "loadtest" },
-  # The three hand-written spec engines carry the Business Source License
+  # The two hand-written spec engines carry the Business Source License
   # (owner decisions 2026-09-04 and 2026-09-24); the five generated model
-  # crates and the openehr-its wire layer stay Apache-2.0.
+  # crates, the openehr-its wire layer and openehr-query (2026-10-29) are
+  # Apache-2.0.
   { allow = ["BUSL-1.1"], crate = "openehr-adl" },
-  { allow = ["BUSL-1.1"], crate = "openehr-query" },
   { allow = ["BUSL-1.1"], crate = "openehr-sdt" },
   # FerroUI, the FerroHEALTH consoles' shared component library, is the same
   # Licensor's code under the same licence (owner decision 2026-10-18), taken

@@ -1,0 +1,1 @@
+- `openehr-query`, the AQL 1.1.0 lexer, parser, typed AST and printer, is published under Apache-2.0 from 0.0.116, like the generated model crates and `openehr-its`, so any Rust project can parse AQL with it. Versions 0.0.60 to 0.0.115 keep the Business Source License 1.1 they were published under.

@@ -207,6 +207,45 @@ async fn insert_batch_persists_every_record_with_identical_shape() {
     store.insert_batch(&[]).await.expect("empty batch");
 }
 
+/// A token the store already holds draws no new identity value, and the
+/// search token index takes new entries through its bounded pending list
+/// (PostgreSQL 18 docs, "GIN Fast Update Technique").
+#[tokio::test]
+async fn repeated_batches_store_each_token_once_and_index_through_the_pending_list() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = store_over(&pool);
+
+    let event = read_event("2026-07-10T09:00:00Z".parse().unwrap());
+    for _ in 0..3 {
+        store
+            .insert_batch(&[record(&event, Some("patient-42"))])
+            .await
+            .expect("batch insert");
+    }
+
+    let (count, highest): (i64, Option<i32>) =
+        sqlx::query_as("SELECT count(*), max(id) FROM audit.audit_search_token")
+            .fetch_one(&pool)
+            .await
+            .expect("tokens");
+    assert!(count > 0, "the batch stored its search tokens");
+    assert_eq!(
+        highest.map(i64::from),
+        Some(count),
+        "a held token spent an identity value"
+    );
+
+    let options: Vec<String> = sqlx::query_scalar(
+        "SELECT unnest(reloptions) FROM pg_class \
+         WHERE oid = 'audit.ix_audit_event_search_tokens'::regclass ORDER BY 1",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("index options");
+    assert_eq!(options, ["fastupdate=on", "gin_pending_list_limit=512"]);
+}
+
 #[tokio::test]
 async fn reap_deletes_only_rows_past_the_horizon() {
     let db = testkit::db().await.expect("testkit database");

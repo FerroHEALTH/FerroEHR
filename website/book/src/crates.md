@@ -228,7 +228,8 @@ it is not an assessment of your product.
 The nine crates fall into two groups.
 
 The six generated-or-wire crates (`openehr-base`, `openehr-rm`, `openehr-am`,
-`openehr-lang`, `openehr-term`, `openehr-its`) are **`Apache-2.0`**, the
+`openehr-lang`, `openehr-term`, `openehr-its`) and the AQL parser
+`openehr-query` are **`Apache-2.0`**, the
 licence of the openEHR machine-readable artifacts they are generated from, so
 any Rust project can use them, in proprietary and hosted products included.
 They embed material derived from those artifacts (generated types carrying
@@ -241,11 +242,13 @@ packages the vendored ITS-JSON schema as bytes, so its README carries that
 file's attribution (upstream repository, the exact vendored commit, and the
 licence) inside the package, where it travels with any redistribution.
 
-The three hand-written engines, `openehr-query`, `openehr-adl` and
-`openehr-sdt`, are under the **Business Source License 1.1**, the licence of
+`openehr-query` is hand-written from openEHR's Apache-2.0 AQL grammar and
+ships only its Rust sources, the README and `LICENSE-APACHE-2.0`.
+
+The two hand-written engines, `openehr-adl` and `openehr-sdt`, are under the **Business Source License 1.1**, the licence of
 the FerroEHR application. Each declares **`BUSL-1.1`** and ships only its own
 Rust sources, the README and its `LICENSE` with the parameters. Non-production
-use of these three is free, production use is free for Non-Commercial
+use of these two is free, production use is free for Non-Commercial
 Purposes, and any other production use, hosting for third parties or
 distribution for a fee needs a commercial licence, exactly as for the
 application.
@@ -267,6 +270,8 @@ BUSL-1.1, and `openehr-its` was published as `BUSL-1.1 AND Apache-2.0` from
 Apache-2.0 again. Its hand-written Simplified Formats, RM-instance validation
 and scope grammar moved into the new `openehr-sdt`, first published alone at
 0.0.68 under BUSL-1.1 against the 0.0.67 siblings and in lockstep from 0.0.69.
+`openehr-query` is Apache-2.0 again from 0.0.116; its 0.0.60 to 0.0.115 keep
+BUSL-1.1.
 Published
 versions keep the licence they were published with. The full picture, including
 the vendored material that never reaches a published package, is in

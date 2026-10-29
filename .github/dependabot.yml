@@ -109,6 +109,30 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "deps"
+  # The quickstart's FerroPIX pin (#4380): FerroPIX releases often, and a pin
+  # that falls behind runs a PIX Manager whose configuration the quickstart no
+  # longer matches. Allowed alone: the FerroEHR images follow the workspace
+  # version (scripts/checks/compose-image-tags.sh), and the CI job
+  # `quickstart-config` checks the inline configuration against every pin this
+  # entry proposes before it can merge. The Helm chart and the hosted sandbox
+  # pin FerroPIX too, and the CI job `ferropix-pins` (#4392) refuses a proposal
+  # until both name the same release with configurations that read under it,
+  # so this entry keeps all three current.
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    allow:
+      - dependency-name: "ghcr.io/ferrohealth/ferropix"
+    labels:
+      - "dependencies"
+      - "no-changelog"
+    schedule:
+      interval: "weekly"
+    # The base-image window: an image that ships in the quickstart.
+    cooldown:
+      default-days: 5
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "deps"
   - package-ecosystem: "github-actions"
     directory: "/"
     # Dependency bumps default to the changelog-guard escape (the triage

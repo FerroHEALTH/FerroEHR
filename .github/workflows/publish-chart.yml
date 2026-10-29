@@ -16,9 +16,12 @@
 # of release.yml, which owns the `v*` tag end to end — that is what makes the
 # appVersion image the chart is judged against pullable by construction instead
 # of polled for. This file remains the BETWEEN-RELEASES lane: a chart-only fix
-# does not wait for an unrelated application release, and it is also the
-# recovery path when a release's chart leg fails after the push (bump the chart
-# version and publish it from here).
+# does not wait for an unrelated application release. Given `release-tag`, it
+# is also the recovery of a release's chart leg for a tag cut before the leg
+# could finish itself on a re-run (#4331): it packages the chart of the tag's
+# tree as the release did, and build-chart.yml at this revision compares it
+# with the published chart, skipping the push and signing and attesting the
+# published digest when the files match.
 #
 # The default dispatch is a DRY RUN — it packages and runs every pre-flight
 # check but pushes nothing — mirroring publish-crates.yml. Two pre-flights read
@@ -54,6 +57,11 @@ on:
         required: false
         default: false
         type: boolean
+      release-tag:
+        description: "An existing vX.Y.Z tag whose chart leg to recover (empty = a between-releases publish)"
+        required: false
+        default: ""
+        type: string
 
 # An OCI tag is MUTABLE — verified against a local registry: a second
 # `helm push` of the same chart version silently replaced the manifest and
@@ -85,9 +93,11 @@ jobs:
       id-token: write # Sigstore, for the keyless attestation
       attestations: write # store it against this repository
     # The whole build lives in the reusable build-chart.yml — the SLSA Build
-    # L3 construction (#2140): this caller has no steps at all. No
-    # `release-tag`: that input is what marks a call as a release cut, and this
-    # lane is deliberately never one.
+    # L3 construction (#2140): this caller has no steps at all. `release-tag`
+    # is passed only to recover an existing tag's chart leg, and the tag's tree
+    # is then what is packaged.
     uses: ./.github/workflows/build-chart.yml
     with:
       publish: ${{ inputs.publish }}
+      release-tag: ${{ inputs.release-tag }}
+      sha: ${{ inputs.release-tag != '' && format('refs/tags/{0}', inputs.release-tag) || '' }}

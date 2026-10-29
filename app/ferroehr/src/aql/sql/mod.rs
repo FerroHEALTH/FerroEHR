@@ -441,7 +441,9 @@ impl<'a> Builder<'a> {
 /// which rows return is unconstrained, so a lazy streaming scan is
 /// conformant. With `ORDER BY`, `DISTINCT`, or aggregates the full row set
 /// is needed anyway; an EHR-scoped query (`ehr_ids`) is already bounded by
-/// the `ehr_id` indexes and keeps the flat shape.
+/// the `ehr_id` indexes and keeps the flat shape. A population query that only
+/// counts its root objects takes the streaming shape too, for its version
+/// spine ([`from::StreamPlan::counts_roots`]).
 fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
     ctx.limit.is_some()
         && ctx.ehr_ids.is_empty()
@@ -463,10 +465,10 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
     from::refuse_negated_reads(ir)?;
     let mut b = Builder::new(ir, params, ctx);
-    match streaming_eligible(ir, ctx)
-        .then(|| from::streaming_plan(ir))
-        .flatten()
-    {
+    let plan = from::streaming_plan(ir).filter(|plan| {
+        streaming_eligible(ir, ctx) || (ctx.ehr_ids.is_empty() && plan.counts_roots(ir))
+    });
+    match plan {
         Some(plan) => b.build_from_streaming(&plan)?,
         None => b.build_from(&ir.contains)?,
     }

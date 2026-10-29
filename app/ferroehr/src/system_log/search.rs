@@ -23,6 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Mutex, PoisonError};
 
+use sqlx::postgres::PgConnection;
 use sqlx::{PgPool, Row};
 
 use crate::db::acquire::acquire;
@@ -129,12 +130,18 @@ pub(crate) fn document_tokens(document: &serde_json::Value) -> BTreeSet<SearchTo
 
 /// Stores the tokens of each record of a batch that the store does not hold
 /// yet and returns the `search_tokens` value of each record.
+///
+/// Only a token the store does not hold reaches the `INSERT`: an `ON CONFLICT`
+/// row still draws its identity value (PostgreSQL 18 docs, "INSERT", the
+/// `ON CONFLICT` clause), and a held token would spend one per batch.
 const STORE_TOKENS: &str = "WITH input AS (\
      SELECT * FROM unnest($1::text[], $2::text[], $3::text[]) AS i(parameter, system, code)), \
      keyed AS (SELECT parameter, system, code, \
      audit.search_token_digest(parameter, system, code) AS digest FROM input), \
      inserted AS (INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
-     SELECT parameter, system, code, digest FROM keyed ON CONFLICT (digest) DO NOTHING \
+     SELECT k.parameter, k.system, k.code, k.digest FROM keyed k \
+     WHERE NOT EXISTS (SELECT FROM audit.audit_search_token h WHERE h.digest = k.digest) \
+     ON CONFLICT (digest) DO NOTHING \
      RETURNING id, digest) \
      SELECT k.parameter, k.system, k.code, coalesce(n.id, t.id) AS id FROM keyed k \
      LEFT JOIN inserted n ON n.digest = k.digest \
@@ -157,19 +164,28 @@ pub(crate) struct TokenRegistry {
     sets: Mutex<BTreeMap<Vec<i32>, i32>>,
 }
 
+/// The shared sets a write read or stored that the registry does not hold
+/// yet, which [`TokenRegistry::remember`] takes once the write commits: a set
+/// stored by a transaction that rolls back does not exist.
+#[derive(Debug, Default)]
+#[must_use = "the sets are remembered only once the write commits"]
+pub(crate) struct LearnedSets(BTreeMap<Vec<i32>, i32>);
+
 impl TokenRegistry {
     /// The `search_tokens` value of each of `records`, storing every token and
-    /// set the store does not hold yet.
+    /// set the store does not hold yet on `conn`, with the sets this call
+    /// learned.
     ///
     /// # Errors
     /// [`AuditError::Store`] when a statement fails, and
     /// [`AuditError::SearchToken`] when a token or set cannot be read back.
     pub(crate) async fn record_tokens(
         &self,
-        pool: &PgPool,
+        conn: &mut PgConnection,
         records: &[BTreeSet<SearchToken>],
-    ) -> Result<Vec<Vec<i32>>, AuditError> {
-        let ids = token_ids(pool, records).await?;
+    ) -> Result<(Vec<Vec<i32>>, LearnedSets), AuditError> {
+        let ids = token_ids(conn, records).await?;
+        let mut learned = LearnedSets::default();
         let mut values = Vec::with_capacity(records.len());
         for tokens in records {
             let mut shared = Vec::new();
@@ -190,18 +206,31 @@ impl TokenRegistry {
             shared.sort_unstable();
             let mut value = Vec::with_capacity(own.len() + 1);
             if !shared.is_empty() {
-                let set = self.set_id(pool, shared).await?;
+                let set = self.set_id(conn, shared, &mut learned).await?;
                 value.push(set.checked_neg().ok_or(AuditError::SearchToken)?);
             }
             own.sort_unstable();
             value.extend(own);
             values.push(value);
         }
-        Ok(values)
+        Ok((values, learned))
+    }
+
+    /// Holds the sets of a committed write.
+    pub(crate) fn remember(&self, learned: LearnedSets) {
+        self.sets
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .extend(learned.0);
     }
 
     /// The id of the shared set of `tokens`, stored the first time.
-    async fn set_id(&self, pool: &PgPool, tokens: Vec<i32>) -> Result<i32, AuditError> {
+    async fn set_id(
+        &self,
+        conn: &mut PgConnection,
+        tokens: Vec<i32>,
+        learned: &mut LearnedSets,
+    ) -> Result<i32, AuditError> {
         if let Some(id) = self
             .sets
             .lock()
@@ -210,16 +239,16 @@ impl TokenRegistry {
         {
             return Ok(*id);
         }
+        if let Some(id) = learned.0.get(&tokens) {
+            return Ok(*id);
+        }
         for _ in 0..READ_AGAIN {
             let id: Option<i32> = sqlx::query_scalar(STORE_SET)
                 .bind(&tokens)
-                .fetch_optional(&mut *acquire(pool).await?)
+                .fetch_optional(&mut *conn)
                 .await?;
             if let Some(id) = id {
-                self.sets
-                    .lock()
-                    .unwrap_or_else(PoisonError::into_inner)
-                    .insert(tokens, id);
+                learned.0.insert(tokens, id);
                 return Ok(id);
             }
         }
@@ -231,7 +260,7 @@ impl TokenRegistry {
 /// hold yet; a token another writer stored after this statement began is read
 /// again.
 async fn token_ids(
-    pool: &PgPool,
+    conn: &mut PgConnection,
     records: &[BTreeSet<SearchToken>],
 ) -> Result<BTreeMap<TokenKey, i32>, AuditError> {
     let mut wanted: BTreeSet<&SearchToken> = records.iter().flatten().collect();
@@ -248,7 +277,7 @@ async fn token_ids(
             .bind(parameters)
             .bind(systems)
             .bind(codes)
-            .fetch_all(&mut *acquire(pool).await?)
+            .fetch_all(&mut *conn)
             .await?;
         for row in rows {
             let Some(id) = row.try_get::<Option<i32>, _>("id")? else {

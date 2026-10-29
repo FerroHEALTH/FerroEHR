@@ -184,6 +184,10 @@ const UNAVAILABLE_MESSAGE: &str = "the server cannot reach its database; retry s
 /// connection: the server is busy, not broken.
 const OVERLOADED_MESSAGE: &str = "the server is temporarily overloaded; retry shortly";
 
+/// The client-visible message of a statement the database cancelled: it
+/// rolled back, so the request can be repeated.
+const CANCELLED_MESSAGE: &str = "the database cancelled the request's statement; retry shortly";
+
 /// The client-visible message of a node-codec fault — a versioned-object tree
 /// the decomposer could not take apart, or stored node rows that do not
 /// reassemble into one tree. Opaque for the same reason the driver string is:
@@ -201,7 +205,7 @@ const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec er
 /// Unavailable`).
 ///
 /// No driver string ever reaches a client body: every branch returns one of the
-/// three curated constants above, and the SQLSTATE, constraint, table and
+/// curated constants above, and the SQLSTATE, constraint, table and
 /// driver text are recorded on the trace record only, a PostgreSQL message
 /// naming schema objects the client can neither use nor be trusted with.
 ///
@@ -234,6 +238,13 @@ const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec er
 ///   transaction the cut interrupted is rolled back by the server; only a
 ///   `COMMIT` cut between its execution and its reply leaves the outcome
 ///   unknown, as it would behind a `500`.
+/// - `57014` `query_canceled` → `CallStatusType::ServiceOverloaded` (`503`
+///   plus `Retry-After`): the cancelled statement rolled back, so repeating the
+///   request is safe. By default the `[server]` request timeout (30 s)
+///   answers a request before the `[db]` `statement_timeout` backstop (60 s)
+///   fires, so on a request path an operator's cancel or a forward step of the
+///   database host's wall clock, which `PostgreSQL` measures its timeouts
+///   against, raises it.
 /// - anything else → `CallStatusType::Exception` (`500`, a genuine fault),
 ///   including a protocol error, which no restart produces.
 pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::SmError {
@@ -247,6 +258,9 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::SmError 
             CallStatusType::ServiceOverloaded,
             UNAVAILABLE_MESSAGE.to_owned(),
         );
+    }
+    if let Some(cancelled) = cancelled(e) {
+        return cancelled;
     }
     if is_cut_session(e) {
         tracing::error!(
@@ -335,6 +349,30 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::SmError 
     }
 }
 
+/// The status of a statement the database cancelled (`57014`
+/// `query_canceled`, by `statement_timeout` or a cancel request), with its
+/// trace record; `None` for any other failure.
+fn cancelled(e: &sqlx::Error) -> Option<crate::service::status::SmError> {
+    use crate::service::status::{CallStatusType, SmError};
+    let sqlx::Error::Database(db) = e else {
+        return None;
+    };
+    if db.code().as_deref() != Some("57014") {
+        return None;
+    }
+    // NOTE: RFC 9110 §15.6.4; the cancelled statement rolled back, so a repeat is safe.
+    tracing::error!(
+        sqlstate = "57014",
+        error = %e,
+        "storage bridge: the database cancelled the statement \
+         (statement_timeout or a cancel request) → 503"
+    );
+    Some(SmError::new(
+        CallStatusType::ServiceOverloaded,
+        CANCELLED_MESSAGE.to_owned(),
+    ))
+}
+
 /// Classifies a failure to obtain a pooled connection as the SM call status it
 /// surfaces: always `CallStatusType::ServiceOverloaded` (`503` plus
 /// `Retry-After`), because no statement of the request ran.
@@ -411,7 +449,8 @@ pub(crate) fn is_connect_failure(e: &sqlx::Error) -> bool {
 ///   `57P03` `cannot_connect_now` and `57P05` `idle_session_timeout`
 ///   (<https://www.postgresql.org/docs/18/errcodes-appendix.html>). `57014`
 ///   `query_canceled` (a statement timeout or cancel) and `57P04`
-///   `database_dropped` are no outage and stay where they were.
+///   `database_dropped` are no outage; [`classify_sqlx`] answers each on its
+///   own.
 /// - an I/O error of kind `ConnectionReset`, `ConnectionAborted`,
 ///   `BrokenPipe`, `NotConnected` or `UnexpectedEof`: the socket closed under
 ///   the session.
@@ -626,14 +665,13 @@ pub(crate) mod tests {
     }
 
     /// A failure on an established connection that no outage produces stays
-    /// `500`: a protocol violation, a cancelled or timed-out statement, a
-    /// dropped database, a statement error (#3659).
+    /// `500`: a protocol violation, a dropped database, a statement error
+    /// (#3659).
     #[test]
     fn a_failure_after_connecting_stays_an_exception() {
         let failures = [
             sqlx::Error::Protocol("unexpected message".to_owned()),
             db_error("08P01"),
-            db_error("57014"),
             db_error("57P04"),
             db_error("42P01"),
         ];
@@ -645,6 +683,17 @@ pub(crate) mod tests {
                 "a failure on an open session is a server fault: {failure}"
             );
         }
+    }
+
+    /// A statement the database cancelled, by `statement_timeout` or a cancel
+    /// request, answers `503`: it rolled back, and the request timeout fires
+    /// before the backstop does, so only a stepped clock or an operator's
+    /// cancel reaches it (#4338).
+    #[test]
+    fn a_cancelled_statement_is_unavailable() {
+        let sm = classify_sqlx(&db_error("57014"));
+        assert_eq!(sm.status, CallStatusType::ServiceOverloaded);
+        assert_eq!(sm.message, super::CANCELLED_MESSAGE);
     }
 
     /// The storage and database errors keep their cause as the source and out

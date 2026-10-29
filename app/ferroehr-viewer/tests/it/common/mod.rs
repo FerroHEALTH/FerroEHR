@@ -49,6 +49,25 @@ const COMMAND_BUDGET: Duration = Duration::from_secs(10);
 /// The interval every poll loop here re-reads its condition at.
 const POLL_STEP: Duration = Duration::from_millis(200);
 
+/// How long a `WebDriver` command may take before the journey's output names
+/// it ([`bounded_for`]), so a failure reports where its time went.
+const SLOW_COMMAND: Duration = Duration::from_secs(1);
+
+/// The script [`Harness::focused`] runs: the focused element's tag, id,
+/// classes and first words, whether it sits in the main area, whether the
+/// document has the focus, and the page's address.
+const DESCRIBE_FOCUS: &str = r"
+const e = document.activeElement;
+const at = location.pathname + location.search + location.hash;
+if (!e) { return 'nothing at ' + at; }
+const id = e.id ? '#' + e.id : '';
+const cls = typeof e.className === 'string' && e.className.trim()
+  ? '.' + e.className.trim().split(/\s+/).join('.') : '';
+const text = (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+return e.tagName.toLowerCase() + id + cls + ' “' + text + '” (in main: '
+  + !!e.closest('main') + ', document focused: ' + document.hasFocus() + ') at ' + at;
+";
+
 /// The budget [`Harness::wait_hydrated`] allows, four times [`WAIT`]: the host
 /// lane's debug WASM is ~91 MB and the browser has to fetch, compile and run it
 /// before the marker appears, which is comfortably slower than any wait that
@@ -399,8 +418,7 @@ impl Harness {
     /// # Panics
     /// When the URL never matches within `budget`.
     pub(crate) async fn wait_url_contains_for(&self, fragment: &str, budget: Duration) {
-        let step = Duration::from_millis(200);
-        let mut waited = Duration::ZERO;
+        let started = tokio::time::Instant::now();
         loop {
             let url = bounded("current_url()", self.driver.current_url())
                 .await
@@ -409,11 +427,10 @@ impl Harness {
                 return;
             }
             assert!(
-                waited < budget,
-                "URL never contained `{fragment}` (last: {url})"
+                started.elapsed() < budget,
+                "URL never contained `{fragment}` within {budget:?} (last: {url})"
             );
-            tokio::time::sleep(step).await;
-            waited += step;
+            tokio::time::sleep(POLL_STEP).await;
         }
     }
 
@@ -425,13 +442,11 @@ impl Harness {
     /// When a toast is still visible after 15 s, or when the `WebDriver` stops
     /// answering — a stalled driver used to look exactly like a cleared screen.
     pub(crate) async fn wait_toasts_cleared(&self) {
-        for _ in 0..75 {
-            if count_matching(self, TOAST_CARD).await == 0 {
-                return;
-            }
-            tokio::time::sleep(Duration::from_millis(200)).await;
-        }
-        panic!("a toast never cleared (it would intercept the next click)");
+        let cleared = poll_until(async || count_matching(self, TOAST_CARD).await == 0).await;
+        assert!(
+            cleared,
+            "a toast never cleared (it would intercept the next click)"
+        );
     }
 
     /// Wait until client hydration has completed on the current page
@@ -661,6 +676,25 @@ impl Harness {
         answer.json().as_bool().unwrap_or(false)
     }
 
+    /// The focused element as a failure message names it: its tag, id and
+    /// classes, the start of its text, and the address the page is at.
+    ///
+    /// # Panics
+    /// When the `WebDriver` does not answer.
+    pub(crate) async fn focused(&self) -> String {
+        let answer = bounded(
+            "execute(describe activeElement)",
+            self.driver.execute(DESCRIBE_FOCUS, Vec::new()),
+        )
+        .await
+        .expect("describe the focused element");
+        answer
+            .json()
+            .as_str()
+            .unwrap_or("an answer that is not text")
+            .to_owned()
+    }
+
     /// Press Tab until the focus reaches an element matching `css`, at most
     /// `limit` times; whether it got there.
     ///
@@ -727,7 +761,68 @@ impl Harness {
 
     /// End the session (screenshots + console gate are per-journey calls).
     pub(crate) async fn finish(self) {
-        bounded("quit()", self.driver.quit()).await.expect("quit");
+        bounded("quit()", self.driver.clone().quit())
+            .await
+            .expect("quit");
+    }
+}
+
+/// How long the session's end may take when a journey fails (#4393).
+const TEARDOWN_BUDGET: Duration = Duration::from_secs(10);
+
+/// A journey that fails ends its browser session within [`TEARDOWN_BUDGET`].
+///
+/// A panicking journey drops the `WebDriver` unquit, and thirtyfour's own
+/// fallback then ends the session synchronously under its 120 s request
+/// timeout, so a browser that stopped answering held the failed job for two
+/// minutes after the assertion had already failed (#4315). The session is
+/// leaked from thirtyfour instead, and ended here with one bounded
+/// `DELETE /session/{id}` on a runtime of its own (the journey's runtime is
+/// the one unwinding). The panic stays the assertion's own: nothing here
+/// panics, and a teardown that does not answer is only reported.
+impl Drop for Harness {
+    fn drop(&mut self) {
+        if !std::thread::panicking() {
+            return;
+        }
+        let url = format!(
+            "{}/session/{}",
+            self.driver.server_url().as_str().trim_end_matches('/'),
+            self.driver.session_id()
+        );
+        // A session `finish` already ended answers `AlreadyQuit`, and has
+        // nothing left to end.
+        if self.driver.clone().leak().is_err() {
+            return;
+        }
+        let ended = std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| format!("no teardown runtime: {e}"))?;
+            runtime.block_on(async move {
+                let client = reqwest::Client::builder()
+                    .timeout(TEARDOWN_BUDGET)
+                    .build()
+                    .map_err(|e| format!("no teardown client: {e}"))?;
+                let answer = client
+                    .delete(&url)
+                    .send()
+                    .await
+                    .map_err(|e| format!("DELETE {url}: {e}"))?;
+                if answer.status().is_success() {
+                    Ok(())
+                } else {
+                    Err(format!("DELETE {url} answered {}", answer.status()))
+                }
+            })
+        })
+        .join();
+        match ended {
+            Ok(Ok(())) => {}
+            Ok(Err(why)) => println!("the failed journey's browser session did not end: {why}"),
+            Err(_) => println!("the failed journey's browser teardown thread panicked"),
+        }
     }
 }
 
@@ -1068,12 +1163,18 @@ async fn bounded_for<T>(
     budget: Duration,
     command: impl Future<Output = WebDriverResult<T>>,
 ) -> WebDriverResult<T> {
-    match tokio::time::timeout(budget, command).await {
+    let started = tokio::time::Instant::now();
+    let answer = match tokio::time::timeout(budget, command).await {
         Ok(answer) => answer,
         Err(_) => Err(WebDriverError::Timeout(format!(
             "`{what}` did not answer within {budget:?} (the harness command budget)"
         ))),
+    };
+    let elapsed = started.elapsed();
+    if elapsed >= SLOW_COMMAND {
+        println!("slow WebDriver command `{what}`: {elapsed:?}");
     }
+    answer
 }
 
 /// Whether a `WebDriver` error means the element is simply NOT THERE — the
@@ -1314,6 +1415,10 @@ pub(crate) async fn count_matching(h: &Harness, css: &str) -> usize {
 /// Poll `condition` every [`POLL_STEP`] until it holds, for at most `budget`;
 /// returns whether it did.
 ///
+/// The budget is wall-clock time, the condition's own commands counted, so a
+/// slow driver ends the wait at its budget instead of stretching it by the
+/// time each command takes.
+///
 /// The one poll loop every journey condition is written over, so a journey
 /// file needs no timer of its own — which is what lets
 /// `scripts/checks/e2e-waits.sh` refuse `sleep` there outright.
@@ -1321,16 +1426,15 @@ pub(crate) async fn poll_until_for(
     budget: Duration,
     mut condition: impl AsyncFnMut() -> bool,
 ) -> bool {
-    let mut waited = Duration::ZERO;
+    let started = tokio::time::Instant::now();
     loop {
         if condition().await {
             return true;
         }
-        if waited >= budget {
+        if started.elapsed() >= budget {
             return false;
         }
         tokio::time::sleep(POLL_STEP).await;
-        waited += POLL_STEP;
     }
 }
 
@@ -1681,7 +1785,10 @@ mod tests {
 
     use thirtyfour::error::{WebDriverError, WebDriverErrorInfo, WebDriverErrorInner};
 
-    use super::{COMMAND_BUDGET, WAIT, bounded, element_command, element_probe, is_absence};
+    use super::{
+        COMMAND_BUDGET, Harness, POLL_STEP, TEARDOWN_BUDGET, WAIT, bounded, element_command,
+        element_probe, is_absence, poll_until_for,
+    };
 
     /// The two failures a probe is allowed to read as "not there yet"
     /// ([`is_absence`]).
@@ -1776,6 +1883,28 @@ mod tests {
         panic!("a stalled driver must not answer `{answer:?}`");
     }
 
+    /// A poll whose condition is slow to answer still ends at its budget: the
+    /// budget is wall-clock time, so the condition's own time counts.
+    #[tokio::test(start_paused = true)]
+    async fn a_slow_condition_ends_the_poll_at_its_budget() {
+        let started = tokio::time::Instant::now();
+        let held = poll_until_for(WAIT, async || {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            false
+        })
+        .await;
+
+        assert!(
+            !held,
+            "a condition that never holds is reported as not held"
+        );
+        assert!(
+            started.elapsed() < WAIT + Duration::from_secs(5) + POLL_STEP,
+            "the poll ends within its budget plus the one condition it was inside, not after {:?}",
+            started.elapsed()
+        );
+    }
+
     /// A command that answers is handed back untouched — the bound adds no
     /// behaviour of its own to the ordinary path.
     #[tokio::test(start_paused = true)]
@@ -1794,6 +1923,75 @@ mod tests {
         assert!(
             started.elapsed() < COMMAND_BUDGET,
             "an answered command returns as soon as it answers"
+        );
+    }
+
+    /// A journey that fails ends its session within the teardown budget, with
+    /// the assertion's own panic, even when the driver never answers the
+    /// `DELETE` (#4393): a stand-in driver opens the session and then holds
+    /// the delete forever.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_failing_journey_ends_its_session_within_the_teardown_budget() {
+        use axum::routing::{delete, post};
+
+        let app = axum::Router::new()
+            .route(
+                "/session",
+                post(async || {
+                    axum::Json(serde_json::json!({
+                        "value": { "sessionId": "stand-in", "capabilities": { "browserName": "chrome" } }
+                    }))
+                }),
+            )
+            .route(
+                "/session/{id}",
+                delete(async || std::future::pending::<&'static str>().await),
+            )
+            .route(
+                "/session/{id}/timeouts",
+                post(async || axum::Json(serde_json::json!({ "value": null }))),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind the stand-in driver");
+        let address = listener.local_addr().expect("the stand-in's address");
+        tokio::spawn(async move { axum::serve(listener, app).await });
+
+        let driver = thirtyfour::WebDriver::builder(
+            format!("http://{address}"),
+            thirtyfour::DesiredCapabilities::chrome(),
+        )
+        .await
+        .expect("a session on the stand-in driver");
+        let harness = Harness {
+            driver,
+            base: String::new(),
+            shots_dir: String::new(),
+            journey: "teardown",
+            js: true,
+            withheld: false,
+        };
+
+        let started = std::time::Instant::now();
+        let failed = tokio::task::spawn_blocking(move || {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                let _held = harness;
+                panic!("the journey's own assertion");
+            }))
+        })
+        .await
+        .expect("the journey thread ends");
+        let elapsed = started.elapsed();
+
+        let payload = failed.expect_err("the journey failed");
+        assert_eq!(
+            payload.downcast_ref::<&str>().copied(),
+            Some("the journey's own assertion"),
+            "the failure stays the assertion's own"
+        );
+        assert!(
+            elapsed < TEARDOWN_BUDGET + Duration::from_secs(5),
+            "the teardown took {elapsed:?}, past its {TEARDOWN_BUDGET:?} budget"
         );
     }
 }

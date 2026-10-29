@@ -17,6 +17,16 @@
 #     releases (dry run by default). It passes no tag, so this lane takes its
 #     between-releases decisions: judge against an image built from the tree,
 #     and report rather than refuse an already-published version on a dry run.
+#     Given an existing release tag it recovers that release's chart leg from
+#     the tag's tree instead, with this revision's comparison script.
+#
+# A published chart version is never published again (#4331). When the chart
+# this run packages unpacks to the same files as the one already published
+# under its version (scripts/release/chart-published.sh), the push is skipped
+# and every post-push step (signature, provenance and SBOM attestations,
+# Artifact Hub ownership tag) runs against the published digest, so a leg that
+# pushed and then failed after the push is finished by a re-run, with this
+# workflow as the signing identity. When the files differ, a publish is refused.
 #
 # A consumer pins:
 #
@@ -32,17 +42,20 @@ on:
   workflow_call:
     inputs:
       publish:
-        description: Actually push, sign and attest (false = dry run, package only).
+        description: >-
+          Actually push, sign and attest (false = dry run, package only). The
+          release pipeline passes true; a release tag alone publishes nothing.
         required: false
         type: boolean
         default: false
       release-tag:
         description: >-
-          The `vX.Y.Z` tag being released, when this call is the release
-          pipeline's chart leg. Non-empty means: the package is given THIS
-          version as its appVersion and image annotations, it is judged against
-          that version's image, and the push happens. Empty means a
-          between-releases dispatch, which packages the committed default.
+          The `vX.Y.Z` tag being released or recovered, when this call is the
+          release pipeline's chart leg or a recovery of it. Non-empty means:
+          the package is given THIS version as its appVersion and image
+          annotations, and it is judged against that version's image. Empty
+          means a between-releases dispatch, which packages the committed
+          default.
         required: false
         type: string
         default: ""
@@ -90,6 +103,18 @@ jobs:
           persist-credentials: false
           ref: ${{ inputs.sha || github.ref }}
 
+      # The comparison with a published chart is this workflow's own revision,
+      # so a recovery dispatched from main for a tag cut before the script
+      # existed still compares with it; on a release both revisions are the tag.
+      - name: Check out this workflow's comparison script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: lane
+          sparse-checkout: scripts/release/chart-published.sh
+          sparse-checkout-cone-mode: false
+
       # The same helm the golden renders are pinned to, from the same file. The
       # read-and-install pair lives in the composite (#2775), which is also where
       # the `version` vs `version-file` trap is recorded.
@@ -128,6 +153,10 @@ jobs:
           version=$(helm show chart "$CHART_DIR" | sed -nE 's/^version: *"?([^"]+)"?/\1/p')
           app=$(helm show chart "$CHART_DIR" | sed -nE 's/^appVersion: *"?([^"]+)"?/\1/p')
           [ -n "$version" ] && [ -n "$app" ] || { echo "::error::could not read version/appVersion from $CHART_DIR/Chart.yaml"; exit 1; }
+          if [ -n "$RELEASE_TAG" ] && ! grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' <<<"$RELEASE_TAG"; then
+            echo "::error::'${RELEASE_TAG}' is not a vX.Y.Z tag"
+            exit 1
+          fi
           if [ -n "$RELEASE_TAG" ]; then
             effective="${RELEASE_TAG#v}"
             why="the released version, injected at package time"
@@ -195,34 +224,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # A published chart version is taken, exactly like a crates.io version —
-      # except the registry will happily overwrite it, so the refusal has to live
-      # here. `helm show chart` exits 0 when the version resolves and 1 when it
-      # does not (verified against a local registry).
-      #
-      # It is a REFUSAL only on a path that actually pushes. On a dry run it
-      # reports and continues: the tree's chart version is already published for
-      # the whole cycle after a release, so the unconditional refusal made a dry
-      # run impossible exactly when it is most useful — validating a change to
-      # this lane without publishing anything (measured on run 32960523630,
-      # where the guard fired before the dry-run branch was ever reached).
-      - name: Refuse to overwrite an already-published chart version
-        env:
-          VERSION: ${{ steps.chart.outputs.version }}
-          PUBLISHES: ${{ inputs.release-tag != '' || inputs.publish }}
-        run: |
-          set -euo pipefail
-          if ! helm show chart "oci://${CHART_REF}" --version "$VERSION" >/dev/null 2>&1; then
-            echo "chart version $VERSION is unpublished — proceeding."
-            exit 0
-          fi
-          if [ "$PUBLISHES" != "true" ]; then
-            echo "::notice::chart version $VERSION is already published at ${CHART_REF}; a real publish would be refused. This is a dry run, so it continues."
-            exit 0
-          fi
-          echo "::error::chart version $VERSION is already published at ${CHART_REF} — a published version is immutable; bump Chart.yaml version."
-          exit 1
 
       # WHICH image the chart is judged against is a per-trigger decision,
       # because the packaged appVersion and the chart's `config` defaults move on
@@ -443,8 +444,52 @@ jobs:
           bash deploy/helm/chart-sbom.sh "$PACKAGE" "$out" "" "$CHART_REF"
           echo "path=$out" >> "$GITHUB_OUTPUT"
 
+      # A published chart version is taken, exactly like a crates.io version,
+      # except the registry will happily overwrite it, so the refusal lives
+      # here. A version already in the registry is compared by its unpacked
+      # files with this package: the same files skip the push and the post-push
+      # steps act on the published digest (a re-run finishing a leg that failed
+      # after its push); other files refuse a publish and are reported on a dry
+      # run. Only a registry answer of "not found" counts as unpublished; any
+      # other failure to read the registry stops the leg.
+      - name: Compare with a chart version already published
+        id: published
+        env:
+          VERSION: ${{ steps.chart.outputs.version }}
+          PACKAGE: ${{ steps.package.outputs.path }}
+          PUBLISHES: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          mkdir -p published
+          if ! helm pull "oci://${CHART_REF}" --version "$VERSION" --destination published > pull.log 2>&1; then
+            cat pull.log
+            if grep -qE ': (not found|name unknown)' pull.log; then
+              echo "chart version $VERSION is unpublished — proceeding."
+              exit 0
+            fi
+            echo "::error::the registry did not answer whether ${CHART_REF}:${VERSION} is published"
+            exit 1
+          fi
+          cat pull.log
+          digest="$(sed -nE 's/^Digest: (sha256:[0-9a-f]{64})$/\1/p' pull.log)"
+          [ -n "$digest" ] || { echo "::error::helm pull printed no digest for ${CHART_REF}:${VERSION}"; exit 1; }
+          if bash lane/scripts/release/chart-published.sh compare "published/ferroehr-${VERSION}.tgz" "$PACKAGE"; then
+            if [ "$PUBLISHES" = "true" ]; then
+              echo "::notice::chart ${VERSION} is published already with the same files; the push is skipped and ${digest} is signed and attested."
+              echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+            else
+              echo "::notice::chart ${VERSION} is published already with the same files; a publish would sign and attest ${digest}. This is a dry run."
+            fi
+            exit 0
+          fi
+          if [ "$PUBLISHES" = "true" ]; then
+            echo "::error::chart version $VERSION is already published at ${CHART_REF} with other files — a published version is immutable; bump Chart.yaml version."
+            exit 1
+          fi
+          echo "::notice::chart version $VERSION is already published at ${CHART_REF} with other files; a real publish would be refused. This is a dry run, so it continues."
+
       - name: Dry run — everything but the push
-        if: inputs.release-tag == '' && !inputs.publish
+        if: ${{ !inputs.publish }}
         env:
           PACKAGE: ${{ steps.package.outputs.path }}
         run: |
@@ -453,7 +498,7 @@ jobs:
 
       - name: Push the chart
         id: push
-        if: inputs.release-tag != '' || inputs.publish
+        if: inputs.publish && steps.published.outputs.digest == ''
         env:
           PACKAGE: ${{ steps.package.outputs.path }}
         run: |
@@ -462,6 +507,20 @@ jobs:
           digest=$(sed -nE 's/^Digest: (sha256:[0-9a-f]+)$/\1/p' push.log)
           [ -n "$digest" ] || { echo "::error::could not read the pushed digest from helm push output"; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # The one digest every post-push step acts on: the one this run pushed, or
+      # the published one whose files this package matches.
+      - name: The published digest
+        id: digest
+        if: inputs.publish
+        env:
+          PUSHED: ${{ steps.push.outputs.digest }}
+          PUBLISHED: ${{ steps.published.outputs.digest }}
+        run: |
+          set -euo pipefail
+          digest="${PUSHED:-$PUBLISHED}"
+          [ -n "$digest" ] || { echo "::error::neither a pushed nor a published digest to sign"; exit 1; }
+          echo "value=$digest" >> "$GITHUB_OUTPUT"
 
       # A keyless cosign SIGNATURE over the pushed digest. Distinct from the
       # attestation below and not redundant with it: the attestation answers
@@ -487,14 +546,14 @@ jobs:
       # directions.
       - name: Sign the chart with keyless cosign
         id: sign
-        if: steps.push.outputs.digest != ''
+        if: steps.digest.outputs.value != ''
         env:
-          DIGEST: ${{ steps.push.outputs.digest }}
+          DIGEST: ${{ steps.digest.outputs.value }}
         run: |
           set -euo pipefail
-          # Retried: the chart is already pushed and immutable by this point, so
-          # a transient Sigstore outage must not strand a published-but-unsigned
-          # version (chart 6.0.14 was lost to a single Fulcio connection reset).
+          # Retried: the chart is already pushed by this point, so a transient
+          # Sigstore outage would leave a published-but-unsigned version until a
+          # re-run (chart 6.0.14 was lost to a single Fulcio connection reset).
           for attempt in 1 2 3; do
             if cosign sign --yes "${CHART_REF}@${DIGEST}"; then
               exit 0
@@ -517,11 +576,11 @@ jobs:
       # went missing.
       - name: Attest build provenance
         id: attest
-        if: steps.push.outputs.digest != ''
+        if: steps.digest.outputs.value != ''
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ${{ env.CHART_REF }}
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ steps.digest.outputs.value }}
           push-to-registry: true
           # No artifact-metadata storage record: the org uses no linked-artifacts
           # view, and the record would need an artifact-metadata: write grant.
@@ -533,11 +592,11 @@ jobs:
       # the signature or the provenance the step below reads back.
       - name: Attest the chart SBOM
         id: attest-sbom
-        if: steps.push.outputs.digest != ''
+        if: steps.digest.outputs.value != ''
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ${{ env.CHART_REF }}
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ steps.digest.outputs.value }}
           sbom-path: ${{ steps.sbom.outputs.path }}
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -561,7 +620,7 @@ jobs:
         id: verify
         if: steps.sign.outcome == 'success' && steps.attest.outcome == 'success' && steps.attest-sbom.outcome == 'success'
         env:
-          DIGEST: ${{ steps.push.outputs.digest }}
+          DIGEST: ${{ steps.digest.outputs.value }}
           REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -612,7 +671,7 @@ jobs:
       # The config media type ends `+yaml`; the layer media type ends `.v1.yaml`
       # with no `+`. They are not the same shape and a swap is silent.
       - name: Push the Artifact Hub ownership metadata
-        if: steps.push.outputs.digest != ''
+        if: steps.digest.outputs.value != ''
         run: |
           set -euo pipefail
           if grep -q 'REPLACE_WITH_ARTIFACT_HUB_REPOSITORY_ID' deploy/helm/artifacthub-repo.yml; then
@@ -631,7 +690,7 @@ jobs:
       # mistyped tag, or a registry that dropped the artifact all present as
       # "no Verified Publisher badge" weeks later, with no error anywhere.
       - name: Verify the ownership claim is readable and correct
-        if: steps.push.outputs.digest != ''
+        if: steps.digest.outputs.value != ''
         run: |
           set -euo pipefail
           layer="application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml"
@@ -654,30 +713,32 @@ jobs:
           echo "::notice::Verified Publisher applies on Artifact Hub's next processing cycle. The GHCR package must be PUBLIC for the hub to read it at all."
 
       # Everything after `helm push` operates on an artifact that is already
-      # PUBLIC and, by this lane's own refusal, immutable — so a failure there
-      # consumes the chart version rather than leaving the tree where it was. It
-      # happened on 5.0.0: the signing step failed, the chart stayed published
-      # unsigned and un-attested, and the obvious next move — re-run the lane —
-      # then failed on the immutability guard with a message about bumping
-      # Chart.yaml that read like a mistake in the branch rather than the
-      # consequence of the first failure. This says it at the point of the first
-      # failure instead.
+      # public. It happened on 5.0.0: the signing step failed, the chart stayed
+      # published unsigned and un-attested, and the re-run was refused by the
+      # overwrite guard. The comparison above makes that re-run the recovery:
+      # the same files skip the push and the post-push steps act on the
+      # published digest (#4331). This says so at the point of the failure.
       - name: What the failure left behind
-        if: failure() && steps.push.outputs.digest != ''
+        if: failure() && steps.digest.outputs.value != ''
         env:
           VERSION: ${{ steps.chart.outputs.version }}
-          DIGEST: ${{ steps.push.outputs.digest }}
+          DIGEST: ${{ steps.digest.outputs.value }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
         run: |
           {
             printf '## Chart %s is published, and this run failed after that\n\n' "$VERSION"
-            printf 'The chart was pushed (`%s`) before the failing step, so it is public and\n' "$DIGEST"
-            printf 'immutable: re-running this lane will be refused by the overwrite guard, and\n'
-            printf 're-pushing the tag would silently replace a version consumers may already have.\n\n'
-            printf 'It may be missing its signature, its attestation, or the Artifact Hub ownership\n'
-            printf 'tag, depending on where this run stopped — check the steps above.\n\n'
-            printf 'Fix the cause and ship it as the NEXT chart version. Leave %s as it is.\n' "$VERSION"
+            printf 'The chart is in the registry (`%s`), so it is public. It may be missing its\n' "$DIGEST"
+            printf 'signature, an attestation, or the Artifact Hub ownership tag, depending on\n'
+            printf 'where this run stopped; check the steps above.\n\n'
+            printf 'Fix the cause if it is ours, then re-run the failed jobs. The re-run packages\n'
+            printf 'the same chart, finds the published one holds the same files, skips the push\n'
+            printf 'and completes every step after it against `%s`.\n' "$DIGEST"
+            if [ -n "$RELEASE_TAG" ]; then
+              printf '\nA tag cut before this recovery existed is recovered from main instead:\n'
+              printf '`gh workflow run publish-chart.yml --ref main -f release-tag=%s -f publish=true`\n' "$RELEASE_TAG"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "::error::chart ${VERSION} is already published; fix the cause and ship the next version — do not re-run this lane for ${VERSION}."
+          echo "::error::chart ${VERSION} is published and a step after the push failed; re-run the failed jobs to finish it."
 
       - name: Summary
         if: always()
@@ -685,7 +746,7 @@ jobs:
           VERSION: ${{ steps.chart.outputs.version }}
           APP: ${{ steps.chart.outputs.effective }}
           COMMITTED_APP: ${{ steps.chart.outputs.app }}
-          DIGEST: ${{ steps.push.outputs.digest }}
+          DIGEST: ${{ steps.digest.outputs.value }}
           SIGNATURE: ${{ steps.verify.outputs.sig }}
           JUDGED: ${{ steps.judge.outputs.image }}
           WHY: ${{ steps.judge.outputs.why }}

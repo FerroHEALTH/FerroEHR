@@ -249,7 +249,7 @@ fn version_names_the_manufacturer() {
         format!(
             "ferroehr {}\nManufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The \
              Netherlands, info@cadasto.com\nhttps://www.cadasto.com/contact/\nSupport: {}\n",
-            env!("CARGO_PKG_VERSION"),
+            ferroehr::telemetry::provenance::SERVER_VERSION,
             ferroehr::support::SupportPeriod::current().describe_on(ferroehr::support::today_utc())
         )
     );

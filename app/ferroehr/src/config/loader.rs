@@ -413,6 +413,43 @@ mod tests {
         assert!(text.contains("auth.issuer"), "{text}");
     }
 
+    /// An unknown key in the file is named by its own dotted path, whether it
+    /// is a key of a known section, a table inside one, or a section of its
+    /// own, never by a doubled path such as `rest.rest`, and the refusal is
+    /// the same on every run (#4380).
+    #[test]
+    fn an_unknown_file_key_is_named_as_itself() {
+        for (text, key, doubled) in [
+            (
+                "[rest]\nno_such_key = true\n",
+                "rest.no_such_key",
+                "rest.rest",
+            ),
+            (
+                "[server.no_such_table]\nx = 1\n",
+                "server.no_such_table",
+                "no_such_table.no_such_table",
+            ),
+            (
+                "[no_such_section]\nx = 1\n",
+                "no_such_section",
+                "no_such_section.no_such_section",
+            ),
+        ] {
+            let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
+            assert_fs::prelude::FileWriteStr::write_str(&file, text).expect("write the config");
+            let refuse = || {
+                assemble_from(Some(file.path()), &env(&[]), &[])
+                    .expect_err("the unknown key is refused")
+                    .to_string()
+            };
+            let first = refuse();
+            assert!(first.contains(key), "{key} is named: {first}");
+            assert!(!first.contains(doubled), "no doubled path: {first}");
+            assert_eq!(first, refuse(), "the refusal is deterministic");
+        }
+    }
+
     /// Every name the loader passes without setting a key is accepted.
     #[test]
     fn the_reserved_names_pass_the_sweep() {
@@ -612,5 +649,101 @@ mod tests {
              composed server cannot start:\n{}",
             failures.join("\n")
         );
+    }
+
+    /// One inline server configuration of the quickstart: the `content` of
+    /// the compose config `name` in `docker-compose.yml`, with the compose
+    /// `$$` escape read back as `$`
+    /// (docs.docker.com/reference/compose-file/configs).
+    fn quickstart_config(name: &str) -> FerroEhrConfig {
+        let yaml = std::fs::read_to_string(repo_root().join("docker-compose.yml"))
+            .expect("read docker-compose.yml");
+        let opening = format!("  {name}:");
+        let mut lines = yaml
+            .lines()
+            .skip_while(|line| line.trim_end() != opening)
+            .skip(1);
+        assert_eq!(
+            lines.next().map(str::trim_end),
+            Some("    content: |"),
+            "{name} is an inline content block"
+        );
+        let text = lines
+            .take_while(|line| line.is_empty() || line.starts_with("      "))
+            .map(|line| {
+                line.strip_prefix("      ")
+                    .unwrap_or(line)
+                    .replace("$$", "$")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
+        assert_fs::prelude::FileWriteStr::write_str(&file, &text).expect("write the config");
+        let (_, config) = assemble_from(Some(file.path()), &env(&[]), &[])
+            .unwrap_or_else(|e| panic!("{name} assembles: {e}"));
+        config
+            .validate()
+            .unwrap_or_else(|e| panic!("{name} validates: {e}"));
+        config
+    }
+
+    /// The quickstart's two configurations, the one `FERROEHR_EHR_INDEX=local`
+    /// selects and the default, both validate and differ in the EHR index and
+    /// the pseudonym namespaces alone (#4379).
+    #[test]
+    fn the_quickstart_local_index_differs_in_the_ehr_index_alone() {
+        use crate::service::ehr_index::config::{EhrIndexConfig, ProviderKind};
+
+        let mut ihe = quickstart_config("ferroehr-config");
+        let mut local = quickstart_config("ferroehr-config-local");
+        assert_eq!(ihe.ehr_index.provider, ProviderKind::Ihe);
+        assert_eq!(ihe.privacy.subject_namespaces, ["urn:oid:2.999.7.1"]);
+        assert_eq!(local.ehr_index.provider, ProviderKind::Local);
+        assert!(
+            local.privacy.subject_namespaces.is_empty(),
+            "no pseudonym namespace is declared on the local index"
+        );
+        for config in [&mut ihe, &mut local] {
+            config.ehr_index = EhrIndexConfig::default();
+            config.privacy.subject_namespaces.clear();
+        }
+        assert_eq!(
+            serde_json::to_value(&ihe).expect("render"),
+            serde_json::to_value(&local).expect("render"),
+            "the two quickstart configurations differ beyond [ehr_index] and \
+             [privacy] subject_namespaces"
+        );
+    }
+
+    /// `FERROEHR__EHR_INDEX__PROVIDER=local` alone switches a configuration
+    /// written for an IHE patient identity source to the local index: the IHE
+    /// keys are kept and named as unused (#4379).
+    #[test]
+    fn the_provider_variable_alone_switches_the_ehr_index() {
+        let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
+        assert_fs::prelude::FileWriteStr::write_str(
+            &file,
+            "[privacy]\nsubject_namespaces = [\"urn:oid:2.999.7.1\"]\n\n\
+             [ehr_index]\nprovider = \"ihe\"\npixm_url = \"http://localhost:8090/fhir\"\n\
+             assigning_authority = \"urn:oid:2.999.7.1\"\n",
+        )
+        .expect("write the config");
+        let (_, config) = assemble_from(
+            Some(file.path()),
+            &env(&[("FERROEHR__EHR_INDEX__PROVIDER", "local")]),
+            &[],
+        )
+        .expect("the switched config assembles");
+        config.validate().expect("the switched config validates");
+        assert_eq!(
+            config.ehr_index.unused_keys(),
+            ["ehr_index.pixm_url", "ehr_index.assigning_authority"]
+        );
+        // The declared namespace stays in force under the local index, so every
+        // subject reference is still a pseudonym (no mixed mode, #4379).
+        let policy =
+            crate::privacy::PrivacyPolicy::compile(&config.privacy).expect("the policy compiles");
+        assert!(policy.subject_rule_in_force());
+        assert!(!policy.admits_subject("benchmark", "1793131381"));
     }
 }

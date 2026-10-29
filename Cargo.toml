@@ -397,7 +397,7 @@ leptos_router = "0.8.17"
 # The shared FerroHEALTH console components, role tokens, stylesheet and table
 # model (FerroUI), pinned exactly: a console moves its pin after looking at its
 # own screens.
-ferrohealth-ui = "=0.5.4"
+ferrohealth-ui = "=0.5.8"
 # The viewer's string catalogs (#300): Project Fluent messages embedded at
 # build time from app/ferroehr-viewer/locales/, the crate and version
 # ferrohealth-ui catalogs its own words with, so one locale drives both.
@@ -453,7 +453,7 @@ indexmap = { version = "2", features = ["serde"] }
 
 # ── HTTP client & external integration ───────────────────────────────────────
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "gzip", "brotli"] }
-jsonschema = "0.59.0"               # validate against openEHR ITS-JSON schemas (verify latest)
+jsonschema = "0.60.0"               # validate against openEHR ITS-JSON schemas (verify latest)
 
 # ── Dev / test (dev-dependencies at the crate level) ─────────────────────────
 insta = { version = "1", features = ["json", "redactions", "filters"] }

@@ -57,15 +57,12 @@ Rust 1.98 (edition 2024).
 
 ## License
 
-Business Source License 1.1 ([`LICENSE`](LICENSE), SPDX `BUSL-1.1`), the
-licence of the FerroEHR application: all non-production use is free, production
-use is free for Non-Commercial Purposes, and any other production use, hosting
-for third parties or distribution for a fee needs a commercial licence from the
-Licensor, Cadasto B.V.: write to [info@cadasto.com](mailto:info@cadasto.com)
-or use <https://www.cadasto.com/contact/>. Each version becomes Apache License
-2.0 four years after it is published. The crate is hand-written; the openEHR
-specification text it implements is the authority but is not embedded in the
-package. Versions up to 0.0.59 were published under Apache-2.0 and keep it.
+Apache License 2.0 ([`LICENSE-APACHE-2.0`](LICENSE-APACHE-2.0), SPDX
+`Apache-2.0`) from 0.0.116. The crate is hand-written from the openEHR AQL
+grammar, which openEHR publishes under Apache-2.0; every file names
+Cadasto B.V. and the openEHR Foundation as copyright holders. Versions 0.0.60 to
+0.0.115 were published under the Business Source License 1.1 and keep it;
+versions up to 0.0.59 were published under Apache-2.0.
 
 ## Part of FerroEHR
 

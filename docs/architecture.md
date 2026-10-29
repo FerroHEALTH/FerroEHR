@@ -216,6 +216,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   database together). Schema preparation runs per database: the `ext` set is
   applied by whichever domain reaches that database first, so two co-located
   domains share one `ext` and a relocated domain carries its own copy.
+- **One checkout per pool per request.** Every REST request runs inside
+  `db::acquire::request_scope`: the connection a request takes from a pool is
+  kept between its statements and returns to the pool when the request
+  answers, so the access checks and the read or commit of one request queue
+  for the pool once, and the pool's release round trip is paid once. A background task outside a scope checks out per statement.
 - **Five `NOINHERIT` runtime roles** hold the domains: `ferroehr_clinical` and
   its read-only twin hold `clinical`, `ferroehr_party` and its twin hold
   `party`, and `ferroehr_linkage` holds `linkage` alone. Each is revoked from

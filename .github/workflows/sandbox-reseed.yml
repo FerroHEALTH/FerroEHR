@@ -35,6 +35,9 @@
 # seed always addresses the deployed version. The env contract between this
 # file and reseed.sh (SANDBOX_IDENTITIES) must stay readable by the scripts
 # of the release the box runs.
+# The verbs this file calls on the box's deploy.sh (`wipe`, `restart`,
+# `identities`) are asked for first (.github/actions/deploy-verbs): deploy.sh
+# does not update itself, so the box can hold an older release's copy.
 #
 # Secrets: HOSTED_SSH_KEY / HOSTED_KNOWN_HOSTS — the deploy key, in the
 # hosted environment. An empty secret is a hard failure, never a skip
@@ -201,6 +204,18 @@ jobs:
           fi
           echo "the sandbox serves FerroEHR $version; seeding with the scripts of $ref"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      # The verb contract is read with this workflow's own revision, which
+      # carries the action; the tag checkout below then replaces the tree.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The box's deploy script offers the identities verb
+        uses: ./.github/actions/deploy-verbs
+        with:
+          verb: identities
+          ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
+          known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

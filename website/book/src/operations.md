@@ -1000,6 +1000,16 @@ only busy keeps its requests queued up to
 [`db.acquire_timeout_secs`](installation/config-server.md#db) (30 seconds by
 default).
 
+A statement the database cancels (SQLSTATE `57014`, by
+[`db.statement_timeout_ms`](installation/config-server.md#db) or by an
+operator's `pg_cancel_backend`) also answers `503` with `Retry-After`: the
+statement rolled back, so the request can be repeated. With the defaults the
+request timeout (30 seconds) answers first, so the statement timeout (60
+seconds) does not fire on a request. PostgreSQL measures its timeouts against
+the database host's wall clock, so a host whose clock steps forward, such as a
+virtual machine resynchronised after a stall, cancels every running statement
+at once; keep the database host's clock synchronised by slewing, not stepping.
+
 ## The management surface
 
 The management surface is **ops introspection only**: build info, Prometheus,
@@ -1084,7 +1094,7 @@ surface an operator or a user reads:
 | Surface | What it shows |
 |---|---|
 | startup banner | `Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/`, then the postal address and `info@cadasto.com` |
-| `ferroehr --version` | the version, then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
+| `ferroehr --version` | the version (a release build prints the release, any other build appends its commit as `+dev.<commit>`, as `server_version` on `GET /ferroehr/rest/status` does), then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
 | `GET /management/info` | a `manufacturer` object with `name`, `postal_address`, `email` and `website` |
 | `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[rest.identity]`](installation/config-server.md#restidentity)) |
 | viewer | the footer of every screen, and a Manufacturer card on `/system` |

@@ -39,9 +39,16 @@
 # A patient is registered with FerroPIX by its Patient Identity Source, the
 # client `quickstart-source` (https://ferropix.eu/docs/integrate/pixm-manager.html).
 #
-# To run FerroEHR on its own instead (development, a single-source
-# installation), set [ehr_index] provider = "local" in the config block and
-# drop the identity services; the server refuses to start with neither.
+# ── The local EHR index (the subject-id posture) ──────────────────────────────
+# The other supported posture keeps the subject-to-EHR cross-reference in
+# FerroEHR itself: EHR_STATUS.subject names a patient by its own namespace and
+# identifier (`benchmark` / `1793131381`), and GET /ehr?subject_id=&subject_namespace=
+# finds it. One variable selects it, with no copy of the config to make:
+#   FERROEHR_EHR_INDEX=local docker compose up
+# It runs the `ferroehr-config-local` block below, which differs from
+# `ferroehr-config` in [ehr_index] and [privacy] alone: no pseudonym namespace,
+# so a subject reference is stored as the client sends it. The identity
+# services still start; nothing asks them.
 #
 # ── The two quickstart variants ───────────────────────────────────────────────
 # Basic auth only (this file alone):
@@ -432,7 +439,7 @@ services:
   # below names the client `ferroehr`). Pinned by tag and by the digest of its
   # image index.
   ferropix:
-    image: ghcr.io/ferrohealth/ferropix:0.0.7@sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825
+    image: ghcr.io/ferrohealth/ferropix:0.0.12@sha256:01adb1e7cc91b46409cc315162200fb99a712a9232508d5c85a228554d22d6d3
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer:
@@ -548,7 +555,8 @@ services:
     configs:
       # Named by FERROEHR_CONFIG above.
       # The inline quickstart posture — see the `configs:` block at the bottom.
-      - source: ferroehr-config
+      # FERROEHR_EHR_INDEX=local selects `ferroehr-config-local` instead.
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
         target: /etc/ferroehr/ferroehr.toml
     # The image is distroless/nonroot and the server binds 8080, so it needs no
     # capability at all — not even NET_BIND_SERVICE (that is for ports < 1024).
@@ -853,6 +861,83 @@ configs:
       url = "http://ferroterm:8080/r4b"
       fail_on_error = false
 
+  # The same quickstart configuration on the local EHR index, selected by
+  # FERROEHR_EHR_INDEX=local; it differs from `ferroehr-config` in [ehr_index]
+  # and [privacy] alone, which a test of the configuration loader holds.
+  ferroehr-config-local:
+    content: |
+      # The declared posture, explicit because this file is the quickstart: a
+      # sandbox must not hold real patient data, names the separations it lacks
+      # on the boot banner, and reports its profile on GET /ferroehr/rest/status.
+      deployment_profile = "sandbox"
+
+      # Per authenticated caller, refused 429 + Retry-After past it.
+      [server.caller_rate]
+      requests_per_second = 1024
+      burst = 2048
+
+      [rest]
+      # Permissive CORS — quickstart only. Production configures explicit origins.
+      cors_permissive = true
+
+      [auth]
+      enabled = true
+
+      # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
+      # "ferroehr"). Replace with your own users — or an [auth] issuer — before
+      # exposing the server to anything real. Every route checks the SMART on
+      # openEHR scopes a user holds: these grant every resource family, and
+      # the product scope admits the ADMIN and DEMOGRAPHIC APIs.
+      [[auth.basic.users]]
+      user = "ferroehr"
+      password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+      scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+      roles = ["ADMIN", "USER"]
+
+      # Quickstart: authentication only, no role gate — the one user above can
+      # use the clinical API, the admin API and the management endpoints.
+      [authz.rbac]
+      enabled = false
+
+      # The admin API (DELETE /admin/...) — on for the quickstart so the
+      # optional viewer's panels work; keep off in production unless
+      # operationally needed.
+      [admin]
+      enabled = true
+
+      # Ops introspection (/management/...) on the main listener, for the
+      # optional viewer and for curl-based poking. The health probes
+      # (/health, /health/liveness, /health/readiness) are always served and
+      # need none of this; they report statuses only, and the detail behind
+      # them is /management/health.
+      [management]
+      enabled = true
+
+      [management.endpoints]
+      info = "private"
+      metrics = "private"
+      prometheus = "public"
+      env = "admin_only"
+      loggers = "admin_only"
+      health = "admin_only"
+      status = "admin_only"
+
+      # The local EHR index: FerroEHR keeps the subject-to-EHR cross-reference,
+      # and EHR_STATUS.subject names a patient by its own namespace and
+      # identifier. No [privacy] subject_namespaces, so no pseudonym namespace
+      # is in force and a subject reference is stored as the client sends it.
+      [ehr_index]
+      provider = "local"
+
+      # The terminology server FerroTERM, declared here and switched on by
+      # docker-compose.terminology.yml (the overlay only flips the switch, so
+      # the two files never disagree about where the server is). Off, the CDR
+      # resolves nothing externally and this block is inert.
+      [terminology.server]
+      enabled = false
+      url = "http://ferroterm:8080/r4b"
+      fail_on_error = false
+
   # FerroPIX's configuration (https://ferropix.eu/docs/operate/configuration.html):
   # the loopback base, the development issuer, one synthetic identifier domain
   # under the OID arc 2.999 (ITU-T X.660 reserves it for examples), and the
@@ -860,8 +945,6 @@ configs:
   ferropix-config:
     content: |
       profile = "production"
-
-      [server]
       public_base_url = "http://localhost:8090"
 
       [db]
@@ -874,8 +957,13 @@ configs:
       # The development issuer signs plain JWTs (`typ` JWT), hence `jwt`.
       [[auth.issuer]]
       issuer = "http://localhost:8180/quickstart"
-      clients = ["quickstart-source"]
       token_profile = "jwt"
+
+      # The clients the issuer signs for that may act as a Patient Identity
+      # Source.
+      [[trust.issuer]]
+      issuer = "http://localhost:8180/quickstart"
+      clients = ["quickstart-source"]
 
       [[domain]]
       system = "urn:oid:2.999.1.1"

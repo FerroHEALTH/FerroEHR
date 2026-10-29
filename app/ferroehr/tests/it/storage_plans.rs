@@ -682,6 +682,69 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
     assert_no_policy_qual(&plan, &scans);
 }
 
+/// The archetype columns carry one statistics object, so the planner sees that
+/// an archetype fixes its RM type, entity and major version instead of
+/// multiplying their selectivities (PostgreSQL 18, "Extended Statistics").
+#[tokio::test]
+async fn the_archetype_columns_carry_dependency_statistics() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let (columns, kinds): (Vec<String>, Vec<String>) = sqlx::query_as(
+        "SELECT ARRAY(SELECT a.attname::text FROM unnest(s.stxkeys) AS k(n) \
+                      JOIN pg_attribute a ON a.attrelid = s.stxrelid AND a.attnum = k.n \
+                      ORDER BY a.attnum), \
+                s.stxkind::text[] \
+         FROM pg_statistic_ext s \
+         WHERE s.stxname = 'st_node_hot_archetype' \
+           AND s.stxrelid = 'clinical.node_hot'::regclass",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the archetype statistics object exists");
+    assert_eq!(
+        columns,
+        ["rm_type", "arch_entity", "arch_concept", "arch_major"]
+    );
+    assert!(kinds.contains(&"f".to_owned()), "dependencies: {kinds:?}");
+    assert!(
+        kinds.contains(&"m".to_owned()),
+        "most common values: {kinds:?}"
+    );
+}
+
+/// A population count of a whole object reads no node row (#4286).
+///
+/// `COUNT(c)` and `COUNT(*)` ask only whether each COMPOSITION is there
+/// (QUERY master03 §COUNT), which the current version row of an object that
+/// is not logically deleted answers; probing `node` for every root row cost
+/// 25 s at 500 000 compositions.
+#[tokio::test]
+async fn a_population_count_of_whole_objects_reads_no_node() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed(&svc, &pool).await;
+
+    for aql in [
+        "SELECT count(c) FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT count(*) FROM EHR e CONTAINS COMPOSITION c",
+    ] {
+        let plan = explain_aql(&pool, aql_sql(aql, Vec::new())).await;
+        let scans = scans(&plan);
+        assert!(
+            partitions(&scans, "node").is_empty(),
+            "{aql} reads no node partition:\n{}",
+            render(&scans)
+        );
+        assert_eq!(
+            partitions(&scans, "version"),
+            vec!["version_hot"],
+            "{aql} reads the hot version partition:\n{}",
+            render(&scans)
+        );
+    }
+}
+
 /// The `LATEST_VERSION` binding under `CONTAINS` costs one key probe per
 /// object, not a walk of its trunk (#3453).
 ///

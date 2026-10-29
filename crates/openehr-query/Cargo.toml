@@ -1,16 +1,16 @@
 [package]
 name = "openehr-query"
-version = "0.0.115"
+version = "0.0.118"
 description = "openEHR QUERY (AQL 1.1.0): hand-written lexer, parser, typed AST and canonical printer from the official grammar (no ANTLR runtime)"
 edition.workspace = true
 rust-version.workspace = true
-license = "BUSL-1.1"
+license = "Apache-2.0"
 repository.workspace = true
 documentation = "https://docs.rs/openehr-query"
 readme = "README.md"
 keywords = ["openehr", "aql", "query", "parser", "healthcare"]
 categories = ["parser-implementations", "science"]
-include = ["src/**", "README.md", "LICENSE"]
+include = ["src/**", "README.md", "LICENSE-APACHE-2.0"]
 
 [dependencies]
 logos.workspace = true

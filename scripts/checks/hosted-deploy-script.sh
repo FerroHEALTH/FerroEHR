@@ -107,6 +107,39 @@ compose_paths_baked() {
   done < <(grep -oE '/opt/sandbox-posture/[A-Za-z0-9._-]+' "$compose" | sort -u)
   return "$rc"
 }
+# The verb contract (#4372): the verbs the script's `case` admits, the list its
+# `verbs` verb answers, and every verb a caller names must agree, because the
+# script on the box does not update itself and its callers run from main.
+# $1 the extracted script, $2.. the caller files.
+verb_contract() {
+  local script="$1" admitted answered called v rc=0
+  shift
+  admitted="$(sed -nE 's/^  ([a-z|]+)\) ;;$/\1/p' "$script" | sed -n 1p | tr '|' '\n' | sort -u | paste -sd' ' -)"
+  answered="$(sed -nE 's/^  echo "verbs ([a-z ]+)"$/\1/p' "$script" | tr ' ' '\n' | sort -u | paste -sd' ' -)"
+  if [[ -z "$admitted" || "$admitted" != "$answered" ]]; then
+    echo "::error::the deploy script admits '${admitted}' and its verbs verb answers '${answered}'; the two lists must be the same" >&2
+    return 1
+  fi
+  # shellcheck disable=SC2016 # the literal $HOST is the caller's text being matched
+  called="$(grep -hoE '(remote-command|verb): [a-z]+$|SSH_ORIGINAL_COMMAND=[a-z]+|"deploy@\$HOST" [a-z]+' "$@" \
+    | sed -E 's/.*[:= ]//' | sort -u)"
+  for v in $called; do
+    if [[ " $admitted " != *" $v "* ]]; then
+      echo "::error::a caller of the deploy script names the verb '$v', which the script does not offer ($admitted)" >&2
+      rc=1
+    fi
+  done
+  return "$rc"
+}
+
+readonly VERB_CALLERS=(
+  .github/actions/hosted-deploy/action.yml
+  .github/workflows/sandbox-reseed.yml
+  .github/workflows/hosted-deploy.yml
+  .github/workflows/release.yml
+  deploy/hosted/sandbox-ferropix-rollout.sh
+)
+
 if ! command -v shellcheck >/dev/null 2>&1; then
   echo "::error::shellcheck is not installed, so this guard would pass vacuously" >&2
   echo "install it (https://github.com/koalaman/shellcheck#installing) and re-run." >&2
@@ -140,7 +173,24 @@ if [[ "${1:-}" == "--self-test" ]]; then
     exit 1
   fi
   compose_paths_baked deploy/hosted/docker-compose.yml docker/Dockerfile >/dev/null
-  echo "hosted-deploy-script: self-test OK (a seeded unquoted expansion and an unbaked compose path are caught, the committed files pass)."
+  {
+    echo '  deploy|wipe) ;;'
+    echo '  echo "verbs deploy wipe"'
+  } > "$scratch/deploy.sh"
+  printf '        remote-command: restart\n' > "$scratch/caller.yml"
+  if verb_contract "$scratch/deploy.sh" "$scratch/caller.yml" >/dev/null 2>&1; then
+    echo "::error::the self-test's caller of a verb the script lacks was not caught" >&2
+    exit 1
+  fi
+  printf '  echo "verbs deploy"\n' > "$scratch/answer"
+  { echo '  deploy|wipe) ;;'; cat "$scratch/answer"; } > "$scratch/deploy.sh"
+  if verb_contract "$scratch/deploy.sh" /dev/null >/dev/null 2>&1; then
+    echo "::error::the self-test's verbs answer that disagrees with the case was not caught" >&2
+    exit 1
+  fi
+  extract "$CLOUD_INIT" > "$scratch/committed.sh"
+  verb_contract "$scratch/committed.sh" "${VERB_CALLERS[@]}" >/dev/null
+  echo "hosted-deploy-script: self-test OK (a seeded unquoted expansion, an unbaked compose path, a verb the script lacks and a verbs answer that disagrees are caught, the committed files pass)."
   exit 0
 fi
 
@@ -163,8 +213,13 @@ rm -f "$script_tmp"
 
 compose_paths_baked deploy/hosted/docker-compose.yml docker/Dockerfile || missing=1
 
+script_tmp="$(mktemp)"
+extract "$CLOUD_INIT" > "$script_tmp"
+verb_contract "$script_tmp" "${VERB_CALLERS[@]}" || missing=1
+rm -f "$script_tmp"
+
 # An explicit exit: bash before 4.1 does not stop on a failing [[ ]] under set -e.
 if [[ "$missing" -ne 0 ]]; then
   exit 1
 fi
-echo "hosted-deploy-script: the $SCRIPT_PATH embedded in $CLOUD_INIT is shellcheck-clean and every posture path it reads is baked — OK."
+echo "hosted-deploy-script: the $SCRIPT_PATH embedded in $CLOUD_INIT is shellcheck-clean, every posture path it reads is baked, and every verb a caller names is one it offers — OK."

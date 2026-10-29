@@ -32,8 +32,8 @@ use std::sync::{Arc, LazyLock};
 use std::sync::{Mutex, PoisonError};
 
 use jiff_sqlx::Timestamp;
-use sqlx::postgres::PgRow;
-use sqlx::{PgPool, Row};
+use sqlx::postgres::{PgConnection, PgRow};
+use sqlx::{Connection, PgPool, Row};
 use tokio::sync::OnceCell;
 use uuid::Uuid;
 
@@ -213,6 +213,13 @@ impl WritePolicy {
 #[cfg(feature = "fhir")]
 type PolicyCache = Arc<Mutex<BTreeMap<Vec<u8>, Arc<CompiledPolicy>>>>;
 
+/// The shared sets a write learned, held once it commits.
+#[cfg(feature = "fhir")]
+type LearnedSets = crate::system_log::search::LearnedSets;
+/// A slim build stores no search tokens, so a write learns nothing.
+#[cfg(not(feature = "fhir"))]
+type LearnedSets = ();
+
 /// The PG-backed Audit Record Repository (the `store` sink).
 #[derive(Debug, Clone)]
 pub struct AuditStore {
@@ -294,9 +301,10 @@ impl AuditStore {
     }
 
     /// The `search_tokens` value of each record: the ITI-81 search tokens of
-    /// the document it renders under the store's policy. A record whose
-    /// document cannot be rendered is stored without tokens, metered and
-    /// logged, since its document cannot be served either.
+    /// the document it renders under the store's policy, stored on `conn`, with
+    /// the shared sets learned. A record whose document cannot be rendered is
+    /// stored without tokens, metered and logged, since its document cannot be
+    /// served either.
     ///
     /// # Errors
     /// The [`RenderPolicy::compile`] errors, [`AuditError::Store`] when a
@@ -305,8 +313,9 @@ impl AuditStore {
     #[cfg(feature = "fhir")]
     async fn search_tokens<'a>(
         &self,
+        conn: &mut PgConnection,
         records: impl Iterator<Item = (&'a AuditEvent, Option<&'a str>)>,
-    ) -> Result<Vec<Vec<i32>>, AuditError> {
+    ) -> Result<(Vec<Vec<i32>>, LearnedSets), AuditError> {
         let compiled = self
             .writing
             .compiled
@@ -326,33 +335,45 @@ impl AuditStore {
                 }
             })
             .collect();
-        self.tokens.record_tokens(&self.pool, &tokens).await
+        self.tokens.record_tokens(conn, &tokens).await
+    }
+
+    /// Holds the shared sets of a committed write; a slim build stores no
+    /// search tokens, so it learns no set.
+    fn remember(&self, learned: LearnedSets) {
+        #[cfg(feature = "fhir")]
+        self.tokens.remember(learned);
+        #[cfg(not(feature = "fhir"))]
+        let _: (LearnedSets, &Self) = (learned, self);
     }
 
     /// The `search_tokens` of each record of a batch, as the text of an
-    /// `integer[]` the batched insert casts.
+    /// `integer[]` the batched insert casts, with the shared sets learned.
     ///
     /// # Errors
     /// As [`Self::search_tokens`].
     #[cfg(feature = "fhir")]
     async fn batch_tokens(
         store: &Self,
+        conn: &mut PgConnection,
         records: &[AuditRecord],
-    ) -> Result<Vec<String>, AuditError> {
-        let ids = store
+    ) -> Result<(Vec<String>, LearnedSets), AuditError> {
+        let (ids, learned) = store
             .search_tokens(
+                conn,
                 records
                     .iter()
                     .map(|record| (&record.event, record.subject.as_deref())),
             )
             .await?;
-        Ok(ids
+        let texts = ids
             .iter()
             .map(|ids| {
                 let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
                 format!("{{{}}}", ids.join(","))
             })
-            .collect())
+            .collect();
+        Ok((texts, learned))
     }
 
     /// A slim build refuses the store at start
@@ -361,14 +382,15 @@ impl AuditStore {
     #[cfg(not(feature = "fhir"))]
     fn batch_tokens(
         _store: &Self,
+        _conn: &mut PgConnection,
         records: &[AuditRecord],
-    ) -> std::future::Ready<Result<Vec<String>, AuditError>> {
-        std::future::ready(Ok(records.iter().map(|_| "{}".to_owned()).collect()))
+    ) -> std::future::Ready<Result<(Vec<String>, LearnedSets), AuditError>> {
+        std::future::ready(Ok((records.iter().map(|_| "{}".to_owned()).collect(), ())))
     }
 
     /// Persist one audit record: its facts as columns, under the store's
-    /// render policy. Returns the stored row id (for the per-sink delivery
-    /// stamps).
+    /// render policy, in one transaction with its search tokens. Returns the
+    /// stored row id (for the per-sink delivery stamps).
     ///
     /// # Errors
     /// [`AuditError::Store`] when the INSERT fails.
@@ -378,17 +400,20 @@ impl AuditStore {
         subject: Option<&str>,
     ) -> Result<Uuid, AuditError> {
         let policy = self.writing_digest().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         #[cfg(feature = "fhir")]
-        let tokens = self
-            .search_tokens(std::iter::once((event, subject)))
-            .await?
-            .pop()
-            .ok_or(AuditError::SearchToken)?;
+        let (tokens, learned) = {
+            let (mut tokens, learned) = self
+                .search_tokens(&mut tx, std::iter::once((event, subject)))
+                .await?;
+            (tokens.pop().ok_or(AuditError::SearchToken)?, learned)
+        };
         // NOTE: a slim build refuses the store at start, so no record it writes is searched.
         #[cfg(not(feature = "fhir"))]
-        let tokens: Vec<i32> = Vec::new();
+        let (tokens, learned): (Vec<i32>, LearnedSets) = (Vec::new(), ());
         let outcome = outcome_smallint(event);
-        sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
+        let id = sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
             .bind(Timestamp::from(event.timestamp))
             .bind(action_str(event))
             .bind(outcome)
@@ -427,10 +452,13 @@ impl AuditStore {
             .bind(category_content_json(event)?)
             .bind(policy)
             .bind(tokens)
-            .fetch_one(&mut *acquire(&self.pool).await?)
+            .fetch_one(&mut *tx)
             .await?
             .try_get::<Uuid, _>("id")
-            .map_err(AuditError::Store)
+            .map_err(AuditError::Store)?;
+        tx.commit().await?;
+        self.remember(learned);
+        Ok(id)
     }
 
     /// Persist a whole drained batch in ONE multi-row `INSERT` (UNNEST over
@@ -479,7 +507,30 @@ impl AuditStore {
             return Ok(());
         }
         let policy = self.writing_digest().await?;
-        let tokens = Self::batch_tokens(self, records).await?;
+        // NOTE: one transaction holds the tokens and the records, so a batch costs one commit.
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
+        let (tokens, learned) = Self::batch_tokens(self, &mut tx, records).await?;
+        self.insert_rows(&mut tx, records, ends, policy, tokens)
+            .await?;
+        tx.commit().await?;
+        self.remember(learned);
+        Ok(())
+    }
+
+    /// The multi-row `INSERT` of [`Self::write_batch`] on `conn`, each record
+    /// with its `search_tokens` text in `tokens`.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the INSERT fails.
+    async fn insert_rows(
+        &self,
+        conn: &mut PgConnection,
+        records: &[AuditRecord],
+        ends: &[RecordEnd],
+        policy: Vec<u8>,
+        tokens: Vec<String>,
+    ) -> Result<(), AuditError> {
         let mut recorded_at: Vec<Timestamp> = Vec::with_capacity(records.len());
         let mut actions: Vec<String> = Vec::with_capacity(records.len());
         let mut outcomes: Vec<i16> = Vec::with_capacity(records.len());
@@ -569,7 +620,7 @@ impl AuditStore {
             .bind(classified.contents)
             .bind(policy)
             .bind(tokens)
-            .execute(&mut *acquire(&self.pool).await?)
+            .execute(&mut *conn)
             .await?;
         Ok(())
     }
