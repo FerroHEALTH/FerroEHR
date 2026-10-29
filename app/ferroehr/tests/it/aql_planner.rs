@@ -984,23 +984,26 @@ fn a_fragment_path_ending_on_a_list_names_its_elements() {
         };
         let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::new(), &ctx)
             .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"));
-        (built.sql, format!("{:?}", built.values))
+        // Whether the array-cell projection runs over a bound jsonpath equal to `jsonpath`.
+        move |jsonpath: &str| {
+            let array_cell =
+                built.sql.contains("jsonb_path_query_array(") && built.sql.contains("nullif(");
+            let bound = format!("{:?}", built.values).contains(&format!("{jsonpath:?}"));
+            (array_cell, bound)
+        }
     };
-    let (sql, values) = built(
-        "SELECT c/feeder_audit/originating_system_item_ids FROM EHR e CONTAINS COMPOSITION c",
+    let list =
+        "SELECT c/feeder_audit/originating_system_item_ids FROM EHR e CONTAINS COMPOSITION c";
+    assert_eq!(
+        built(list)("$.originating_system_item_ids[*]"),
+        (true, true),
+        "a path ending on a list projects an array cell over the list's elements"
     );
-    assert!(
-        sql.contains("jsonb_path_query_array(") && sql.contains("nullif("),
-        "array-cell projection: {sql}"
-    );
-    assert!(
-        values.contains("\"$.originating_system_item_ids[*]\""),
-        "the list step names its elements: {values}"
-    );
-    let (_, below) = built("SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c");
-    assert!(
-        below.contains("$.links[*].target.value"),
-        "the path below a list matches each element's value: {below}"
+    let below = "SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c";
+    assert_eq!(
+        built(below)("$.links[*].target.value"),
+        (true, true),
+        "a path below a list projects an array cell over each element's value"
     );
 }
 
