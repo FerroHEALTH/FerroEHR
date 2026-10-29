@@ -689,6 +689,11 @@ It prints every disagreement and exits non-zero on any. A disagreement is
 either FerroEHR's or a shared crate's defect, filed and fixed, or the other
 side's, recorded with the profile text that shows it.
 
+The run of 2026-10-29 found no disagreement: HAPI FHIR accepted and validated
+all 71 records of the window, syslog-ng parsed all 72 messages, and the ten
+ITI-81 searches answered the same records on both repositories
+([the record](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/interop/atna/2026-10-29.md)).
+
 ## Configuration summary
 
 Auditing defaults to on with the local store only; see the
