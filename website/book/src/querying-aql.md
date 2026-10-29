@@ -101,10 +101,25 @@ ORDER BY systolic DESC
   bindings: `EXISTS` holds when any node on the path carries the data and
   `NOT EXISTS` when none does, whatever the other tests bind.
 
-  Projecting a path that crosses a list attribute inside a node's data returns
-  every match as one JSON array cell, and `null` where nothing matches. Paths
-  through different repeated steps of one variable are bound independently, so
-  selecting both returns every combination of their nodes.
+  A list attribute in a projected path is read by one of two rules, depending
+  on what the list holds:
+  - **Row rule:** a list that holds structure nodes (`c/content`,
+    `p/identities`, `.../items`, `.../events`) gives one **row** per node.
+    `SELECT o/data[at0001]/events/time/value` over an observation with two
+    events answers two rows, one time each.
+  - **Cell rule:** a list inside one node's data (`links`,
+    `context/participations`, `composer/identifiers`, `mappings`,
+    `feeder_audit/originating_system_item_ids`) gives one **cell**. A path
+    that ends on the list answers the list itself, and a path that continues
+    below it answers the array of its matches. Both are `null` where nothing
+    matches. Over a composition with a placer and a filler order number,
+    `c/feeder_audit/originating_system_item_ids` answers
+    `[{"_type": "DV_IDENTIFIER", "id": "ORD-PLACER-1", ...}, {"_type": "DV_IDENTIFIER", "id": "ORD-FILLER-1", ...}]`
+    and `c/feeder_audit/originating_system_item_ids/id` answers
+    `["ORD-PLACER-1", "ORD-FILLER-1"]`.
+
+  Paths through different repeated steps of one variable are bound
+  independently, so selecting both returns every combination of their nodes.
 - **Aggregates read every data item of their path** in the rows `FROM` and
   `WHERE` select: `MAX(<systolic>)` over an observation measured twice sees
   both events, and `COUNT` over a list attribute counts its elements. An item
