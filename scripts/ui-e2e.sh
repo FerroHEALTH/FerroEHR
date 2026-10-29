@@ -362,9 +362,32 @@ if ! command -v "$CHROMEDRIVER_BIN" >/dev/null; then
   echo "FATAL: chromedriver not found (set CHROMEDRIVER)" >&2
   exit 1
 fi
-"$CHROMEDRIVER_BIN" --port=$DRIVER_PORT &
+# The driver's own log lands beside the screenshots, which the lane uploads
+# whatever the outcome, so a stalled command is read from its timestamps.
+"$CHROMEDRIVER_BIN" --port=$DRIVER_PORT --log-level=INFO \
+  --log-path="$SHOTS_DIR/chromedriver.log" &
 DRIVER_PID=$!
 wait_http "http://127.0.0.1:$DRIVER_PORT/status"
+# The first Chrome a fresh runner starts can take most of two minutes to answer,
+# which a journey's session start then spends: open one session and close it
+# before the journeys, waiting on the browser answering, for at most 180 s.
+warm_browser() {
+  local started=$SECONDS deadline=$((SECONDS + 180)) session
+  local caps='{"capabilities":{"alwaysMatch":{"browserName":"chrome","goog:chromeOptions":{"args":["--headless=new","--window-size=1440,900"]}}}}'
+  while ((SECONDS < deadline)); do
+    session="$(curl -s --max-time 120 -H 'Content-Type: application/json' -d "$caps" \
+      "http://127.0.0.1:$DRIVER_PORT/session" | jq -r '.value.sessionId // empty')"
+    if [[ -n "$session" ]]; then
+      curl -s --max-time 60 -X DELETE "http://127.0.0.1:$DRIVER_PORT/session/$session" >/dev/null
+      echo "── the browser answers (warm-up session took $((SECONDS - started)) s)"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "FATAL: chromedriver could not start a browser within 180 s" >&2
+  return 1
+}
+warm_browser
 
 # ── 5. The journeys ──────────────────────────────────────────────────────────
 # Prebuilt archive vs in-tree compile: one selection switch, used by both the

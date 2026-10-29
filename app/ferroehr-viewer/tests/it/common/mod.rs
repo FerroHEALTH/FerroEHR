@@ -49,6 +49,10 @@ const COMMAND_BUDGET: Duration = Duration::from_secs(10);
 /// The interval every poll loop here re-reads its condition at.
 const POLL_STEP: Duration = Duration::from_millis(200);
 
+/// How long a `WebDriver` command may take before the journey's output names
+/// it ([`bounded_for`]), so a failure reports where its time went.
+const SLOW_COMMAND: Duration = Duration::from_secs(1);
+
 /// The budget [`Harness::wait_hydrated`] allows, four times [`WAIT`]: the host
 /// lane's debug WASM is ~91 MB and the browser has to fetch, compile and run it
 /// before the marker appears, which is comfortably slower than any wait that
@@ -399,8 +403,7 @@ impl Harness {
     /// # Panics
     /// When the URL never matches within `budget`.
     pub(crate) async fn wait_url_contains_for(&self, fragment: &str, budget: Duration) {
-        let step = Duration::from_millis(200);
-        let mut waited = Duration::ZERO;
+        let started = tokio::time::Instant::now();
         loop {
             let url = bounded("current_url()", self.driver.current_url())
                 .await
@@ -409,11 +412,10 @@ impl Harness {
                 return;
             }
             assert!(
-                waited < budget,
-                "URL never contained `{fragment}` (last: {url})"
+                started.elapsed() < budget,
+                "URL never contained `{fragment}` within {budget:?} (last: {url})"
             );
-            tokio::time::sleep(step).await;
-            waited += step;
+            tokio::time::sleep(POLL_STEP).await;
         }
     }
 
@@ -425,13 +427,11 @@ impl Harness {
     /// When a toast is still visible after 15 s, or when the `WebDriver` stops
     /// answering — a stalled driver used to look exactly like a cleared screen.
     pub(crate) async fn wait_toasts_cleared(&self) {
-        for _ in 0..75 {
-            if count_matching(self, TOAST_CARD).await == 0 {
-                return;
-            }
-            tokio::time::sleep(Duration::from_millis(200)).await;
-        }
-        panic!("a toast never cleared (it would intercept the next click)");
+        let cleared = poll_until(async || count_matching(self, TOAST_CARD).await == 0).await;
+        assert!(
+            cleared,
+            "a toast never cleared (it would intercept the next click)"
+        );
     }
 
     /// Wait until client hydration has completed on the current page
@@ -1068,12 +1068,18 @@ async fn bounded_for<T>(
     budget: Duration,
     command: impl Future<Output = WebDriverResult<T>>,
 ) -> WebDriverResult<T> {
-    match tokio::time::timeout(budget, command).await {
+    let started = tokio::time::Instant::now();
+    let answer = match tokio::time::timeout(budget, command).await {
         Ok(answer) => answer,
         Err(_) => Err(WebDriverError::Timeout(format!(
             "`{what}` did not answer within {budget:?} (the harness command budget)"
         ))),
+    };
+    let elapsed = started.elapsed();
+    if elapsed >= SLOW_COMMAND {
+        println!("slow WebDriver command `{what}`: {elapsed:?}");
     }
+    answer
 }
 
 /// Whether a `WebDriver` error means the element is simply NOT THERE — the
@@ -1314,6 +1320,10 @@ pub(crate) async fn count_matching(h: &Harness, css: &str) -> usize {
 /// Poll `condition` every [`POLL_STEP`] until it holds, for at most `budget`;
 /// returns whether it did.
 ///
+/// The budget is wall-clock time, the condition's own commands counted, so a
+/// slow driver ends the wait at its budget instead of stretching it by the
+/// time each command takes.
+///
 /// The one poll loop every journey condition is written over, so a journey
 /// file needs no timer of its own — which is what lets
 /// `scripts/checks/e2e-waits.sh` refuse `sleep` there outright.
@@ -1321,16 +1331,15 @@ pub(crate) async fn poll_until_for(
     budget: Duration,
     mut condition: impl AsyncFnMut() -> bool,
 ) -> bool {
-    let mut waited = Duration::ZERO;
+    let started = tokio::time::Instant::now();
     loop {
         if condition().await {
             return true;
         }
-        if waited >= budget {
+        if started.elapsed() >= budget {
             return false;
         }
         tokio::time::sleep(POLL_STEP).await;
-        waited += POLL_STEP;
     }
 }
 
@@ -1681,7 +1690,10 @@ mod tests {
 
     use thirtyfour::error::{WebDriverError, WebDriverErrorInfo, WebDriverErrorInner};
 
-    use super::{COMMAND_BUDGET, WAIT, bounded, element_command, element_probe, is_absence};
+    use super::{
+        COMMAND_BUDGET, POLL_STEP, WAIT, bounded, element_command, element_probe, is_absence,
+        poll_until_for,
+    };
 
     /// The two failures a probe is allowed to read as "not there yet"
     /// ([`is_absence`]).
@@ -1774,6 +1786,28 @@ mod tests {
         )
         .await;
         panic!("a stalled driver must not answer `{answer:?}`");
+    }
+
+    /// A poll whose condition is slow to answer still ends at its budget: the
+    /// budget is wall-clock time, so the condition's own time counts.
+    #[tokio::test(start_paused = true)]
+    async fn a_slow_condition_ends_the_poll_at_its_budget() {
+        let started = tokio::time::Instant::now();
+        let held = poll_until_for(WAIT, async || {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            false
+        })
+        .await;
+
+        assert!(
+            !held,
+            "a condition that never holds is reported as not held"
+        );
+        assert!(
+            started.elapsed() < WAIT + Duration::from_secs(5) + POLL_STEP,
+            "the poll ends within its budget plus the one condition it was inside, not after {:?}",
+            started.elapsed()
+        );
     }
 
     /// A command that answers is handed back untouched — the bound adds no
