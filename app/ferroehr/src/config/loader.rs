@@ -413,6 +413,43 @@ mod tests {
         assert!(text.contains("auth.issuer"), "{text}");
     }
 
+    /// An unknown key in the file is named by its own dotted path, whether it
+    /// is a key of a known section, a table inside one, or a section of its
+    /// own, never by a doubled path such as `rest.rest`, and the refusal is
+    /// the same on every run (#4380).
+    #[test]
+    fn an_unknown_file_key_is_named_as_itself() {
+        for (text, key, doubled) in [
+            (
+                "[rest]\nno_such_key = true\n",
+                "rest.no_such_key",
+                "rest.rest",
+            ),
+            (
+                "[server.no_such_table]\nx = 1\n",
+                "server.no_such_table",
+                "no_such_table.no_such_table",
+            ),
+            (
+                "[no_such_section]\nx = 1\n",
+                "no_such_section",
+                "no_such_section.no_such_section",
+            ),
+        ] {
+            let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
+            assert_fs::prelude::FileWriteStr::write_str(&file, text).expect("write the config");
+            let refuse = || {
+                assemble_from(Some(file.path()), &env(&[]), &[])
+                    .expect_err("the unknown key is refused")
+                    .to_string()
+            };
+            let first = refuse();
+            assert!(first.contains(key), "{key} is named: {first}");
+            assert!(!first.contains(doubled), "no doubled path: {first}");
+            assert_eq!(first, refuse(), "the refusal is deterministic");
+        }
+    }
+
     /// Every name the loader passes without setting a key is accepted.
     #[test]
     fn the_reserved_names_pass_the_sweep() {

@@ -75,7 +75,7 @@ const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
 static VERSION_TEXT: LazyLock<String> = LazyLock::new(|| {
     format!(
         "{}\nSupport: {}",
-        MANUFACTURER.version_text(env!("CARGO_PKG_VERSION")),
+        MANUFACTURER.version_text(telemetry::provenance::SERVER_VERSION),
         SupportPeriod::current().describe_on(today_utc())
     )
 });

@@ -1084,7 +1084,7 @@ surface an operator or a user reads:
 | Surface | What it shows |
 |---|---|
 | startup banner | `Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/`, then the postal address and `info@cadasto.com` |
-| `ferroehr --version` | the version, then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
+| `ferroehr --version` | the version (a release build prints the release, any other build appends its commit as `+dev.<commit>`, as `server_version` on `GET /ferroehr/rest/status` does), then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
 | `GET /management/info` | a `manufacturer` object with `name`, `postal_address`, `email` and `website` |
 | `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[rest.identity]`](installation/config-server.md#restidentity)) |
 | viewer | the footer of every screen, and a Manufacturer card on `/system` |

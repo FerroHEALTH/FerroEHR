@@ -43,7 +43,7 @@ static BUILT_AT: LazyLock<String> = LazyLock::new(|| {
 pub fn build() -> ferrohealth_server::build_info::BuildInfo {
     ferrohealth_server::build_info::BuildInfo::new(
         env!("CARGO_PKG_NAME"),
-        env!("CARGO_PKG_VERSION"),
+        provenance::SERVER_VERSION,
     )
     .with_commit(env!("REVISION"))
     .with_built_at(BUILT_AT.as_str())

@@ -96,6 +96,10 @@ jobs:
         # `ferroehr-server` is the binary-producing crate (bin name stays
         # `ferroehr`) since the crate consolidation; `-p ferroehr` is the
         # platform library and yields no binary.
+        # FERROEHR_RELEASE_TAG marks this a release build, so the binary
+        # reports the bare release version rather than `+dev.<commit>`.
+        env:
+          FERROEHR_RELEASE_TAG: ${{ inputs.tag }}
         run: cargo auditable build --release --locked -p ferroehr-server
       - name: Package
         shell: bash
