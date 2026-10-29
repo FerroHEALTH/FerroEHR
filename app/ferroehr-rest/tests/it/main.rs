@@ -48,6 +48,7 @@ mod base_path_http;
 mod cohort_http;
 mod composition_validation_http;
 mod connection_bounds;
+mod connection_per_request;
 mod credential_separation;
 mod definition_adl2_http;
 mod definition_archetype_http;
