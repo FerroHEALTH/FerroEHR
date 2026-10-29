@@ -83,7 +83,7 @@ impl FullStatus {
     pub(crate) fn now(licence: LicenceStatus, deployment: DeploymentPosture) -> Self {
         Self {
             status: "UP",
-            server_version: env!("CARGO_PKG_VERSION"),
+            server_version: provenance::SERVER_VERSION,
             openehr_rest_api_version: provenance::ITS_REST,
             timestamp: jiff::Timestamp::now().to_string(),
             licence,
@@ -117,7 +117,7 @@ impl FullStatus {
 async fn status(State(state): State<AppState>) -> Json<PublicStatus> {
     Json(PublicStatus {
         status: "UP",
-        server_version: env!("CARGO_PKG_VERSION"),
+        server_version: provenance::SERVER_VERSION,
         openehr_rest_api_version: provenance::ITS_REST,
         timestamp: jiff::Timestamp::now().to_string(),
         deployment: PublicDeployment {

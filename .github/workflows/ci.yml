@@ -2841,6 +2841,23 @@ jobs:
       - name: compose image tags match the workspace version
         run: bash scripts/checks/compose-image-tags.sh
 
+  # Quickstart config guard (#4380): the inline configurations of
+  # docker-compose.yml must be readable by the images the file pins, or a
+  # downloader gets a server that refuses its own configuration. Runs each
+  # pinned image's `config check` over its block, on no network.
+  quickstart-config:
+    name: quickstart-config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The quickstart's inline configurations read under the pinned images
+        run: bash scripts/checks/quickstart-config-image.sh
+
   # Viewer tool-pin guard (#4222): the wasm-bindgen CLI must equal the
   # wasm-bindgen Cargo.lock resolves, and every cargo-leptos pin must agree,
   # or a viewer build in one lane fails its bindings step while CI is green.
@@ -2930,6 +2947,7 @@ jobs:
       - release-fragments
       - citation
       - compose-version-guard
+      - quickstart-config
       - viewer-tool-pins
       - crate-version
       - chart-version

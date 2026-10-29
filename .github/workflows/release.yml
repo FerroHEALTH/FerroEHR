@@ -712,8 +712,11 @@ jobs:
         # release commit here (an env, never interpolated into a shell) makes the
         # provenance explicit and does not depend on git being present in the
         # slim job container (it is not). Empty/absent degrades to `unknown`.
+        # FERROEHR_RELEASE_TAG marks this a release build, so the binary
+        # reports the bare release version rather than `+dev.<commit>`.
         env:
           REVISION: ${{ github.sha }}
+          FERROEHR_RELEASE_TAG: ${{ needs.plan.outputs.tag }}
         run: cargo auditable build --release --locked -p ferroehr-server
 
       - name: Strip

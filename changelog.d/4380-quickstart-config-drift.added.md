@@ -1,0 +1,1 @@
+- CI checks every inline configuration of the compose quickstart with the `config check` of the image the file pins, FerroEHR's and FerroPIX's, so the quickstart can no longer carry a configuration its pinned server refuses.

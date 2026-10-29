@@ -232,7 +232,8 @@ FerroEHR keeps no patient-to-record cross-reference of its own by default. It
 asks an IHE patient identity source over PIXm (ITI-83) which pseudonym the
 clinical domain holds for a patient
 ([`[ehr_index]`](config-integrations.md#ehr_index)). The quickstart runs
-FerroPIX as that source, pinned by tag and image-index digest, with four
+FerroPIX as that source, pinned by tag and image-index digest (CI runs the
+`config check` of every pinned image over its inline configuration), with four
 services beside the server:
 
 - **`identity-issuer`:** a development OpenID Provider (NAV's

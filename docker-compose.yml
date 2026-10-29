@@ -439,7 +439,7 @@ services:
   # below names the client `ferroehr`). Pinned by tag and by the digest of its
   # image index.
   ferropix:
-    image: ghcr.io/ferrohealth/ferropix:0.0.7@sha256:eaad206d6862208ca10046cf34898402dc85c16159a19e1fae8fc11d0e62b825
+    image: ghcr.io/ferrohealth/ferropix:0.0.12@sha256:01adb1e7cc91b46409cc315162200fb99a712a9232508d5c85a228554d22d6d3
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer:
@@ -945,8 +945,6 @@ configs:
   ferropix-config:
     content: |
       profile = "production"
-
-      [server]
       public_base_url = "http://localhost:8090"
 
       [db]
@@ -959,8 +957,13 @@ configs:
       # The development issuer signs plain JWTs (`typ` JWT), hence `jwt`.
       [[auth.issuer]]
       issuer = "http://localhost:8180/quickstart"
-      clients = ["quickstart-source"]
       token_profile = "jwt"
+
+      # The clients the issuer signs for that may act as a Patient Identity
+      # Source.
+      [[trust.issuer]]
+      issuer = "http://localhost:8180/quickstart"
+      clients = ["quickstart-source"]
 
       [[domain]]
       system = "urn:oid:2.999.1.1"
