@@ -761,7 +761,68 @@ impl Harness {
 
     /// End the session (screenshots + console gate are per-journey calls).
     pub(crate) async fn finish(self) {
-        bounded("quit()", self.driver.quit()).await.expect("quit");
+        bounded("quit()", self.driver.clone().quit())
+            .await
+            .expect("quit");
+    }
+}
+
+/// How long the session's end may take when a journey fails (#4393).
+const TEARDOWN_BUDGET: Duration = Duration::from_secs(10);
+
+/// A journey that fails ends its browser session within [`TEARDOWN_BUDGET`].
+///
+/// A panicking journey drops the `WebDriver` unquit, and thirtyfour's own
+/// fallback then ends the session synchronously under its 120 s request
+/// timeout, so a browser that stopped answering held the failed job for two
+/// minutes after the assertion had already failed (#4315). The session is
+/// leaked from thirtyfour instead, and ended here with one bounded
+/// `DELETE /session/{id}` on a runtime of its own (the journey's runtime is
+/// the one unwinding). The panic stays the assertion's own: nothing here
+/// panics, and a teardown that does not answer is only reported.
+impl Drop for Harness {
+    fn drop(&mut self) {
+        if !std::thread::panicking() {
+            return;
+        }
+        let url = format!(
+            "{}/session/{}",
+            self.driver.server_url().as_str().trim_end_matches('/'),
+            self.driver.session_id()
+        );
+        // A session `finish` already ended answers `AlreadyQuit`, and has
+        // nothing left to end.
+        if self.driver.clone().leak().is_err() {
+            return;
+        }
+        let ended = std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| format!("no teardown runtime: {e}"))?;
+            runtime.block_on(async move {
+                let client = reqwest::Client::builder()
+                    .timeout(TEARDOWN_BUDGET)
+                    .build()
+                    .map_err(|e| format!("no teardown client: {e}"))?;
+                let answer = client
+                    .delete(&url)
+                    .send()
+                    .await
+                    .map_err(|e| format!("DELETE {url}: {e}"))?;
+                if answer.status().is_success() {
+                    Ok(())
+                } else {
+                    Err(format!("DELETE {url} answered {}", answer.status()))
+                }
+            })
+        })
+        .join();
+        match ended {
+            Ok(Ok(())) => {}
+            Ok(Err(why)) => println!("the failed journey's browser session did not end: {why}"),
+            Err(_) => println!("the failed journey's browser teardown thread panicked"),
+        }
     }
 }
 
@@ -1725,8 +1786,8 @@ mod tests {
     use thirtyfour::error::{WebDriverError, WebDriverErrorInfo, WebDriverErrorInner};
 
     use super::{
-        COMMAND_BUDGET, POLL_STEP, WAIT, bounded, element_command, element_probe, is_absence,
-        poll_until_for,
+        COMMAND_BUDGET, Harness, POLL_STEP, TEARDOWN_BUDGET, WAIT, bounded, element_command,
+        element_probe, is_absence, poll_until_for,
     };
 
     /// The two failures a probe is allowed to read as "not there yet"
@@ -1862,6 +1923,75 @@ mod tests {
         assert!(
             started.elapsed() < COMMAND_BUDGET,
             "an answered command returns as soon as it answers"
+        );
+    }
+
+    /// A journey that fails ends its session within the teardown budget, with
+    /// the assertion's own panic, even when the driver never answers the
+    /// `DELETE` (#4393): a stand-in driver opens the session and then holds
+    /// the delete forever.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_failing_journey_ends_its_session_within_the_teardown_budget() {
+        use axum::routing::{delete, post};
+
+        let app = axum::Router::new()
+            .route(
+                "/session",
+                post(async || {
+                    axum::Json(serde_json::json!({
+                        "value": { "sessionId": "stand-in", "capabilities": { "browserName": "chrome" } }
+                    }))
+                }),
+            )
+            .route(
+                "/session/{id}",
+                delete(async || std::future::pending::<&'static str>().await),
+            )
+            .route(
+                "/session/{id}/timeouts",
+                post(async || axum::Json(serde_json::json!({ "value": null }))),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind the stand-in driver");
+        let address = listener.local_addr().expect("the stand-in's address");
+        tokio::spawn(async move { axum::serve(listener, app).await });
+
+        let driver = thirtyfour::WebDriver::builder(
+            format!("http://{address}"),
+            thirtyfour::DesiredCapabilities::chrome(),
+        )
+        .await
+        .expect("a session on the stand-in driver");
+        let harness = Harness {
+            driver,
+            base: String::new(),
+            shots_dir: String::new(),
+            journey: "teardown",
+            js: true,
+            withheld: false,
+        };
+
+        let started = std::time::Instant::now();
+        let failed = tokio::task::spawn_blocking(move || {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                let _held = harness;
+                panic!("the journey's own assertion");
+            }))
+        })
+        .await
+        .expect("the journey thread ends");
+        let elapsed = started.elapsed();
+
+        let payload = failed.expect_err("the journey failed");
+        assert_eq!(
+            payload.downcast_ref::<&str>().copied(),
+            Some("the journey's own assertion"),
+            "the failure stays the assertion's own"
+        );
+        assert!(
+            elapsed < TEARDOWN_BUDGET + Duration::from_secs(5),
+            "the teardown took {elapsed:?}, past its {TEARDOWN_BUDGET:?} budget"
         );
     }
 }
