@@ -59,8 +59,8 @@ Rust 1.98 (edition 2024).
 
 Apache License 2.0 ([`LICENSE-APACHE-2.0`](LICENSE-APACHE-2.0), SPDX
 `Apache-2.0`) from 0.0.116. The crate is hand-written from the openEHR AQL
-grammar, which openEHR publishes under Apache-2.0; every file names Cadasto
-B.V. and the openEHR Foundation as copyright holders. Versions 0.0.60 to
+grammar, which openEHR publishes under Apache-2.0; every file names
+Cadasto B.V. and the openEHR Foundation as copyright holders. Versions 0.0.60 to
 0.0.115 were published under the Business Source License 1.1 and keep it;
 versions up to 0.0.59 were published under Apache-2.0.
 
