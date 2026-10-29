@@ -1000,6 +1000,16 @@ only busy keeps its requests queued up to
 [`db.acquire_timeout_secs`](installation/config-server.md#db) (30 seconds by
 default).
 
+A statement the database cancels (SQLSTATE `57014`, by
+[`db.statement_timeout_ms`](installation/config-server.md#db) or by an
+operator's `pg_cancel_backend`) also answers `503` with `Retry-After`: the
+statement rolled back, so the request can be repeated. With the defaults the
+request timeout (30 seconds) answers first, so the statement timeout (60
+seconds) does not fire on a request. PostgreSQL measures its timeouts against
+the database host's wall clock, so a host whose clock steps forward, such as a
+virtual machine resynchronised after a stall, cancels every running statement
+at once; keep the database host's clock synchronised by slewing, not stepping.
+
 ## The management surface
 
 The management surface is **ops introspection only**: build info, Prometheus,
