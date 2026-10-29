@@ -315,7 +315,7 @@ async fn an_emergency_purpose_does_not_lift_a_gdpr_restriction() {
     // Each problem names its own request as `instance`; every other member is
     // the refusal itself.
     let without_instance = |body: &str| {
-        let mut problem: serde_json::Value = serde_json::from_str(body).expect("problem details");
+        let mut problem: Value = serde_json::from_str(body).expect("problem details");
         if let Some(members) = problem.as_object_mut() {
             members.remove("instance");
         }
