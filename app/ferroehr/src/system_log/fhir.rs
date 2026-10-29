@@ -20,6 +20,7 @@
 
 use std::net::IpAddr;
 
+use ehds_logging::balp::ObjectIds;
 use ehds_logging::emergency::EmergencyPurposes;
 use ehds_logging::label::LabelPolicy;
 use ehds_logging::record::{
@@ -51,6 +52,13 @@ pub const BALP_PROFILE_BASE: &str = "https://profiles.ihe.net/ITI/BALP/Structure
 // NOTE: no specification governs this: our own design; no external code system names the
 // openEHR REST operations, and the DICOM rendering names them `openEHR-ITS-REST`.
 pub const OPERATION_SYSTEM: &str = "urn:openehr:its-rest:operation";
+
+/// The namespace of the openEHR object ids (BASE 1.3.0 `OBJECT_ID.value`) an
+/// access record names its data entity by, written as
+/// `entity[data].what.identifier.system`.
+// NOTE: no specification governs this: our own design; an openEHR object id is no FHIR
+// resource, so it is an identifier (FHIR R4 references.html §2.3.0.3) in a namespace we name.
+pub const OBJECT_ID_SYSTEM: &str = "urn:openehr:object-id";
 
 /// The policies an access record is written under: how long the store keeps
 /// it, the security labels of its categories and origins, and the purposes of
@@ -137,13 +145,26 @@ pub fn to_fhir(
         source_types: vec![SOURCE_APPLICATION_SERVER],
     };
     let exchange = match access_record(event, ctx, subject) {
-        Some(record) => ehds_logging::balp::exchange(&record, &endpoint),
+        Some(record) => ehds_logging::balp::exchange_with(&record, &endpoint, &object_ids()?),
         None => exchange(event, ctx, subject, &endpoint),
     };
     exchange
         .audit_event_value(&observer)
         .map(ihe_atna::balp::AuditEventValue::into_value)
         .map_err(|e| AuditError::Render(Box::new(e)))
+}
+
+/// How an access record names the openEHR object ids FerroEHR passes as its
+/// resource: identifiers in [`OBJECT_ID_SYSTEM`], never literal references.
+///
+/// # Errors
+///
+/// [`AuditError::Render`] when [`OBJECT_ID_SYSTEM`] is not a URI.
+fn object_ids() -> Result<ObjectIds, AuditError> {
+    let system = url::Url::parse(OBJECT_ID_SYSTEM).map_err(|e| AuditError::Render(Box::new(e)))?;
+    Ok(ObjectIds::Identifiers {
+        system: Some(system),
+    })
 }
 
 /// The address the record names FerroEHR's own agent by: its
@@ -1103,6 +1124,37 @@ mod tests {
             "jti-1",
             "{classified}"
         );
+    }
+
+    /// The data entity of a classified read names the openEHR version uid as
+    /// an identifier in [`OBJECT_ID_SYSTEM`] and never as a reference, since
+    /// it is no FHIR resource (FHIR R4 references.html §2.3.0.2, §2.3.0.3).
+    #[test]
+    fn a_classified_read_names_its_object_by_identifier() {
+        let mut e = event(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        e.object_id = Some("8fa1::ferroehr::1".to_owned());
+        e.event_type = Some(EventType::rest("composition_get"));
+        e.category =
+            Some(Classifier::default().classify(&AccessedContent::Objects(Vec::new()), false));
+        let v = json(&e, Some("patient-42"));
+        let data: Vec<&serde_json::Value> = v["entity"]
+            .as_array()
+            .expect("entities")
+            .iter()
+            .filter(|entity| entity["role"]["code"] == "4")
+            .collect();
+        assert_eq!(data.len(), 1, "one data entity: {v}");
+        let what = &data[0]["what"];
+        assert_eq!(
+            what["identifier"],
+            serde_json::json!({ "system": OBJECT_ID_SYSTEM, "value": "8fa1::ferroehr::1" }),
+            "{v}"
+        );
+        assert!(what.get("reference").is_none(), "{v}");
     }
 
     /// The declared data permit (Regulation (EU) 2025/327 Art 68) follows the
