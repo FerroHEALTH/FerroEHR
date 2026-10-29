@@ -107,7 +107,7 @@ pub(super) async fn execute(
     // Config gate: the surface is off until a predicate is bound, and an
     // unbound deployment answers as if the route were not mounted.
     if !state.backend().cohort_enabled() {
-        return Err(RestError(ApiError::NotFound(
+        return Err(RestError::from(ApiError::NotFound(
             "cohort queries are not configured on this server".to_owned(),
         )));
     }

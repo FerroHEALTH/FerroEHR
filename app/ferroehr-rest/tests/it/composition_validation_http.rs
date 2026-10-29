@@ -7,9 +7,10 @@
 //!
 //! Wire oracle: ITS-REST 1.1.0
 //! `specifications/responses/422.yaml` ("content could be
-//! converted to a COMPOSITION, but there are semantic validation errors") and
-//! `schemas/others/Error.yaml` (the `Error` object's `validationErrors`
-//! list). The RM rule under test is `data_structures` §ELEMENT
+//! converted to a COMPOSITION, but there are semantic validation errors"),
+//! answered as RFC 9457 problem details whose `errors` member, the additional
+//! detail a `Prefer: return=representation` request receives
+//! (`Requests_and_responses.md` §HTTP status codes), lists the violations. The RM rule under test is `data_structures` §ELEMENT
 //! `Inv_null_flavour_indicated`.
 #![expect(
     clippy::unwrap_used,
@@ -129,8 +130,8 @@ fn strip_first_element_value(v: &mut Value) -> bool {
 /// > (`RM/docs/UML/classes/org.openehr.rm.data_structures.element.adoc`)
 ///
 /// The commit is a `422` (ITS-REST `responses/422.yaml`: converts,
-/// but does not validate) whose `Error` body carries the violation in
-/// `validationErrors`, keyed by the offending RM path and naming the
+/// but does not validate) whose problem details carry the violation in
+/// `errors`, keyed by the offending RM path and naming the
 /// invariant — so the client learns which node is wrong and why, instead of
 /// the element being silently dropped.
 #[tokio::test]
@@ -149,6 +150,7 @@ async fn composition_with_a_value_less_element_is_422_naming_the_invariant() {
             .method("POST")
             .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
             .header(header::CONTENT_TYPE, "application/json")
+            .header("prefer", "return=representation")
             .body(Body::from(broken.to_string()))
             .unwrap(),
     )
@@ -159,17 +161,26 @@ async fn composition_with_a_value_less_element_is_422_naming_the_invariant() {
         "an RM-invalid ELEMENT must not commit: {body}"
     );
 
-    let error: Value = serde_json::from_str(&body).expect("the 422 carries an Error object");
-    let entries = error["validationErrors"]
+    let error: Value = serde_json::from_str(&body).expect("the 422 carries problem details");
+    assert!(
+        error["type"]
+            .as_str()
+            .is_some_and(|t| t.ends_with("#validation-failed")),
+        "{body}"
+    );
+    let entries = error["errors"]
         .as_array()
-        .expect("the Error object lists validationErrors");
+        .expect("the problem lists its violations in errors");
     let named = entries
         .iter()
-        .filter_map(Value::as_str)
-        .find(|e| e.contains("Inv_null_flavour_indicated"))
+        .find(|e| {
+            e["detail"]
+                .as_str()
+                .is_some_and(|d| d.contains("Inv_null_flavour_indicated"))
+        })
         .unwrap_or_else(|| panic!("no entry names the invariant: {entries:?}"));
     assert!(
-        named.contains(": "),
-        "each validationErrors entry is `<rm path>: <message>`, got {named:?}"
+        named["path"].is_string(),
+        "each errors entry is `{{path, detail}}`, got {named:?}"
     );
 }

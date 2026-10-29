@@ -30,6 +30,7 @@
 - [Using the API](using-the-api/index.md)
   - [Resource walkthroughs](using-the-api/resources.md)
   - [Content negotiation & errors](using-the-api/content-negotiation.md)
+  - [Problem types](using-the-api/problems.md)
 - [Querying with AQL](querying-aql.md)
 - [Templates & validation](templates-validation.md)
 - [Beyond the core](beyond-core/index.md)

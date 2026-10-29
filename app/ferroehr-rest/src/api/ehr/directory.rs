@@ -53,7 +53,7 @@ pub(super) async fn run(
         "directory_create" => create(state, parts).await,
         "directory_delete" => delete(state, parts).await,
         "directory_get_by_version_id" => get_by_version_id(state, parts).await,
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"
         )))),
     }

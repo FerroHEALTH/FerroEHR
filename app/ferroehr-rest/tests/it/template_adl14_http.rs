@@ -367,9 +367,9 @@ async fn opt_upload_with_an_empty_typed_default_value_names_the_place() {
     let line = closing + 5;
     let (status, text) = upload_body(&app, &body).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{text}");
-    let message = serde_json::from_str::<Value>(&text).expect("an error document")["message"]
+    let message = serde_json::from_str::<Value>(&text).expect("an error document")["detail"]
         .as_str()
-        .expect("message")
+        .expect("detail")
         .to_owned();
     for expected in [
         r#"element <default_value xsi:type="DV_IDENTIFIER">"#,

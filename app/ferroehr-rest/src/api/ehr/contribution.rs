@@ -81,7 +81,7 @@ pub(super) async fn run(
                     .await?
                 }
                 _ => {
-                    return Err(RestError(ApiError::UnsupportedMediaType(
+                    return Err(RestError::from(ApiError::UnsupportedMediaType(
                         "a CONTRIBUTION is committed as application/json, \
                          application/openehr.wt.flat+json, or \
                          application/openehr.wt.structured+json"
@@ -188,7 +188,7 @@ pub(super) async fn run(
             // NOTE: no openEHR spec governs this — our own extension; the
             // contract defines only the by-uid CONTRIBUTION GET.
             let ehr_id_raw = parts.path.get("ehr_id").ok_or_else(|| {
-                RestError(ApiError::BadRequest(
+                RestError::from(ApiError::BadRequest(
                     "missing path parameter 'ehr_id'".to_owned(),
                 ))
             })?;
@@ -211,7 +211,7 @@ pub(super) async fn run(
             // A JSON-only DTO (no spec-typed canonical-XML shape) → `respond`.
             Ok(negotiate::respond(h, ok, &body))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"
         )))),
     }

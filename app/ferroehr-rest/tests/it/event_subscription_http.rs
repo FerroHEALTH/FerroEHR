@@ -240,7 +240,7 @@ async fn a_put_omitting_enabled_is_refused_and_cannot_reenable() {
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{refused}");
     assert!(
-        refused["message"]
+        refused["detail"]
             .as_str()
             .is_some_and(|m| m.contains("enabled")),
         "the refusal names the field: {refused}"
@@ -269,7 +269,7 @@ async fn an_unknown_predicate_key_is_refused_never_dropped() {
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert!(
-        body["message"]
+        body["detail"]
             .as_str()
             .is_some_and(|m| m.contains("archetype")),
         "the refusal names the unknown key: {body}"

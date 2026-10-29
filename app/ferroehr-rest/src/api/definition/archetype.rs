@@ -541,7 +541,7 @@ async fn run(
             state.backend().delete_artefact(artefact_id).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted definition archetype operation: {other}"
         )))),
     }
@@ -575,7 +575,7 @@ fn cursor_param(query: Option<&str>, key: &str) -> Result<Option<u64>, RestError
     match params::query_param(query, key) {
         None => Ok(None),
         Some(raw) => raw.parse::<u64>().map(Some).map_err(|_| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "query parameter `{key}` must be a non-negative integer, got {raw:?}"
             )))
         }),
@@ -586,7 +586,7 @@ fn cursor_param(query: Option<&str>, key: &str) -> Result<Option<u64>, RestError
 /// route, so it is a routing bug → `500`).
 fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
     parts.path.get(key).cloned().ok_or_else(|| {
-        RestError(ApiError::Internal(format!(
+        RestError::from(ApiError::Internal(format!(
             "missing path parameter `{key}`"
         )))
     })

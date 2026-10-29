@@ -67,7 +67,7 @@
 //! - **Method status — DONE.** `error::method_not_allowed_handler`
 //!   (`405`) is mounted as the API router's `method_not_allowed_fallback`
 //!   (`crate::router::router`), so a known path called with a disallowed method renders
-//!   the openEHR `{ error, message }` body, and axum decorates it with the
+//!   problem details, and axum decorates it with the
 //!   matched route's `Allow` (RFC 9110 §15.5.6). A `405` raised from a
 //!   **matched** handler — the config-gated admin group — carries its own
 //!   `Allow` via `error::method_not_allowed_response`. The paired `501` for a
@@ -140,5 +140,6 @@ pub mod committal;
 pub mod error;
 pub mod negotiate;
 pub mod params;
+pub mod problem;
 pub mod status;
 pub mod version_id;

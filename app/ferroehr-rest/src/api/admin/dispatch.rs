@@ -113,7 +113,7 @@ async fn run(
             // and `202` (async); this server is synchronous.
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin operation: {other}"
         )))),
     }
@@ -142,7 +142,7 @@ pub(super) fn admin_group_gate(state: &AppState) -> Option<Response> {
 /// rather than panicking.
 fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
     parts.path.get(key).cloned().ok_or_else(|| {
-        RestError(ApiError::BadRequest(format!(
+        RestError::from(ApiError::BadRequest(format!(
             "missing path parameter '{key}'"
         )))
     })

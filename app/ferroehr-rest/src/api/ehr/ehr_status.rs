@@ -223,7 +223,7 @@ pub(super) async fn run(
                 .await?;
             Ok(negotiate::empty(no_content))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"
         )))),
     }

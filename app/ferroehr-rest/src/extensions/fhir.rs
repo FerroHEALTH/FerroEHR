@@ -11,7 +11,7 @@
 //!
 //! The route is gated by the local store (`[audit.store]`) and answers `404` as
 //! an `OperationOutcome` when it is off. Every error on this surface is a FHIR
-//! `OperationOutcome` rather than the openEHR error body: this is a FHIR
+//! `OperationOutcome` rather than problem details: this is a FHIR
 //! boundary.
 
 use axum::Json;
@@ -470,8 +470,14 @@ fn operation_outcome(status: StatusCode, code: IssueType, diagnostics: &str) -> 
 /// `diagnostics`.
 fn sm_error_outcome(e: SmError) -> Response {
     let message = e.message.clone();
-    let status = RestError::from(e).0.status();
+    let status = RestError::from(e).status();
     operation_outcome(status, issue_type(status), &message)
+}
+
+/// A refusal written outside this module on a FHIR route, such as the
+/// authentication layer's `401`, as an `OperationOutcome` of `status`.
+pub(crate) fn refusal_outcome(status: StatusCode, diagnostics: &str) -> Response {
+    operation_outcome(status, issue_type(status), diagnostics)
 }
 
 /// The FHIR `issue.code` (`IssueType`) for an HTTP status.

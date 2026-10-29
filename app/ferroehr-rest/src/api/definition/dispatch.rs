@@ -56,9 +56,11 @@ async fn run(
         "definition_query_store.yaml" => stored_query::store(&state, &parts).await,
         "definition_query_version_get" => stored_query::version_get(&state, &parts).await,
         "definition_query_version_store.yaml" => stored_query::version_store(&state, &parts).await,
-        other => Err(RestError(openehr_its::rest::runtime::ApiError::Internal(
-            format!("unrouted definition operation: {other}"),
-        ))),
+        other => Err(RestError::from(
+            openehr_its::rest::runtime::ApiError::Internal(format!(
+                "unrouted definition operation: {other}"
+            )),
+        )),
     }
 }
 

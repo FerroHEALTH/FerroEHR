@@ -1230,7 +1230,7 @@ pub(crate) fn error_with_meta(
     meta: Option<&ResourceMeta>,
 ) -> Response {
     let _ = (base_path, segment);
-    let mut out = crate::overview::error::RestError(error).into_response();
+    let mut out = crate::overview::error::RestError::from(error).into_response();
     if let Some(meta) = meta {
         set_versioning_headers(&mut out, meta);
     }
@@ -1305,7 +1305,7 @@ trait IntoErrorResponse {
 
 impl IntoErrorResponse for ApiError {
     fn into_response_body(self) -> Response {
-        crate::overview::error::RestError(self).into_response()
+        crate::overview::error::RestError::from(self).into_response()
     }
 }
 

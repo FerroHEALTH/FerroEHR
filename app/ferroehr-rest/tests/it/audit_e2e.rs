@@ -748,7 +748,7 @@ async fn fail_closed_returns_503_when_channel_full() {
 
 #[tokio::test]
 async fn fail_closed_503_carries_openehr_error_body_and_retry_after() {
-    // the fail-closed 503 must emit the standard openEHR `{ error, message }`
+    // the fail-closed 503 must emit problem details
     // JSON body + a `Retry-After` header, not a plain-text body.
     let sender = audit_capture_fail_closed().await;
     let (_pg, app) = audit_app(sender).await;
@@ -767,12 +767,12 @@ async fn fail_closed_503_carries_openehr_error_body_and_retry_after() {
     assert_eq!(resp.headers().get(http::header::RETRY_AFTER).unwrap(), "1");
     assert_eq!(
         resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
-        "application/json"
+        "application/problem+json"
     );
     let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    let body: Value = serde_json::from_slice(&bytes).expect("json error body");
-    assert_eq!(body["error"], "Service Unavailable");
-    assert!(body.get("message").and_then(Value::as_str).is_some());
+    let body: Value = serde_json::from_slice(&bytes).expect("problem details");
+    assert_eq!(body["status"], 503);
+    assert!(body.get("detail").and_then(Value::as_str).is_some());
 }
 
 /// Drive an auditable, ehr-scoped request repeatedly until the fail-closed

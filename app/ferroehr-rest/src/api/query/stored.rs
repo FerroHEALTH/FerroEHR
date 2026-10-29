@@ -109,7 +109,7 @@ pub(super) async fn execute(
                 .execute_stored_query(name, Some(version), request)
                 .await?)
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted stored query operation: {other}"
         )))),
     }

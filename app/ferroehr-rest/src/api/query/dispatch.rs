@@ -86,7 +86,7 @@ async fn run(
             query
         }
         other => {
-            return Err(RestError(ApiError::Internal(format!(
+            return Err(RestError::from(ApiError::Internal(format!(
                 "unrouted query operation: {other}"
             ))));
         }

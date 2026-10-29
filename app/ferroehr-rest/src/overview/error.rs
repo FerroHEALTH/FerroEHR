@@ -1,22 +1,20 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Mapping the contract's [`ApiError`] onto an HTTP response with an openEHR
-//! error body.
+//! Mapping the contract's [`ApiError`] onto an HTTP response with RFC 9457
+//! problem details.
 //!
 //! The generated server traits return [`openehr_its::rest::runtime::ApiError`],
 //! which carries the ITS-REST status code but renders as a bare string. The
 //! REST layer wraps it in [`RestError`] so handlers can use `?` and every error
-//! leaves the server as a structured JSON body.
+//! leaves the server as `application/problem+json`
+//! ([`crate::overview::problem`]): the status ITS-REST's table requires, a
+//! FerroEHR problem type for a refusal a client acts on, and the detail, with
+//! the violations, the AQL position and the latest version as the additional
+//! details a `Prefer: return=representation` request receives.
 //!
-//! One body shape, uniform across every non-2xx: the generated openEHR `Error`
-//! (`schemas/others/Error.yaml`: `required: [message, validationErrors]`, an
-//! open object) with our `error` reason-phrase member in its extension map. A semantic-validation failure populates the list with
-//! its `"<path>: <message>"` violations; every other error carries it empty.
-//!
-//! NOTE: only the OAS `400.yaml` / `400_CONTRIBUTION.yaml` attach `Error.yaml`
-//! and the docs text makes the body a MAY with no shape, so the uniform shape
-//! beyond the 400 surface is our own design.
+//! NOTE: `Requests_and_responses.md` §HTTP status codes makes the error body a
+//! MAY with an example shape, so the problem details body is our own design.
 
 #![allow(
     clippy::disallowed_types,
@@ -25,20 +23,100 @@
               cfg(test)-only, so #[expect] would be unfulfilled in the non-test build"
 )]
 
-use std::collections::BTreeMap;
-
 use axum::response::{IntoResponse, Response};
 use http::{HeaderValue, StatusCode, header};
 
+use ferroehr::aql::error::AqlError;
 use ferroehr::service::error::{ErrorChain, ServiceError};
 use ferroehr::service::status::{CallStatusType, QUERY_TIMEOUT_TAG, SmError};
 use ferroehr::versioning::object_version_id::VersionIdError;
-use openehr_its::rest::generated::common::Error;
 use openehr_its::rest::runtime::ApiError;
+use openehr_query::lexer::LexError;
+use openehr_query::parser::ParseError;
 
-/// A response-rendering wrapper over the contract's [`ApiError`].
+use crate::overview::problem::{Detail, Kind, Position, Refused, Violation};
+
+/// A response-rendering wrapper over the contract's [`ApiError`], with the
+/// problem type and the additional details its refusal carries
+/// ([`crate::overview::problem`]).
 #[derive(Debug)]
-pub struct RestError(pub ApiError);
+pub struct RestError {
+    error: ApiError,
+    kind: Option<Kind>,
+    details: Vec<Detail>,
+}
+
+impl RestError {
+    /// The contract error the refusal answers.
+    #[must_use]
+    pub fn error(&self) -> &ApiError {
+        &self.error
+    }
+
+    /// The status the refusal answers with.
+    #[must_use]
+    pub fn status(&self) -> StatusCode {
+        self.error.status()
+    }
+
+    /// This refusal as a problem of `kind`.
+    #[must_use]
+    pub fn of_kind(mut self, kind: Kind) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
+    /// This refusal with an additional detail, the extension member a
+    /// `Prefer: return=representation` request receives.
+    #[must_use]
+    pub fn with_detail(mut self, detail: Detail) -> Self {
+        self.details.push(detail);
+        self
+    }
+
+    /// The AQL kind and the source position of an AQL refusal in `error`'s
+    /// cause chain, when `status` is the `400` an AQL refusal answers.
+    fn with_aql_cause(self, error: &(dyn std::error::Error + 'static)) -> Self {
+        if self.status() != StatusCode::BAD_REQUEST {
+            return self;
+        }
+        let mut aql = false;
+        let mut position = None;
+        let mut current = Some(error);
+        while let Some(cause) = current {
+            if let Some(parse) = cause.downcast_ref::<ParseError>() {
+                aql = true;
+                position = position.or_else(|| parse_position(parse));
+            } else if let Some(lex) = cause.downcast_ref::<LexError>() {
+                aql = true;
+                position = position.or_else(|| Some(lex.span.clone()));
+            } else if cause.downcast_ref::<AqlError>().is_some() {
+                aql = true;
+            }
+            current = cause.source();
+        }
+        if !aql {
+            return self;
+        }
+        let refused = self.of_kind(Kind::AqlInvalid);
+        match position {
+            Some(range) => refused.with_detail(Detail::Position(Position {
+                start: range.start,
+                end: range.end,
+            })),
+            None => refused,
+        }
+    }
+}
+
+/// The byte range of the source an AQL parse refusal points at.
+fn parse_position(error: &ParseError) -> Option<std::ops::Range<usize>> {
+    match error {
+        ParseError::Lex(lex) => Some(lex.span.clone()),
+        ParseError::Syntax { faults } => faults.iter().find_map(|fault| fault.bytes.clone()),
+        ParseError::TooDeep { at, .. } => at.bytes.clone(),
+    }
+}
 
 /// The client-visible message of a server-side fault raised inside the protocol
 /// adapter.
@@ -84,8 +162,12 @@ pub(crate) fn internal_fault_caused(
 }
 
 impl From<ApiError> for RestError {
-    fn from(e: ApiError) -> Self {
-        Self(e)
+    fn from(error: ApiError) -> Self {
+        Self {
+            error,
+            kind: None,
+            details: Vec::new(),
+        }
     }
 }
 
@@ -95,7 +177,7 @@ impl From<VersionIdError> for RestError {
     /// why it was rejected and its own [`ApiError`] mapping fixes the status, so
     /// the adapter only lifts it into the response wrapper.
     fn from(e: VersionIdError) -> Self {
-        Self(ApiError::from(e))
+        Self::from(ApiError::from(e))
     }
 }
 
@@ -152,7 +234,14 @@ pub(crate) fn sm_api_error(e: SmError) -> ApiError {
 
 impl From<SmError> for RestError {
     fn from(e: SmError) -> Self {
-        Self(sm_api_error(e))
+        let restricted = e.status == CallStatusType::ProcessingRestricted;
+        let cause = e.clone();
+        let refused = Self::from(sm_api_error(e)).with_aql_cause(&cause);
+        if restricted {
+            refused.of_kind(Kind::ProcessingRestricted)
+        } else {
+            refused
+        }
     }
 }
 
@@ -161,44 +250,35 @@ impl From<ServiceError> for RestError {
     /// per-path violations of [`ServiceError::ValidationFailed`] that the
     /// `SmError` bridge collapses into a flat message.
     fn from(e: ServiceError) -> Self {
-        Self(ApiError::from(e))
+        let restricted = matches!(
+            &e,
+            ServiceError::NotFound(sm) | ServiceError::BadRequest(sm) | ServiceError::Conflict(sm)
+                if sm.status == CallStatusType::ProcessingRestricted
+        );
+        let aql = match &e {
+            ServiceError::BadRequest(sm) => Some(sm.clone()),
+            _ => None,
+        };
+        let refused = Self::from(ApiError::from(e));
+        let refused = match aql {
+            Some(cause) => refused.with_aql_cause(&cause),
+            None => refused,
+        };
+        if restricted {
+            refused.of_kind(Kind::ProcessingRestricted)
+        } else {
+            refused
+        }
     }
 }
 
-/// Serializes the one JSON error body this server emits, uniform across every
-/// non-2xx.
-///
-/// The body is the generated ITS-REST [`Error`]: `message`, `validationErrors`
-/// (always emitted, so the 400 surface satisfies `Error.yaml`'s required member
-/// list) and, in the open schema's extension map, `error`, the status's reason
-/// phrase. The released assignment is narrow: only the OAS `responses/400.yaml`
-/// and `400_CONTRIBUTION.yaml` attach `schemas/others/Error.yaml` to a 400 body,
-/// and `Requests_and_responses.md` §HTTP status codes makes the body itself a
-/// MAY with no shape. Every other status's body is our own design, kept uniform
-/// so a client parses one shape everywhere.
-fn error_body(status: StatusCode, message: String, validation_errors: Vec<String>) -> Vec<u8> {
-    let reason = status.canonical_reason().unwrap_or("Error").to_owned();
-    let body = Error {
-        message,
-        validation_errors,
-        additional_properties: BTreeMap::from([("error".to_owned(), reason.into())]),
-    };
-    serde_json::to_vec(&body).unwrap_or_else(|_| b"{}".to_vec())
-}
-
-/// Renders an arbitrary status as the `{ error, message }` openEHR error body.
+/// Renders an arbitrary status as an `about:blank` problem with `message` as
+/// its detail.
 ///
 /// Used for the method-status responses no [`ApiError`] variant can represent,
-/// and for the transport-layer statuses whose middleware default body is aligned
-/// onto this shape ([`crate::router()`]).
+/// and for the transport-layer statuses the stack writes ([`crate::router()`]).
 pub(crate) fn status_error_response(status: StatusCode, message: &str) -> Response {
-    let json = error_body(status, message.to_owned(), Vec::new());
-    let mut resp = (status, json).into_response();
-    resp.headers_mut().insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_static("application/json"),
-    );
-    resp
+    Refused::blank(status, message).into_response()
 }
 
 // NOTE: overview §HTTP Methods asks for `501` on an unrecognized method, which
@@ -206,7 +286,7 @@ pub(crate) fn status_error_response(status: StatusCode, message: &str) -> Respon
 // in the spec's own status table.
 
 /// Axum fallback for a request whose method is not served by the matched
-/// resource: a `405` (overview §HTTP Methods) with the openEHR error body.
+/// resource: a `405` (overview §HTTP Methods) with problem details.
 ///
 /// The mandatory `Allow` header (RFC 9110 §15.5.6) is supplied by axum, not
 /// here: only the router knows the matched path's method set, and axum decorates
@@ -243,33 +323,82 @@ pub(crate) fn method_not_allowed_response(allow: &'static str, message: &str) ->
     resp
 }
 
+/// The detail of `error`: its message without the status word the
+/// [`ApiError`] display leads with, which the problem's title already says.
+fn detail_of(error: &ApiError) -> String {
+    match error {
+        ApiError::BadRequest(message)
+        | ApiError::Unauthorized(message)
+        | ApiError::Forbidden(message)
+        | ApiError::NotFound(message)
+        | ApiError::Conflict(message)
+        | ApiError::PreconditionFailed(message)
+        | ApiError::Unprocessable(message)
+        | ApiError::UnsupportedMediaType(message)
+        | ApiError::NotAcceptable(message)
+        | ApiError::ServiceUnavailable(message)
+        | ApiError::Internal(message) => message.clone(),
+        ApiError::ValidationFailed(errors) => format!(
+            "the content fails validation at {} path(s); a request with \
+             `Prefer: return=representation` receives each path and its violation",
+            errors.len()
+        ),
+        ApiError::NotImplemented => "this server does not provide the operation".to_owned(),
+    }
+}
+
+/// The problem type of `error` when the refusal names none: the ones a
+/// client acts on have a FerroEHR type, the rest are `about:blank`.
+fn kind_of(error: &ApiError) -> Option<Kind> {
+    match error {
+        ApiError::Unauthorized(_) => Some(Kind::Unauthenticated),
+        ApiError::Forbidden(_) => Some(Kind::Forbidden),
+        ApiError::Conflict(_) => Some(Kind::Conflict),
+        ApiError::PreconditionFailed(_) => Some(Kind::VersionConflict),
+        ApiError::Unprocessable(_) => Some(Kind::ContentInvalid),
+        ApiError::ValidationFailed(_) => Some(Kind::ValidationFailed),
+        ApiError::ServiceUnavailable(_) => Some(Kind::Unavailable),
+        ApiError::BadRequest(_)
+        | ApiError::NotFound(_)
+        | ApiError::UnsupportedMediaType(_)
+        | ApiError::NotAcceptable(_)
+        | ApiError::NotImplemented
+        | ApiError::Internal(_) => None,
+    }
+}
+
 impl IntoResponse for RestError {
     fn into_response(self) -> Response {
         // A query-execution timeout arrives as an `exception` `SmError` whose
         // message carries [`QUERY_TIMEOUT_TAG`], and is rendered as the `408` of
         // `Requests_and_responses.md` §HTTP status codes with the sentinel
         // stripped.
-        if let ApiError::Internal(raw) = &self.0
+        if let ApiError::Internal(raw) = &self.error
             && let Some(detail) = raw.strip_prefix(QUERY_TIMEOUT_TAG)
         {
-            return status_error_response(StatusCode::REQUEST_TIMEOUT, detail);
+            return Refused::of(Kind::QueryTimeout, detail).into_response();
         }
-        let status = self.0.status();
-        let message = self.0.to_string();
-        let validation_errors = if let ApiError::ValidationFailed(errors) = &self.0 {
-            errors
-                .iter()
-                .map(|e| format!("{}: {}", e.path, e.message))
-                .collect()
-        } else {
-            Vec::new()
+        let status = self.error.status();
+        let detail = detail_of(&self.error);
+        let mut refused = match self.kind.or_else(|| kind_of(&self.error)) {
+            Some(kind) if kind.status() == status => Refused::of(kind, detail),
+            _ => Refused::blank(status, detail),
         };
-        let json = error_body(status, message, validation_errors);
-        let mut resp = (status, json).into_response();
-        resp.headers_mut().insert(
-            header::CONTENT_TYPE,
-            HeaderValue::from_static("application/json"),
-        );
+        if let ApiError::ValidationFailed(errors) = &self.error {
+            refused = refused.with_detail(Detail::Errors(
+                errors
+                    .iter()
+                    .map(|e| Violation {
+                        path: e.path.clone(),
+                        detail: e.message.clone(),
+                    })
+                    .collect(),
+            ));
+        }
+        for detail in self.details {
+            refused = refused.with_detail(detail);
+        }
+        let mut resp = refused.into_response();
         // A `503` condition is transient by definition (RFC 9110 §15.6.4), so
         // every one carries a `Retry-After` hint.
         if status == StatusCode::SERVICE_UNAVAILABLE {
@@ -289,49 +418,74 @@ mod tests {
     use serde_json::Value;
 
     use super::RestError;
+    use crate::overview::problem::{BASE, Refused};
 
     async fn body_json(err: ApiError) -> (StatusCode, Value) {
-        let resp = RestError(err).into_response();
+        let resp = RestError::from(err).into_response();
         let status = resp.status();
+        assert_eq!(
+            resp.headers().get(http::header::CONTENT_TYPE).unwrap(),
+            "application/problem+json"
+        );
         let bytes = resp.into_body().collect().await.unwrap().to_bytes();
         (status, serde_json::from_slice(&bytes).unwrap())
     }
 
-    #[tokio::test]
-    async fn validation_failure_renders_422_with_validation_errors() {
-        let (status, body) = body_json(ApiError::ValidationFailed(vec![
-            ValidationError {
-                path: "/content[0]/data".to_owned(),
-                message: "value out of range".to_owned(),
-            },
-            ValidationError {
-                path: "/category".to_owned(),
-                message: "code not in group".to_owned(),
-            },
-        ]))
-        .await;
-
-        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-        // The uniform body: Error.yaml's members plus our `error` extra.
-        assert_eq!(body["error"], "Unprocessable Entity");
-        assert!(body.get("message").and_then(Value::as_str).is_some());
-        let errors = body["validationErrors"]
-            .as_array()
-            .expect("validationErrors");
-        assert_eq!(errors.len(), 2);
-        assert_eq!(errors[0], "/content[0]/data: value out of range");
-        assert_eq!(errors[1], "/category: code not in group");
+    /// The problem a `Prefer: return=representation` request receives.
+    fn full_problem(err: ApiError) -> Value {
+        let resp = RestError::from(err).into_response();
+        resp.extensions()
+            .get::<Refused>()
+            .expect("the refusal is marked for the middleware")
+            .render(None, true)
+            .to_json()
     }
 
     #[tokio::test]
-    async fn other_errors_carry_the_uniform_body_with_an_empty_list() {
+    async fn validation_failure_renders_422_with_its_violations_on_request() {
+        let violations = || {
+            ApiError::ValidationFailed(vec![
+                ValidationError {
+                    path: "/content[0]/data".to_owned(),
+                    message: "value out of range".to_owned(),
+                },
+                ValidationError {
+                    path: "/category".to_owned(),
+                    message: "code not in group".to_owned(),
+                },
+            ])
+        };
+        let (status, body) = body_json(violations()).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(body["type"], format!("{BASE}validation-failed"));
+        assert_eq!(body["status"], 422);
+        assert!(body.get("detail").and_then(Value::as_str).is_some());
+        assert!(
+            body.get("errors").is_none(),
+            "the additional details wait for Prefer"
+        );
+        let full = full_problem(violations());
+        let errors = full["errors"].as_array().expect("errors");
+        assert_eq!(errors.len(), 2);
+        assert_eq!(
+            errors[0],
+            serde_json::json!({"path": "/content[0]/data", "detail": "value out of range"})
+        );
+        assert_eq!(
+            errors[1],
+            serde_json::json!({"path": "/category", "detail": "code not in group"})
+        );
+    }
+
+    #[tokio::test]
+    async fn other_errors_carry_the_five_members_and_no_status_word_in_the_detail() {
         let (status, body) = body_json(ApiError::NotFound("EHR x".to_owned())).await;
         assert_eq!(status, StatusCode::NOT_FOUND);
-        assert_eq!(body["error"], "Not Found");
-        assert!(body.get("message").and_then(Value::as_str).is_some());
-        // Always present (Error.yaml `required` on the assigned 400 surface;
-        // uniform everywhere else) — empty when no per-path violations exist.
-        assert_eq!(body["validationErrors"], serde_json::json!([]));
+        assert_eq!(body["type"], "about:blank");
+        assert_eq!(body["title"], "Not Found");
+        assert_eq!(body["status"], 404);
+        assert_eq!(body["detail"], "EHR x");
+        assert!(body.get("errors").is_none());
     }
 
     async fn handler_body(resp: axum::response::Response) -> (StatusCode, Value) {
@@ -341,7 +495,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn method_not_allowed_renders_405_openehr_body() {
+    async fn method_not_allowed_renders_405_problem() {
         let resp = super::method_not_allowed_handler().await;
         // The router fallback deliberately leaves `Allow` unset: axum fills it
         // in from the matched route's method set, and would NOT overwrite a
@@ -354,8 +508,8 @@ mod tests {
         );
         let (status, body) = handler_body(resp).await;
         assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
-        assert_eq!(body["error"], "Method Not Allowed");
-        assert!(body.get("message").and_then(Value::as_str).is_some());
+        assert_eq!(body["title"], "Method Not Allowed");
+        assert!(body.get("detail").and_then(Value::as_str).is_some());
     }
 
     #[tokio::test]
@@ -373,8 +527,8 @@ mod tests {
             Some("GET,HEAD")
         );
         let (_status, body) = handler_body(resp).await;
-        assert_eq!(body["error"], "Method Not Allowed");
-        assert_eq!(body["message"], "nope");
+        assert_eq!(body["title"], "Method Not Allowed");
+        assert_eq!(body["detail"], "nope");
     }
 
     #[tokio::test]
@@ -394,15 +548,44 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_timeout_tag_renders_408_with_clean_message() {
+    async fn query_timeout_tag_renders_408_with_clean_detail() {
         // Requests_and_responses.md §HTTP status codes, row 408: a query-execution
         // timeout is tagged on an `exception` message and rendered as 408 with the
         // sentinel stripped from the client-visible detail.
         let tagged = format!("{}query aborted after 5000ms", super::QUERY_TIMEOUT_TAG);
         let (status, body) = body_json(ApiError::Internal(tagged)).await;
         assert_eq!(status, StatusCode::REQUEST_TIMEOUT);
-        assert_eq!(body["error"], "Request Timeout");
-        assert_eq!(body["message"], "query aborted after 5000ms");
+        assert_eq!(body["type"], format!("{BASE}query-timeout"));
+        assert_eq!(body["detail"], "query aborted after 5000ms");
+    }
+
+    #[test]
+    fn an_aql_parse_refusal_is_aql_invalid_with_its_position() {
+        let err = openehr_query::parser::parse_str("SELECT e FROM EHR e WHERE").unwrap_err();
+        let sm = ferroehr::service::status::SmError::precondition("invalid AQL").with_source(err);
+        let full = full_problem_of(RestError::from(sm));
+        assert_eq!(full["type"], format!("{BASE}aql-invalid"));
+        assert_eq!(full["status"], 400);
+        assert!(full["position"]["start"].is_u64(), "{full}");
+        assert!(full["position"]["end"].is_u64(), "{full}");
+    }
+
+    #[test]
+    fn a_processing_restriction_is_its_own_type() {
+        use ferroehr::service::status::{CallStatusType, SmError};
+        let sm = SmError::new(CallStatusType::ProcessingRestricted, "restricted");
+        let full = full_problem_of(RestError::from(sm));
+        assert_eq!(full["type"], format!("{BASE}processing-restricted"));
+        assert_eq!(full["status"], 403);
+    }
+
+    fn full_problem_of(err: RestError) -> Value {
+        err.into_response()
+            .extensions()
+            .get::<Refused>()
+            .expect("the refusal is marked")
+            .render(None, true)
+            .to_json()
     }
 
     #[tokio::test]

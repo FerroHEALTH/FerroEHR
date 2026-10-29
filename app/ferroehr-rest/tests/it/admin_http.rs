@@ -169,9 +169,9 @@ async fn disabled_admin_config_is_405() {
     // currently allows no methods at all (RFC 9110 §10.2.1) — see
     // `disabled_admin_is_405_and_never_deletes`.
     assert_eq!(allow_of(&headers), "");
-    // …and the openEHR `{ error, message }` body, as on every other error path.
-    let v: serde_json::Value = serde_json::from_str(&body).expect("openEHR error body");
-    assert_eq!(v["error"], "Method Not Allowed");
+    // …and problem details, as on every other error path.
+    let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+    assert_eq!(v["title"], "Method Not Allowed");
 }
 
 #[tokio::test]

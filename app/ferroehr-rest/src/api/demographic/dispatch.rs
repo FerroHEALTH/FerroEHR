@@ -47,7 +47,7 @@ async fn run(
             "tags_get" | "tags_update" | "tags_delete" => {
                 super::tags::run(state, kind, action, parts).await
             }
-            other => Err(RestError(ApiError::Internal(format!(
+            other => Err(RestError::from(ApiError::Internal(format!(
                 "unrouted demographic party operation: {}_{other}",
                 kind.segment()
             )))),
@@ -62,7 +62,7 @@ async fn run(
             super::contribution::run(state, op, parts).await
         }
         "demographic_tags_get" => super::tags::run_collection(state, parts).await,
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted demographic operation: {other}"
         )))),
     }

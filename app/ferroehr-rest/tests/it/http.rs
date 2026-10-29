@@ -150,13 +150,19 @@ async fn unauthenticated_request_is_401_with_challenge() {
     let (status, headers, body) = send(app, get(&format!("{BASE}/ehr/abc"))).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert!(headers.contains_key(header::WWW_AUTHENTICATE));
-    // JSON error body.
+    // RFC 9457 problem details.
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
-        "application/json"
+        "application/problem+json"
     );
     let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-    assert_eq!(v["error"], "Unauthorized");
+    assert_eq!(v["status"], 401);
+    assert!(
+        v["type"]
+            .as_str()
+            .is_some_and(|t| t.ends_with("#unauthenticated")),
+        "{body}"
+    );
 }
 
 /// The public status document answers without a credential and says only what
@@ -537,7 +543,7 @@ async fn unknown_route_is_404() {
 }
 
 /// A known path called with a method it does not serve answers `405` with the
-/// openEHR `{ error, message }` body AND the `Allow` header.
+/// problem details AND the `Allow` header.
 ///
 /// ITS-REST `docs/overview/Requests_and_responses.md` §HTTP Methods: "If a
 /// method is recognized but not allowed for the target resource, the response
@@ -570,10 +576,10 @@ async fn recognized_but_unallowed_method_is_405_with_allow() {
     );
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
-        "application/json"
+        "application/problem+json"
     );
     let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-    assert_eq!(v["error"], "Method Not Allowed");
+    assert_eq!(v["title"], "Method Not Allowed");
 }
 
 /// The same `405` + `Allow` discipline for a method the server does not
@@ -604,7 +610,7 @@ async fn unrecognized_method_is_405_with_allow() {
 /// status code (ITS-REST `Requests_and_responses.md` §HTTP status codes:
 /// "Additional status codes MAY be used as long as they do not conflict with
 /// the predefined codes"). The refusal must still leave the server in the
-/// openEHR `{ error, message }` shape, not tower-http's `text/plain` default.
+/// problem details, not tower-http's `text/plain` default.
 #[tokio::test]
 async fn oversized_request_body_is_413_with_the_openehr_error_body() {
     let (_pg, app) = app(false).await;
@@ -621,12 +627,12 @@ async fn oversized_request_body_is_413_with_the_openehr_error_body() {
     assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
-        "application/json"
+        "application/problem+json"
     );
-    let v: serde_json::Value = serde_json::from_str(&body).expect("openEHR error body");
-    assert_eq!(v["error"], "Payload Too Large");
+    let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+    assert_eq!(v["title"], "Payload Too Large");
     assert!(
-        v.get("message")
+        v.get("detail")
             .and_then(serde_json::Value::as_str)
             .is_some()
     );
@@ -1084,14 +1090,14 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
     );
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
-        "application/json",
-        "the refusal keeps the openEHR error body"
+        "application/problem+json",
+        "the refusal is problem details"
     );
 }
 
 /// A declared body over the listener's `server.body_limit_bytes` is refused
 /// `413` by the family stack before any route reads it, in the openEHR
-/// `{ error, message }` body every other refusal carries.
+/// problem details every other refusal carries.
 #[tokio::test]
 async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
     let (pg, service) = common::test_service().await;
@@ -1111,11 +1117,11 @@ async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
     assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE, "{body}");
     assert_eq!(
         headers.get(header::CONTENT_TYPE).unwrap(),
-        "application/json"
+        "application/problem+json"
     );
-    let v: serde_json::Value = serde_json::from_str(&body).expect("openEHR error body");
-    assert_eq!(v["error"], "Payload Too Large");
-    assert!(v["message"].as_str().is_some(), "{body}");
+    let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+    assert_eq!(v["title"], "Payload Too Large");
+    assert!(v["detail"].as_str().is_some(), "{body}");
 }
 
 /// The bulk tier really is more permissive than the clinical tier: the same
@@ -1187,11 +1193,11 @@ async fn past_the_rate_a_caller_is_429_with_retry_after() {
         headers.contains_key(header::RETRY_AFTER),
         "429 must tell the caller when to retry"
     );
-    let v: serde_json::Value = serde_json::from_str(&body).expect("openEHR error body");
-    assert_eq!(v["error"], "Too Many Requests");
+    let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+    assert_eq!(v["status"], 429);
     assert!(
-        v["message"].as_str().is_some_and(|m| m.contains("retry")),
-        "the message says the caller may retry: {body}"
+        v["detail"].as_str().is_some_and(|m| m.contains("retry")),
+        "the detail says the caller may retry: {body}"
     );
 }
 
@@ -1279,4 +1285,112 @@ async fn the_served_document_omits_paths_whose_features_are_off() {
             "{absent} answers 404 in this configuration and must not be advertised"
         );
     }
+}
+
+/// Every refusal on the openEHR and extension routes is RFC 9457 problem
+/// details, whatever raised it: the router (an unknown path, an unserved
+/// method), authentication, a handler and the AQL engine. A route that
+/// answers an error in another shape fails here.
+#[tokio::test]
+async fn every_error_route_answers_problem_details() {
+    let (_pg, app) = app(true).await;
+    let ext = "/ferroehr/rest/extensions/v1";
+    let authorized = |method: &str, uri: String| {
+        Request::builder()
+            .method(method)
+            .uri(uri)
+            .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
+            .header("prefer", "return=representation")
+            .body(Body::empty())
+            .unwrap()
+    };
+    let cases = [
+        (
+            authorized("GET", format!("{BASE}/no-such-resource")),
+            StatusCode::NOT_FOUND,
+        ),
+        (
+            authorized("GET", format!("{ext}/no-such-resource")),
+            StatusCode::NOT_FOUND,
+        ),
+        (
+            authorized("GET", format!("{BASE}/ehr/{EHR}")),
+            StatusCode::NOT_FOUND,
+        ),
+        (
+            authorized("PATCH", format!("{BASE}/ehr/{EHR}")),
+            StatusCode::METHOD_NOT_ALLOWED,
+        ),
+        (
+            authorized("GET", format!("{BASE}/query/aql?q=SELECT%20c")),
+            StatusCode::BAD_REQUEST,
+        ),
+        (get(&format!("{BASE}/ehr/{EHR}")), StatusCode::UNAUTHORIZED),
+        (
+            get(&format!("{ext}/admin/event_subscription")),
+            StatusCode::UNAUTHORIZED,
+        ),
+    ];
+    for (req, expected) in cases {
+        let call = format!("{} {}", req.method(), req.uri());
+        let (status, headers, body) = send(app.clone(), req).await;
+        assert_eq!(status, expected, "{call}: {body}");
+        assert_eq!(
+            headers
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok()),
+            Some("application/problem+json"),
+            "{call}"
+        );
+        let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+        assert!(v["type"].is_string(), "{call}: {body}");
+        assert_eq!(v["status"], status.as_u16(), "{call}: {body}");
+        assert!(
+            v["instance"]
+                .as_str()
+                .is_some_and(|i| i.starts_with("urn:uuid:")),
+            "{call}: {body}"
+        );
+    }
+}
+
+/// An AQL text that does not parse is the `aql-invalid` problem, and a
+/// request preferring the representation receives the byte range it points
+/// at, with `Preference-Applied` saying so.
+#[tokio::test]
+async fn an_aql_parse_refusal_carries_its_position_on_request() {
+    let (_pg, app) = app(true).await;
+    let req = Request::builder()
+        .method("GET")
+        .uri(format!("{BASE}/query/aql?q=SELECT%20c"))
+        .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
+        .header("prefer", "return=representation")
+        .body(Body::empty())
+        .unwrap();
+    let (status, headers, body) = send(app.clone(), req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(
+        headers
+            .get("preference-applied")
+            .and_then(|v| v.to_str().ok()),
+        Some("return=representation")
+    );
+    let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+    assert!(
+        v["type"]
+            .as_str()
+            .is_some_and(|t| t.ends_with("#aql-invalid")),
+        "{body}"
+    );
+    assert!(v["position"]["start"].is_u64(), "{body}");
+    let minimal = Request::builder()
+        .method("GET")
+        .uri(format!("{BASE}/query/aql?q=SELECT%20c"))
+        .header(header::AUTHORIZATION, bearer(common::FULL_SCOPES))
+        .body(Body::empty())
+        .unwrap();
+    let (_status, headers, body) = send(app, minimal).await;
+    assert!(headers.get("preference-applied").is_none());
+    let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+    assert!(v.get("position").is_none(), "{body}");
 }

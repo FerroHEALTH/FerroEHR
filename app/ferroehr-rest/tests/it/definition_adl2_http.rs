@@ -443,7 +443,7 @@ async fn upload_invalid_source_is_422_with_rule_codes() {
     let (_pg, app) = app().await;
     // A source missing the mandatory `description` section → VARD (AOM2
     // master03 §Validity Rules). The engine rejects it; the wire renders a 422
-    // `Error` object whose `validationErrors` carry the rule code.
+    // problem whose `errors` carry the rule code.
     let invalid = "operational_template (adl_version=2.0.6; rm_release=1.1.0)\n    \
                    openEHR-EHR-COMPOSITION.t_no_desc.v1.0.0\n\n\
                    language\n    original_language = <[ISO_639-1::en]>\n\n\
@@ -454,19 +454,19 @@ async fn upload_invalid_source_is_422_with_rule_codes() {
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
+        .header("prefer", "return=representation")
         .body(Body::from(invalid))
         .unwrap();
     let (status, _headers, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let v: Value = serde_json::from_str(&body).unwrap();
     let errors = v
-        .get("validationErrors")
+        .get("errors")
         .and_then(Value::as_array)
-        .expect("the Error object carries validationErrors");
+        .expect("the problem carries its violations in errors");
     assert!(
-        errors
-            .iter()
-            .any(|e| e.as_str().is_some_and(|s| s.contains("VARD"))),
+        errors.iter().any(|e| e["path"].as_str() == Some("VARD")
+            || e["detail"].as_str().is_some_and(|s| s.contains("VARD"))),
         "the rule code VARD is reported in the 422 body: {errors:?}"
     );
 }
@@ -679,6 +679,7 @@ async fn upload_with_absent_parent_is_422_with_vasid() {
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
+        .header("prefer", "return=representation")
         .body(Body::from(src))
         .unwrap();
     let (status, _h, body) = send(&app, req).await;
@@ -723,7 +724,7 @@ async fn upload_nested_past_the_engine_bound_is_a_400_naming_the_bound() {
     let (status, _, text) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "body: {text}");
     let json: Value = serde_json::from_str(&text).expect("an error document");
-    let message = json["message"].as_str().expect("message");
+    let message = json["detail"].as_str().expect("detail");
     assert!(
         message.contains("SUNK"),
         "the S-code bucket is named: {message}"

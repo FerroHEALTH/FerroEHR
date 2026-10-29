@@ -32,7 +32,7 @@
 //!   server emits.
 //!
 //! The group is config-gated (`AppConfig::admin.enabled`, default false), and
-//! while off every route answers `405` with the openEHR error body before the
+//! while off every route answers `405` with problem details before the
 //! backend is touched. The ground differs per route and each declaration cites
 //! its own: `admin_ehr_delete_all` has released provenance (its own NOTE plus
 //! `responses/405.yaml`), while `admin_ehr_delete` and the four extensions rest

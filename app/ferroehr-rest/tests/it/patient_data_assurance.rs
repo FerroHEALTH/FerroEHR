@@ -131,8 +131,8 @@ async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
             ),
             "{extra}"
         );
-        let body: Value = serde_json::from_str(&body).expect("openEHR error body");
-        assert!(body.get("message").is_some(), "{body}");
+        let body: Value = serde_json::from_str(&body).expect("problem details");
+        assert!(body.get("detail").is_some(), "{body}");
     }
 }
 
@@ -161,7 +161,7 @@ async fn a_token_at_or_above_the_minimum_passes() {
 }
 
 /// A client token naming no professional is refused on patient data with
-/// `403` and the openEHR error body.
+/// `403` and problem details.
 #[tokio::test]
 async fn a_client_token_without_acting_for_is_refused() {
     let (_db, _pool, app) = app(Some(ProfessionalSection::default()), false).await;
@@ -170,9 +170,9 @@ async fn a_client_token_without_acting_for_is_refused() {
         common::send(&app, common::get_authorized(&ehr_path(), &token)).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert!(headers.get(header::WWW_AUTHENTICATE).is_none());
-    let body: Value = serde_json::from_str(&body).expect("openEHR error body");
+    let body: Value = serde_json::from_str(&body).expect("problem details");
     assert!(
-        body["message"]
+        body["detail"]
             .as_str()
             .is_some_and(|m| m.contains("natural person")),
         "{body}"

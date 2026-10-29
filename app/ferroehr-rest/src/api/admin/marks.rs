@@ -606,7 +606,7 @@ async fn run(
         "admin_restriction_register" => {
             let ehr_id =
                 params::query_param(parts.query.as_deref(), "ehr_id").ok_or_else(|| {
-                    RestError(ApiError::BadRequest(
+                    RestError::from(ApiError::BadRequest(
                         "the `ehr_id` query parameter is required".to_owned(),
                     ))
                 })?;
@@ -648,7 +648,7 @@ async fn run(
                 .get("objected")
                 .and_then(serde_json::Value::as_bool)
                 .ok_or_else(|| {
-                    RestError(ApiError::BadRequest(
+                    RestError::from(ApiError::BadRequest(
                     "`objected` must be a boolean: true records the objection, false withdraws it"
                         .to_owned(),
                 ))
@@ -710,7 +710,7 @@ async fn run(
                 (Some(at), Some(ground)) => Some((at, ground)),
                 (None, None) => None,
                 _ => {
-                    return Err(RestError(ApiError::BadRequest(
+                    return Err(RestError::from(ApiError::BadRequest(
                         "a retention hold needs both `hold_at` and `hold_ground`: a hold with \
                          no stated reason is not a record of anything"
                             .to_owned(),
@@ -734,7 +734,7 @@ async fn run(
                 .get("held")
                 .and_then(serde_json::Value::as_bool)
                 .ok_or_else(|| {
-                    RestError(ApiError::BadRequest(
+                    RestError::from(ApiError::BadRequest(
                         "`held` must be a boolean: true places the hold, false releases it"
                             .to_owned(),
                     ))
@@ -748,7 +748,7 @@ async fn run(
         "admin_retention_due" => {
             let limit = match params::query_param(parts.query.as_deref(), "limit") {
                 Some(raw) => raw.parse::<i64>().map_err(|_e| {
-                    RestError(ApiError::BadRequest(format!(
+                    RestError::from(ApiError::BadRequest(format!(
                         "`limit` must be a positive whole number, got {raw:?}"
                     )))
                 })?,
@@ -792,7 +792,7 @@ async fn run(
         "admin_access_restriction_register" => {
             let ehr_id =
                 params::query_param(parts.query.as_deref(), "ehr_id").ok_or_else(|| {
-                    RestError(ApiError::BadRequest(
+                    RestError::from(ApiError::BadRequest(
                         "the `ehr_id` query parameter is required".to_owned(),
                     ))
                 })?;
@@ -827,7 +827,7 @@ async fn run(
                 .await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin marks operation: {other}"
         )))),
     }
@@ -841,7 +841,7 @@ fn required_str<'a>(body: &'a serde_json::Value, field: &str) -> Result<&'a str,
     body.get(field)
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| {
-            RestError(ApiError::BadRequest(format!(
+            RestError::from(ApiError::BadRequest(format!(
                 "request body must carry a `{field}` string"
             )))
         })
@@ -856,7 +856,7 @@ fn optional_str<'a>(
     match body.get(field) {
         None | Some(serde_json::Value::Null) => Ok(None),
         Some(serde_json::Value::String(s)) => Ok(Some(s.as_str())),
-        Some(other) => Err(RestError(ApiError::BadRequest(format!(
+        Some(other) => Err(RestError::from(ApiError::BadRequest(format!(
             "`{field}` must be a string when present, got {other}"
         )))),
     }

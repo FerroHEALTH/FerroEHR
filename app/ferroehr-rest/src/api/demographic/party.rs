@@ -140,7 +140,7 @@ pub(super) async fn run(
             }
         }
         "delete" => run_delete(&state, kind, &parts).await,
-        other => Err(RestError(ApiError::Internal(format!(
+        other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted demographic party operation: {seg}_{other}"
         )))),
     }

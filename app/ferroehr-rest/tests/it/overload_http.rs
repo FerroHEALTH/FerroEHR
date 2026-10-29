@@ -22,7 +22,7 @@
 //!
 //! * beyond the `max_concurrent_requests` bound, an API request is shed
 //!   immediately with `503 Service Unavailable` + `Retry-After: 1` and the
-//!   openEHR error body;
+//!   problem details;
 //! * with the bound unset concurrency is unbounded;
 //! * the health routes are outside the bound and are never shed, even while
 //!   the bound is fully taken.
@@ -163,10 +163,10 @@ async fn requests_beyond_limit_are_shed_with_503() {
         Some("1")
     );
     let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    let body: Value = serde_json::from_slice(&bytes).expect("json error body");
-    // The standard openEHR `{ error, message }` shape.
-    assert_eq!(body["error"], "Service Unavailable");
-    assert!(body.get("message").and_then(Value::as_str).is_some());
+    let body: Value = serde_json::from_slice(&bytes).expect("problem details");
+    // RFC 9457 problem details, FerroEHR's `unavailable` type.
+    assert_eq!(body["status"], 503);
+    assert!(body.get("detail").and_then(Value::as_str).is_some());
 
     // Release the parked handlers (aborting drops their futures → frees permits).
     p1.abort();

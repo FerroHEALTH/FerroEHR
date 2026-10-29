@@ -312,9 +312,18 @@ async fn an_emergency_purpose_does_not_lift_a_gdpr_restriction() {
     let (plain_status, plain_body) = read(&app, &ehr, &vo_id, None).await;
     assert_eq!(plain_status, StatusCode::FORBIDDEN, "{plain_body}");
     let (status, body) = read(&app, &ehr, &vo_id, Some("ETREAT")).await;
+    // Each problem names its own request as `instance`; every other member is
+    // the refusal itself.
+    let without_instance = |body: &str| {
+        let mut problem: Value = serde_json::from_str(body).expect("problem details");
+        if let Some(members) = problem.as_object_mut() {
+            members.remove("instance");
+        }
+        problem
+    };
     assert_eq!(
-        (status, body.as_str()),
-        (plain_status, plain_body.as_str()),
+        (status, without_instance(&body)),
+        (plain_status, without_instance(&plain_body)),
         "an emergency purpose must be refused exactly as a read without one"
     );
 

@@ -111,7 +111,7 @@ async fn run(
         return Ok(refusal);
     }
     if op != "admin_party_identifiers" {
-        return Err(RestError(ApiError::Internal(format!(
+        return Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin identifier operation: {op}"
         ))));
     }
@@ -122,7 +122,7 @@ async fn run(
         state.config().rbac.identifier_reader_role.as_deref(),
         &roles,
     ) {
-        return Err(RestError(ApiError::Forbidden(
+        return Err(RestError::from(ApiError::Forbidden(
             "reading a party's protected identifiers needs the role \
              `authz.rbac.identifier_reader_role` names"
                 .to_owned(),
@@ -130,7 +130,7 @@ async fn run(
     }
     let version_uid =
         params::query_param(parts.query.as_deref(), "version_uid").ok_or_else(|| {
-            RestError(ApiError::BadRequest(
+            RestError::from(ApiError::BadRequest(
                 "the `version_uid` query parameter is required".to_owned(),
             ))
         })?;

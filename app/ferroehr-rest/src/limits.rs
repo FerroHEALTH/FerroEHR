@@ -94,7 +94,7 @@ pub(crate) async fn middleware(
     }
 }
 
-/// The `413` refusal in the openEHR `{ error, message }` shape.
+/// The `413` refusal as problem details.
 ///
 /// The message names the limit and the configuration key that raises it, and
 /// nothing else — an operator can act on it and a caller learns no internal
