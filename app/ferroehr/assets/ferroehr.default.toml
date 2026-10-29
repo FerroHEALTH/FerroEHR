@@ -709,8 +709,9 @@ retry_max_ms = 60000         # the longest wait between two attempts
 # The pseudonymisation domains this deployment issues subject pseudonyms in.
 # EMPTY (the default) leaves the subject-reference rule out of force: a
 # namespace name is a deployment fact, not something a server can invent.
-# Declaring one turns the rule on — from then on EHR_STATUS.subject.external_ref
-# must name a listed namespace and carry a UUID as its id.value.
+# Declaring one turns the rule on under either EHR index, with no mixed mode:
+# from then on EHR_STATUS.subject.external_ref must name a listed namespace and
+# carry a UUID as its id.value.
 subject_namespaces = []
 # Accept PARTY_IDENTIFIED / PARTY_RELATED carrying `name` or `identifiers` in
 # clinical content (composer, participations, health_care_facility, feeder
@@ -777,15 +778,25 @@ subjects = false
 #? organisation  = { archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1", node = "at0003", kind = "text" }
 
 # ── [ehr_index] — who holds the subject-to-EHR cross-reference ───────────────
-# An IHE patient identity source is the default: FerroEHR asks its PIX Manager
-# over PIXm (ITI-83, the $ihe-pix operation) which identifier the clinical
-# domain holds for a patient, and that identifier is the pseudonym
-# EHR_STATUS.subject carries. Any conformant PIX Manager serves; FerroEHR sends
-# nothing product-specific and does no matching or merging of its own. The
-# server refuses to start until either the endpoint below is set, or a FerroEHR
-# run on its own (development, tests, a single-source installation) opts in to
-# the in-instance map with provider = "local". No silent fallback: a configured
-# source that cannot be reached refuses boot, and a request it fails is an error.
+# Two supported postures, production included:
+#   ihe    an IHE patient identity source (the default): FerroEHR asks its PIX
+#          Manager over PIXm (ITI-83, the $ihe-pix operation) which identifier
+#          the clinical domain holds for a patient, and that identifier is the
+#          pseudonym EHR_STATUS.subject carries. Any conformant PIX Manager
+#          serves; FerroEHR sends nothing product-specific and does no matching
+#          or merging of its own.
+#   local  the in-instance map, the subject-id posture: EHR_STATUS.subject
+#          names a patient by any namespace and identifier, and
+#          GET /ehr?subject_id=&subject_namespace= finds it. With no
+#          privacy.subject_namespaces declared no pseudonym namespace is in
+#          force, so a subject reference is stored as the client sends it;
+#          production accepts the open_subject_namespace gap by name to run it.
+# provider alone switches the index (FERROEHR__EHR_INDEX__PROVIDER=local): the
+# keys of the provider not chosen are kept, not used, and named at boot; the
+# declared privacy.subject_namespaces stay in force. The
+# server refuses to start until the endpoint below is set or provider is
+# "local". No silent fallback: a configured source that cannot be reached
+# refuses boot, and a request it fails is an error.
 [ehr_index]
 provider = "ihe"             # ihe | local
 #? pixm_url = "https://pix.example.org/fhir"   # the PIX Manager's FHIR base URL

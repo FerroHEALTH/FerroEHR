@@ -64,16 +64,39 @@ another domain's identifier names. That identifier is the pseudonym
 conformant PIX Manager serves; FerroPIX is the one the compose quickstart and
 the Helm chart run.
 
-**A FerroEHR run on its own opts in to the in-instance map** with
-`provider = "local"`: development, tests, the conformance suites, a
-single-source installation. The map answers the openEHR REST API's
-`GET /ehr?subject_id=…&subject_namespace=…` lookup over `EHR_STATUS` content
-and nothing more. An EHR created for a subject through the service's
+**The in-instance map, `provider = "local"`, is the other supported
+posture**, for production as much as for development, tests and the
+conformance suites: the subject-id and subject-namespace model. A client names
+a patient in `EHR_STATUS.subject.external_ref` by any namespace and identifier
+(`benchmark` / `1793131381`), as `OBJECT_REF.namespace` and a local
+`GENERIC_ID.scheme` allow, and the map answers the openEHR REST API's
+`GET /ehr?subject_id=…&subject_namespace=…` lookup over `EHR_STATUS` content,
+matching both exactly. An EHR created for a subject through the service's
 `create_ehr_for_subject` enters the map with its creation, as a `Primary`
 association with no location, so a subject cohort finds it; an EHR created
 over `POST /ehr` or `PUT /ehr/{ehr_id}` enters the map only through
-`add_ehr_subject`. **With neither**, the server refuses to start and the
-refusal names both choices.
+`add_ehr_subject`. **With neither** provider configured, the server refuses to
+start and the refusal names both choices.
+
+What the local posture means for pseudonymisation: with no
+`[privacy] subject_namespaces` declared, the server stores a subject reference
+as the client sends it, a real identifier included. Pseudonymisation then
+belongs to the client, or to the demographic service the reference points at
+(GDPR Art. 4(5)). There is no mixed mode: a deployment that declares pseudonym
+namespaces keeps the rule in force under `local` too, so every subject
+reference must name a declared namespace and carry a UUID, and no other
+namespace is accepted beside them. A `production` deployment runs the
+subject-id posture by accepting the `open_subject_namespace` gap by name
+([`deployment_profile`](configuration.md#deployment_profile)), which boot and
+`GET /management/status` then state.
+
+**`provider` alone switches the index**, in the file or as
+`FERROEHR__EHR_INDEX__PROVIDER`. The keys of the provider not chosen are kept
+and not used, and boot names them, so a configuration written for the IHE
+source runs on the local map with `FERROEHR__EHR_INDEX__PROVIDER=local` and no
+other change; its declared pseudonym namespaces stay in force. The compose
+quickstart selects its local configuration with one variable
+([The local EHR index](compose.md#the-local-ehr-index)).
 
 | Key | Type | Default | Description |
 |---|---|---|---|

@@ -272,9 +272,44 @@ curl -s -X PUT -H "Authorization: Bearer $SRC" \
 ```
 
 Any conformant PIX Manager can take FerroPIX's place: point `pixm_url`,
-`assigning_authority` and `[ehr_index.oauth]` at it. To run FerroEHR on its
-own instead, set `[ehr_index] provider = "local"` in the inline configuration
-and leave the identity services out.
+`assigning_authority` and `[ehr_index.oauth]` at it.
+
+## The local EHR index
+
+The other supported posture keeps the subject-to-EHR cross-reference in
+FerroEHR ([`[ehr_index]`](config-integrations.md#ehr_index)): `EHR_STATUS.subject`
+names a patient by its own namespace and identifier, and
+`GET /ehr?subject_id=…&subject_namespace=…` finds the EHR by them. One
+variable selects it, with no copy of the configuration to make:
+
+```shell
+FERROEHR_EHR_INDEX=local docker compose up
+```
+
+The server then runs the file's `ferroehr-config-local` block, which differs
+from `ferroehr-config` in `[ehr_index]` and `[privacy]` alone: the local map,
+and no pseudonym namespace, so a subject reference is stored as the client
+sends it:
+
+```shell
+curl -u ferroehr:ferroehr -X POST -i -H 'Content-Type: application/json' \
+  http://localhost:8080/ferroehr/rest/openehr/v1/ehr -d '{
+  "_type": "EHR_STATUS",
+  "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+  "archetype_details": {"_type": "ARCHETYPED", "rm_version": "1.1.0",
+    "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-EHR_STATUS.generic.v1"}},
+  "name": {"_type": "DV_TEXT", "value": "EHR Status"},
+  "subject": {"_type": "PARTY_SELF", "external_ref": {"_type": "PARTY_REF",
+    "namespace": "benchmark", "type": "PERSON",
+    "id": {"_type": "GENERIC_ID", "value": "1793131381", "scheme": "benchmark"}}},
+  "is_queryable": true, "is_modifiable": true}'
+curl -u ferroehr:ferroehr -i \
+  'http://localhost:8080/ferroehr/rest/openehr/v1/ehr?subject_id=1793131381&subject_namespace=benchmark'
+```
+
+The identity services still start, and nothing asks them. Start without the
+variable to return to FerroPIX; the EHRs created on the local index keep their
+subject references, and the database refuses no stored row.
 
 ## The OIDC variant (Keycloak overlay)
 

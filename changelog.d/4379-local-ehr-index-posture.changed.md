@@ -1,0 +1,1 @@
+- `[ehr_index] provider = "local"` beside `pixm_url`, `assigning_authority`, `[ehr_index.oauth]` or `[ehr_index.tls]` is accepted, where it was refused: the IHE keys are kept, not used and named at boot, so `provider` alone switches the index, in the file or as `FERROEHR__EHR_INDEX__PROVIDER`. Declared pseudonym namespaces stay in force under either index.

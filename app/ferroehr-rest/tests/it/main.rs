@@ -66,6 +66,7 @@ mod headers;
 mod http;
 mod item_tag_http;
 mod legal_marks_http;
+mod local_ehr_index_posture;
 mod management;
 mod message_extension_http;
 mod overload_http;
