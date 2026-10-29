@@ -5,20 +5,23 @@
 //! the subject of ([`crate::aql::join`]), across the party, linkage and
 //! clinical pools.
 //!
-//! No openEHR spec governs this: our own design. The plan runs in three
-//! statements, one per pool, and never in one: the party query on the
-//! demographic pool, the party-to-EHR map in force on the linkage pool, and
-//! the clinical query on the clinical pool scoped to the EHRs the map names
-//! (the cohort query's crossing, `crate::service::linkage::cohort`). The rows
-//! are joined here on the map, sorted by the ranks each pool's own ordering
-//! gave the keys, and paged. Each half is bounded by the server's result
+//! No openEHR spec governs this: our own design. The plan runs in four
+//! statements, one pool each, and never in one: the party query on the
+//! demographic pool, the party-to-EHR map in force on the linkage pool, the
+//! EHRs whose `EHR_STATUS.subject.external_ref` names one of those parties on
+//! the clinical pool, and the clinical query on the clinical pool scoped to
+//! the EHRs the two reads name (the cohort query's crossing,
+//! `crate::service::linkage::cohort`). The rows are joined here on the union
+//! of the two reads, sorted by the ranks each pool's own ordering gave the
+//! keys, and paged. Each half is bounded by the server's result
 //! ceiling (`query.max_result_rows`), and a half or a join larger than it is
 //! refused rather than truncated: a silently shortened half would join to a
 //! wrong answer with nothing in the `RESULT_SET` to say so.
 //!
 //! The clinical query carries the caller's per-EHR access decision and ABAC
 //! patient scope as any query does; the party read and the crossing each
-//! leave an access record in their own domain.
+//! leave an access record in their own domain, the subject read on the
+//! linkage record of the crossing as `ehr_id_for_subject` files it.
 
 #![expect(
     clippy::disallowed_types,
@@ -159,7 +162,7 @@ impl FerroEhrService {
         let mut distinct: Vec<VoId> = parties.clone();
         distinct.sort_unstable_by_key(|p| p.0);
         distinct.dedup();
-        let pairs = self.linked_ehrs(&distinct).await?;
+        let pairs = self.linked_ehrs(&distinct, &job.plan.root).await?;
 
         let (clinical, scope) = self.run_clinical(job, halves, party_ctx, &pairs).await?;
         refuse_above(ceiling, clinical.rows.len(), "clinical")?;
@@ -304,11 +307,21 @@ impl FerroEhrService {
     }
 
     /// The `(party, EHR)` pairs of the party-to-EHR map in force, read on the
-    /// linkage pool, with the linkage-domain access record the crossing owes.
-    async fn linked_ehrs(&self, parties: &[VoId]) -> Result<Vec<(VoId, EhrId)>, Failure> {
-        let pairs = crate::service::linkage::store::open_mapping_pairs(&self.linkage_pool, parties)
-            .await
-            .map_err(|e| Failure::analysis(linkage_failure(LinkageError::from(e))))?;
+    /// linkage pool, united with the EHRs whose subject names one of the
+    /// `parties` as a `root`, read on the clinical pool, each pair once and
+    /// ordered, with the linkage-domain access record the crossing owes.
+    async fn linked_ehrs(
+        &self,
+        parties: &[VoId],
+        root: &str,
+    ) -> Result<Vec<(VoId, EhrId)>, Failure> {
+        let mut pairs =
+            crate::service::linkage::store::open_mapping_pairs(&self.linkage_pool, parties)
+                .await
+                .map_err(|e| Failure::analysis(linkage_failure(LinkageError::from(e))))?;
+        pairs.extend(self.party_subject_ehrs(parties, root).await?);
+        pairs.sort_unstable_by_key(|(party, ehr)| (party.0, ehr.0));
+        pairs.dedup();
         self.emit_linkage_access(
             EventActionCode::Read,
             "party-ehr:query".to_owned(),
@@ -318,6 +331,38 @@ impl FerroEhrService {
         )
         .map_err(|e| Failure::analysis(linkage_failure(e)))?;
         Ok(pairs)
+    }
+
+    /// The `(party, EHR)` pairs of the EHRs whose current `EHR_STATUS.subject`
+    /// `external_ref` names one of `parties`, read on the clinical pool.
+    ///
+    /// The `id.value` is the party's versioned-object id, which is what
+    /// `uid/value` carries before its first `::` (RM common master06 §Version
+    /// Identification).
+    async fn party_subject_ehrs(
+        &self,
+        parties: &[VoId],
+        root: &str,
+    ) -> Result<Vec<(VoId, EhrId)>, Failure> {
+        let ids: Vec<String> = parties.iter().map(|party| party.0.to_string()).collect();
+        // NOTE: BASE `OBJECT_REF.namespace` takes any name a deployment chooses, so the
+        // namespace is not matched: the party's own id and its class decide.
+        let found =
+            crate::storage::ehr_repo::ehrs_by_subject_ids(&self.pool, &ids, subject_types(root))
+                .await
+                .map_err(|e| {
+                    Failure::analysis(internal_fault_caused("read the EHRs of the subjects", &e))
+                })?;
+        found
+            .into_iter()
+            .map(|(subject, ehr)| {
+                Uuid::parse_str(&subject)
+                    .map(|party| (VoId(party), ehr))
+                    .map_err(|e| {
+                        Failure::analysis(internal_fault_caused("read a matched subject id", &e))
+                    })
+            })
+            .collect()
     }
 
     /// Records the party read of a joined query as a demographic-domain access
@@ -341,6 +386,19 @@ impl FerroEhrService {
         crate::service::linkage::stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
         self.record_access(event)
+    }
+}
+
+/// The `OBJECT_REF.type` values a subject `external_ref` may carry to name a
+/// party of class `root`.
+fn subject_types(root: &str) -> &'static [&'static str] {
+    // NOTE: BASE `OBJECT_REF.type` names "the class (concrete or abstract)" and
+    // `PARTY_REF` admits `PARTY` and `ACTOR`, so a root matches itself and its RM ancestors.
+    match root {
+        "PERSON" => &["PERSON", "ACTOR", "PARTY"],
+        "ORGANISATION" => &["ORGANISATION", "ACTOR", "PARTY"],
+        "ROLE" => &["ROLE", "PARTY"],
+        _ => &[],
     }
 }
 

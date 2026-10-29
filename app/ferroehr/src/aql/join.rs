@@ -20,7 +20,8 @@
 //! root, its party classes, the `WHERE` conjuncts and columns that read them)
 //! and a clinical query (the `EHR` and what it contains, likewise), each an
 //! ordinary single-domain AQL statement the engine plans and runs unchanged.
-//! The caller joins the two answers on the linkage map: a row is a party row
+//! The caller joins the two answers on the party-to-EHR map and on the
+//! `EHR_STATUS.subject` references that name the party: a row is a party row
 //! and a clinical row of an EHR that party is the subject of, so a party with
 //! no EHR and an EHR with no party answer nothing.
 //!
@@ -82,6 +83,8 @@ pub struct JoinOrderKey {
 /// A demographic-to-EHR query cut into its two single-domain halves.
 #[derive(Debug, Clone, PartialEq)]
 pub struct JoinPlan {
+    /// The RM class at the root (`PERSON`, `ORGANISATION` or `ROLE`).
+    pub root: String,
     /// The party query: its columns, then the root's `uid/value`, then its
     /// order keys, ordered by those keys.
     pub party: SelectQuery,
@@ -153,6 +156,7 @@ pub fn split(query: &SelectQuery) -> Result<Option<JoinPlan>, AqlError> {
     let order = distribute_order(query, &sides, &mut halves)?;
     let [party, clinical] = halves;
     Ok(Some(JoinPlan {
+        root: cut.root,
         party: party.finish(),
         clinical: clinical.finish(),
         columns,
@@ -167,6 +171,8 @@ pub fn split(query: &SelectQuery) -> Result<Option<JoinPlan>, AqlError> {
 
 /// The `FROM` clause of a joined query, cut into its halves.
 struct Cut {
+    /// The RM class at the root.
+    root: String,
     /// The root with its party classes.
     party_from: ContainsExpr,
     /// The `EHR` with what it contains.
@@ -224,6 +230,7 @@ fn cut_from(from: &ContainsExpr) -> Result<Option<Cut>, AqlError> {
     };
     let (clinical_from, ehr_var) = with_variable(ehr);
     Ok(Some(Cut {
+        root: rm_type.clone(),
         party_from,
         clinical_from,
         party_var,

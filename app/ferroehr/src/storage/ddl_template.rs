@@ -57,6 +57,11 @@ pub const NODE: &str = include_str!("../../migrations/templates/node.sql.in");
 /// slimmed fragment (#4306).
 pub const NODE_VALUES: &str = include_str!("../../migrations/templates/node_values.sql.in");
 
+/// The version-tree key template: `uq_version_tree` keyed with the object
+/// last, so the foreign-key lookup of a node row reads one version (#4340).
+pub const VERSION_TREE_KEY: &str =
+    include_str!("../../migrations/templates/version_tree_key.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -127,6 +132,16 @@ mod tests {
             NODE_VALUES,
         ),
         ("migrations/party/0012_node_values.sql", PARTY, NODE_VALUES),
+        (
+            "migrations/clinical/0022_version_tree_key.sql",
+            CLINICAL,
+            VERSION_TREE_KEY,
+        ),
+        (
+            "migrations/party/0013_version_tree_key.sql",
+            PARTY,
+            VERSION_TREE_KEY,
+        ),
     ];
 
     /// Set to `1` to rewrite the committed files from the templates instead of
@@ -160,7 +175,7 @@ mod tests {
 
     #[test]
     fn the_two_domains_differ_only_in_kinds_and_the_clinical_references() {
-        for template in [CHANGE_CONTROL, NODE, NODE_VALUES] {
+        for template in [CHANGE_CONTROL, NODE, NODE_VALUES, VERSION_TREE_KEY] {
             let clinical = render(template, &CLINICAL);
             let party = render(template, &PARTY);
             let differences: Vec<(&str, &str)> = diff_lines(&clinical, &party);
