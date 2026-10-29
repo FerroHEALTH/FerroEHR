@@ -44,7 +44,13 @@ the candidate's latency against the baseline measured there (#4318):
    least: with two rounds a build, unchanged code read one operation's p99
    15 % apart with the rounds separated),
    alternating the order (baseline then candidate, candidate then baseline),
-   so a runner that slows down part way through slows both alike.
+   so a runner that slows down part way through slows both alike. Each round
+   seeds a fresh database and runs `ANALYZE` before the first group, so every
+   round plans its statements over the same statistics. A clone starts with
+   none, and whether autovacuum's first `ANALYZE` landed before or during a
+   group used to decide that group's plans: the same build read `supersede`
+   at 9 ms in one round and 14 ms in the next, with ten times the buffer hits
+   (#4340).
 3. `scripts/render/storage-bench-compare.sh --ab <dir>` takes, per operation
    and per build, the median of the rounds' p50 and p99, and shows the range
    of the rounds beside it. An operation regresses when a median rose more

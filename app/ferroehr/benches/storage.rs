@@ -353,6 +353,15 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         ehrs.len(),
         class.compositions + kept.len()
     );
+    // The clone starts with no planner statistics, and whether autovacuum's
+    // first ANALYZE landed before or during a group decided that group's plans:
+    // without them the node rows' foreign-key check walked every version of
+    // the superseded object (#4340). Every round measures the statistics a
+    // running server has (PostgreSQL docs § Updating Planner Statistics).
+    sqlx::query("ANALYZE")
+        .execute(pool)
+        .await
+        .expect("analyze the seeded database");
     Corpus {
         entry_rm_type: entry_rm_type(&payload),
         at: jiff::Timestamp::now().to_string(),
