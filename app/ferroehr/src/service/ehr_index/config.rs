@@ -6,9 +6,11 @@
 //!
 //! An IHE patient identity source asked over PIXm (ITI-83) is the default, and
 //! it is named by its endpoint and the assigning authority of the clinical
-//! domain, never by a product. A FerroEHR that runs on its own opts in to the
-//! in-instance map with `provider = "local"`. With neither, the server refuses
-//! to start and names both choices.
+//! domain, never by a product. The in-instance map, `provider = "local"`, is
+//! the other supported posture, the subject-id and subject-namespace model.
+//! With neither provider configured, the server refuses to start and names
+//! both choices. `provider` alone switches between them: the keys of the
+//! provider not chosen are kept and not used.
 //!
 //! NOTE: no openEHR spec governs where the cross-reference lives (RM common
 //! master04 §`PARTY_SELF`: "may be done elsewhere for security reasons"): our own design.
@@ -25,7 +27,8 @@ pub enum ProviderKind {
     /// An IHE patient identity source asked over PIXm (ITI-83), the default.
     #[default]
     Ihe,
-    /// The in-instance `linkage` map, the opt-in for a FerroEHR run on its own.
+    /// The in-instance `linkage` map: the subject-id and subject-namespace
+    /// model, which `EHR_STATUS.subject` reads directly.
     Local,
 }
 
@@ -101,38 +104,58 @@ impl EhrIndexConfig {
     ///
     /// `subject_namespaces` is `privacy.subject_namespaces`: the clinical
     /// domain's identifier is the pseudonym on `EHR_STATUS`, so its assigning
-    /// authority must be a declared pseudonym namespace.
+    /// authority must be a declared pseudonym namespace. Only the chosen
+    /// provider's keys are checked; the other provider's are kept and not used
+    /// ([`Self::unused_keys`]), so `provider` alone switches the index, from
+    /// the file or as `FERROEHR__EHR_INDEX__PROVIDER`.
     #[must_use]
     pub fn problems(&self, subject_namespaces: &[String]) -> Vec<String> {
-        let mut problems = Vec::new();
         match self.provider {
-            ProviderKind::Local => {
-                if !self.pixm_url.is_empty() || !self.assigning_authority.is_empty() {
-                    problems.push(
-                        "ehr_index.provider = \"local\" takes no ehr_index.pixm_url or \
-                         ehr_index.assigning_authority; remove them, or choose provider = \"ihe\""
-                            .to_owned(),
-                    );
-                }
-            }
+            ProviderKind::Local => Vec::new(),
             ProviderKind::Ihe => {
                 if self.pixm_url.expose().trim().is_empty()
                     && self.assigning_authority.trim().is_empty()
                 {
-                    problems.push(
+                    return vec![
                         "no patient identity source is configured: set ehr_index.pixm_url \
                          (the PIXm base URL of an IHE patient identity source) and \
-                         ehr_index.assigning_authority (the clinical domain), or opt in to \
-                         the in-instance map with ehr_index.provider = \"local\" for a \
-                         FerroEHR run on its own"
+                         ehr_index.assigning_authority (the clinical domain), or choose the \
+                         in-instance map with ehr_index.provider = \"local\" \
+                         (FERROEHR__EHR_INDEX__PROVIDER=local), where EHR_STATUS.subject names \
+                         a patient by its own namespace and identifier"
                             .to_owned(),
-                    );
-                    return problems;
+                    ];
                 }
-                problems.extend(self.ihe_problems(subject_namespaces));
+                self.ihe_problems(subject_namespaces)
             }
         }
-        problems
+    }
+
+    /// The keys set for the IHE provider while `provider = "local"`, which the
+    /// server keeps and does not use; boot names them.
+    #[must_use]
+    pub fn unused_keys(&self) -> Vec<&'static str> {
+        if self.provider != ProviderKind::Local {
+            return Vec::new();
+        }
+        let tls = &self.tls;
+        [
+            ("ehr_index.pixm_url", !self.pixm_url.is_empty()),
+            (
+                "ehr_index.assigning_authority",
+                !self.assigning_authority.trim().is_empty(),
+            ),
+            ("ehr_index.oauth", self.oauth.is_some()),
+            (
+                "ehr_index.tls",
+                tls.client_identity.is_some()
+                    || tls.client_identity_file.is_some()
+                    || tls.trust_roots_file.is_some(),
+            ),
+        ]
+        .into_iter()
+        .filter_map(|(key, set)| set.then_some(key))
+        .collect()
     }
 
     /// The rules of a configured IHE provider.
@@ -193,7 +216,7 @@ mod tests {
     }
 
     /// The binary's default is the IHE provider with no endpoint, which is
-    /// refused with both choices named.
+    /// refused with both choices named, the environment switch included.
     #[test]
     fn the_default_names_both_choices() {
         let problems = EhrIndexConfig::default().problems(&[]);
@@ -201,16 +224,33 @@ mod tests {
         let message = &problems[0];
         assert!(message.contains("ehr_index.pixm_url"), "{message}");
         assert!(message.contains("provider = \"local\""), "{message}");
+        assert!(
+            message.contains("FERROEHR__EHR_INDEX__PROVIDER=local"),
+            "{message}"
+        );
     }
 
+    /// `provider = "local"` beside the IHE keys runs the local index: the keys
+    /// are kept and named as unused, so the provider alone switches (#4379).
     #[test]
-    fn local_is_an_explicit_opt_in() {
+    fn the_provider_alone_switches_the_index() {
         assert_eq!(EhrIndexConfig::local().problems(&[]), Vec::<String>::new());
-        let mixed = EhrIndexConfig {
+        assert_eq!(EhrIndexConfig::local().unused_keys(), Vec::<&str>::new());
+        let switched = EhrIndexConfig {
             provider: ProviderKind::Local,
+            oauth: Some(ferrohealth_smart::config::OauthSection::default()),
             ..ihe()
         };
-        assert_ne!(mixed.problems(&[DOMAIN.to_owned()]), Vec::<String>::new());
+        assert_eq!(switched.problems(&[]), Vec::<String>::new());
+        assert_eq!(
+            switched.unused_keys(),
+            [
+                "ehr_index.pixm_url",
+                "ehr_index.assigning_authority",
+                "ehr_index.oauth"
+            ]
+        );
+        assert_eq!(ihe().unused_keys(), Vec::<&str>::new());
     }
 
     #[test]
