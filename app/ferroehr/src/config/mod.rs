@@ -1675,10 +1675,9 @@ mod tests {
             let err = assemble(Some(file.path()), &env(&[]), &[])
                 .expect_err("a client CA under none is refused");
             let text = err.to_string();
-            assert!(
-                text.contains("client_ca_file") && text.contains("client_auth"),
-                "{policy:?}: {err}"
-            );
+            for word in ["client_ca_file", "client_auth", "required", "optional"] {
+                assert!(text.contains(word), "{policy:?}: {word} in {err}");
+            }
         }
         let required = toml_file(
             "[server.tls]\ncertificate_file = \"a\"\nkey_file = \"b\"\n\

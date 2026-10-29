@@ -5,7 +5,7 @@
   `ferrohealth-server`, where `client_auth` defaults to `none` and the CA was
   read and ignored, so a configuration carried over passed `config check` and
   served without asking a client certificate. FerroEHR takes
-  `ferrohealth-server` 0.3.8, which refuses it. A 5.5.0 deployer who sets
+  `ferrohealth-server` 0.3.9, which refuses it and names the remedy in full. A 5.5.0 deployer who sets
   `client_ca_file` sets `client_auth = "required"` beside it. The default
   template no longer pairs a client CA with `none`, and says what each
   `client_auth` value does.

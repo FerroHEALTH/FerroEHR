@@ -250,8 +250,8 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # TLS, the bounded drain, the healthcheck, the CLI skeleton and the build
 # banner; `tls_client` reads the TLS material of an outbound HTTPS client and
 # sets it on a `reqwest::ClientBuilder` (feature `reqwest`). Verified on
-# crates.io 2026-10-28 (0.3.8).
-ferrohealth-server = { version = "=0.3.8", default-features = false }
+# crates.io 2026-10-29 (0.3.9).
+ferrohealth-server = { version = "=0.3.9", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
