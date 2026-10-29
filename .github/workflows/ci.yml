@@ -473,6 +473,8 @@ jobs:
         run: bash scripts/release/milestone.sh --self-test
       - name: The release plan orders tags by version and counts the support period as GNU date does
         run: bash scripts/release/plan.sh --self-test
+      - name: The chart comparison matches a repackaged chart and refuses a changed, added or removed file
+        run: bash scripts/release/chart-published.sh --self-test
       - name: The performance guard refuses a throughput or a p95 latency outside its budget
         run: bash scripts/perf/compare.sh --self-test
 
@@ -538,8 +540,12 @@ jobs:
           tool: shellcheck@0.11.0
       - name: The embedded deploy script is clean and its posture paths are baked
         run: bash scripts/checks/hosted-deploy-script.sh
-      - name: The FerroPIX rollout's --check pulls no image onto the app box
+      - name: The embedded deploy script's verb contract refuses a caller of a verb it lacks
+        run: bash scripts/checks/hosted-deploy-script.sh --self-test
+      - name: The FerroPIX rollout's --check pulls no image onto the app box, and it runs only at the release the sandbox serves
         run: bash deploy/hosted/sandbox-ferropix-rollout.sh --self-test
+      - name: The verb reader reads both deploy script generations and refuses a verb the box lacks
+        run: bash .github/actions/deploy-verbs/verbs.sh --self-test
 
   # Comment-style guard (.claude/rules/comments.md, RFC 505/1574): block
   # comments, TODO(#N) form, NOTE/essay line budgets — over the WHOLE tree

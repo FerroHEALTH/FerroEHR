@@ -164,30 +164,28 @@ impl Builder<'_> {
         Ok((mode, members))
     }
 
-    /// The typed EHR-id comparison fast path: fires only for
-    /// `Eq`/`Ne` between an `EHR.ehr_id/value` path and a string literal or
-    /// parameter. Returns `None` (fall through to the generic text lowering)
-    /// for every other shape — ordering comparisons stay textual (uuid byte
-    /// order differs from text order, and the spec defines string comparison).
+    /// The EHR-id comparison of `WHERE`: fires for a comparison between an
+    /// `EHR.ehr_id/value` path and a string literal or parameter, and lowers it
+    /// through [`ehr_id_compare`], the shape the `EHR` class predicate takes
+    /// too. Returns `None` (the generic text lowering) for every other shape.
     fn ehr_id_typed_compare(
         &mut self,
         lhs: &Operand,
         op: CompOp,
         rhs: &Operand,
     ) -> Result<Option<Expr>, AqlError> {
-        if !matches!(op, CompOp::Eq | CompOp::Ne) {
-            return Ok(None);
-        }
         let (path, other, flipped) = match (lhs, rhs) {
             (Operand::Path(t), o) if Self::is_ehr_id_target(t) => (t, o, false),
             (o, Operand::Path(t)) if Self::is_ehr_id_target(t) => (t, o, true),
             _ => return Ok(None),
         };
-        let _ = flipped; // equality/inequality are symmetric
-        let raw = match other {
-            Operand::Literal(TypedLit::String(sv)) => sv.clone(),
-            Operand::Param(p) => self.param_str(p)?,
+        let bind = match other {
+            Operand::Literal(lit) => Bind::Literal(lit.clone()),
+            Operand::Param(p) => Bind::Param(p.clone()),
             _ => return Ok(None),
+        };
+        let Some(raw) = self.ehr_id_value(&bind)? else {
+            return Ok(None);
         };
         let PathTarget::Ehr { source, .. } = path else {
             return Ok(None);
@@ -197,15 +195,21 @@ impl Builder<'_> {
             .get(&source.0)
             .cloned()
             .ok_or_else(|| SqlError::Unsupported("EHR path without a bound EHR".to_owned()))?;
-        Ok(Some(match raw.parse::<uuid::Uuid>() {
-            Ok(u) => {
-                let rhs_uuid = cast(Expr::val(u.to_string()), "uuid");
-                col(&alias, Ehr::Id).binary(binoper(op), rhs_uuid)
-            }
-            // Not a uuid → it can equal no EHR id: `=` is constant false,
-            // `!=` constant true.
-            Err(_) => Expr::val(matches!(op, CompOp::Ne)),
-        }))
+        let op = if flipped { flip(op) } else { op };
+        Ok(Some(ehr_id_compare(&alias, op, &raw)))
+    }
+
+    /// The string an EHR id is compared against: a string literal, or a
+    /// parameter's value as text; `None` for any other literal.
+    ///
+    /// # Errors
+    /// [`SqlError::UnboundParameter`] for an unbound or `NULL` parameter.
+    pub(super) fn ehr_id_value(&self, value: &Bind) -> Result<Option<String>, AqlError> {
+        Ok(match value {
+            Bind::Literal(TypedLit::String(s) | TypedLit::Temporal(s)) => Some(s.clone()),
+            Bind::Param(p) => Some(self.param_str(p)?),
+            Bind::Literal(_) => None,
+        })
     }
 
     /// Whether a path target addresses the EHR id (`e/ehr_id/value` or the
@@ -435,4 +439,39 @@ pub(super) fn raw_numeric_wanted(operands: &[&Operand]) -> bool {
             Operand::Literal(TypedLit::Integer(_) | TypedLit::Real(_))
         )
     })
+}
+
+/// Lowers `ehr.id <op> raw`, the one EHR-id comparison of the `EHR` class
+/// predicate and of `WHERE`.
+///
+/// `EHR.ehr_id` is a `HIER_OBJECT_ID` whose `value` is a `String` (RM 1.2.0
+/// `EHR`, BASE `OBJECT_ID`), so a value that is not a UUID is a legal operand
+/// that equals no stored id: `=` is constant false and `!=` constant true,
+/// never a cast error. A UUID compares as `uuid` on `ehr.id`, which keeps the
+/// index usable and is case-insensitive, the identifier-equality semantics
+/// (BASE `base_types` master05 §Composite Identifiers and Case). An ordering
+/// operator compares the id's text, the string comparison QUERY master03
+/// §Comparison operators defines.
+pub(super) fn ehr_id_compare(alias: &str, op: CompOp, raw: &str) -> Expr {
+    match op {
+        CompOp::Eq | CompOp::Ne => match raw.parse::<uuid::Uuid>() {
+            Ok(u) => {
+                col(alias, Ehr::Id).binary(binoper(op), cast(Expr::val(u.to_string()), "uuid"))
+            }
+            Err(_) => Expr::val(matches!(op, CompOp::Ne)),
+        },
+        _ => cast(col(alias, Ehr::Id), "text")
+            .binary(binoper(op), cast(Expr::val(raw.to_owned()), "text")),
+    }
+}
+
+/// The operator with its operands swapped (`a < b` is `b > a`).
+fn flip(op: CompOp) -> CompOp {
+    match op {
+        CompOp::Lt => CompOp::Gt,
+        CompOp::Gt => CompOp::Lt,
+        CompOp::Le => CompOp::Ge,
+        CompOp::Ge => CompOp::Le,
+        CompOp::Eq | CompOp::Ne => op,
+    }
 }

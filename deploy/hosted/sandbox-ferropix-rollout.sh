@@ -19,6 +19,11 @@
 # 5 after the v5.5.0 deploy: recreate, seed FerroPIX and verify end to end;
 # 6 the DB box onto the pinned ferroehr-postgres image (#4252).
 #
+# It runs at the release the sandbox serves (#4372): before any step it reads
+# `solution_version` from the ITS-REST system OPTIONS and refuses, naming the
+# tag to check out, when this checkout's workspace version is another one, so
+# the routes it probes and the deploy script it installs are that release's.
+#
 # A secret is generated on the box it belongs to, or read from the
 # environment (FERROPIX_DB_PASSWORD, FERROPIX_DATA_KEY), and is never printed:
 # the log shows `set` or the first 12 hex digits of its SHA-256.
@@ -133,6 +138,33 @@ docker inspect --format '{{index .Config.Labels "org.opencontainers.image.versio
 EOF
 }
 
+# The FerroEHR version this checkout builds: the workspace version.
+checkout_version() {
+  sed -nE '/^\[workspace\.package\]/,/^\[/ s/^version = "([^"]+)"/\1/p' "$ROOT/Cargo.toml" | sed -n 1p
+}
+
+# The version the sandbox serves: `solution_version` on the ITS-REST 1.1.0
+# system OPTIONS (specifications/schemas/others/Options.yaml), the one route
+# no FerroEHR release moves.
+served_version() {
+  curl -sS --fail -m 30 -X OPTIONS "$PUBLIC_URL/ferroehr/rest/openehr/v1" | jq -r '.solution_version // empty'
+}
+
+# Judges a served version $1 against this checkout's $2: prints the verdict
+# and returns 0 only when they are the same release.
+release_verdict() {
+  local served="$1" checkout="$2"
+  if ! [[ "$served" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+    echo "the sandbox's OPTIONS answered solution_version '${served}', which names no FerroEHR release"
+    return 1
+  fi
+  if [[ "$served" != "$checkout" ]]; then
+    echo "the sandbox serves FerroEHR $served and this checkout builds ${checkout:-nothing}; run this script from the tag v$served (git worktree add ../ferroehr-v$served v$served)"
+    return 1
+  fi
+  echo "the sandbox serves FerroEHR $served, the release this checkout builds"
+}
+
 release_knows_ferropix() {
   local version="$1"
   [[ "$ASSUME_RELEASE" -eq 1 ]] && return 0
@@ -209,8 +241,23 @@ STUB
 0 0 login
 0 1 login
 CASES
+  local served checkout verdict
+  while read -r served checkout want; do
+    verdict=refuse
+    release_verdict "$served" "$checkout" > /dev/null && verdict=run
+    if [[ "$verdict" != "$want" ]]; then
+      echo "self-test: served=$served checkout=$checkout: got $verdict, want $want" >&2
+      failures=1
+    fi
+  done <<'CASES'
+5.5.0 5.5.0 run
+5.6.0-rc3 5.6.0-rc3 run
+5.5.0 5.6.0-rc2 refuse
+5.6.0-rc2 5.6.0-rc3 refuse
+- 5.5.0 refuse
+CASES
   [[ "$failures" -eq 0 ]] || return 1
-  echo "sandbox-ferropix-rollout: self-test OK (--check runs no docker run without the client image; 3 login cases run it)."
+  echo "sandbox-ferropix-rollout: self-test OK (--check runs no docker run without the client image; 3 login cases run it; only the served release runs)."
 }
 
 # ── step 1: preflight ─────────────────────────────────────────────────────────
@@ -884,6 +931,8 @@ if [[ "$SELF_TEST" -eq 1 ]]; then
 fi
 command -v jq > /dev/null || fail "jq is required on this machine"
 [[ -f "$MANIFEST" ]] || fail "run this from a checkout: $MANIFEST is missing"
+release="$(release_verdict "$(served_version || true)" "$(checkout_version)")" || fail "$release"
+ok "$release"
 echo "sandbox-ferropix-rollout: app box $SSH_USER@$APP_HOST, DB box $SSH_USER@$DB_HOST, $([[ "$CHECK" -eq 1 ]] && echo 'check only' || echo 'changing what is missing'), steps ${STEPS[*]}"
 want_step 1 && step1
 want_step 2 && step2

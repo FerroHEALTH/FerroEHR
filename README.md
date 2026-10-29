@@ -115,7 +115,19 @@ curl -u ferroehr:ferroehr -H 'Content-Type: application/json' \
 
 The API documentation is at `http://localhost:8080/ferroehr/rest/swagger-ui`
 (same credentials), and `docker compose --profile viewer up` adds the viewer
-on `http://localhost:3000`. These defaults are for evaluation only. The
+on `http://localhost:3000`.
+
+The quickstart asks FerroPIX, an IHE patient identity source, for the
+pseudonym an `EHR_STATUS` subject carries. To keep the subject-to-EHR
+cross-reference in FerroEHR instead, so a subject is named by its own namespace
+and identifier and `GET /ehr?subject_id=&subject_namespace=` finds it, start
+with one variable:
+
+```shell
+FERROEHR_EHR_INDEX=local docker compose up
+```
+
+These defaults are for evaluation only. The
 [getting started guide](https://ferroehr.eu/docs/latest/getting-started.html)
 continues from here, and [Kubernetes & Helm](https://ferroehr.eu/docs/latest/installation/kubernetes.html)
 covers production.

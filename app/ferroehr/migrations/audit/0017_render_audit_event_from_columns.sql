@@ -226,12 +226,16 @@ COMMENT ON COLUMN audit_event.render_policy IS
 COMMENT ON COLUMN audit_event.search_tokens IS
     'The ITI-81 search tokens of the record''s FHIR AuditEvent: the ids of its audit_search_token rows, and its audit_search_set id negated.';
 
--- The token parameters match through this index. Each insert updates it in
--- place: the pending list of fastupdate leaves the index three times the size
--- after the same writes (PostgreSQL 18 docs, "GIN Fast Update Technique",
+-- The token parameters match through this index. A record's entries go to the
+-- pending list in one append and move into the posting trees in bulk, since
+-- an in-place insert rewrites the last segment of the tree of every token all
+-- records share (their set, the principal, the address) and wrote more WAL
+-- than the clinical writes of the same load. A search reads the pending list
+-- whole, so its limit is 512 kB rather than the 4 MB default (PostgreSQL 18
+-- docs, "GIN Fast Update Technique",
 -- https://www.postgresql.org/docs/18/gin.html#GIN-FAST-UPDATE).
 CREATE INDEX ix_audit_event_search_tokens ON audit_event USING gin (search_tokens)
-    WITH (fastupdate = off);
+    WITH (fastupdate = on, gin_pending_list_limit = 512);
 -- entity matches resource_id through its hash, since a resource id can be a
 -- stored query name longer than a B-tree entry holds.
 CREATE INDEX ix_audit_event_resource_id ON audit_event (hashtextextended(resource_id, 0));

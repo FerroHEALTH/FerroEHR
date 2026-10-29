@@ -893,6 +893,14 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
              namespace"
         );
     }
+    let unused = config.ehr_index.unused_keys();
+    if !unused.is_empty() {
+        tracing::warn!(
+            keys = %unused.join(", "),
+            "[ehr_index] provider is \"local\": the IHE patient identity source keys are set \
+             and not used"
+        );
+    }
 }
 
 /// Connects the four domain pools and prepares every database they reach.

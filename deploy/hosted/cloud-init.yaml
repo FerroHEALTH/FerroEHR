@@ -65,14 +65,22 @@ write_files:
       }
 
   # The ONE command the CI key may run. It reads SSH_ORIGINAL_COMMAND and
-  # accepts exactly four verbs: `deploy` (the default — pull, extract the
+  # accepts exactly five verbs: `deploy` (the default — pull, extract the
   # posture out of the pulled image, recreate), `restart` (recreate the CDR
   # so a fresh boot re-runs the migrations — what the reseed needs after its
   # wipe), `wipe` (drop the CDR's schemas on the private database, using
   # the DSN this box already holds — the database has no public port and CI
   # holds no database credential), and `identities` (register the demo
-  # subjects with FerroPIX and answer their pseudonyms, #4242). Nothing is built here, and nothing is
-  # fetched from the repository.
+  # subjects with FerroPIX and answer their pseudonyms, #4242), and `verbs`
+  # (print the verbs this copy offers, #4372). Nothing is built here, and
+  # nothing is fetched from the repository.
+  #
+  # The verb contract across a release boundary: this file does not update
+  # itself, so the workflows on main call whatever copy the box holds. A verb
+  # keeps its name, its input and its output for good; a changed meaning is a
+  # new verb. Every caller asks `verbs` first (.github/actions/deploy-verbs),
+  # and scripts/checks/hosted-deploy-script.sh holds each verb a caller names
+  # to this list.
   - path: /opt/ferroehr-sandbox/deploy.sh
     permissions: "0755"
     owner: deploy:deploy
@@ -100,12 +108,19 @@ write_files:
 
       verb="${SSH_ORIGINAL_COMMAND:-deploy}"
       case "$verb" in
-        deploy|restart|wipe|identities) ;;
+        deploy|restart|wipe|identities|verbs) ;;
         *)
-          echo "deploy: unknown verb '$verb' (this key runs 'deploy', 'restart', 'wipe' or 'identities')" >&2
+          echo "deploy: unknown verb '$verb' (this key runs 'deploy', 'restart', 'wipe', 'identities' or 'verbs')" >&2
           exit 1
           ;;
       esac
+
+      # `verbs` answers the verbs this copy offers, which every caller reads
+      # before it calls one: this file does not update itself.
+      if [[ "$verb" == "verbs" ]]; then
+        echo "verbs deploy restart wipe identities verbs"
+        exit 0
+      fi
 
       # `identities` is the reseed's FerroPIX step (#4242): the demo subjects
       # arrive on stdin, one per line, and the answer on stdout is the file

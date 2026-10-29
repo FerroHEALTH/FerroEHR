@@ -12,12 +12,12 @@ before any viewer change:
 - the consumer guide, [`docs/consoles.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/consoles.md):
   how a console takes the library, what it keeps local, how it moves to a
   new release;
-- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.5.4/.claude/rules/leptos-ui.md):
+- the component rules, [`.claude/rules/leptos-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.5.8/.claude/rules/leptos-ui.md):
   the mandates (§0), the four-layer interaction contract (§1), reactivity,
   views, forms, tables and paging, accessibility to WCAG 2.2 AA, tokens and
   themes, icons, the bundle (§12), the catalogs (§13), the book's rules (§14)
   and the hydration rules (§15);
-- the crate discipline, [`crates/ferrohealth-ui/CLAUDE.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.5.4/crates/ferrohealth-ui/CLAUDE.md):
+- the crate discipline, [`crates/ferrohealth-ui/CLAUDE.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.5.8/crates/ferrohealth-ui/CLAUDE.md):
   the interaction contract, the whole page hydrated and the list of ready
   components;
 - the reviewed design, [`design/README.md`](https://github.com/FerroHEALTH/FerroUI/blob/main/design/README.md),
@@ -27,8 +27,8 @@ before any viewer change:
   [`design/consoles/ferroehr/`](https://github.com/FerroHEALTH/FerroUI/tree/main/design/consoles/ferroehr).
 
 **The pin decides the version you read.** The viewer pins `ferrohealth-ui =
-"=0.5.4"` (root `Cargo.toml`), so the component rules, the guide, the crate
-discipline and the design are read at the tag `v0.5.4`. The viewer hydrates
+"=0.5.8"` (root `Cargo.toml`), so the component rules, the guide, the crate
+discipline and the design are read at the tag `v0.5.8`. The viewer hydrates
 the whole page and draws every page after the first in the browser, under
 the four-layer interaction contract (FerroHEALTH/FerroUI#410, #4116).
 FerroUI's `design/` is the only design source: a design folder anywhere
