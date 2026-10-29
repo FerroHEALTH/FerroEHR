@@ -50,7 +50,11 @@ record says and where it is stored.
   `policy`, the caller's roles as its `role` and the client application as an
   agent of its own (BALP 1.1.4 §3:5.7.5.4); a Basic user is named by the
   account alone, with no issuer and no client. The ITS-REST operation id is a
-  second `subtype` (`urn:openehr:its-rest:operation`), the outcome is stated
+  second `subtype` (`urn:openehr:its-rest:operation`). The object an access
+  record reads, creates, updates or deletes is named by its openEHR object id
+  as `entity.what.identifier` in the system `urn:openehr:object-id`, never as
+  a `what.reference`, since it is no FHIR resource (FHIR R4 references.html
+  §2.3.0.3). The outcome is stated
   in `outcomeDesc`, and `source.type` names an application server. Query
   executions carry the search expression.
 - **DICOM Audit Message** (DICOM PS3.15 §A.5 XML): the classic ATNA form,
@@ -566,8 +570,10 @@ with several comma-separated values matches any of them, and every
 parameter of the query must match. A token takes the three forms of FHIR R4
 Search §3.1.1.4.10: `code`, `|code` (recorded without a system) and
 `system|code` (or `system|` for any code of that system). FerroEHR records
-identifiers without a system, so a query that names a system for an
-identifier matches nothing. Every parameter answers through an index. A
+identifiers without a system, except the object of an access record, whose
+system is `urn:openehr:object-id`: `entity.identifier=urn:openehr:object-id|<uid>`
+and `entity.identifier=<uid>` find it, and a query that names another system
+for an identifier matches nothing. Every parameter answers through an index. A
 parameter on an element of the document (`address` and the `.identifier`,
 `entity-type`, `entity-role`, `type` and `subtype` parameters) matches the
 search tokens the store takes from the record's rendered document when it
