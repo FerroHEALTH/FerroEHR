@@ -16,16 +16,16 @@ use http::{Request, StatusCode};
 use crate::common;
 use crate::common::BASE;
 
-/// The fewest pool checkouts one of three identical `GET`s of `uri` took: a
-/// background task of the process can check out beside a request, never in
-/// all three windows at once.
-async fn checkouts_of(app: &Router, uri: &str) -> u64 {
+/// The fewest pool checkouts one of three identical `GET`s of `uri`, the read
+/// `read` names, took: a background task of the process can check out beside
+/// a request, never in all three windows at once.
+async fn checkouts_of(app: &Router, read: &str, uri: &str) -> u64 {
     let mut fewest = u64::MAX;
     for _ in 0..3 {
         let before = pool_checkouts();
         let (status, body) = common::send_body(app, common::get(uri)).await;
         let after = pool_checkouts();
-        assert_eq!(status, StatusCode::OK, "GET {uri}: {body}");
+        assert_eq!(status, StatusCode::OK, "{read}: {body}");
         fewest = fewest.min(after - before);
     }
     fewest
@@ -54,15 +54,18 @@ async fn the_common_reads_check_out_one_connection() {
     assert_eq!(status, StatusCode::CREATED, "composition create: {body}");
     let uid = common::etag_uid(&headers);
 
-    for uri in [
-        format!("{BASE}/ehr/{ehr_id}"),
-        format!("{BASE}/ehr/{ehr_id}/ehr_status"),
-        format!("{BASE}/ehr/{ehr_id}/composition/{uid}"),
+    for (read, uri) in [
+        ("EHR", format!("{BASE}/ehr/{ehr_id}")),
+        ("EHR_STATUS", format!("{BASE}/ehr/{ehr_id}/ehr_status")),
+        (
+            "COMPOSITION",
+            format!("{BASE}/ehr/{ehr_id}/composition/{uid}"),
+        ),
     ] {
         assert_eq!(
-            checkouts_of(&app, &uri).await,
+            checkouts_of(&app, read, &uri).await,
             1,
-            "pool checkouts of GET {uri}"
+            "pool checkouts of a read of the {read}"
         );
     }
 }

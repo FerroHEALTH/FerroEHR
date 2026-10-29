@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: openEHR Foundation
+// SPDX-License-Identifier: Apache-2.0
 
 //! Binding `query_parameters` into the AST (`QUERY/docs/AQL/master03-syntax.adoc`
 //! §Parameters; `ITS-REST/specifications/docs/query/Request.md` §Query

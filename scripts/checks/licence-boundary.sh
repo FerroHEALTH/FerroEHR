@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: BUSL-1.1
 # The Apache-2.0 crates never depend on a BUSL-1.1 crate.
 #
-# Six `crates/*` packages publish under Apache-2.0 (the five generated model
-# crates and the `openehr-its` wire layer) so any Rust project can take them;
-# three hand-written engines publish under BUSL-1.1. A normal or build
+# Seven `crates/*` packages publish under Apache-2.0 (the five generated model
+# crates, the `openehr-its` wire layer and the `openehr-query` AQL parser) so
+# any Rust project can take them; two hand-written engines publish under
+# BUSL-1.1. A normal or build
 # dependency from the first set on the second would make every consumer of the
 # Apache wire layer compile BUSL code, which the licence split exists to rule
 # out. Dev-dependencies are exempt: cargo strips them at packaging, so one
@@ -34,8 +35,8 @@ set -euo pipefail
 . "$(dirname "$0")/../lib/guard-args.sh"
 cd "$(dirname "$0")/../.."
 
-readonly -a APACHE_CRATES=(openehr-base openehr-lang openehr-term openehr-rm openehr-am openehr-its)
-readonly -a BUSL_CRATES=(openehr-query openehr-adl openehr-sdt)
+readonly -a APACHE_CRATES=(openehr-base openehr-lang openehr-term openehr-rm openehr-am openehr-its openehr-query)
+readonly -a BUSL_CRATES=(openehr-adl openehr-sdt)
 
 for tool in yq jq; do
   command -v "$tool" >/dev/null || { echo "error: $tool is required" >&2; exit 1; }
@@ -155,8 +156,8 @@ self_test() {
   expect 'a renamed dependency' refused 'openehr-its: depends on the BUSL-1.1 crate openehr-sdt'
 
   fresh
-  printf '\n[build-dependencies]\nopenehr-query = { path = "../openehr-query" }\n' >>"$its"
-  expect 'a build dependency' refused 'openehr-its: depends on the BUSL-1.1 crate openehr-query'
+  printf '\n[build-dependencies]\nopenehr-sdt = { path = "../openehr-sdt" }\n' >>"$its"
+  expect 'a build dependency' refused 'openehr-its: depends on the BUSL-1.1 crate openehr-sdt'
 
   fresh
   printf '\n[target.%s.dependencies]\nopenehr-adl = { path = "../openehr-adl" }\n' "'cfg(unix)'" >>"$its"

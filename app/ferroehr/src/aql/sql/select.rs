@@ -455,6 +455,11 @@ impl Builder<'_> {
             AggFunc::Sum | AggFunc::Avg => ValueMode::Value(Coercion::Magnitude),
         };
         let count = matches!(func, AggFunc::Count);
+        if count && !distinct && self.root_node_elided(target) {
+            // NOTE: QUERY master03 §COUNT counts the objects that are there, and
+            // the spine row of a version whose root node is elided is one.
+            return Ok(aggregate_expr(func, None, false));
+        }
         // A plain count only asks whether each object is there;
         // a DISTINCT count compares the objects themselves.
         self.presence_only = count && !distinct;
@@ -482,6 +487,19 @@ impl Builder<'_> {
             };
             Ok(aggregate_expr(func, Some(value), distinct))
         }
+    }
+
+    /// Whether `target` is the whole streaming root object and the plan
+    /// elided its node row (`Builder::stream_root`), so a version row stands
+    /// for it.
+    fn root_node_elided(&self, target: &PathTarget) -> bool {
+        let PathTarget::Data(leaf) = target else {
+            return false;
+        };
+        let source = leaf.source.0;
+        self.vo_alias.contains_key(&source)
+            && !self.node_alias.contains_key(&source)
+            && super::from::is_whole_root_object(target, source)
     }
 
     /// Whether `target` is read as a jsonb fragment value (a data path that is

@@ -712,6 +712,39 @@ async fn the_archetype_columns_carry_dependency_statistics() {
     );
 }
 
+/// A population count of a whole object reads no node row (#4286).
+///
+/// `COUNT(c)` and `COUNT(*)` ask only whether each COMPOSITION is there
+/// (QUERY master03 §COUNT), which the current version row of an object that
+/// is not logically deleted answers; probing `node` for every root row cost
+/// 25 s at 500 000 compositions.
+#[tokio::test]
+async fn a_population_count_of_whole_objects_reads_no_node() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed(&svc, &pool).await;
+
+    for aql in [
+        "SELECT count(c) FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT count(*) FROM EHR e CONTAINS COMPOSITION c",
+    ] {
+        let plan = explain_aql(&pool, aql_sql(aql, Vec::new())).await;
+        let scans = scans(&plan);
+        assert!(
+            partitions(&scans, "node").is_empty(),
+            "{aql} reads no node partition:\n{}",
+            render(&scans)
+        );
+        assert_eq!(
+            partitions(&scans, "version"),
+            vec!["version_hot"],
+            "{aql} reads the hot version partition:\n{}",
+            render(&scans)
+        );
+    }
+}
+
 /// The `LATEST_VERSION` binding under `CONTAINS` costs one key probe per
 /// object, not a walk of its trunk (#3453).
 ///
