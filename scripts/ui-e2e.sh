@@ -440,7 +440,14 @@ NEXTEST_PARTITION=()
 env "${E2E_ENV[@]}" \
   UI_E2E_OIDC_USER="ferroehr-admin" \
   UI_E2E_OIDC_PASS="E2ePass-admin1!" \
-  cargo nextest run "${NEXTEST_TARGET[@]}" -j 1 "${NEXTEST_FILTER[@]}" ${NEXTEST_PARTITION[@]+"${NEXTEST_PARTITION[@]}"}
+  cargo nextest run "${NEXTEST_TARGET[@]}" -j 1 "${NEXTEST_FILTER[@]}" ${NEXTEST_PARTITION[@]+"${NEXTEST_PARTITION[@]}"} || {
+    status=$?
+    # The driver's last commands and answers, with their timestamps, so the
+    # job log shows where a failed journey's time went.
+    echo "── the last chromedriver commands before the failure"
+    grep -E '\] (COMMAND|RESPONSE) ' "$SHOTS_DIR/chromedriver.log" | tail -n 80 | cut -c1-240 || true
+    exit "$status"
+  }
 fi
 
 # ── 6. The documentation-screenshot pass (opt-in) ────────────────────────────
