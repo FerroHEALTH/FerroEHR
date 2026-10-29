@@ -90,7 +90,7 @@ identity:
 | Artifact | Signing workflow | SAN on a release build | SAN on a development build |
 |---|---|---|---|
 | the three images | `build-image.yml` — the reusable builder both callers use | `…/build-image.yml@refs/tags/vX.Y.Z` (the release pipeline) | `…/build-image.yml@refs/heads/main` (via `containers.yml`) |
-| the chart | `build-chart.yml` — the reusable chart lane | `…/build-chart.yml@refs/tags/vX.Y.Z` (the release pipeline's chart leg) | `…/build-chart.yml@refs/heads/main` (a `workflow_dispatch` chart-only publish) |
+| the chart | `build-chart.yml` — the reusable chart lane | `…/build-chart.yml@refs/tags/vX.Y.Z` (the release pipeline's chart leg) | `…/build-chart.yml@refs/heads/main` (a `workflow_dispatch` chart-only publish, or the recovery of a release's chart leg for a tag cut before a re-run could finish it) |
 | the release binaries | `release-build.yml` | `…/release-build.yml@refs/tags/vX.Y.Z` | *(none; the lane only runs on a tag)* |
 
 All three prefixed with `https://github.com/FerroHEALTH/FerroEHR/.github/workflows/`,
