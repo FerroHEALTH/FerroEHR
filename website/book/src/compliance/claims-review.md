@@ -736,3 +736,51 @@ accesses through the map FerroEHR ships (#4298); chart 20.0.1-rc1 with
 
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths until 5.6.0 ships.
+
+## The review of 2026-10-29, for 5.6.0-rc2
+
+Read on the tree after commit `40982f374`, for the FerroEHR release candidate
+5.6.0-rc2; 5.6.0-rc1 was tagged at `61d5d1ff7` and not published. The review of
+2026-10-28 stands for everything 5.6.0-rc1 carried. The facts added since and
+checked in every text in scope: the `[origins]` register stamps a direct commit
+from a registered client with that client's origin, a retention period may be
+keyed on a registered origin, and the ABAC request carries `category` and
+`origin` attributes (#4299); a client CA under `client_auth = "none"` is
+refused at load (#4349, GHSA-52mf-qg39-4q4j); the chart refuses to render
+without an explicit deployment profile (#4294); the logging component's
+intended performance is stated and measured (#4293) and its ATNA transactions
+are exercised against independent implementations (#4296); an unclassified
+record's FHIR rendering carries the BALP `entity:data` slice (#4353); chart
+21.0.0-rc2 with `appVersion` 5.6.0-rc2.
+
+### Changed on 2026-10-29, for 5.6.0-rc2
+
+- **The hazard log**: H4 said a body without `FEEDER_AUDIT` records this
+  server as its origin; it names the registered client's origin and its test
+  (#4299). H3's remainder said the chart's empty map matches the binary, which
+  ships a map since #4298; it says the shipped map applies.
+
+### Read and kept on 2026-10-29, for 5.6.0-rc2
+
+- **The retention and access pages**: [retention](retention.md), the
+  [audit configuration](../installation/config-audit.md) and
+  [security](../security.md) describe the `[origins]` register, the
+  origin-keyed retention policy and the two ABAC attributes as the code
+  implements them.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc2 and image 5.6.0-rc2 in the book of main, and the Kubernetes page
+  sets `config.deployment_profile` in its install example (#4294).
+- **The TLS and performance pages**: [the server configuration](../installation/config-server.md)
+  says `client_ca_file` is refused under `client_auth = "none"`, and
+  [logging performance](logging-performance.md) states the claims
+  `scripts/perf/audit.sh` measures.
+- **The landing page, `SECURITY.md`, the crate READMEs, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-29, for 5.6.0-rc2
+
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths until 5.6.0 ships.

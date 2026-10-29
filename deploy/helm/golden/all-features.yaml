@@ -34,7 +34,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -116,7 +116,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -239,7 +239,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -320,7 +320,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -344,7 +344,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -375,7 +375,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -410,7 +410,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -425,7 +425,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
   annotations:
@@ -442,7 +442,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -471,7 +471,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 type: Opaque
@@ -496,7 +496,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 type: Opaque
@@ -573,7 +573,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -597,7 +597,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 data:
@@ -776,7 +776,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     grafana_dashboard: "1"
@@ -1040,7 +1040,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -1195,7 +1195,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -1218,7 +1218,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
   annotations:
@@ -1252,7 +1252,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -1396,7 +1396,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -1527,7 +1527,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -1577,7 +1577,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: ferroehr
-          image: "ghcr.io/ferrohealth/ferroehr:5.6.0-rc1"
+          image: "ghcr.io/ferrohealth/ferroehr:5.6.0-rc2"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -1798,7 +1798,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -1942,7 +1942,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -1979,7 +1979,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-backup-clinical
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: backup
@@ -2024,7 +2024,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc2"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -2082,7 +2082,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-backup-party
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: backup
@@ -2127,7 +2127,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc2"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -2185,7 +2185,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-backup-linkage
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: backup
@@ -2230,7 +2230,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc2"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -2288,7 +2288,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-backup-audit
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: backup
@@ -2333,7 +2333,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc1"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc2"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -2389,7 +2389,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -2427,7 +2427,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     release: kube-prometheus-stack
@@ -2487,7 +2487,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: migration
@@ -2506,7 +2506,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.0-rc2
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc1"
+    app.kubernetes.io/version: "5.6.0-rc2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: migration
@@ -2531,7 +2531,7 @@ spec:
         helm.sh/chart: ferroehr-21.0.0-rc2
         app.kubernetes.io/name: ferroehr-migration
         app.kubernetes.io/instance: ferroehr
-        app.kubernetes.io/version: "5.6.0-rc1"
+        app.kubernetes.io/version: "5.6.0-rc2"
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/part-of: ferroehr
         app.kubernetes.io/component: migration
@@ -2555,7 +2555,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: migrate
-          image: "ghcr.io/ferrohealth/ferroehr:5.6.0-rc1"
+          image: "ghcr.io/ferrohealth/ferroehr:5.6.0-rc2"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
