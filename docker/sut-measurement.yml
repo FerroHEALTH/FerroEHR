@@ -29,8 +29,11 @@ services:
       # the SUT answered any 429, so a measurement can never be silently
       # limiter-shaped even if this overlay is left out.
       #
-      # The family section has no off switch beside leaving the table out, which
-      # an overlay cannot do to the base file's environment, so the rate is
-      # raised to the largest value it takes, far past any offered load.
-      FERROEHR__SERVER__CALLER_RATE__REQUESTS_PER_SECOND: "4294967295"
-      FERROEHR__SERVER__CALLER_RATE__BURST: "4294967295"
+      # The family section switches the limiter off when the
+      # `[server.caller_rate]` table is absent, so the overlay removes both of
+      # the base file's keys with Compose's `!reset` tag
+      # (docs.docker.com/reference/compose-file/merge/#reset-value), and the
+      # server logs `caller rate limiting configured` with `enabled=false` at
+      # boot. A huge rate instead truncated the limiter's interval (#4281).
+      FERROEHR__SERVER__CALLER_RATE__REQUESTS_PER_SECOND: !reset null
+      FERROEHR__SERVER__CALLER_RATE__BURST: !reset null

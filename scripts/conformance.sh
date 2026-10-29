@@ -108,19 +108,32 @@ STATEMENT="${CONF_STATEMENT:-$PARTY/statement.json}"
 # server), declared as the ixit's `sut_stable` instance. The spec-profile
 # cases address it with `on:`; both claimed generation sets land in the ONE
 # record, the same both-postures law the signing lane follows.
-FERROEHR_RS_COMPOSE=(docker compose -p ferroehr-cnf \
-  --project-directory "$REPO_ROOT" --profile terminology \
-  -f "$REPO_ROOT/docker/sut-ferroehr.yml" \
-  -f "$REPO_ROOT/docker/sut-smart.yml" \
-  -f "$REPO_ROOT/docker/sut-terminology.yml" \
-  -f "$REPO_ROOT/docker/sut-spec-stable.yml")
 # A measurement lane composes one more overlay: docker/sut-measurement.yml turns
 # the rate limiter off for the run, because the instruments offer load past the
 # server's knee on purpose and a 429 would measure the limiter instead of the
 # server. Declared as a file rather than an exported variable so the posture of
-# a recorded run is readable after the fact.
+# a recorded run is readable after the fact. It goes right after the base file:
+# Compose (v5.6.1) keeps a key the overlay `!reset`s when a file between the two
+# sets other keys of the same `environment` map, which sut-terminology.yml does.
+MEASUREMENT_OVERLAY=()
 if [[ -n "${CONF_PERF_CLASS:-}" ]] || [[ -n "${CONF_STRESS:-}" ]]; then
-  FERROEHR_RS_COMPOSE+=(-f "$REPO_ROOT/docker/sut-measurement.yml")
+  MEASUREMENT_OVERLAY=(-f "$REPO_ROOT/docker/sut-measurement.yml")
+fi
+FERROEHR_RS_COMPOSE=(docker compose -p ferroehr-cnf \
+  --project-directory "$REPO_ROOT" --profile terminology \
+  -f "$REPO_ROOT/docker/sut-ferroehr.yml" \
+  ${MEASUREMENT_OVERLAY[@]+"${MEASUREMENT_OVERLAY[@]}"} \
+  -f "$REPO_ROOT/docker/sut-smart.yml" \
+  -f "$REPO_ROOT/docker/sut-terminology.yml" \
+  -f "$REPO_ROOT/docker/sut-spec-stable.yml")
+if ((${#MEASUREMENT_OVERLAY[@]})); then
+  # The posture is checked on the composed model before anything starts: a
+  # caller-rate key left on the measured service would put the limiter back.
+  if (cd "$REPO_ROOT" && "${FERROEHR_RS_COMPOSE[@]}" config --format json) |
+    jq -e '.services.ferroehr.environment | keys | any(startswith("FERROEHR__SERVER__CALLER_RATE__"))' >/dev/null; then
+    echo "FATAL: the measurement stack still sets [server.caller_rate] on the ferroehr service" >&2
+    exit 1
+  fi
   echo "==> Measurement lane: composing docker/sut-measurement.yml (rate limiting off)"
 fi
 # BOTH claimed version-signing modes are exercised in the ONE record: a SECOND
