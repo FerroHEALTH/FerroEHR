@@ -153,8 +153,8 @@ fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
 /// list. Blank entries are dropped.
 ///
 /// The value is split on its literal commas (the RFC 6570 §3.2.8 list
-/// delimiter) before each item is form-decoded as every other query parameter
-/// is ([`query_component_octets`]).
+/// delimiter) before each item is percent-decoded as every other query
+/// parameter is ([`query_component_octets`], RFC 3986 §2.1).
 fn ehr_id_list(query: Option<&str>) -> Vec<String> {
     let Some(q) = query else {
         return Vec::new();
@@ -195,10 +195,10 @@ mod tests {
         );
         // A present-but-empty value contributes nothing.
         assert_eq!(ehr_id_list(Some("ehr_id=")), Vec::<String>::new());
-        // Each item is form-decoded after the comma split (WHATWG URL §5.1).
+        // Each item is percent-decoded after the comma split, a plus kept (RFC 3986 §2.1).
         assert_eq!(
-            ehr_id_list(Some("ehr_id=a%2Db,+c+")),
-            vec!["a-b".to_owned(), "c".to_owned()]
+            ehr_id_list(Some("ehr_id=a%2Db,%20c%20,d+e")),
+            vec!["a-b".to_owned(), "c".to_owned(), "d+e".to_owned()]
         );
     }
 }

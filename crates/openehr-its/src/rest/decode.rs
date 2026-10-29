@@ -12,10 +12,10 @@
 //! A query parameter is read as the generated client writes it: one
 //! `name=value` pair per scalar, one pair per array item, and one pair per
 //! member of a form-exploded object (`style: form, explode: true`). Both the
-//! name and the value are decoded as the `application/x-www-form-urlencoded`
-//! parser of the WHATWG URL Standard §5.1 decodes them: a `+` is a space and a
-//! literal plus arrives as `%2B`, which RFC 6570 §3.2.8 form expansion always
-//! writes, so every request the OAS `style: form` describes reads unchanged.
+//! name and the value are percent-decoded as RFC 3986 §2.1 and §3.4 decode a
+//! URI query, and nothing else: a `+` is a literal plus, and a space arrives
+//! as `%20`, which RFC 6570 §3.2.8 form expansion always writes. ITS-REST
+//! 1.1.0 names no `application/x-www-form-urlencoded` reading for a query.
 
 use std::fmt;
 use std::str::FromStr;
@@ -103,16 +103,15 @@ impl PathValues {
     }
 }
 
-/// The octets one name or value of a query string decodes to: each `+` a
-/// space, then every percent-encoded octet decoded.
+/// The octets one name or value of a query string decodes to: every
+/// percent-encoded octet decoded, every other character kept.
 ///
-/// This is the per-component step of the WHATWG URL Standard §5.1
-/// `application/x-www-form-urlencoded` parser (step 3.4, then percent-decoding),
-/// in that order, so an encoded `%2B` stays a literal plus. The caller decides
-/// how octets that are not UTF-8 are answered.
+/// RFC 3986 §2.1 and §3.4 decode only percent-encoded octets in a URI query,
+/// so a `+` stays a literal plus and `%2B` decodes to one too. The caller
+/// decides how octets that are not UTF-8 are answered.
 #[must_use]
 pub fn query_component_octets(text: &str) -> Vec<u8> {
-    urlencoding::decode_binary(text.replace('+', " ").as_bytes()).into_owned()
+    urlencoding::decode_binary(text.as_bytes()).into_owned()
 }
 
 /// The query pairs of one request, in order, each name and value decoded.
