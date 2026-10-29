@@ -781,6 +781,10 @@ jobs:
           persist-credentials: false
       - name: Compose artifacts stay hardened
         run: bash scripts/checks/compose-hardening.sh
+      - name: Compose drops no !reset key the guard depends on, and the check refuses a merged model that holds one
+        run: bash scripts/checks/compose-reset.sh --self-test
+      - name: Every key a compose overlay resets is absent from the stack its launcher merges
+        run: bash scripts/checks/compose-reset.sh
       - name: The overlay's inline dashboard matches the chart's canonical copy
         run: bash scripts/checks/dashboard-drift.sh
       # The shipped default sends a usage report; a test instance must not.
