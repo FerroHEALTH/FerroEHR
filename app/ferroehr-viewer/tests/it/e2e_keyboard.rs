@@ -41,6 +41,10 @@ const TAB_BUDGET: usize = 80;
 /// (WCAG 2.2 SC 2.4.3), and the next Tab stays in the main area; on a page
 /// the browser loads, the first Tab reaches the skip link, and following it
 /// puts the focus in the main area, past the top bar and the sidebar.
+///
+/// Each focus check after a key waits on the condition it asserts (#4315):
+/// the key's command returns once the key is dispatched, and the browser's
+/// fragment navigation and the page's focus handling follow it.
 #[tokio::test]
 async fn a_route_change_starts_the_focus_at_the_skip_link() {
     let Some(h) = Harness::start("keyboard-route-change").await else {
@@ -62,7 +66,7 @@ async fn a_route_change_starts_the_focus_at_the_skip_link() {
     );
     h.press(Key::Tab).await;
     assert!(
-        h.focus_matches("main *").await,
+        poll_until(async || h.focus_matches("main *").await).await,
         "the first Tab after the heading stays in the main area (focus: {})",
         h.focused().await
     );
@@ -71,7 +75,7 @@ async fn a_route_change_starts_the_focus_at_the_skip_link() {
     h.wait_css("main table").await;
     h.press(Key::Tab).await;
     assert!(
-        h.focus_matches("a.fui-skip").await,
+        poll_until(async || h.focus_matches("a.fui-skip").await).await,
         "the first Tab on a new page reaches the skip link (focus: {})",
         h.focused().await
     );
@@ -79,7 +83,7 @@ async fn a_route_change_starts_the_focus_at_the_skip_link() {
     h.wait_url_contains("#main").await;
     h.press(Key::Tab).await;
     assert!(
-        h.focus_matches("main *").await,
+        poll_until(async || h.focus_matches("main *").await).await,
         "after the skip link the next Tab lands in the main area (focus: {})",
         h.focused().await
     );
