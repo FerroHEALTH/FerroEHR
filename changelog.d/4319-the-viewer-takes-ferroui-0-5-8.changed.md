@@ -1,0 +1,1 @@
+- The viewer takes FerroUI 0.5.8: a menu item draws a visible bar under the pointer and the keyboard focus, and the top bar's search no longer opens its panel again over the page the router draws after a search is submitted or one of its options followed.

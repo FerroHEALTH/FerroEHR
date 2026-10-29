@@ -178,7 +178,7 @@ pub fn AboutPage() -> impl IntoView {
 
 /// The FerroUI release the viewer draws with: the exact pin of the
 /// workspace manifest, held to it by a test.
-const FERROHEALTH_UI: &str = "0.5.4";
+const FERROHEALTH_UI: &str = "0.5.8";
 
 /// The FerroUI release the viewer draws with.
 fn ferrohealth_ui_version() -> String {

@@ -2955,15 +2955,19 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.5.4"
+version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6243a76ad1714441c93b65f511777a08f4e811b83e533400d3fdb8853de62d1a"
+checksum = "cb21239233ca94af5ea2ca3b180a6e76653061a8b69f32f63ca0c5393e2d82b2"
 dependencies = [
+ "axum",
  "fluent-templates",
+ "form_urlencoded",
+ "http",
  "intl-memoizer",
  "leptos",
  "leptos_router",
  "serde",
+ "tower",
  "wasm-bindgen-futures",
  "web-sys",
 ]
