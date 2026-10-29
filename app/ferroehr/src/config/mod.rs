@@ -1661,6 +1661,31 @@ mod tests {
         assert!(err.to_string().contains("RFC 8996"), "{err}");
     }
 
+    /// A client CA under `client_auth = "none"`, written or by default, is
+    /// refused at load naming the setting: before 5.5.0 a CA alone meant a
+    /// required client certificate, and under `none` it would ask for none
+    /// (GHSA-52mf-qg39-4q4j).
+    #[test]
+    fn a_client_ca_without_a_client_certificate_policy_is_refused() {
+        for policy in ["", "client_auth = \"none\"\n"] {
+            let file = toml_file(&format!(
+                "[server.tls]\ncertificate_file = \"a\"\nkey_file = \"b\"\n{policy}\
+                 client_ca_file = \"ca.pem\"\n"
+            ));
+            let err = assemble(Some(file.path()), &env(&[]), &[])
+                .expect_err("a client CA under none is refused");
+            let text = err.to_string();
+            for word in ["client_ca_file", "client_auth", "required", "optional"] {
+                assert!(text.contains(word), "{policy:?}: {word} in {err}");
+            }
+        }
+        let required = toml_file(
+            "[server.tls]\ncertificate_file = \"a\"\nkey_file = \"b\"\n\
+             client_auth = \"required\"\nclient_ca_file = \"ca.pem\"\n",
+        );
+        assert!(assemble(Some(required.path()), &env(&[]), &[]).is_ok());
+    }
+
     /// A URL loses its userinfo and query; text without `://` keeps its text.
     #[test]
     fn mask_if_url_masks_only_a_url() {

@@ -118,10 +118,17 @@ min_version = "1.3"
 | `certificate_file` | path | (required in the table) | Server certificate chain (PEM), the leaf first. A missing, unreadable or certificate-less file stops startup. |
 | `key_file` | path | (required in the table) | Server private key (PEM), read as a secret file. A key that does not belong to the leaf stops startup. |
 | `client_auth` | enum{none,optional,required} | `none` | Client-certificate policy. `optional` verifies a certificate when one is presented and still accepts connections without; `required` rejects any client without a verified certificate at the handshake. |
-| `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required unless `client_auth = "none"`. |
+| `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required when `client_auth` is `optional` or `required`, and refused at load when it is `none`, since a listener under `none` asks no client certificate. |
 | `min_version` | enum{"1.3","1.2"} | `"1.3"` | The lowest TLS version this listener negotiates. `"1.0"` and `"1.1"` are refused when the configuration is read (RFC 8996). |
 | `reload_interval_s` | int | unset | How often the certificate, key and client CA are read again while the server runs. The files are always read again on `SIGHUP`. A changed pair is served, and a changed client CA verifies, from the next handshake on without a restart; a read that fails is logged and the running configuration stays. |
 | `healthcheck_identity_file` | path | unset | The client certificate chain and key, in one PEM, that `ferroehr healthcheck` presents to a listener requiring one. |
+
+Before 5.5.0, `client_ca_file` alone meant that every client presents a
+certificate. From 5.5.0, `client_auth` decides it and defaults to `none`, so a
+configuration carried over from an earlier release set `client_ca_file` and no
+`client_auth`, and 5.5.0 served it without asking a client certificate. Such a
+configuration is now refused at load. Set `client_auth = "required"` beside
+`client_ca_file` to keep mutual TLS (GHSA-52mf-qg39-4q4j).
 
 `ferroehr healthcheck` speaks TLS to a TLS listener over the loopback and
 accepts exactly the leaf certificate in `certificate_file`.
