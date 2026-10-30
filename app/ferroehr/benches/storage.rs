@@ -541,6 +541,10 @@ struct Snapshot {
     blks_read: i64,
     /// Committed transactions.
     xact_commit: i64,
+    /// Parallel workers the executed plans asked for.
+    parallel_workers_to_launch: i64,
+    /// Parallel workers actually started.
+    parallel_workers_launched: i64,
     /// The write-ahead-log insert position, when the role may read it.
     wal_lsn: Option<String>,
 }
@@ -587,7 +591,9 @@ async fn snapshot(pool: &PgPool) -> Snapshot {
         );
     }
     let db = sqlx::query(
-        "SELECT blks_hit, blks_read, xact_commit FROM pg_stat_database \
+        "SELECT blks_hit, blks_read, xact_commit, parallel_workers_to_launch, \
+                parallel_workers_launched \
+           FROM pg_stat_database \
           WHERE datname = current_database()",
     )
     .fetch_one(pool)
@@ -598,6 +604,8 @@ async fn snapshot(pool: &PgPool) -> Snapshot {
         blks_hit: db.try_get("blks_hit").unwrap_or_default(),
         blks_read: db.try_get("blks_read").unwrap_or_default(),
         xact_commit: db.try_get("xact_commit").unwrap_or_default(),
+        parallel_workers_to_launch: db.try_get("parallel_workers_to_launch").unwrap_or_default(),
+        parallel_workers_launched: db.try_get("parallel_workers_launched").unwrap_or_default(),
         // NOTE: PostgreSQL docs §Backup Control Functions — reading the WAL
         // position may be refused for an unprivileged role, which the record
         // reports as an absent figure rather than a zero.
@@ -637,6 +645,10 @@ async fn facts(pool: &PgPool, before: &Snapshot) -> Value {
         "blks_hit_delta": after.blks_hit - before.blks_hit,
         "blks_read_delta": after.blks_read - before.blks_read,
         "xact_commit_delta": after.xact_commit - before.xact_commit,
+        "parallel_workers_to_launch_delta":
+            after.parallel_workers_to_launch - before.parallel_workers_to_launch,
+        "parallel_workers_launched_delta":
+            after.parallel_workers_launched - before.parallel_workers_launched,
         "wal_bytes": wal_bytes,
     })
 }

@@ -498,8 +498,12 @@ impl Builder<'_> {
     /// predicated fragment step, or `None` when the leaf addresses the whole
     /// anchor node.
     ///
+    /// A multi-valued step is followed by `[*]`, so a path that ends on a list
+    /// attribute matches each element, as a path that continues below one
+    /// does.
+    ///
     /// A step predicate lowers to a jsonpath filter expression on the step's
-    /// member accessor (`$.links ? (@.archetype_node_id == $p0).target.value`
+    /// member accessor (`$.links[*] ? (@.archetype_node_id == $p0).target.value`
     /// — QUERY master03 §Node predicate / §Standard predicate); every
     /// compared value travels in the `vars` jsonb PARAMETER (`$p0`, `$p1`, …),
     /// never spliced into the path text, and member names are lexer-restricted
@@ -526,6 +530,11 @@ impl Builder<'_> {
         };
         for step in &leaf.fragment {
             let _ = write!(jp, ".{}", step.name);
+            // NOTE: PostgreSQL 18 docs "Strict and Lax Modes": lax mode matches a path
+            // ending on an array once, so a list step names its elements explicitly.
+            if step.multi_valued {
+                jp.push_str("[*]");
+            }
             let Some(pred) = &step.predicate else {
                 continue;
             };

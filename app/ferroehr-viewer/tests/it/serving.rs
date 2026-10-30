@@ -127,6 +127,49 @@ async fn the_healthcheck_asks_the_readiness_of_the_served_viewer() {
     );
 }
 
+/// A document request without a session for a path no route matches meets
+/// the session guard through the family stack, as a routed page does
+/// (FerroHEALTH/FerroSYS#199), and health stays open.
+#[tokio::test]
+async fn an_unknown_address_without_a_session_meets_the_sign_in_through_the_stack() {
+    use tower::util::ServiceExt as _;
+    drop(leptos_axum::generate_route_list(|| ()));
+    let options = leptos::prelude::LeptosOptions::builder()
+        .output_name(env!("CARGO_PKG_NAME"))
+        .build();
+    let app = ferroehr_viewer::server::app(
+        app_state(),
+        options,
+        Health::new(Registry::default(), Lifecycle::default()),
+        ferrohealth_telemetry::request_log::RequestLog::new(&[]),
+    );
+    let get = |path: &str| {
+        http::Request::get(path)
+            .header(http::header::ACCEPT, "text/html")
+            .header(http::header::HOST, "viewer.test")
+            .body(axum::body::Body::empty())
+            .expect("a request")
+    };
+    let answer = app
+        .clone()
+        .oneshot(get("/no-such-screen"))
+        .await
+        .expect("an answer");
+    assert_eq!(http::StatusCode::FOUND, answer.status());
+    assert_eq!(
+        Some("/login?next=%2Fno-such-screen"),
+        answer
+            .headers()
+            .get(http::header::LOCATION)
+            .and_then(|value| value.to_str().ok())
+    );
+    let answer = app
+        .oneshot(get("/health/liveness"))
+        .await
+        .expect("an answer");
+    assert_eq!(http::StatusCode::OK, answer.status());
+}
+
 /// A CDR behind a private CA answers the client that names the CA in
 /// `[cdr.tls] trust_roots_file`, and refuses the handshake of one that does
 /// not.

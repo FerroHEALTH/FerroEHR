@@ -965,6 +965,48 @@ fn multi_valued_fragment_projection_is_an_array_cell() {
     );
 }
 
+/// A path that ends on a list attribute in a fragment names the list's
+/// elements (`[*]`), so the array cell holds the list itself rather than the
+/// list wrapped once more (#4413); the path below a list keeps its matches.
+#[test]
+fn a_fragment_path_ending_on_a_list_names_its_elements() {
+    // The jsonpath travels as a bound value, so it is read off the bound values.
+    let built = |q: &str| {
+        let ctx = SqlCtx {
+            system_id: "sys.example.com".to_owned(),
+            ehr_ids: Vec::new(),
+            ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
+            subject_scope: None,
+            ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+            limit: None,
+            offset: None,
+            archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        };
+        let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::new(), &ctx)
+            .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"));
+        // Whether the array-cell projection runs over a bound jsonpath equal to `jsonpath`.
+        move |jsonpath: &str| {
+            let array_cell =
+                built.sql.contains("jsonb_path_query_array(") && built.sql.contains("nullif(");
+            let bound = format!("{:?}", built.values).contains(&format!("{jsonpath:?}"));
+            (array_cell, bound)
+        }
+    };
+    let list =
+        "SELECT c/feeder_audit/originating_system_item_ids FROM EHR e CONTAINS COMPOSITION c";
+    assert_eq!(
+        built(list)("$.originating_system_item_ids[*]"),
+        (true, true),
+        "a path ending on a list projects an array cell over the list's elements"
+    );
+    let below = "SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c";
+    assert_eq!(
+        built(below)("$.links[*].target.value"),
+        (true, true),
+        "a path below a list projects an array cell over each element's value"
+    );
+}
+
 /// A single-valued fragment leaf keeps the exact first-match scalar
 /// extraction — the existential machinery only fires where multiplicity is
 /// real.

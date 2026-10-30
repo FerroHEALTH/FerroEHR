@@ -70,7 +70,7 @@ sea-orm); `jiff-sqlx` for jiff↔Postgres on plain sqlx queries (sqlx has no
 path. Migrations: five sets (`ext`, `clinical`, `party`, `linkage`, `audit`),
 each a sequence of natural files with one concern apiece and its grants in
 the last file; new ones via `sqlx migrate add --sequential`, and a file the
-latest release tag carries is never edited
+latest release tag or a pre-release tag above it carries is never edited
 (`.claude/rules/sqlx-conventions.md`).
 
 Serialization & formats: `serde` 1, `serde_json` 1 (`preserve_order`),

@@ -2232,7 +2232,7 @@ dependencies = [
 
 [[package]]
 name = "docs-meta"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 
 [[package]]
 name = "dotenvy"
@@ -2509,7 +2509,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2580,7 +2580,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "aes-gcm 0.11.1",
  "argon2 0.6.0",
@@ -2661,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-ext"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2681,7 +2681,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-rest"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "argon2 0.6.0",
  "assert_fs",
@@ -2745,7 +2745,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-server"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2769,7 +2769,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-viewer"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "anyhow",
  "axum",
@@ -2874,9 +2874,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-server"
-version = "0.3.9"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb7ced1223ab4d3a98f77ff6fc5654a1e7b420f65f503a49752cd4ab1eb0d856"
+checksum = "0343298b82aed16423437fa659b7435c729bd3369c33261c1161493b62762440"
 dependencies = [
  "axum",
  "clap",
@@ -4883,7 +4883,7 @@ checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
 name = "loadtest"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "anyhow",
  "clap",
@@ -5541,7 +5541,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-codegen"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "http",
  "roxmltree",
@@ -6603,7 +6603,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7114,7 +7114,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7188,7 +7188,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8371,7 +8371,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8431,7 +8431,7 @@ dependencies = [
 
 [[package]]
 name = "testkit"
-version = "5.6.0-rc2"
+version = "5.6.0-rc3"
 dependencies = [
  "ferroehr",
  "jiff",
@@ -9603,7 +9603,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

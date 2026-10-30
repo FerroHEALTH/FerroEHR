@@ -119,7 +119,9 @@ on the same machine.
                           "n_live_tup": 0, "n_dead_tup": 0,
                           "total_bytes": 0 } ],
             "blks_hit_delta": 0, "blks_read_delta": 0,
-            "xact_commit_delta": 0, "wal_bytes": 0 } } ] } ],
+            "xact_commit_delta": 0,
+            "parallel_workers_to_launch_delta": 0,
+            "parallel_workers_launched_delta": 0, "wal_bytes": 0 } } ] } ],
   "commit_probe": { "operation": "create_composition", "commits": 1,
                     "database": { "…": "as above" } },
   "explain": { "statement": "SELECT …", "node_type": "…",
@@ -195,7 +197,9 @@ and after that benchmark, and only the relations the operation actually touched
 appear. The instruments are the ones the PostgreSQL documentation names —
 `pg_stat_user_tables` (`n_tup_ins`, `n_tup_upd`, `n_tup_hot_upd`, `n_tup_del`,
 `n_live_tup`, `n_dead_tup`), `pg_total_relation_size`, `pg_stat_database`
-(`blks_hit`, `blks_read`), and the WAL position (`pg_current_wal_lsn`,
+(`blks_hit`, `blks_read`, and `parallel_workers_to_launch` and
+`parallel_workers_launched`, which say whether the operation's plans asked for
+parallel workers and how many started, #4429), and the WAL position (`pg_current_wal_lsn`,
 `pg_wal_lsn_diff`). A counter read waits out the statistics flush interval
 first, because a backend's pending counts reach shared memory when its
 transaction ends and at most once a second; a WAL figure an unprivileged role

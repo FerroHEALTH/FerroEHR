@@ -10,12 +10,14 @@
 # installation out of its own database at boot, with an error about a checksum
 # rather than about the edit.
 #
-# SHIPPED means present at the latest release tag in the repository
-# (`v<major>.<minor>.<patch>`, the tags the release procedure cuts), whether or
-# not the branch descends from it: a history rewrite of `main` (2026-08-31,
-# 2026-09-16) leaves every earlier tag on a lineage the branch no longer
-# reaches, and the files those releases ship are applied by installations all
-# the same. A
+# SHIPPED means present at a published release tag in the repository: the
+# highest `v<major>.<minor>.<patch>` tag, or any pre-release tag
+# (`v<major>.<minor>.<patch>-rc<n>`) of a version above it, since a release
+# candidate is published and installed like a release (#4425). This holds
+# whether or not the branch descends from the tag: a history rewrite of `main`
+# (2026-08-31, 2026-09-16) leaves every earlier tag on a lineage the branch no
+# longer reaches, and the files those releases ship are applied by
+# installations all the same. A
 # file that is on the base branch but in no release yet has been applied by no
 # installation: it is rewrite material, and it is fixed in the file that
 # defines it rather than papered over by a follow-up file (owner ruling
@@ -43,6 +45,9 @@
 # partial turnover, or a whole-set turnover whose schema the boot refusal does
 # not name stays refused. When the repository carries no release tag (a clone
 # without tags), every base file counts as shipped: the conservative reading.
+# A modification that returns a shipped file to its released bytes is the
+# repair of an earlier edit, which gives installations their checksum back, and
+# passes (#4424).
 #
 # Usage:
 #   scripts/checks/migration-immutability.sh --diff <base> [head]
@@ -69,36 +74,60 @@ refused_schemas_at() {
     | sed 's/schema: "\(.*\)"/\1/'
 }
 
-# The highest release tag in the repository by version, or nothing when it
-# carries none (a clone fetched without tags, or a repository before its first
-# release). Ancestry is deliberately not required: after a rewrite of `main`
-# the release tags sit on the old lineage, and `git describe` would find none.
-shipped_tag() {
-  git tag --list --sort=-version:refname 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null \
-    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n 1p || true
+# The release tags whose trees define SHIPPED, one per line: the highest
+# stable tag by version, and every pre-release tag of a version above it (a
+# pre-release of a version that has since been cut is covered by that stable
+# tag, which carries every file the pre-release did). Nothing when the
+# repository carries no release tag (a clone fetched without tags, or a
+# repository before its first release). Ancestry is deliberately not required:
+# after a rewrite of `main` the release tags sit on the old lineage, and
+# `git describe` would find none.
+shipped_tags() {
+  local tags stable tag core
+  tags="$(git tag --list 'v[0-9]*' 2>/dev/null \
+    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' || true)"
+  stable="$(grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' <<<"$tags" | sort -V | tail -n 1 || true)"
+  [[ -z "$stable" ]] || printf '%s\n' "$stable"
+  while IFS= read -r tag; do
+    [[ -n "$tag" ]] || continue
+    core="${tag%%-*}"
+    if [[ -z "$stable" ]] \
+      || { [[ "$core" != "$stable" ]] \
+        && [[ "$(printf '%s\n%s\n' "$stable" "$core" | sort -V | tail -n 1)" == "$core" ]]; }; then
+      printf '%s\n' "$tag"
+    fi
+  done < <(grep -E -- '-' <<<"$tags" || true)
 }
 
-# Whether `$2` (a migration path) exists at `$1` (the release tag, or the merge
-# base when the repository carries no tag): that is what makes a file SHIPPED.
+# Whether `$2` (a migration path) exists at any revision of `$1` (the shipped
+# release tags, one per line, or the merge base when the repository carries no
+# tag): that is what makes a file SHIPPED.
 shipped_at() {
-  local rev="$1" path="$2"
-  git cat-file -e "$rev:$path" 2>/dev/null
+  local revs="$1" path="$2" rev
+  while IFS= read -r rev; do
+    [[ -n "$rev" ]] || continue
+    git cat-file -e "$rev:$path" 2>/dev/null && return 0
+  done <<<"$revs"
+  return 1
 }
 
 # Whether every SHIPPED file under `$3` (a schema directory) is absent at `$2`
-# (head), `$1` being the revision whose tree defines "shipped".
+# (head), `$1` being the revisions whose trees define "shipped", one per line.
 #
 # Turnover, not emptiness: the directory may hold a whole new set at head, which
 # is what re-authoring a surviving schema name looks like. What must be gone is
 # every shipped file of the old one.
 whole_set_turned_over() {
-  local shipped="$1" head="$2" schema="$3" file
-  while IFS= read -r file; do
-    [[ -n "$file" ]] || continue
-    if git cat-file -e "$head:$file" 2>/dev/null; then
-      return 1
-    fi
-  done < <(git ls-tree -r --name-only "$shipped" -- "${MIGRATIONS}${schema}/")
+  local shipped="$1" head="$2" schema="$3" file rev
+  while IFS= read -r rev; do
+    [[ -n "$rev" ]] || continue
+    while IFS= read -r file; do
+      [[ -n "$file" ]] || continue
+      if git cat-file -e "$head:$file" 2>/dev/null; then
+        return 1
+      fi
+    done < <(git ls-tree -r --name-only "$rev" -- "${MIGRATIONS}${schema}/")
+  done <<<"$shipped"
   return 0
 }
 
@@ -112,9 +141,25 @@ retired_with_the_refusal() {
   grep -qx "$schema" <<<"$refused"
 }
 
+# Whether `$3` (a modified path) is at `$2` (head) byte for byte what every
+# shipped revision of `$1` that carries it holds: the repair of an earlier
+# in-place edit, which gives an installed database its recorded checksum back
+# (#4424).
+restored_to_shipped() {
+  local revs="$1" head="$2" path="$3" rev blob
+  blob="$(git rev-parse -q --verify "$head:$path" 2>/dev/null)" || return 1
+  while IFS= read -r rev; do
+    [[ -n "$rev" ]] || continue
+    git cat-file -e "$rev:$path" 2>/dev/null || continue
+    [[ "$(git rev-parse -q --verify "$rev:$path")" == "$blob" ]] || return 1
+  done <<<"$revs"
+  return 0
+}
+
 # The status letters git reports for a change that is not a pure addition.
 # A = added (allowed); M = modified, D = deleted, R = renamed, C = copied,
-# T = type change (all refused, except the whole-set retirement above).
+# T = type change (all refused, except the whole-set retirement above and a
+# modification that restores the shipped content).
 #
 # A RENAME is judged like a deletion of its old path, because that is what an
 # installed database sees: the row it recorded for the old file has nothing left
@@ -126,9 +171,9 @@ refused_changes() {
   # branch that fell behind a main which added a migration must not be told
   # it deleted that file (#3358).
   fork="$(git merge-base "$base" "$head")"
-  # What counts as shipped is the tree of the latest release tag; without one
-  # every base file does.
-  shipped="$(shipped_tag)"
+  # What counts as shipped is the trees of the published release tags; without
+  # one every base file does.
+  shipped="$(shipped_tags)"
   [[ -n "$shipped" ]] || shipped="$fork"
   while IFS=$'\t' read -r status path _; do
     [[ -n "${status:-}" ]] || continue
@@ -139,6 +184,9 @@ refused_changes() {
       schema="${path#"$MIGRATIONS"}"
       schema="${schema%%/*}"
       retired_with_the_refusal "$shipped" "$head" "$schema" && continue
+      ;;
+    M*)
+      restored_to_shipped "$shipped" "$head" "$path" && continue
       ;;
     *) ;;
     esac
@@ -214,9 +262,22 @@ self_test() {
     printf 'SELECT 15;\n' > "$MIGRATIONS/keep/0006_released_off_lineage.sql"
     git add -A && git commit -qm "released on the old lineage"
     git -c tag.gpgSign=false tag v0.2.0
+    # (h) A PRE-RELEASE of a version above the highest stable tag is published
+    #     and installed like a release: editing a file it carries is refused
+    #     (#4425, where `v5.6.0-rc2` shipped an audit migration the guard let
+    #     through), while 0003, which it does not carry, stays unshipped.
+    printf 'SELECT 16;\n' > "$MIGRATIONS/keep/0007_released_as_rc.sql"
+    git add -A && git commit -qm "released as a release candidate"
+    git -c tag.gpgSign=false tag v0.3.0-rc1
     git switch -q base
     printf 'SELECT 15;\n' > "$MIGRATIONS/keep/0006_released_off_lineage.sql"
-    git add -A && git commit -qm "the same file on the rewritten base"
+    printf 'SELECT 16;\n' > "$MIGRATIONS/keep/0007_released_as_rc.sql"
+    git add -A && git commit -qm "the same files on the rewritten base"
+    # (i) The base branch edited the shipped 0001 after the release, the defect
+    #     of #4424; the work branch restores it byte for byte: allowed, since
+    #     the restored file has the checksum installations recorded.
+    printf 'SELECT 6; -- edited after the release\n' > "$MIGRATIONS/keep/0001_baseline.sql"
+    git add -A && git commit -qm "a shipped file edited in place on base"
 
     # (a) `ext` turns over WHOLE — every base file gone, a new set in its place —
     #     and the boot refusal names it: accepted, which is the shape this
@@ -239,6 +300,8 @@ self_test() {
     printf 'SELECT 11;\n' > "$MIGRATIONS/keep/0004_third.sql"
     printf 'SELECT 14; -- fixed in place, unshipped\n' > "$MIGRATIONS/keep/0003_unshipped.sql"
     printf 'SELECT 15; -- edited, but v0.2.0 ships it\n' > "$MIGRATIONS/keep/0006_released_off_lineage.sql"
+    printf 'SELECT 16; -- edited, but v0.3.0-rc1 ships it\n' > "$MIGRATIONS/keep/0007_released_as_rc.sql"
+    printf 'SELECT 6;\n' > "$MIGRATIONS/keep/0001_baseline.sql"
     printf 'const FIRST_GENERATION_SETS: &[FirstGenerationSet] = &[\n    FirstGenerationSet { schema: "ext", first_description: Some("openehr functions") },\n    FirstGenerationSet { schema: "demographic", first_description: None },\n];\n' > "$REFUSAL_FILE"
     git add -A && git commit -qm work
 
@@ -268,6 +331,12 @@ self_test() {
   fi
   grep -q '0006_released_off_lineage.sql' <<<"$found" \
     || { echo "self-test: a migration shipped by a release tag OFF the base's lineage was not caught" >&2; failures=1; }
+  if grep -q 'keep/0001_baseline.sql' <<<"$found"; then
+    echo "self-test: a shipped migration RESTORED to its released content was wrongly caught" >&2
+    failures=1
+  fi
+  grep -q '0007_released_as_rc.sql' <<<"$found" \
+    || { echo "self-test: a migration shipped by a PRE-RELEASE tag was not caught" >&2; failures=1; }
   if grep -q '0005_later.sql' <<<"$found"; then
     echo "self-test: a migration the BASE gained after the branch point was wrongly caught" >&2
     failures=1
@@ -296,7 +365,7 @@ self_test() {
   if [[ "$failures" -ne 0 ]]; then
     return 1
   fi
-  echo "migration-immutability: self-test OK (shipped edit, partial turnover and unannounced turnover caught; announced whole-set turnover, addition, an unshipped edit and behind-main allowed; a release tag off the lineage still governs)."
+  echo "migration-immutability: self-test OK (shipped edit, partial turnover and unannounced turnover caught; announced whole-set turnover, addition, an unshipped edit, a restored shipped file and behind-main allowed; a release tag off the lineage and a pre-release tag still govern)."
 }
 
 case "${1:-}" in

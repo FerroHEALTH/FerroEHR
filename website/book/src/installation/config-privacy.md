@@ -22,7 +22,8 @@ patient identifying information"). GDPR
 what make it a duty; this section is where a deployment states its side of it.
 
 All three rules run on the write path, before anything is stored. A refusal is
-`422 Unprocessable Entity` with one `validationErrors[]` entry per finding,
+`422 Unprocessable Entity` with one `errors[]` entry per finding (sent when
+the request carries `Prefer: return=representation`),
 each naming the RM path and the rule that matched. **A refusal never echoes the
 offending value** — it would otherwise travel into the response body, the
 access log and the traces, which is the leak the rule exists to prevent.

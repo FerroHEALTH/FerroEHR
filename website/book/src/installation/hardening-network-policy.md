@@ -134,7 +134,8 @@ nested bounds, each catching what the next cannot:
    backstop the HTTP timeout cannot be, because dropping a handler future does not
    cancel the statement PostgreSQL is running.
 2. **Per connection / per caller:** `config.server.header_read_timeout_ms`
-   bounds a socket before a request exists; `config.server.caller_rate` refuses
+   bounds a socket before a request exists and `config.server.idle_timeout_ms`
+   a kept-alive one between requests; `config.server.caller_rate` refuses
    `429`; `config.server.max_concurrent_requests` refuses `503` when the server
    is full.
 3. **Per container:** the requests and limits above.

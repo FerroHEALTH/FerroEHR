@@ -60,7 +60,9 @@ The upload runs two distinct gates, and they answer differently:
   validity (temporal and duration patterns, boolean satisfiability, assumed
   values inside their own constraints). The response body lists the offending
   archetype-model rule codes (`VCARM`, `VATID`, `VCORM`, `Pattern_validity`, …)
-  in `validationErrors`, each with a human-readable detail.
+  in the problem's `errors`, each with a human-readable `detail`; a request
+  with `Prefer: return=representation` receives them
+  ([Problem types](using-the-api/problems.md#validation-failed)).
 
 The 422 gate also validates the template's **own meta-data** against the RM
 resource-package invariants: the template's `language` (and every description
@@ -69,13 +71,13 @@ agree with the presence of a `revision_history`, and a `description` needs a
 non-empty `original_author`, `lifecycle_state`, and at least one detail with a
 non-empty `purpose`, with details keyed by distinct languages. Those refusals
 carry the RM invariant name (for example
-`RESOURCE_DESCRIPTION.Lifecycle_state_valid`) in `validationErrors`. ADL 1.4
+`RESOURCE_DESCRIPTION.Lifecycle_state_valid`) in `errors`. ADL 1.4
 archetype source uploads enforce the same family; there, an empty
 `purpose`/`use`/`misuse` string is reported as a named warning rather than
 refused, because the empty string is how real-world 1.4 authoring spells
 absence.
 
-**A refusal lists everything it found, not the first thing.** `validationErrors`
+**A refusal lists everything it found, not the first thing.** `errors`
 carries one entry per violation, so a template with an empty `use` and an empty
 `misuse` reports both, and a code list with several duplicated codes names each
 one. Fix the list, upload once. Two things are worth knowing about the shape of
@@ -118,7 +120,7 @@ The two failure modes are again distinguished by status:
 - **A source that does not parse is a 400 Bad Request**, carrying the ADL syntax
   (`S`-prefixed) error codes.
 - **A source that parses but fails validation is a 422 Unprocessable Entity**,
-  whose `validationErrors` list the AOM2 validity (`V`-prefixed) rule codes:
+  whose `errors` list the AOM2 validity (`V`-prefixed) rule codes:
   `VARD`, `VCORM`, `VACSD` and friends.
 
 A duplicate artefact id returns **409 Conflict**.
@@ -533,9 +535,10 @@ optional, XX is not allowed.
 ```
 
 If a composition is well-formed but breaks its template, the commit fails with
-**422 Unprocessable Entity** and a `validationErrors` list (one entry per
-offending node, as `"<path>: <message>"`) so a client can show the user exactly
-what to fix. A syntactically malformed request instead gets **400 Bad Request**.
+**422 Unprocessable Entity**, a `validation-failed` problem whose `errors`, sent
+when the request carries `Prefer: return=representation`, hold one
+`{"path": …, "detail": …}` per offending node, so a client can show the user
+exactly what to fix. A syntactically malformed request instead gets **400 Bad Request**.
 The error shapes are described in
 [Content negotiation & errors](using-the-api/content-negotiation.md#error-responses).
 

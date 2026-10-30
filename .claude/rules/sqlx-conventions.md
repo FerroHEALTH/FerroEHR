@@ -20,9 +20,11 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
   is a change to the template plus a regeneration, never a hand edit of the
   rendered file.
 - **A migration that has SHIPPED is never edited (owner rulings 2026-09-09
-  and 2026-09-15).** SHIPPED means present at the latest release tag
-  (`vX.Y.Z`). sqlx records a checksum of each applied migration and refuses a
-  database whose recorded checksum no longer matches the file
+  and 2026-09-15).** SHIPPED means present at a published release tag:
+  the latest `vX.Y.Z`, or a pre-release `vX.Y.Z-rcN` of a version above it,
+  which is published and installed like a release (#4425). sqlx records a
+  checksum of each applied migration and refuses a database whose recorded
+  checksum no longer matches the file
   (https://docs.rs/sqlx/latest/sqlx/migrate/struct.Migrator.html), so editing
   a file an installation has applied does not change history, it locks that
   installation out of its own database at boot. **Never edit, rename or delete
@@ -60,12 +62,14 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
 - Enforcement (tier 4): `scripts/checks/migration-immutability.sh`, run by the
   `migration-immutability` CI job over the pull request's diff against its
   merge base, judging only the files present at the highest release tag
-  in the repository, whether or not the branch descends from it (every base
-  file when the repository carries no tag).
+  in the repository or at a pre-release tag above it, whether or not the
+  branch descends from it (every base file when the repository carries no
+  tag).
   It fails on any modification, rename or partial deletion of a shipped file
   under `app/ferroehr/migrations/`; an added file passes, and so does any
-  change to a file no release carries. The whole-set retirement above is
-  accepted only when the guard can verify BOTH halves itself — every shipped
+  change to a file no release carries and a modification that restores a
+  shipped file byte for byte to its released content (#4424). The whole-set
+  retirement above is accepted only when the guard can verify BOTH halves itself — every shipped
   file of that directory gone at head,
   and the schema named in that table — so the acceptance cannot be claimed by a
   comment. **There is deliberately no escape-hatch label:** the checksum makes

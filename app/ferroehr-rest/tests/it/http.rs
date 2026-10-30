@@ -1124,6 +1124,55 @@ async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
     assert!(v["detail"].as_str().is_some(), "{body}");
 }
 
+/// A client that sends its own `X-Request-Id` gets it back in the header, and
+/// the problem's `instance` names the server's id, never the client's, whether
+/// the family stack wrote the refusal (`413`) or a FerroEHR handler did
+/// (`404`), so one id finds the exchange in the request log either way.
+#[tokio::test]
+async fn a_refusal_names_the_server_id_when_the_client_sends_its_own() {
+    const CLIENT_ID: &str = "7d2c41e8-93b0-4f6a-8e15-c0a9b3d7e254";
+    let (pg, service) = common::test_service().await;
+    let mut cfg = config(false);
+    cfg.server.body_limit_bytes = 1024;
+    let app = common::router_with(cfg, service).await;
+    let _keep = pg;
+
+    let oversized = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{EHR}/composition"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::CONTENT_LENGTH, "4096")
+        .header("x-request-id", CLIENT_ID)
+        .body(Body::from(vec![b'x'; 4096]))
+        .unwrap();
+    let unknown = Request::builder()
+        .method("GET")
+        .uri(format!("{BASE}/ehr/{EHR}"))
+        .header("x-request-id", CLIENT_ID)
+        .body(Body::empty())
+        .unwrap();
+    for (req, expected) in [
+        (oversized, StatusCode::PAYLOAD_TOO_LARGE),
+        (unknown, StatusCode::NOT_FOUND),
+    ] {
+        let (status, headers, body) = send(app.clone(), req).await;
+        assert_eq!(status, expected, "{body}");
+        assert_eq!(
+            headers.get("x-request-id").and_then(|v| v.to_str().ok()),
+            Some(CLIENT_ID),
+            "{expected}: the client's id is echoed"
+        );
+        let v: serde_json::Value = serde_json::from_str(&body).expect("problem details");
+        let instance = v["instance"].as_str().expect("an instance");
+        assert!(instance.starts_with("urn:uuid:"), "{expected}: {body}");
+        assert_ne!(
+            instance,
+            format!("urn:uuid:{CLIENT_ID}"),
+            "{expected}: the instance is the server's id: {body}"
+        );
+    }
+}
+
 /// The bulk tier really is more permissive than the clinical tier: the same
 /// payload that a clinical route refuses is accepted for reading on a bulk
 /// route (it then fails on its own merits, not on size).
