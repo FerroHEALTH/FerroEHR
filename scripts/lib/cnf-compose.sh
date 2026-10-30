@@ -18,6 +18,5 @@ cnf_compose_files() {
   [[ "$measurement" != 1 ]] || printf '%s\n' "$root/docker/sut-measurement.yml"
   printf '%s\n' \
     "$root/docker/sut-smart.yml" \
-    "$root/docker/sut-terminology.yml" \
-    "$root/docker/sut-spec-stable.yml"
+    "$root/docker/sut-terminology.yml"
 }

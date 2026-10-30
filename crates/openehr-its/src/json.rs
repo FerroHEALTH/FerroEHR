@@ -329,16 +329,67 @@ pub fn reject_undeclared_keys(value: &serde_json::Value) -> Result<(), JsonParse
 /// Validate a canonical-JSON value against the vendored ITS-JSON RM schema
 /// (`openehr_rm_1.1.0_all.json`).
 ///
-/// The schema's root dispatches on the top-level `_type` (draft-07
-/// `if`/`then`) to the matching class definition, so any RM object with a
-/// `_type` is validated against its own definition.
+/// The published root dispatches on the top-level `_type` (draft-07
+/// `if`/`then`) to the matching definition for the classes it lists; a value
+/// of any other class passes the root unjudged ([`validate_canonical_class`]
+/// judges every class).
 ///
 /// # Errors
 /// Returns every schema violation (path + message), or a single-element error if
 /// the schema itself failed to compile.
 #[cfg(feature = "schema-validation")]
 pub fn validate_canonical(value: &serde_json::Value) -> Result<(), Vec<String>> {
-    match &*RM_VALIDATOR {
+    collect_errors(&RM_VALIDATOR, value)
+}
+
+/// The ITS-JSON validator whose root dispatches on the top-level `_type` to
+/// EVERY class definition of [`RM_SCHEMA_JSON`], the published root listing
+/// only some of them.
+#[cfg(feature = "schema-validation")]
+static RM_CLASS_VALIDATOR: std::sync::LazyLock<Result<jsonschema::Validator, String>> =
+    std::sync::LazyLock::new(|| {
+        let mut schema: serde_json::Value =
+            serde_json::from_str(RM_SCHEMA_JSON).map_err(|e| format!("parse RM schema: {e}"))?;
+        let names: Vec<String> = schema
+            .get("definitions")
+            .and_then(serde_json::Value::as_object)
+            .map(|definitions| definitions.keys().cloned().collect())
+            .ok_or_else(|| "the RM schema has no definitions".to_owned())?;
+        // The schema keyword that names a class, never a canonical shape's own key.
+        let discriminator = "_type";
+        let mut root = vec![serde_json::json!({
+            "required": [discriminator],
+            "properties": { (discriminator): { "enum": names } }
+        })];
+        root.extend(names.iter().map(|class| {
+            serde_json::json!({
+                "if": { "properties": { (discriminator): { "const": class } } },
+                "then": { "$ref": format!("#/definitions/{class}") }
+            })
+        }));
+        if let Some(map) = schema.as_object_mut() {
+            map.insert("allOf".to_owned(), serde_json::Value::Array(root));
+        }
+        jsonschema::validator_for(&schema).map_err(|e| format!("compile RM schema: {e}"))
+    });
+
+/// Validate a canonical-JSON value against the ITS-JSON definition its
+/// top-level `_type` names, for every class the vendored schema defines.
+///
+/// # Errors
+/// Returns every schema violation (path + message), or a single-element error if
+/// the schema itself failed to compile.
+#[cfg(feature = "schema-validation")]
+pub fn validate_canonical_class(value: &serde_json::Value) -> Result<(), Vec<String>> {
+    collect_errors(&RM_CLASS_VALIDATOR, value)
+}
+
+#[cfg(feature = "schema-validation")]
+fn collect_errors(
+    validator: &Result<jsonschema::Validator, String>,
+    value: &serde_json::Value,
+) -> Result<(), Vec<String>> {
+    match validator {
         Ok(validator) => {
             let errors: Vec<String> = validator
                 .iter_errors(value)

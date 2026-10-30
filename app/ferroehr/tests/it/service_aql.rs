@@ -2508,6 +2508,11 @@ async fn folder_containment_resolves_references() {
         json!({
             "_type": "FOLDER",
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.1.0"
+            },
             "name": { "_type": "DV_TEXT", "value": name },
             "items": items
         })
@@ -2515,6 +2520,11 @@ async fn folder_containment_resolves_references() {
     let directory = json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "episodes" },
         "items": [folder_ref(&ca)],
         "folders": [
@@ -2665,6 +2675,11 @@ async fn folder_contains_folder_reaches_items_referenced_versioned_folders() {
         let mut f = json!({
             "_type": "FOLDER",
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.1.0"
+            },
             "name": { "_type": "DV_TEXT", "value": name }
         });
         if !items.is_empty() {
@@ -3922,6 +3937,11 @@ async fn folder_referenced_or_branch_compositions_are_projected() {
     let directory = json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "root" },
         "items": [folder_ref(&uid_root(&filed))]
     });
@@ -4252,4 +4272,74 @@ async fn an_ehr_id_predicate_and_its_where_spelling_answer_alike() {
         &vec![json!([0])],
         "a parameter takes the same path"
     );
+}
+
+/// `NOT CONTAINS` directly under the EHR excludes every EHR that holds a
+/// matching object (QUERY master03 §Containment: "the absence of any
+/// containment relationship between a parent and potential child items").
+#[tokio::test]
+async fn not_contains_at_the_ehr_root_excludes_an_ehr_holding_the_archetype() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let holding = create_ehr(&svc).await;
+    let empty = create_ehr(&svc).await;
+    create_comp(&svc, &holding, "held", 1.0).await;
+    let archetype = base_composition()["archetype_node_id"]
+        .as_str()
+        .expect("composition archetype")
+        .to_owned();
+
+    let r = run_aql(
+        &svc,
+        &format!("SELECT e/ehr_id/value FROM EHR e NOT CONTAINS COMPOSITION c[{archetype}]"),
+        ehr_scope_multi(&[&holding, &empty]),
+    )
+    .await;
+    assert_eq!(rows(&r), &vec![json!([empty])], "{r}");
+
+    let r = run_aql(
+        &svc,
+        "SELECT e/ehr_id/value FROM EHR e NOT CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.other.v1]",
+        ehr_scope_multi(&[&holding, &empty]),
+    )
+    .await;
+    assert_eq!(rows(&r).len(), 2, "neither holds the other archetype: {r}");
+}
+
+/// Two date-times with different offsets compare as the instants they name
+/// (QUERY master03 §Dates and Times: date/time strings are "processed as
+/// date/time quantities rather than literal strings"). `13:48:50Z` is
+/// `15:48:50+02:00`, so it is later than `15:00:00+02:00`, and `12:48:50Z` is
+/// earlier.
+#[tokio::test]
+async fn a_date_time_with_another_offset_compares_as_an_instant() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    for (name, start) in [
+        ("later", "2026-10-06T13:48:50Z"),
+        ("earlier", "2026-10-06T12:48:50Z"),
+    ] {
+        create_comp_body(&svc, &ehr_id, composition_at(name, 1.0, start), name).await;
+    }
+    for path in [
+        "c/context/start_time/value",
+        "c/context/end_time/value",
+        "c/context/start_time",
+    ] {
+        let r = run_aql(
+            &svc,
+            &format!(
+                "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c \
+                 WHERE {path} > '2026-10-06T15:00:00+02:00'"
+            ),
+            ehr_scope(&ehr_id),
+        )
+        .await;
+        if path.contains("end_time") {
+            assert!(rows(&r).is_empty(), "no end_time is stored: {r}");
+        } else {
+            assert_eq!(rows(&r), &vec![json!(["later"])], "{path}: {r}");
+        }
+    }
 }

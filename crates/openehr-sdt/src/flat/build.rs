@@ -371,8 +371,8 @@ fn merge_root_ctx_spellings(ctx_node: Option<&SimNode>, data_root: &SimNode) -> 
 /// suffix spelling of the same attribute has not already set it.
 ///
 /// # Errors
-/// [`FlatError::InvalidRaw`] for a `|raw` value without `_type`, one whose
-/// `_type` is not the attribute's RM type (`CODE_PHRASE`, or a `PARTY_PROXY`
+/// [`FlatError::RawWithoutType`] for a `|raw` value without `_type`;
+/// [`FlatError::InvalidRaw`] for one whose `_type` is not the attribute's RM type (`CODE_PHRASE`, or a `PARTY_PROXY`
 /// subtype for `composer`; RM ehr §COMPOSITION), or one beside other content.
 fn apply_root_raw(
     defaults: &mut ctx::CtxDefaults,
@@ -422,9 +422,8 @@ fn has_explicit_event_context(ctx_node: Option<&SimNode>) -> bool {
 /// (`master04 §Raw canonical JSON`).
 fn build_raw(raw: &Value, path: &str) -> Result<Value, FlatError> {
     if raw.get("_type").and_then(Value::as_str).is_none() {
-        return Err(FlatError::InvalidRaw {
+        return Err(FlatError::RawWithoutType {
             path: path.to_owned(),
-            reason: "the |raw value must be a canonical-JSON object with _type".to_owned(),
         });
     }
     Ok(raw.clone())
@@ -776,7 +775,7 @@ fn is_null_flavoured(sim: &SimNode) -> bool {
 
 /// Whether the template-child walk builds `child` from its own sim sub-tree.
 ///
-/// Three in-context families are routed elsewhere and are therefore NOT walked:
+/// Four in-context families are routed elsewhere and are therefore NOT walked:
 ///
 /// * **EVENT_CONTEXT** standard fields (everything but archetyped
 ///   `other_context` content) — `start_time`/`setting` come from the `ctx/`
@@ -796,6 +795,8 @@ fn is_null_flavoured(sim: &SimNode) -> bool {
 ///   [`direct_rm_path`]. `subject` is NOT in this set — a non-`PARTY_SELF`
 ///   subject is real data (master05 §OBSERVATION `/subject`) and builds as a
 ///   PARTY_PROXY leaf.
+/// * **ACTIVITY** `action_archetype_id` — a String attribute (master05
+///   §ACTIVITY), set by [`direct_rm_path`] from the bare value.
 ///
 /// A skipped child's identifier must never be treated as "already handled" by
 /// the datum loop: every non-walked spelling either reaches [`direct_rm_path`]
@@ -810,6 +811,9 @@ fn child_is_walked(node: &WebTemplateNode, child: &WebTemplateNode) -> bool {
         return false;
     }
     if is_entry_family(&node.rm_type) && matches!(child.id.as_str(), "language" | "encoding") {
+        return false;
+    }
+    if node.rm_type == "ACTIVITY" && child.id == "action_archetype_id" {
         return false;
     }
     true
@@ -1005,6 +1009,12 @@ fn apply_container_datum_attrs(
 fn container_datum_attr(host: &str, suffix: &str) -> Option<&'static str> {
     match (host, suffix) {
         ("INTERVAL_EVENT", "sample_count") => Some("sample_count"),
+        // master05 §DV_INTERVAL: the four BOOLEAN flags sit on the interval
+        // itself when the template gives its bounds their own nodes.
+        ("DV_INTERVAL", "lower_unbounded") => Some("lower_unbounded"),
+        ("DV_INTERVAL", "upper_unbounded") => Some("upper_unbounded"),
+        ("DV_INTERVAL", "lower_included") => Some("lower_included"),
+        ("DV_INTERVAL", "upper_included") => Some("upper_included"),
         _ => None,
     }
 }
@@ -1094,7 +1104,8 @@ fn place_direct_rm_path(
 /// # Errors
 /// [`FlatError::MissingRequiredSuffix`] naming the first absent suffix,
 /// [`FlatError::UnknownSuffix`] for any other suffix, and
-/// [`FlatError::InvalidRaw`] for a `|raw` value that is no lone `PARTY_REF`.
+/// [`FlatError::RawWithoutType`] or [`FlatError::InvalidRaw`] for a `|raw`
+/// value that is no lone `PARTY_REF`.
 fn build_party_ref(node: &SimNode, path: &str) -> Result<Value, FlatError> {
     if let Some(raw) = map::raw_value(node, path, &["PARTY_REF"]) {
         return raw;
@@ -1906,19 +1917,13 @@ fn fill_mandatory_entry_attributes(
             obj.entry("data".to_owned())
                 .or_insert_with(|| structural_from_stub(node, "data", "ITEM_TREE", "Tree"));
         }
-        "INSTRUCTION" => {
-            obj.entry("narrative".to_owned())
-                .or_insert_with(|| json!({"_type": "DV_TEXT", "value": "<narrative>"}));
-        }
+        // NOTE: master06 §§instruction_narrative, action_ism_transition_current_state make
+        // `INSTRUCTION.narrative` and the ISM state ctx defaults, so complete_tree fills them last.
         "ACTION" => {
             obj.entry("time".to_owned())
                 .or_insert_with(|| dv_date_time(DEFAULT_TIME));
             obj.entry("description".to_owned())
                 .or_insert_with(|| structural_from_stub(node, "description", "ITEM_TREE", "Tree"));
-            obj.entry("ism_transition".to_owned()).or_insert_with(|| {
-                json!({"_type": "ISM_TRANSITION",
-                       "current_state": dv_coded_text("initial", "openehr", "524")})
-            });
         }
         _ => {}
     }
@@ -2420,6 +2425,14 @@ fn fill_structural_mandatory(obj: &mut Map<String, Value>, rm_type: &str) {
         "ISM_TRANSITION" => {
             obj.entry("current_state".to_owned())
                 .or_insert_with(|| dv_coded_text("initial", "openehr", "524"));
+        }
+        "INSTRUCTION" => {
+            obj.entry("narrative".to_owned())
+                .or_insert_with(|| json!({"_type": "DV_TEXT", "value": "<narrative>"}));
+        }
+        "ACTION" => {
+            obj.entry("ism_transition".to_owned())
+                .or_insert_with(|| json!({"_type": "ISM_TRANSITION"}));
         }
         _ => {}
     }

@@ -56,10 +56,9 @@ externalization; acceptance is the openEHR conformance suite. See
 - `postgres-features.md` — the PG 17/18 feature delta this CDR exploits.
 - `release.md` — the release preflight: `scripts/release/preflight.sh` runs the
   release `plan` job's checks before the tag is pushed.
-- `conformance/` — CNF 2.0 pipeline artifacts, one directory per SUT
-  (`ferroehr/`: `results.json`, `verdicts.json`). `ehrbase/` +
-  `COMPARISON.md` are frozen comparison data until the CNF pipeline re-bases
-  the public comparison. Numbers live ONLY in these committed artifacts.
+- `conformance/` — the conformance record of FerroEHR (`ferroehr/`:
+  `results.json`) and its party set (`party/ferroehr/`: the statement and the
+  IXIT). Numbers live ONLY in these committed artifacts.
 Statement-level profiling evidence is not produced here. `veredictum aql-probe`
 seeds a class-scale corpus, fires the measurement machinery's AQL set against
 the composed stack, and attributes the database-side cost per statement through

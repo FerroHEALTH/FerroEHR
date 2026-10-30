@@ -320,24 +320,73 @@ async fn person_delete_is_204_with_etag_and_no_location() {
     assert_eq!(body, "");
 }
 
-/// The versioned-object-uid delete shape (ECC-DEM-005 family): the path is the
-/// bare `HIER_OBJECT_ID` and the preceding version is carried by `If-Match`.
+/// An ACTOR body of `rm_type` (AGENT, GROUP, ORGANISATION, PERSON) with one
+/// identity.
+fn actor_body(rm_type: &str) -> Value {
+    let archetype = format!(
+        "openEHR-DEMOGRAPHIC-{rm_type}.{}.v1",
+        rm_type.to_lowercase()
+    );
+    json!({
+        "_type": rm_type,
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": "actor" },
+        "identities": [{
+            "_type": "PARTY_IDENTITY",
+            "archetype_node_id": "at0001",
+            "name": { "_type": "DV_TEXT", "value": "legal name" },
+            "details": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "at0002",
+                "name": { "_type": "DV_TEXT", "value": "structure" },
+                "items": []
+            }
+        }]
+    })
+}
+
+/// A party delete addressed by the bare versioned-object uid is a `400`, for
+/// all five kinds, and leaves the latest version in place: ITS-REST
+/// `operations/agent_delete.yaml` (and its four siblings), "The
+/// `uid_based_id` MUST be in a form of an `OBJECT_VERSION_ID` identifier taken
+/// from the last (most recent) VERSION.uid.value", and
+/// `responses/400_already_deleted.yaml` answers an "invalid ... parameter"
+/// with `400`. An `If-Match` naming the latest version does not make the
+/// container id a version id.
 #[tokio::test]
-async fn person_delete_by_versioned_uid_with_if_match_is_204() {
+async fn party_delete_by_versioned_object_uid_is_400_for_every_kind() {
     let (_pg, app) = app().await;
-    let ovid = create(&app, "person", &person_body()).await;
-    let vo = vo_of(&ovid);
-
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
-        .header(header::IF_MATCH, format!("\"{ovid}\""))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
-
-    assert_eq!(status, StatusCode::NO_CONTENT);
-    assert_eq!(body, "");
+    let kinds = [
+        ("agent", actor_body("AGENT")),
+        ("group", actor_body("GROUP")),
+        ("organisation", actor_body("ORGANISATION")),
+        ("person", person_body()),
+        ("role", role_body()),
+    ];
+    for (seg, body) in kinds {
+        let ovid = create(&app, seg, &body).await;
+        let vo = vo_of(&ovid).to_owned();
+        for if_match in [None, Some(format!("\"{ovid}\""))] {
+            let mut req = Request::builder()
+                .method("DELETE")
+                .uri(format!("{BASE}/demographic/{seg}/{vo}"));
+            if let Some(value) = &if_match {
+                req = req.header(header::IF_MATCH, value);
+            }
+            let (status, _h, body) = send(&app, req.body(Body::empty()).unwrap()).await;
+            assert_eq!(
+                status,
+                StatusCode::BAD_REQUEST,
+                "{seg} delete by its container id (If-Match {if_match:?}): {body}"
+            );
+        }
+        let (status, h, body) = get_json(&app, format!("{BASE}/demographic/{seg}/{vo}")).await;
+        assert_eq!(status, StatusCode::OK, "{seg} still readable: {body}");
+        assert_eq!(etag_uid(&h), ovid, "{seg}: the latest version is unchanged");
+    }
 }
 
 /// A stale `If-Match` is `412` echoing the latest `version_uid` in `ETag`
@@ -467,17 +516,16 @@ async fn malformed_if_match_is_400() {
     }
 }
 
-/// A `DELETE` addressed by the bare versioned-object uid accepts the weak
-/// `If-Match` form the server emits (same normalization seam as `PUT`).
+/// A `DELETE` addressed by its `version_uid` accepts the weak `If-Match` form
+/// the server emits (same normalization seam as `PUT`).
 #[tokio::test]
 async fn delete_accepts_the_weak_if_match_form() {
     let (_pg, app) = app().await;
     let ovid = create(&app, "person", &person_body()).await;
-    let vo = vo_of(&ovid).to_owned();
 
     let req = Request::builder()
         .method("DELETE")
-        .uri(format!("{BASE}/demographic/person/{vo}"))
+        .uri(format!("{BASE}/demographic/person/{ovid}"))
         .header(header::IF_MATCH, format!("W/\"{ovid}\""))
         .body(Body::empty())
         .unwrap();
@@ -828,6 +876,36 @@ async fn party_relationship_get_is_mounted() {
     assert_eq!(v["_type"], "PARTY_RELATIONSHIP");
 }
 
+/// A relationship delete takes the party delete rule (our own extension
+/// route): the container id is a `400` that leaves the relationship in place,
+/// and the latest `version_uid` deletes it with a `204`.
+#[tokio::test]
+async fn party_relationship_delete_needs_the_version_uid() {
+    let (_pg, app) = app().await;
+    let ovid = create(&app, "party_relationship", &relationship_body()).await;
+    let vo = vo_of(&ovid).to_owned();
+
+    let req = Request::builder()
+        .method("DELETE")
+        .uri(format!("{EXT}/demographic/party_relationship/{vo}"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, _h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "container id: {body}");
+    let (status, h, body) =
+        get_json(&app, format!("{EXT}/demographic/party_relationship/{vo}")).await;
+    assert_eq!(status, StatusCode::OK, "still readable: {body}");
+    assert_eq!(etag_uid(&h), ovid, "the latest version is unchanged");
+
+    let req = Request::builder()
+        .method("DELETE")
+        .uri(format!("{EXT}/demographic/party_relationship/{ovid}"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, _h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "version id: {body}");
+}
+
 #[tokio::test]
 async fn versioned_party_relationship_is_mounted() {
     // RE-TARGET: the old Mock returned a blanket `501` (route mounted, unbuilt).
@@ -1042,6 +1120,88 @@ async fn stale_delete_conflict_echoes_latest_version_etag() {
         v2,
         "the 409 returns the latest version_uid in ETag \
          (409_PERSON_with_uid_based_id.yaml)"
+    );
+}
+
+/// A CONTRIBUTION body holding one creation member of `data`.
+fn contribution_of(data: &Value) -> Value {
+    let creation = json!({
+        "_type": "DV_CODED_TEXT",
+        "value": "creation",
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+            "code_string": "249" }
+    });
+    json!({
+        "versions": [{
+            "data": data,
+            "lifecycle_state": {
+                "_type": "DV_CODED_TEXT",
+                "value": "complete",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "532" }
+            },
+            "commit_audit": {
+                "change_type": creation,
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "committer" }
+            }
+        }],
+        "audit": {
+            "change_type": creation,
+            "committer": { "_type": "PARTY_IDENTIFIED", "name": "committer" }
+        }
+    })
+}
+
+/// A CONTRIBUTION member outside the operation's `UVersionable` set fails the
+/// request schema, so it is a `400` in both directions: ITS-REST
+/// `schemas/ehr/UVersionable.yaml` (`oneOf` COMPOSITION, `EHR_STATUS`, FOLDER)
+/// and `schemas/demographic/UVersionable.yaml` (the five PARTY kinds), with
+/// `responses/400_CONTRIBUTION.yaml` for an invalid content.
+#[tokio::test]
+async fn a_contribution_member_of_the_wrong_kind_is_400() {
+    let (_pg, app) = app().await;
+    let folder = json!({
+        "_type": "FOLDER",
+        "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "name": { "_type": "DV_TEXT", "value": "root" }
+    });
+    let post = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/demographic/contribution"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(contribution_of(&folder).to_string()))
+        .unwrap();
+    let (status, _h, body) = send(&app, post).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "FOLDER in a demographic CONTRIBUTION: {body}"
+    );
+
+    let post = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, h, body) = send(&app, post).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let ehr_id = location(&h)
+        .and_then(|l| l.rsplit('/').next())
+        .expect("EHR location")
+        .to_owned();
+    let post = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{ehr_id}/contribution"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(contribution_of(&person_body()).to_string()))
+        .unwrap();
+    let (status, _h, body) = send(&app, post).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "PERSON in an EHR CONTRIBUTION: {body}"
     );
 }
 

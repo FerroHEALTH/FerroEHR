@@ -68,12 +68,16 @@ pub(crate) fn parse_opt(xml: &str) -> Result<OperationalTemplate, ServiceError> 
 fn require_well_formed_xml(xml: &str) -> Result<(), ServiceError> {
     let mut reader = quick_xml::Reader::from_str(xml);
     let mut saw_root = false;
+    let mut open = 0_usize;
     loop {
         match reader.read_event() {
             Ok(quick_xml::events::Event::Eof) => break,
-            Ok(quick_xml::events::Event::Start(_) | quick_xml::events::Event::Empty(_)) => {
+            Ok(quick_xml::events::Event::Start(_)) => {
                 saw_root = true;
+                open = open.saturating_add(1);
             }
+            Ok(quick_xml::events::Event::Empty(_)) => saw_root = true,
+            Ok(quick_xml::events::Event::End(_)) => open = open.saturating_sub(1),
             Ok(_) => {}
             Err(e) => {
                 return Err(ServiceError::precondition(format!(
@@ -82,11 +86,37 @@ fn require_well_formed_xml(xml: &str) -> Result<(), ServiceError> {
             }
         }
     }
+    // NOTE: XML 1.0 §2.1 `document ::= prolog element Misc*`; an element still open
+    // at end of input is no document, so a truncated upload is the 400 branch.
+    if open > 0 {
+        return Err(ServiceError::precondition(format!(
+            "syntactically invalid XML content: the document ends with {open} element(s) unclosed"
+        )));
+    }
     if saw_root {
         Ok(())
     } else {
         Err(ServiceError::precondition(
             "syntactically invalid XML content: the document has no root element".to_owned(),
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::require_well_formed_xml;
+    use crate::service::error::ServiceError;
+
+    #[test]
+    fn a_truncated_document_is_a_bad_request() {
+        let truncated =
+            r#"<template xmlns="http://schemas.openehr.org/v1"><template_id><value>vdef"#;
+        let err = require_well_formed_xml(truncated).expect_err("truncated XML");
+        assert!(matches!(err, ServiceError::BadRequest(_)), "{err:?}");
+    }
+
+    #[test]
+    fn a_closed_document_passes() {
+        require_well_formed_xml("<template><a/><b>x</b></template>").expect("well-formed");
     }
 }

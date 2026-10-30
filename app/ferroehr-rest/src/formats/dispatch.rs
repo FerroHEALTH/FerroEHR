@@ -75,13 +75,12 @@ fn internal(detail: impl std::fmt::Display) -> RestError {
     ))
 }
 
-/// The `422` for a simplified COMPOSITION commit that supplies no template id.
-/// `Requests_and_responses.md §openehr-template-id` makes the header the
-/// mechanism; without it the payload cannot be resolved to a template — a
-/// well-formed-but-unprocessable request (`Requests_and_responses.md §HTTP
-/// status codes`, row `422`).
+/// The `400` for a simplified COMPOSITION commit that supplies no template id.
+///
+/// NOTE: `Requests_and_responses.md` §openehr-template-id says the header "MUST be used"
+/// on such a commit, and `responses/400.yaml` answers a "missing required header".
 fn missing_template_id() -> RestError {
-    RestError::from(ApiError::Unprocessable(
+    RestError::from(ApiError::BadRequest(
         "a Simplified-Format COMPOSITION commit requires the target template id \
          in the `openehr-template-id` request header (Requests_and_responses \
          §openehr-template-id)"
@@ -103,6 +102,7 @@ fn flat_input_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
         FlatError::MalformedPath { .. }
             | FlatError::UnknownContext(_)
             | FlatError::OtherSuffixConflict(_)
+            | FlatError::RawWithoutType { .. }
     );
     let msg = format!(
         "Simplified-Format conversion failed: {}",

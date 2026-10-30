@@ -1220,18 +1220,24 @@ impl Builder<'_> {
                 Ok(())
             }
             Link::NotContains => {
-                let parent = vo.ok_or_else(|| {
-                    SqlError::Unsupported("NOT CONTAINS without a containing object".to_owned())
-                })?;
+                // NOTE: QUERY master03 §Containment: `NOT CONTAINS` is "the absence of any
+                // containment relationship between a parent and potential child items", the EHR included.
+                let anchor = match (vo, ehr) {
+                    (Some(parent), _) => ExistsAnchor::Vo(parent.node, parent.types),
+                    (None, Some(e)) => ExistsAnchor::Ehr(e.to_owned()),
+                    (None, None) => {
+                        return Err(SqlError::Unsupported(
+                            "NOT CONTAINS without a containing object".to_owned(),
+                        )
+                        .into());
+                    }
+                };
                 // the exclusion is the negation of "parent contains
                 // <tree>" — the same disjunction-capable `EXISTS` builder,
                 // negated. This generalises NOT CONTAINS to compound (AND/OR)
                 // and further-nested operands (QUERY master03 §Containment,
                 // §NOT).
-                let inner = self.contained_exists(
-                    &ExistsAnchor::Vo(parent.node.clone(), parent.types.clone()),
-                    &c.tree,
-                )?;
+                let inner = self.contained_exists(&anchor, &c.tree)?;
                 self.q.and_where(inner.not());
                 Ok(())
             }

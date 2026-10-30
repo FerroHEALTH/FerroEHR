@@ -93,7 +93,7 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
         &app,
         post_json(
             &format!("/ehr/{ehr_id}/directory"),
-            r#"{"_type":"FOLDER","archetype_node_id":"openEHR-EHR-FOLDER.generic.v1",
+            r#"{"_type":"FOLDER","archetype_node_id":"openEHR-EHR-FOLDER.generic.v1", "archetype_details": { "_type": "ARCHETYPED", "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" }, "rm_version": "1.1.0" },
                 "name":{"_type":"DV_TEXT","value":"root"}}"#,
         ),
     )

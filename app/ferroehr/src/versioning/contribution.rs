@@ -1347,32 +1347,30 @@ fn parse_audit(
 /// demographic contribution (`party_only`) may carry only party roots and
 /// `PARTY_RELATIONSHIP`, and an EHR contribution may carry neither.
 ///
-/// NOTE: `FOLDER` is EHR-scoped in both directions, no released service surface
-/// admitting a demographic folder (SM `UML/classes/i_demographic_service.adoc`
-/// declares no folder operation and every ITS-REST `directory_*` operation is
-/// mounted at `/ehr/{ehr_id}/directory`).
+/// NOTE: ITS-REST `schemas/ehr/UVersionable.yaml` and `schemas/demographic/UVersionable.yaml`
+/// close each member set with a `oneOf`, so a member outside it fails the request schema (400).
+///
+/// `FOLDER` is EHR-scoped in both directions: no released service surface
+/// admits a demographic folder (SM `i_demographic_service.adoc` declares no
+/// folder operation, and every ITS-REST `directory_*` operation is mounted at
+/// `/ehr/{ehr_id}/directory`).
 ///
 /// # Errors
-/// [`ServiceError::Unprocessable`] (`422`) on a scope mismatch in either
-/// direction.
+/// [`ServiceError::BadRequest`] (`400`, ITS-REST `responses/400_CONTRIBUTION.yaml`)
+/// on a scope mismatch in either direction.
 fn check_kind_scope(kind: Kind, party_only: bool) -> Result<(), ServiceError> {
     if party_only && !kind.is_demographic() {
-        return Err(ServiceError::content_invalid(
-            Violation::new(format!(
-                "of a demographic CONTRIBUTION may only be demographic versions, got {}",
-                kind.as_str()
-            ))
-            .with_path("versions"),
-        ));
+        return Err(ServiceError::precondition(format!(
+            "a member of a demographic CONTRIBUTION may only be a demographic version, \
+             got {}",
+            kind.as_str()
+        )));
     }
     if !party_only && kind.is_demographic() {
-        return Err(ServiceError::content_invalid(
-            Violation::new(format!(
-                "of an EHR CONTRIBUTION may not be demographic versions, got {}",
-                kind.as_str()
-            ))
-            .with_path("versions"),
-        ));
+        return Err(ServiceError::precondition(format!(
+            "a member of an EHR CONTRIBUTION may not be a demographic version, got {}",
+            kind.as_str()
+        )));
     }
     Ok(())
 }
@@ -1517,9 +1515,7 @@ fn typed_decode_gate(kind: Kind, data: &Value, incomplete: bool) -> Result<(), S
         | Kind::PartyRelationship => None,
     };
     match refused {
-        Some(e) => Err(ServiceError::precondition(format!(
-            "invalid canonical JSON body: {e}"
-        ))),
+        Some(e) => Err(ServiceError::canonical_decode(data, e)),
         None => Ok(()),
     }
 }

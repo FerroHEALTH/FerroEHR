@@ -134,6 +134,11 @@ fn folder_json(name: &str, subfolders: Vec<Value>) -> Value {
         "_type": "FOLDER",
         "name": dv_text(name),
         "archetype_node_id": FOLDER_ARCHETYPE,
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": FOLDER_ARCHETYPE },
+            "rm_version": "1.1.0"
+        },
         "folders": subfolders
     })
 }
@@ -149,6 +154,11 @@ fn folder_with_items(name: &str, subfolders: Vec<Value>, item_ids: &[&str]) -> V
         "_type": "FOLDER",
         "name": dv_text(name),
         "archetype_node_id": FOLDER_ARCHETYPE,
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": FOLDER_ARCHETYPE },
+            "rm_version": "1.1.0"
+        },
         "folders": subfolders,
         "items": item_ids.iter().copied().map(composition_ref).collect::<Vec<_>>()
     })
@@ -1339,4 +1349,39 @@ async fn create_rejects_root_archetype_id_mismatch_as_422() {
         body.contains("archetype"),
         "the 422 names the root archetype-identity rule: {body}"
     );
+}
+
+/// A root FOLDER that names an archetype in `archetype_node_id` is an
+/// archetype root, so without `archetype_details` it breaks the RM and the
+/// create and the update are `422`, committing nothing: RM common master03
+/// §The LOCATABLE Class, "`LOCATABLE` also provides the attribute
+/// `_archetype_details_`, which is non-Void for archetype root points in
+/// data".
+#[tokio::test]
+async fn a_root_without_archetype_details_is_422() {
+    let (_pg, app) = common::test_router().await;
+    let ehr = create_ehr(&app).await;
+    let mut root = folder_json("root", vec![]);
+    root.as_object_mut()
+        .expect("FOLDER object")
+        .remove("archetype_details");
+
+    let (status, _h, body) = create_directory(&app, &ehr, &root, None).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "create: {body}");
+    assert!(
+        body.contains("archetype_details"),
+        "names the member: {body}"
+    );
+    let (status, _h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "no directory committed: {body}"
+    );
+
+    let (status, h, body) = create_directory(&app, &ehr, &folder_json("root", vec![]), None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let uid = etag_uid(&h);
+    let (status, _h, body) = update_directory(&app, &ehr, &root, Some(&quoted(&uid)), None).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "update: {body}");
 }

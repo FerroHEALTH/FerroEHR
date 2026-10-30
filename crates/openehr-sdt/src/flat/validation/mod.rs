@@ -877,13 +877,33 @@ impl Validator {
             else {
                 continue;
             };
-            if ca.allowed_ids.iter().any(|a| a == nid) {
+            let ct = child.get("_type").and_then(Value::as_str).unwrap_or("");
+            let id_types: Vec<&str> = ca
+                .allowed_ids
+                .iter()
+                .zip(&ca.allowed_rm_types)
+                .filter(|(a, _)| *a == nid)
+                .map(|(_, t)| t.as_str())
+                .collect();
+            if !id_types.is_empty() {
+                // NOTE: AOM 1.4 `c_object.adoc` `rm_type_name`, "Reference model type that this
+                // node corresponds to": a child the id matches must conform to that type too.
+                if !ct.is_empty() && !id_types.iter().any(|t| subtype::conforms(ct, t)) {
+                    self.push(
+                        &ca.path,
+                        format!(
+                            "node '{nid}' under '{attribute}' is a {ct}, which conforms to \
+                             none of the RM types the template allows there [{}]",
+                            id_types.join(", ")
+                        ),
+                        ValidationKind::WrongType,
+                    );
+                }
                 continue; // Matches a fixed sibling alternative.
             }
             if ca.slots.is_empty() && openehr_rm::v1_2::paths::is_archetype_root_node_id(nid) {
                 continue;
             }
-            let ct = child.get("_type").and_then(Value::as_str).unwrap_or("");
             match ca.slots.iter().position(|s| slot_admits(s, ct, nid)) {
                 Some(i) => counts[i] += 1,
                 None => self.push(
@@ -2340,6 +2360,7 @@ mod tests {
         root.closed_attributes = vec![WebTemplateClosedAttribute {
             path: "/content".to_owned(),
             allowed_ids: vec!["openEHR-EHR-SECTION.x.v1".to_owned()],
+            allowed_rm_types: vec!["SECTION".to_owned()],
             slots: vec![],
         }];
         let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": [
@@ -2386,6 +2407,7 @@ mod tests {
         root.closed_attributes = vec![WebTemplateClosedAttribute {
             path: "/items[at0001]/value".to_owned(),
             allowed_ids: vec!["at9999".to_owned()],
+            allowed_rm_types: vec!["DATA_VALUE".to_owned()],
             slots: vec![],
         }];
         let inst = json!({"_type": "ELEMENT", "archetype_node_id": "at0001",
@@ -2404,6 +2426,7 @@ mod tests {
         root.closed_attributes = vec![WebTemplateClosedAttribute {
             path: "/content".to_owned(),
             allowed_ids: vec![],
+            allowed_rm_types: vec![],
             slots: vec![WebTemplateArchetypeSlot {
                 rm_type: "OBSERVATION".to_owned(),
                 min,
@@ -2647,6 +2670,7 @@ mod tests {
             n.closed_attributes = vec![WebTemplateClosedAttribute {
                 path: "/items[openEHR-EHR-CLUSTER.c.v1]/items".to_owned(),
                 allowed_ids: vec!["at0004".to_owned()],
+                allowed_rm_types: vec!["ITEM".to_owned()],
                 slots: vec![],
             }];
             n
@@ -2659,6 +2683,7 @@ mod tests {
             n.closed_attributes = vec![WebTemplateClosedAttribute {
                 path: "/items[openEHR-EHR-CLUSTER.c.v1,'B']/items".to_owned(),
                 allowed_ids: vec!["at0013".to_owned()],
+                allowed_rm_types: vec!["ITEM".to_owned()],
                 slots: vec![],
             }];
             n

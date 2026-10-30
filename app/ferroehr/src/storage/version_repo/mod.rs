@@ -50,6 +50,27 @@
 // `TreeId::columns()` → the three tree ints). Storage never depends upward on
 // versioning — this decoupling is deliberate and stays.
 
+/// The `FROM` item that joins each version row `v` to its commit audit `a`,
+/// with the six audit columns the reads project.
+///
+/// A plain join is costed over the statistics of `version`, and once they had
+/// fallen behind the commits the planner rated a merge join that walks
+/// `pk_commit_audit` from its first entry as cheaper than one probe per
+/// version row (#4438). A subquery that carries a `LIMIT` is never flattened
+/// into the outer join (PostgreSQL 18, `prepjointree.c` `is_simple_subquery`),
+/// so this lateral one runs once per version row and probes the key whatever
+/// the statistics say. `LIMIT 1` drops nothing: `a.id` is the primary key. No
+/// openEHR spec governs the SQL: our own design.
+macro_rules! audit_of_version {
+    () => {
+        concat!(
+            "CROSS JOIN LATERAL (SELECT a.system_id, a.change_type, a.description, ",
+            "a.committer, a.attestation, a.time_committed FROM commit_audit a ",
+            "WHERE a.id = v.commit_audit_id LIMIT 1) a "
+        )
+    };
+}
+
 pub mod attestation;
 pub mod commit;
 pub mod contribution;

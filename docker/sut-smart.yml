@@ -13,11 +13,9 @@
 # scripts/conformance.sh composes it on the root stack for every run, so the
 # ONE committed record (docs/conformance/ferroehr/) covers the whole
 # claimed surface, SMART cases included, in one invocation (owner ruling
-# 2026-07-28: no focused lanes, no sidecar artifact directories). The ixit's
-# principals mint scoped RS256 Bearer tokens against the committed static
-# test issuer; per-step `scopes:` declarations override the standing grant
-# for the SMART boundary cases. The signing lane (sut-signing-pgp.yml)
-# STACKS on top of this overlay.
+# 2026-07-28: no focused lanes, no sidecar artifact directories). The
+# instrument logs in with Basic; the SMART documents present RS256 Bearer
+# tokens minted from the committed static test issuer.
 #
 # THE ISSUER IS COMMITTED TEST MATERIAL. `docs/conformance/party/smart/`
 # holds a passphrase-less RSA test keypair in public version control, so the

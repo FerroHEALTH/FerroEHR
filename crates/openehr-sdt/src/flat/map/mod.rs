@@ -71,7 +71,7 @@ pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
 /// `listOpen`. `path` is the printed simplified path, used only for diagnostics.
 ///
 /// # Errors
-/// - [`FlatError::InvalidRaw`] — a `|raw` payload without a `_type`
+/// - [`FlatError::RawWithoutType`] — a `|raw` payload without a `_type`
 ///   (master04 §"Raw canonical JSON").
 /// - [`FlatError::OtherSuffixConflict`] — `|other` combined with
 ///   `|code`/`|value`/`|terminology`/`|preferred_term` (master04 §"Open
@@ -100,9 +100,8 @@ pub(crate) fn build_leaf(
         if raw.get("_type").and_then(Value::as_str).is_some() {
             return Ok(raw.clone());
         }
-        return Err(FlatError::InvalidRaw {
+        return Err(FlatError::RawWithoutType {
             path: path.to_owned(),
-            reason: "the |raw payload must carry a _type property".to_owned(),
         });
     }
 
@@ -181,8 +180,9 @@ pub(crate) fn build_rm_attr(
 /// a suffix or a sub-path beside it would be dropped.
 ///
 /// # Errors
-/// [`FlatError::InvalidRaw`] for a value without `_type`, one of another
-/// class, or a `|raw` beside other content.
+/// [`FlatError::RawWithoutType`] for a value without `_type`;
+/// [`FlatError::InvalidRaw`] for one of another class, or a `|raw` beside
+/// other content.
 pub(crate) fn raw_value(
     node: &SimNode,
     path: &str,
@@ -194,9 +194,9 @@ pub(crate) fn raw_value(
         reason,
     };
     let Some(rm_type) = raw.get("_type").and_then(Value::as_str) else {
-        return Some(Err(invalid(
-            "the |raw value must be a canonical-JSON object with _type".to_owned(),
-        )));
+        return Some(Err(FlatError::RawWithoutType {
+            path: path.to_owned(),
+        }));
     };
     if !types.contains(&rm_type) {
         return Some(Err(invalid(format!(
@@ -463,7 +463,7 @@ mod tests {
         let node = leaf(&[("raw", json!({"magnitude": 1}))]);
         assert!(matches!(
             build_leaf(&node, "DV_TEXT", None, "p"),
-            Err(FlatError::InvalidRaw { .. })
+            Err(FlatError::RawWithoutType { .. })
         ));
     }
 

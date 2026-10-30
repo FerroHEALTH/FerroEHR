@@ -128,8 +128,17 @@ pub enum FlatError {
         reason: String,
     },
 
-    /// A `|raw` payload is not a usable canonical-JSON RM fragment
-    /// (master04 §Raw canonical JSON: the value must carry `_type`).
+    /// A `|raw` value carries no `_type`, so it cannot be read as an RM
+    /// object (master04 §Raw canonical JSON: "The raw JSON value must include
+    /// the `_type` property indicating the openEHR type").
+    #[error("invalid |raw payload at {path}: the value must be a canonical-JSON object with _type")]
+    RawWithoutType {
+        /// The simplified path of the `|raw` key.
+        path: String,
+    },
+
+    /// A `|raw` payload is an RM object the attribute does not admit, or
+    /// stands beside other content at its node.
     #[error("invalid |raw payload at {path}: {reason}")]
     InvalidRaw {
         /// The simplified path of the `|raw` key.

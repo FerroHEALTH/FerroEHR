@@ -436,7 +436,7 @@ fn rejects_unknown_suffix_on_container() {
 }
 
 /// master04 §Raw canonical JSON ("The raw JSON value must include the `_type`
-/// property") — a `|raw` payload without `_type` is `InvalidRaw`.
+/// property") — a `|raw` payload without `_type` is `RawWithoutType`.
 #[test]
 fn rejects_raw_without_type() {
     let wt = coded_leaf_wt(true);
@@ -446,7 +446,10 @@ fn rejects_raw_without_type() {
         NOW,
     )
     .unwrap_err();
-    assert!(matches!(err, FlatError::InvalidRaw { .. }), "got {err:?}");
+    assert!(
+        matches!(err, FlatError::RawWithoutType { .. }),
+        "got {err:?}"
+    );
 }
 
 /// master04 §Flat format syntax rules — malformed keys are `MalformedPath`,

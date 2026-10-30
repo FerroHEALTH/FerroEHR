@@ -256,7 +256,17 @@ pub(crate) async fn definition_template_adl1_4_list(
                         i.e. the `TemplateIdentifier` object; missing or \
                         `return=minimal` — \"the body is empty\". The token \
                         actually honoured is echoed in `Preference-Applied`.",
-         example = "return=representation")
+         example = "return=representation"),
+        ("Accept" = Option<String>, Header,
+         description = "The media type of the `return=representation` body \
+                        (`specifications/parameters/header/Accept_Template.yaml`): \
+                        `application/xml` (the OPT; also the default for \
+                        absent/`*/*`), or `application/openehr.wt+json` / \
+                        `application/json` (the Web Template document), as \
+                        `responses/201_Template_adl1_4_upload.yaml` declares. \
+                        Any other `Accept` with `return=representation` is \
+                        `406`, before the template is stored.",
+         example = "application/openehr.wt+json")
     ),
     request_body(content((String = "application/xml")),
                  description = "The operational template as canonical OPT XML \
@@ -333,6 +343,7 @@ pub(crate) async fn definition_template_adl1_4_list(
     </definition>
 </template>
 "#),
+                (serde_json::Value = "application/openehr.wt+json"),
                 (serde_json::Value = "application/json",
                  example = json!({ "template_id": "Vital Signs" }))
             )
@@ -359,6 +370,15 @@ pub(crate) async fn definition_template_adl1_4_list(
                                       with same `template_id` already exists\" \
                                       (ITS-REST \
                                       `specifications/responses/409_template_already_exists.yaml`).",
+         body = serde_json::Value),
+        (status = 406, description = "`Prefer: return=representation` with an \
+                                      `Accept` outside \
+                                      `parameters/header/Accept_Template.yaml`: \
+                                      \"If the service cannot fulfill this aspect \
+                                      of the request, it MUST respond with HTTP \
+                                      status code `406 Not Acceptable`\" \
+                                      (`Resources.md` §Simplified Formats). \
+                                      Nothing is stored.",
          body = serde_json::Value),
         (status = 415, description = "The request DECLARES a payload media type \
                                       the service cannot process as this \

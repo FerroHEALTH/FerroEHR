@@ -1244,6 +1244,7 @@ fn closed_world_rejects_foreign_content() {
     root.closed_attributes = vec![WebTemplateClosedAttribute {
         path: "/content".to_owned(),
         allowed_ids: vec!["openEHR-EHR-SECTION.x.v1".to_owned()],
+        allowed_rm_types: vec!["SECTION".to_owned()],
         slots: vec![],
     }];
     let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": [
@@ -1290,6 +1291,7 @@ fn closed_world_ignores_metadata_values() {
     root.closed_attributes = vec![WebTemplateClosedAttribute {
         path: "/items[at0001]/value".to_owned(),
         allowed_ids: vec!["at9999".to_owned()],
+        allowed_rm_types: vec!["DATA_VALUE".to_owned()],
         slots: vec![],
     }];
     let inst = json!({"_type": "ELEMENT", "archetype_node_id": "at0001",
@@ -1308,6 +1310,7 @@ fn obs_slot(includes: &[&str], excludes: &[&str], min: i32, max: i32) -> WebTemp
     root.closed_attributes = vec![WebTemplateClosedAttribute {
         path: "/content".to_owned(),
         allowed_ids: vec![],
+        allowed_rm_types: vec![],
         slots: vec![WebTemplateArchetypeSlot {
             rm_type: "OBSERVATION".to_owned(),
             min,
@@ -1696,6 +1699,7 @@ fn name_diff_parent() -> WebTemplateNode {
         n.closed_attributes = vec![WebTemplateClosedAttribute {
             path: "/items[openEHR-EHR-CLUSTER.c.v1]/items".to_owned(),
             allowed_ids: vec!["at0004".to_owned()],
+            allowed_rm_types: vec!["ITEM".to_owned()],
             slots: vec![],
         }];
         n
@@ -1708,6 +1712,7 @@ fn name_diff_parent() -> WebTemplateNode {
         n.closed_attributes = vec![WebTemplateClosedAttribute {
             path: "/items[openEHR-EHR-CLUSTER.c.v1,'B']/items".to_owned(),
             allowed_ids: vec!["at0013".to_owned()],
+            allowed_rm_types: vec!["ITEM".to_owned()],
             slots: vec![],
         }];
         n

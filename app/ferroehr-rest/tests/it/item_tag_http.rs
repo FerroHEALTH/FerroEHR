@@ -81,6 +81,11 @@ fn folder(name: &str) -> Value {
         "_type": "FOLDER",
         "name": { "_type": "DV_TEXT", "value": name },
         "archetype_node_id": FOLDER_ARCHETYPE,
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": FOLDER_ARCHETYPE },
+            "rm_version": "1.1.0"
+        }
     })
 }
 

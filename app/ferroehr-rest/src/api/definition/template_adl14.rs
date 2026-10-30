@@ -99,6 +99,16 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // (`overview/Resources.md` §XML Format, a `415` MUST). An absent
     // `Content-Type` declares nothing to refuse and reads as the XML body type.
     negotiate::require_content_type(h, &[WireFormat::CanonicalXml], "application/xml")?;
+    // NOTE: `responses/201_Template_adl1_4_upload.yaml` declares the OPT XML and the Web Template,
+    // and `Resources.md` §Simplified Formats answers an `Accept` the service cannot fulfil with 406.
+    let representation = if negotiate::prefers_representation(h) {
+        Some(
+            negotiate::resolve_accept(h, TEMPLATE_DEF_FORMATS, WireFormat::CanonicalXml)
+                .ok_or_else(|| RestError::from(ApiError::NotAcceptable(not_acceptable())))?,
+        )
+    } else {
+        None
+    };
     let xml = negotiate::text_body(&parts.body)?;
     let meta = state.backend().template_adl14_upload(xml.clone()).await?;
     let template_id = meta
@@ -111,7 +121,21 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
         state.config().rest.base_path,
         urlencoding::encode(&template_id)
     );
-    Ok(upload_response(h, &location, &template_id, &xml))
+    let body = match representation {
+        Some(WireFormat::CanonicalXml) => Some(negotiate::xml_body(StatusCode::CREATED, xml)),
+        Some(fmt) => {
+            Some(web_template_response(state, &template_id, fmt, StatusCode::CREATED).await?)
+        }
+        None => None,
+    };
+    Ok(upload_response(h, &location, &template_id, body))
+}
+
+/// The `406` detail for an `Accept` outside [`TEMPLATE_DEF_FORMATS`].
+fn not_acceptable() -> String {
+    "the template is available as application/xml (canonical OPT), \
+     application/openehr.wt+json, or application/json (web template)"
+        .to_owned()
 }
 
 /// `GET …/definition/template/adl1.4/{template_id}` — retrieve the stored OPT.
@@ -134,11 +158,7 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
     // `406`; absent or `*/*` defaults to the canonical OPT.
     let Some(fmt) = negotiate::resolve_accept(h, TEMPLATE_DEF_FORMATS, WireFormat::CanonicalXml)
     else {
-        return Err(RestError::from(ApiError::NotAcceptable(
-            "the template is available as application/xml (canonical OPT), \
-             application/openehr.wt+json, or application/json (web template)"
-                .to_owned(),
-        )));
+        return Err(RestError::from(ApiError::NotAcceptable(not_acceptable())));
     };
     // The XML fetch runs regardless: it is the existence probe (an unknown
     // template is a 404) as well as the canonical body.
@@ -155,7 +175,7 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
         // Both JSON forms serve the Web Template document, the only JSON
         // projection of an OPT, under the media type the client negotiated
         // (`Resources.md` §JSON Format).
-        other => web_template_response(state, &template_id, other).await,
+        other => web_template_response(state, &template_id, other, StatusCode::OK).await,
     }
 }
 
@@ -219,7 +239,8 @@ fn set_template_etag(resp: &mut Response, template_id: &str) {
 }
 
 /// Render the `201_Template_adl1_4_upload` response per `Prefer`:
-/// `return=representation` → the OPT XML; `return=identifier` → the JSON
+/// `return=representation` → `representation`, the OPT XML or the Web
+/// Template `Accept` negotiated; `return=identifier` → the JSON
 /// `TemplateIdentifier` object `{"template_id": <id>}`
 /// (`schemas/others/TemplateIdentifier.yaml`); missing / `return=minimal` → an
 /// empty body. `Location` + the weak `ETag` are set on every case, and the
@@ -236,24 +257,21 @@ fn upload_response(
     headers: &HeaderMap,
     location: &str,
     template_id: &str,
-    opt_xml: &str,
+    representation: Option<Response>,
 ) -> Response {
-    let applied = if negotiate::prefers_representation(headers) {
-        AppliedPreference::Representation
-    } else if negotiate::prefers_identifier(headers) {
-        AppliedPreference::Identifier(template_id)
-    } else {
-        AppliedPreference::Minimal
-    };
-    let mut resp = match applied {
-        AppliedPreference::Representation => {
-            negotiate::xml_body(StatusCode::CREATED, opt_xml.to_owned())
+    let (applied, mut resp) = match representation {
+        Some(resp) => (AppliedPreference::Representation, resp),
+        None if negotiate::prefers_identifier(headers) => {
+            let body = serde_json::json!({ "template_id": template_id });
+            (
+                AppliedPreference::Identifier(template_id),
+                (StatusCode::CREATED, axum::Json(body)).into_response(),
+            )
         }
-        AppliedPreference::Identifier(id) => {
-            let body = serde_json::json!({ "template_id": id });
-            (StatusCode::CREATED, axum::Json(body)).into_response()
-        }
-        AppliedPreference::Minimal => StatusCode::CREATED.into_response(),
+        None => (
+            AppliedPreference::Minimal,
+            StatusCode::CREATED.into_response(),
+        ),
     };
     if let Ok(v) = HeaderValue::from_str(location) {
         resp.headers_mut().insert(header::LOCATION, v);
@@ -282,6 +300,7 @@ async fn web_template_response(
     state: &AppState,
     template_id: &str,
     fmt: WireFormat,
+    status: StatusCode,
 ) -> Result<Response, RestError> {
     let built = state
         .backend()
@@ -295,8 +314,8 @@ async fn web_template_response(
         ))
     })?;
     let mut resp = match fmt {
-        WireFormat::CanonicalJson => negotiate::json_body(StatusCode::OK, json),
-        _ => negotiate::wt_json_body(StatusCode::OK, json),
+        WireFormat::CanonicalJson => negotiate::json_body(status, json),
+        _ => negotiate::wt_json_body(status, json),
     };
     set_template_etag(&mut resp, template_id);
     Ok(resp)

@@ -178,6 +178,11 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
     let folder = json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "root" }
     });
     svc.create_directory(ehr_uuid, uv(&folder, "249", None))

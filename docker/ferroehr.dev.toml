@@ -2,8 +2,7 @@
 #
 # Mounted into the app container at /etc/ferroehr/ferroehr.toml, which each
 # service that mounts it names in FERROEHR_CONFIG (docker-compose.dev.yml
-# through docker-compose.yml, docker/sut-ferroehr.yml,
-# docker/sut-spec-stable.yml). Their env vars
+# through docker-compose.yml, docker/sut-ferroehr.yml). Their env vars
 # override individual keys on top of this file (layer 3 beats the file).
 #
 # The out-of-the-box auth posture has authentication ENABLED but no configured
@@ -99,8 +98,8 @@ roles = ["USER"]
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
 # Dev-only ADMIN account for the admin API (`DELETE /admin/...`) and the
-# conformance suite's AdminApi cases (scripts/conformance.sh CONF_ADMIN_AUTH
-# defaults to it). Same dev password "ferroehr" (same hash); ADMIN + USER
+# conformance catalogue's administrative workflows (scripts/conformance.sh
+# logs its admin principal in as this user by default). Same dev password "ferroehr" (same hash); ADMIN + USER
 # roles. Do NOT use in production.
 [[auth.basic.users]]
 user = "ferroehr-admin"

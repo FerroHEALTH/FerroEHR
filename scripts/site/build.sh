@@ -35,7 +35,6 @@ build_book() {
 #    markers are filled after the copy (step 3). Sources carry no numbers
 #    (CI: scripts/checks/conformance-numbers.sh).
 bash "$ROOT/scripts/render/conformance-stats.sh" includes
-bash "$ROOT/scripts/render/comparison.sh"
 bash "$ROOT/scripts/render/perf-assets.sh"
 bash "$ROOT/scripts/render/cohort-bench.sh"
 bash "$ROOT/scripts/render/storage-bench.sh"

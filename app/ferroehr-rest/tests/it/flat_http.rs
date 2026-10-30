@@ -17,7 +17,7 @@
 //! * POST with `Content-Type: application/openehr.wt.flat+json` + `?template_id`
 //!   → the flat body is rebuilt into a canonical composition before the service
 //!   commits it (verified by reading the stored composition back);
-//! * POST flat without a template id → 400;
+//! * POST flat without a template id → 400, and a `|raw` without `_type` → 400;
 //! * a full flat → RM → flat round-trip through the two endpoints is stable
 //!   (modulo the server-assigned version `_uid`s the Mock never produced).
 #![expect(
@@ -37,7 +37,7 @@ use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use serde_json::Value;
+use serde_json::{Value, json};
 use tower::ServiceExt;
 
 use ferroehr::config::rest::RestConfig;
@@ -276,14 +276,12 @@ async fn post_flat_composition_is_rebuilt_to_canonical() {
 }
 
 /// A simplified COMPOSITION commit with no `openehr-template-id` header is a
-/// `422` (`Requests_and_responses` §openehr-template-id makes the header the
-/// mechanism; a well-formed-but-unprocessable request). This deliberately
-/// supersedes the prior `400` expectation — the earlier build resolved the
-/// template id from a `template_id` query parameter, which the spec does not
-/// define; only the header (and the payload-embedded `archetype_details`) are
-/// read now.
+/// `400`: `Requests_and_responses.md` §openehr-template-id, "The
+/// `openehr-template-id` request header MUST be used whenever committing
+/// COMPOSITION ... using a Simplified Format", and `responses/400.yaml`
+/// answers a "missing required header or parameter".
 #[tokio::test]
-async fn post_flat_without_template_id_is_422() {
+async fn post_flat_without_template_id_is_400() {
     let (_pg, app, ehr) = app_with_ehr().await;
     let req = Request::builder()
         .method("POST")
@@ -291,8 +289,38 @@ async fn post_flat_without_template_id_is_422() {
         .header(header::CONTENT_TYPE, FLAT_MIME)
         .body(Body::from("{\"ctx/language\":\"en\"}"))
         .unwrap();
-    let (status, _h, _b) = send(&app, req).await;
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    let (status, _h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+}
+
+/// A `|raw` value without `_type` cannot be read as an RM object (master04
+/// §Raw canonical JSON: "The raw JSON value must include the `_type`
+/// property"), so the commit is syntactically invalid content, a `400`.
+#[tokio::test]
+async fn post_flat_raw_without_type_is_400() {
+    let (_pg, app, ehr) = app_with_ehr().await;
+    let wt = web_template();
+    let mut flat: BTreeMap<String, Value> =
+        openehr_sdt::flat::convert::composition_to_flat(&canonical_composition(), &wt)
+            .unwrap()
+            .into_iter()
+            .collect();
+    let leaf = flat
+        .keys()
+        .find(|k| k.ends_with("|magnitude"))
+        .map(|k| k.trim_end_matches("|magnitude").to_owned())
+        .expect("a quantity leaf");
+    flat.retain(|k, _| !k.starts_with(&format!("{leaf}|")));
+    flat.insert(format!("{leaf}|raw"), json!({ "magnitude": 120 }));
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        .header(header::CONTENT_TYPE, FLAT_MIME)
+        .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
+        .body(Body::from(serde_json::to_string(&flat).unwrap()))
+        .unwrap();
+    let (status, _h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
 }
 
 /// The deprecated and legacy simplified-format media types the release does

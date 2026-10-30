@@ -1276,13 +1276,15 @@ fn closed_attributes(
         {
             continue;
         }
-        let (allowed_ids, slots) = admissible_children(attr, overlay_parents);
-        if allowed_ids.is_empty() && slots.is_empty() {
+        let (allowed, slots) = admissible_children(attr, overlay_parents);
+        if allowed.is_empty() && slots.is_empty() {
             continue; // Open attribute (no node-id alternatives, no slot).
         }
+        let (allowed_ids, allowed_rm_types) = allowed.into_iter().unzip();
         out.push(WebTemplateClosedAttribute {
             path: format!("{node_path}/{}", attr.rm_attribute_name),
             allowed_ids,
+            allowed_rm_types,
             slots,
         });
     }
@@ -1290,7 +1292,7 @@ fn closed_attributes(
 }
 
 /// The admissible child identities of one attribute: its node-identified
-/// LOCATABLE alternatives and its archetype slots.
+/// LOCATABLE alternatives, each with its RM type, and its archetype slots.
 ///
 /// An alternative is an at/id-coded `C_COMPLEX_OBJECT`, or an inlined
 /// `C_ARCHETYPE_ROOT` carrying its interface archetype id; primitive value
@@ -1298,8 +1300,8 @@ fn closed_attributes(
 fn admissible_children(
     attr: &CAttribute,
     overlay_parents: &BTreeMap<String, String>,
-) -> (Vec<String>, Vec<WebTemplateArchetypeSlot>) {
-    let mut allowed_ids: Vec<String> = Vec::new();
+) -> (Vec<(String, String)>, Vec<WebTemplateArchetypeSlot>) {
+    let mut allowed: Vec<(String, String)> = Vec::new();
     let mut slots: Vec<WebTemplateArchetypeSlot> = Vec::new();
     for child in attr.children.iter().flatten() {
         match child {
@@ -1307,13 +1309,13 @@ fn admissible_children(
             CObject::CComplexObject(_) => {
                 let id = object_archetype_node_id(child, overlay_parents);
                 if !id.is_empty() {
-                    allowed_ids.push(id);
+                    allowed.push((id, object_rm_type(child).to_owned()));
                 }
             }
             _ => {}
         }
     }
-    (allowed_ids, slots)
+    (allowed, slots)
 }
 
 /// The validation-only slot record from an AOM2 `ARCHETYPE_SLOT`: its constrained

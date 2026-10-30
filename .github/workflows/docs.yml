@@ -47,8 +47,8 @@ permissions: {}
 
 jobs:
   # ── Change detection (pull requests only) ───────────────────────────────────
-  # The site build renders the conformance assets, regenerates the derived
-  # party documents (which installs the pinned `veredictum`), lints the book and
+  # The site build renders the conformance assets (which installs the
+  # `veredictum` release of the committed record), lints the book and
   # link-checks the assembled tree — 30 minutes of work that a pull request
   # touching none of its inputs has no reason to pay (#2777).
   #
@@ -101,10 +101,9 @@ jobs:
           fi
           echo "Changed files:"; echo "$changed"
           # The site's sources, plus every INPUT the build's own gates read:
-          # the committed conformance artifacts and party statements that
-          # `scripts/render/conformance-docs.sh` regenerates from, the pin that
-          # decides WHICH instrument and catalogue it regenerates them with, the
-          # render/assemble scripts, the stale-numbers gate's script, and the
+          # the committed conformance artifacts the render scripts read, the pin
+          # that decides WHICH instrument renders them, the render/assemble
+          # scripts, the stale-numbers gate's script, and the
           # job's own recipe — this workflow and the toolchain action — so a
           # change to what the job DOES exercises the job it changes.
           # The list is in scripts/lib/change-lanes.sh, matched from a
@@ -127,13 +126,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Full history: the party-documents drift gate regenerates
-          # COMPARISON.md, whose run dates derive from the conformance
-          # artifacts' AUTHOR dates (scripts/render/comparison.sh). On a
-          # shallow checkout that git log is empty and the mtime fallback
-          # stamps the CHECKOUT day — green only on the baseline's own UTC
-          # day, red every day after (#2402; it failed both the v3.17.6 and
-          # v3.17.7 tag runs).
+          # Full history: conformance-stats.sh dates the record by the AUTHOR
+          # date of results.json. On a shallow checkout that git log is empty
+          # and the date falls back to the CHECKOUT day (#2402).
           fetch-depth: 0
       # The deployed site is rebuilt in the deploy job, which restores no build
       # cache; this job publishes only a pull-request diagnostic artifact.
@@ -141,33 +136,17 @@ jobs:
       - uses: ./.github/actions/docs-toolchain
       - name: Stale-numbers gate (no hand-typed conformance claims in site sources)
         run: bash scripts/checks/conformance-numbers.sh
-      - name: Render conformance stats + comparison + perf assets (the generated includes must exist before lint)
+      - name: Render conformance stats + perf assets (the generated includes must exist before lint)
         run: |
           bash scripts/render/conformance-stats.sh includes
-          bash scripts/render/comparison.sh
           bash scripts/render/perf-assets.sh
           bash scripts/render/cohort-bench.sh
           bash scripts/render/storage-bench.sh
           bash scripts/render/conformance-assets.sh
-          CONF_SUT=ehrbase bash scripts/render/conformance-assets.sh
-      - name: Regenerate the derived party documents (verdicts + renders + badges)
-        # The published statements/reports/certificates are DERIVED from the
-        # committed statement + results + catalogue by the same pure pipeline
-        # a campaign ends with. Regenerating them here, beside the SVGs, is
-        # what stops a catalogue or statement change from leaving a published
-        # document silently stale (#2377). results.json is an input only.
-        run: bash scripts/render/conformance-docs.sh
-      - name: Party-documents drift gate (regenerated documents match the committed ones)
-        # COMPARISON.md is written by comparison.sh in the render step above and
-        # was the one regenerated record no gate diffed — a stale committed copy
-        # passed CI silently.
-        run: git diff --exit-code docs/conformance/ferroehr docs/conformance/ehrbase docs/conformance/COMPARISON.md
       - name: Perf-assets drift gate (regenerated SVGs match the committed assets)
         run: git diff --exit-code website/book/src/perf-assets
       - name: Conformance-assets drift gate (regenerated SVGs match the committed assets)
-        # comparison-assets/ is gitignored build output (regenerated above);
-        # the committed, drift-guarded copies are the product's own.
-        run: git diff --exit-code website/book/src/conformance-assets website/book/src/comparison-assets/conformance-heat-grid-ehrbase.svg website/book/src/comparison-assets/conformance-chapter-bars-ehrbase.svg
+        run: git diff --exit-code website/book/src/conformance-assets
       - name: Markdown lint gate
         run: mdbook-lint lint website/book/src
       - name: Assemble _site (landing + /docs/dev/)
