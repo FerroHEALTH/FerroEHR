@@ -2603,7 +2603,8 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-          # The guard judges only files present at the latest release tag.
+          # The guard judges only files present at the latest release tag or a
+          # pre-release tag above it.
           fetch-tags: true
       # The detector runs against a scratch repository of its own first, so the
       # data this job acts on is produced by a filter that was just proven to
