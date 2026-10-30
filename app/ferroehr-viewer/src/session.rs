@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Sealed-cookie session state and the auth guard every `#[server]` fn calls.
+//! Sealed-cookie session state and the auth guard every read of the CDR calls.
 //!
-//! Server functions are a public HTTP API (the Leptos book's `server/25`
-//! security rule) — "only my UI calls this" is never assumed.
+//! Every route is a public HTTP endpoint: "only my UI calls this" is never
+//! assumed.
 //!
 //! The whole session lives in ONE encrypted, authenticated cookie
 //! (AES-256-GCM via the `cookie` crate's private jar), so any viewer
@@ -325,20 +325,30 @@ fn removal_cookie(cookie_secure: bool) -> cookie::Cookie<'static> {
     cookie
 }
 
-/// Extract the current request's session inside a `#[server]` fn.
+/// The session the request being drawn carries.
 ///
 /// # Errors
 /// [`ViewerError::Internal`] when called outside a request (a bug).
-pub async fn http_session() -> Result<CookieSession, ViewerError> {
-    let (keys, idle) = context_keys()?;
-    let headers: http::HeaderMap = leptos_axum::extract()
-        .await
-        .map_err(|e| ViewerError::Internal(format!("header extraction: {e}")))?;
-    Ok(unseal(&keys, &headers, idle))
+pub fn http_session() -> Result<CookieSession, ViewerError> {
+    crate::scope::with(|scope| {
+        unseal(
+            &scope.state.session_keys,
+            &scope.parts.headers,
+            scope.state.config.session.idle_minutes,
+        )
+    })
+    .ok_or_else(outside_request)
 }
 
-/// Persist a mutated session from a `#[server]` fn: appends the sealed
-/// `Set-Cookie` to this request's response.
+/// The error of a read that needs the request but runs outside one, a defect
+/// of its caller.
+#[must_use]
+pub fn outside_request() -> ViewerError {
+    ViewerError::Internal("no request in scope".to_owned())
+}
+
+/// Persists a mutated session: appends the sealed `Set-Cookie` to the
+/// answer of the request being drawn.
 ///
 /// # Errors
 /// [`ViewerError::Internal`] outside a request or on a sealing failure.
@@ -350,41 +360,31 @@ pub fn commit(session: &CookieSession) -> Result<(), ViewerError> {
         state.config.session.cookie_secure,
         state.config.session.idle_minutes,
     )?;
-    let response: leptos_axum::ResponseOptions = leptos::prelude::use_context()
-        .ok_or_else(|| ViewerError::Internal("no response context".to_owned()))?;
-    response.append_header(http::header::SET_COOKIE, header);
-    Ok(())
+    crate::scope::with(|scope| scope.answer(|answer| answer.cookies.push(header)))
+        .ok_or_else(outside_request)
 }
 
 /// The guard: return the authenticated session or `Unauthenticated`.
 ///
-/// Every `#[server]` fn that touches the CDR or session state calls this
-/// first. A missing, tampered or idle-expired cookie is the same answer:
+/// Every read of the CDR or of the session state calls this first. A missing, tampered or idle-expired cookie is the same answer:
 /// [`ViewerError::Unauthenticated`].
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a live session;
 /// [`ViewerError::Internal`] outside a request (a bug).
-pub async fn require_session() -> Result<ViewerSession, ViewerError> {
-    http_session()
-        .await?
+pub fn require_session() -> Result<ViewerSession, ViewerError> {
+    let session = http_session()?
         .get::<ViewerSession>(SESSION_KEY)
-        .ok_or(ViewerError::Unauthenticated)
+        .ok_or(ViewerError::Unauthenticated);
+    if let Err(error) = &session {
+        crate::session_client::note_if_over(error);
+    }
+    session
 }
 
-/// The `AppState` from the Leptos request context.
+/// The `AppState` of the request being drawn.
 fn app_state() -> Result<crate::state::AppState, ViewerError> {
-    leptos::prelude::use_context::<crate::state::AppState>()
-        .ok_or_else(|| ViewerError::Internal("no app state in context".to_owned()))
-}
-
-/// The sealing key + idle window from the Leptos request context.
-fn context_keys() -> Result<(SessionKeys, u64), ViewerError> {
-    let state = app_state()?;
-    Ok((
-        state.session_keys.clone(),
-        state.config.session.idle_minutes,
-    ))
+    crate::scope::state()
 }
 
 #[cfg(test)]

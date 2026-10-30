@@ -65,53 +65,6 @@
     {
       "ferroehr:reachability": {
         "direct_dependents": [
-          "either_of",
-          "leptos",
-          "reactive_graph",
-          "reactive_stores",
-          "tachys"
-        ],
-        "package": "paste@1.0.15",
-        "workspace_roots": [
-          "ferroehr-viewer"
-        ]
-      },
-      "impact_statement": "An UNMAINTAINED-crate advisory, not a vulnerability: the author archived the repository and RustSec records no flaw and no patched version. `paste` is a procedural macro that pastes tokens at compile time, reached only through five crates of the Leptos 0.8 family in the viewer (`cargo tree -i paste@1.0.15`); the server stopped reaching it when `utoipa-axum` 0.3 moved to `pastey`. Like every proc-macro it runs inside the compiler and links into nothing that ships, so it is absent from the artifacts this document describes. Re-evaluate on the next Leptos release.",
-      "justification": "vulnerable_code_not_present",
-      "products": [
-        {
-          "@id": "pkg:cargo/ferroehr-server",
-          "subcomponents": [
-            {
-              "@id": "pkg:cargo/paste"
-            }
-          ]
-        },
-        {
-          "@id": "pkg:oci/ferroehr",
-          "subcomponents": [
-            {
-              "@id": "pkg:cargo/paste"
-            }
-          ]
-        },
-        {
-          "@id": "pkg:oci/ferroehr-viewer",
-          "subcomponents": [
-            {
-              "@id": "pkg:cargo/paste"
-            }
-          ]
-        }
-      ],
-      "status": "not_affected",
-      "vulnerability": {
-        "name": "RUSTSEC-2024-0436"
-      }
-    },
-    {
-      "ferroehr:reachability": {
-        "direct_dependents": [
           "cx448",
           "elliptic-curve"
         ],

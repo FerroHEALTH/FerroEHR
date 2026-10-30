@@ -14,40 +14,31 @@
 //! reads/writes IS spec-bound: the DIRECTORY operations (ITS-REST
 //! `specifications/operations/directory_*.yaml`), the `FOLDER` schema
 //! (`specifications/schemas/ehr/Folder.yaml`), and RM common
-//! `master05-directory_package`. Every `#[server]` fn below authenticates the
+//! `master05-directory_package`. Every read below authenticates the
 //! viewer session first and the CDR credential never reaches client-visible
 //! state.
 //!
-//! This module owns the DIRECTORY `#[server]` fns, the shared wire types, and
+//! This module owns the DIRECTORY reads and writes, the shared wire types, and
 //! the `directory_section` orchestrator; the view is split across
 //! `tree` (the structured editor), `panels` (history / time / path /
 //! delete), `create` (the empty-directory create flow), and the pure
 //! [`edit`] helpers.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod edit;
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::{Value, json};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 
 /// The EHR's directory as its canonical FOLDER JSON body plus the current
@@ -69,9 +60,6 @@ pub struct DirectoryState {
 
 /// One row of the directory version history: a past (or the current) FOLDER
 /// version summarized for the history panel.
-///
-/// Carries fixed-size ints only so it is WASM-safe over the server-fn
-/// boundary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DirectoryVersion {
     /// The version's `OBJECT_VERSION_ID` (`uid.value`).
@@ -127,17 +115,14 @@ pub enum DirectorySubtree {
     Missing,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The standard openEHR directory root archetype id (the FOLDER example in
 /// ITS-REST `specifications/schemas/ehr/Folder.yaml`).
 pub(crate) const DIRECTORY_ARCHETYPE: &str = "openEHR-EHR-FOLDER.directory.v1";
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Node id reused by child folders; siblings differ by `name` (RM common
 /// `master05-directory_package` §Paths — uniqueness modifiers).
 pub(crate) const FOLDER_NODE_ID: &str = "at0001";
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Build a canonical FOLDER JSON node from `archetype_node_id`, `name`, and
 /// child `folders`. `_type` + mandatory `archetype_node_id`/`name` (from
 /// LOCATABLE) + the FOLDER `folders`/`items` arrays per
@@ -153,7 +138,6 @@ pub(crate) fn folder_json(archetype_node_id: &str, name: &str, folders: &[Value]
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// An empty directory root FOLDER (the "empty root" create choice).
 pub(crate) fn empty_root_folder() -> Value {
     folder_json(DIRECTORY_ARCHETYPE, "root", &[])
@@ -167,13 +151,12 @@ pub(crate) fn empty_root_folder() -> Value {
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
 /// errors pass through; a non-2xx, non-404 CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_directory(
-    /// The EHR whose directory to read.
+    // The EHR whose directory to read.
     ehr_id: String,
 ) -> Result<Option<DirectoryState>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state
         .cdr
         .rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
@@ -194,7 +177,6 @@ pub async fn fetch_directory(
     )))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Take a served FOLDER answer as the viewer's [`DirectoryState`], reading the
 /// version the CDR named in its `ETag` and falling back to the body's `uid`.
 ///
@@ -215,11 +197,12 @@ fn directory_state(response: crate::cdr::CdrResponse) -> DirectoryState {
 }
 
 /// Create the EHR's directory (`POST /ehr/{ehr_id}/directory`) from a canonical
-/// JSON FOLDER `body`. `Content-Type: application/json`,
-/// `Prefer: return=representation`, `Accept: application/json`; the new
-/// version uid (`uid.value` of the returned FOLDER) is returned (empty when the
-/// CDR returned no representation). Directory operations per ITS-REST
-/// `specifications/operations/directory_create.yaml`.
+/// JSON FOLDER `body`.
+///
+/// `Content-Type: application/json`, `Prefer: return=representation`, `Accept:
+/// application/json`; the new version uid (`uid.value` of the returned FOLDER)
+/// is returned (empty when the CDR returned no representation). Directory
+/// operations per ITS-REST `specifications/operations/directory_create.yaml`.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
@@ -227,15 +210,14 @@ fn directory_state(response: crate::cdr::CdrResponse) -> DirectoryState {
 /// through; a non-2xx CDR answer (its validation diagnostics, which the UI
 /// renders verbatim, included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn create_directory(
-    /// The EHR to create the directory in.
+    // The EHR to create the directory in.
     ehr_id: String,
-    /// The root FOLDER document to commit, as canonical JSON text.
+    // The root FOLDER document to commit, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::DirectoryBodyEmpty,
@@ -260,11 +242,13 @@ pub async fn create_directory(
 }
 
 /// Update the EHR's directory (`PUT /ehr/{ehr_id}/directory`) with a new
-/// canonical JSON FOLDER `body`. The version the seeding read's `ETag` named
-/// (the `preceding_version_uid`) is sent quoted in `If-Match`, per ITS-REST
-/// `specifications/operations/directory_update.yaml`;
-/// `Prefer: return=representation` yields the new version uid. A stale uid is
-/// answered `412` by the CDR and surfaces as `is_conflict`.
+/// canonical JSON FOLDER `body`.
+///
+/// The version the seeding read's `ETag` named (the `preceding_version_uid`) is
+/// sent quoted in `If-Match`, per ITS-REST
+/// `specifications/operations/directory_update.yaml`; `Prefer:
+/// return=representation` yields the new version uid. A stale uid is answered
+/// `412` by the CDR and surfaces as `is_conflict`.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
@@ -272,17 +256,16 @@ pub async fn create_directory(
 /// CDR transport errors pass through; a non-2xx CDR answer (its validation
 /// diagnostics, which the UI renders verbatim, included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn update_directory(
-    /// The EHR holding the directory.
+    // The EHR holding the directory.
     ehr_id: String,
-    /// The version this edit is based on, sent as `If-Match`.
+    // The version this edit is based on, sent as `If-Match`.
     current_version_uid: String,
-    /// The replacement root FOLDER document, as canonical JSON text.
+    // The replacement root FOLDER document, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::DirectoryBodyEmpty,
@@ -316,9 +299,10 @@ pub async fn update_directory(
     Ok(uid_value_of(&response.body))
 }
 
-/// Delete the EHR's directory (`DELETE /ehr/{ehr_id}/directory`). The version
-/// the seeding read's `ETag` named (the `preceding_version_uid`) is sent quoted
-/// in `If-Match`, per ITS-REST
+/// Delete the EHR's directory (`DELETE /ehr/{ehr_id}/directory`).
+///
+/// The version the seeding read's `ETag` named (the `preceding_version_uid`) is
+/// sent quoted in `If-Match`, per ITS-REST
 /// `specifications/operations/directory_delete.yaml`; a stale uid is answered
 /// `412` and surfaces as `is_conflict`.
 ///
@@ -327,15 +311,14 @@ pub async fn update_directory(
 /// [`ViewerError::Invalid`] on a missing current version uid; CDR transport
 /// errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_directory(
-    /// The EHR holding the directory.
+    // The EHR holding the directory.
     ehr_id: String,
-    /// The version being deleted, sent as `If-Match`.
+    // The version being deleted, sent as `If-Match`.
     current_version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -371,7 +354,7 @@ pub async fn delete_directory(
 /// The request count is therefore `1 + min(window, N)` regardless of how deep
 /// the history runs; the rest is reached by asking for a wider window.
 ///
-/// NOTE: ITS-REST 1.1.0 exposes no VERSIONED_FOLDER revision history (register
+/// NOTE: ITS-REST 1.1.0 exposes no `VERSIONED_FOLDER` revision history (register
 /// AMB-24, upstream report #1490), so the uid list is synthesized from the
 /// latest version number rather than read from the CDR.
 ///
@@ -379,17 +362,16 @@ pub async fn delete_directory(
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
 /// errors pass through; a non-2xx, non-404 CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_directory_versions(
-    /// The EHR whose directory version list to read.
+    // The EHR whose directory version list to read.
     ehr_id: String,
-    /// How many of the newest versions to read.
+    // How many of the newest versions to read.
     window: u32,
 ) -> Result<DirectoryHistory, ViewerError> {
     use futures::stream::{StreamExt, TryStreamExt};
 
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let base = state
         .cdr
         .rest_v1(&format!("ehr/{}/directory", urlencoding::encode(&ehr_id)));
@@ -458,33 +440,32 @@ pub async fn list_directory_versions(
 
 /// The version numbers one history window covers, newest first: at most
 /// `window` numbers ending at `latest_n`, never below `1`.
-#[cfg(not(target_arch = "wasm32"))]
 fn version_window(latest_n: i32, window: u32) -> Vec<i32> {
     let window = i32::try_from(window).unwrap_or(i32::MAX).max(1);
     let oldest = latest_n.saturating_sub(window).saturating_add(1).max(1);
     (oldest..=latest_n).rev().collect()
 }
 
-/// Read the directory FOLDER as it stood at `version_at_time`
-/// (`GET /ehr/{ehr_id}/directory?version_at_time=…`, ITS-REST
-/// `specifications/operations/directory_get_at_time.yaml`). `200` →
-/// [`DirectoryAtTime::Present`], `204` → [`DirectoryAtTime::DeletedAtTime`],
-/// `404` → [`DirectoryAtTime::NoneAtTime`].
+/// Read the directory FOLDER as it stood at `version_at_time` (`GET
+/// /ehr/{ehr_id}/directory?version_at_time=…`, ITS-REST
+/// `specifications/operations/directory_get_at_time.yaml`).
+///
+/// `200` → [`DirectoryAtTime::Present`], `204` →
+/// [`DirectoryAtTime::DeletedAtTime`], `404` → [`DirectoryAtTime::NoneAtTime`].
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::Invalid`] on an empty time; CDR transport errors pass
 /// through; any other non-2xx answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_directory_at_time(
-    /// The EHR holding the directory.
+    // The EHR holding the directory.
     ehr_id: String,
-    /// The instant to resolve the directory at.
+    // The instant to resolve the directory at.
     time: String,
 ) -> Result<DirectoryAtTime, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let time = time.trim();
     if time.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -512,6 +493,7 @@ pub async fn fetch_directory_at_time(
 /// Read the sub-FOLDER at `path` of the current directory
 /// (`GET /ehr/{ehr_id}/directory?path=…`, ITS-REST
 /// `specifications/operations/directory_get_at_time.yaml` `path` parameter).
+///
 /// `200` → [`DirectorySubtree::Found`], `404` → [`DirectorySubtree::Missing`].
 ///
 /// # Errors
@@ -519,15 +501,14 @@ pub async fn fetch_directory_at_time(
 /// [`ViewerError::Invalid`] on an empty path; CDR transport errors pass
 /// through; any other non-2xx answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_directory_subtree(
-    /// The EHR holding the directory.
+    // The EHR holding the directory.
     ehr_id: String,
-    /// The folder path within the directory to read.
+    // The folder path within the directory to read.
     path: String,
 ) -> Result<DirectorySubtree, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let path = path.trim();
     if path.is_empty() {
         return Err(ViewerError::Invalid(tr_served(RecordsMsg::APathIsRequired)));
@@ -551,7 +532,6 @@ pub async fn fetch_directory_subtree(
 /// Split an `OBJECT_VERSION_ID` into its `object_id::system` prefix and its
 /// integer version tree number (`abc::sys::3` → `("abc::sys", 3)`). Returns
 /// `None` for a branched (non-integer) version tree id.
-#[cfg(not(target_arch = "wasm32"))]
 fn split_version_uid(uid: &str) -> Option<(String, i32)> {
     let (prefix, version) = uid.rsplit_once("::")?;
     let number = version.parse::<i32>().ok()?;
@@ -562,7 +542,6 @@ fn split_version_uid(uid: &str) -> Option<(String, i32)> {
 }
 
 /// Summarize a fetched directory FOLDER version body into a [`DirectoryVersion`].
-#[cfg(not(target_arch = "wasm32"))]
 fn summarize_directory_version(body: &str, number: i32, is_latest: bool) -> DirectoryVersion {
     let doc: Value = serde_json::from_str(body).unwrap_or(Value::Null);
     let version_uid = uid_value_of(body);
@@ -584,7 +563,7 @@ fn summarize_directory_version(body: &str, number: i32, is_latest: bool) -> Dire
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::{
         DIRECTORY_ARCHETYPE, FOLDER_NODE_ID, directory_state, empty_root_folder, folder_json,

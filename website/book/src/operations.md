@@ -337,6 +337,27 @@ below.
 > appears, harmless but confusing, and it delays the rollout rather than failing
 > it. Gate the rollout on the migration job.
 
+### Planner statistics of the partitioned tables
+
+`node`, `version` and `vo_attestation` are partitioned by storage tier in both
+stores, and PostgreSQL estimates a join over them from the statistics of the
+partitioned table itself. Autovacuum analyzes the partitions and never the
+partitioned table (PostgreSQL 18, §24.1.3 Updating Planner Statistics), so
+FerroEHR runs `ANALYZE ONLY` on the partitioned tables itself, and on `ehr`
+while autovacuum has never analyzed it:
+
+- after it applies the migrations, as the migration credential;
+- after `load_ehrs` loads an archive;
+- at boot and then every hour, as each store's serving role.
+
+Without these statistics a revision history can walk the whole commit audit
+index and an AQL `CONTAINS` can read every COMPOSITION's nodes. `ANALYZE`
+needs the `MAINTAIN` privilege on the table. When the serving roles do not own
+the tables, which is the case under the role split above, the hourly refresh
+logs a warning naming the tables it could not analyze. Grant those roles
+`MAINTAIN` on the tables the warning names, or run the same `ANALYZE ONLY`
+from a scheduled job as the migration role.
+
 ### Recovering a partially wiped database
 
 A wipe that removes *some* of the server's schemas is not a fresh start, and the

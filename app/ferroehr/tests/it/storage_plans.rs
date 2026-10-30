@@ -47,10 +47,10 @@
 
 use std::sync::Arc;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 use sqlx::{Executor as _, PgPool, Postgres, Row as _, Transaction};
 
-use ferroehr::aql::ir::Params;
+use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::sql::SqlCtx;
 use ferroehr::config::profile::SpecProfile;
@@ -811,9 +811,18 @@ fn aql_sql_limited(
     ehr_ids: Vec<EhrId>,
     limit: Option<i64>,
 ) -> ferroehr::aql::sql::PreparedQuery {
+    aql_sql_with(aql, &Params::new(), ehr_ids, limit)
+}
+
+/// [`aql_sql_limited`] with the query parameters bound.
+fn aql_sql_with(
+    aql: &str,
+    params: &Params,
+    ehr_ids: Vec<EhrId>,
+    limit: Option<i64>,
+) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
-    let params = Params::new();
-    let ir = ferroehr::aql::plan(&ast, &params, SpecProfile::default()).expect("the AQL plans");
+    let ir = ferroehr::aql::plan(&ast, params, SpecProfile::default()).expect("the AQL plans");
     let ctx = SqlCtx {
         system_id: "plan.shapes.test".to_owned(),
         ehr_ids,
@@ -824,7 +833,7 @@ fn aql_sql_limited(
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers to SQL")
+    ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }
 
 /// `EXPLAIN` a lowered AQL statement inside a rolled-back transaction.
@@ -909,34 +918,42 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
     assert_no_policy_qual(&plan, &scans);
 }
 
-/// The archetype columns carry one statistics object, so the planner sees that
-/// an archetype fixes its RM type, entity and major version instead of
-/// multiplying their selectivities (PostgreSQL 18, "Extended Statistics").
+/// The archetype columns carry one statistics object in each store, so the
+/// planner sees that an archetype fixes its RM type, entity and major version
+/// instead of multiplying their selectivities (PostgreSQL 18, "Extended
+/// Statistics"; clinical #4399, party #4437).
 #[tokio::test]
 async fn the_archetype_columns_carry_dependency_statistics() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let (columns, kinds): (Vec<String>, Vec<String>) = sqlx::query_as(
-        "SELECT ARRAY(SELECT a.attname::text FROM unnest(s.stxkeys) AS k(n) \
+    for schema in ["clinical", "party"] {
+        let (columns, kinds): (Vec<String>, Vec<String>) = sqlx::query_as(
+            "SELECT ARRAY(SELECT a.attname::text FROM unnest(s.stxkeys) AS k(n) \
                       JOIN pg_attribute a ON a.attrelid = s.stxrelid AND a.attnum = k.n \
                       ORDER BY a.attnum), \
                 s.stxkind::text[] \
          FROM pg_statistic_ext s \
          WHERE s.stxname = 'st_node_hot_archetype' \
-           AND s.stxrelid = 'clinical.node_hot'::regclass",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("the archetype statistics object exists");
-    assert_eq!(
-        columns,
-        ["rm_type", "arch_entity", "arch_concept", "arch_major"]
-    );
-    assert!(kinds.contains(&"f".to_owned()), "dependencies: {kinds:?}");
-    assert!(
-        kinds.contains(&"m".to_owned()),
-        "most common values: {kinds:?}"
-    );
+           AND s.stxrelid = $1::regclass",
+        )
+        .bind(format!("{schema}.node_hot"))
+        .fetch_one(&pool)
+        .await
+        .expect("the archetype statistics object of each store exists");
+        assert_eq!(
+            columns,
+            ["rm_type", "arch_entity", "arch_concept", "arch_major"],
+            "{schema}"
+        );
+        assert!(
+            kinds.contains(&"f".to_owned()),
+            "{schema} dependencies: {kinds:?}"
+        );
+        assert!(
+            kinds.contains(&"m".to_owned()),
+            "{schema} most common values: {kinds:?}"
+        );
+    }
 }
 
 /// A population count of a whole object reads no node row (#4286).
@@ -1220,4 +1237,772 @@ async fn a_commit_time_range_serves_from_the_brin_index() {
         "the archived tier carries no commit-time index:\n{}",
         render(&scans)
     );
+}
+
+// ── the row estimate of a chain of path bindings ─────────────────────────────
+
+/// The archetype of the OBSERVATION the binding-chain tests commit.
+const WIDE_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.plan_shapes.v1";
+
+/// The at-codes of the ELEMENTs under that OBSERVATION's one event.
+const WIDE_ITEMS: [&str; 8] = [
+    "at0004", "at0005", "at0006", "at0007", "at0008", "at0009", "at0010", "at0011",
+];
+
+/// The path from the OBSERVATION to the magnitude of the ELEMENT `item`.
+fn wide_leaf(item: &str) -> String {
+    format!("o/data[at0001]/events[at0002]/data[at0003]/items[{item}]/value/magnitude")
+}
+
+/// A COMPOSITION carrying one OBSERVATION whose one event holds a
+/// `DV_QUANTITY` ELEMENT per [`WIDE_ITEMS`] entry, the shape of the storage
+/// bench's wide projection.
+fn wide_observation_composition(name: &str, magnitude: f64) -> Value {
+    let items: Vec<Value> = WIDE_ITEMS
+        .iter()
+        .zip(0_u8..)
+        .map(|(item, offset)| {
+            json!({
+                "_type": "ELEMENT",
+                "name": { "_type": "DV_TEXT", "value": format!("reading {item}") },
+                "archetype_node_id": item,
+                "value": {
+                    "_type": "DV_QUANTITY",
+                    "magnitude": magnitude + f64::from(offset),
+                    "units": "mm[Hg]"
+                }
+            })
+        })
+        .collect();
+    let mut body = composition(name);
+    let content = json!([{
+        "_type": "OBSERVATION",
+        "name": { "_type": "DV_TEXT", "value": "Readings" },
+        "archetype_node_id": WIDE_ARCHETYPE,
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": WIDE_ARCHETYPE },
+            "rm_version": "1.1.0"
+        },
+        "language": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ISO_639-1" },
+            "code_string": "en"
+        },
+        "encoding": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "IANA_character-sets" },
+            "code_string": "UTF-8"
+        },
+        "subject": { "_type": "PARTY_SELF" },
+        "data": {
+            "_type": "HISTORY",
+            "name": { "_type": "DV_TEXT", "value": "History" },
+            "archetype_node_id": "at0001",
+            "origin": { "_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z" },
+            "events": [{
+                "_type": "POINT_EVENT",
+                "name": { "_type": "DV_TEXT", "value": "Any event" },
+                "archetype_node_id": "at0002",
+                "time": { "_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z" },
+                "data": {
+                    "_type": "ITEM_TREE",
+                    "name": { "_type": "DV_TEXT", "value": "Tree" },
+                    "archetype_node_id": "at0003",
+                    "items": items
+                }
+            }]
+        }
+    }]);
+    body.as_object_mut()
+        .expect("the composition fixture is a JSON object")
+        .insert("content".to_owned(), content);
+    body
+}
+
+/// Every `Plan Rows` estimate of a plan tree, its subplans included.
+fn plan_row_estimates(node: &Value, out: &mut Vec<f64>) {
+    if let Some(rows) = node.get("Plan Rows").and_then(Value::as_f64) {
+        out.push(rows);
+    }
+    for child in node
+        .get("Plans")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        plan_row_estimates(child, out);
+    }
+}
+
+/// A chain of path bindings is estimated at the rows it can produce, so its
+/// cost neither picks the join order of a statement many times larger nor
+/// switches on JIT compilation (#4430, #4431).
+///
+/// Each binding of a path step probes the children of one node row. Lowered
+/// as a set-returning function over an array the planner cannot see into, a
+/// binding was estimated at ten rows (PostgreSQL 18 `estimate_array_length`'s
+/// default), so a chain of eleven multiplied the estimate by 10^11: the
+/// storage bench's wide projection over one EHR spent a second in LLVM
+/// compilation on every execution, because the planner JIT-compiles a
+/// statement whose estimated cost passes `jit_above_cost` (PostgreSQL 18
+/// §30.2 "When to JIT?"). The flat shape's bindings are probed in the same
+/// order and are planned from their own subquery plans. No estimate of a
+/// binding chain can exceed the node rows the store holds: each binding
+/// yields the children of one row, or one all-`NULL` row.
+#[tokio::test]
+async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let mut ehrs = Vec::new();
+    for index in 0..4_u8 {
+        let ehr = svc.create_ehr(None).await.expect("create an EHR");
+        for reading in 0..10_u8 {
+            let body = wide_observation_composition(
+                &format!("readings {index}.{reading}"),
+                f64::from(reading) * 10.0,
+            );
+            svc.create_composition(ehr, uv(&body, "249", None))
+                .await
+                .expect("commit an observation");
+        }
+        ehrs.push(ehr);
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded corpus");
+    let node_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM node")
+        .fetch_one(&pool)
+        .await
+        .expect("count the node rows");
+
+    let magnitude = wide_leaf(WIDE_ITEMS[0]);
+    let ordered = format!(
+        "SELECT c/uid/value, {magnitude} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}] \
+         WHERE {magnitude} >= 0 ORDER BY {magnitude} DESC"
+    );
+    let wide = format!(
+        "SELECT c/uid/value, {} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}]",
+        WIDE_ITEMS.map(wide_leaf).join(", ")
+    );
+    let one_ehr = ehrs.first().copied().expect("a seeded EHR");
+    for (name, prepared, expected) in [
+        (
+            "the ordered population page",
+            aql_sql_limited(&ordered, Vec::new(), Some(50)),
+            40,
+        ),
+        (
+            "the wide projection over one EHR",
+            aql_sql(&wide, vec![one_ehr]),
+            10,
+        ),
+    ] {
+        let plan = explain_aql(&pool, prepared).await;
+        let root = plan
+            .get(0)
+            .expect("EXPLAIN FORMAT JSON returns a one-element array");
+        let returned = root
+            .pointer("/Plan/Actual Rows")
+            .and_then(Value::as_f64)
+            .expect("the root plan node reports its rows");
+        assert!(
+            (returned - f64::from(expected)).abs() < f64::EPSILON,
+            "{name} returns {expected} rows, so the statement read what was seeded: {returned}"
+        );
+        let mut estimates = Vec::new();
+        plan_row_estimates(root.get("Plan").expect("a Plan"), &mut estimates);
+        let widest = estimates.iter().copied().fold(0.0, f64::max);
+        let ceiling = f64::from(
+            i32::try_from(node_rows).expect("a test seed holds fewer than 2^31 node rows"),
+        );
+        assert!(
+            widest <= ceiling,
+            "#4430, #4431: no plan node of {name} is estimated at more rows than the {node_rows} \
+             node rows the store holds ({widest}):\n{}",
+            render(&scans(&plan))
+        );
+        assert!(
+            root.get("JIT").is_none(),
+            "#4430, #4431: {name} is not JIT-compiled: {}",
+            root.get("JIT").map(Value::to_string).unwrap_or_default()
+        );
+    }
+}
+
+// ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────
+
+/// The `person_identifier` CLUSTER archetype the lookup walks.
+const PERSON_IDENTIFIER_CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2";
+
+/// A partner's lookup of a person by an identifier value (#4437).
+const PERSON_LOOKUP_AQL: &str = "SELECT p/uid/value, id/items[at0001]/value/type, \
+     id/items[at0001]/value/issuer, id/items[at0001]/value/assigner \
+     FROM PERSON p CONTAINS CLUSTER id[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2] \
+     WHERE id/items[at0001]/value/id = $v";
+
+/// The identifier of the `index`th seeded person.
+fn person_identifier(index: u32) -> String {
+    format!("MRN-{index:07}")
+}
+
+/// A PERSON carrying one `person_identifier` CLUSTER whose ELEMENT holds a
+/// `DV_IDENTIFIER` with its issuer, assigner and type, the shape whose value
+/// stays in the stored fragment (`crate::storage::slim` moves a bare id to
+/// the typed columns and nothing wider).
+fn person_with_identifier(index: u32) -> Value {
+    json!({
+        "_type": "PERSON",
+        "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1" },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": format!("Person {index}") },
+        "identities": [{
+            "_type": "PARTY_IDENTITY",
+            "archetype_node_id": "at0003",
+            "name": { "_type": "DV_TEXT", "value": "legal name" },
+            "details": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "at0004",
+                "name": { "_type": "DV_TEXT", "value": "structure" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0005",
+                    "name": { "_type": "DV_TEXT", "value": "name" },
+                    "value": { "_type": "DV_TEXT", "value": format!("Person {index}") }
+                }]
+            }
+        }],
+        "details": {
+            "_type": "ITEM_TREE",
+            "archetype_node_id": "at0001",
+            "name": { "_type": "DV_TEXT", "value": "details" },
+            "items": [{
+                "_type": "CLUSTER",
+                "archetype_node_id": PERSON_IDENTIFIER_CLUSTER,
+                "archetype_details": { "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": PERSON_IDENTIFIER_CLUSTER },
+                    "rm_version": "1.1.0" },
+                "name": { "_type": "DV_TEXT", "value": "person identifier" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0001",
+                    "name": { "_type": "DV_TEXT", "value": "identifier" },
+                    "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:issuer:hospital",
+                        "assigner": "urn:issuer:hospital", "type": "MRN",
+                        "id": person_identifier(index) }
+                }]
+            }]
+        }
+    })
+}
+
+/// The at-code of the one `DV_TEXT` ELEMENT of [`text_observation_composition`].
+const TEXT_ITEM: &str = "at0004";
+
+/// The path from the OBSERVATION to the text of that ELEMENT.
+fn text_leaf() -> String {
+    format!("o/data[at0001]/events[at0002]/data[at0003]/items[{TEXT_ITEM}]/value/value")
+}
+
+/// A COMPOSITION carrying one OBSERVATION whose one event holds one `DV_TEXT`
+/// ELEMENT reading `text`, the clinical shape of a lookup by a value.
+fn text_observation_composition(name: &str, text: &str) -> Value {
+    let mut body = wide_observation_composition(name, 0.0);
+    let items = json!([{
+        "_type": "ELEMENT",
+        "name": { "_type": "DV_TEXT", "value": "note" },
+        "archetype_node_id": TEXT_ITEM,
+        "value": { "_type": "DV_TEXT", "value": text }
+    }]);
+    *body
+        .pointer_mut("/content/0/data/events/0/data/items")
+        .expect("the observation fixture holds its items") = items;
+    body
+}
+
+/// Asserts that the plan of a lookup by an ELEMENT value found its one row
+/// through `idx_node_hot_value_search` and read no scan of the population.
+fn assert_value_lookup(name: &str, plan: &Value, population: u32) {
+    let root = plan
+        .get(0)
+        .expect("EXPLAIN FORMAT JSON returns a one-element array");
+    let returned = root
+        .pointer("/Plan/Actual Rows")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its rows");
+    assert!(
+        (returned - 1.0).abs() < f64::EPSILON,
+        "{name} finds the one object carrying the value: {returned} rows"
+    );
+    let scans = scans(plan);
+    assert!(
+        scans
+            .iter()
+            .any(|scan| scan.index.as_deref() == Some("idx_node_hot_value_search")),
+        "#4437: {name} enters through the value index:\n{}",
+        render(&scans)
+    );
+    let population = f64::from(population);
+    for scan in on(&scans, "node_hot") {
+        assert!(
+            scan.rows * scan.loops < population,
+            "#4437: no node scan of {name} walks the {population} objects of the store, \
+             {} read {} rows over {} loops:\n{}",
+            scan.node_type,
+            scan.rows,
+            scan.loops,
+            render(&scans)
+        );
+    }
+    let buffers = root
+        .pointer("/Plan/Shared Hit Blocks")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its buffers");
+    assert!(
+        buffers < population,
+        "#4437: {name} reads fewer buffers than the store holds objects ({buffers}):\n{}",
+        render(&scans)
+    );
+}
+
+/// A lookup of a person by an identifier value reads the one person (#4437).
+///
+/// A path binding is a correlated subquery, so the lookup read every
+/// `person_identifier` CLUSTER of the store, probed its version, head and root
+/// and tested the value last: 16 buffers a person, 350 ms at 50 000 persons.
+/// The engine now anchors such an equality on the ELEMENT rows of the same
+/// version by their search text (`ext.node_search_text`), which
+/// `idx_node_hot_value_search` serves, on the flat shape and on the
+/// streaming one (a LIMIT without an ORDER BY) alike.
+#[tokio::test]
+async fn a_lookup_by_a_person_identifier_reads_the_one_person() {
+    const PERSONS: u32 = 200;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    for index in 0..PERSONS {
+        let body = person_with_identifier(index);
+        svc.party_create(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            openehr_its::json::from_canonical_value(&body).expect("the fixture is a PERSON"),
+            None,
+        )
+        .await
+        .expect("create a person");
+    }
+    pools
+        .party
+        .execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded parties");
+
+    let params = Params::new().with(
+        "v",
+        ParamValue::Str(person_identifier(PERSONS.div_euclid(2))),
+    );
+    for (name, limit) in [("the lookup", None), ("the lookup with a limit", Some(10))] {
+        let prepared = aql_sql_with(PERSON_LOOKUP_AQL, &params, Vec::new(), limit);
+        let plan = explain_aql(&pools.party, prepared).await;
+        assert_value_lookup(name, &plan, PERSONS);
+    }
+}
+
+/// A lookup of a composition by a text value reads the one composition
+/// (#4437): the clinical store serves an equality on an ELEMENT value the
+/// same way.
+#[tokio::test]
+async fn a_lookup_by_an_element_text_reads_the_one_composition() {
+    const COMPOSITIONS: u32 = 400;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    for index in 0..COMPOSITIONS {
+        let ehr = svc.create_ehr(None).await.expect("create an EHR");
+        let body =
+            text_observation_composition(&format!("note {index}"), &format!("needle {index}"));
+        svc.create_composition(ehr, uv(&body, "249", None))
+            .await
+            .expect("commit an observation");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded corpus");
+
+    let text = text_leaf();
+    let aql = format!(
+        "SELECT c/uid/value, {text} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}] WHERE {text} = $needle"
+    );
+    let params = Params::new().with(
+        "needle",
+        ParamValue::Str(format!("needle {}", COMPOSITIONS.div_euclid(2))),
+    );
+    for (name, limit) in [("the lookup", None), ("the lookup with a limit", Some(10))] {
+        let prepared = aql_sql_with(&aql, &params, Vec::new(), limit);
+        let plan = explain_aql(&pool, prepared).await;
+        assert_value_lookup(name, &plan, COMPOSITIONS);
+    }
+}
+
+// ── a lookup of an EHR by its subject (#4442) ────────────────────────────────
+
+/// The `EHR_STATUS` of the `index`th seeded EHR: its subject is a `PARTY_REF`
+/// to a PERSON by its uid, in the `local` namespace.
+fn ehr_status_with_subject(index: u32) -> openehr_rm::prelude::EhrStatus {
+    openehr_its::json::from_canonical_value(&json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": "local",
+                "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": subject_uid(index) }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    }))
+    .expect("the EHR_STATUS fixture decodes")
+}
+
+/// The subject uid of the `index`th seeded EHR.
+fn subject_uid(index: u32) -> String {
+    format!("00000000-0000-4000-8000-{index:012}")
+}
+
+/// A lookup of an EHR by the subject of its `EHR_STATUS` enters through
+/// `uq_ehr_subject` and reads no `EHR_STATUS` version (#4442).
+#[tokio::test]
+async fn an_ehr_lookup_by_subject_enters_through_the_subject_index() {
+    const EHRS: u32 = 200;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    for index in 0..EHRS {
+        svc.create_ehr(Some(ehr_status_with_subject(index)))
+            .await
+            .expect("create an EHR with a subject");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded EHRs");
+
+    let params = Params::new()
+        .with("u", ParamValue::Str(subject_uid(EHRS.div_euclid(2))))
+        .with("n", ParamValue::Str("local".to_owned()));
+    let prepared = aql_sql_with(
+        "SELECT e/ehr_id/value FROM EHR e \
+         WHERE e/ehr_status/subject/external_ref/id/value = $u \
+         AND e/ehr_status/subject/external_ref/namespace = $n",
+        &params,
+        Vec::new(),
+        None,
+    );
+    let plan = explain_aql(&pool, prepared).await;
+    let root = plan
+        .get(0)
+        .expect("EXPLAIN FORMAT JSON returns a one-element array");
+    let returned = root
+        .pointer("/Plan/Actual Rows")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its rows");
+    assert!(
+        (returned - 1.0).abs() < f64::EPSILON,
+        "the lookup finds the one EHR of the subject: {returned} rows"
+    );
+    let scans = scans(&plan);
+    assert!(
+        scans
+            .iter()
+            .any(|scan| scan.index.as_deref() == Some("uq_ehr_subject")),
+        "#4442: the lookup enters through the subject index:\n{}",
+        render(&scans)
+    );
+    assert!(
+        scans
+            .iter()
+            .all(|scan| !scan.relation.starts_with("version") && !scan.relation.starts_with("node")),
+        "#4442: the lookup reads no EHR_STATUS version or node:\n{}",
+        render(&scans)
+    );
+}
+
+// ── the partitioned parents' statistics ─────────────────────────────────────
+
+/// Analyze every partition and plain table of both stores and no partitioned
+/// parent: the statistics autovacuum leaves, since "partitioned tables are not
+/// processed by autovacuum" (`PostgreSQL` 18 docs § 24.1.3).
+async fn analyze_as_autovacuum(pool: &PgPool) {
+    let leaves: Vec<String> = sqlx::query_scalar(
+        "SELECT format('%I.%I', n.nspname, c.relname) \
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace \
+         WHERE n.nspname IN ('clinical', 'party') AND c.relkind = 'r' ORDER BY 1",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("list the stores' tables");
+    for leaf in leaves {
+        pool.execute(sqlx::AssertSqlSafe(format!("ANALYZE {leaf}")))
+            .await
+            .expect("analyze one table as autovacuum would");
+    }
+}
+
+/// The statements that read one object's versions by `vo_id` and join each
+/// version row to its commit audit, under the names the failure reports.
+const READS_BY_VO_ID: [(&str, &str); 2] = [
+    ("the revision history", meta::ALL_VERSION_META_SQL),
+    ("the current version read", read::READ_CURRENT_SQL),
+];
+
+/// A read by `vo_id` probes each version's commit audit by key once the
+/// maintenance task has refreshed the parents' statistics (#4438).
+///
+/// With `version`'s statistics left from the seed, the planner took the
+/// highest commit audit id it held for the highest there is, so a merge join
+/// over `pk_commit_audit` looked as if it stopped after the seed's rows. For
+/// an object committed since, it walked the whole index: 1 318 buffers for
+/// the history of a four-version object beside 1 300 others, against 21.
+#[tokio::test]
+async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    // The storage bench's seed, analyzed whole once seeded.
+    let body = composition("parent statistics");
+    let mut ehrs = Vec::new();
+    for _ in 0..20 {
+        ehrs.push(svc.create_ehr(None).await.expect("create an EHR"));
+    }
+    for index in 0..300 {
+        svc.create_composition(ehrs[index % ehrs.len()], uv(&body, "249", None))
+            .await
+            .expect("commit a single-version composition");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seed");
+
+    // The commits that follow, with the statistics autovacuum takes of them.
+    let ehr = ehrs[0];
+    for _ in 0..1000 {
+        svc.create_composition(ehr, uv(&body, "249", None))
+            .await
+            .expect("commit a first version");
+    }
+    let mut head = svc
+        .create_composition(ehr, uv(&body, "249", None))
+        .await
+        .expect("commit the read object's first version");
+    for _ in 0..3 {
+        head = svc
+            .update_composition(ehr, head.vo_id, uv(&body, "251", None))
+            .await
+            .expect("supersede the read object");
+    }
+    analyze_as_autovacuum(&pool).await;
+    ferroehr::db::parent_statistics::refresh_pool(&pool)
+        .await
+        .expect("refresh the partitioned parents' statistics");
+
+    let mut walked = Vec::new();
+    for (read, sql) in READS_BY_VO_ID {
+        for mode in ["force_custom_plan", "force_generic_plan"] {
+            let mut tx = pool.begin().await.expect("begin the explain transaction");
+            tx.execute(sqlx::AssertSqlSafe(format!(
+                "SET LOCAL plan_cache_mode = {mode}"
+            )))
+            .await
+            .expect("set the plan cache mode");
+            tx.execute(sqlx::AssertSqlSafe(format!(
+                "PREPARE by_vo (uuid) AS {sql}"
+            )))
+            .await
+            .expect("prepare the read");
+            let plan: Value = sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+                "{EXPLAIN}EXECUTE by_vo ('{}')",
+                head.vo_id.0
+            )))
+            .fetch_one(&mut *tx)
+            .await
+            .expect("explain the read")
+            .try_get(0)
+            .expect("EXPLAIN FORMAT JSON returns one json column");
+            // A prepared statement outlives the transaction it was made in.
+            tx.execute("DEALLOCATE by_vo")
+                .await
+                .expect("drop the prepared read");
+            tx.rollback().await.expect("roll the explain back");
+
+            let scans = scans(&plan);
+            let audits = on(&scans, "commit_audit");
+            let probed = !audits.is_empty()
+                && audits.iter().all(|scan| {
+                    scan.index.as_deref() == Some("pk_commit_audit") && scan.rows <= 1.0
+                });
+            if !probed {
+                walked.push(format!("{read}, {mode}:\n{}", render(&scans)));
+            }
+        }
+    }
+    assert!(
+        walked.is_empty(),
+        "a read by vo_id reaches each version's commit audit by one primary-key \
+         probe, never by a walk over the commit audit index:\n{}",
+        walked.join("\n")
+    );
+}
+
+/// Upload one vendored CKM template and generate its committable example, as
+/// the storage bench seeds it.
+async fn ckm_example(svc: &FerroEhrService, template: &str) -> Value {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(format!("../../corpus/templates/ckm/{template}.opt"));
+    let xml = std::fs::read_to_string(path).expect("the vendored OPT is readable");
+    let template_id = openehr_its::opt14::from_xml(&xml)
+        .expect("the vendored OPT parses")
+        .template_id
+        .value;
+    svc.upload_opt(xml).await.expect("upload the template");
+    svc.template_adl14_example(template_id, Some("medium".to_owned()), None)
+        .await
+        .expect("the template generates an example composition")
+}
+
+/// The population `CONTAINS` of the storage bench's `contains_exists` enters
+/// through the archetype index once the parents carry statistics (#4453).
+///
+/// With the partitions analyzed and the parents not, the planner estimated
+/// the head join from no statistics at all and drove from every COMPOSITION
+/// root, reading all of its nodes (3 703 buffers on this seed, against 1 745).
+#[tokio::test]
+async fn a_population_contains_enters_through_the_archetype_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    // The storage bench's seed: its two templates alternating over 20 EHRs.
+    let vital_signs = ckm_example(&svc, "vital-signs").await;
+    let gp_data_set = ckm_example(&svc, "gp-data-set").await;
+    let mut ehrs = Vec::new();
+    for _ in 0..20 {
+        ehrs.push(svc.create_ehr(None).await.expect("create an EHR"));
+    }
+    for index in 0..300_usize {
+        let body = if index.div_euclid(ehrs.len()).is_multiple_of(2) {
+            &vital_signs
+        } else {
+            &gp_data_set
+        };
+        svc.create_composition(ehrs[index % ehrs.len()], uv(body, "249", None))
+            .await
+            .expect("seed a composition");
+    }
+    analyze_as_autovacuum(&pool).await;
+    ferroehr::db::parent_statistics::refresh_pool(&pool)
+        .await
+        .expect("refresh the partitioned parents' statistics");
+
+    let prepared = aql_sql(
+        "SELECT count(c) FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]",
+        Vec::new(),
+    );
+    let mut tx = pool.begin().await.expect("begin the explain transaction");
+    let plan: Value = sqlx::query_scalar_with(
+        sqlx::AssertSqlSafe(format!("{EXPLAIN}{}", prepared.sql)),
+        prepared.values,
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the population CONTAINS");
+    tx.rollback().await.expect("roll the explain back");
+
+    let scans = scans(&plan);
+    assert!(
+        on(&scans, "node_hot")
+            .iter()
+            .any(|scan| scan.index.as_deref() == Some("idx_node_hot_arch_subsume")),
+        "the population CONTAINS finds the OBSERVATIONs through \
+         idx_node_hot_arch_subsume rather than every COMPOSITION's nodes:\n{}",
+        render(&scans)
+    );
+}
+
+/// The maintenance task analyzes the partitioned parents of both stores, which
+/// autovacuum never does, from its first tick (#4453).
+#[tokio::test]
+async fn the_maintenance_task_analyzes_the_partitioned_parents() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    let ehr = svc.create_ehr(None).await.expect("create an EHR");
+    for _ in 0..5 {
+        svc.create_composition(ehr, uv(&composition("maintenance"), "249", None))
+            .await
+            .expect("commit a composition");
+    }
+    // `inherited` marks the statistics of a parent over all its partitions
+    // (`PostgreSQL` 18 docs, `pg_stats`).
+    let parent_stats = || async {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM pg_stats \
+             WHERE schemaname = 'clinical' AND tablename IN ('node', 'version') AND inherited",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("count the parents' statistics")
+    };
+    assert_eq!(
+        parent_stats().await,
+        0,
+        "no ANALYZE has reached the parents"
+    );
+
+    let task = tokio::spawn(ferroehr::db::parent_statistics::scheduled(pools.clone()));
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
+    while parent_stats().await == 0 && tokio::time::Instant::now() < deadline {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    task.abort();
+    assert!(
+        parent_stats().await > 0,
+        "the maintenance task's first tick analyzed clinical.node and clinical.version"
+    );
+
+    let refreshed = ferroehr::db::parent_statistics::refresh_pools(&pools)
+        .await
+        .expect("refresh both stores");
+    for parent in [
+        "clinical.node",
+        "clinical.version",
+        "clinical.vo_attestation",
+        "party.node",
+        "party.version",
+        "party.vo_attestation",
+    ] {
+        assert!(
+            refreshed.analyzed.iter().any(|table| table == parent),
+            "{parent} is analyzed: {refreshed:?}"
+        );
+    }
+    assert!(refreshed.refused.is_empty(), "{refreshed:?}");
 }

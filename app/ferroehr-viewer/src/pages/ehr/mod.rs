@@ -24,28 +24,23 @@ pub mod directory;
 pub mod status;
 pub mod tags;
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
+use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked, Reveal, Revealed};
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
-#[cfg(not(target_arch = "wasm32"))]
-use ferrohealth_ui::widget::identifier::{Domain, KEEP};
-use ferrohealth_ui::widget::identifier::{IdentifierWords, Masked};
-use leptos::prelude::*;
-use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::EhrSummary;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::status::EhrStatusState;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, opt, t};
 use crate::pages::common::{Refused, is_status, refused, shortened};
 
 /// The id of Delete EHR's confirmation dialog.
@@ -82,9 +77,7 @@ impl EhrTab {
 /// The EHR id the route names.
 #[must_use]
 pub fn ehr_id_param() -> String {
-    crate::routes::params()
-        .with(|params| params.get("ehr_id"))
-        .unwrap_or_default()
+    crate::routes::params().get("ehr_id").unwrap_or_default()
 }
 
 /// The page of the EHR `ehr_id`. The id is user- or CDR-supplied, so the
@@ -121,7 +114,6 @@ pub fn crumbs(ehr_id: &str) -> Vec<Crumb> {
     ]
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What the CDR says of an EHR, read once per page by its loader.
 #[derive(Debug, Clone)]
 pub struct EhrFacts {
@@ -135,7 +127,6 @@ pub struct EhrFacts {
     pub admin: bool,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Reads the facts of the EHR `ehr_id`; `Err` when the EHR itself cannot be
 /// read, a `404` among them.
 ///
@@ -160,18 +151,23 @@ pub async fn facts(ehr_id: &str) -> Result<EhrFacts, ViewerError> {
 }
 
 /// Who the subject line names.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Who {
     /// The status names no subject.
     Nobody,
-    /// The subject id, revealed for this page.
-    Revealed(String),
+    /// The subject id, revealed for this page, with its mask.
+    Revealed {
+        /// The id masked, as the identifier draws it once its seconds run out.
+        masked: Masked,
+        /// The id itself.
+        value: String,
+    },
     /// The subject id, masked.
     Masked(Masked),
 }
 
 /// The subject line (E1) of an EHR.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct SubjectFacts {
     /// Who the subject is.
     who: Who,
@@ -182,7 +178,7 @@ struct SubjectFacts {
 }
 
 /// What the header of an EHR shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EhrHead {
     /// When the EHR was created.
     time_created: String,
@@ -197,7 +193,7 @@ pub struct EhrHead {
 }
 
 /// What a post to an EHR's page did not do, drawn above its tabs.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Acted {
     /// The CDR refused it.
     Refused(Refused),
@@ -207,7 +203,7 @@ enum Acted {
 
 /// The model of an EHR's page: what its post did not do, its header, and
 /// the model `P` of its tab, read only when the EHR itself could be.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EhrModel<P> {
     /// What the post did not do.
     acted: Option<Acted>,
@@ -217,10 +213,18 @@ pub struct EhrModel<P> {
     panel: Option<P>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The subject line of the EHR `ehr_id` whose status is `status`; a
 /// revealed subject id is written to the log with who revealed it.
 fn subject_facts(ehr_id: &str, status: &EhrStatusState) -> SubjectFacts {
+    let masked = Masked::new(
+        Domain::new(if status.subject_namespace.is_empty() {
+            tr(RecordsMsg::SubjectId)
+        } else {
+            status.subject_namespace.clone()
+        }),
+        &status.subject,
+        KEEP,
+    );
     let who = if status.subject.is_empty() {
         Who::Nobody
     } else if crate::request::query("reveal").is_some() {
@@ -228,17 +232,12 @@ fn subject_facts(ehr_id: &str, status: &EhrStatusState) -> SubjectFacts {
             .map(|session| session.identity)
             .unwrap_or_default();
         tracing::info!(reader = %reader, ehr = %ehr_id, "revealed an EHR's subject id");
-        Who::Revealed(status.subject.clone())
+        Who::Revealed {
+            masked,
+            value: status.subject.clone(),
+        }
     } else {
-        Who::Masked(Masked::new(
-            Domain::new(if status.subject_namespace.is_empty() {
-                tr(RecordsMsg::SubjectId)
-            } else {
-                status.subject_namespace.clone()
-            }),
-            &status.subject,
-            KEEP,
-        ))
+        Who::Masked(masked)
     };
     SubjectFacts {
         who,
@@ -247,7 +246,6 @@ fn subject_facts(ehr_id: &str, status: &EhrStatusState) -> SubjectFacts {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads the page of the EHR `ehr_id`: answers its post, reads its facts and
 /// then the tab's model from `panel`; an EHR the CDR does not hold answers
 /// `404`.
@@ -325,31 +323,18 @@ fn more(ehr_id: &str, facts: &EhrHead) -> Menu {
 
 /// Delete EHR's confirmation: what a physical delete removes, and the field
 /// that takes the first eight characters of the id.
-fn delete_dialog(ehr_id: &str) -> AnyView {
-    let confirm = view! {
-        <form method="post" action=ehr_href(ehr_id) class="fui-stack">
-            <input type="hidden" name="intent" value="delete-ehr" />
-            <div class="fui-field">
-                <label for="delete-confirm" class="fui-label">
-                    {tr(RecordsMsg::EhrDeleteConfirmLabel)}
-                </label>
-                <input
-                    id="delete-confirm"
-                    name="confirm"
-                    type="text"
-                    class="fui-input fui-mono"
-                    autocomplete="off"
-                    spellcheck="false"
-                    required
-                />
-            </div>
-            <button type="submit" class="fui-button fui-button-danger">
-                {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                {tr(RecordsMsg::EhrDeleteConfirm)}
-            </button>
-        </form>
-    };
-    danger_dialog(
+fn delete_dialog(ehr_id: &str) -> Html {
+    let fields = h(format!(
+        r#"<input type="hidden" name="intent" value="delete-ehr"><div class="fui-field"><label for="delete-confirm" class="fui-label">{label}</label><input id="delete-confirm" name="confirm" type="text" class="fui-input fui-mono" autocomplete="off" spellcheck="false" required></div>"#,
+        label = t(tr(RecordsMsg::EhrDeleteConfirmLabel)),
+    ));
+    let confirm = h(format!(
+        r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
+        ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
+        t(tr(RecordsMsg::EhrDeleteConfirm))
+    ));
+    danger_form_dialog(
+        &current(),
         Confirmation {
             id: DELETE_DIALOG.into(),
             title: tr_with(
@@ -359,50 +344,49 @@ fn delete_dialog(ehr_id: &str) -> AnyView {
             .into(),
             message: tr(RecordsMsg::EhrDeleteMessage).into(),
         },
+        ConfirmForm {
+            action: ehr_href(ehr_id),
+            fields,
+        },
         confirm,
     )
-    .into_any()
 }
 
 /// The subject line (E1) of the EHR `ehr_id`.
-fn subject(ehr_id: &str, subject: Option<&SubjectFacts>) -> AnyView {
+fn subject(ehr_id: &str, subject: Option<&SubjectFacts>) -> Html {
     let Some(subject) = subject else {
-        return ().into_any();
+        return Html::empty();
+    };
+    let reveal = |masked: &Masked, state: Reveal| {
+        crate::components::subject_reveal(
+            "subject".to_owned(),
+            masked.clone(),
+            state,
+            format!("{}?reveal=1", ehr_href(ehr_id)),
+        )
     };
     let who = match &subject.who {
         Who::Nobody => Subject::None,
-        Who::Revealed(id) => Subject::External(
-            view! {
-                <span class="fui-identifier">
-                    <code>{id.clone()}</code>
-                </span>
-            }
-            .into_any(),
-        ),
-        Who::Masked(masked) => Subject::External(
-            view! {
-                <crate::components::SubjectReveal
-                    id="subject".to_owned()
-                    ehr_id=ehr_id.to_owned()
-                    masked=masked.clone()
-                    seconds=crate::prefs::reveal_seconds()
-                    fallback=format!("{}?reveal=1", ehr_href(ehr_id))
-                    words=IdentifierWords::of_page()
-                />
-            }
-            .into_any(),
-        ),
+        Who::Revealed { masked, value } => Subject::External(reveal(
+            masked,
+            Reveal::Shown(Revealed::new(value.clone(), crate::prefs::reveal_seconds())),
+        )),
+        Who::Masked(masked) => Subject::External(reveal(masked, Reveal::Masked)),
     };
-    subject_line(SubjectLine {
-        subject: who,
-        queryable: subject.queryable,
-        modifiable: subject.modifiable,
-    })
+    subject_line(
+        &current(),
+        SubjectLine {
+            subject: who,
+            queryable: subject.queryable,
+            modifiable: subject.modifiable,
+        },
+    )
 }
 
 /// The header of the EHR `ehr_id`: its trail, its title with New composition
 /// and More, the line on when it was created, and its subject line.
-fn header(ehr_id: &str, facts: &EhrHead) -> AnyView {
+fn header(ehr_id: &str, facts: &EhrHead) -> Html {
+    let locale = current();
     let actions = ActionGroup::primary(Action::new(
         Some(Glyph::PLUS),
         tr(RecordsMsg::NewComposition),
@@ -410,6 +394,7 @@ fn header(ehr_id: &str, facts: &EhrHead) -> AnyView {
     ))
     .more(more(ehr_id, facts));
     let heading = page_heading(
+        &locale,
         Header {
             title: tr_with(RecordsMsg::EhrTitle, &[("id", shortened(ehr_id).into())]).into(),
             subtitle: Some(
@@ -418,7 +403,8 @@ fn header(ehr_id: &str, facts: &EhrHead) -> AnyView {
                     &[
                         (
                             "created",
-                            ferrohealth_ui::view::time::reading(&facts.time_created).into(),
+                            ferrohealth_ui::view::time::reading(&locale, &facts.time_created)
+                                .into(),
                         ),
                         ("system", facts.system_id.clone().into()),
                     ],
@@ -432,12 +418,11 @@ fn header(ehr_id: &str, facts: &EhrHead) -> AnyView {
         },
         actions,
     );
-    view! {
-        {heading}
-        {subject(ehr_id, facts.subject.as_ref())}
-        {facts.admin.then(|| delete_dialog(ehr_id))}
-    }
-    .into_any()
+    Html::join([
+        heading,
+        subject(ehr_id, facts.subject.as_ref()),
+        opt(facts.admin.then(|| delete_dialog(ehr_id))),
+    ])
 }
 
 /// The tabs of the EHR, the Directory tab only when it has one.
@@ -474,7 +459,6 @@ fn tabs(ehr_id: &str, facts: &EhrHead) -> Vec<Tab> {
     tabs
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What a post to an EHR's page asks, done: Create the directory and Delete
 /// EHR. `Some` holds what it did not do, drawn above the tabs.
 async fn act(ehr_id: &str) -> Option<Acted> {
@@ -523,14 +507,14 @@ async fn act(ehr_id: &str) -> Option<Acted> {
 
 /// An EHR's page: its header and the tab `tab` over the panel `draw` makes
 /// of the tab's model; an EHR the CDR does not hold says so once.
-pub fn ehr_view<P, F>(ehr_id: &str, tab: EhrTab, model: EhrModel<P>, draw: F) -> AnyView
+pub fn ehr_view<P, F>(ehr_id: &str, tab: EhrTab, model: EhrModel<P>, draw: F) -> Html
 where
-    F: FnOnce(P) -> AnyView,
+    F: FnOnce(P) -> Html,
 {
     let EhrModel { acted, head, panel } = model;
     let acted = acted.map(|acted| match acted {
         Acted::Refused(refusal) => refusal.view(),
-        Acted::Mismatch => crate::pages::common::warn_note(tr(RecordsMsg::EhrDeleteMismatch)),
+        Acted::Mismatch => crate::pages::common::warn_note(t(tr(RecordsMsg::EhrDeleteMismatch))),
     });
     let head = match head {
         Ok(head) => head,
@@ -538,19 +522,17 @@ where
     };
     let header = header(ehr_id, &head);
     let tabs = tabs(ehr_id, &head);
-    let body = panel.map(draw).into_any();
-    view! {
-        {header}
-        <div class="fui-stack">
-            {acted} {binder(tr(RecordsMsg::EhrViews), tabs, tab.key(), body)}
-        </div>
-    }
-    .into_any()
+    let body = opt(panel.map(draw));
+    let binder = binder(&current(), tr(RecordsMsg::EhrViews), tabs, tab.key(), body);
+    header.then(h(format!(
+        r#"<div class="fui-stack">{}{binder}</div>"#,
+        opt(acted)
+    )))
 }
 
 /// The page of an EHR the CDR cannot read: no EHR with this id (404), said
 /// once at the top with no tabs, or the CDR's other refusal.
-fn missing(ehr_id: &str, error: &ViewerError) -> AnyView {
+fn missing(ehr_id: &str, error: &ViewerError) -> Html {
     let title = if is_status(error, http::StatusCode::NOT_FOUND) {
         tr_with(
             RecordsMsg::EhrNotFoundTitle,
@@ -560,6 +542,7 @@ fn missing(ehr_id: &str, error: &ViewerError) -> AnyView {
         tr_with(RecordsMsg::EhrTitle, &[("id", shortened(ehr_id).into())])
     };
     let heading = page_heading(
+        &current(),
         Header {
             title: title.into(),
             subtitle: None,
@@ -576,11 +559,8 @@ fn missing(ehr_id: &str, error: &ViewerError) -> AnyView {
         Some(Glyph::ARROW_LEFT),
         tr(RecordsMsg::EhrBack),
     );
-    view! {
-        {heading}
-        <div class="fui-stack">
-            {refused(tr(RecordsMsg::EhrRefused), error, None)} <div class="fui-cluster">{back}</div>
-        </div>
-    }
-    .into_any()
+    heading.then(h(format!(
+        r#"<div class="fui-stack">{}<div class="fui-cluster">{back}</div></div>"#,
+        refused(tr(RecordsMsg::EhrRefused), error, None)
+    )))
 }

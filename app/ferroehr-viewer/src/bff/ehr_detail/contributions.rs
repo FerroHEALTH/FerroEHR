@@ -4,25 +4,18 @@
 //! The EHR-detail Contributions tab: the per-EHR activity timeline, the paged
 //! contribution list, and the by-uid CONTRIBUTION lookup box.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
 
 /// Contributions read for the activity timeline before day-bucketing. The
@@ -30,7 +23,6 @@ use crate::locale::tr_with;
 /// written to", not "which contributions are on this page"), so it reads its own
 /// window of the SAME endpoint — one reader per claim, never a second endpoint
 /// for the same fact.
-#[cfg(not(target_arch = "wasm32"))]
 const ACTIVITY_FETCH: u32 = 200;
 
 /// One row of the EHR's contribution list. Fixed-size-safe strings; the shape
@@ -52,8 +44,7 @@ pub struct ContributionRow {
 }
 
 /// One page of an EHR's contributions: the rows plus the total count (for
-/// prev/next). Carries only fixed-size ints so it is WASM-safe over the
-/// server-fn boundary.
+/// prev/next).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContributionPage {
     /// The contribution rows on this page.
@@ -77,17 +68,16 @@ pub struct ContributionPage {
 /// `404`/`405` from an older CDR that lacks the list route surfaces there as
 /// [`ViewerError::Cdr`] (the tab renders it inline);
 /// [`ViewerError::Internal`] when the page is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_contributions(
-    /// The EHR whose contributions to list.
+    // The EHR whose contributions to list.
     ehr_id: String,
-    /// First row of the page to return.
+    // First row of the page to return.
     offset: u32,
-    /// How many rows the page holds.
+    // How many rows the page holds.
     fetch: u32,
 ) -> Result<ContributionPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1(&format!(
         "ehr/{}/contribution?offset={offset}&fetch={fetch}",
         urlencoding::encode(&ehr_id),
@@ -100,7 +90,6 @@ pub async fn list_contributions(
     parse_contributions(&response.body)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Parse the contribution-list body (`{ "rows": [...], "total": N }`) into a
 /// [`ContributionPage`]. Defensive throughout — a missing field reads as empty
 /// / zero rather than failing.
@@ -127,7 +116,6 @@ fn parse_contributions(body: &str) -> Result<ContributionPage, ViewerError> {
     Ok(ContributionPage { rows, total })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten one contribution-list entry into a [`ContributionRow`], each field
 /// read defensively as a string.
 fn contribution_row(value: &Value) -> ContributionRow {
@@ -140,7 +128,6 @@ fn contribution_row(value: &Value) -> ContributionRow {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Read a top-level string field, or an empty string when absent / not a string.
 fn contribution_field(value: &Value, key: &str) -> String {
     value
@@ -150,8 +137,9 @@ fn contribution_field(value: &Value, key: &str) -> String {
         .to_owned()
 }
 
-/// The EHR's contribution activity, one [`ActivityPoint`] per calendar day
-/// ascending (`GET /ehr/{ehr_id}/contribution?offset=0&fetch` over
+/// The EHR's contribution activity, one [`ActivityPoint`] per calendar day.
+///
+/// Ascending (`GET /ehr/{ehr_id}/contribution?offset=0&fetch` over
 /// `ACTIVITY_FETCH`, bucketed BFF-side by
 /// [`bucket_by_day`](crate::activity::bucket_by_day) on each contribution's
 /// `AUDIT_DETAILS.time_committed`).
@@ -161,13 +149,12 @@ fn contribution_field(value: &Value, key: &str) -> String {
 /// errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the page is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn contribution_activity(
-    /// The EHR whose contribution instants feed the timeline.
+    // The EHR whose contribution instants feed the timeline.
     ehr_id: String,
 ) -> Result<Vec<ActivityPoint>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/contribution?offset=0&fetch={ACTIVITY_FETCH}",
         urlencoding::encode(&ehr_id),
@@ -186,25 +173,25 @@ pub async fn contribution_activity(
     Ok(crate::activity::bucket_by_day(&times))
 }
 
-/// Look up a single CONTRIBUTION by uid
-/// (`GET /ehr/{ehr_id}/contribution/{contribution_uid}`) — the by-uid lookup
-/// box the Contributions tab keeps below its list (see
-/// `contributions_section`). Returns the raw canonical JSON.
+/// Look up a single CONTRIBUTION by uid (`GET
+/// /ehr/{ehr_id}/contribution/{contribution_uid}`) — the by-uid lookup box the
+/// Contributions tab keeps below its list (see `contributions_section`).
+///
+/// Returns the raw canonical JSON.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
 /// errors pass through; a non-2xx CDR answer (a `404` for an unknown uid
 /// included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_contribution(
-    /// The EHR holding the contribution.
+    // The EHR holding the contribution.
     ehr_id: String,
-    /// The CONTRIBUTION uid to read.
+    // The CONTRIBUTION uid to read.
     contribution_uid: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/contribution/{}",
         urlencoding::encode(&ehr_id),
@@ -217,7 +204,7 @@ pub async fn fetch_contribution(
     Ok(crate::cdr::CdrClient::expect_success(response)?.body)
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::parse_contributions;
 

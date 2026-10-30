@@ -1416,3 +1416,38 @@ async fn a_freshly_committed_repository_reports_no_stale_decomposition() {
         "and both domains were actually read: {report:?}"
     );
 }
+
+/// `ext.node_search_text` answers the same text from a row's typed columns as
+/// from the whole fragment those columns rebuild (#4437): the expression
+/// `idx_node_hot_value_search` indexes does not depend on which of the two
+/// places holds the value.
+#[tokio::test]
+async fn node_search_text_reads_the_same_text_from_the_columns_and_the_fragment() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed_typed_value_compositions(&svc).await;
+
+    let (typed, with_text, differing): (i64, i64, i64) = sqlx::query_as(
+        "SELECT count(*) FILTER (WHERE value_type IS NOT NULL), \
+                count(*) FILTER (WHERE ext.node_search_text(value_type, value_text, data) \
+                                       IS NOT NULL), \
+                count(*) FILTER (WHERE ext.node_search_text(value_type, value_text, data) \
+                    IS DISTINCT FROM ext.node_search_text(NULL, NULL, \
+                        ext.node_fragment(data, rm_type, archetype, name, name_code, \
+                            name_terminology, value_type, value_num, value_text, value_code, \
+                            value_terminology))) \
+           FROM node WHERE rm_type = 'ELEMENT'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("compare the two branches over every ELEMENT row");
+    assert!(
+        typed > 100 && with_text > 100,
+        "the seed must exercise both branches: {typed} typed rows, {with_text} with a text"
+    );
+    assert_eq!(
+        differing, 0,
+        "every ELEMENT row answers the same search text from its columns and its fragment"
+    );
+}

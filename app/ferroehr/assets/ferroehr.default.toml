@@ -61,7 +61,8 @@ request_timeout_ms = 30000     # a request still running then is answered 408
 # sending then is disconnected.
 header_read_timeout_ms = 30000
 # How long a kept-alive connection may wait for its next request before the
-# server closes it; longer than the 90 s a Go client keeps one idle.
+# server closes it. Keep it longer than the idle timeout of your clients (90 s
+# for a Go client) and of any load balancer in front, so they close first.
 idle_timeout_ms = 120000
 # The largest request body any route reads, refused 413 above it. The bulk
 # routes (template upload, /message/import) take up to this;

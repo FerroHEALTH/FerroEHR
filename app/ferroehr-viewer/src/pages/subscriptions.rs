@@ -12,36 +12,32 @@
 //! `404` and the page says so. No openEHR spec governs eventing: our own
 //! design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, definitions, editor_heading, page_heading,
 };
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
-use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{Msg, message, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{Msg, current, message, tr, tr_with};
+use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, Refused, ago, card_panel, dock_editor, docked, drawn, info_note, page_model,
-    section, state_mark,
+    EditorDock, Refused, ago, card_panel, dock_editor, drawn, info_note, section, state_mark,
 };
+use crate::routes::Drawn;
 use crate::subscriptions::SubscriptionRow;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::subscriptions::{
     SubscriptionPredicates, create_event_subscription, delete_event_subscription,
     list_event_subscriptions, name_is_valid, update_event_subscription,
@@ -116,8 +112,9 @@ fn edit_href(name: &str) -> String {
 }
 
 /// The heading of Subscriptions.
-fn heading() -> AnyView {
+fn heading() -> Html {
     page_heading(
+        &current(),
         Header {
             title: tr(Msg::NavSubscriptions).into(),
             subtitle: Some(tr(ConsoleMsg::SubSubtitle).into()),
@@ -132,20 +129,17 @@ fn heading() -> AnyView {
             Act::Link("/subscriptions/new".to_owned()),
         )),
     )
-    .into_any()
 }
 
 /// The note of a CDR without the subscription API.
-fn off() -> AnyView {
-    card_panel(view! {
-        <div class="fui-panel-body fui-stack">
-            <p>{tr(ConsoleMsg::SubOff)}</p>
-            <p class="fui-small fui-muted">{tr(ConsoleMsg::SubOffLine)}</p>
-        </div>
-    })
+fn off() -> Html {
+    card_panel(h(format!(
+        r#"<div class="fui-panel-body fui-stack"><p>{}</p><p class="fui-small fui-muted">{}</p></div>"#,
+        t(tr(ConsoleMsg::SubOff)),
+        t(tr(ConsoleMsg::SubOffLine))
+    )))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The predicates of a subscription row, with `enabled` set.
 fn predicates_of(row: &SubscriptionRow, enabled: bool) -> SubscriptionPredicates {
     SubscriptionPredicates {
@@ -157,7 +151,7 @@ fn predicates_of(row: &SubscriptionRow, enabled: bool) -> SubscriptionPredicates
 }
 
 /// Subscriptions' model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ListModel {
     /// The subscriptions, and the CDR's refusal of a toggle.
     Listed {
@@ -178,17 +172,12 @@ enum ListModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_list(
-    /// The path and query of the page.
-    href: String,
-) -> Result<ListModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_list() -> Result<ListModel, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_list().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_list`] reads, on the server.
+/// What [`load_list`] reads.
 async fn read_list() -> ListModel {
     let rows = match list_event_subscriptions().await {
         Ok(Some(rows)) => rows,
@@ -220,7 +209,11 @@ async fn read_list() -> ListModel {
 }
 
 /// The subscriptions as a list card.
-fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
+#[expect(
+    clippy::too_many_lines,
+    reason = "one listing: its rows with their menus, its empty state and its card"
+)]
+fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> Html {
     let columns = [
         Column::text("name", tr(Msg::NavSubscriptions)).role(Role::Title),
         Column::text("state", tr(ConsoleMsg::ServerState)).role(Role::Sub),
@@ -238,24 +231,46 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
             .enumerate()
             .map(|(index, row)| {
                 let href = edit_href(&row.name);
-                let sub = view! { <span class="fui-row-sub">{summary(&row.kind, &row.change_type, &row.template_id)}</span> }.into_any();
+                let sub = h(format!(
+                    r#"<span class="fui-row-sub">{}</span>"#,
+                    t(summary(&row.kind, &row.change_type, &row.template_id))
+                ));
                 let state = if row.enabled {
                     state_mark(FlowState::Up, &tr(ConsoleMsg::SubStateEnabled))
                 } else {
                     state_mark(FlowState::Off, &tr(ConsoleMsg::SubStateDisabled))
                 };
                 let menu = row_menu(
-                    Menu::new(
+                    &current(),
+                    &Menu::new(
                         format!("subscription-{index}"),
-                        tr_with(Msg::TemplateActionsFor, &[("name", row.name.clone().into())]),
+                        tr_with(
+                            Msg::TemplateActionsFor,
+                            &[("name", row.name.clone().into())],
+                        ),
                         vec![
-                            Item::new(Action::new(Some(Glyph::PENCIL), tr(Msg::PartyEdit), Act::Link(href.clone()))),
                             Item::new(Action::new(
-                                Some(if row.enabled { Glyph::BAN } else { Glyph::CHECK }),
-                                tr(if row.enabled { ConsoleMsg::SubDisable } else { ConsoleMsg::SubEnable }),
+                                Some(Glyph::PENCIL),
+                                tr(Msg::PartyEdit),
+                                Act::Link(href.clone()),
+                            )),
+                            Item::new(Action::new(
+                                Some(if row.enabled {
+                                    Glyph::BAN
+                                } else {
+                                    Glyph::CHECK
+                                }),
+                                tr(if row.enabled {
+                                    ConsoleMsg::SubDisable
+                                } else {
+                                    ConsoleMsg::SubEnable
+                                }),
                                 Act::Post {
                                     action: "/subscriptions".to_owned(),
-                                    fields: vec![("intent".to_owned(), "toggle".to_owned()), ("id".to_owned(), row.id.clone())],
+                                    fields: vec![
+                                        ("intent".to_owned(), "toggle".to_owned()),
+                                        ("id".to_owned(), row.id.clone()),
+                                    ],
                                 },
                             )),
                         ],
@@ -266,18 +281,17 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
                         Act::Link(format!("{href}?confirm=delete")),
                     ))]),
                 );
-                let name = view! { <code>{row.name.clone()}</code> }.into_any();
-                view! {
-                    <tr class:is-excluded=!row
-                        .enabled>
-                        {title_cell(Some(&href), name, Some(sub))} {cell(&columns[1], state)}
-                        {cell(&columns[2], ago(&row.created_at))} {menu_cell(menu)}
-                    </tr>
-                }
-                .into_any()
+                let name = h(format!("<code>{}</code>", t(&row.name)));
+                h(format!(
+                    "<tr{}>{}{}{}{}</tr>",
+                    attr("class", (!row.enabled).then_some("is-excluded")),
+                    title_cell(Some(&href), name, Some(sub)),
+                    cell(&columns[1], state),
+                    cell(&columns[2], ago(&row.created_at)),
+                    menu_cell(menu)
+                ))
             })
-            .collect_view()
-            .into_any();
+            .collect();
         let caption = tr(Msg::NavSubscriptions);
         data_table(DataTable {
             caption: &caption,
@@ -285,46 +299,42 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> AnyView {
             sorting: Sorting::default(),
             body: Body::Rows(body),
         })
-        .into_any()
     };
-    let card = list_card(ListCard {
-        title: tr(Msg::NavSubscriptions),
-        count: u64::try_from(rows.len())
-            .ok()
-            .map(ferrohealth_ui::view::template::list::HeadingCount::All),
-        order: None,
-        tabs: None,
-        actions: None,
-        body: list,
-        pager: None,
-    });
+    let card = list_card(
+        &current(),
+        ListCard {
+            title: tr(Msg::NavSubscriptions),
+            count: u64::try_from(rows.len())
+                .ok()
+                .map(ferrohealth_ui::view::template::list::HeadingCount::All),
+            order: None,
+            tabs: None,
+            actions: None,
+            body: list,
+            pager: None,
+        },
+    );
     let top = top.map(|refusal| refusal.view());
-    view! { <div class="fui-list-page">{top} {card}</div> }.into_any()
+    h(format!(
+        r#"<div class="fui-list-page">{}{card}</div>"#,
+        opt(top)
+    ))
 }
 
 /// Subscriptions.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn SubscriptionsPage() -> impl IntoView {
-    let model = page_model!(load_list());
-    let body = drawn(model, |model| match model {
+/// Subscriptions.
+pub async fn page() -> Drawn {
+    let body = drawn(load_list().await, |model| match model {
         ListModel::Listed { rows, top } => list_view(&rows, top),
         ListModel::Off => off(),
         ListModel::Refused(refusal) => refusal.view(),
-        ListModel::Left => ().into_any(),
+        ListModel::Left => Html::empty(),
     });
-    view! {
-        <Title text=tr(Msg::NavSubscriptions) />
-        {heading()}
-        {body}
-    }
+    Drawn::page(tr(Msg::NavSubscriptions), heading().then(body))
 }
 
 /// The fields of a subscription as the form holds them.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct Form {
     /// Its name.
     name: String,
@@ -338,7 +348,6 @@ struct Form {
     enabled: bool,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl Form {
     /// The form as posted, or as `row` holds it.
     fn read(row: Option<&SubscriptionRow>) -> Self {
@@ -379,146 +388,104 @@ impl Form {
 
 /// The editor's sections: the name (fixed once created), what it selects,
 /// and its delivery.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page part: the reads it waits on and the view it draws"
-)]
-fn form_view(
-    form: &Form,
-    editing: bool,
-    name_error: Option<&str>,
-    templates: &[String],
-) -> AnyView {
+fn form_view(form: &Form, editing: bool, name_error: Option<&str>, templates: &[String]) -> Html {
+    let option = |value: &str, words: &str, selected: bool| {
+        h(format!(
+            r#"<option value="{}"{}>{}</option>"#,
+            t(value),
+            flag("selected", selected),
+            t(words)
+        ))
+    };
     let select = |id: &'static str,
                   name: &'static str,
                   label: String,
                   choices: &[(&str, Msg)],
                   chosen: &str| {
-        let options = choices
+        let options: Html = choices
             .iter()
-            .map(|(value, words)| {
-                view! {
-                    <option value=(*value).to_owned() selected=*value == chosen>
-                        {tr(*words)}
-                    </option>
-                }
-            })
-            .collect_view();
-        Field::new(id, label).view(view! {
-            <select id=id name=name class="fui-select">
-                {options}
-            </select>
-        })
+            .map(|(value, words)| option(value, &tr(*words), *value == chosen))
+            .collect();
+        Field::new(id, label).view(h(format!(
+            r#"<select id="{id}" name="{name}" class="fui-select">{options}</select>"#
+        )))
     };
-    let template_options = templates
+    let template_options: Html = templates
         .iter()
-        .map(|template| {
-            view! {
-                <option value=template.clone() selected=*template == form.template>
-                    {template.clone()}
-                </option>
-            }
-        })
-        .collect_view();
+        .map(|template| option(template, template, *template == form.template))
+        .collect();
     let name = if editing {
         section(
             Some(tr(Msg::QueryName)),
             None,
             None,
-            view! {
-                <p>
-                    <code>{form.name.clone()}</code>
-                </p>
-                {definitions(
-                    vec![
-                        (
-                            tr(ConsoleMsg::SubQueue),
-                            view! { <code>{format!("ferroehr.events.{}", form.name)}</code> }
-                                .into_any(),
-                        ),
-                    ],
-                )}
-                <p class="fui-help">{tr(ConsoleMsg::SubNameFixed)}</p>
-            },
+            Html::join([
+                h(format!("<p><code>{}</code></p>", t(&form.name))),
+                definitions(vec![(
+                    tr(ConsoleMsg::SubQueue),
+                    h(format!(
+                        "<code>{}</code>",
+                        t(format!("ferroehr.events.{}", form.name))
+                    )),
+                )]),
+                h(format!(
+                    r#"<p class="fui-help">{}</p>"#,
+                    t(tr(ConsoleMsg::SubNameFixed))
+                )),
+            ]),
         )
     } else {
-        let error =
-            name_error.map(|error| view! { <p class="fui-field-error">{error.to_owned()}</p> });
+        let mut field = Field::new("sn", tr(Msg::QueryName))
+            .label_hidden()
+            .help(tr(ConsoleMsg::SubNameHelp));
+        if let Some(error) = name_error {
+            field = field.after(h(format!(r#"<p class="fui-field-error">{}</p>"#, t(error))));
+        }
+        let field = field.view(h(format!(
+            r#"<input id="sn" name="name" type="text" class="fui-input fui-mono" spellcheck="false" placeholder="vital-signs-feed" required value="{}"{}>"#,
+            t(&form.name),
+            attr("aria-invalid", name_error.is_some().then_some("true"))
+        )));
         section(
             Some(tr(Msg::QueryName)),
             None,
             None,
-            view! {
-                <div class="fui-form-grid">
-                    <div class="fui-span-2">
-                        {Field::new("sn", tr(Msg::QueryName))
-                            .label_hidden()
-                            .help(tr(ConsoleMsg::SubNameHelp))
-                            .after(error)
-                            .view(
-                                view! {
-                                    <input
-                                        id="sn"
-                                        name="name"
-                                        type="text"
-                                        class="fui-input fui-mono"
-                                        spellcheck="false"
-                                        placeholder="vital-signs-feed"
-                                        required
-                                        value=form.name.clone()
-                                        aria-invalid=name_error.is_some().then_some("true")
-                                    />
-                                },
-                            )}
-                    </div>
-                </div>
-            },
+            h(format!(
+                r#"<div class="fui-form-grid"><div class="fui-span-2">{field}</div></div>"#
+            )),
         )
     };
-    let what = view! {
-        <div class="fui-form-grid">
-            <div class="fui-span-2">
-                {select("sk", "kind", tr(Msg::ColumnKind), &KINDS, &form.kind)}
-            </div>
-            <div class="fui-span-2">
-                {select("sc", "change", tr(ConsoleMsg::SubChangeType), &CHANGES, &form.change)}
-            </div>
-            <div class="fui-span-2">
-                {Field::new("st", tr(Msg::FilterTemplate))
-                    .view(
-                        view! {
-                            <select id="st" name="template" class="fui-select">
-                                <option value="">{tr(ConsoleMsg::SubAnyTemplate)}</option>
-                                {template_options}
-                            </select>
-                        },
-                    )}
-            </div>
-        </div>
-    };
+    let what = h(format!(
+        r#"<div class="fui-form-grid"><div class="fui-span-2">{}</div><div class="fui-span-2">{}</div><div class="fui-span-2">{}</div></div>"#,
+        select("sk", "kind", tr(Msg::ColumnKind), &KINDS, &form.kind),
+        select(
+            "sc",
+            "change",
+            tr(ConsoleMsg::SubChangeType),
+            &CHANGES,
+            &form.change
+        ),
+        Field::new("st", tr(Msg::FilterTemplate)).view(h(format!(
+            r#"<select id="st" name="template" class="fui-select"><option value="">{}</option>{template_options}</select>"#,
+            t(tr(ConsoleMsg::SubAnyTemplate))
+        ))),
+    ));
     let deliver = ferrohealth_ui::view::form::keyed_check_field(
         "enabled".to_owned(),
         tr(ConsoleMsg::SubDeliver),
         tr(ConsoleMsg::SubDeliverHelp),
-        view! {
-            <input type="hidden" name="enabled" value="off" />
-            <input
-                type="checkbox"
-                id="enabled"
-                name="enabled"
-                class="fui-switch"
-                checked=form.enabled
-            />
-        },
+        h(format!(
+            r#"<input type="hidden" name="enabled" value="off"><input type="checkbox" id="enabled" name="enabled" class="fui-switch"{}>"#,
+            flag("checked", form.enabled)
+        )),
     );
-    card_panel(view! {
-        {name}
-        {section(Some(tr(ConsoleMsg::SubSelects)), None, None, what)}
-        {section(Some(tr(ConsoleMsg::SubDelivery)), None, None, deliver)}
-    })
+    card_panel(Html::join([
+        name,
+        section(Some(tr(ConsoleMsg::SubSelects)), None, None, what),
+        section(Some(tr(ConsoleMsg::SubDelivery)), None, None, deliver),
+    ]))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The templates the editor offers; a refused read offers none.
 async fn template_ids() -> Vec<String> {
     crate::bff::templates::list_templates()
@@ -528,7 +495,7 @@ async fn template_ids() -> Vec<String> {
 }
 
 /// What the editor holds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Editor {
     /// The form.
     form: Form,
@@ -541,7 +508,7 @@ struct Editor {
 }
 
 /// New subscription's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum NewModel {
     /// The editor.
     Editor(Box<Editor>),
@@ -554,21 +521,16 @@ enum NewModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_new(
-    /// The path and query of the page.
-    href: String,
-) -> Result<NewModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_new() -> Result<NewModel, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_new().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_new`] reads, on the server.
+/// What [`load_new`] reads.
 async fn read_new() -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
-        leptos_axum::redirect("/subscriptions");
+        crate::request::redirect("/subscriptions");
         return NewModel::Left;
     }
     let form = Form::read(None);
@@ -616,7 +578,7 @@ async fn read_new() -> NewModel {
 }
 
 /// New subscription's editor, its decision bar docked.
-fn new_editor(editor: Editor) -> AnyView {
+fn new_editor(editor: Editor) -> Html {
     let Editor {
         form,
         top,
@@ -628,11 +590,12 @@ fn new_editor(editor: Editor) -> AnyView {
         line: summary(&form.kind, &form.change, &form.template),
         glyph: Glyph::FUNNEL,
         save: tr(ConsoleMsg::SubCreate),
-        // NOTE: leptos-ui.md §15.8: a refused name stays editable and the save stays live, since
-        // a page with no WebAssembly has no other way to send the corrected name.
+        // NOTE: FerroUI console-ui.md §5: a refused name stays editable and the save stays live,
+        // since a page with no script has no other way to send the corrected name.
         blocked: None,
     });
     let heading = editor_heading(
+        &current(),
         message(ConsoleMsg::SubEditorTitle),
         &Mode::Creating,
         Header {
@@ -646,36 +609,24 @@ fn new_editor(editor: Editor) -> AnyView {
         ActionGroup::none(),
     );
     let top = top.map(|refusal| refusal.view());
-    view! {
-        <Title text=tr(ConsoleMsg::SubNew) />
-        {heading}
-        <div class="fui-stack">
-            {top} <form id=EDIT_FORM method="post" action="/subscriptions/new">
-                {form_view(&form, false, name_error.as_deref(), &templates)}
-            </form>
-        </div>
-    }
-    .into_any()
+    heading.then(h(format!(
+        r#"<div class="fui-stack">{}<form id="{EDIT_FORM}" method="post" action="/subscriptions/new">{}</form></div>"#,
+        opt(top),
+        form_view(&form, false, name_error.as_deref(), &templates)
+    )))
 }
 
 /// New subscription.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn NewSubscriptionPage() -> impl IntoView {
-    let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_new());
-    let page = docked(model, dock_promise, |model| match model {
+pub async fn new_page() -> Drawn {
+    let page = drawn(load_new().await, |model| match model {
         NewModel::Editor(editor) => new_editor(*editor),
-        NewModel::Left => ().into_any(),
+        NewModel::Left => Html::empty(),
     });
-    view! { {page} }
+    Drawn::page(tr(ConsoleMsg::SubNew), page)
 }
 
 /// Edit a subscription's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum EditModel {
     /// The editor.
     Editor(Box<Editor>),
@@ -694,23 +645,19 @@ enum EditModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_edit(
-    /// The path and query of the page.
-    href: String,
-    /// The subscription the route names.
+    // The subscription the route names.
     name: String,
 ) -> Result<EditModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_edit(name).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_edit`] reads, on the server.
+/// What [`load_edit`] reads.
 async fn read_edit(name: String) -> EditModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
-        leptos_axum::redirect("/subscriptions");
+        crate::request::redirect("/subscriptions");
         return EditModel::Left;
     }
     let rows = match list_event_subscriptions().await {
@@ -760,7 +707,7 @@ async fn read_edit(name: String) -> EditModel {
 }
 
 /// Edit a subscription's editor, its decision bar docked.
-fn edit_editor(editor: Editor) -> AnyView {
+fn edit_editor(editor: Editor) -> (String, Html) {
     let Editor {
         form,
         top,
@@ -784,6 +731,7 @@ fn edit_editor(editor: Editor) -> AnyView {
             )),
         ]);
     let heading = editor_heading(
+        &current(),
         message(ConsoleMsg::SubEditorTitle),
         &Mode::Editing(name.clone()),
         Header {
@@ -796,85 +744,74 @@ fn edit_editor(editor: Editor) -> AnyView {
         },
         ActionGroup::more_only(more),
     );
-    let delete = view! {
-        <form method="post" action=edit_href(&name)>
-            <input type="hidden" name="intent" value="delete-subscription" />
-            <button type="submit" class="fui-button fui-button-danger">
-                {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                {tr(ConsoleMsg::SubDeleteConfirm)}
-            </button>
-        </form>
-    };
+    let delete_fields = r#"<input type="hidden" name="intent" value="delete-subscription">"#;
     let confirm = (crate::request::query("confirm").as_deref() == Some("delete")).then(|| {
-        crate::pages::common::warn_note(view! {
-            <p>
-                <strong>
-                    {tr_with(ConsoleMsg::SubDeleteTitle, &[("name", name.clone().into())])}
-                </strong>
-                " "
-                {tr(ConsoleMsg::SubDeleteMessage)}
-            </p>
-            <div class="fui-cluster">
-                <form method="post" action=edit_href(&name)>
-                    <input type="hidden" name="intent" value="delete-subscription" />
-                    <button type="submit" class="fui-button fui-button-danger">
-                        {tr(ConsoleMsg::SubDeleteConfirm)}
-                    </button>
-                </form>
-                <a class="fui-button fui-button-secondary" href=edit_href(&name)>
-                    {tr(Msg::Cancel)}
-                </a>
-            </div>
-        })
+        crate::pages::common::warn_note(h(format!(
+            r#"<p><strong>{title}</strong> {message}</p><div class="fui-cluster"><form method="post" action="{href}">{delete_fields}<button type="submit" class="fui-button fui-button-danger">{confirm}</button></form><a class="fui-button fui-button-secondary" href="{href}">{cancel}</a></div>"#,
+            title = t(tr_with(
+                ConsoleMsg::SubDeleteTitle,
+                &[("name", name.clone().into())]
+            )),
+            message = t(tr(ConsoleMsg::SubDeleteMessage)),
+            href = t(edit_href(&name)),
+            confirm = t(tr(ConsoleMsg::SubDeleteConfirm)),
+            cancel = t(tr(Msg::Cancel)),
+        )))
     });
-    let dialog = danger_dialog(
+    let dialog = danger_form_dialog(
+        &current(),
         Confirmation {
             id: DELETE_DIALOG.into(),
             title: tr_with(ConsoleMsg::SubDeleteTitle, &[("name", name.clone().into())]).into(),
             message: tr(ConsoleMsg::SubDeleteMessage).into(),
         },
-        delete,
+        ConfirmForm {
+            action: edit_href(&name),
+            fields: h(delete_fields.to_owned()),
+        },
+        h(format!(
+            r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
+            ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
+            t(tr(ConsoleMsg::SubDeleteConfirm))
+        )),
     );
     let top = top.map(|refusal| refusal.view());
-    view! {
-        <Title text=tr_with(Msg::CompositionEditTitle, &[("name", name.clone().into())]) />
-        {heading}
-        <div class="fui-stack">
-            {top} {confirm} <form id=EDIT_FORM method="post" action=edit_href(&name)>
-                {form_view(&form, true, None, &templates)}
-            </form>
-        </div>
-        {dialog}
-    }
-    .into_any()
+    let body = Html::join([
+        heading,
+        h(format!(
+            r#"<div class="fui-stack">{}{}<form id="{EDIT_FORM}" method="post" action="{}">{}</form></div>"#,
+            opt(top),
+            opt(confirm),
+            t(edit_href(&name)),
+            form_view(&form, true, None, &templates)
+        )),
+        dialog,
+    ]);
+    (
+        tr_with(Msg::CompositionEditTitle, &[("name", name.into())]),
+        body,
+    )
 }
 
 /// Edit a subscription.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn EditSubscriptionPage() -> impl IntoView {
-    let dock_promise = crate::shell::promise_dock();
-    let name = crate::routes::params()
-        .with(|params| params.get("name"))
-        .unwrap_or_default();
-    let model = page_model!(load_edit(name));
-    let page = docked(model, dock_promise, |model| match model {
-        EditModel::Editor(editor) => edit_editor(*editor),
-        EditModel::Off => view! {
-            {heading()}
-            {off()}
-        }
-        .into_any(),
-        EditModel::Refused(refusal) => refusal.view(),
-        EditModel::Missing(name) => view! {
-            {heading()}
-            {info_note(tr_with(ConsoleMsg::SubNone, &[("name", name.into())]))}
-        }
-        .into_any(),
-        EditModel::Left => ().into_any(),
-    });
-    view! { {page} }
+pub async fn edit_page() -> Drawn {
+    let name = crate::routes::params().get("name").unwrap_or_default();
+    let (title, page) = match load_edit(name).await {
+        Ok(EditModel::Editor(editor)) => edit_editor(*editor),
+        Ok(EditModel::Off) => (tr(Msg::NavSubscriptions), heading().then(off())),
+        Ok(EditModel::Refused(refusal)) => (tr(Msg::NavSubscriptions), refusal.view()),
+        Ok(EditModel::Missing(name)) => (
+            tr(Msg::NavSubscriptions),
+            heading().then(info_note(t(tr_with(
+                ConsoleMsg::SubNone,
+                &[("name", name.into())],
+            )))),
+        ),
+        Ok(EditModel::Left) => (String::new(), Html::empty()),
+        Err(error) => (
+            tr(Msg::NavSubscriptions),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
+    };
+    Drawn::page(title, page)
 }

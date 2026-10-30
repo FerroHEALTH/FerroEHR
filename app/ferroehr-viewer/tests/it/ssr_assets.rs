@@ -1,13 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The hydration bundle under `/pkg/` through the REAL service: a file the
-//! bundle holds is served whole with no session, and a file it lacks answers
-//! `404` itself, never the rendered app and never the sign-in redirect (#3849).
-//!
-//! `ssr`-gated like its siblings: the service exists on the server build only.
+//! FerroUI's assets under `ferrohealth_ui::serve::PREFIX` through the REAL
+//! service: a script module the library vendors is served whole with no
+//! session, and a file it lacks answers `404` itself, never a page and never
+//! the sign-in redirect (#3849).
 
-#![cfg(not(target_arch = "wasm32"))]
 #![expect(
     clippy::expect_used,
     reason = "every step here is fixture construction — a site directory, a static request, an \
@@ -15,22 +13,15 @@
               outcome"
 )]
 
-use leptos::prelude::LeptosOptions;
 use tower::util::ServiceExt;
 
-/// The bytes of the bundle file the fixture site holds.
-const WASM: &[u8] = b"\0asm\x01\0\0\0";
-
-/// The name of the bundle file the fixture site holds.
-const WASM_NAME: &str = "ferroehr-viewer.FixtureHash000000000000.wasm";
-
-/// A site root holding one bundle file under `pkg/`, unique to `name`.
-fn site(name: &str) -> String {
-    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("site-{name}"));
-    let pkg = root.join("pkg");
-    std::fs::create_dir_all(&pkg).expect("the fixture site directory");
-    std::fs::write(pkg.join(WASM_NAME), WASM).expect("the fixture bundle file");
-    root.to_string_lossy().into_owned()
+/// The path of one of FerroUI's script modules, the loader.
+fn module_path() -> String {
+    format!(
+        "{}/{}/scripts/fui.js",
+        ferrohealth_ui::serve::PREFIX,
+        ferrohealth_ui::serve::VERSION
+    )
 }
 
 /// The viewer state, its CDR never reached by these requests.
@@ -46,16 +37,10 @@ fn app_state() -> ferroehr_viewer::state::AppState {
     }
 }
 
-/// `GET path` with no session, as a browser's module loader sends it, against
-/// a viewer serving the fixture site `name`; the parts and the body.
-async fn get(name: &str, path: &str) -> (http::response::Parts, Vec<u8>) {
-    // Initializes the reactive executor the way the viewer's own server does.
-    drop(leptos_axum::generate_route_list(|| ()));
-    let options = LeptosOptions::builder()
-        .output_name(env!("CARGO_PKG_NAME"))
-        .site_root(site(name))
-        .build();
-    let service = ferroehr_viewer::server::router(app_state(), options);
+/// `GET path` with no session, as a browser's module loader sends it; the
+/// parts and the body.
+async fn get(path: &str) -> (http::response::Parts, Vec<u8>) {
+    let service = ferroehr_viewer::server::router(app_state());
     let request = http::Request::builder()
         .uri(path)
         .header(http::header::ACCEPT, "*/*")
@@ -75,30 +60,35 @@ async fn get(name: &str, path: &str) -> (http::response::Parts, Vec<u8>) {
 }
 
 #[tokio::test]
-async fn a_bundle_file_is_served_whole_with_no_session() {
-    let (parts, body) = get("served", &format!("/pkg/{WASM_NAME}")).await;
+async fn a_script_module_is_served_whole_with_no_session() {
+    let (parts, body) = get(&module_path()).await;
     assert_eq!(http::StatusCode::OK, parts.status);
-    assert_eq!(WASM, body.as_slice(), "the file as it stands");
-    assert_eq!(
-        Some("application/wasm"),
-        parts
-            .headers
-            .get(http::header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-    );
+    let loader = ferrohealth_ui::script::LOADER.text;
+    assert_eq!(loader.as_bytes(), body.as_slice(), "the module as vendored");
+    let kind = parts
+        .headers
+        .get(http::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    assert!(kind.starts_with("text/javascript"), "{kind}");
 }
 
 #[tokio::test]
-async fn a_file_the_bundle_lacks_answers_404_and_never_the_app_or_the_sign_in() {
-    let (parts, body) = get("missing", "/pkg/ferroehr-viewer.NoSuchHash0000000000.wasm").await;
+async fn a_file_the_library_lacks_answers_404_and_never_a_page_or_the_sign_in() {
+    let (parts, body) = get(&format!(
+        "{}/{}/scripts/no-such-module.js",
+        ferrohealth_ui::serve::PREFIX,
+        ferrohealth_ui::serve::VERSION
+    ))
+    .await;
     assert_eq!(http::StatusCode::NOT_FOUND, parts.status);
     assert!(
         parts.headers.get(http::header::LOCATION).is_none(),
-        "a missing bundle file is no redirect"
+        "a missing asset is no redirect"
     );
     let text = String::from_utf8_lossy(&body);
     assert!(
-        !text.contains("<html") && !text.contains("<!DOCTYPE"),
-        "a missing bundle file never renders the app: {text}"
+        !text.contains("<html") && !text.contains("<!doctype"),
+        "a missing asset never renders a page: {text}"
     );
 }

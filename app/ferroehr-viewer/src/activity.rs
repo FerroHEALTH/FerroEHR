@@ -4,11 +4,10 @@
 //! Activity timelines: the pure day-bucketing every activity chart in the
 //! viewer derives its points from.
 //!
-//! Kept out of the components (and out of the `#[server]` bodies) on purpose —
+//! Kept out of the components (and out of the BFF bodies) on purpose —
 //! business logic lives in plain, unit-tested Rust and the views stay thin. It
 //! is also a pure, deterministic function of its input: no clock, no locale,
-//! no network, so a chart derived from it renders identically on the server
-//! pass and after hydration.
+//! no network, so a chart derived from it renders identically on every draw.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
 //! The timestamps it buckets ARE spec-bound: `AUDIT_DETAILS.time_committed`
@@ -20,8 +19,6 @@ use serde::{Deserialize, Serialize};
 
 /// One day of activity: the calendar day and how many events fell on it.
 ///
-/// The count is a fixed-size `u32` (never `usize`) because the type crosses the
-/// server-fn boundary onto the 32-bit WASM target.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActivityPoint {
     /// The `YYYY-MM-DD` calendar day.
@@ -91,7 +88,7 @@ mod tests {
     fn an_offset_timestamp_buckets_on_its_written_day() {
         // The wire value's own date prefix is the day — the viewer does not
         // re-zone a committed timestamp (no clock, no locale: that is what
-        // keeps the derived chart hydration-stable).
+        // keeps the derived chart the same on every draw).
         assert_eq!(
             bucket_by_day(&["2026-07-15T23:30:00+02:00".to_owned()]),
             vec![point("2026-07-15", 1)]

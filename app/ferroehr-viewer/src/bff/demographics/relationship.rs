@@ -32,33 +32,22 @@
 //! says so rather than implying the list it shows is complete; the relationship
 //! detail links BOTH endpoints, which is the reachable direction.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::container_uid_of;
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The `PARTY_REF` namespace the viewer writes.
 ///
 /// `OBJECT_REF.namespace` is a free string with only a legality rule — "local",
@@ -142,13 +131,12 @@ pub struct InlineRelationship {
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success) — a
 /// `404` from a CDR that does not serve this extension surfaces there;
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_relationship(
-    /// The relationship's `uid_based_id` (either form; the container is used).
+    // The relationship's `uid_based_id` (either form; the container is used).
     uid: String,
 ) -> Result<Option<RelationshipState>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -191,25 +179,24 @@ pub async fn fetch_relationship(
 /// included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the created resource carries no `uid`.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn create_relationship(
-    /// The relationship's `archetype_node_id`.
+    // The relationship's `archetype_node_id`.
     archetype_node_id: String,
-    /// The relationship type, stored as `name.value`.
+    // The relationship type, stored as `name.value`.
     name: String,
-    /// The source party's version container id.
+    // The source party's version container id.
     source_uid: String,
-    /// The source party's kind, as its route segment.
+    // The source party's kind, as its route segment.
     source_kind: String,
-    /// The target party's version container id.
+    // The target party's version container id.
     target_uid: String,
-    /// The target party's kind, as its route segment.
+    // The target party's kind, as its route segment.
     target_kind: String,
-    /// The optional `details`, as a JSON object; empty leaves it out.
+    // The optional `details`, as a JSON object; empty leaves it out.
     details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     // Flat string parameters rather than the draft struct: a server function is
     // a URL-encoded public endpoint, and a flat argument list has no nested
     // encoding to get wrong.
@@ -261,21 +248,20 @@ pub async fn create_relationship(
 /// `details` draft that is not a JSON object; CDR transport errors pass
 /// through; any non-2xx CDR answer (the `412` collision included) normalizes
 /// via [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn update_relationship(
-    /// The version container to update.
+    // The version container to update.
     versioned_object_uid: String,
-    /// The version this edit is based on, sent as `If-Match`.
+    // The version this edit is based on, sent as `If-Match`.
     current_version_uid: String,
-    /// The served relationship document this edit merges into, verbatim.
+    // The served relationship document this edit merges into, verbatim.
     base_body: String,
-    /// The replacement relationship type (`name.value`).
+    // The replacement relationship type (`name.value`).
     name: String,
-    /// The replacement `details`, as a JSON object; empty removes it.
+    // The replacement `details`, as a JSON object; empty removes it.
     details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -317,13 +303,12 @@ pub async fn update_relationship(
 /// [`ViewerError::Invalid`] when the id is not a full `OBJECT_VERSION_ID`; CDR
 /// transport errors pass through; any non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_relationship(
-    /// The version to supersede, as a full `OBJECT_VERSION_ID`.
+    // The version to supersede, as a full `OBJECT_VERSION_ID`.
     version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let version_uid = version_uid.trim();
     if !version_uid.contains("::") {
         return Err(ViewerError::Invalid(tr_served(
@@ -339,7 +324,6 @@ pub async fn delete_relationship(
     Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Assemble a `PARTY_RELATIONSHIP` create body from the form's fields.
 ///
 /// Pure and unit-tested. Refuses what the RM refuses before any round trip: a
@@ -402,7 +386,6 @@ pub struct RelationshipDraft {
     pub details: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// One `PARTY_REF` for a relationship end.
 ///
 /// # Errors
@@ -445,7 +428,6 @@ fn party_ref(uid: &str, kind: &str, end: &str) -> Result<Value, String> {
     Ok(Value::Object(reference))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// A `DV_TEXT` carrying `value`.
 fn dv_text(value: &str) -> Value {
     let mut text = serde_json::Map::new();
@@ -454,7 +436,6 @@ fn dv_text(value: &str) -> Value {
     Value::Object(text)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Read a `details` draft: `None` when blank, `Some(object)` otherwise.
 ///
 /// `PARTY_RELATIONSHIP.details` is an `ITEM_STRUCTURE` `0..1`
@@ -483,7 +464,6 @@ fn parse_details_draft(draft: &str) -> Result<Option<Value>, String> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Apply the edit form's two changes to the loaded relationship document.
 ///
 /// `base` is re-sent verbatim apart from `name` and `details`, so `source`,
@@ -524,7 +504,6 @@ fn apply_relationship_edits(base: &str, name: &str, details: &str) -> Result<Str
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a canonical `PARTY_RELATIONSHIP` body into a [`RelationshipState`],
 /// keeping the body verbatim.
 ///
@@ -572,7 +551,6 @@ fn parse_relationship_state(
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a party document's inline `relationships` list — "relationships in
 /// which this Party takes part as source"
 /// (`org.openehr.rm.demographic.party.adoc`).
@@ -601,7 +579,6 @@ pub(super) fn inline_relationships_of(doc: &Value) -> Vec<InlineRelationship> {
         .collect()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten one `PARTY_REF` into its three carried facts.
 fn party_ref_view(value: Option<&Value>) -> PartyRefView {
     let Some(value) = value else {

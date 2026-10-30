@@ -5,32 +5,31 @@
 //! typed, and where an id can be opened.
 //!
 //! The search posts its words, since an id can name a patient's record, so
-//! they never reach a URL (FerroUI `leptos-ui.md` §5). An id shaped as a UUID
+//! they never reach a URL (FerroUI `console-ui.md` §5). An id shaped as a UUID
 //! is read as an EHR id and as a composition's versioned object, and is tried
 //! as a party; any words are matched against the template ids and concepts
 //! and the stored queries' names. A subject id needs its namespace, which the
 //! EHRs list asks for. As you type, the panel under the search box asks the
-//! server function [`find_answer`] and shows the hits grouped by kind; the
+//! answer route, which answers with [`find_answer`], and shows the hits
+//! grouped by kind; the
 //! find page lists every hit in the page and the other ways to read the id.
 //! No openEHR spec governs the viewer: our own design; the reads are
 //! ITS-REST.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::search::{Hit, HitGroup, Mark, SearchAnswer, find_results};
 use ferrohealth_ui::view::surface::{Header, page_heading};
 use ferrohealth_ui::view::template::list::{ListCard, list_card};
-use leptos::prelude::*;
-use leptos::server_fn::codec::Json;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::locale::overview::OverviewMsg;
-use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::{awaited, info_note, shortened};
-use crate::session_client::SessionAwareClient;
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, t};
+use crate::pages::common::{info_note, shortened};
+use crate::routes::Drawn;
 
 /// One kind of hit, as the answer groups them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Kind {
     /// An EHR.
     Ehr,
@@ -69,7 +68,7 @@ impl Kind {
 }
 
 /// One thing the CDR holds under the words typed.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 struct Found1 {
     /// Its kind.
     kind: Kind,
@@ -81,9 +80,8 @@ struct Found1 {
     href: String,
 }
 
-/// What a search found: the words typed and every hit, read on the server
-/// and drawn on both halves.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// What a search found: the words typed and every hit.
+#[derive(Debug, Clone)]
 pub struct Found {
     /// The words typed.
     typed: String,
@@ -170,17 +168,17 @@ impl Found {
 }
 
 /// Answers the panel under the search box: what the CDR holds under the
-/// words `q`, as JSON. The words travel in the post's body, never a URL.
+/// words `q`, which the answer route writes as JSON. The words travel in
+/// the post's body, never a URL.
 ///
 /// # Errors
 /// Returns [`crate::error::ViewerError::Unauthenticated`] with no live
 /// session.
-#[server(endpoint = "find_answer", output = Json, client = SessionAwareClient)]
 pub async fn find_answer(
-    /// The words typed.
+    // The words typed.
     q: String,
 ) -> Result<SearchAnswer, crate::error::ViewerError> {
-    crate::session::require_session().await?;
+    crate::session::require_session()?;
     Ok(find(&q).await.answer())
 }
 
@@ -189,12 +187,11 @@ pub async fn find_answer(
 /// # Errors
 /// Returns [`crate::error::ViewerError::Unauthenticated`] with no live
 /// session.
-#[server(client = SessionAwareClient)]
 pub async fn load_found(
-    /// The words typed.
+    // The words typed.
     q: String,
 ) -> Result<Found, crate::error::ViewerError> {
-    crate::session::require_session().await?;
+    crate::session::require_session()?;
     Ok(find(&q).await)
 }
 
@@ -210,19 +207,16 @@ fn failed_line(failed: &[Kind]) -> String {
 
 /// Whether `error` means the thing looked for is not there (`404`), which a
 /// search reads as no hit; any other error is the CDR not answering.
-#[cfg(not(target_arch = "wasm32"))]
 fn absent(error: &crate::error::ViewerError) -> bool {
     crate::pages::common::is_status(error, http::StatusCode::NOT_FOUND)
 }
 
 /// Whether `text` is shaped as an RFC 9562 UUID.
-#[cfg(not(target_arch = "wasm32"))]
 fn uuid_shaped(text: &str) -> bool {
     crate::bff::ehrs::is_uuid(text)
 }
 
 /// The hits of the words `typed`, from every place the CDR answers.
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn find(typed: &str) -> Found {
     let typed = typed.trim().to_owned();
     let id = crate::uid::container_uid_of(&typed);
@@ -312,7 +306,6 @@ pub async fn find(typed: &str) -> Found {
 
 /// The compositions whose versioned object is `uid`, read with one AQL query
 /// whose value travels as a binding.
-#[cfg(not(target_arch = "wasm32"))]
 #[expect(
     clippy::disallowed_types,
     reason = "the AQL parameters are a JSON object the query wire takes"
@@ -349,7 +342,7 @@ async fn composition_hits(uid: &str) -> Result<Vec<Found1>, crate::error::Viewer
 }
 
 /// The ways an id can be read when the CDR holds nothing under it.
-fn ways(found: &Found) -> AnyView {
+fn ways(found: &Found) -> Html {
     let rows = [
         (
             OverviewMsg::FindWaySubject,
@@ -367,94 +360,77 @@ fn ways(found: &Found) -> AnyView {
             found.ehr_href.clone(),
         ),
     ];
-    let items = rows
+    let items: Html = rows
         .into_iter()
         .map(|(title, line, href)| {
-            view! {
-                <li>
-                    <a class="fui-row-link" href=href>
-                        {tr(title)}
-                    </a>
-                    <div class="fui-small fui-muted">{tr(line)}</div>
-                </li>
-            }
+            h(format!(
+                r#"<li><a class="fui-row-link" href="{}">{}</a><div class="fui-small fui-muted">{}</div></li>"#,
+                t(href),
+                t(tr(title)),
+                t(tr(line))
+            ))
         })
-        .collect_view();
-    view! { <ul class="fui-match-list">{items}</ul> }.into_any()
+        .collect();
+    h(format!(r#"<ul class="fui-match-list">{items}</ul>"#))
 }
 
 /// The find page: what was typed, and where it can go.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn FindPage() -> impl IntoView {
+pub async fn page() -> Drawn {
     let typed = crate::posted::posted()
         .map(|posted| posted.text("q"))
         .filter(|typed| !typed.is_empty());
-    let model = OnceResource::new(async move {
-        match typed {
-            Some(typed) => load_found(typed).await.map(Some),
-            None => Ok(None),
+    let locale = current();
+    let heading = page_heading(
+        &locale,
+        Header {
+            title: tr(OverviewMsg::FindTitle).into(),
+            subtitle: Some(tr(OverviewMsg::FindSubtitle).into()),
+            crumbs: Vec::new(),
+            mono: false,
+            badge: None,
+            subtitle_view: None,
+        },
+        ferrohealth_ui::view::action::ActionGroup::none(),
+    );
+    let Some(typed) = typed else {
+        let body = heading.then(info_note(t(tr(OverviewMsg::FindEmpty))));
+        return Drawn::page(tr(OverviewMsg::FindTitle), body);
+    };
+    let found = match load_found(typed).await {
+        Ok(found) => found,
+        Err(error) => {
+            let body = heading.then(crate::pages::common::refused(
+                tr(OverviewMsg::FindUnfinishedTitle),
+                &error,
+                None,
+            ));
+            return Drawn::page(tr(OverviewMsg::FindTitle), body);
         }
-    });
-    let body = awaited(async move {
-        let heading = page_heading(
-            Header {
-                title: tr(OverviewMsg::FindTitle).into(),
-                subtitle: Some(tr(OverviewMsg::FindSubtitle).into()),
-                crumbs: Vec::new(),
-                mono: false,
-                badge: None,
-                subtitle_view: None,
-            },
-            ferrohealth_ui::view::action::ActionGroup::none(),
-        )
-        .into_any();
-        let found = match model.await {
-            Ok(Some(found)) => found,
-            Ok(None) => {
-                return view! {
-                    {heading}
-                    {info_note(tr(OverviewMsg::FindEmpty))}
-                }
-                .into_any();
-            }
-            Err(error) => {
-                return view! {
-                    {heading}
-                    {crate::pages::common::refused(
-                        tr(OverviewMsg::FindUnfinishedTitle),
-                        &error,
-                        None,
-                    )}
-                }
-                .into_any();
-            }
-        };
-        let read = if found.hits.is_empty() {
-            let line = if found.id_shaped {
-                tr_with(
-                    OverviewMsg::FindNoIdHolds,
-                    &[("id", shortened(&found.typed).into())],
-                )
-            } else {
-                tr_with(
-                    OverviewMsg::FindNothingFor,
-                    &[("typed", found.typed.clone().into())],
-                )
-            };
-            view! {
-                {(!found.failed.is_empty())
-                    .then(|| crate::pages::common::warn_note(failed_line(&found.failed)))}
-                {info_note(line)}
-            }
-            .into_any()
+    };
+    let read = if found.hits.is_empty() {
+        let line = if found.id_shaped {
+            tr_with(
+                OverviewMsg::FindNoIdHolds,
+                &[("id", shortened(&found.typed).into())],
+            )
         } else {
-            find_results(found.clone().answer())
+            tr_with(
+                OverviewMsg::FindNothingFor,
+                &[("typed", found.typed.clone().into())],
+            )
         };
-        let card = list_card(ListCard {
+        let failed = if found.failed.is_empty() {
+            Html::empty()
+        } else {
+            crate::pages::common::warn_note(t(failed_line(&found.failed)))
+        };
+        failed.then(info_note(t(line)))
+    } else {
+        find_results(&locale, &found.clone().answer())
+    };
+    let card = list_card(
+        &locale,
+        ListCard {
             title: tr(OverviewMsg::FindOtherWays),
             count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(3)),
             order: None,
@@ -462,17 +438,12 @@ pub fn FindPage() -> impl IntoView {
             actions: None,
             body: ways(&found),
             pager: None,
-        });
-        view! {
-            {heading}
-            <div class="fui-list-page">{read} {card}</div>
-        }
-        .into_any()
-    });
-    view! {
-        <Title text=tr(OverviewMsg::FindTitle) />
-        {body}
-    }
+        },
+    );
+    let body = heading.then(h(format!(
+        r#"<div class="fui-list-page">{read}{card}</div>"#
+    )));
+    Drawn::page(tr(OverviewMsg::FindTitle), body)
 }
 
 #[cfg(test)]

@@ -133,7 +133,7 @@ mod tests {
             datetime_local_to_rfc3339("  2026-07-12T08:00  "),
             "2026-07-12T08:00:00Z"
         );
-        // Empty stays empty (the server fn rejects it before the round-trip).
+        // Empty stays empty (the save rejects it before the round-trip).
         assert_eq!(datetime_local_to_rfc3339(""), "");
         assert_eq!(datetime_local_to_rfc3339("  "), "");
     }

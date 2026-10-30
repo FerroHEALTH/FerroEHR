@@ -1075,6 +1075,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let support_watch = tokio::spawn(ferroehr::support::watch(SupportPeriod::current()));
     let pools = connect_pool(&config).await?;
     let pool = pools.clinical.clone();
+    // The partitioned parents' planner statistics, which autovacuum never
+    // collects: now and then hourly (#4453).
+    let parent_statistics = tokio::spawn(db::parent_statistics::scheduled(pools.clone()));
 
     // The declared deployment posture, over the clusters the pools actually
     // reached (#3226): `production` refuses here, `sandbox` says what is open.
@@ -1279,6 +1282,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
     }
     support_watch.abort();
+    parent_statistics.abort();
     if let Some(handle) = usage_report {
         handle.abort();
     }

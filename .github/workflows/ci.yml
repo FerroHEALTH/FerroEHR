@@ -257,13 +257,6 @@ jobs:
           # rustfmt compiles nothing — a restored target/registry cache is
           # pure download time here.
           cache: false
-      # The viewer's `view!` bodies are formatted by leptosfmt, which rustfmt
-      # leaves alone (#3814). Pinned here and in the ui-gates skill; leptosfmt
-      # runs first because its output moves where rustfmt breaks a chain.
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
-        with:
-          tool: leptosfmt@0.1.33
-      - run: leptosfmt --check app/ferroehr-viewer/src app/ferroehr-viewer/tests
       - run: cargo fmt --all --check
 
   # ── Always required: no AI/Claude attribution in commit messages ────────────
@@ -1146,8 +1139,7 @@ jobs:
   clippy:
     name: clippy
     needs: changes
-    # The three lanes below (workspace-minus-viewer, viewer ssr, viewer
-    # wasm hydrate) are this file's own recipe, so a change to it runs them
+    # The lane below is this file's own recipe, so a change to it runs it
     # (#2373).
     if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
@@ -1164,17 +1156,12 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           components: clippy
-          target: wasm32-unknown-unknown
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      # The viewer's `hydrate`/`ssr` features are mutually exclusive (a
-      # compile_error! guard per the Cargo book §Mutually exclusive features),
-      # so the workspace lane excludes it and the crate gets its own two
-      # per-feature lanes — the same split as /ui-gates. `--locked` everywhere:
-      # CI must fail on new commits only, never on registry drift
+      # The viewer is one server-rendered crate with no feature of its own
+      # (FerroUI 0.6), so the workspace lane covers it. `--locked`: CI must
+      # fail on new commits only, never on registry drift
       # (https://doc.rust-lang.org/cargo/faq.html#why-have-cargolock-in-version-control).
-      - run: cargo clippy --locked --workspace --exclude ferroehr-viewer --all-targets --all-features -- -D warnings
-      - run: cargo clippy --locked -p ferroehr-viewer --all-targets -- -D warnings
-      - run: cargo clippy --locked -p ferroehr-viewer --lib --target wasm32-unknown-unknown -- -D warnings
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 
   # ── The slim server: the optional-integration features, subtracted ──────────
   # The clippy job above compiles the workspace with --all-features, so nothing
@@ -1229,9 +1216,8 @@ jobs:
   # selection (the lane after this one clippies them natively); `openehr-sdt`
   # adds the Simplified Formats (`flat`) on top.
   # Nothing else in CI compiles those selections: the clippy job runs
-  # --all-features, and the viewer's wasm lane takes the crates with
-  # default-features = false. So the property was claimed by the manifests and
-  # checked by no lane at all.
+  # --all-features. So the property was claimed by the manifests and checked
+  # by no lane at all.
   #
   # Library target only, no --all-targets: the crates' dev-dependencies
   # (testkit -> sqlx, tokio -> mio) are native by construction and cannot build
@@ -1350,8 +1336,7 @@ jobs:
       # --document-private-items on both runs: stale intra-doc links can hide behind
       # non-pub items the public build never evaluates (#1838; measured
       # cost ~10s incremental over the public-only run).
-      - run: cargo doc --locked --workspace --exclude ferroehr-viewer --all-features --no-deps --document-private-items
-      - run: cargo doc --locked -p ferroehr-viewer --no-deps --document-private-items
+      - run: cargo doc --locked --workspace --all-features --no-deps --document-private-items
       # Doc tests live HERE, not in the pg18 test job: nextest cannot run
       # doctests, so `cargo test --doc` is its own compile (default features —
       # doctests document what a default consumer gets), and this job is ~1/10
@@ -1481,8 +1466,7 @@ jobs:
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-nextest
-      # The viewer is excluded from --all-features lanes (mutually exclusive
-      # hydrate/ssr, compile_error!-guarded) and has its own job below.
+      # The viewer has its own job below, which replays its recorded CDR.
       # --no-tests=pass: empty crates are expected until P17 (nextest exits 4 otherwise)
       # The shard index reaches the command through `env:`, never interpolated
       # into the script (the workflow-security rule in reliability.md).
@@ -1517,12 +1501,11 @@ jobs:
       - run: cargo build --locked --workspace --exclude ferroehr-viewer --all-features
 
   # ── The viewer's own build + unit tests ────────────────────────────────────
-  # The viewer compiles under `ssr`, a different feature configuration from the
-  # rest of the workspace, so it shares no build cache with them. In the old
-  # test job that cost 361 s of the critical path to run 551 tests in 2.3 s.
-  # It needs no database.
+  # The viewer links none of the CDR's application crates, so it shares little
+  # build cache with them. In the old test job that cost 361 s of the critical
+  # path to run 551 tests in 2.3 s. It needs no database.
   test-viewer:
-    name: build & test (viewer, ssr)
+    name: build & test (viewer)
     needs: changes
     if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
@@ -1895,7 +1878,7 @@ jobs:
 
   # ── Viewer + e2e test binaries, prebuilt in parallel (issue #335) ──────────
   # The second half of the compile-nothing-in-the-battery split: the host
-  # cargo-leptos build and the nextest test-binary compile were 8m32s of the
+  # viewer build and the nextest test-binary compile were 8m32s of the
   # measured battery step, all of it parallelizable with ui-e2e-binary. This
   # job builds both and ships them as one artifact; the battery job then only
   # composes, seeds, and drives the browser.
@@ -1930,11 +1913,10 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ui-e2e-console-stage
-          key: ui-e2e-console-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr-viewer/**', 'scripts/cargo-leptos.sh') }}
+          key: ui-e2e-console-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr-viewer/**') }}
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         with:
-          target: wasm32-unknown-unknown
           # Registry-only cache; sccache owns compilation caching (the same
           # split, for the same lockfile-rotation reason, as the jobs above).
           cache-targets: false
@@ -1943,11 +1925,7 @@ jobs:
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         with:
-          # wasm-bindgen pinned to the workspace's wasm-bindgen version;
-          # cargo-leptos resolves its external tools from PATH before its
-          # own downloader (which failed opaque on a runner), so it is
-          # preinstalled deterministically.
-          tool: cargo-nextest,cargo-leptos@0.3.11,wasm-bindgen@0.2.129
+          tool: cargo-nextest
       - name: Build the viewer + archive the e2e test binaries
         if: steps.viewer-cache.outputs.cache-hit != 'true'
         env:
@@ -1963,28 +1941,15 @@ jobs:
           CARGO_INCREMENTAL: "0"
         run: |
           set -euo pipefail
-          # ORDER IS LOAD-BEARING: the nextest archive step compiles the
-          # crate (tests + bin) under plain cargo, WITHOUT the LEPTOS_*
-          # compile-time env cargo-leptos sets — and leptos picks the served
-          # wasm FILENAME at compile time (leptos 0.8 hydration/mod.rs:
-          # `option_env!("LEPTOS_OUTPUT_NAME")` absent ⇒ it appends `_bg` to
-          # the preload path). An archive-after-leptos order clobbers the
-          # viewer binary with a `_bg.wasm`-referencing build while the site
-          # tree holds `<name>.wasm`, and every page 404s its wasm. Archive
-          # FIRST, cargo-leptos LAST, stage immediately.
           cargo nextest archive -p ferroehr-viewer \
             --archive-file ui-e2e-tests.tar.zst
-          bash scripts/cargo-leptos.sh build
+          cargo build --locked -p ferroehr-viewer --bin ferroehr-viewer
           # One staging tree = one artifact = one cache path. The viewer
           # binary's executable bit is restored by the battery job (GitHub
-          # artifacts do not preserve file permissions). hash.txt is the
-          # content-hash manifest the renderer reads the /pkg filenames back
-          # from; without it the viewer 404s its own hashed wasm.
-          mkdir -p ui-e2e-console-stage/site
+          # artifacts do not preserve file permissions).
+          mkdir -p ui-e2e-console-stage
           cp target/debug/ferroehr-viewer ui-e2e-console-stage/
-          cp target/debug/hash.txt ui-e2e-console-stage/
           cp ui-e2e-tests.tar.zst ui-e2e-console-stage/
-          cp -R target/site/. ui-e2e-console-stage/site/
       - name: sccache statistics
         if: always() && steps.viewer-cache.outputs.cache-hit != 'true'
         env:
@@ -2074,11 +2039,8 @@ jobs:
       - name: Place the prebuilt viewer where the harness expects it
         run: |
           set -euo pipefail
-          mkdir -p target/debug target/site
+          mkdir -p target/debug
           install -m0755 ui-e2e-console-stage/ferroehr-viewer target/debug/ferroehr-viewer
-          # leptos resolves the hash manifest as current_exe().parent()/hash.txt.
-          cp ui-e2e-console-stage/hash.txt target/debug/hash.txt
-          cp -R ui-e2e-console-stage/site/. target/site/
           test -f ui-e2e-console-stage/ui-e2e-tests.tar.zst
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Package the app image (COPY-only, seconds)
@@ -2148,10 +2110,8 @@ jobs:
       - name: Place the prebuilt viewer where the harness expects it
         run: |
           set -euo pipefail
-          mkdir -p target/debug target/site
+          mkdir -p target/debug
           install -m0755 ui-e2e-console-stage/ferroehr-viewer target/debug/ferroehr-viewer
-          cp ui-e2e-console-stage/hash.txt target/debug/hash.txt
-          cp -R ui-e2e-console-stage/site/. target/site/
           test -f ui-e2e-console-stage/ui-e2e-tests.tar.zst
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Package the app image (COPY-only, seconds)
@@ -2220,15 +2180,11 @@ jobs:
           name: ui-e2e-console
           path: ui-e2e-console-stage
       # docker/viewer/Dockerfile `runtime-prebuilt` COPYs
-      # bin/<arch>/ferroehr-viewer and site/ (with the hash.txt leptos reads
-      # beside the binary), the layout build-image.yml stages.
-      - name: Stage the viewer binary and site bundle
+      # bin/<arch>/ferroehr-viewer, the layout build-image.yml stages.
+      - name: Stage the viewer binary
         run: |
           set -euo pipefail
           install -m0755 ui-e2e-console-stage/ferroehr-viewer bin/amd64/ferroehr-viewer
-          mkdir -p site
-          cp -R ui-e2e-console-stage/site/. site/
-          cp ui-e2e-console-stage/hash.txt site/hash.txt
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Package the CDR image (COPY-only, seconds)
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -2287,8 +2243,7 @@ jobs:
   # The viewer's compose/local target (docker/viewer/Dockerfile
   # runtime-from-source), on the same terms as the server's above: the
   # published viewer image packages `runtime-prebuilt`, so a broken in-image
-  # build (a wasm-bindgen CLI the lock no longer matches, #4222) shipped
-  # unnoticed until a compose user built it.
+  # build shipped unnoticed until a compose user built it (#4222).
   viewer-image-from-source:
     name: viewer image (from source)
     needs: changes
@@ -2884,24 +2839,6 @@ jobs:
       - name: Every FerroPIX pin is one release, and its configurations read under it
         run: bash scripts/checks/ferropix-pins.sh
 
-  # Viewer tool-pin guard (#4222): the wasm-bindgen CLI must equal the
-  # wasm-bindgen Cargo.lock resolves, and every cargo-leptos pin must agree,
-  # or a viewer build in one lane fails its bindings step while CI is green.
-  viewer-tool-pins:
-    name: viewer-tool-pins
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: viewer tool-pin guard self-test
-        run: bash scripts/checks/viewer-tool-pins.sh --self-test
-      - name: viewer tool pins match Cargo.lock and one another
-        run: bash scripts/checks/viewer-tool-pins.sh
-
   # ── The one-check aggregate gate (the rust-analyzer/ruff pattern) ───────────
   # A single job that needs everything and passes iff nothing failed — skipped
   # jobs count as satisfied, exactly like branch protection treats them. Point
@@ -2975,7 +2912,6 @@ jobs:
       - compose-version-guard
       - quickstart-config
       - ferropix-pins
-      - viewer-tool-pins
       - crate-version
       - chart-version
       - chart-appversion

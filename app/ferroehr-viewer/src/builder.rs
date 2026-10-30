@@ -8,8 +8,8 @@
 //! is never string-concatenated**. Grammar/semantics authority:
 //! `docs/specs/openehr/QUERY/docs/AQL/`. The per-datatype criterion catalog
 //! follows the RM data types the Web Template exposes per node (`inputs`),
-//! executed against the CDR Query API. Compiles on both targets; the UI
-//! manipulates this state in WASM and the BFF validates through the same code.
+//! executed against the CDR Query API. The builder page posts this state
+//! and the BFF validates it through the same code.
 //!
 //! The lowering has an inverse: [`lift`] recognizes exactly the query shape
 //! [`lower`] emits and lifts a stored query's AQL back into the editable
@@ -17,7 +17,6 @@
 //! lossily.
 
 pub mod catalog;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod lift;
 pub mod lower;
 pub mod model;

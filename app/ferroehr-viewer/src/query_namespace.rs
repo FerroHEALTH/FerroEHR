@@ -4,8 +4,7 @@
 //! Namespace-derived stored-query grouping: the pure rules the `/queries`
 //! screen, the dashboard tiles, and both save flows share.
 //!
-//! Component-free plain Rust with ordinary unit tests, compiled for both
-//! the `ssr` and `hydrate` targets.
+//! Component-free plain Rust with ordinary unit tests.
 //!
 //! A stored query's group **is** the namespace of its qualified name. ITS-REST
 //! defines the stored-query identifier as `[{namespace}::]{query-name}`, with
@@ -25,7 +24,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::locale::Msg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::queries_api::StoredQueryRow;
 
 /// The heading for stored queries whose name carries no namespace.
@@ -39,7 +37,6 @@ pub const UNQUALIFIED_LABEL: &str = "unqualified";
 /// One derived group: the namespace (`None` for the unqualified bucket) and
 /// its member stored queries in listing order. A plain record — it is built
 /// from a listing, never stored.
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryNamespaceGroup {
     /// The namespace prefix shared by every member, or `None` when the members
@@ -347,7 +344,6 @@ pub fn next_minor(version: &str) -> Option<String> {
 /// Group a stored-query listing by the namespace of each name: namespaced
 /// groups first, sorted by namespace, then the unqualified bucket (omitted
 /// when empty). Members keep the CDR's listing order.
-#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn group_by_namespace(rows: &[StoredQueryRow]) -> Vec<QueryNamespaceGroup> {
     let mut named: std::collections::BTreeMap<String, Vec<StoredQueryRow>> =

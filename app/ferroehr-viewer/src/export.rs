@@ -3,14 +3,11 @@
 
 //! `RESULT_SET` export over a native `<form method="post">` download.
 //!
-//! A plain BFF axum route (NOT a `#[server]` fn), so the download itself is a
-//! form submission the client router never intercepts. It is not a no-JS path
-//! end to end: the forms only render on a hydrated results pane and their
-//! hidden inputs are `prop:value`-bound (nothing lands in SSR markup), so a
-//! WASM-less browser never reaches a filled form.
+//! A plain BFF axum route: each export of the results pane is a submit of the
+//! query's own form with `formaction`, so the download needs no script.
 //!
-//! The route enforces the viewer session exactly like every server fn (the
-//! public-endpoint rule) and runs the AQL through the same CDR client.
+//! The route enforces the viewer session exactly like every page and runs
+//! the AQL through the same CDR client.
 //!
 //! The query is sent to the CDR as-is (no `fetch`/`offset` paging): a
 //! query carrying its own `LIMIT` exports that window, and an unbounded

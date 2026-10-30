@@ -9,44 +9,33 @@
 //! `POST query/aql` (`docs/specs/openehr/ITS-REST/docs/query/`) with fixed,
 //! parse-validated AQL consts — user input never reaches the query text.
 //!
-//! Every co-located `#[server]` fn guards with
+//! Every read guards with
 //! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches client-visible state. Each tile resolves its
-//! `Result` inside its own suspense rather than through an `<ErrorBoundary>`,
-//! whose SSR'd fallback mismatches at hydration in leptos 0.8, so one failing
-//! section never blanks the dashboard.
+//! credential never reaches the page. Each tile draws its own `Result`, so
+//! one failing section never blanks the dashboard.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
 
 /// Total EHRs — a fixed count AQL. Validated by the `dashboard_aql_consts_parse` test.
-#[cfg(not(target_arch = "wasm32"))]
 const EHR_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e";
 /// Total compositions — a fixed count AQL.
-#[cfg(not(target_arch = "wasm32"))]
 const COMPOSITION_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c";
 /// Recent composition commit times, newest first, for the day-bucketed trend.
-#[cfg(not(target_arch = "wasm32"))]
 const TREND_AQL: &str = "SELECT v/commit_audit/time_committed/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c ORDER BY v/commit_audit/time_committed/value DESC";
 /// Rows pulled for the commit-activity trend before day-bucketing.
-#[cfg(not(target_arch = "wasm32"))]
 const TREND_FETCH: u32 = 500;
 
 /// Run a `SELECT COUNT(*)`-shaped AQL and read its single numeric cell (0 when
 /// the result set is not the expected 1×1 numeric shape).
-#[cfg(not(target_arch = "wasm32"))]
 async fn run_count_aql(
     state: &crate::state::AppState,
     session: &crate::session::ViewerSession,
@@ -87,10 +76,9 @@ async fn run_count_aql(
 /// normalized via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] on an unparseable result set.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn dashboard_counts() -> Result<(i64, i64, u32), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let ehrs = run_count_aql(&state, &session, EHR_COUNT_AQL).await?;
     let compositions = run_count_aql(&state, &session, COMPOSITION_COUNT_AQL).await?;
     let templates =
@@ -100,8 +88,6 @@ pub async fn dashboard_counts() -> Result<(i64, i64, u32), ViewerError> {
 
 /// One dashboard namespace tile: the derived group's heading, the summed match
 /// count of its member stored queries, and how many members that sum covers.
-///
-/// Fixed-size ints only, so it is WASM-safe over the server-fn boundary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NamespaceTile {
     /// The namespace, or the label for the bucket of names that carry none
@@ -129,11 +115,10 @@ pub struct NamespaceTile {
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors from
 /// the stored-query LISTING normalized (a failure there means no grouping at
 /// all); a failing member RUN is confined to its own tile's `matches: None`.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
     use futures::stream::StreamExt;
 
-    crate::session::require_session().await?;
+    crate::session::require_session()?;
     let rows = crate::queries_api::list_stored_queries().await?;
     let groups = crate::query_namespace::group_by_namespace(&rows);
 
@@ -141,7 +126,7 @@ pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
     // so every member runs, and ONE bounded stream drives every count across
     // ALL groups. The identifiers are collected into owned, group-indexed
     // triples BEFORE the stream: an async block borrowing out of `groups` is
-    // not general enough over lifetimes for the `#[server]` boundary's future.
+    // not general enough over lifetimes for the page's future.
     let members: Vec<(usize, String, String)> = groups
         .iter()
         .enumerate()
@@ -197,17 +182,18 @@ pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
 }
 
 /// The recent commit-activity trend, one [`ActivityPoint`] per calendar day
-/// ascending. Pulls the most recent composition commit times (fetch
-/// `TREND_FETCH`) and buckets them per day BFF-side with the shared
+/// ascending.
+///
+/// Pulls the most recent composition commit times (fetch `TREND_FETCH`) and
+/// buckets them per day BFF-side with the shared
 /// [`bucket_by_day`](crate::activity::bucket_by_day).
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
 /// normalized; [`ViewerError::Internal`] on an unparseable result set.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn commit_trend() -> Result<Vec<ActivityPoint>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1("query/aql");
     let body = serde_json::json!({
         "q": TREND_AQL,
@@ -237,7 +223,7 @@ pub async fn commit_trend() -> Result<Vec<ActivityPoint>, ViewerError> {
     Ok(crate::activity::bucket_by_day(&times))
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::{COMPOSITION_COUNT_AQL, EHR_COUNT_AQL, TREND_AQL};
 

@@ -32,17 +32,14 @@
 //! (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`
 //! §`physical_ehr_delete`), whose `ehr_id_does_not_exist` error is the `404`.
 //!
-//! Every `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first (a server fn is
-//! a public HTTP endpoint) and keeps the CDR credential server-side.
+//! Every read guards with
+//! [`require_session`](crate::session::require_session) first and keeps the
+//! CDR credential server-side.
 
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 use crate::locale::tr_with;
 use crate::system_api::ConformanceManifest;
@@ -53,9 +50,6 @@ use crate::system_api::ConformanceManifest;
 const ADMIN_ENDPOINT: &str = "/admin";
 
 /// Whether the CDR advertises its Admin API as mounted.
-///
-/// Carries only fixed-size, client-safe data — it crosses the server-fn
-/// boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AdminAvailability {
     /// The conformance manifest lists `/admin`: the group is mounted, so the
@@ -103,7 +97,6 @@ pub fn renders_admin_ops(probe: &Result<AdminAvailability, ViewerError>) -> bool
 /// [`ViewerError::CdrUnreachable`] on transport failure;
 /// [`ViewerError::Cdr`] / [`ViewerError::Internal`] when the manifest cannot
 /// be read.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn probe_admin_api() -> Result<AdminAvailability, ViewerError> {
     let manifest = crate::system_api::fetch_conformance_manifest().await?;
     Ok(availability_of(&manifest))
@@ -188,18 +181,17 @@ pub fn delete_failure_copy(object: &str, error: &ViewerError) -> String {
 /// [`ViewerError::Invalid`] for an empty id;
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn admin_delete_template(
-    /// The `template_id` of the OPT to delete.
+    // The `template_id` of the OPT to delete.
     template_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if template_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::NoTemplateIdDelete,
         )));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1(&format!(
         "admin/template/{}",
         urlencoding::encode(&template_id)
@@ -220,20 +212,19 @@ pub async fn admin_delete_template(
 /// [`ViewerError::Invalid`] for an empty name or version;
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn admin_delete_stored_query(
-    /// The qualified stored-query name (`[{namespace}::]{query-name}`).
+    // The qualified stored-query name (`[{namespace}::]{query-name}`).
     name: String,
-    /// The concrete `major.minor.patch` version to delete.
+    // The concrete `major.minor.patch` version to delete.
     version: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if name.trim().is_empty() || version.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::StoredQueryDeleteNeedsBothQualified,
         )));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1(&format!(
         "admin/query/{}/{}",
         urlencoding::encode(&name),
@@ -244,10 +235,12 @@ pub async fn admin_delete_stored_query(
     Ok(())
 }
 
-/// Physically delete an EHR and everything under it
-/// (`DELETE admin/ehr/{ehr_id}`) — SM `I_ADMIN_SERVICE.physical_ehr_delete`
+/// Physically delete an EHR and everything under it.
+///
+/// `DELETE admin/ehr/{ehr_id}`, SM `I_ADMIN_SERVICE.physical_ehr_delete`
 /// (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`): the
 /// precondition is `has_ehr`, and `ehr_id_does_not_exist` is the CDR's `404`.
+///
 /// This is NOT the openEHR logical delete — the versions, contributions and
 /// audit trail are gone.
 ///
@@ -256,16 +249,15 @@ pub async fn admin_delete_stored_query(
 /// [`ViewerError::Invalid`] for an empty id;
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn admin_delete_ehr(
-    /// The EHR to delete, with everything committed under it.
+    // The EHR to delete, with everything committed under it.
     ehr_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if ehr_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(ServerMsg::NoEhrIdDelete)));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state
         .cdr
         .rest_v1(&format!("admin/ehr/{}", urlencoding::encode(&ehr_id)));

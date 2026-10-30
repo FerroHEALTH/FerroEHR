@@ -42,15 +42,14 @@
 //!    inline rather than hiding.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
-//! Every co-located `#[server]` fn guards with
+//! Every read guards with
 //! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches client-visible state.
+//! credential never reaches the page.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 pub mod contribution;
@@ -58,15 +57,12 @@ pub mod party;
 pub mod relationship;
 pub mod tags;
 
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::error::ViewerError;
 use crate::locale::Msg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr_served, tr_with};
 use crate::uid::container_uid_of;
 
@@ -185,7 +181,6 @@ impl VersionedFamily {
     /// The CDR URL of `path` (a `demographic/...` path of this family): under
     /// the openEHR API for the released `versioned_party`, under the CDR's
     /// extensions root for the relationship container.
-    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn url(self, cdr: &crate::cdr::CdrClient, path: &str) -> String {
         match self {
@@ -233,7 +228,6 @@ impl DemographicResource {
     /// The CDR URL of `path` (a `demographic/...` path of this resource):
     /// under the openEHR API for a party, under the CDR's extensions root for
     /// a relationship.
-    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn url(self, cdr: &crate::cdr::CdrClient, path: &str) -> String {
         self.family().url(cdr, path)
@@ -261,7 +255,6 @@ impl DemographicResource {
 
 /// The typed refusal a server function answers when a caller hands it a
 /// segment outside the closed demographic route set.
-#[cfg(not(target_arch = "wasm32"))]
 fn unknown_segment(segment: &str, expected: &str) -> ViewerError {
     ViewerError::Invalid(format!(
         "{segment:?} is not a {expected} of the demographic API"
@@ -320,18 +313,17 @@ pub fn contribution_href(uid: &str) -> String {
 /// container or version included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when either body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_versioned_object(
-    /// Which versioned-object family the container belongs to, as its route
-    /// segment ([`VersionedFamily::segment`]).
+    // Which versioned-object family the container belongs to, as its route
+    // segment ([`VersionedFamily::segment`]).
     family: String,
-    /// The container id (`versioned_object_uid`).
+    // The container id (`versioned_object_uid`).
     versioned_object_uid: String,
-    /// The version whose envelope facts to read; empty reads the latest.
+    // The version whose envelope facts to read; empty reads the latest.
     version_uid: String,
 ) -> Result<VersionedObjectFacts, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let versioned = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let family = versioned.segment();
@@ -379,16 +371,15 @@ pub async fn fetch_versioned_object(
 /// included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the history is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_demographic_revision_history(
-    /// Which versioned-object family the container belongs to, as its route
-    /// segment ([`VersionedFamily::segment`]).
+    // Which versioned-object family the container belongs to, as its route
+    // segment ([`VersionedFamily::segment`]).
     family: String,
-    /// The container id (`versioned_object_uid`).
+    // The container id (`versioned_object_uid`).
     versioned_object_uid: String,
 ) -> Result<Vec<VersionEntry>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let family = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let url = family.url(
@@ -413,11 +404,13 @@ pub async fn fetch_demographic_revision_history(
     })
 }
 
-/// Resolve the `OBJECT_VERSION_ID` of the VERSION extant at `at_time` (a
-/// browser `datetime-local` value):
+/// Resolve the `OBJECT_VERSION_ID` of the VERSION extant at `at_time`.
+///
+/// For a browser `datetime-local` value:
 /// `GET /demographic/{family}/{versioned_object_uid}/version?version_at_time=…`
 /// — "If `version_at_time` is supplied, retrieves the VERSION extant _at
 /// specified time_" (`operations/versioned_party_version_get_at_time.yaml`).
+///
 /// The `200` body is a VERSION envelope whose `uid.value` is that
 /// `OBJECT_VERSION_ID`; the string is returned so the caller can pin it.
 ///
@@ -427,18 +420,17 @@ pub async fn fetch_demographic_revision_history(
 /// through; a non-2xx CDR answer (the `404` for no version at that time
 /// included, which the UI renders as an inline note) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn resolve_demographic_version_at_time(
-    /// Which versioned-object family the container belongs to, as its route
-    /// segment ([`VersionedFamily::segment`]).
+    // Which versioned-object family the container belongs to, as its route
+    // segment ([`VersionedFamily::segment`]).
     family: String,
-    /// The container id (`versioned_object_uid`).
+    // The container id (`versioned_object_uid`).
     versioned_object_uid: String,
-    /// The instant to resolve, as a `datetime-local` input value.
+    // The instant to resolve, as a `datetime-local` input value.
     at_time: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let family = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
@@ -468,7 +460,7 @@ pub async fn resolve_demographic_version_at_time(
 /// The document CONTENT reader is the RESOURCE route, not the VERSION route —
 /// the composition viewer's split: `GET /demographic/{segment}/{uid_based_id}`
 /// serves the party (or relationship) itself, and a `uid_based_id` "in the form
-/// of an OBJECT_VERSION_ID … is used to retrieve a specific known version"
+/// of an `OBJECT_VERSION_ID` … is used to retrieve a specific known version"
 /// (`operations/person_get.yaml`). The VERSION envelope facts come from
 /// [`fetch_versioned_object`] instead.
 ///
@@ -477,16 +469,15 @@ pub async fn resolve_demographic_version_at_time(
 /// [`ViewerError::Invalid`] when no version uid is given; CDR transport errors
 /// pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_demographic_version_document(
-    /// Which resource family the version belongs to, as its route segment
-    /// ([`DemographicResource::segment`]).
+    // Which resource family the version belongs to, as its route segment
+    // ([`DemographicResource::segment`]).
     resource: String,
-    /// The version to read, as a full `OBJECT_VERSION_ID`.
+    // The version to read, as a full `OBJECT_VERSION_ID`.
     version_uid: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let resource = DemographicResource::from_segment(&resource)
         .ok_or_else(|| unknown_segment(&resource, "resource"))?;
     let version_uid = version_uid.trim();
@@ -534,13 +525,12 @@ pub async fn fetch_demographic_version_document(
 /// through; a refusal or any non-`404` failure normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success) rather
 /// than being read as "not found".
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn resolve_party_kind(
-    /// The party id to place, in either `uid_based_id` form.
+    // The party id to place, in either `uid_based_id` form.
     uid: String,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PartyIdRequired)));
@@ -567,7 +557,6 @@ pub async fn resolve_party_kind(
     Ok(None)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a container body plus a VERSION body into [`VersionedObjectFacts`].
 /// Defensive throughout — an absent attribute reads as empty rather than
 /// failing the card.
@@ -605,7 +594,6 @@ fn parse_versioned_object(
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 pub(crate) fn json_str(value: &Value, path: &[&str]) -> String {
@@ -738,7 +726,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod parse_tests {
     use super::parse_versioned_object;
 

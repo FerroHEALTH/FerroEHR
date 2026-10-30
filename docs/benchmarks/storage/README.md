@@ -180,6 +180,8 @@ return rows before it is timed:
 | `wide_projection_population` | the same over the population, `LIMIT 50` |
 | `select_observation` | `SELECT o`, the whole OBSERVATION reassembled |
 | `select_composition_one_ehr` | `SELECT c` over one EHR |
+| `person_identifier_lookup` | a lookup of one person by an identifier value, `WHERE id/items[at0001]/value/id = $v` over the party store's `person_identifier` CLUSTERs (#4437) |
+| `ehr_by_subject` | a lookup of one EHR by the subject of its EHR_STATUS, `WHERE e/ehr_status/subject/external_ref/id/value = $u AND e/ehr_status/subject/external_ref/namespace = $n` (#4442) |
 | `aql_version_at_time` | a `VERSION v[commit_audit/time_committed <= …]` scope; named apart from the `storage_read` operation, since the compare step keys operations by name |
 
 Each entry carries its `statement`, the `rows` it returned and whether it ran

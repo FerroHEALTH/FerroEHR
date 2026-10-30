@@ -60,12 +60,6 @@ ignore = [
   # release (upgrade the day it ships).
   # https://rustsec.org/advisories/RUSTSEC-2023-0071
   { id = "RUSTSEC-2023-0071", reason = "no fix upstream; RSA verification only in the OIDC path, and the pgp signing path is off by default (digest mode) and key-algorithm-agnostic" },
-  # 2026-07-15: `paste` (proc-macro) is archived/unmaintained. utoipa-axum 0.3
-  # moved to `pastey` (2026-09-30), so the Leptos 0.8 family in the viewer is
-  # the only carrier left. Compile-time-only token pasting, no runtime code,
-  # no attack surface. DELETING EVENT: the first paste-free Leptos release.
-  # https://rustsec.org/advisories/RUSTSEC-2024-0436
-  { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro via the Leptos 0.8 family (viewer); no runtime surface" },
   # 2026-10-24 (#3965): crypto-bigint 0.5.5, timing variability in
   # operations meant to be constant-time; only 0.7.6 and later are fixed and
   # no release of pgp, cx448 or openidconnect leaves 0.5. The path argument
@@ -88,9 +82,6 @@ allow = [
   "MIT",
   "BSD-2-Clause",
   "BSD-3-Clause",
-  # Boost Software License (OSI-approved, permissive): xxhash-rust via
-  # leptos server_fn (the viewer, 2026-07-18).
-  "BSL-1.0",
   "ISC",
   "Zlib",
   "Unicode-3.0",

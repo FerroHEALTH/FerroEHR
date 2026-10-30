@@ -43,8 +43,7 @@ The AQL the form lowers to is shown under it, and is what Run sends.
 ![Build](img/queries/build.png)
 
 Every control is a field of the page's form, and Add and Remove post it, so
-Build works with JavaScript off. With the page's WebAssembly loaded, Add a
-data point and Remove work in place.
+Build works with JavaScript off.
 
 ### AQL
 
@@ -67,7 +66,7 @@ its own `LIMIT`, and the rows as a table.
 columns as lines over the first time column (or over the row order when there
 is none), one series per column with a legend; **Table** goes back, and the
 next **Run** keeps the view you chose. The table under the chart names each
-point by its time. With the page's WebAssembly loaded, pressing a legend entry
+point by its time. With FerroUI's scripts loaded, pressing a legend entry
 hides that series; the last one shown stays.
 
 ![Results as a chart](img/queries/results-chart.png)
@@ -75,7 +74,7 @@ hides that series; the last one shown stays.
 **Export** in the Results heading opens a menu of the formats: **CSV** and
 **JSON** download the rows. The query runs again on the viewer's server and
 the file arrives as `aql-export.csv` or `aql-export.json`. The menu works
-with no WebAssembly, and with no row Export is unavailable. The
+with JavaScript off, and with no row Export is unavailable. The
 viewer keeps no results between requests, so an export is always the CDR's
 answer at that moment.
 

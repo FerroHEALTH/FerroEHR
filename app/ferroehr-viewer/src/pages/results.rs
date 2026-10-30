@@ -15,28 +15,24 @@
 //! cannot hold another. No openEHR spec
 //! governs the viewer's pages: our own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Sorting, cell, data_table};
-use ferrohealth_ui::view::chart::{LineChart, Series};
+use ferrohealth_ui::view::chart::{ChartWords, LineChart, Series, line_chart};
 use ferrohealth_ui::view::results::{Export, ResultsPane, Shown, Switch, results_pane};
-use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
-use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::{ResultPage, cell_text};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::chart_model::AxisScale;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
 use crate::locale::queries::QueriesMsg;
-use crate::locale::{tr, tr_with};
+use crate::locale::{current, tr, tr_with};
+use crate::markup::{h, t};
 use crate::pages::common::{Refused, count, quiet, section};
 
 /// The name the view the results show rides as, so the next Run keeps it;
 /// the switch's own `shown` wins.
 const SHOWN_DEFAULT: &str = "default-shown";
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Whether the reader asked for the chart.
 fn chart_asked() -> bool {
     use ferrohealth_ui::view::results::SHOWN;
@@ -48,7 +44,6 @@ fn chart_asked() -> bool {
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The words of one result cell: a data value read as a person reads it (a
 /// quantity with its unit, a text, a code or a time by its value), anything
 /// else as the CDR sent it.
@@ -101,7 +96,6 @@ struct Plot {
     axis: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The numeric columns of a result set as a line chart over its first time
 /// column, or the row order; `None` when it has nothing to draw.
 fn plot(page: &ResultPage) -> Option<Plot> {
@@ -154,7 +148,7 @@ fn plot(page: &ResultPage) -> Option<Plot> {
 }
 
 /// The rows of a result set as a table.
-fn table(columns: &[String], rows: &[Vec<String>]) -> AnyView {
+fn table(columns: &[String], rows: &[Vec<String>]) -> Html {
     let columns: Vec<Column> = columns
         .iter()
         .map(|name| Column::owned(name.clone(), name.clone()))
@@ -162,27 +156,24 @@ fn table(columns: &[String], rows: &[Vec<String>]) -> AnyView {
     let rows = rows
         .iter()
         .map(|row| {
-            let cells = columns
+            let cells: Html = columns
                 .iter()
                 .zip(row.iter())
                 .enumerate()
                 .map(|(index, (column, words))| {
                     if index == 0 {
-                        view! {
-                            <th scope="row" data-role="title">
-                                <code>{words.clone()}</code>
-                            </th>
-                        }
-                        .into_any()
+                        h(format!(
+                            r#"<th scope="row" data-role="title"><code>{}</code></th>"#,
+                            t(words)
+                        ))
                     } else {
-                        cell(column, words.clone())
+                        cell(column, t(words))
                     }
                 })
-                .collect_view();
-            view! { <tr>{cells}</tr> }.into_any()
+                .collect();
+            h(format!("<tr>{cells}</tr>"))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     let caption = tr(QueriesMsg::ResultsTitle);
     data_table(DataTable {
         caption: &caption,
@@ -190,11 +181,10 @@ fn table(columns: &[String], rows: &[Vec<String>]) -> AnyView {
         sorting: Sorting::default(),
         body: Body::Rows(rows),
     })
-    .into_any()
 }
 
 /// A plot, drawn.
-fn chart(plot: Plot) -> AnyView {
+fn chart(plot: Plot) -> Html {
     let names: Vec<String> = plot.lines.iter().map(|line| line.name.clone()).collect();
     let series = plot
         .lines
@@ -214,7 +204,7 @@ fn chart(plot: Plot) -> AnyView {
     let x_labels = plot
         .times
         .iter()
-        .map(|(x, label)| (*x, ferrohealth_ui::view::time::reading(label)))
+        .map(|(x, label)| (*x, ferrohealth_ui::view::time::reading(&current(), label)))
         .collect();
     let chart = LineChart {
         id: "results-chart",
@@ -231,18 +221,18 @@ fn chart(plot: Plot) -> AnyView {
         x_labels,
         y_range: None,
     };
-    view! {
-        {line_chart(&chart, ChartWords::of_page())}
-        <p class="fui-small fui-muted">
-            {tr_with(QueriesMsg::ResultsAxis, &[("axis", plot.axis.into())])}
-        </p>
-    }
-    .into_any()
+    line_chart(&chart, ChartWords::of(&current())).then(h(format!(
+        r#"<p class="fui-small fui-muted">{}</p>"#,
+        t(tr_with(
+            QueriesMsg::ResultsAxis,
+            &[("axis", plot.axis.into())]
+        ))
+    )))
 }
 
 /// What a run answered: the rows as words, the chart they draw, and what the
 /// exports run again.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ran {
     /// The column names.
     columns: Vec<String>,
@@ -262,7 +252,6 @@ pub struct Ran {
     export: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl Ran {
     /// What `page` answered to `aql` with `parameters`.
     fn of(page: &ResultPage, aql: &str, parameters: &str) -> Self {
@@ -288,7 +277,7 @@ impl Ran {
 }
 
 /// The Results section of a run.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Answer {
     /// Nothing ran, and the line saying why.
     NotRun(String),
@@ -299,7 +288,6 @@ pub enum Answer {
 }
 
 impl Answer {
-    #[cfg(not(target_arch = "wasm32"))]
     /// The answer of a run of `aql` with `parameters`.
     #[must_use]
     pub fn of(outcome: Result<ResultPage, ViewerError>, aql: &str, parameters: &str) -> Self {
@@ -311,7 +299,7 @@ impl Answer {
 
     /// The Results section `answer` draws, or the one before a run.
     #[must_use]
-    pub fn view(answer: Option<Self>) -> AnyView {
+    pub fn view(answer: Option<Self>) -> Html {
         match answer {
             None => not_run(tr(QueriesMsg::ResultsNotRun)),
             Some(Self::NotRun(line)) => not_run(line),
@@ -337,7 +325,7 @@ fn export(route: &str, format: &str) -> Export {
 }
 
 /// The Results section of a run (E7).
-fn results(ran: Ran) -> AnyView {
+fn results(ran: Ran) -> Html {
     let total = ran.rows.len();
     let window = if ran.own_window {
         tr_with(QueriesMsg::ResultsWindowOwn, &[("count", count(total))])
@@ -352,31 +340,33 @@ fn results(ran: Ran) -> AnyView {
     let numeric = ran.plot.is_some();
     let (shown, body) = match ran.plot.filter(|_| ran.chart) {
         Some(plot) => (Shown::Chart, chart(plot)),
-        None if total == 0 => (Shown::Table, ().into_any()),
+        None if total == 0 => (Shown::Table, Html::empty()),
         None => (Shown::Table, table(&ran.columns, &ran.rows)),
     };
-    let body = view! {
-        <input type="hidden" name=SHOWN_DEFAULT value=asked.key() />
-        <input type="hidden" name="q" value=ran.aql />
-        <input type="hidden" name="parameters_json" value=ran.parameters />
-        {body}
-    }
-    .into_any();
-    results_pane(ResultsPane {
-        title: tr(QueriesMsg::ResultsTitle),
-        count: u64::try_from(total).unwrap_or(u64::MAX),
-        numeric,
-        shown,
-        switch: Switch::Form { form: None },
-        csv: export(&ran.export, "csv"),
-        json: export(&ran.export, "json"),
-        window,
-        body,
-    })
+    let body = h(format!(
+        r#"<input type="hidden" name="{SHOWN_DEFAULT}" value="{}"><input type="hidden" name="q" value="{}"><input type="hidden" name="parameters_json" value="{}">{body}"#,
+        asked.key(),
+        t(&ran.aql),
+        t(&ran.parameters)
+    ));
+    results_pane(
+        &current(),
+        ResultsPane {
+            title: tr(QueriesMsg::ResultsTitle),
+            count: u64::try_from(total).unwrap_or(u64::MAX),
+            numeric,
+            shown,
+            switch: Switch::Form { form: None },
+            csv: export(&ran.export, "csv"),
+            json: export(&ran.export, "json"),
+            window,
+            body,
+        },
+    )
 }
 
 /// The Results section before a run.
-fn not_run(line: String) -> AnyView {
+fn not_run(line: String) -> Html {
     section(Some(tr(QueriesMsg::ResultsTitle)), None, None, quiet(line))
 }
 

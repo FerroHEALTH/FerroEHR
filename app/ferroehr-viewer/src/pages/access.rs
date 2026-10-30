@@ -14,6 +14,7 @@
 //! request. No openEHR spec governs the viewer: our own design.
 
 use ferrohealth_smart::openehr::smart_scopes::{self, Permissions, SmartScope};
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::scope::{
@@ -21,12 +22,12 @@ use ferrohealth_ui::view::scope::{
 };
 use ferrohealth_ui::view::surface::{Header, definitions, page_heading};
 use ferrohealth_ui::view::transform::{Density, Run, RunState, run_button, transform_options};
-use leptos::prelude::*;
-use leptos_meta::Title;
 
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, t};
 use crate::pages::common::{card_panel, quiet, section};
+use crate::routes::Drawn;
 use crate::scopes::GrantDetail;
 
 /// The grant FerroUI draws for `raw`, built from the CDR's grammar: its
@@ -116,16 +117,13 @@ pub fn grants_of(claim: &str) -> Vec<ScopeGrant> {
 }
 
 /// Your access.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
+/// Your access.
 #[expect(
     clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+    reason = "one page: who is signed in, the scopes held and the previewer"
 )]
-#[component]
-pub fn AccessPage() -> impl IntoView {
+#[must_use]
+pub fn page() -> Drawn {
     let session = crate::request::signed();
     let idle = crate::request::settings().idle_minutes;
     let (who, how, method, scopes) = match &session {
@@ -147,13 +145,16 @@ pub fn AccessPage() -> impl IntoView {
     let facts = definitions(vec![
         (
             tr(ConsoleMsg::AccessSignedInAs),
-            view! { <strong>{who}</strong> }.into_any(),
+            h(format!("<strong>{}</strong>", t(who))),
         ),
-        (tr(ConsoleMsg::AccessHow), how.into_any()),
-        (tr(ConsoleMsg::AccessDecides), policy.note.into_any()),
+        (tr(ConsoleMsg::AccessHow), t(how)),
+        (tr(ConsoleMsg::AccessDecides), t(policy.note)),
         (
             tr(ConsoleMsg::AccessSession),
-            tr_with(ConsoleMsg::AccessSessionEnds, &[("minutes", idle.into())]).into_any(),
+            t(tr_with(
+                ConsoleMsg::AccessSessionEnds,
+                &[("minutes", idle.into())],
+            )),
         ),
     ]);
     let claim = scopes.join(" ");
@@ -171,29 +172,26 @@ pub fn AccessPage() -> impl IntoView {
             Some(tr(ConsoleMsg::AccessScopes)),
             Some(count),
             None,
-            scope_grants(tr(ConsoleMsg::AccessScopes), grants),
+            scope_grants(&current(), &tr(ConsoleMsg::AccessScopes), grants),
         )
     };
     let typed = crate::request::query("scope").unwrap_or_default();
     let previewed = if typed.is_empty() {
         quiet(tr(ConsoleMsg::AccessPreviewEmpty))
     } else {
-        scope_grants(tr(ConsoleMsg::AccessPreviewed), grants_of(&typed))
+        scope_grants(
+            &current(),
+            &tr(ConsoleMsg::AccessPreviewed),
+            grants_of(&typed),
+        )
     };
     let field = Field::new("scope", tr(ConsoleMsg::AccessScopeField))
         .holds_id()
-        .view(view! {
-            <input
-                id="scope"
-                name="scope"
-                type="text"
-                class="fui-input fui-mono"
-                spellcheck="false"
-                autocomplete="off"
-                value=typed
-                placeholder=tr(ConsoleMsg::AccessScopePlaceholder)
-            />
-        });
+        .view(h(format!(
+            r#"<input id="scope" name="scope" type="text" class="fui-input fui-mono" spellcheck="false" autocomplete="off" value="{}" placeholder="{}">"#,
+            t(typed),
+            t(tr(ConsoleMsg::AccessScopePlaceholder))
+        )));
     let run = run_button(Run {
         id: "scope-read".to_owned(),
         label: tr(ConsoleMsg::AccessReadIt),
@@ -203,26 +201,23 @@ pub fn AccessPage() -> impl IntoView {
         operation: None,
         state: RunState::Ready,
     });
-    let preview = view! {
-        <form method="get" action="/access">
-            {transform_options(Density::Plain, field, run)}
-        </form>
-        {previewed}
-    };
-    let body = card_panel(view! {
-        {section(Some(tr(ConsoleMsg::AccessWho)), None, None, facts)}
-        {held}
-        {section(
+    let preview = h(format!(
+        r#"<form method="get" action="/access">{}</form>{previewed}"#,
+        transform_options(Density::Plain, field, run)
+    ));
+    let body = card_panel(Html::join([
+        section(Some(tr(ConsoleMsg::AccessWho)), None, None, facts),
+        held,
+        section(
             Some(tr(ConsoleMsg::AccessPreview)),
             None,
             None,
-            view! {
-                {ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::AccessPreviewIntro))}
-                {preview}
-            },
-        )}
-    });
+            ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::AccessPreviewIntro))
+                .then(preview),
+        ),
+    ]));
     let heading = page_heading(
+        &current(),
         Header {
             title: tr(Msg::YourAccess).into(),
             subtitle: Some(tr(ConsoleMsg::AccessSubtitle).into()),
@@ -233,11 +228,10 @@ pub fn AccessPage() -> impl IntoView {
         },
         ferrohealth_ui::view::action::ActionGroup::none(),
     );
-    view! {
-        <Title text=tr(Msg::YourAccess) />
-        {heading}
-        <div class="fui-stack">{body}</div>
-    }
+    Drawn::page(
+        tr(Msg::YourAccess),
+        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
+    )
 }
 
 #[cfg(test)]

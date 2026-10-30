@@ -4,16 +4,17 @@
 # Browser-driven login against the BUILT viewer image (issue #2871).
 #
 # The asset-chain smoke beside this one proves the pushed image SERVES every
-# /pkg asset its own page references. Nothing proved a browser can log in
+# FerroUI asset its own page references. Nothing proved a browser can log in
 # through them: the host `scripts/ui-e2e.sh` battery drives a browser, but at a
-# viewer cargo-leptos built on the runner, never at the shipped artifact. This
+# viewer built on the runner, never at the shipped artifact. This
 # closes that gap by driving real Chrome over the W3C WebDriver protocol
 # (curl + jq — this repository authors no JavaScript) and asserting BOTH
 # halves of a working login:
 #
-#   1. the shipped WASM attaches: the hydrated app marks <body> — a viewer
-#      whose bundle never loads still logs in through the server-rendered
-#      form (the #2164 class), so a login alone passes on a broken bundle;
+#   1. the shipped scripts attach: FerroUI's loader marks the root element
+#      once it has imported the page's modules; a viewer whose scripts never
+#      load still logs in through the server-rendered form (the #2164
+#      class), so a login alone passes on a broken asset chain;
 #   2. the browser posts the credentials through the sign-in card's form and
 #      lands on the authenticated Dashboard. The Basic form is a plain POST
 #      to the page itself, `/login`, which answers accepted credentials with
@@ -100,8 +101,8 @@ curl -sf "$DRIVER_URL/status" | jq -e '.value.ready' >/dev/null || {
   exit 1
 }
 
-# The performance log is what distinguishes the hydrated `fetch` dispatch from
-# the no-JS form navigation; the browser log carries any WASM panic.
+# The performance log shows the Document POST of the sign-in form; the
+# browser log carries any module error.
 SESSION=$(curl -sS -X POST "$DRIVER_URL/session" \
   -H 'Content-Type: application/json' \
   -d '{"capabilities":{"alwaysMatch":{"browserName":"chrome",
@@ -157,20 +158,18 @@ done
   dump_browser_log
   exit 1
 }
-# The page is server-rendered and its no-JS form works by design, so typing
-# before the WASM hydrates posts a document and reads as the #2164 defect
-# although the bundle may attach a moment later. Wait (bounded) for the mark
-# FerroUI's hydrate writes on the root element once the page has hydrated
-# (`data-ferroui-hydrated`); a bundle that never hydrates still fails, with
-# its own message.
-HYDRATED=""
+# The page is server-rendered and its form works with no script by design.
+# Wait (bounded) for the mark FerroUI's loader writes on the root element
+# once it has imported the page's modules (`data-fui-script`); scripts that
+# never load fail here, with their own message.
+SCRIPTED=""
 for _ in $(seq 1 30); do
-  HYDRATED=$(find_element 'html[data-ferroui-hydrated]')
-  [[ -n "$HYDRATED" ]] && break
+  SCRIPTED=$(find_element 'html[data-fui-script]')
+  [[ -n "$SCRIPTED" ]] && break
   sleep 1
 done
-[[ -n "$HYDRATED" ]] || {
-  echo "::error::the viewer page never hydrated within 30 s: the shipped WASM did not attach (the #2164 class)"
+[[ -n "$SCRIPTED" ]] || {
+  echo "::error::FerroUI's scripts never attached to the viewer page within 30 s (the #2164 class)"
   dump_browser_log
   exit 1
 }
@@ -255,4 +254,4 @@ grep -qE '^Document true 3[0-9]{2}$' <<<"$LOGIN_POSTS" || {
 }
 
 dump_browser_log
-echo "── the viewer image logs in through a real browser: WASM hydrated, sign-in form POST redirected, Dashboard reached"
+echo "── the viewer image logs in through a real browser: scripts attached, sign-in form POST redirected, Dashboard reached"

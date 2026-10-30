@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# Screenshot freshness (.claude/rules/leptos-ui.md): a change to the viewer UI
+# Screenshot freshness (.claude/rules/console-ui.md): a change to the viewer UI
 # re-captures the published book screenshots in the same pull request.
 #
 # The paths are read from the merge base of <base> and <head> (`base...head`),

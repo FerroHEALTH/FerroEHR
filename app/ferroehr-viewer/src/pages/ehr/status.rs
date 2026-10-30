@@ -16,43 +16,36 @@
 //! the viewer's pages: our own design.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::diagnostics::DiagnosticsWords;
 use ferrohealth_ui::view::form::keyed_check_field;
+use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked};
 use ferrohealth_ui::view::surface::{Crumb, Header, Mode, definitions, editor_heading};
 use ferrohealth_ui::view::versions::{
     Standing, Version, VersionHistory, older_version, version_history,
 };
-use ferrohealth_ui::widget::editor::EditorWords;
-#[cfg(not(target_arch = "wasm32"))]
-use ferrohealth_ui::widget::identifier::{Domain, KEEP, Masked};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::status::{
     EhrStatusState, fetch_ehr_status, fetch_ehr_status_version, fetch_status_revision_history,
     fetch_status_version_at_time, fetch_versioned_status, parse_status_state, update_ehr_status,
 };
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
-use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, message, tr, tr_with};
+use crate::locale::{Msg, current, message, tr, tr_with};
+use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, docked, document_section,
-    drawn, page_model, panel, plain_section, section, short, shortened, version_number,
+    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section, drawn, panel,
+    plain_section, section, short, shortened, version_number,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::{is_status, version_uid_at};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
+use crate::routes::Drawn;
 
-#[cfg(not(target_arch = "wasm32"))]
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's JSON wire to mask the subject in the document it shows"
@@ -75,7 +68,7 @@ fn masked_document(body: &str) -> String {
 }
 
 /// The version history (E2) of the status, the version in view marked.
-fn history(ehr_id: &str, versions: &[VersionEntry], reading: Option<&str>) -> AnyView {
+fn history(ehr_id: &str, versions: &[VersionEntry], reading: Option<&str>) -> Html {
     let latest = versions.first().map(|version| version.version_id.clone());
     let rows = versions
         .iter()
@@ -98,23 +91,26 @@ fn history(ehr_id: &str, versions: &[VersionEntry], reading: Option<&str>) -> An
                 change: version.change_type.clone(),
                 committer: version.committer.clone(),
                 when: ago(&version.committed),
-                contribution: tr(RecordsMsg::NoneShown).into_any(),
+                contribution: t(tr(RecordsMsg::NoneShown)),
             }
         })
         .collect();
-    version_history(VersionHistory {
-        caption: tr(RecordsMsg::StatusVersions),
-        versions: rows,
-        at_time: Some(at_time_row(
-            tab_href(ehr_id, EhrTab::Status),
-            &crate::request::query("at").unwrap_or_default(),
-            tr(RecordsMsg::StatusAtTimeOpens),
-        )),
-    })
+    version_history(
+        &current(),
+        VersionHistory {
+            caption: tr(RecordsMsg::StatusVersions),
+            versions: rows,
+            at_time: Some(at_time_row(
+                tab_href(ehr_id, EhrTab::Status),
+                &crate::request::query("at").unwrap_or_default(),
+                tr(RecordsMsg::StatusAtTimeOpens),
+            )),
+        },
+    )
 }
 
 /// The status version the tab shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Shown {
     /// The version history, or the CDR's refusal of it.
     versions: Result<Vec<VersionEntry>, Refused>,
@@ -133,7 +129,7 @@ struct Shown {
 }
 
 /// The Status tab's model: the version shown, or why none is.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum StatusPanel {
     /// The version shown.
     Shown(Box<Shown>),
@@ -146,19 +142,15 @@ enum StatusPanel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_status(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<EhrModel<StatusPanel>, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_status(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_status`] reads, on the server.
+/// What [`load_status`] reads.
 async fn read_status(ehr_id: String) -> EhrModel<StatusPanel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |facts| {
         let asked = crate::request::query("version");
@@ -216,11 +208,8 @@ async fn read_status(ehr_id: String) -> EhrModel<StatusPanel> {
 
 /// The rows of the version shown: its number and, when the CDR answered
 /// them, its envelope facts.
-fn fact_rows(version_uid: &str, facts: Option<&VersionedObjectFacts>) -> Vec<(String, AnyView)> {
-    let mut rows = vec![(
-        tr(RecordsMsg::FactVersion),
-        version_number(version_uid).into_any(),
-    )];
+fn fact_rows(version_uid: &str, facts: Option<&VersionedObjectFacts>) -> Vec<(String, Html)> {
+    let mut rows = vec![(tr(RecordsMsg::FactVersion), t(version_number(version_uid)))];
     if let Some(facts) = facts {
         rows.push((
             tr(RecordsMsg::FactContribution),
@@ -228,18 +217,15 @@ fn fact_rows(version_uid: &str, facts: Option<&VersionedObjectFacts>) -> Vec<(St
         ));
         rows.push((
             tr(RecordsMsg::FactSigned),
-            tr(if facts.signed { Msg::Yes } else { Msg::No }).into_any(),
+            t(tr(if facts.signed { Msg::Yes } else { Msg::No })),
         ));
-        rows.push((
-            tr(RecordsMsg::FactLifecycle),
-            facts.lifecycle_state.clone().into_any(),
-        ));
+        rows.push((tr(RecordsMsg::FactLifecycle), t(&facts.lifecycle_state)));
     }
     rows
 }
 
 /// The Status tab's panel.
-fn status_panel(ehr_id: &str, shown: StatusPanel) -> AnyView {
+fn status_panel(ehr_id: &str, shown: StatusPanel) -> Html {
     let shown = match shown {
         StatusPanel::Shown(shown) => *shown,
         StatusPanel::Refused(refusal) => return panel(plain_section(refusal.view())),
@@ -261,6 +247,7 @@ fn status_panel(ehr_id: &str, shown: StatusPanel) -> AnyView {
         .filter(|number| **number != latest_number)
         .map(|number| {
             plain_section(older_version(
+                &current(),
                 number,
                 count,
                 tab_href(ehr_id, EhrTab::Status),
@@ -280,10 +267,7 @@ fn status_panel(ehr_id: &str, shown: StatusPanel) -> AnyView {
         Some(tr(RecordsMsg::StatusThisVersion)),
         None,
         edit,
-        view! {
-            {definitions(rows)}
-            {refused_facts}
-        },
+        definitions(rows).then(opt(refused_facts)),
     );
     let document = document_section(
         tr_with(
@@ -310,56 +294,45 @@ fn status_panel(ehr_id: &str, shown: StatusPanel) -> AnyView {
         ),
     };
     let queryable = (!is_queryable).then(|| {
-        plain_section(crate::pages::common::info_note(tr(
+        plain_section(crate::pages::common::info_note(t(tr(
             RecordsMsg::StatusNotQueryable,
-        )))
+        ))))
     });
-    panel(view! {
-        {notice}
-        {queryable}
-        {this}
-        {section(
+    panel(Html::join([
+        opt(notice),
+        opt(queryable),
+        this,
+        section(
             Some(tr(RecordsMsg::StatusDocument)),
             None,
             None,
-            view! {
-                {ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::StatusDocumentIntro))}
-            },
-        )}
-        {document}
-        {history}
-    })
+            ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::StatusDocumentIntro)),
+        ),
+        document,
+        history,
+    ]))
 }
 
 /// An EHR's Status tab.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn StatusTab() -> impl IntoView {
+pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(
         RecordsMsg::StatusTitle,
         &[("id", shortened(&ehr_id).into())],
     );
-    let model = page_model!(load_status(ehr_id.clone()));
-    let body = drawn(model, move |model| {
+    let body = drawn(load_status(ehr_id.clone()).await, |model| {
         ehr_view(&ehr_id, EhrTab::Status, model, |shown| {
             status_panel(&ehr_id, shown)
         })
     });
-    view! {
-        <Title text=title />
-        {body}
-    }
+    Drawn::page(title, body)
 }
 
 /// The id of Edit status's form.
 const EDIT_FORM: &str = "status-edit";
 
 /// A save the CDR refused.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Unsaved {
     /// The refusal.
     refusal: Refused,
@@ -368,7 +341,7 @@ struct Unsaved {
 }
 
 /// What Edit status's form holds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Editor {
     /// The id of the version the edit is based on.
     opened_uid: String,
@@ -387,7 +360,7 @@ struct Editor {
 }
 
 /// Edit status's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum EditModel {
     /// The form.
     Editor(Box<Editor>),
@@ -402,23 +375,19 @@ enum EditModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_edit(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<EditModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_edit(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_edit`] reads, on the server.
+/// What [`load_edit`] reads.
 async fn read_edit(ehr_id: String) -> EditModel {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
-        leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Status));
+        crate::request::redirect(&tab_href(&ehr_id, EhrTab::Status));
         return EditModel::Left;
     }
     let current = match fetch_ehr_status(ehr_id.clone()).await {
@@ -494,11 +463,7 @@ async fn read_edit(ehr_id: String) -> EditModel {
 }
 
 /// Edit status's form, its decision bar docked.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one editor: its refusal, its docked decisions, its flags and its document"
-)]
-fn edit_form(ehr_id: &str, editor: Editor) -> AnyView {
+fn edit_form(ehr_id: &str, editor: Editor) -> Html {
     let Editor {
         opened_uid,
         current_uid,
@@ -516,26 +481,21 @@ fn edit_form(ehr_id: &str, editor: Editor) -> AnyView {
     };
     let top = unsaved.map(|unsaved| {
         let reload = unsaved.conflict.then(|| {
-            view! {
-                <div class="fui-cluster">
-                    {ferrohealth_ui::view::button::link_button(
-                        format!("{}/edit", tab_href(ehr_id, EhrTab::Status)),
-                        ferrohealth_ui::view::button::Variant::Secondary,
-                        Some(Glyph::REFRESH_CW),
-                        tr_with(
-                            RecordsMsg::EditorReloadVersion,
-                            &[("version", version_number(&current_uid).into())],
-                        ),
-                    )}
-                    <span class="fui-small fui-muted">{tr(RecordsMsg::EditorReloadReplaces)}</span>
-                </div>
-            }
+            h(format!(
+                r#"<div class="fui-cluster">{}<span class="fui-small fui-muted">{}</span></div>"#,
+                ferrohealth_ui::view::button::link_button(
+                    format!("{}/edit", tab_href(ehr_id, EhrTab::Status)),
+                    ferrohealth_ui::view::button::Variant::Secondary,
+                    Some(Glyph::REFRESH_CW),
+                    tr_with(
+                        RecordsMsg::EditorReloadVersion,
+                        &[("version", version_number(&current_uid).into())],
+                    ),
+                ),
+                t(tr(RecordsMsg::EditorReloadReplaces))
+            ))
         });
-        view! {
-            {unsaved.refusal.view()}
-            {reload}
-        }
-        .into_any()
+        unsaved.refusal.view().then(opt(reload))
     });
     let next = version_number(&opened_uid).parse::<u32>().map_or_else(
         |_| tr(Msg::EditorSave),
@@ -553,101 +513,60 @@ fn edit_form(ehr_id: &str, editor: Editor) -> AnyView {
         save: next,
         blocked: conflict.then(|| tr(RecordsMsg::EditorReloadFirst)),
     });
-    let flags = view! {
-        {keyed_check_field(
+    let check = |name: &str, checked: bool| {
+        h(format!(
+            r#"<input type="hidden" name="{name}" value="off"><input type="checkbox" id="{name}" name="{name}" class="fui-checkbox"{}>"#,
+            flag("checked", checked)
+        ))
+    };
+    let flags = Html::join([
+        keyed_check_field(
             "is_queryable".to_owned(),
             tr(RecordsMsg::FlagQueryable),
             tr(RecordsMsg::StatusQueryableHelp),
-            view! {
-                <input type="hidden" name="is_queryable" value="off" />
-                <input
-                    type="checkbox"
-                    id="is_queryable"
-                    name="is_queryable"
-                    class="fui-checkbox"
-                    checked=queryable
-                />
-            },
-        )}
-        {keyed_check_field(
+            check("is_queryable", queryable),
+        ),
+        keyed_check_field(
             "is_modifiable".to_owned(),
             tr(RecordsMsg::FlagModifiable),
             tr(RecordsMsg::StatusModifiableHelp),
-            view! {
-                <input type="hidden" name="is_modifiable" value="off" />
-                <input
-                    type="checkbox"
-                    id="is_modifiable"
-                    name="is_modifiable"
-                    class="fui-checkbox"
-                    checked=modifiable
-                />
-            },
-        )}
-    };
-    let editor = view! {
-        <CodeEditor
-            setup=EditorSetup {
-                field: EditorField::OtherDetails,
-                language: EditorLanguage::Json,
-                text: details,
-                opened: Some(opened_details),
-                marks: Vec::new(),
-                label: tr(RecordsMsg::StatusOtherDetails),
-                lead: tr(RecordsMsg::EditorJson),
-                facts: vec![tr(Msg::EditorUtf8)],
-                findings: None,
-            }
-            words=EditorWords::of_page()
-            diagnostics=DiagnosticsWords::of_page()
-        />
-    };
-    view! {
-        {top}
-        <form
-            id=EDIT_FORM
-            method="post"
-            action=format!("{}/edit", tab_href(ehr_id, EhrTab::Status))
-        >
-            <input type="hidden" name="version" value=opened_uid />
-            {card_panel(
-                view! {
-                    {section(Some(tr(RecordsMsg::StatusCapabilities)), None, None, flags)}
-                    {section(
-                        Some(tr(RecordsMsg::StatusOtherDetails)),
-                        None,
-                        None,
-                        view! {
-                            {ferrohealth_ui::view::surface::section_intro(
-                                tr(RecordsMsg::StatusOtherDetailsIntro),
-                            )}
-                            {editor}
-                        },
-                    )}
-                },
-            )}
-        </form>
-    }
-    .into_any()
+            check("is_modifiable", modifiable),
+        ),
+    ]);
+    let editor = code_editor(EditorSetup {
+        field: EditorField::OtherDetails,
+        language: EditorLanguage::Json,
+        text: details,
+        opened: Some(opened_details),
+        marks: Vec::new(),
+        label: tr(RecordsMsg::StatusOtherDetails),
+        lead: tr(RecordsMsg::EditorJson),
+        facts: vec![tr(Msg::EditorUtf8)],
+        findings: None,
+    });
+    let sections =
+        section(Some(tr(RecordsMsg::StatusCapabilities)), None, None, flags).then(section(
+            Some(tr(RecordsMsg::StatusOtherDetails)),
+            None,
+            None,
+            ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::StatusOtherDetailsIntro))
+                .then(editor),
+        ));
+    opt(top).then(h(format!(
+        r#"<form id="{EDIT_FORM}" method="post" action="{action}"><input type="hidden" name="version" value="{version}">{panel}</form>"#,
+        action = t(format!("{}/edit", tab_href(ehr_id, EhrTab::Status))),
+        version = t(&opened_uid),
+        panel = card_panel(sections),
+    )))
 }
 
 /// Edit status.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn StatusEditPage() -> impl IntoView {
+pub async fn edit_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_edit(ehr_id.clone()));
-    let body = docked(model, dock_promise, {
-        let ehr_id = ehr_id.clone();
-        move |model| match model {
-            EditModel::Editor(editor) => edit_form(&ehr_id, *editor),
-            EditModel::Refused(refusal) => refusal.view(),
-            EditModel::Left => ().into_any(),
-        }
+    let body = drawn(load_edit(ehr_id.clone()).await, |model| match model {
+        EditModel::Editor(editor) => edit_form(&ehr_id, *editor),
+        EditModel::Refused(refusal) => refusal.view(),
+        EditModel::Left => Html::empty(),
     });
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(
@@ -655,6 +574,7 @@ pub fn StatusEditPage() -> impl IntoView {
         tab_href(&ehr_id, EhrTab::Status),
     ));
     let heading = editor_heading(
+        &current(),
         message(RecordsMsg::EditorTitle),
         &Mode::Editing(tr(RecordsMsg::EhrTabStatus)),
         Header {
@@ -667,11 +587,10 @@ pub fn StatusEditPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    view! {
-        <Title text=tr(RecordsMsg::StatusEditTitle) />
-        {heading}
-        <div class="fui-stack">{body}</div>
-    }
+    Drawn::page(
+        tr(RecordsMsg::StatusEditTitle),
+        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
+    )
 }
 
 #[cfg(test)]
@@ -684,7 +603,7 @@ mod tests {
 
     #[test]
     fn a_refused_envelope_draws_its_refusal_where_the_facts_would_be() {
-        let html = leptos::prelude::Owner::new().with(|| {
+        let html = {
             let shown = Shown {
                 versions: Err(Refused::new(
                     tr(RecordsMsg::StatusHistoryRefused),
@@ -703,13 +622,15 @@ mod tests {
                 document: "{}".to_owned(),
                 is_queryable: true,
             };
-            leptos::prelude::RenderHtml::to_html(status_panel(
+            String::from(status_panel(
                 "8849182c-82ad-4088-a07f-48ead4180515",
                 StatusPanel::Shown(Box::new(shown)),
             ))
-        });
+        };
         assert!(
-            html.contains(&tr(RecordsMsg::StatusFactsRefused)),
+            html.contains(
+                ferrohealth_ui::html::Html::text(tr(RecordsMsg::StatusFactsRefused)).as_str()
+            ),
             "the refusal's summary is drawn: {html}"
         );
         assert!(

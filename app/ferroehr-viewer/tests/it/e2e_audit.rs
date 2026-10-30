@@ -69,8 +69,8 @@ async fn admin_browses_audit_records_and_the_empty_state() {
         .await;
     h.wait_url_contains("/audit/").await;
     wait_text_contains(&h, "#audit-record-text", "\"resourceType\": \"AuditEvent\"").await;
-    // The hydrated copy button appears; it is hidden without WebAssembly.
-    h.wait_hydrated().await;
+    // The copy button appears with the scripts; it is hidden without them.
+    h.wait_scripts().await;
     common::wait_visible(&h, "#audit-record").await;
     h.shot(2, "audit-record").await;
 

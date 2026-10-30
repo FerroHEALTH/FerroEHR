@@ -1,25 +1,52 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The viewer's pages in lazy groups, one for each part of the navigation a
-//! reader reads together, and the sign-in on its own.
+//! The viewer's pages by the route that names each, and the draw of the page
+//! a request names.
 //!
-//! Under `cargo leptos build --split` each group loads its code from chunks
-//! of its own (the Leptos book, "Code Splitting"), so the first page costs
-//! the entry and its group. [`ROUTES`] is the one route table: the one
-//! route ([`Pages`]) loads the group that holds the page its address
-//! names ([`Page::of`]), the group draws that page again as the address
-//! changes, after a post the router drew, and when the display cookies the
-//! server answers with change, and a page reads the segments its route names
-//! through [`params`]. FerroUI loads a group ahead of a visit from the same
-//! table (`ferrohealth_ui::widget::prefetch`). One route in place of one per
-//! page keeps the router's route tree, which the entry WebAssembly carries
-//! whole, to its two routes. No openEHR spec governs the grouping: our own
-//! design.
+//! [`ROUTES`] is the one route table, each fixed segment listed before a
+//! segment a route names, so [`Page::of`] ranks them as a router does; a page
+//! reads the segments its route names through [`params`]. [`draw`] draws the
+//! page a request names, once, whole, on the server (FerroUI
+//! `docs/consoles.md`, "How a console builds"). No openEHR spec governs the
+//! routing: our own design.
 
-use ferrohealth_ui::widget::prefetch::{Route, matches};
-use leptos::prelude::*;
-use leptos_router::{LazyRoute, lazy_route};
+use ferrohealth_ui::html::Html;
+
+/// A page as its handler drew it: its bare title, its content and whether
+/// the shell frames it.
+#[derive(Debug, Clone, Default)]
+pub struct Drawn {
+    /// The page's bare title, which the document adds the product name to.
+    pub title: String,
+    /// The page's content.
+    pub body: Html,
+    /// Whether the content stands alone, centred, with no shell: the
+    /// sign-in page.
+    pub bare: bool,
+}
+
+impl Drawn {
+    /// A page titled `title` drawn in the shell.
+    #[must_use]
+    pub const fn page(title: String, body: Html) -> Self {
+        Self {
+            title,
+            body,
+            bare: false,
+        }
+    }
+
+    /// A page titled `title` drawn centred, with no shell.
+    #[must_use]
+    pub const fn bare(title: String, body: Html) -> Self {
+        Self {
+            title,
+            body,
+            bare: true,
+        }
+    }
+}
 
 /// A viewer page, as its route names it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -204,14 +231,29 @@ impl Page {
 
     /// The page the address path `path` names: the first route of
     /// [`ROUTES`] that matches it, each fixed segment listed before a
-    /// segment a route names, as the router ranks them.
+    /// segment a route names, as a router ranks them.
     #[must_use]
     pub fn of(path: &str) -> Option<Self> {
         ROUTES
             .iter()
-            .find(|route| matches(route.path, path))
-            .and_then(|route| Self::of_pattern(route.path))
+            .find(|route| matches(route, path))
+            .and_then(|route| Self::of_pattern(route))
     }
+}
+
+/// Whether the address path `path` is one the route `pattern` names: the
+/// same number of segments, each fixed one equal and each `:name` one
+/// filled.
+#[must_use]
+pub fn matches(pattern: &str, path: &str) -> bool {
+    let path = path.split(['?', '#']).next().unwrap_or_default();
+    let wanted: Vec<&str> = pattern.split('/').filter(|part| !part.is_empty()).collect();
+    let given: Vec<&str> = path.split('/').filter(|part| !part.is_empty()).collect();
+    wanted.len() == given.len()
+        && wanted
+            .iter()
+            .zip(&given)
+            .all(|(part, segment)| part.starts_with(':') || part == segment)
 }
 
 /// The segments the route of a page names, decoded.
@@ -239,18 +281,18 @@ impl Params {
 #[must_use]
 pub fn params_of(path: &str) -> Params {
     let path = path.split(['?', '#']).next().unwrap_or_default();
-    let Some(route) = ROUTES.iter().find(|route| matches(route.path, path)) else {
+    let Some(route) = ROUTES.iter().find(|route| matches(route, path)) else {
         return Params::default();
     };
     let given = path.split('/').filter(|part| !part.is_empty());
-    let wanted = route.path.split('/').filter(|part| !part.is_empty());
+    let wanted = route.split('/').filter(|part| !part.is_empty());
     Params(
         wanted
             .zip(given)
             .filter_map(|(part, segment)| {
                 let name = part.strip_prefix(':')?;
                 // NOTE: no openEHR spec governs this: our own design; a segment that is no
-                // valid percent-encoding reads as sent, as the router would read it.
+                // valid percent-encoding reads as sent.
                 let value = urlencoding::decode(segment)
                     .map_or_else(|_| segment.to_owned(), std::borrow::Cow::into_owned);
                 Some((name.to_owned(), value))
@@ -259,355 +301,149 @@ pub fn params_of(path: &str) -> Params {
     )
 }
 
-/// The segments the route of the page in view names.
+/// The segments the route of the page being drawn names.
 #[must_use]
 pub fn params() -> Params {
     params_of(&crate::request::path())
 }
 
-/// Draws the page `page` names with no tracking, as `view!` draws a
-/// component.
-fn drawn<V: IntoView + 'static>(page: fn() -> V) -> AnyView {
-    untrack(|| page().into_any())
-}
-
-/// A group's view as it loads, erased, so every group shares one `Suspend`.
-type Loading = std::pin::Pin<Box<dyn Future<Output = AnyView> + Send>>;
-
-/// The view of the group `$group` as it loads: the server draws it in place,
-/// and the browser loads its code from its chunks first, as `leptos_router`'s
-/// own nested router awaits a lazy route.
-macro_rules! loading {
-    ($group:ident) => {{
-        #[cfg(not(target_arch = "wasm32"))]
-        let loading: Loading = Box::pin(async { $group::draw() });
-        #[cfg(target_arch = "wasm32")]
-        let loading: Loading =
-            Box::pin(send_wrapper::SendWrapper::new($group::view($group::data())));
-        loading
-    }};
-}
-
-/// The group `loading` loads, drawn once it has.
-fn group_view(loading: Loading) -> AnyView {
-    view! { <Suspense fallback=|| ()>{Suspend::new(loading)}</Suspense> }.into_any()
-}
-
-/// The place in the dispatch of the group that holds `page`; an address that
-/// names no page goes to the overview, which draws the page that is not there.
-fn group_of(page: Option<Page>) -> u8 {
-    let Some(page) = page else {
-        return 0;
-    };
-    [
-        LOverview::PAGES,
-        LRecords::PAGES,
-        LDefinitions::PAGES,
-        LQueries::PAGES,
-        LConsole::PAGES,
-        LSignIn::PAGES,
-    ]
-    .iter()
-    .zip(0..)
-    .find_map(|(group, place)| group.contains(&page).then_some(place))
-    .unwrap_or(0)
-}
-
-/// Loads the code of the group that holds the page at the address path
-/// `path`, which the browser does before it hydrates the page the server drew.
-///
-/// A `Suspend` hydrates from a future it polls once, so the group's view must
-/// be ready on that poll: its chunks are loaded first, as `leptos_router`
-/// awaits a lazy route before it hydrates one.
-#[cfg(target_arch = "wasm32")]
-pub async fn preload(path: &str) {
-    match group_of(Page::of(path)) {
-        1 => LRecords::preload().await,
-        2 => LDefinitions::preload().await,
-        3 => LQueries::preload().await,
-        4 => LConsole::preload().await,
-        5 => LSignIn::preload().await,
-        _ => LOverview::preload().await,
-    }
-}
-
-/// The one route: the group that holds the page the address names.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn Pages() -> impl IntoView {
-    let location = leptos_router::hooks::use_location();
-    let group = Memo::new(move |_| group_of(Page::of(&location.pathname.get())));
-    let drawn = move || {
-        group_view(match group.get() {
-            1 => loading!(LRecords),
-            2 => loading!(LDefinitions),
-            3 => loading!(LQueries),
-            4 => loading!(LConsole),
-            5 => loading!(LSignIn),
-            _ => loading!(LOverview),
-        })
-    };
-    // NOTE: Leptos 0.8 `tachys` renders a view closure once per pass of the server's render,
-    // so the server draws the group once, outside a closure, as the group draws its page.
-    #[cfg(not(target_arch = "wasm32"))]
-    let view = untrack(drawn);
-    #[cfg(target_arch = "wasm32")]
-    let view = drawn.into_any();
-    view
-}
-
-macro_rules! group {
-    ($(#[$doc:meta])* $name:ident { $($page:ident => $draw:path),+ $(,)? }) => {
-        $(#[$doc])*
-        #[derive(Debug, Clone, Copy)]
-        pub struct $name;
-
-        impl $name {
-            /// The pages the group draws.
-            pub const PAGES: &'static [Page] = &[$(Page::$page),+];
-
-            /// The page the address names, drawn again in the browser as the
-            /// address changes.
-            fn draw() -> AnyView {
-                let location = leptos_router::hooks::use_location();
-                // NOTE: Leptos 0.8 `tachys` renders a view closure once per pass of the
-                // server's render, so the server draws the page once, outside a closure.
-                #[cfg(not(target_arch = "wasm32"))]
-                let view = {
-                    crate::shell::undock();
-                    Self::page(&location.pathname.get_untracked())
-                };
-                // NOTE: no openEHR spec governs this: our own design; the group stays drawn
-                // while the address stays in it, so it draws the page the address names.
-                #[cfg(target_arch = "wasm32")]
-                let view = {
-                    let kept = crate::request::kept_memo();
-                    (move || {
-                        let path = location.pathname.get();
-                        let href = crate::request::address(&path, &location.search.get());
-                        let posts = ferrohealth_ui::widget::submit::posts().get();
-                        kept.track();
-                        let after = crate::request::follow_address(&href, posts);
-                        crate::shell::undock();
-                        if !after {
-                            return Self::page(&path);
-                        }
-                        Suspend::new(send_wrapper::SendWrapper::new(async move {
-                            if crate::request::visited(href).await {
-                                Self::page(&path)
-                            } else {
-                                ().into_any()
-                            }
-                        }))
-                        .into_any()
-                    })
-                    .into_any()
-                };
-                view
-            }
-
-            /// The page at the address path `path`.
-            fn page(path: &str) -> AnyView {
-                match Page::of(path) {
-                    $(Some(Page::$page) => drawn($draw),)+
-                    _ => crate::pages::errors::not_found_page(),
-                }
-            }
-        }
-
-        #[lazy_route]
-        impl LazyRoute for $name {
-            fn data() -> Self {
-                Self
-            }
-
-            fn view(_this: Self) -> AnyView {
-                $name::draw()
-            }
-        }
-    };
-}
-
-group!(
-    /// The overview: the dashboard and the top bar's search.
-    LOverview {
-        Dashboard => crate::pages::dashboard::DashboardPage,
-        Find => crate::pages::find::FindPage,
-    }
-);
-
-group!(
-    /// The records: EHRs and what each holds, compositions and parties.
-    LRecords {
-        Ehrs => crate::pages::ehrs::EhrsPage,
-        NewEhr => crate::pages::ehrs::NewEhrPage,
-        Compositions => crate::pages::ehr::compositions::CompositionsTab,
-        Directory => crate::pages::ehr::directory::DirectoryTab,
-        EditDirectory => crate::pages::ehr::directory::DirectoryEditPage,
-        Status => crate::pages::ehr::status::StatusTab,
-        EditStatus => crate::pages::ehr::status::StatusEditPage,
-        Contributions => crate::pages::ehr::contribution::ContributionsTab,
-        Contribution => crate::pages::ehr::contribution::ContributionPage,
-        NewContribution => crate::pages::ehr::contribution::NewContributionPage,
-        Tags => crate::pages::ehr::tags::TagsTab,
-        NewComposition => crate::pages::composition::NewCompositionPage,
-        Composition => crate::pages::composition::CompositionPage,
-        EditComposition => crate::pages::composition::EditCompositionPage,
-        Parties => crate::pages::parties::PartiesPage,
-        NewParty => crate::pages::parties::NewPartyPage,
-        NewRelationship => crate::pages::parties::NewRelationshipPage,
-        Relationship => crate::pages::parties::RelationshipPage,
-        EditRelationship => crate::pages::parties::EditRelationshipPage,
-        PartyContribution => crate::pages::parties::PartyContributionPage,
-        Party => crate::pages::parties::PartyPage,
-        EditParty => crate::pages::parties::EditPartyPage,
-    }
-);
-
-group!(
-    /// The definitions: templates and terminology.
-    LDefinitions {
-        Templates => crate::pages::templates::TemplatesPage,
-        UploadTemplate => crate::pages::templates::UploadTemplatePage,
-        Adl2Template => crate::pages::templates::Adl2TemplatePage,
-        Template => crate::pages::templates::TemplatePage,
-        Terminologies => crate::pages::terminology::TerminologiesTab,
-        Lookup => crate::pages::terminology::LookupTab,
-        ValueSets => crate::pages::terminology::ValueSetsTab,
-        Subsumption => crate::pages::terminology::SubsumptionTab,
-        Terminology => crate::pages::terminology::TerminologyPage,
-    }
-);
-
-group!(
-    /// The queries: stored queries and Query.
-    LQueries {
-        StoredQueries => crate::pages::queries::StoredQueriesPage,
-        StoredQueryVersions => crate::pages::queries::StoredQueryVersionsTab,
-        StoredQuery => crate::pages::queries::StoredQueryPage,
-        StoredQueryRun => crate::pages::queries::StoredQueryRunTab,
-        Build => crate::pages::query::BuildTab,
-        Aql => crate::pages::query::AqlTab,
-    }
-);
-
-group!(
-    /// The console: the server, the audit log, subscriptions, the
-    /// configuration and the reader's own pages.
-    LConsole {
-        ServerOverview => crate::pages::server::OverviewTab,
-        Health => crate::pages::server::HealthTab,
-        Metrics => crate::pages::server::MetricsTab,
-        Logging => crate::pages::server::LoggingTab,
-        Api => crate::pages::server::ApiTab,
-        Smart => crate::pages::server::SmartTab,
-        Audit => crate::pages::audit::AuditPage,
-        AuditRecord => crate::pages::audit::AuditRecordPage,
-        Subscriptions => crate::pages::subscriptions::SubscriptionsPage,
-        NewSubscription => crate::pages::subscriptions::NewSubscriptionPage,
-        EditSubscription => crate::pages::subscriptions::EditSubscriptionPage,
-        Configuration => crate::pages::configuration::ConfigurationPage,
-        Preferences => crate::pages::preferences::PreferencesPage,
-        Access => crate::pages::access::AccessPage,
-        About => crate::pages::about::AboutPage,
-    }
-);
-
-group!(
-    /// The sign-in, outside the shell.
-    LSignIn {
-        Login => crate::pages::login::LoginPage,
-    }
-);
-
-macro_rules! route {
-    ($path:literal, $group:ident, $idle:literal) => {
-        Route {
-            path: $path,
-            preload: || Box::pin($group::preload()),
-            idle: $idle,
-        }
-    };
-}
-
-/// Every route, its group and whether it loads once the first page is idle
-/// (the main navigation's), each fixed segment before a segment a route
-/// names, so [`Page::of`] ranks them as the router does.
-pub static ROUTES: &[Route] = &[
-    route!("/", LOverview, true),
-    route!("/find", LOverview, false),
-    route!("/ehrs", LRecords, true),
-    route!("/ehrs/new", LRecords, false),
-    route!("/ehrs/:ehr_id", LRecords, false),
-    route!("/ehrs/:ehr_id/directory", LRecords, false),
-    route!("/ehrs/:ehr_id/directory/edit", LRecords, false),
-    route!("/ehrs/:ehr_id/status", LRecords, false),
-    route!("/ehrs/:ehr_id/status/edit", LRecords, false),
-    route!("/ehrs/:ehr_id/contributions", LRecords, false),
-    route!("/ehrs/:ehr_id/contributions/:uid", LRecords, false),
-    route!("/ehrs/:ehr_id/contribution/new", LRecords, false),
-    route!("/ehrs/:ehr_id/tags", LRecords, false),
-    route!("/ehrs/:ehr_id/compositions/new", LRecords, false),
-    route!("/ehrs/:ehr_id/compositions/:uid", LRecords, false),
-    route!("/ehrs/:ehr_id/compositions/:uid/edit", LRecords, false),
-    route!("/parties", LRecords, true),
-    route!("/parties/new", LRecords, false),
-    route!("/parties/relationships/new", LRecords, false),
-    route!("/parties/relationships/:uid", LRecords, false),
-    route!("/parties/relationships/:uid/edit", LRecords, false),
-    route!("/parties/contributions/:uid", LRecords, false),
-    route!("/parties/:kind/:uid", LRecords, false),
-    route!("/parties/:kind/:uid/edit", LRecords, false),
-    route!("/templates", LDefinitions, true),
-    route!("/templates/upload", LDefinitions, false),
-    route!("/templates/adl2/:template_id", LDefinitions, false),
-    route!("/templates/adl2/:template_id/:release", LDefinitions, false),
-    route!("/templates/:template_id", LDefinitions, false),
-    route!("/terminology", LDefinitions, true),
-    route!("/terminology/lookup", LDefinitions, false),
-    route!("/terminology/valuesets", LDefinitions, false),
-    route!("/terminology/subsumption", LDefinitions, false),
-    route!("/terminology/:id", LDefinitions, false),
-    route!("/queries", LQueries, true),
-    route!("/queries/:name/versions", LQueries, false),
-    route!("/queries/:name/:version", LQueries, false),
-    route!("/queries/:name/:version/run", LQueries, false),
-    route!("/query", LQueries, true),
-    route!("/query/aql", LQueries, false),
-    route!("/server", LConsole, true),
-    route!("/server/health", LConsole, false),
-    route!("/server/metrics", LConsole, false),
-    route!("/server/logging", LConsole, false),
-    route!("/server/api", LConsole, false),
-    route!("/server/smart", LConsole, false),
-    route!("/audit", LConsole, true),
-    route!("/audit/:id", LConsole, false),
-    route!("/subscriptions", LConsole, true),
-    route!("/subscriptions/new", LConsole, false),
-    route!("/subscriptions/:name/edit", LConsole, false),
-    route!("/configuration", LConsole, true),
-    route!("/configuration/:section", LConsole, false),
-    route!("/preferences", LConsole, false),
-    route!("/preferences/:section", LConsole, false),
-    route!("/access", LConsole, false),
-    route!("/about", LConsole, true),
-    route!("/login", LSignIn, false),
+/// Every route, each fixed segment before a segment a route names, so
+/// [`Page::of`] ranks them as a router does.
+pub static ROUTES: &[&str] = &[
+    "/",
+    "/find",
+    "/ehrs",
+    "/ehrs/new",
+    "/ehrs/:ehr_id",
+    "/ehrs/:ehr_id/directory",
+    "/ehrs/:ehr_id/directory/edit",
+    "/ehrs/:ehr_id/status",
+    "/ehrs/:ehr_id/status/edit",
+    "/ehrs/:ehr_id/contributions",
+    "/ehrs/:ehr_id/contributions/:uid",
+    "/ehrs/:ehr_id/contribution/new",
+    "/ehrs/:ehr_id/tags",
+    "/ehrs/:ehr_id/compositions/new",
+    "/ehrs/:ehr_id/compositions/:uid",
+    "/ehrs/:ehr_id/compositions/:uid/edit",
+    "/parties",
+    "/parties/new",
+    "/parties/relationships/new",
+    "/parties/relationships/:uid",
+    "/parties/relationships/:uid/edit",
+    "/parties/contributions/:uid",
+    "/parties/:kind/:uid",
+    "/parties/:kind/:uid/edit",
+    "/templates",
+    "/templates/upload",
+    "/templates/adl2/:template_id",
+    "/templates/adl2/:template_id/:release",
+    "/templates/:template_id",
+    "/terminology",
+    "/terminology/lookup",
+    "/terminology/valuesets",
+    "/terminology/subsumption",
+    "/terminology/:id",
+    "/queries",
+    "/queries/:name/versions",
+    "/queries/:name/:version",
+    "/queries/:name/:version/run",
+    "/query",
+    "/query/aql",
+    "/server",
+    "/server/health",
+    "/server/metrics",
+    "/server/logging",
+    "/server/api",
+    "/server/smart",
+    "/audit",
+    "/audit/:id",
+    "/subscriptions",
+    "/subscriptions/new",
+    "/subscriptions/:name/edit",
+    "/configuration",
+    "/configuration/:section",
+    "/preferences",
+    "/preferences/:section",
+    "/access",
+    "/about",
+    "/login",
 ];
+
+/// Draws the page the request being answered names, or the page that is not
+/// there.
+pub async fn draw() -> Drawn {
+    use crate::pages;
+    let Some(page) = Page::of(&crate::request::path()) else {
+        return pages::errors::not_found_page();
+    };
+    match page {
+        Page::Dashboard => pages::dashboard::page().await,
+        Page::Find => pages::find::page().await,
+        Page::Ehrs => pages::ehrs::list_page().await,
+        Page::NewEhr => pages::ehrs::new_page().await,
+        Page::Compositions => pages::ehr::compositions::page().await,
+        Page::Directory => pages::ehr::directory::page().await,
+        Page::EditDirectory => pages::ehr::directory::edit_page().await,
+        Page::Status => pages::ehr::status::page().await,
+        Page::EditStatus => pages::ehr::status::edit_page().await,
+        Page::Contributions => pages::ehr::contribution::tab_page().await,
+        Page::Contribution => pages::ehr::contribution::page().await,
+        Page::NewContribution => pages::ehr::contribution::new_page().await,
+        Page::Tags => pages::ehr::tags::page().await,
+        Page::NewComposition => pages::composition::new_page().await,
+        Page::Composition => pages::composition::page().await,
+        Page::EditComposition => pages::composition::edit_composition_page().await,
+        Page::Parties => pages::parties::list_page().await,
+        Page::NewParty => pages::parties::new_party_page().await,
+        Page::NewRelationship => pages::parties::new_relationship_page().await,
+        Page::Relationship => pages::parties::relationship_page().await,
+        Page::EditRelationship => pages::parties::edit_relationship_page().await,
+        Page::PartyContribution => pages::parties::party_contribution_page().await,
+        Page::Party => pages::parties::party_page().await,
+        Page::EditParty => pages::parties::edit_party_page().await,
+        Page::Templates => pages::templates::list_page().await,
+        Page::UploadTemplate => pages::templates::upload_page().await,
+        Page::Adl2Template => pages::templates::adl2_page().await,
+        Page::Template => pages::templates::page().await,
+        Page::Terminologies => pages::terminology::terminologies_page().await,
+        Page::Lookup => pages::terminology::lookup_page().await,
+        Page::ValueSets => pages::terminology::value_sets_page().await,
+        Page::Subsumption => pages::terminology::subsumption_page().await,
+        Page::Terminology => pages::terminology::terminology_page().await,
+        Page::StoredQueries => pages::queries::list_page().await,
+        Page::StoredQueryVersions => pages::queries::versions_page().await,
+        Page::StoredQuery => pages::queries::page().await,
+        Page::StoredQueryRun => pages::queries::run_page().await,
+        Page::Build => pages::query::build_page().await,
+        Page::Aql => pages::query::aql_page().await,
+        Page::ServerOverview => pages::server::overview_page().await,
+        Page::Health => pages::server::health_page().await,
+        Page::Metrics => pages::server::metrics_page().await,
+        Page::Logging => pages::server::logging_page().await,
+        Page::Api => pages::server::api_page().await,
+        Page::Smart => pages::server::smart_page().await,
+        Page::Audit => pages::audit::page().await,
+        Page::AuditRecord => pages::audit::record_page().await,
+        Page::Subscriptions => pages::subscriptions::page().await,
+        Page::NewSubscription => pages::subscriptions::new_page().await,
+        Page::EditSubscription => pages::subscriptions::edit_page().await,
+        Page::Configuration => pages::configuration::page().await,
+        Page::Preferences => pages::preferences::page(),
+        Page::Access => pages::access::page(),
+        Page::About => pages::about::page().await,
+        Page::Login => pages::login::login_page().await,
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        LConsole, LDefinitions, LOverview, LQueries, LRecords, LSignIn, Page, Params, ROUTES,
-        params_of,
-    };
+    use super::{Page, Params, ROUTES, matches, params_of};
 
     #[test]
     fn every_route_names_a_page() {
         for route in ROUTES {
-            assert!(Page::of_pattern(route.path).is_some(), "{}", route.path);
+            assert!(Page::of_pattern(route).is_some(), "{route}");
         }
     }
 
@@ -637,20 +473,13 @@ mod tests {
     }
 
     #[test]
-    fn every_page_sits_in_one_group() {
-        let groups = [
-            LOverview::PAGES,
-            LRecords::PAGES,
-            LDefinitions::PAGES,
-            LQueries::PAGES,
-            LConsole::PAGES,
-            LSignIn::PAGES,
-        ];
-        for route in ROUTES {
-            let page = Page::of_pattern(route.path).expect("a page");
-            let holding = groups.iter().filter(|group| group.contains(&page)).count();
-            assert_eq!(1, holding, "{} sits in {holding} groups", route.path);
-        }
+    fn a_route_matches_only_its_own_shape() {
+        assert!(matches("/ehrs/:ehr_id", "/ehrs/abc"));
+        assert!(matches("/ehrs/:ehr_id", "/ehrs/abc?tab=x"));
+        assert!(!matches("/ehrs/:ehr_id", "/ehrs"));
+        assert!(!matches("/ehrs/:ehr_id", "/ehrs/abc/status"));
+        assert!(matches("/", "/"));
+        assert!(!matches("/", "/ehrs"));
     }
 
     #[test]

@@ -11,7 +11,7 @@
 //! template to show a document, so any composition — including one whose
 //! template was since removed — reads the same way. It is also a pure,
 //! deterministic function of the document text (no clock, no locale, no
-//! network), which is what makes the pane hydration-safe, and a READ-ONLY
+//! network), so every draw of the pane is the same, and a READ-ONLY
 //! projection: nothing is stored, nothing is sent anywhere.
 //!
 //! Every hard-coded attribute name below is the RM attribute of the same name.

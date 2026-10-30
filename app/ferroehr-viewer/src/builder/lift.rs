@@ -50,12 +50,10 @@ const TEMPLATE_PATH: &str = "/archetype_details/template_id/value";
 ///
 /// Every variant names a property of the QUERY, so the notice the screen renders
 /// tells the reader what to do about it (edit it as raw AQL, or run it on the
-/// stored-query runner). Never crosses a server-fn boundary — the lift is pure
-/// and runs on whichever target holds the AQL.
+/// stored-query runner). The lift is pure.
 ///
-/// NOTE: `NotAql` carries the parse failure as text because the refusal is held
-/// in an `RwSignal` and compared, so the type must be `Clone + Eq` (Leptos book
-/// `reactivity/working_with_signals`) — which the parser's error is not.
+/// NOTE: `NotAql` carries the parse failure as text because the refusal is
+/// compared, so the type must be `Clone + Eq`, which the parser's error is not.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LiftError {
     /// The stored text is not valid AQL at all.

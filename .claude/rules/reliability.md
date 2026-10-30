@@ -246,7 +246,7 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   Enforcement (tier 4): `scripts/checks/typed-status.sh`, per-edit via the
   hook and per-PR via CI at `--all`.
 - **A browser journey never holds a raw WebDriver handle, and never waits on a
-  timer** (issue #3296; the rule is `leptos-ui.md` §10). thirtyfour bounds a
+  timer** (issue #3296; the rule is `console-ui.md` §5). thirtyfour bounds a
   request only by its 120 s per-request default, which outlasts every poll loop
   in the E2E suite — so `button.is_enabled().await.unwrap_or(false)` on a raw
   `WebElement` reads a stalled driver as an inert control, and the journey

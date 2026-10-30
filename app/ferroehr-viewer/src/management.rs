@@ -29,9 +29,9 @@
 //! authorization: a mounted-but-refused endpoint (`401`/`403`) still counts as
 //! present, and the refusal surfaces on the screen that asked.
 //!
-//! Every `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first (a server fn is a
-//! publicly reachable HTTP endpoint) and keeps the CDR credential server-side.
+//! Every read guards with
+//! [`require_session`](crate::session::require_session) first and keeps the
+//! CDR credential server-side.
 
 #![expect(
     clippy::disallowed_types,
@@ -40,19 +40,14 @@
 )]
 
 use ferrohealth_health::document::Readiness;
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::expect_context;
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr_served, tr_served_with};
 
 /// One headline metric: its name, its tile label, and an optional
 /// `(label, value)` sample filter.
-#[cfg(not(target_arch = "wasm32"))]
 type HeadlineMetric = (&'static str, Msg, Option<(&'static str, &'static str)>);
 
 /// The headline metric tiles, in display order.
@@ -64,7 +59,6 @@ type HeadlineMetric = (&'static str, Msg, Option<(&'static str, &'static str)>);
 // NOTE: these are the Prometheus exporter's RENDERED names — `_total` is derived
 // from the counter kind, never written on the instrument — and the correspondence
 // is pinned by the CDR's `exporter_renders_the_viewer_metric_names` test.
-#[cfg(not(target_arch = "wasm32"))]
 const HEADLINE_METRICS: [HeadlineMetric; 3] = [
     (
         "compositions_committed_total",
@@ -80,9 +74,6 @@ const HEADLINE_METRICS: [HeadlineMetric; 3] = [
 ];
 
 /// Whether the CDR serves its management surface at the configured base URL.
-///
-/// Carries only fixed-size, client-safe data — it crosses the server-fn
-/// boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManagementAvailability {
     /// The surface answered: it is mounted, so the operations panel is offered.
@@ -145,8 +136,8 @@ pub struct ReadinessView {
 /// [`ReadinessView`].
 ///
 /// Both carry the family readiness document; only the management body adds
-/// each indicator's `detail`. The indicators are sorted by name so both render
-/// passes agree (hydration determinism).
+/// each indicator's `detail`. The indicators are sorted by name so every draw
+/// agrees.
 ///
 /// # Errors
 /// The parse error when `body` is not the readiness document.
@@ -185,10 +176,9 @@ pub fn falls_back_to_public_readiness(status: http::StatusCode) -> bool {
 /// session; [`ViewerError::CdrUnreachable`] on transport failure;
 /// [`ViewerError::Cdr`] on any other status than `200`/`503`;
 /// [`ViewerError::Internal`] when the body is not JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.management_url("health");
     let detailed = state
         .cdr
@@ -227,10 +217,9 @@ pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::CdrUnreachable`] when the management listener is unreachable.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn probe_management_api() -> Result<ManagementAvailability, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.management_url("info");
     let response = state
         .cdr
@@ -286,8 +275,7 @@ impl InfoSection {
 /// members, so every top-level member is rendered rather than a fixed list.
 /// Non-object members become fact rows; each object member (`spec`,
 /// `manufacturer`, `support`, `audit`, …) becomes its own section, one level
-/// deep. Every list is key-sorted, so the render order is deterministic and
-/// hydration-safe.
+/// deep. Every list is key-sorted, so the render order is deterministic.
 #[must_use]
 pub fn build_info_view(body: &serde_json::Value) -> BuildInfoView {
     let mut view = BuildInfoView::default();
@@ -339,7 +327,6 @@ fn leaf_text(value: &serde_json::Value) -> String {
 /// session, [`ViewerError::Forbidden`] when the endpoint's access level
 /// refuses it; [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] from the
 /// CDR; [`ViewerError::Internal`] when the body is not JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_build_info() -> Result<Option<BuildInfoView>, ViewerError> {
     let Some(body) = management_get("info").await? else {
         return Ok(None);
@@ -473,7 +460,6 @@ pub fn format_metric(value: f64) -> String {
 ///
 /// # Errors
 /// As [`fetch_build_info`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_metric_names() -> Result<Option<Vec<String>>, ViewerError> {
     let Some(body) = management_get("metrics").await? else {
         return Ok(None);
@@ -508,9 +494,8 @@ pub async fn fetch_metric_names() -> Result<Option<Vec<String>>, ViewerError> {
 /// # Errors
 /// [`ViewerError::Invalid`] for an empty name; otherwise as
 /// [`fetch_build_info`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_metric_detail(
-    /// The metric name to read, as listed by the metrics index.
+    // The metric name to read, as listed by the metrics index.
     name: String,
 ) -> Result<Option<MetricDetailView>, ViewerError> {
     if name.trim().is_empty() {
@@ -529,15 +514,16 @@ pub async fn fetch_metric_detail(
     Ok(Some(metric_detail_view(&value)))
 }
 
-/// The headline metric tiles: the registry's names, then one detail read per
-/// `HEADLINE_METRICS` entry the CDR actually registers (so a tile never
-/// provokes a `404`, and a metric the deployment does not record renders `—`).
+/// The headline metric tiles.
+///
+/// The registry's names, then one detail read per `HEADLINE_METRICS` entry
+/// the CDR actually registers (so a tile never provokes a `404`, and a
+/// metric the deployment does not record renders `—`).
 ///
 /// `Ok(None)` = the metrics endpoint is not mounted.
 ///
 /// # Errors
 /// As [`fetch_build_info`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_headline_metrics() -> Result<Option<Vec<MetricTile>>, ViewerError> {
     let Some(names) = fetch_metric_names().await? else {
         return Ok(None);
@@ -596,7 +582,6 @@ pub fn logger_view(body: &serde_json::Value) -> LoggerView {
 ///
 /// # Errors
 /// As [`fetch_build_info`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_loggers() -> Result<Option<LoggerView>, ViewerError> {
     let Some(body) = management_get("loggers").await? else {
         return Ok(None);
@@ -624,19 +609,18 @@ pub async fn fetch_loggers() -> Result<Option<LoggerView>, ViewerError> {
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
 /// when the body is not JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn set_log_filter(
-    /// The replacement log filter, one or more `target=level` directives.
+    // The replacement log filter, one or more `target=level` directives.
     filter: String,
 ) -> Result<LoggerView, ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     let filter = filter.trim().to_owned();
     if filter.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             Msg::LogFilterNeedsLeastOneDirective,
         )));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.management_url("loggers");
     let body = serde_json::json!({ "filter": filter }).to_string();
     let response = state
@@ -664,10 +648,9 @@ pub async fn set_log_filter(
 ///
 /// # Errors
 /// As [`set_log_filter`], minus the empty-input case.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.management_url("loggers");
     let response = state.cdr.delete(&session.credential, &url, &[]).await?;
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
@@ -684,12 +667,11 @@ pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
 /// `404` to `Ok(None)` — the "endpoint not mounted" state every management read
 /// renders as a first-class absence rather than an error.
 ///
-/// Guards the viewer session first: the server fns above are publicly
-/// reachable endpoints, and this is the one place their CDR call is made.
-#[cfg(not(target_arch = "wasm32"))]
+/// Guards the viewer session first: the pages reading through the reads
+/// above are publicly reachable endpoints, and this is the one place their CDR call is made.
 async fn management_get(path: &str) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.management_url(path);
     let response = state
         .cdr

@@ -38,7 +38,7 @@
 //! then the very rows the table shows; the JSON carries the same `RESULT_SET`;
 //! both arrive as downloads with their `Content-Disposition` filenames; and the
 //! route refuses a caller with no session instead of exporting to anyone who
-//! asks (the public-endpoint rule — `.claude/rules/leptos-ui.md` §0).
+//! asks (the public-endpoint rule, `.claude/rules/console-ui.md` §0).
 //!
 //! The query carries its own `LIMIT`, which is what makes the comparison exact:
 //! ITS-REST forbids combining `fetch`/`offset` with an AQL window

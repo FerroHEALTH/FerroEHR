@@ -14,16 +14,15 @@
 //! cookie is. The sidebar's rail is kept the same way. No openEHR spec
 //! governs the viewer's preferences: our own design.
 
-#[cfg(not(target_arch = "wasm32"))]
 use axum::extract::Form;
-#[cfg(not(target_arch = "wasm32"))]
+
 use axum::response::{IntoResponse, Redirect, Response};
 use ferrohealth_ui::theme::{
     Density, Hints, Language, Motion, Preference, Preferences, Theme, WeekStart, cookie,
 };
-#[cfg(not(target_arch = "wasm32"))]
+
 use http::StatusCode;
-#[cfg(not(target_arch = "wasm32"))]
+
 use http::header::SET_COOKIE;
 
 /// What the viewer puts before each preference's cookie name, so the theme
@@ -139,20 +138,17 @@ pub fn preference_return(back: &str, name: &str) -> String {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The `Set-Cookie` value keeping `value` under `name` for a year.
 fn kept_cookie(name: &str, value: &str, secure: bool) -> String {
     let secure = if secure { "; Secure" } else { "" };
     format!("{name}={value}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000{secure}")
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Whether the deployment marks its cookies `Secure`.
 fn secure(state: &crate::state::AppState) -> bool {
     state.config.session.cookie_secure
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The redirect to `location` that sets each of `cookies`.
 fn redirect_with(location: &str, cookies: &[String]) -> Response {
     let mut response = Redirect::to(location).into_response();
@@ -167,7 +163,6 @@ fn redirect_with(location: &str, cookies: &[String]) -> Response {
     response
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Keeps the one preference a plain form post chose in its cookie and sends
 /// the browser back to the page it came from.
 ///
@@ -203,7 +198,6 @@ pub async fn choose_preference(
     redirect_with(&preference_return(back, name), &[cookie])
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What Reset to defaults posts.
 #[derive(Debug, serde::Deserialize)]
 pub struct Reset {
@@ -211,7 +205,6 @@ pub struct Reset {
     back: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Clears every preference cookie and sends the browser back.
 pub async fn reset_preferences(Form(reset): Form<Reset>) -> Response {
     let cleared = reset_cookies()
@@ -221,7 +214,6 @@ pub async fn reset_preferences(Form(reset): Form<Reset>) -> Response {
     redirect_with(crate::request::return_path(&reset.back), &cleared)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What the sidebar's Collapse or Expand posts.
 #[derive(Debug, serde::Deserialize)]
 pub struct SidebarChoice {
@@ -231,7 +223,6 @@ pub struct SidebarChoice {
     back: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Keeps the sidebar's state in its cookie and sends the browser back.
 pub async fn choose_sidebar(
     axum::Extension(state): axum::Extension<crate::state::AppState>,

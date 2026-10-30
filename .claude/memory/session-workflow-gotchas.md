@@ -19,14 +19,6 @@ Recurring session-workflow traps (all hit 2026-07-13/14):
    cache invalidation, run the pipeline as
    `CARGO_BUILD_JOBS=1 bash scripts/conformance.sh` (docker/sut-ferroehr.yml
    forwards the env var); warm rebuilds are fine at the default 2.
-   ESCALATION (2026-08-22, #309): the console crate's wasm-release pass
-   (`[profile.wasm-release]`: opt-level=z + codegen-units=1) now SIGKILLs in
-   the 8 GB Docker VM even building ALONE at jobs=1 — rustc's own peak on the
-   grown crate exceeds the VM. jobs=1 cannot fix a single-process peak; the
-   fixes are a bigger VM (Docker Desktop → Resources → Memory, 12-16 GB —
-   recommended to the owner) or host-built/prebuilt packaging. Keycloak (1 GB
-   container limit) is always the first OOM-reaper victim mid-run — the
-   monitor tripwire `docker start ferroehr-e2e-keycloak-1` revives it.
 
 1. **Long background Bash tasks get killed (~30 min)** — for multi-hour runs
    (benchmark ladders, seeds), launch detached: `nohup caffeinate -is
@@ -92,11 +84,6 @@ commit-message wording. Late labels: since #2777 applying a label raises a fresh
    then gh pr merge N …; else report; fi`. Repo has no auto-merge
    (enablePullRequestAutoMerge is off), so this guard is the only gate.
 
-7. **Formatter order: leptosfmt FIRST, `cargo fmt` LAST** (same incident):
-   leptosfmt may collapse a `view! {…}` to one line, which changes where
-   rustfmt wants a chained `.into_any()` — running leptosfmt after a clean
-   `cargo fmt --check` leaves the tree rustfmt-dirty. Always finish with
-   `cargo fmt --all && cargo fmt --all --check`.
 - **Changelog entries are fragments** under `changelog.d/` (`changelog.d/README.md`, #4123), never an edit of `CHANGELOG.md`: the section headers that used to be duplicated by hand (twice, owner-corrected 2026-08-01) are written once by `scripts/release/changelog.sh --assemble` at the cut.
 - **`gh` comment bodies need heredocs:** backticks inside a double-quoted
   `--body` get shell-executed and silently mangle the posted comment. Use
@@ -283,7 +270,7 @@ commit-message wording. Late labels: since #2777 applying a label raises a fresh
    moved, rebase, re-run any tracker-derived generator (the control matrix
    follows closed issues), and `--force-with-lease`.
 
-10. **The from-source image build and a cargo gate battery do not fit in memory together** (2026-09-11): running `docker compose build ferroehr` (a `--release` build inside the 8 GB Docker VM) while the host ran the viewer clippy/nextest/cargo-leptos battery got BOTH killed by the harness for low memory, and the docs-screenshot pass chained behind the build died with it. Sequence them: gates first, then the image build alone with `--build-arg CARGO_BUILD_JOBS=1`, then `UI_E2E_SHOTS_ONLY=1 UI_E2E_DOCS_SHOTS=1 UI_E2E_NO_BUILD=1 CHROMEDRIVER=/opt/homebrew/bin/chromedriver bash scripts/ui-e2e.sh` (the compose file set is `docker-compose.yml` + `docker-compose.dev.yml` + `docker/viewer/e2e-env.yml`, project `ferroehr-e2e`; the base compose file alone has no build section, so it reports "No services to build"). The same box also kills a full `cargo nextest run -p ferroehr` battery when it compiles test binaries at default parallelism beside RustRover (1 GB) and Docker Desktop (8 GB VM): run the suites as `CARGO_BUILD_JOBS=3 cargo nextest run … -j 6`, and never chain the suites behind clippy/rustdoc in one background command (a kill loses all of it).
+10. **The from-source image build and a cargo gate battery do not fit in memory together** (2026-09-11): running `docker compose build ferroehr` (a `--release` build inside the 8 GB Docker VM) while the host ran the viewer clippy/nextest/build battery got BOTH killed by the harness for low memory, and the docs-screenshot pass chained behind the build died with it. Sequence them: gates first, then the image build alone with `--build-arg CARGO_BUILD_JOBS=1`, then `UI_E2E_SHOTS_ONLY=1 UI_E2E_DOCS_SHOTS=1 UI_E2E_NO_BUILD=1 CHROMEDRIVER=/opt/homebrew/bin/chromedriver bash scripts/ui-e2e.sh` (the compose file set is `docker-compose.yml` + `docker-compose.dev.yml` + `docker/viewer/e2e-env.yml`, project `ferroehr-e2e`; the base compose file alone has no build section, so it reports "No services to build"). The same box also kills a full `cargo nextest run -p ferroehr` battery when it compiles test binaries at default parallelism beside RustRover (1 GB) and Docker Desktop (8 GB VM): run the suites as `CARGO_BUILD_JOBS=3 cargo nextest run … -j 6`, and never chain the suites behind clippy/rustdoc in one background command (a kill loses all of it).
 
 11. **chromedriver comes from Chrome for Testing, not Homebrew** (2026-09-11): the `chromedriver` cask is disabled (Gatekeeper, 2026-09-01) and `/opt/homebrew/bin/chromedriver` is a dangling symlink, so `scripts/ui-e2e.sh` reports "chromedriver not found" even though `brew list` shows it. Fetch the build matching `Google Chrome --version` from `https://storage.googleapis.com/chrome-for-testing-public/<version>/mac-arm64/chromedriver-mac-arm64.zip` into the scratchpad, `xattr -dr com.apple.quarantine`, and pass it as `CHROMEDRIVER=...`. The `block_dangerous` hook refuses `rm -rf` even in the scratchpad; use `mkdir -p` + `unzip -o`.
 

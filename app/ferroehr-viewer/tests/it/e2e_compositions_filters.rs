@@ -413,8 +413,8 @@ async fn the_ehr_header_names_the_subject_and_its_status_badges() {
     }
     h.shot(1, "header-masked").await;
 
-    // Reveal is the hydrated island's button; it shows the whole id.
-    h.wait_xpath("//div[contains(@class, 'fui-subject')]//button[normalize-space(.)='Reveal']")
+    // Reveal shows the whole id.
+    h.wait_xpath("//div[contains(@class, 'fui-subject')]//a[normalize-space(.)='Reveal']")
         .await
         .click()
         .await;

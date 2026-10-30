@@ -4,14 +4,12 @@
 //! Shared E2E journey harness: env-gated `WebDriver` setup (skip-with-reason
 //! when the stack isn't up), step screenshots, explicit waits, and the
 //! standing browser-console gate — every journey fails on any console
-//! error (the cheapest hydration-bug detector).
+//! error (the cheapest script-defect detector).
 //!
 //! Two lanes drive this harness, and they are not equals. The IMAGE lane is
-//! the authoritative one: it runs the shipped OCI artifact, whose WASM is the
-//! release build. The HOST lane serves a debug-profile WASM bundle an order of
-//! magnitude larger, trading hydration latency for compile speed so a change
-//! can be driven in seconds — which is why [`Harness::wait_hydrated`] carries
-//! its own, far longer budget than the element waits around it.
+//! the authoritative one: it runs the shipped OCI artifact, a release build.
+//! The HOST lane runs a debug build, trading render speed for compile speed
+//! so a change can be driven in seconds.
 
 #![allow(
     clippy::panic,
@@ -68,22 +66,17 @@ return e.tagName.toLowerCase() + id + cls + ' “' + text + '” (in main: '
   + !!e.closest('main') + ', document focused: ' + document.hasFocus() + ') at ' + at;
 ";
 
-/// The budget [`Harness::wait_hydrated`] allows, four times [`WAIT`]: the host
-/// lane's debug WASM is ~91 MB and the browser has to fetch, compile and run it
-/// before the marker appears, which is comfortably slower than any wait that
-/// only observes a rendered page (module docs).
-const HYDRATION_WAIT: Duration = Duration::from_mins(1);
+/// The budget [`Harness::wait_scripts`] allows, four times [`WAIT`]: the
+/// loader imports every module the page marks before it marks the root, on a
+/// debug server in the host lane (module docs).
+const SCRIPTS_WAIT: Duration = Duration::from_mins(1);
 
 /// The words [`Harness::mark_document`] leaves on the window.
 const DOCUMENT_MARK: &str = "drawn-in-this-document";
 
-/// The site bundle's files a browser without WebAssembly is refused: the
-/// entry's WebAssembly and glue and the lazy routes' chunks.
-const WITHHELD: [&str; 3] = [
-    "*/pkg/ferroehr-viewer*",
-    "*/pkg/__wasm_split*",
-    "*/pkg/*.wasm",
-];
+/// The files a browser without scripts is refused: FerroUI's loader and
+/// every module it imports (`ferrohealth_ui::serve::Assets`).
+const WITHHELD: [&str; 1] = ["*/ferrohealth-ui/*/scripts/*"];
 
 /// The width of a phone screen, in CSS pixels.
 pub(crate) const PHONE_WIDTH: u32 = 390;
@@ -98,13 +91,12 @@ pub(crate) struct Harness {
     pub(crate) base: String,
     shots_dir: String,
     journey: &'static str,
-    /// Whether this session runs with JavaScript enabled — hydrated pages
-    /// only exist in that mode, so [`Harness::goto`] waits for the shell's
-    /// hydration marker exactly when one will ever appear.
+    /// Whether this session runs FerroUI's modules, so [`Harness::goto`]
+    /// waits for the loader's mark exactly when one will ever appear.
     js: bool,
-    /// Whether the browser is refused the site bundle
-    /// ([`Harness::start_without_webassembly`]), so a page logs the refused
-    /// bundle file as its one expected error.
+    /// Whether the browser is refused FerroUI's modules
+    /// ([`Harness::start_without_scripts`]), so a page logs the refused
+    /// module as its one expected error.
     withheld: bool,
 }
 
@@ -201,7 +193,7 @@ impl Harness {
             .filter(|e| e.level == "SEVERE")
             .map(|e| e.message)
             .filter(|m| !m.contains("Failed to load resource"))
-            .filter(|m| !(self.withheld && m.contains("/pkg/")))
+            .filter(|m| !(self.withheld && m.contains("/scripts/")))
             .collect();
         assert!(
             severe.is_empty(),
@@ -211,13 +203,13 @@ impl Harness {
         bounded("goto()", self.driver.goto(format!("{}{path}", self.base)))
             .await
             .expect("navigate");
-        // Every full navigation restarts hydration, and any first click or
-        // file selection landing before it completes is silently lost —
-        // unrecoverably for same-value re-sends (#2285). Waiting here makes
-        // every journey's first interaction land on live listeners; the
-        // no-JS sessions skip it, since their pages never hydrate.
+        // Every document loads FerroUI's modules anew, and a first click or
+        // file selection landing before a module enhances its part is the
+        // browser's own (#2285). Waiting here makes every journey's first
+        // interaction land on live modules; a session without scripts skips
+        // it, since its pages never load one.
         if self.js {
-            self.wait_hydrated().await;
+            self.wait_scripts().await;
         }
     }
 
@@ -229,7 +221,7 @@ impl Harness {
         self.wait_css_for(css, WAIT).await
     }
 
-    /// [`Self::wait_css`] with an explicit budget, so the hydration wait can be
+    /// [`Self::wait_css`] with an explicit budget, so the scripts' wait can be
     /// long without lengthening every other wait.
     ///
     /// # Panics
@@ -249,11 +241,9 @@ impl Harness {
             Err(e) => {
                 // Failure evidence: where the browser actually was, and what
                 // its console says. The console half is what separates "the
-                // screen simply has not got there yet" from "the client
-                // runtime is dead": an unrecoverable hydration error traps the
-                // WASM module, after which no client-side navigation completes
-                // and the page only moves on a full reload. Without it a
-                // timeout reports a missing selector and hides its cause.
+                // screen simply has not got there yet" from "a module failed":
+                // a script error leaves its element without behaviour. Without
+                // it a timeout reports a missing selector and hides its cause.
                 let url = bounded("current_url()", self.driver.current_url())
                     .await
                     .map(|u| u.to_string())
@@ -289,7 +279,7 @@ impl Harness {
     }
 
     /// Start a journey with JavaScript DISABLED (the progressive-enhancement
-    /// contract: SSR + plain HTML forms must work before WASM ever loads).
+    /// contract: the server's page and plain HTML forms work with no script).
     ///
     /// # Panics
     /// When the stack env is set but the browser session cannot start.
@@ -449,31 +439,26 @@ impl Harness {
         );
     }
 
-    /// Wait until client hydration has completed on the current page
-    /// (FerroUI writes `data-ferroui-hydrated` on the root element once the
-    /// page and its lazy route have hydrated).
-    /// Required before driving any control whose handler exists only
-    /// hydrated — a click or file selection landing earlier is silently
-    /// lost, and a same-value re-send fires no later event (#2285).
+    /// Wait until FerroUI's loader has imported the modules of the current
+    /// page (it writes `data-fui-script` on the root once it has,
+    /// `ferrohealth_ui::script::MARK`).
+    /// Required before driving any control a module enhances: a click or
+    /// file selection landing earlier is the browser's own (#2285).
     ///
-    /// This one wait gets [`HYDRATION_WAIT`] rather than [`WAIT`]: it is the
-    /// only condition whose latency is dominated by the WASM bundle's size,
-    /// which differs by an order of magnitude between the two lanes (module
+    /// This one wait gets [`SCRIPTS_WAIT`] rather than [`WAIT`] (module
     /// docs).
-    pub(crate) async fn wait_hydrated(&self) {
-        self.wait_css_for("html[data-ferroui-hydrated]", HYDRATION_WAIT)
+    pub(crate) async fn wait_scripts(&self) {
+        self.wait_css_for("html[data-fui-script]", SCRIPTS_WAIT)
             .await;
     }
 
-    /// Start a journey whose browser is refused the site bundle's
-    /// WebAssembly, its glue and its chunks, so no page hydrates, as on a
-    /// page whose WebAssembly has not loaded or will not; the stylesheets
-    /// still load.
+    /// Start a journey whose browser is refused FerroUI's loader and every
+    /// module, so no page runs a script; the stylesheets still load.
     ///
     /// # Panics
     /// When the stack env is set but the browser session cannot start, or
     /// the browser refuses the blocked addresses.
-    pub(crate) async fn start_without_webassembly(journey: &'static str) -> Option<Self> {
+    pub(crate) async fn start_without_scripts(journey: &'static str) -> Option<Self> {
         let mut h = Self::start(journey).await?;
         let cdp = h.driver.cdp();
         bounded(
@@ -490,15 +475,15 @@ impl Harness {
             ),
         )
         .await
-        .expect("block the bundle");
+        .expect("block the modules");
         h.js = false;
         h.withheld = true;
         Some(h)
     }
 
     /// Marks the window, which a document the browser loads anew does not
-    /// carry, so [`Self::document_kept`] tells a page the router drew from a
-    /// page the browser loaded.
+    /// carry, so [`Self::document_kept`] tells a change a module made in
+    /// place from a page the browser loaded.
     ///
     /// # Panics
     /// When the browser refuses the script.
@@ -563,7 +548,7 @@ impl Harness {
 
     /// The standing browser-console gate: read the browser log (thirtyfour's
     /// legacy-log support over chromedriver) and fail on any SEVERE entry
-    /// (hydration errors and panics land there). Network 4xx from
+    /// (a module's errors land there). Network 4xx from
     /// deliberate negative steps can be allowed by substring.
     ///
     /// # Panics
@@ -757,6 +742,32 @@ impl Harness {
         )
         .await
         .expect("the browser takes the colour-scheme emulation");
+    }
+
+    /// How many CSS pixels the page's content is wider than its layout
+    /// viewport, from Chrome `DevTools` Protocol `Page.getLayoutMetrics`;
+    /// zero or less when the page scrolls no way but down.
+    ///
+    /// # Panics
+    /// When the browser refuses the call or answers another shape.
+    pub(crate) async fn sideways_overflow(&self) -> f64 {
+        let metrics = bounded(
+            "Page.getLayoutMetrics",
+            self.driver
+                .cdp()
+                .send_raw("Page.getLayoutMetrics", serde_json::json!({})),
+        )
+        .await
+        .expect("the browser reports its layout metrics");
+        let content = metrics
+            .pointer("/cssContentSize/width")
+            .and_then(serde_json::Value::as_f64)
+            .expect("cssContentSize.width");
+        let viewport = metrics
+            .pointer("/cssLayoutViewport/clientWidth")
+            .and_then(serde_json::Value::as_f64)
+            .expect("cssLayoutViewport.clientWidth");
+        content - viewport
     }
 
     /// End the session (screenshots + console gate are per-journey calls).
@@ -1324,7 +1335,7 @@ pub(crate) async fn wait_dialog_settled(h: &Harness, control_css: &str) {
 const TOAST_CARD: &str = ".fui-toast-text";
 
 /// Upload the file at `path` as a template of `family` (`adl14` or `adl2`)
-/// through Upload a template: the hydrated file field reads the file into
+/// through Upload a template: FerroUI's upload module reads the file into
 /// the source editor, and the dock's primary button posts it.
 ///
 /// Leaves the browser on the page that answers the post: the template's own
@@ -1448,9 +1459,9 @@ pub(crate) async fn poll_until(condition: impl AsyncFnMut() -> bool) -> bool {
 /// The viewer keeps an edit form inert until the document it edits has been
 /// seeded into it, so this is the condition that makes typing (or saving) safe:
 /// input accepted earlier would be replaced by the seed and the save would then
-/// commit the pre-seed draft. FerroUI's code editor keeps its text area
-/// read-only (not disabled) until the page hydrates and while its form is
-/// unseeded, so both properties are read.
+/// commit the pre-seed draft. FerroUI's code editor writes its text area
+/// read-only (not disabled) while its form is not editable, so both
+/// properties are read.
 ///
 /// # Panics
 /// When it never becomes enabled within 15 s, or when the `WebDriver` stops
@@ -1614,14 +1625,23 @@ pub(crate) async fn main_text(h: &Harness) -> String {
     h.wait_css("main").await.text().await
 }
 
-/// Type `text` into the field at `css`, replacing what it holds.
+/// The characters [`fill`] types in one `WebDriver` command, so a long
+/// document typed into FerroUI's editor keeps each command inside
+/// [`COMMAND_BUDGET`] (the editor re-highlights a JSON document on every key,
+/// FerroHEALTH/FerroUI#531).
+const FILL_CHUNK: usize = 256;
+
+/// Type `text` into the field at `css`, replacing what it holds, key by key.
 ///
 /// # Panics
 /// When the field is not on the page.
 pub(crate) async fn fill(h: &Harness, css: &str, text: &str) {
     let field = h.wait_css(css).await;
     field.clear().await;
-    field.send_keys(text).await;
+    let chars: Vec<char> = text.chars().collect();
+    for chunk in chars.chunks(FILL_CHUNK) {
+        field.send_keys(chunk.iter().collect::<String>()).await;
+    }
 }
 
 /// Click the submit control at `css` and wait for the page that answers the
@@ -1742,10 +1762,9 @@ pub(crate) async fn login_basic_as(h: &Harness, user: &str, pass: &str) {
     h.goto("/login").await;
     h.wait_css("#sign-in-username").await.send_keys(&user).await;
     h.wait_css("#sign-in-password").await.send_keys(&pass).await;
-    // Submit with a bounded retry: a click landing exactly while hydration
-    // swaps the form can be lost (the ActionForm is valid both pre- and
-    // post-hydration, but the swap instant is a real race). Each attempt
-    // gets a short bounded wait; leaving /login ends the loop.
+    // Submit with a bounded retry: a click landing while the scripts attach
+    // can be lost. Each attempt gets a short bounded wait; leaving /login
+    // ends the loop.
     let mut attempts = 0;
     loop {
         h.wait_css("button[type=submit]").await.click().await;

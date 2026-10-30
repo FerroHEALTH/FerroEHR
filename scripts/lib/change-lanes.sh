@@ -25,8 +25,8 @@ set -euo pipefail
 #
 # ci deploy: the deployment harness, the compose files and the server image.
 # ci code: the Rust trees and manifests, the shared corpus (#2811), and the
-# only scripts a code-gated job runs (the drift check, the e2e harness, the
-# cargo-leptos wrapper); any other script costs no Rust run.
+# only scripts a code-gated job runs (the drift check and the e2e harness);
+# any other script costs no Rust run.
 # ci msrv (#3120): what can move the minimum Rust version, a manifest, the
 # lockfile, the toolchain, or the recipe; a source edit cannot.
 # ci viewer (#335, #3190): the viewer, its harness, the stack it drives, the
@@ -41,9 +41,9 @@ set -euo pipefail
 # docs: the site sources and every input of the build's own gates.
 # sonar: the scanned trees, their manifests, the scan scope and the recipe.
 readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/)
-ci|code|^scripts/(checks/codegen-drift|ui-e2e|cargo-leptos)\.sh$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
+ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
 ci|msrv|(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$
-ci|viewer|^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|scripts/cargo-leptos\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)
+ci|viewer|^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)
 ci|server_dockerfile|^(docker/Dockerfile|\.dockerignore)$
 ci|viewer_dockerfile|^(docker/viewer/Dockerfile|\.dockerignore)$
 ci|helm|^(deploy/helm/|\.github/workflows/ci\.yml$)

@@ -6,7 +6,7 @@
 #
 # scripts/ui-e2e.sh has carried a shipped-artifact mode
 # (UI_E2E_IMAGE/UI_E2E_IMAGE_REF) since the viewer lane was built, and nothing
-# ever called it: every gate ran the battery against a viewer cargo-leptos
+# ever called it: every gate ran the battery against a viewer
 # built on the runner. A capability no lane runs is decoration, so this is its
 # caller.
 #

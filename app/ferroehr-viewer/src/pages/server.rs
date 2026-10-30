@@ -15,6 +15,7 @@
 
 use ferrohealth_health::document::State;
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, group_row,
@@ -28,28 +29,24 @@ use ferrohealth_ui::view::surface::{
     Header, Stat, definitions, page_heading, stat_card, stat_grid,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::bff::system::Endpoint;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, current, tr, tr_with};
 use crate::management::{
     BuildInfoView, LoggerView, MetricDetailView, MetricTile, ReadinessView, format_metric,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::management::{
     fetch_build_info, fetch_headline_metrics, fetch_loggers, fetch_metric_detail,
     fetch_metric_names, fetch_readiness, probe_management_api, reset_log_filter, set_log_filter,
 };
+use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
-    Refused, count, document_section, drawn, info_note, page_model, panel, plain_section, section,
-    state_mark,
+    Refused, count, document_section, drawn, info_note, panel, plain_section, section, state_mark,
 };
+use crate::routes::Drawn;
 
 /// The id of Apply the log filter's confirmation.
 const APPLY_DIALOG: &str = "apply-log-filter";
@@ -126,7 +123,7 @@ impl ServerTab {
 
 /// A tab's model: whether the CDR serves the management surface, and the
 /// tab's own model, absent on a management tab the CDR does not serve.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 struct Tabbed<T> {
     /// Whether the management surface answers.
     managed: bool,
@@ -134,7 +131,6 @@ struct Tabbed<T> {
     body: Option<T>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads a tab of Server: probes the management surface, then loads `body`
 /// unless the tab reads the surface and the CDR does not serve it.
 async fn load_tab<T, F, Fut>(tab: ServerTab, body: F) -> Tabbed<T>
@@ -153,15 +149,16 @@ where
 
 /// A tab of Server over the view `draw` makes of its model; a management tab
 /// on a CDR without the management surface says so.
-fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> AnyView) -> AnyView {
+fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Html) -> Html {
     let Tabbed { managed, body } = tabbed;
     let tabs = ServerTab::ALL
         .into_iter()
         .filter(|each| managed || !each.managed())
         .map(|each| Tab::new(each.key(), each.href(), each.words().0))
         .collect();
-    let content = body.map_or_else(|| info_note(tr(ConsoleMsg::ServerNoManagement)), draw);
+    let content = body.map_or_else(|| info_note(t(tr(ConsoleMsg::ServerNoManagement))), draw);
     let heading = page_heading(
+        &current(),
         Header {
             title: tr(Msg::NavServer).into(),
             subtitle: Some(tr(ConsoleMsg::ServerSubtitle).into()),
@@ -177,42 +174,32 @@ fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Any
     } else {
         ferrohealth_ui::view::surface::section_intro(tab.words().1)
     };
-    view! {
-        <Title text=tr(Msg::NavServer) />
-        {heading}
-        <div class="fui-stack">
-            {binder(
-                tr(ConsoleMsg::ServerSections),
-                tabs,
-                tab.key(),
-                panel(
-                    view! {
-                        {plain_section(intro)}
-                        {content}
-                    },
-                ),
-            )}
-        </div>
-    }
-    .into_any()
+    let binder = binder(
+        &current(),
+        tr(ConsoleMsg::ServerSections),
+        tabs,
+        tab.key(),
+        panel(plain_section(intro).then(content)),
+    );
+    heading.then(h(format!(r#"<div class="fui-stack">{binder}</div>"#)))
 }
 
 /// The line under the SMART tab, its "Your access" a link to the page that
 /// shows the scopes the session holds.
-fn smart_intro() -> AnyView {
+fn smart_intro() -> Html {
     const MARK: &str = "\u{1}";
     let line = tr_with(ConsoleMsg::ServerSmartLine, &[("access", MARK.into())]);
     let (before, after) = line.split_once(MARK).unwrap_or((line.as_str(), ""));
-    view! {
-        <p class="fui-small fui-muted fui-section-intro">
-            {before.to_owned()} <a href="/access">{tr(Msg::YourAccess)}</a> {after.to_owned()}
-        </p>
-    }
-    .into_any()
+    h(format!(
+        r#"<p class="fui-small fui-muted fui-section-intro">{}<a href="/access">{}</a>{}</p>"#,
+        t(before),
+        t(tr(Msg::YourAccess)),
+        t(after)
+    ))
 }
 
 /// How the CDR's status document says it runs.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Running {
     /// `UP`.
     Up,
@@ -225,7 +212,7 @@ enum Running {
 }
 
 /// Overview's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Overview {
     /// How the CDR runs.
     running: Running,
@@ -243,16 +230,11 @@ struct Overview {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_overview(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Tabbed<Overview>, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_overview() -> Result<Tabbed<Overview>, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_overview().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What [`load_overview`] reads, on the server.
 async fn read_overview() -> Tabbed<Overview> {
     load_tab(ServerTab::Overview, || async {
@@ -300,11 +282,7 @@ async fn read_overview() -> Tabbed<Overview> {
 }
 
 /// Overview, drawn.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one page part: the status, the safeguards and the build it draws"
-)]
-fn overview(model: Overview) -> AnyView {
+fn overview(model: Overview) -> Html {
     let Overview {
         running,
         sandbox,
@@ -327,17 +305,16 @@ fn overview(model: Overview) -> AnyView {
         (tr(ConsoleMsg::ServerState), state),
         (
             tr(ConsoleMsg::ServerDeployment),
-            tr(if sandbox {
+            t(tr(if sandbox {
                 ConsoleMsg::ServerSandbox
             } else {
                 ConsoleMsg::ServerProduction
-            })
-            .into_any(),
+            })),
         ),
-        (tr(ConsoleMsg::ServerVersion), version.into_any()),
+        (tr(ConsoleMsg::ServerVersion), t(version)),
         (
             tr(ConsoleMsg::ServerConformance),
-            view! { <a href="/about">{tr(Msg::NavAbout)}</a> }.into_any(),
+            h(format!(r#"<a href="/about">{}</a>"#, t(tr(Msg::NavAbout)))),
         ),
     ]);
     let gaps = (!gaps.is_empty()).then(|| {
@@ -346,31 +323,25 @@ fn overview(model: Overview) -> AnyView {
         let rows = gaps
             .iter()
             .map(|gap| {
-                view! {
-                    <tr>
-                        <th scope="row" data-role="title">
-                            {state_mark(FlowState::Degraded, gap)}
-                        </th>
-                    </tr>
-                }
-                .into_any()
+                h(format!(
+                    r#"<tr><th scope="row" data-role="title">{}</th></tr>"#,
+                    state_mark(FlowState::Degraded, gap)
+                ))
             })
-            .collect_view()
-            .into_any();
+            .collect();
         let caption = tr(ConsoleMsg::ServerSafeguardsOff);
         section(
             Some(tr(ConsoleMsg::ServerSafeguardsOff)),
             total,
             None,
-            view! {
-                {ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::ServerSandboxIntro))}
-                {data_table(DataTable {
+            ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::ServerSandboxIntro)).then(
+                data_table(DataTable {
                     caption: &caption,
                     columns: &columns,
                     sorting: Sorting::default(),
                     body: Body::Rows(rows),
-                })}
-            },
+                }),
+            ),
         )
     });
     let build = match build {
@@ -382,7 +353,7 @@ fn overview(model: Overview) -> AnyView {
                 definitions(
                     info.facts
                         .iter()
-                        .map(|(key, value)| (key.clone(), value.clone().into_any()))
+                        .map(|(key, value)| (key.clone(), t(value)))
                         .collect(),
                 ),
             )];
@@ -395,36 +366,30 @@ fn overview(model: Overview) -> AnyView {
                         group
                             .rows
                             .iter()
-                            .map(|(key, value)| (key.clone(), value.clone().into_any()))
+                            .map(|(key, value)| (key.clone(), t(value)))
                             .collect(),
                     ),
                 ));
             }
-            parts.collect_view().into_any()
+            Html::join(parts)
         }
-        Ok(None) => plain_section(info_note(tr(ConsoleMsg::ServerNoBuildInfo))),
+        Ok(None) => plain_section(info_note(t(tr(ConsoleMsg::ServerNoBuildInfo)))),
         Err(refusal) => plain_section(refusal.view()),
     };
-    view! {
-        {section(Some(tr(ConsoleMsg::ServerStatus)), None, None, facts)}
-        {gaps}
-        {build}
-    }
-    .into_any()
+    Html::join([
+        section(Some(tr(ConsoleMsg::ServerStatus)), None, None, facts),
+        opt(gaps),
+        build,
+    ])
 }
 
 /// Server: Overview.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn OverviewTab() -> impl IntoView {
-    let model = page_model!(load_overview());
-    let page = drawn(model, |tabbed| {
+/// Server › Overview.
+pub async fn overview_page() -> Drawn {
+    let page = drawn(load_overview().await, |tabbed| {
         server_page(ServerTab::Overview, tabbed, overview)
     });
-    view! { {page} }
+    Drawn::page(tr(Msg::NavServer), page)
 }
 
 /// The word the health tab shows for an indicator's `state`.
@@ -451,16 +416,11 @@ fn flow_of(status: &str) -> FlowState {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_health(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Tabbed<Result<ReadinessView, Refused>>, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_health() -> Result<Tabbed<Result<ReadinessView, Refused>>, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_health().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What [`load_health`] reads, on the server.
 async fn read_health() -> Tabbed<Result<ReadinessView, Refused>> {
     load_tab(ServerTab::Health, || async {
@@ -472,21 +432,16 @@ async fn read_health() -> Tabbed<Result<ReadinessView, Refused>> {
 }
 
 /// Server: Health.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn HealthTab() -> impl IntoView {
-    let model = page_model!(load_health());
-    let page = drawn(model, |tabbed| {
+/// Server › Health.
+pub async fn health_page() -> Drawn {
+    let page = drawn(load_health().await, |tabbed| {
         server_page(ServerTab::Health, tabbed, health)
     });
-    view! { {page} }
+    Drawn::page(tr(Msg::NavServer), page)
 }
 
 /// Health, drawn from the readiness document or its refusal.
-fn health(read: Result<ReadinessView, Refused>) -> AnyView {
+fn health(read: Result<ReadinessView, Refused>) -> Html {
     match read {
         Ok(readiness) => {
             let columns = [
@@ -500,34 +455,27 @@ fn health(read: Result<ReadinessView, Refused>) -> AnyView {
                 .iter()
                 .map(|row| {
                     let word = state_word(row.state);
-                    view! {
-                        <tr>
-                            <th scope="row" data-role="title">
-                                {row.name.clone()}
-                            </th>
-                            {cell(&columns[1], state_mark(flow_of(word), word))}
-                            {cell(&columns[2], row.detail.clone().unwrap_or_default())}
-                        </tr>
-                    }
-                    .into_any()
+                    h(format!(
+                        r#"<tr><th scope="row" data-role="title">{}</th>{}{}</tr>"#,
+                        t(&row.name),
+                        cell(&columns[1], state_mark(flow_of(word), word)),
+                        cell(&columns[2], t(row.detail.clone().unwrap_or_default()))
+                    ))
                 })
-                .collect_view()
-                .into_any();
+                .collect();
             let caption = tr(ConsoleMsg::ServerDependencies);
             section(
                 Some(tr(ConsoleMsg::ServerDependencies)),
                 u64::try_from(readiness.readiness.indicators.len()).ok(),
                 None,
-                view! {
-                    {(!readiness.detailed)
-                        .then(|| info_note(tr(ConsoleMsg::ServerPublicReadiness)))}
-                    {data_table(DataTable {
-                        caption: &caption,
-                        columns: &columns,
-                        sorting: Sorting::default(),
-                        body: Body::Rows(rows),
-                    })}
-                },
+                opt((!readiness.detailed)
+                    .then(|| info_note(t(tr(ConsoleMsg::ServerPublicReadiness)))))
+                .then(data_table(DataTable {
+                    caption: &caption,
+                    columns: &columns,
+                    sorting: Sorting::default(),
+                    body: Body::Rows(rows),
+                })),
             )
         }
         Err(refusal) => plain_section(refusal.view()),
@@ -535,7 +483,7 @@ fn health(read: Result<ReadinessView, Refused>) -> AnyView {
 }
 
 /// Metrics' model.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 struct Metrics {
     /// The headline tiles, or their refusal.
     headline: Result<Option<Vec<MetricTile>>, Refused>,
@@ -549,16 +497,11 @@ struct Metrics {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_metrics(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Tabbed<Metrics>, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_metrics() -> Result<Tabbed<Metrics>, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_metrics().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What [`load_metrics`] reads, on the server.
 async fn read_metrics() -> Tabbed<Metrics> {
     load_tab(ServerTab::Metrics, || async {
@@ -591,7 +534,7 @@ fn picked() -> Option<String> {
     clippy::too_many_lines,
     reason = "one page part: the headline, the picker and the samples it draws"
 )]
-fn metrics(model: Metrics) -> AnyView {
+fn metrics(model: Metrics) -> Html {
     let Metrics {
         headline,
         names,
@@ -613,52 +556,40 @@ fn metrics(model: Metrics) -> AnyView {
                             href: None,
                         })
                     })
-                    .collect_view(),
+                    .collect(),
             ),
         ),
-        Ok(None) => ().into_any(),
+        Ok(None) => Html::empty(),
         Err(refusal) => plain_section(refusal.view()),
     };
     let names = match names {
         Ok(names) => names,
         Err(refusal) => {
-            return view! {
-                {headline}
-                {plain_section(refusal.view())}
-            }
-            .into_any();
+            return headline.then(plain_section(refusal.view()));
         }
     };
     let picked = picked();
-    let options = names
+    let options: Html = names
         .iter()
         .map(|name| {
-            view! {
-                <option value=name.clone() selected=picked.as_deref() == Some(name.as_str())>
-                    {name.clone()}
-                </option>
-            }
+            h(format!(
+                r#"<option value="{}"{}>{}</option>"#,
+                t(name),
+                flag("selected", picked.as_deref() == Some(name.as_str())),
+                t(name)
+            ))
         })
-        .collect_view();
-    let pick = view! {
-        <form method="get" action="/server/metrics" class="fui-transform-options">
-            {Field::new("m-pick", tr(ConsoleMsg::ServerMetric))
-                .holds_id()
-                .view(
-                    view! {
-                        <select id="m-pick" name="metric" class="fui-select">
-                            {options}
-                        </select>
-                    },
-                )}
-            <div class="fui-transform-run">
-                <button type="submit" class="fui-button fui-button-secondary">
-                    {ferrohealth_ui::icon::icon(Glyph::CHART_LINE, "16")}
-                    {tr(ConsoleMsg::ServerShow)}
-                </button>
-            </div>
-        </form>
-    };
+        .collect();
+    let pick = h(format!(
+        r#"<form method="get" action="/server/metrics" class="fui-transform-options">{}<div class="fui-transform-run"><button type="submit" class="fui-button fui-button-secondary">{}{}</button></div></form>"#,
+        Field::new("m-pick", tr(ConsoleMsg::ServerMetric))
+            .holds_id()
+            .view(h(format!(
+                r#"<select id="m-pick" name="metric" class="fui-select">{options}</select>"#
+            ))),
+        ferrohealth_ui::icon::icon(Glyph::CHART_LINE, "16"),
+        t(tr(ConsoleMsg::ServerShow))
+    ));
     let samples = match samples {
         Some(Ok(Some(detail))) => {
             let columns = [
@@ -671,71 +602,61 @@ fn metrics(model: Metrics) -> AnyView {
                 .samples
                 .iter()
                 .map(|sample| {
-                    view! {
-                        <tr>
-                            <th scope="row" data-role="title">
-                                <code>{sample.labels.clone()}</code>
-                            </th>
-                            {cell(&columns[1], format_metric(sample.value))}
-                        </tr>
-                    }
-                    .into_any()
+                    h(format!(
+                        r#"<tr><th scope="row" data-role="title"><code>{}</code></th>{}</tr>"#,
+                        t(&sample.labels),
+                        cell(&columns[1], t(format_metric(sample.value)))
+                    ))
                 })
-                .collect_view()
-                .into_any();
+                .collect();
             let caption = tr_with(
                 ConsoleMsg::ServerSamplesOf,
                 &[("metric", detail.name.clone().into())],
             );
-            view! {
-                <p class="fui-small fui-muted">{detail.help.clone()}</p>
-                {data_table(DataTable {
-                    caption: &caption,
-                    columns: &columns,
-                    sorting: Sorting::default(),
-                    body: Body::Rows(rows),
-                })}
-            }
-            .into_any()
+            h(format!(
+                r#"<p class="fui-small fui-muted">{}</p>"#,
+                t(&detail.help)
+            ))
+            .then(data_table(DataTable {
+                caption: &caption,
+                columns: &columns,
+                sorting: Sorting::default(),
+                body: Body::Rows(rows),
+            }))
         }
-        Some(Ok(None)) => info_note(tr(ConsoleMsg::ServerNoMetric)),
+        Some(Ok(None)) => info_note(t(tr(ConsoleMsg::ServerNoMetric))),
         Some(Err(refusal)) => refusal.view(),
-        None => ().into_any(),
+        None => Html::empty(),
     };
-    view! {
-        {headline}
-        {section(
-            Some(tr(ConsoleMsg::ServerRegistry)),
-            None,
-            None,
-            view! {
-                <p class="fui-small fui-muted">
-                    {tr_with(ConsoleMsg::ServerMetricCount, &[("count", count(names.len()))])}
-                </p>
-                {pick}
-                {samples}
-            },
-        )}
-    }
-    .into_any()
+    headline.then(section(
+        Some(tr(ConsoleMsg::ServerRegistry)),
+        None,
+        None,
+        Html::join([
+            h(format!(
+                r#"<p class="fui-small fui-muted">{}</p>"#,
+                t(tr_with(
+                    ConsoleMsg::ServerMetricCount,
+                    &[("count", count(names.len()))]
+                ))
+            )),
+            pick,
+            samples,
+        ]),
+    ))
 }
 
 /// Server: Metrics.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn MetricsTab() -> impl IntoView {
-    let model = page_model!(load_metrics());
-    let page = drawn(model, |tabbed| {
+/// Server › Metrics.
+pub async fn metrics_page() -> Drawn {
+    let page = drawn(load_metrics().await, |tabbed| {
         server_page(ServerTab::Metrics, tabbed, metrics)
     });
-    view! { {page} }
+    Drawn::page(tr(Msg::NavServer), page)
 }
 
 /// Logging's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Logging {
     /// The filters, and the refusal of a change the post asked for.
     Loggers {
@@ -754,16 +675,11 @@ enum Logging {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_logging(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Tabbed<Logging>, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_logging() -> Result<Tabbed<Logging>, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_logging().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What [`load_logging`] reads, on the server.
 async fn read_logging() -> Tabbed<Logging> {
     load_tab(ServerTab::Logging, || async {
@@ -815,7 +731,7 @@ async fn read_logging() -> Tabbed<Logging> {
                 loggers
                     .as_ref()
                     .ok()
-                    .flatten()
+                    .and_then(Option::as_ref)
                     .map(|loggers| loggers.filter.clone())
             })
             .unwrap_or_default();
@@ -829,132 +745,90 @@ async fn read_logging() -> Tabbed<Logging> {
 }
 
 /// The confirmation of Apply, which posts the log form.
-fn apply_dialog() -> AnyView {
+fn apply_dialog() -> Html {
     confirm_dialog(
+        &current(),
         Confirmation {
             id: APPLY_DIALOG.into(),
             title: tr(ConsoleMsg::ServerApplyTitle).into(),
             message: tr(ConsoleMsg::ServerApplyMessage).into(),
         },
-        view! {
-            <button
-                type="submit"
-                form=LOG_FORM
-                name="intent"
-                value="apply-filter"
-                class="fui-button fui-button-primary"
-            >
-                {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
-                {tr(ConsoleMsg::ServerApplyConfirm)}
-            </button>
-        },
+        h(format!(
+            r#"<button type="submit" form="{LOG_FORM}" name="intent" value="apply-filter" class="fui-button fui-button-primary">{}{}</button>"#,
+            ferrohealth_ui::icon::icon(Glyph::CHECK, "16"),
+            t(tr(ConsoleMsg::ServerApplyConfirm))
+        )),
     )
-    .into_any()
 }
 
 /// Logging, drawn.
-fn logging(model: Logging) -> AnyView {
+fn logging(model: Logging) -> Html {
     let (top, loggers, typed) = match model {
         Logging::Loggers {
             top,
             loggers,
             typed,
         } => (top, loggers, typed),
-        Logging::Left => return ().into_any(),
+        Logging::Left => return Html::empty(),
     };
     let loggers = match loggers {
         Ok(Some(loggers)) => loggers,
-        Ok(None) => return info_note(tr(ConsoleMsg::ServerNoLogging)),
+        Ok(None) => return info_note(t(tr(ConsoleMsg::ServerNoLogging))),
         Err(refusal) => return refusal.view(),
     };
     let at_boot = loggers.filter == loggers.boot_filter;
     let facts = definitions(vec![
         (
             tr(ConsoleMsg::ServerInEffect),
-            view! { <code>{loggers.filter.clone()}</code> }.into_any(),
+            h(format!("<code>{}</code>", t(&loggers.filter))),
         ),
         (
             tr(ConsoleMsg::ServerAtBoot),
-            view! { <code>{loggers.boot_filter.clone()}</code> }.into_any(),
+            h(format!("<code>{}</code>", t(&loggers.boot_filter))),
         ),
     ]);
-    let form = view! {
-        <form id=LOG_FORM method="post" action="/server/logging" class="fui-transform-options">
-            {Field::new("lf", tr(ConsoleMsg::ServerNewFilter))
-                .holds_id()
-                .view(
-                    view! {
-                        <input
-                            id="lf"
-                            name="filter"
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=typed.clone()
-                        />
-                    },
-                )}
-            <div class="fui-transform-run fui-cluster">
-                <button
-                    type="button"
-                    class="fui-button fui-button-primary"
-                    command="show-modal"
-                    commandfor=APPLY_DIALOG
-                    aria-haspopup="dialog"
-                >
-                    {ferrohealth_ui::icon::icon(Glyph::CHECK, "16")}
-                    {tr(ConsoleMsg::ServerApply)}
-                </button>
-                <button
-                    type="submit"
-                    name="intent"
-                    value="reset-filter"
-                    class="fui-button fui-button-secondary"
-                    disabled=at_boot
-                    title=at_boot.then(|| tr(ConsoleMsg::ServerAtBootAlready))
-                >
-                    {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16")}
-                    {tr(ConsoleMsg::ServerReset)}
-                </button>
-            </div>
-        </form>
-    };
+    let form = h(format!(
+        r#"<form id="{LOG_FORM}" method="post" action="/server/logging" class="fui-transform-options">{field}<div class="fui-transform-run fui-cluster"><button type="button" class="fui-button fui-button-primary" command="show-modal" commandfor="{APPLY_DIALOG}" aria-haspopup="dialog">{check}{apply}</button><button type="submit" name="intent" value="reset-filter" class="fui-button fui-button-secondary"{disabled}{title}>{rotate}{reset}</button></div></form>"#,
+        field = Field::new("lf", tr(ConsoleMsg::ServerNewFilter))
+            .holds_id()
+            .view(h(format!(
+                r#"<input id="lf" name="filter" type="text" class="fui-input fui-mono" value="{}">"#,
+                t(&typed)
+            ))),
+        check = ferrohealth_ui::icon::icon(Glyph::CHECK, "16"),
+        apply = t(tr(ConsoleMsg::ServerApply)),
+        disabled = flag("disabled", at_boot),
+        title = attr("title", at_boot.then(|| tr(ConsoleMsg::ServerAtBootAlready))),
+        rotate = ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16"),
+        reset = t(tr(ConsoleMsg::ServerReset)),
+    ));
     let dialog = apply_dialog();
     let top = top.map(|refusal| refusal.view());
-    view! {
-        {top}
-        {section(Some(tr(ConsoleMsg::ServerFilter)), None, None, facts)}
-        {section(
+    Html::join([
+        opt(top),
+        section(Some(tr(ConsoleMsg::ServerFilter)), None, None, facts),
+        section(
             Some(tr(ConsoleMsg::ServerChangeFilter)),
             None,
             None,
-            view! {
-                {ferrohealth_ui::view::surface::section_intro(
-                    tr(ConsoleMsg::ServerChangeFilterIntro),
-                )}
-                {form}
-            },
-        )}
-        {dialog}
-    }
-    .into_any()
+            ferrohealth_ui::view::surface::section_intro(tr(ConsoleMsg::ServerChangeFilterIntro))
+                .then(form),
+        ),
+        dialog,
+    ])
 }
 
 /// Server: Logging.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn LoggingTab() -> impl IntoView {
-    let model = page_model!(load_logging());
-    let page = drawn(model, |tabbed| {
+/// Server › Logging.
+pub async fn logging_page() -> Drawn {
+    let page = drawn(load_logging().await, |tabbed| {
         server_page(ServerTab::Logging, tabbed, logging)
     });
-    view! { {page} }
+    Drawn::page(tr(Msg::NavServer), page)
 }
 
 /// One OpenAPI document as API lists it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Document {
     /// Its operations, grouped by tag.
     groups: Vec<(String, Vec<Endpoint>)>,
@@ -963,7 +837,7 @@ struct Document {
 }
 
 /// API's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Api {
     /// The family shown.
     family: String,
@@ -977,16 +851,11 @@ struct Api {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_api(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Tabbed<Api>, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_api() -> Result<Tabbed<Api>, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_api().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What [`load_api`] reads, on the server.
 #[expect(
     clippy::disallowed_types,
@@ -1021,40 +890,30 @@ async fn read_api() -> Tabbed<Api> {
 }
 
 /// The form that picks the API family `family` shows of `families`.
-fn family_pick(family: &str, families: &[(String, String)]) -> AnyView {
-    let options = families
+fn family_pick(family: &str, families: &[(String, String)]) -> Html {
+    let options: Html = families
         .iter()
         .map(|(key, words)| {
-            view! {
-                <option value=key.clone() selected=*key == family>
-                    {words.clone()}
-                </option>
-            }
+            h(format!(
+                r#"<option value="{}"{}>{}</option>"#,
+                t(key),
+                flag("selected", *key == family),
+                t(words)
+            ))
         })
-        .collect_view();
-    view! {
-        <form method="get" action="/server/api" class="fui-transform-options">
-            {Field::new("api-f", tr(ConsoleMsg::ServerApiFamily))
-                .view(
-                    view! {
-                        <select id="api-f" name="family" class="fui-select">
-                            {options}
-                        </select>
-                    },
-                )}
-            <div class="fui-transform-run">
-                <button type="submit" class="fui-button fui-button-secondary">
-                    {ferrohealth_ui::icon::icon(Glyph::SEARCH, "16")}
-                    {tr(ConsoleMsg::ServerShow)}
-                </button>
-            </div>
-        </form>
-    }
-    .into_any()
+        .collect();
+    h(format!(
+        r#"<form method="get" action="/server/api" class="fui-transform-options">{}<div class="fui-transform-run"><button type="submit" class="fui-button fui-button-secondary">{}{}</button></div></form>"#,
+        Field::new("api-f", tr(ConsoleMsg::ServerApiFamily)).view(h(format!(
+            r#"<select id="api-f" name="family" class="fui-select">{options}</select>"#
+        ))),
+        ferrohealth_ui::icon::icon(Glyph::SEARCH, "16"),
+        t(tr(ConsoleMsg::ServerShow))
+    ))
 }
 
 /// API, drawn.
-fn api(model: Api) -> AnyView {
+fn api(model: Api) -> Html {
     let Api {
         family,
         families,
@@ -1076,75 +935,61 @@ fn api(model: Api) -> AnyView {
             for (tag, items) in groups {
                 rows.push(group_row(
                     &columns,
-                    view! {
-                        {tag}
-                        <span class="fui-small fui-muted">
-                            {format!(
-                                " · {}",
-                                tr_with(
-                                    ConsoleMsg::ServerEndpointCount,
-                                    &[("count", count(items.len()))],
-                                ),
-                            )}
-                        </span>
-                    },
+                    t(&tag).then(h(format!(
+                        r#"<span class="fui-small fui-muted">{}</span>"#,
+                        t(format!(
+                            " · {}",
+                            tr_with(
+                                ConsoleMsg::ServerEndpointCount,
+                                &[("count", count(items.len()))],
+                            ),
+                        ))
+                    ))),
                 ));
                 for (method, path, summary) in items {
-                    rows.push(
-                        view! {
-                            <tr>
-                                <th scope="row" data-role="title">
-                                    <code class="fui-method">{method}</code>
-                                    " "
-                                    <code class="fui-path">{path}</code>
-                                </th>
-                                {cell(&columns[1], summary)}
-                            </tr>
-                        }
-                        .into_any(),
-                    );
+                    rows.push(h(format!(
+                        r#"<tr><th scope="row" data-role="title"><code class="fui-method">{}</code> <code class="fui-path">{}</code></th>{}</tr>"#,
+                        t(method),
+                        t(path),
+                        cell(&columns[1], t(summary))
+                    )));
                 }
             }
             let caption = tr_with(ConsoleMsg::ServerEndpointsOf, &[("family", words.into())]);
-            view! {
-                {section(
-                    Some(caption.clone()),
-                    u64::try_from(total).ok(),
-                    None,
-                    data_table(DataTable {
-                        caption: &caption,
-                        columns: &columns,
-                        sorting: Sorting::default(),
-                        body: Body::Rows(rows.collect_view().into_any()),
-                    }),
-                )}
-                {document_section(tr(ConsoleMsg::ServerOpenApi), Language::Json, text, "openapi")}
-            }
-            .into_any()
+            section(
+                Some(caption.clone()),
+                u64::try_from(total).ok(),
+                None,
+                data_table(DataTable {
+                    caption: &caption,
+                    columns: &columns,
+                    sorting: Sorting::default(),
+                    body: Body::Rows(Html::join(rows)),
+                }),
+            )
+            .then(document_section(
+                tr(ConsoleMsg::ServerOpenApi),
+                Language::Json,
+                text,
+                "openapi",
+            ))
         }
         Err(refusal) => plain_section(refusal.view()),
     };
-    view! {
-        {plain_section(pick)}
-        {listed}
-    }
-    .into_any()
+    plain_section(pick).then(listed)
 }
 
 /// Server: API.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn ApiTab() -> impl IntoView {
-    let model = page_model!(load_api());
-    let page = drawn(model, |tabbed| server_page(ServerTab::Api, tabbed, api));
-    view! { {page} }
+/// Server › Api.
+pub async fn api_page() -> Drawn {
+    let page = drawn(load_api().await, |tabbed| {
+        server_page(ServerTab::Api, tabbed, api)
+    });
+    Drawn::page(tr(Msg::NavServer), page)
 }
 
 /// The SMART configuration as the tab lists it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Smart {
     /// The resource scopes it supports.
     resources: Vec<String>,
@@ -1162,16 +1007,11 @@ struct Smart {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_smart(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Tabbed<Result<Option<Smart>, Refused>>, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_smart() -> Result<Tabbed<Result<Option<Smart>, Refused>>, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_smart().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What [`load_smart`] reads, on the server.
 #[expect(
     clippy::disallowed_types,
@@ -1217,7 +1057,7 @@ async fn read_smart() -> Tabbed<Result<Option<Smart>, Refused>> {
 }
 
 /// SMART, drawn.
-fn smart(read: Result<Option<Smart>, Refused>) -> AnyView {
+fn smart(read: Result<Option<Smart>, Refused>) -> Html {
     match read {
         Ok(Some(Smart {
             resources,
@@ -1232,46 +1072,38 @@ fn smart(read: Result<Option<Smart>, Refused>) -> AnyView {
                     tr(ConsoleMsg::ServerAlso),
                     others
                         .iter()
-                        .map(|scope| view! { <code>{scope.clone()}</code> " " })
-                        .collect_view()
-                        .into_any(),
+                        .map(|scope| h(format!("<code>{}</code> ", t(scope))))
+                        .collect(),
                 ),
-                (
-                    tr(ConsoleMsg::ServerGrantTypes),
-                    grant_types.join(", ").into_any(),
-                ),
-                (tr(ConsoleMsg::ServerPkce), pkce.join(", ").into_any()),
+                (tr(ConsoleMsg::ServerGrantTypes), t(grant_types.join(", "))),
+                (tr(ConsoleMsg::ServerPkce), t(pkce.join(", "))),
             ]);
-            view! {
-                {section(
+            Html::join([
+                section(
                     Some(tr(ConsoleMsg::ServerScopes)),
                     u64::try_from(resources.len()).ok(),
                     None,
-                    scope_grants(tr(ConsoleMsg::ServerScopes), grants),
-                )}
-                {section(Some(tr(ConsoleMsg::ServerSignIn)), None, None, facts)}
-                {document_section(
+                    scope_grants(&current(), &tr(ConsoleMsg::ServerScopes), grants),
+                ),
+                section(Some(tr(ConsoleMsg::ServerSignIn)), None, None, facts),
+                document_section(
                     "/.well-known/smart-configuration".to_owned(),
                     Language::Json,
                     text,
                     "smart-configuration",
-                )}
-            }
-            .into_any()
+                ),
+            ])
         }
-        Ok(None) => plain_section(info_note(tr(ConsoleMsg::ServerNoSmart))),
+        Ok(None) => plain_section(info_note(t(tr(ConsoleMsg::ServerNoSmart)))),
         Err(refusal) => plain_section(refusal.view()),
     }
 }
 
 /// Server: SMART.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn SmartTab() -> impl IntoView {
-    let model = page_model!(load_smart());
-    let page = drawn(model, |tabbed| server_page(ServerTab::Smart, tabbed, smart));
-    view! { {page} }
+/// Server › Smart.
+pub async fn smart_page() -> Drawn {
+    let page = drawn(load_smart().await, |tabbed| {
+        server_page(ServerTab::Smart, tabbed, smart)
+    });
+    Drawn::page(tr(Msg::NavServer), page)
 }

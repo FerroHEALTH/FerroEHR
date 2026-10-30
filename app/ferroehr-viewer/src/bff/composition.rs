@@ -19,31 +19,23 @@
 //!
 //! No openEHR spec governs the viewer — our own design; the wire it reads is
 //! spec-bound (`Accept` negotiation per
-//! `docs/specs/openehr/ITS-REST/docs/simplified_formats/`). Every co-located
-//! `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches client-visible state.
+//! `docs/specs/openehr/ITS-REST/docs/simplified_formats/`). Every read guards
+//! with [`require_session`](crate::session::require_session) first, and the
+//! CDR credential never reaches the page.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::bff::wire::VersionEntry;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr_served, tr_served_with};
 
 /// The revision history of a versioned composition, newest-first.
@@ -53,15 +45,14 @@ use crate::locale::{tr_served, tr_served_with};
 /// errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the history is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_versions(
-    /// The EHR holding the versioned composition.
+    // The EHR holding the versioned composition.
     ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid whose revision history to read.
+    // The `VERSIONED_COMPOSITION` uid whose revision history to read.
     uid: String,
 ) -> Result<Vec<VersionEntry>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/versioned_composition/{}/revision_history",
         urlencoding::encode(&ehr_id),
@@ -82,9 +73,10 @@ pub async fn fetch_versions(
 }
 
 /// One representation of a composition version, pretty-printed for display, or
-/// `None` when the addressed version is deleted. `version_uid` may be the bare
-/// versioned-object id (the latest version) or a full `OBJECT_VERSION_ID` (that
-/// exact version).
+/// `None` when the addressed version is deleted.
+///
+/// `version_uid` may be the bare versioned-object id (the latest version) or a
+/// full `OBJECT_VERSION_ID` (that exact version).
 ///
 /// The `204` branch is `composition_get`'s own declared answer for a version
 /// deleted at the specified time
@@ -97,18 +89,17 @@ pub async fn fetch_versions(
 /// errors pass through; a non-2xx CDR answer (a `406` for a declined
 /// representation included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_composition(
-    /// The EHR holding the composition.
+    // The EHR holding the composition.
     ehr_id: String,
-    /// The version to read: a full `OBJECT_VERSION_ID`, or the object uid
-    /// for the latest version.
+    // The version to read: a full `OBJECT_VERSION_ID`, or the object uid
+    // for the latest version.
     version_uid: String,
-    /// Which representation to negotiate for the document body.
+    // Which representation to negotiate for the document body.
     format: ReprFormat,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/composition/{}",
         urlencoding::encode(&ehr_id),
@@ -125,13 +116,16 @@ pub async fn fetch_composition(
     Ok(Some(crate::bff::pretty_body(&response.body, format)))
 }
 
-/// Resolve the `OBJECT_VERSION_ID` of the VERSION of a `VERSIONED_COMPOSITION`
-/// that was extant at `at_time` (a browser `datetime-local` value):
-/// `GET /ehr/{ehr}/versioned_composition/{uid}/version?version_at_time=…`
-/// (ITS-REST `VERSIONED_COMPOSITION` API `versioned_composition_version_get_at_time`
-/// — "if `version_at_time` is supplied, retrieves the VERSION extant at
-/// specified time"). The 200 body is a VERSION envelope whose `uid.value` is
-/// the `OBJECT_VERSION_ID` (RM common — a VERSION's `uid` is an
+/// Resolve the version of a `VERSIONED_COMPOSITION` extant at `at_time`.
+///
+/// The `OBJECT_VERSION_ID`, for a browser `datetime-local` value: `GET
+/// /ehr/{ehr}/versioned_composition/{uid}/version?version_at_time=…` (ITS-REST
+/// `VERSIONED_COMPOSITION` API `versioned_composition_version_get_at_time` —
+/// "if `version_at_time` is supplied, retrieves the VERSION extant at specified
+/// time").
+///
+/// The 200 body is a VERSION envelope whose `uid.value` is the
+/// `OBJECT_VERSION_ID` (RM common — a VERSION's `uid` is an
 /// `OBJECT_VERSION_ID`); that string is returned so the caller can select it.
 ///
 /// # Errors
@@ -140,17 +134,16 @@ pub async fn fetch_composition(
 /// through; a non-2xx CDR answer (a `404` for no version at that time included,
 /// which the UI renders as an inline note) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_version_at_time(
-    /// The EHR holding the versioned composition.
+    // The EHR holding the versioned composition.
     ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid to read a version of.
+    // The `VERSIONED_COMPOSITION` uid to read a version of.
     versioned_object_uid: String,
-    /// The instant to resolve, as a `datetime-local` input value.
+    // The instant to resolve, as a `datetime-local` input value.
     at_time: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
     if at_time.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
@@ -170,12 +163,14 @@ pub async fn fetch_version_at_time(
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
-/// Commit a new version of a COMPOSITION
-/// (`PUT /ehr/{ehr_id}/composition/{versioned_object_uid}`). `If-Match` carries
-/// the CURRENT (latest) `version_uid` — the `preceding_version_uid` — so the
-/// update is conditional (ITS-REST COMPOSITION API `composition_update`; the
-/// header value is the `version_uid` enclosed in double quotes). Canonical
-/// JSON body; `Prefer: return=representation` yields the new `uid.value`.
+/// Commit a new version of a COMPOSITION (`PUT
+/// /ehr/{ehr_id}/composition/{versioned_object_uid}`).
+///
+/// `If-Match` carries the CURRENT (latest) `version_uid` — the
+/// `preceding_version_uid` — so the update is conditional (ITS-REST COMPOSITION
+/// API `composition_update`; the header value is the `version_uid` enclosed in
+/// double quotes). Canonical JSON body; `Prefer: return=representation` yields
+/// the new `uid.value`.
 ///
 /// This is the one update whose precondition is NOT a served `ETag`: the
 /// document pane may be showing an older version, so the value comes from the
@@ -189,19 +184,18 @@ pub async fn fetch_version_at_time(
 /// appended); CDR transport errors pass through; any other non-2xx CDR answer
 /// (its validation diagnostics included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn update_composition(
-    /// The EHR holding the composition.
+    // The EHR holding the composition.
     ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid being updated.
+    // The `VERSIONED_COMPOSITION` uid being updated.
     versioned_object_uid: String,
-    /// The version this edit is based on, sent as `If-Match`.
+    // The version this edit is based on, sent as `If-Match`.
     current_version_uid: String,
-    /// The replacement composition document, as canonical JSON text.
+    // The replacement composition document, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::CompositionBodyEmpty)));
     }
@@ -250,8 +244,8 @@ pub async fn update_composition(
 /// (`DELETE /ehr/{ehr_id}/composition/{version_uid}`).
 ///
 /// `version_uid` MUST be a full `OBJECT_VERSION_ID` — the path id is "in a form
-/// of an OBJECT_VERSION_ID identifier taken from the last (most recent)
-/// VERSION.uid.value, representing the `preceding_version_uid` to be deleted"
+/// of an `OBJECT_VERSION_ID` identifier taken from the last (most recent)
+/// `VERSION.uid.value`, representing the `preceding_version_uid` to be deleted"
 /// (`docs/specs/openehr/ITS-REST/specifications/operations/composition_delete.yaml`)
 /// — so a bare versioned-object id is rejected here rather than sent. No
 /// `If-Match` is sent: the operation declares none, and latest-ness is enforced
@@ -267,15 +261,14 @@ pub async fn update_composition(
 /// transport errors pass through; a non-2xx CDR answer (the `409` stale-uid
 /// branch and the `400` for an already-deleted version included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_composition(
-    /// The EHR holding the composition.
+    // The EHR holding the composition.
     ehr_id: String,
-    /// The latest version's full `OBJECT_VERSION_ID`, which the delete requires.
+    // The latest version's full `OBJECT_VERSION_ID`, which the delete requires.
     version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let version_uid = version_uid.trim();
     if version_uid.is_empty() || !version_uid.contains("::") {
         return Err(ViewerError::Invalid(tr_served(
@@ -348,17 +341,16 @@ pub struct VersionedCompositionDetails {
 /// object/version included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when either body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_versioned_composition(
-    /// The EHR holding the versioned composition.
+    // The EHR holding the versioned composition.
     ehr_id: String,
-    /// The `VERSIONED_COMPOSITION` uid whose envelope facts to read.
+    // The `VERSIONED_COMPOSITION` uid whose envelope facts to read.
     versioned_object_uid: String,
-    /// The specific version within that versioned object.
+    // The specific version within that versioned object.
     version_uid: String,
 ) -> Result<VersionedCompositionDetails, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let ehr = urlencoding::encode(&ehr_id);
     let object = urlencoding::encode(&versioned_object_uid);
     let object_url = state
@@ -389,7 +381,6 @@ pub async fn fetch_versioned_composition(
     parse_versioned_details(&object_body, &version_body)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a `VERSIONED_COMPOSITION` body plus a VERSION body into
 /// [`VersionedCompositionDetails`]. Defensive throughout — an absent attribute
 /// reads as empty rather than failing the card.
@@ -425,7 +416,6 @@ fn parse_versioned_details(
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Parse a `REVISION_HISTORY` body (either the canonical `{ "items": [...] }`
 /// wrapper or a bare array) into version entries. Defensive throughout — a
 /// missing field reads as empty rather than failing.
@@ -448,7 +438,6 @@ pub(crate) fn parse_versions(body: &str) -> Result<Vec<VersionEntry>, ViewerErro
     Ok(items.iter().map(version_entry).collect())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten one `REVISION_HISTORY_ITEM` (`version_id` + `audits`) into a
 /// [`VersionEntry`], reading the first audit for the commit metadata.
 fn version_entry(item: &Value) -> VersionEntry {
@@ -471,7 +460,6 @@ fn version_entry(item: &Value) -> VersionEntry {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys and return the terminal string value, or an
 /// empty string if any hop is missing / not a string.
 fn json_str(value: &Value, path: &[&str]) -> String {
@@ -485,7 +473,7 @@ fn json_str(value: &Value, path: &[&str]) -> String {
     current.as_str().unwrap_or_default().to_owned()
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::{parse_versioned_details, parse_versions};
 

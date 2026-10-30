@@ -15,14 +15,14 @@
     dead_code,
     reason = "the shared `common` harness is compiled into every journey binary; each one drives a different subset of it"
 )]
-//! The viewer with its WebAssembly withheld: every page the navigation leads
-//! to still draws its content, and a form post still answers with its page
-//! (FerroUI `docs/consoles.md`, "How a console builds": every page works
-//! without the WebAssembly as the fallback).
+//! The viewer with its scripts refused: every page the navigation leads to
+//! still draws its content, a `GET` form still answers, and a form post
+//! still answers with its page (FerroUI `docs/consoles.md`, "Before you write
+//! UI code", step 5: every important action is a link or a form).
 //!
-//! The browser is refused the bundle's WebAssembly, its glue and its chunks,
-//! so nothing hydrates; the stylesheets still load. A refused bundle file is
-//! the one browser error a page may log here. Read-only towards the CDR.
+//! The browser is refused FerroUI's loader and every module, so no script
+//! runs; the stylesheets still load. A refused module is the one browser
+//! error a page may log here. Read-only towards the CDR.
 
 use crate::common;
 
@@ -42,28 +42,29 @@ const ENTRIES: [(&str, &str); 9] = [
     ("About", "/about"),
 ];
 
-/// Fails the journey if the page hydrated at `step`.
-async fn not_hydrated(h: &Harness, step: &str) {
+/// Fails the journey if a script ran at `step`: the loader marks the root
+/// once it has imported the page's modules.
+async fn no_script_ran(h: &Harness, step: &str) {
     assert!(
-        common::count_matching(h, "html[data-ferroui-hydrated]").await == 0,
-        "{step} hydrated with its WebAssembly withheld"
+        common::count_matching(h, "html[data-fui-script]").await == 0,
+        "{step} ran a script with the scripts refused"
     );
 }
 
 #[tokio::test]
-async fn every_page_and_a_post_work_with_the_webassembly_withheld() {
-    let Some(h) = Harness::start_without_webassembly("no-webassembly").await else {
+async fn every_page_and_a_post_work_with_the_scripts_refused() {
+    let Some(h) = Harness::start_without_scripts("no-script").await else {
         return;
     };
     login_basic(&h).await;
     h.goto("/").await;
     h.wait_css("main h1").await;
-    not_hydrated(&h, "the dashboard").await;
+    no_script_ran(&h, "the dashboard").await;
     for (words, path) in ENTRIES {
         common::follow_nav(&h, path).await;
         h.wait_url_contains(path).await;
         h.wait_css("main h1").await;
-        not_hydrated(&h, words).await;
+        no_script_ran(&h, words).await;
     }
 
     // A GET form submits as the browser does.
@@ -89,7 +90,7 @@ async fn every_page_and_a_post_work_with_the_webassembly_withheld() {
         .click()
         .await;
     h.wait_css("html[data-theme='dark']").await;
-    not_hydrated(&h, "the theme post").await;
+    no_script_ran(&h, "the theme post").await;
     h.wait_css("button[popovertarget='user-menu']")
         .await
         .click()
@@ -100,7 +101,7 @@ async fn every_page_and_a_post_work_with_the_webassembly_withheld() {
         .await;
     h.wait_css("html[data-theme='system']").await;
 
-    h.assert_console_clean(&["/pkg/", "Failed to load resource"])
+    h.assert_console_clean(&["/scripts/", "Failed to load resource"])
         .await;
     h.finish().await;
 }
