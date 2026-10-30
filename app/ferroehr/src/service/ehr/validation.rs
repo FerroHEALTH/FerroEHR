@@ -690,17 +690,42 @@ pub(in crate::service) fn validate_ehr_access(
 /// - the presence layer (`OBJECT_REF`'s mandatory `id`/`namespace`/`type`,
 ///   `LOCATABLE.name`, `Archetype_node_id_valid`, `Links_valid`, the
 ///   archetype-root identity rule), which relaxes on a `553|incomplete|` commit,
-///   so no lifecycle special-casing is needed. `archetype_details` stays
-///   optional on a FOLDER, the RM typing it 0..1 with no `Is_archetype_root`
-///   invariant.
+///   so no lifecycle special-casing is needed.
+///
+/// The root FOLDER whose `archetype_node_id` is an archetype id is an archetype
+/// root, so it must carry `archetype_details` (RM common master03 §The LOCATABLE
+/// Class), a presence rule a `553|incomplete|` commit relaxes. A nested FOLDER
+/// keeps `archetype_details` optional.
 ///
 /// # Errors
-/// [`ServiceError::ValidationFailed`] carrying every violation found in the
-/// tree, each at its own path (→ 422).
+/// [`ServiceError::Unprocessable`] for an archetype root without
+/// `archetype_details`; [`ServiceError::ValidationFailed`] carrying every
+/// violation found in the tree, each at its own path (→ 422).
 pub(in crate::service) fn validate_folder(
     folder: &Value,
     incomplete: bool,
 ) -> Result<(), ServiceError> {
+    // NOTE: RM master03 §The LOCATABLE Class: `archetype_details` "is non-Void for archetype
+    // root points in data", where `archetype_node_id` "carries the archetype identifier".
+    let archetype_root = folder
+        .get("archetype_node_id")
+        .and_then(Value::as_str)
+        .is_some_and(openehr_adl::hrid::is_archetype_id);
+    if !incomplete
+        && archetype_root
+        && !folder
+            .get("archetype_details")
+            .is_some_and(Value::is_object)
+    {
+        return Err(ServiceError::content_invalid(
+            Violation::new(
+                "is mandatory: the directory root names an archetype in archetype_node_id, \
+                 so it is an archetype root and must carry ARCHETYPED",
+            )
+            .with_path("FOLDER.archetype_details")
+            .with_invariant("LOCATABLE.Archetyped_valid"),
+        ));
+    }
     validate_rm_invariants_for_commit(folder, "FOLDER", incomplete)
 }
 
@@ -1122,6 +1147,11 @@ mod tests {
             "_type": "FOLDER",
             "name": { "_type": "DV_TEXT", "value": "root" },
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.2.0"
+            },
             "items": [{
                 "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_COMPOSITION",
                 "id": { "_type": "HIER_OBJECT_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515" }
@@ -1162,6 +1192,11 @@ mod tests {
             "_type": "FOLDER",
             "name": { "_type": "DV_TEXT", "value": "root" },
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.2.0"
+            },
             "items": [{
                 "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_COMPOSITION"
             }]
@@ -1243,10 +1278,29 @@ mod tests {
             format!("{err:?}").contains("LOCATABLE.archetype_node_id"),
             "got {err:?}"
         );
+    }
 
+    /// RM common master03 §The LOCATABLE Class: `archetype_details` "is
+    /// non-Void for archetype root points in data", where `archetype_node_id`
+    /// "carries the archetype identifier". A directory root naming an
+    /// archetype must carry it; a `553|incomplete|` commit and a nested
+    /// FOLDER keep it optional.
+    #[test]
+    fn a_directory_archetype_root_needs_archetype_details() {
         let mut without = folder_fixture();
         without.as_object_mut().unwrap().remove("archetype_details");
-        validate_folder(&without, false).expect("archetype_details stays optional on a FOLDER");
+        let err = validate_folder(&without, false)
+            .expect_err("an archetype root without ARCHETYPED is refused");
+        assert!(
+            matches!(err, ServiceError::Unprocessable { .. })
+                && format!("{err:?}").contains("archetype_details"),
+            "got {err:?}"
+        );
+        validate_folder(&without, true).expect("a 553|incomplete| root may omit it");
+
+        let mut nested = folder_fixture();
+        nested["folders"][0]["archetype_node_id"] = json!("openEHR-EHR-FOLDER.episode.v1");
+        validate_folder(&nested, false).expect("a nested FOLDER keeps archetype_details optional");
     }
 
     // ── the whole-instance RM class-invariant pass on the non-COMPOSITION

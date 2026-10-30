@@ -121,10 +121,20 @@ fn directory(composition: &str) -> serde_json::Value {
     serde_json::json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.directory.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.directory.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "root" },
         "folders": [{
             "_type": "FOLDER",
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.1.0"
+            },
             "name": { "_type": "DV_TEXT", "value": "Episodes" },
             "items": [{
                 "_type": "OBJECT_REF",
