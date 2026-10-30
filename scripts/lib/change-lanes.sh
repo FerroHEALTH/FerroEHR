@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Which CI lanes a change needs: the path classifiers of the `changes` jobs in
-# ci.yml, docs.yml and sonar.yml, in one place (#4208).
+# ci.yml, docs.yml, sonar.yml and conformance.yml, in one place (#4208).
 #
 # It reads the changed-path list on stdin, whole, and prints one `lane=true`
 # or `lane=false` line per lane of the named workflow, the form
@@ -16,7 +16,7 @@
 # fallback, every lane true, for a base it cannot diff against.
 #
 # Usage:
-#   scripts/lib/change-lanes.sh <ci|docs|sonar> < paths
+#   scripts/lib/change-lanes.sh <ci|docs|sonar|conformance> < paths
 #   scripts/lib/change-lanes.sh --self-test
 set -euo pipefail
 
@@ -40,6 +40,9 @@ set -euo pipefail
 # ci vex (#2370): the OpenVEX documents and the checks the deny job runs.
 # docs: the site sources and every input of the build's own gates.
 # sonar: the scanned trees, their manifests, the scan scope and the recipe.
+# conformance (#4449): the server build (never the viewer), the party set,
+# the conformance deployment's compose files and what it mounts, the
+# pipeline scripts and the recipe.
 readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/)
 ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
 ci|msrv|(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$
@@ -51,7 +54,8 @@ ci|chart_boot|^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/
 ci|workflows|^\.github/workflows/ci\.yml$
 ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)
 docs|docs|^(website/|docs/conformance/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
-sonar|code|^(app/|crates/|tools/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|clippy\.toml$|sonar-project\.properties$|\.github/workflows/sonar\.yml$)'
+sonar|code|^(app/|crates/|tools/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|clippy\.toml$|sonar-project\.properties$|\.github/workflows/sonar\.yml$)
+conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|scripts/conformance\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
 
 # classify <workflow> <paths>: print `lane=true|false` for each of its lanes.
 classify() {
@@ -65,7 +69,7 @@ classify() {
       printf '%s=false\n' "$lane"
     fi
   done <<<"$LANES"
-  [[ "$found" -eq 1 ]] || { echo "change-lanes: unknown workflow '$workflow' (ci, docs or sonar)" >&2; return 2; }
+  [[ "$found" -eq 1 ]] || { echo "change-lanes: unknown workflow '$workflow' (ci, docs, sonar or conformance)" >&2; return 2; }
 }
 
 # filler <n>: n long paths no lane matches, so the list tops the pipe buffer.
@@ -120,8 +124,14 @@ a book page builds the site|docs|website/book/src/index.md|docs
 a crate source does not build the site|docs|crates/openehr-rm/src/lib.rs|
 a crate source runs the scan|sonar|crates/openehr-rm/src/lib.rs|code
 a book page runs no scan|sonar|website/book/src/index.md|
+a server source runs conformance|conformance|app/ferroehr-rest/src/router.rs|conformance
+the party statement runs conformance|conformance|docs/conformance/party/ferroehr/statement.json|conformance
+a compose overlay runs conformance|conformance|docker/sut-terminology.yml|conformance
+the pin runs conformance|conformance|scripts/lib/veredictum.sh|conformance
+the recipe runs conformance|conformance|.github/workflows/conformance.yml|conformance
+a viewer source runs no conformance|conformance|app/ferroehr-viewer/src/lib.rs|
 CASES
-  for workflow in ci docs sonar; do
+  for workflow in ci docs sonar conformance; do
     got=$(classify "$workflow" "" | grep -c '=true$' || true)
     if [[ "$got" != 0 ]]; then
       echo "self-test: an empty list set $got $workflow lanes true" >&2
@@ -133,21 +143,21 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (16 paths classified first and last in a 2000-path list; the pipe form fails on it)."
+  echo "change-lanes: self-test OK (22 paths classified first and last in a 2000-path list; the pipe form fails on it)."
 }
 
 case "${1-}" in
 --self-test)
-  [[ "$#" -eq 1 ]] || { echo "usage: $0 <ci|docs|sonar> < paths | --self-test" >&2; exit 2; }
+  [[ "$#" -eq 1 ]] || { echo "usage: $0 <ci|docs|sonar|conformance> < paths | --self-test" >&2; exit 2; }
   self_test
   ;;
-ci | docs | sonar)
-  [[ "$#" -eq 1 ]] || { echo "usage: $0 <ci|docs|sonar> < paths | --self-test" >&2; exit 2; }
+ci | docs | sonar | conformance)
+  [[ "$#" -eq 1 ]] || { echo "usage: $0 <ci|docs|sonar|conformance> < paths | --self-test" >&2; exit 2; }
   paths=$(cat)
   classify "$1" "$paths"
   ;;
 *)
-  echo "usage: $0 <ci|docs|sonar> < paths | --self-test" >&2
+  echo "usage: $0 <ci|docs|sonar|conformance> < paths | --self-test" >&2
   exit 2
   ;;
 esac
