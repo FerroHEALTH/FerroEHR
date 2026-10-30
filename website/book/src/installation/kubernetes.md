@@ -1247,7 +1247,7 @@ procedure, and the `ferroehr db verify` gate that judges it, are on the
 
 ## Staying available while things move
 
-Four defaults keep the API serving through the events that routinely interrupt
+Five defaults keep the API serving through the events that routinely interrupt
 it. None needs configuring; each is listed because the reason matters when you
 tune it.
 
@@ -1278,6 +1278,15 @@ migration Job carries a `podFailurePolicy` that ignores pod failures caused by
 disruption, so ordinary cluster maintenance during a release cannot exhaust
 `migrations.job.backoffLimit` and fail the upgrade with no migration error
 anywhere in the logs.
+
+**A reused connection is not closed under a client.** The server closes a
+kept-alive connection only after `config.server.idle_timeout_ms` (120 s by
+default) with no request, and counts `config.server.header_read_timeout_ms`
+from the first byte of each request. Keep the idle limit longer than the idle
+timeout of your clients (90 s for a Go client) and of the ingress controller or
+load balancer in front, so they close an idle connection first. A client that
+sends a request into a connection the server is closing gets no answer, and a
+client that never retries a `POST` reports the commit as failed.
 
 Two more are available and off by default. `service.trafficDistribution:
 PreferSameZone` keeps traffic inside the caller's zone, for lower latency and
