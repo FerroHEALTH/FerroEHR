@@ -7,8 +7,7 @@
 # 3.20.0 — the rendered CONFORMANCE_STATEMENT.md contradicted the report
 # beside it for fourteen releases with nothing failing. The release cut
 # bumps both in one PR (.claude/rules/changelog.md); this guard is the
-# failing check that keeps them together. The ehrbase party statement is
-# deliberately NOT checked — it declares another vendor's product.
+# failing check that keeps them together.
 #
 # Usage: scripts/checks/statement-version.sh   (no arguments)
 set -euo pipefail
@@ -28,8 +27,7 @@ fi
 if [[ "$workspace" != "$statement" ]]; then
   echo "statement-version: the ferroehr party statement declares product \
 version $statement but the workspace is $workspace — bump \
-docs/conformance/party/ferroehr/statement.json (and regenerate the derived \
-documents: bash scripts/render/conformance-docs.sh) in the same PR." >&2
+docs/conformance/party/ferroehr/statement.json in the same PR." >&2
   exit 1
 fi
 echo "statement-version: OK ($workspace)."

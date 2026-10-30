@@ -74,8 +74,7 @@ optional:
   `date-released` (the `citation-guard` CI job enforces the version match),
   then re-render `.zenodo.json` (`bash scripts/render/zenodo-json.sh`, checked
   by the same job), + the ferroehr party statement's product version
-  (`docs/conformance/party/ferroehr/statement.json`, regenerating the derived
-  documents via `bash scripts/render/conformance-docs.sh` — the
+  (`docs/conformance/party/ferroehr/statement.json` — the
   `statement-version.sh` step of `citation-guard` enforces the match) — it is GENERATED, never hand-edited, because Zenodo ignores
   `CITATION.cff` completely whenever a `.zenodo.json` exists
   (<https://help.zenodo.org/docs/github/describe-software/zenodo-json/>),

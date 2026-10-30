@@ -52,13 +52,11 @@ _check/
 # Stray local build artifacts
 *.rlib
 website/book/generated/
-website/book/src/comparison-assets/*
-# The upstream conformance visuals are COMMITTED (README + book embeds),
-# drift-guarded in the docs workflow like the ferroehr set.
-!website/book/src/comparison-assets/conformance-heat-grid-ehrbase.svg
-!website/book/src/comparison-assets/conformance-chapter-bars-ehrbase.svg
 __pycache__/
 docs/conformance/*/perf-corpus-*.json
+# The HAR recording of a conformance run holds the server's response bodies
+# verbatim; it stays where the run is kept and is never committed.
+docs/conformance/*/recording.har
 
 # The viewer keeps NO local store: query grouping is derived from the
 # namespace in each stored query's qualified name, and the directory create

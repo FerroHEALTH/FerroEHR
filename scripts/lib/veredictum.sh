@@ -3,51 +3,68 @@
 # SPDX-License-Identifier: BUSL-1.1
 # The pinned conformance instrument: Veredictum.
 #
-# The acceptance instrument is no longer a sibling crate in this workspace. It
-# is an independent project with its own release line, consumed here at a PIN
-# recorded in exactly one place — VEREDICTUM_VERSION below. Everything that
-# runs the catalogue sources this file and calls the two resolvers.
+# The acceptance instrument is an independent project with its own release
+# line, consumed here at the pin VEREDICTUM_VERSION records. Everything that
+# runs it sources this file.
 #
-# Two halves, obtained separately because the publisher separates them:
+# Three forms of one release, each obtained the way the publisher ships it:
 #
-#   the BINARY  `cargo install veredictum --version <pin> --locked`, from
-#               crates.io. The published package carries source only; its
-#               manifest `include` list is an allowlist of code and the legal
-#               set, because the catalogue and the vendored spec oracle are
-#               hundreds of megabytes of data no registry accepts.
-#   the DATA    the catalogue (`artifacts/`) and the spec oracle
-#               (`specs/openehr`, with the schema bundles beside it) come from
-#               the repository at the tag matching the pin — a shallow, cached
-#               checkout. There is no data tarball on the release, and the
-#               release binaries are Linux-only, so this is the one path that
-#               works on every machine that runs the pipeline.
+#   the IMAGE   ghcr.io/vernum-projecten/veredictum, pinned below by the digest
+#               of its multi-platform index. It carries the engine, the
+#               catalogue (/work/catalogue) and the vendored spec oracle
+#               (/work/specs/openehr), so `validate`, `test` and `export` run
+#               in it with nothing else fetched. scripts/conformance.sh uses it.
+#   the DATA    the repository at the tag of the pin, a shallow cached clone,
+#               for what the image does not carry: the performance schedule
+#               (`perf/`) the measured lanes read.
+#   the BINARY  `cargo install veredictum`, from crates.io when the release is
+#               published there and from the repository tag otherwise, for
+#               the lanes that run on the host beside the clone.
 #
-# Both halves are cached under one version-keyed root, and both resolvers are
-# idempotent: a warm machine re-runs them for the cost of a version check.
+# The clone and the binary are cached under one version-keyed root, and both
+# resolvers are idempotent: a warm machine re-runs them for the cost of a check.
 #
 # Overrides, for an offline machine or a contributor working on the instrument
 # itself (each is used verbatim and never fetched over):
-#   VEREDICTUM_BIN   path to an existing `veredictum` binary
-#   VEREDICTUM_ROOT  path to an existing Veredictum checkout (its `artifacts/`
-#                    and `specs/` are read from there)
-#   VEREDICTUM_CACHE cache root (default: $XDG_CACHE_HOME/ferroehr-veredictum,
-#                    falling back to ~/.cache/ferroehr-veredictum)
+#   VEREDICTUM_BIN    path to an existing `veredictum` binary
+#   VEREDICTUM_ROOT   path to an existing Veredictum checkout
+#   VEREDICTUM_CACHE  cache root (default: $XDG_CACHE_HOME/ferroehr-veredictum,
+#                     falling back to ~/.cache/ferroehr-veredictum)
+#   CONTAINER_ENGINE  `docker` or `podman` (default: docker when it is on PATH,
+#                     else podman)
 
-# The pin. Bumping it is a deliberate change: the catalogue, the oracle and the
-# verdict pipeline all move together, so a bump is re-proven by a full
-# `scripts/conformance.sh` run against the committed baseline, unless the
-# catalogue (`artifacts/`), `specs/`, `schemas/` and runner
-# (`app/veredictum/src/`) trees are all unchanged between the old and the new
-# tag. Machine-enforced by the `veredictum-pin` CI job
-# (scripts/checks/veredictum-pin.sh, #2867, #3593): outside that exception the
-# bumping PR refreshes docs/conformance/ferroehr/ or carries the
-# `no-conformance-run` deferral label.
-VEREDICTUM_VERSION="0.1.6"
+# The pin. A bump moves the version and the image digest together: the digest
+# is the one `docker buildx imagetools inspect` reports for the tag's index.
+VEREDICTUM_VERSION="0.3.0"
 VEREDICTUM_REPO="https://github.com/Vernum-Projecten/Veredictum"
+# shellcheck disable=SC2034 # read by the scripts that source this file
+VEREDICTUM_IMAGE="ghcr.io/vernum-projecten/veredictum@sha256:64ab6ee89db9efa093630d65e6f878b1b62c66193129fd3128d49291e28b4d8c"
 
+# The release the committed record under docs/conformance/ferroehr/ was
+# produced with. Its renderers (scripts/render/perf-assets.sh and
+# conformance-assets.sh) read that record's shape, which no later release
+# reads, so they run this release until the record of the current pin replaces
+# it (#4451, #4452).
+VEREDICTUM_RECORD_VERSION="0.1.6"
+
+# Echoes the container CLI the image runs under.
+veredictum_engine() {
+  if [[ -n "${CONTAINER_ENGINE:-}" ]]; then
+    printf '%s' "$CONTAINER_ENGINE"
+  elif command -v docker >/dev/null 2>&1; then
+    printf 'docker'
+  elif command -v podman >/dev/null 2>&1; then
+    printf 'podman'
+  else
+    echo "veredictum: neither docker nor podman is on PATH" >&2
+    return 1
+  fi
+}
+
+# Each resolver below takes an optional release (default: the pin).
 veredictum_cache_root() {
   local base="${VEREDICTUM_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/ferroehr-veredictum}"
-  printf '%s/%s' "$base" "$VEREDICTUM_VERSION"
+  printf '%s/%s' "$base" "${1:-$VEREDICTUM_VERSION}"
 }
 
 # Echoes the path to the pinned binary, installing it on a cache miss.
@@ -60,12 +77,18 @@ veredictum_bin() {
     printf '%s' "$VEREDICTUM_BIN"
     return 0
   fi
-  local root bin
-  root="$(veredictum_cache_root)/install"
+  local version="${1:-$VEREDICTUM_VERSION}" root bin
+  root="$(veredictum_cache_root "$version")/install"
   bin="$root/bin/veredictum"
-  if [[ ! -x "$bin" ]] || ! grep -qF "$VEREDICTUM_VERSION" <<<"$("$bin" --version 2>/dev/null)"; then
-    echo "==> Installing veredictum $VEREDICTUM_VERSION (cargo install, cached in $root)" >&2
-    cargo install veredictum --version "$VEREDICTUM_VERSION" --locked --root "$root" >&2
+  local reported=""
+  [[ ! -x "$bin" ]] || reported="$("$bin" --version 2>/dev/null || true)"
+  if [[ "$reported" != "veredictum $version" ]] && [[ "$reported" != "veredictum $version "* ]]; then
+    echo "==> Installing veredictum $version (cargo install, cached in $root)" >&2
+    # Both sources build the same tagged release; the tag serves a release the
+    # registry does not carry (0.3.0 is not on crates.io).
+    cargo install veredictum --version "$version" --locked --root "$root" >&2 ||
+      cargo install veredictum --git "$VEREDICTUM_REPO" --tag "v$version" \
+        --locked --root "$root" >&2
   fi
   printf '%s' "$bin"
 }
@@ -80,12 +103,12 @@ veredictum_root() {
     printf '%s' "$VEREDICTUM_ROOT"
     return 0
   fi
-  local root tag stamp
-  root="$(veredictum_cache_root)/repo"
-  tag="v$VEREDICTUM_VERSION"
+  local version="${1:-$VEREDICTUM_VERSION}" root tag stamp
+  root="$(veredictum_cache_root "$version")/repo"
+  tag="v$version"
   stamp="$root/.ferroehr-pin"
   if [[ "$(cat "$stamp" 2>/dev/null || true)" != "$tag" ]]; then
-    echo "==> Fetching the Veredictum catalogue at $tag (shallow clone, cached in $root)" >&2
+    echo "==> Fetching Veredictum at $tag (shallow clone, cached in $root)" >&2
     rm -rf "${root:?}"
     mkdir -p "$(dirname "$root")"
     git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$tag" \
@@ -95,9 +118,15 @@ veredictum_root() {
   printf '%s' "$root"
 }
 
-# The catalogue root the `--root` flag takes.
-veredictum_artifacts() { printf '%s/artifacts' "$(veredictum_root)"; }
+# The conformance catalogue the `--root` flag of `validate` and `test` takes.
+veredictum_catalogue() { printf '%s/catalogue' "$(veredictum_root)"; }
 
-# The vendored spec oracle the `--specs` flag takes. The instrument resolves
-# the ITS schema bundles from this path's parent, so it is passed as-is.
+# The vendored spec oracle the `--specs` flag takes.
 veredictum_specs() { printf '%s/specs/openehr' "$(veredictum_root)"; }
+
+# The performance schedule the `--root` flag of the measured commands takes.
+veredictum_perf() { printf '%s/perf' "$(veredictum_root)"; }
+
+# The case-core catalogue of the record's release, which its renderers take as
+# `--root`.
+veredictum_record_artifacts() { printf '%s/artifacts' "$(veredictum_root "$VEREDICTUM_RECORD_VERSION")"; }

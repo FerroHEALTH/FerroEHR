@@ -2,10 +2,8 @@
 
 FerroEHR makes a measured claim: it is an openEHR-spec-conformant Clinical Data
 Repository, and that claim is backed by a test run you can reproduce. This
-chapter explains what conformance means here, how to run the suite (against
-this server, against another CDR, or against any deployed endpoint you point it
-at) and how to read the artefacts it produces: the report, the
-statement, the certificate, and the cross-server comparison matrix.
+chapter explains what conformance means here, how to run the suite against
+FerroEHR, and how to read the artefacts it produces.
 
 <!-- toc -->
 
@@ -87,137 +85,66 @@ unrealized wire on this technology profile, an undeclared option branch, or a
 ground a shared server cannot establish), never silent omissions. Options
 aggregates optional capabilities under the Profiles book's "any passes" rule.
 
-## Any server can be assessed
+## The party set
 
-The runner is deliberately not tied to FerroEHR — it is a separate project with
-its own release line, so the instrument and the system it judges do not share a
-build. It assesses **any openEHR CDR reachable over HTTP** and emits the same
-artefact set for each system under test, into its own directory:
+The runner is a separate project with its own release line, so the instrument
+and the system it judges do not share a build. It assesses any openEHR CDR
+reachable over HTTP; this repository runs it against FerroEHR alone. What it
+reads about FerroEHR is the party set under `docs/conformance/party/ferroehr/`:
 
-- **FerroEHR** (the default): the composed stack built from the current sources.
-  This is the project's own gate: the committed artefacts are regenerated and
-  diff-checked, so a change that moves a verdict cannot land quietly.
-- **EHRbase:** `CONF_SUT=ehrbase` composes the official `ehrbase/ehrbase` image
-  (with its companion PostgreSQL) on fresh volumes and runs the same catalogue
-  with EHRbase's own committed party set. Its measured artefacts feed the
-  [comparison page](comparison.md).
-- **Bring your own endpoint:** point the runner at any deployed CDR by URL and
-  credentials, with its own party set: an *ixit* naming the instances and
-  credential environment variables, and a *statement* (the ICS) declaring the
-  capabilities and ambiguity-register options the vendor claims. Option branches
-  the ICS does not declare are excused as not-applicable with a citation, in the
-  ISO/IEC 9646 tradition of test selection. No code or adapter is needed; a
-  target is a configuration entry.
+- **`statement.json`** claims the capability folders of the catalogue FerroEHR
+  serves and selects one arm of every option the catalogue leaves to the
+  implementation (canonical XML on each resource, the Simplified Formats,
+  version signing, the administrative delete, and the others). Each arm states
+  what the server does, and `veredictum validate --statement` holds the file to
+  the published statement schema and the catalogue before a run.
+- **`ixit.json`** describes the deployment: the `system_id` the server stamps
+  into commit audits and the version ids it mints, the `environment` a measured
+  run happened on, and `exclusive_server`, which lets the workflows that delete
+  every EHR run.
 
-The ixit is also where a deployment declares the facts no openEHR operation
-exposes, each of which switches on the cases that depend on it:
-
-| Declaration | What it tells the runner |
-|---|---|
-| `environment` | The hardware, cores, memory, storage and topology a measured run happened on — mandatory for a performance run |
-| `containers` | The composed containers, enabling database-side attribution and deterministic maintenance settling |
-| `system_id` | The identifier the server stamps into commit audits and the version ids it mints |
-| `dump_location` | A path on the server's own file system the admin dump/load operations may use |
-| `signing` | The version-signing mode the deployment realizes (digest or openPGP) |
-| `smart` | That the deployment runs the SMART resource-server role, and which test issuer it trusts |
-| `terminology` | The terminology query servers it is wired to, the namespaces each answers for, and what it does with a bound value set it cannot resolve |
-
-A party that declares none of these has the dependent cases recorded
-not-applicable rather than checked against a guess.
-
-That silence has a cost, and the pipeline makes it visible before a run. The
-instrument's ixit schema also defines parameters per instance (the
-`administrative` posture of a principal, an instance's own `signing`,
-`terminology` or `spec_profile` when it differs from the party's), and an
-absent one is undeclared, never a default: every case that requires it is
-guarded out. `scripts/checks/ixit-declarations.sh` reads that parameter set
-from the pinned schema itself and refuses to run the catalogue while an
-instance leaves one undeclared, unless `ixit-undeclared.json` beside the ixit
-records why that instance leaves it so (an unauthenticated instance has no
-principal to be administrative, for example). A pin bump that introduces a
-parameter therefore fails the pipeline until the party declares or adjudicates
-it, instead of quietly losing the cases it guards.
+Credentials are in neither file. The run reads them from the environment.
 
 ## Running the suite yourself
 
 The suite runs against a real, deployed server (the same container image and
-stack a deployment uses) so the wire under test is always the production
-artefact, never a re-wired in-process stub. From a checkout with Docker
-available:
+stack a deployment uses), so the wire under test is always the production
+artefact. From a checkout with Docker or Podman available:
 
 ```bash
-# our server, from the current sources (the default)
 bash scripts/conformance.sh
-
-# EHRbase, from the official images
-CONF_SUT=ehrbase bash scripts/conformance.sh
-
-# any deployed CDR, by URL (credentials via the SUT_* variables the
-# ixit references)
-CONF_SUT=byo CONF_BASE_URL=https://your-host/ferroehr/rest/openehr/v1 \
-  SUT_USER=user SUT_PASS=password bash scripts/conformance.sh
 ```
 
-The script brings up the selected stack on fresh volumes (for `byo` it manages
-nothing), executes the committed catalogue, computes the verdicts through the pure
-pipeline, and writes the artefacts to `docs/conformance/<sut-name>/` before
-tearing the stack down.
+The script reviews the statement, composes one FerroEHR deployment from the
+current sources on fresh volumes, runs `veredictum test` through the pinned
+release image with the Basic users of `docker/ferroehr.dev.toml`, writes
+`results.json`, `recording.har` and the JUnit, CTRF and Markdown views `export`
+renders to `docs/conformance/ferroehr/`, and tears the stack down. The
+recording holds the server's response bodies, so it is never committed.
 
-Useful knobs: a case-id filter as the first argument, `CONF_IXIT` /
-`CONF_STATEMENT` for a custom party set, `CONF_OUT` for a different artefact root,
-`CONF_NO_COMPOSE` to run against an already-deployed stack, `SKIP_BUILD` to
-compose a published image instead of building from source, and the runner's own
-`verdicts` subcommand to recompute the documents from a previous `results.json`
-without re-running.
+Useful knobs: `CONF_DOCUMENTS` to narrow the run to named documents (a working
+tool, never the record), `CONF_OUT` for a different artefact root,
+`CONF_NO_COMPOSE` with `CONF_BASE_URL` to run against an already-deployed
+FerroEHR, `SKIP_BUILD` to compose a published image instead of building from
+source, and `CONTAINER_ENGINE` to choose between Docker and Podman.
 
-### The postures a run covers
+### The posture a run covers
 
-Some behaviour exists only in a particular server configuration. Rather than
-splitting those into separate runs whose records would have to be merged by hand
-(which is exactly how a claim stops being reproducible) the pipeline brings up
-**four deployments of the same image** and covers every posture in the **one**
-committed record:
+The one deployment runs the SMART resource-server role with a trusted test
+issuer, digest version signing, and FerroTERM as its terminology server, in the
+**fail-open** posture.
 
-- the **primary** deployment runs the SMART resource-server role with fail-closed
-  scopes and a trusted test issuer, digest version signing, and FerroTERM as its
-  one terminology server, reachable, in the **fail-open** posture;
-- a **stable-profile** deployment shares the primary's database and serves the
-  released openEHR generation set, with the same terminology server;
-- an **openPGP** deployment, in its own compose project on remapped ports, runs
-  openPGP version signing and the **fail-closed** terminology posture, wired to a
-  terminology server nothing answers on;
-- a **fail-open** deployment, also in its own compose project, runs the
-  fail-open posture wired to a terminology server nothing answers on.
-
-The reason is the same in every case: a running server realizes exactly one
-signing depth, one generation set, and one unresolvable-value-set behaviour, and
-it is wired to one terminology server, which is either reachable or not. Testing
-each claim means running the deployment that realizes it. The ixit declares each
-deployment as its own instance, and the cases that check those properties address
-it by name.
-
-Two consequences worth knowing:
-
-- **SMART is the standard posture.** The SMART discovery
-  document, the resource-scope grammar, and the fail-closed `403` are executable
-  cases in the same record as everything else, driven by principals presenting
-  minted Bearer tokens with the roles and resource scopes each case needs. The
-  tokens are signed by a committed test issuer: public test key material for the
-  harness, never usable for anything else. A system under test whose ixit declares
-  no SMART block (EHRbase) records those cases not-applicable with the citation
-  instead.
-- **External terminology is part of the standard posture too.** An archetype can
+- **SMART is part of the posture.** The tokens the SMART documents present are
+  signed by a committed test issuer: public test key material for the harness,
+  never usable for anything else.
+- **External terminology is part of the posture too.** An archetype can
   constrain a coded element to a value set only an external terminology query
   server can resolve, so the pipeline composes a real FHIR R4B server beside the
-  CDR, seeded with synthetic test code systems and value sets. That covers the
-  terminology-routed surface — AQL `TERMINOLOGY()` resolved through the routed
-  server, and commit-time validation of a bound value set, accepted for a member
-  code and refused for a non-member. What a deployment does when the value set
-  cannot be resolved *at all* is not decided by any openEHR text, so it is a
-  declared posture rather than a verdict; both branches execute, each on a
-  deployment whose terminology server is unreachable. With one server per
-  deployment, the case that needs two distinct reachable servers records
-  not-applicable by its own guard.
+  CDR, seeded with synthetic test code systems and value sets. That covers AQL
+  `TERMINOLOGY()` resolved through the routed server, and commit-time validation
+  of a bound value set. What a deployment does when the value set cannot be
+  resolved *at all* is not decided by any openEHR text, so it is a declared
+  option arm rather than a verdict.
 
 A measured performance or stress run adds one more posture: rate limiting is
 turned off for the duration, because the instruments deliberately offer load past
@@ -269,19 +196,10 @@ measured run, its **Workload Coverage** table additionally shows which claimed
 capabilities the hospital-simulation load actually exercised; a capability the
 simulation does not reach must carry an adjudicated exclusion, printed with its
 reason, and the runner's validation gate refuses an artefact tree that leaves such
-a row undecided. It is emitted for **every** assessed system — FerroEHR, EHRbase,
-or your own — and always identifies itself as a framework assessment with the
+a row undecided. It always identifies itself as a framework assessment with the
 claim computed from the attached run; it is never an official openEHR
 certification. This is the document to hand to a procurement or evaluation
 reviewer who wants the capability-by-capability picture.
-
-### The comparison matrix
-
-The multi-system record is fully generated from the two committed
-results/verdicts sets (ours and EHRbase's): profile verdicts, the
-capability-by-capability evidence matrix, and failure tables in both directions:
-measured numbers only, no editorial adjustment, both directions always published.
-It renders as the [comparison page](comparison.md).
 
 > [!TIP]
 > The conformance badges in the project README are generated from the same run

@@ -161,9 +161,9 @@ files=$(collect "$@")
 # It needs a helper because the obvious spelling does not work: `$files` is
 # NEWLINE-separated, so `case " $files " in *" $page "*)` asks for a match
 # delimited by spaces and can never find one. Three sections were written that
-# way and were silently inert — the quoted-wire-evidence check on comparison.md
-# and the Rust-version check on from-source.md never ran once, proven by
-# mutating both pages and watching the guard report OK (#2779). Space-normalise
+# way and were silently inert — the Rust-version check on from-source.md and a
+# page check since retired never ran once, proven by mutating both pages and
+# watching the guard report OK (#2779). Space-normalise
 # the list once and test against that.
 files_spaced=" ${files//$'\n'/ } "
 in_files() {
@@ -375,22 +375,6 @@ if in_files "$RUST_PAGE"; then
   done < <(grep -ohE '1\.[0-9]{2}(\.[0-9]+)?' "$RUST_PAGE" | sort -u)
 fi
 
-# ── 3b. quoted wire evidence on the comparison page ─────────────────────────
-# Five fabricated response-body quotes shipped on the published comparison page
-# (#2348) — none occurred anywhere in the committed run records. A backticked
-# double-quoted string on that page presents itself as captured wire evidence,
-# so it must occur verbatim in one of the committed results records.
-COMPARISON_PAGE="$BOOK/comparison.md"
-if in_files "$COMPARISON_PAGE"; then
-  # shellcheck disable=SC2016 # the ERE below matches literal markdown backticks
-  while read -r quote; do
-    [[ -n "$quote" ]] || continue
-    inner=${quote#\`\"}; inner=${inner%\"\`}
-    grep -qF "$inner" docs/conformance/ehrbase/results.json docs/conformance/ferroehr/results.json 2>/dev/null \
-      || report "$COMPARISON_PAGE" "quotes \`\"$inner\"\` as wire evidence, but no committed results record contains it"
-  done < <(grep -ohE '`"[^"`]{4,}"`' "$COMPARISON_PAGE" | sort -u)
-fi
-
 # ── 3c. banned phrases with a recorded refutation ────────────────────────────
 # "static binary" shipped on four pages, the landing and the README while the
 # runtime image is distroless/cc precisely because the binary links glibc
@@ -454,15 +438,15 @@ fi
 # catch, and that page may not be in a narrow diff.
 #
 # The reference may sit in an mdBook `{{#include}}` source rather than in a page
-# — `comparison.md` pulls its figures in from `website/book/generated/` — so that
+# — a page can pull its figures in from `website/book/generated/` — so that
 # tree is searched too. Searching only the pages reported a chart as orphaned when
 # it was in fact published, which is the failure mode that gets a guard ignored.
 #
 # And `website/book/generated/` is a BUILD ARTIFACT: it is not committed and does
 # not exist in a fresh checkout, so on its own it never matches and a figure
 # published only through an include is reported as orphaned regardless — measured
-# on `perf-stress-compare.svg`, which `scripts/render/comparison.sh` both renders
-# AND embeds, while this guard called it unpublished. The durable reference for
+# on a stress-curve figure its render script both rendered AND embedded, while
+# this guard called it unpublished. The durable reference for
 # generated markdown is therefore the GENERATOR, so the render scripts are the
 # third haystack.
 while read -r svg; do

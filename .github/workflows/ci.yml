@@ -2491,32 +2491,6 @@ jobs:
           fi
           bash scripts/checks/veredictum-pin.sh "${label[@]}" "$BASE" "$HEAD"
 
-  # Every per-instance ixit parameter the PINNED instrument defines is declared
-  # on every instance of our party set, or its absence is adjudicated in the
-  # register beside the ixit (#3041). The parameter set comes from the pinned
-  # tag's own schema, fetched here, so a pin bump that introduces one fails this
-  # job until the party declares or adjudicates it — before the pipeline would
-  # silently guard its cases out.
-  ixit-declarations:
-    name: ixit-declarations
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The party ixit declares every instance parameter the pinned schema defines
-        run: |
-          set -euo pipefail
-          version=$(grep -m1 '^VEREDICTUM_VERSION=' scripts/lib/veredictum.sh | cut -d'"' -f2)
-          curl -fsSL --retry 3 \
-            "https://raw.githubusercontent.com/Vernum-Projecten/Veredictum/v${version}/schemas/ixit.schema.json" \
-            -o /tmp/ixit.schema.json
-          bash scripts/checks/ixit-declarations.sh --schema /tmp/ixit.schema.json docs/conformance/party/ferroehr
-
   # A person's pull request records acceptance of the contribution licensing
   # terms (CONTRIBUTING.md § Licensing of contributions) through the template's
   # checkbox; this gate is what makes the checkbox binding. Bot authors are
@@ -2754,9 +2728,7 @@ jobs:
       # The ferroehr party statement is the published conformance claim for
       # THE product this repo ships; its product version sat at 3.6.0 while
       # the record reached 3.20.0 with nothing failing (#2576). Same
-      # version-agreement family as the CITATION check below; the ehrbase
-      # party statement deliberately stays unchecked (another vendor's
-      # product).
+      # version-agreement family as the CITATION check below.
       - name: The ferroehr party statement's product version matches the workspace
         run: bash scripts/checks/statement-version.sh
       - name: CITATION.cff version matches the workspace version
@@ -2903,7 +2875,6 @@ jobs:
       - contribution-licence
       - privacy-boundary
       - migration-immutability
-      - ixit-declarations
       - changelog
       - release-fragments
       - citation

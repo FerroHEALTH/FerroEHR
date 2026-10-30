@@ -124,12 +124,13 @@ byte-identical.
 
 The acceptance instrument is [Veredictum](https://github.com/Vernum-Projecten/Veredictum),
 an independent Apache-2.0 project (split from this repository, #2789/#2811).
-Its pin — the `veredictum` crates.io version the pipeline installs and the
-matching tag whose catalogue/spec data is checked out — lives in EXACTLY one
-place, `scripts/lib/veredictum.sh` (`VEREDICTUM_VERSION`); this file records
-no copy of it, per the never-copy-a-pin rule this file opens with. Bumping
-the instrument is a one-line change there plus a fresh
-`bash scripts/conformance.sh` acceptance run.
+Its pin lives in EXACTLY one place, `scripts/lib/veredictum.sh`: the
+release (`VEREDICTUM_VERSION`) and the digest of its release image
+(`VEREDICTUM_IMAGE`), which `scripts/conformance.sh` runs `validate`, `test`
+and `export` in, beside the tag the measured lanes check out for its `perf/`
+tree. This file records no copy of it, per the never-copy-a-pin rule this file
+opens with. Bumping the instrument moves the version and the digest together,
+plus a fresh `bash scripts/conformance.sh` acceptance run.
 
 ## Spec version policy (owner rulings 2026-07-20, superseded in part 2026-08-05)
 

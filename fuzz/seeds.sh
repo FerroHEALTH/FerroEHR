@@ -93,19 +93,23 @@ extract_aql_examples() {
 
 # The catalogue's query text lives with the instrument, not in this repository:
 # it is Veredictum's, obtained at the pin scripts/lib/veredictum.sh records. The
-# seeder therefore resolves an ABSOLUTE schedule path through that helper and
+# seeder therefore resolves an ABSOLUTE catalogue path through that helper and
 # checks it itself — a missing catalogue fails loud here, the same way a renamed
 # corpus directory does in require_dir, rather than quietly producing a smaller
 # seed set than the last run.
+#
+# Each query is the `q` member of an Arazzo step's or a rows file's YAML: a
+# plain or quoted scalar, or a block scalar (`>-`, `|-`) whose lines are
+# joined with spaces, so one seed file holds one query.
 extract_aql_catalogue_queries() {
   local dest="$seeds_root/aql_query"
   mkdir -p "$dest"
   # shellcheck source=scripts/lib/veredictum.sh
   source "$repo_root/scripts/lib/veredictum.sh"
-  local schedule
-  schedule="$(veredictum_artifacts)/schedule"
-  if [[ ! -d "$schedule" ]]; then
-    echo "seeds.sh: missing catalogue schedule: $schedule" >&2
+  local cases
+  cases="$(veredictum_catalogue)/cases"
+  if [[ ! -d "$cases" ]]; then
+    echo "seeds.sh: missing catalogue cases: $cases" >&2
     exit 1
   fi
   local written=0 query index=0
@@ -114,9 +118,27 @@ extract_aql_catalogue_queries() {
     printf '%s\n' "$query" > "$(printf '%s/cnf_%04d.aql' "$dest" "$index")"
     written=$((written + 1))
   done < <(
-    grep -rhE '^[[:space:]]*(q|query|aql):[[:space:]]*"' \
-      "$schedule" --include='*.yaml' |
-      sed -E 's/^[[:space:]]*(q|query|aql):[[:space:]]*"(.*)"[[:space:]]*$/\2/' |
+    # shellcheck disable=SC2016 # an awk program: its $0 and $fields are awk's own
+    find "$cases" -name '*.yaml' -print0 |
+      xargs -0 awk '
+        function flush() { if (collecting && buf != "") print buf; collecting = 0; buf = "" }
+        {
+          line = $0
+          match(line, /^ */); ind = RLENGTH
+          if (collecting) {
+            if (line ~ /^ *$/) next
+            if (ind > qind) { sub(/^ +/, "", line); buf = (buf == "" ? line : buf " " line); next }
+            flush()
+          }
+          if (line ~ /^ *(- )?q: */) {
+            v = line; sub(/^ *(- )?q: */, "", v)
+            if (v ~ /^[>|][-+]?$/) { collecting = 1; qind = ind; buf = ""; next }
+            if (v ~ /^".*"$/ || v ~ /^\047.*\047$/) v = substr(v, 2, length(v) - 2)
+            if (v != "") print v
+          }
+        }
+        END { flush() }' |
+      grep -iE '^select[[:space:]]' |
       LC_ALL=C sort -u
   )
   echo "  aql_query <- veredictum $VEREDICTUM_VERSION catalogue ($written queries)"

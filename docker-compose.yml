@@ -129,8 +129,8 @@ services:
     image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc3}
     # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic shared
     # memory under load (parallel workers error `could not resize shared
-    # memory segment … No space left on device`); measured runs share this
-    # floor with the upstream comparison stack (docker/sut-ehrbase.yml).
+    # memory segment … No space left on device`), so measured runs keep this
+    # floor.
     shm_size: ${BENCH_PG_SHM_SIZE:-1gb}
     environment:
       # Bootstrap superuser (postgres) — dev default; override in production.

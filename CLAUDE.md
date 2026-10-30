@@ -80,9 +80,8 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --document-private-items
 cargo deny check   # subsumes cargo-audit
-bash scripts/conformance.sh   # the CNF 2.0 acceptance run → docs/conformance/<sut>/ (baseline numbers live ONLY there)
-# perf (hour-plus, exclusive SUT): CONF_PERF_CLASS=POC|S|L|R [CONF_PERF_HOURS=1..12] bash scripts/conformance.sh
-# stress / aql-probe (exploration only, never a record): source scripts/lib/veredictum.sh; "$(veredictum_bin)" stress|aql-probe --root "$(veredictum_artifacts)" --ixit docs/conformance/party/<sut>/ixit.json --out <file>
+bash scripts/conformance.sh   # the Veredictum catalogue against one FerroEHR, in the pinned release image → docs/conformance/ferroehr/ (baseline numbers live ONLY there)
+# perf / stress / aql-probe (the measured lanes, moving to the perf tree in #4452): source scripts/lib/veredictum.sh; "$(veredictum_bin)" perf|stress|aql-probe --root "$(veredictum_perf)" --ixit docs/conformance/party/ferroehr/ixit.json …
 # published perf SVGs regenerate from committed artifacts: bash scripts/render/perf-assets.sh
 # CPU profiling: the /flamegraph skill
 # viewer gates: /ui-gates · browser journeys: bash scripts/ui-e2e.sh
