@@ -1,7 +1,7 @@
 {
   "product": {
     "name": "FerroEHR",
-    "version": "5.6.0-rc2",
+    "version": "5.6.0-rc3",
     "vendor": "Cadasto B.V.",
     "identifier": "urn:rubentalstra:ferroehr"
   },
