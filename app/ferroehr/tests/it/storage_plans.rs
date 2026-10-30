@@ -1036,6 +1036,100 @@ async fn the_newest_compositions_page_reads_the_start_time_index() {
     );
 }
 
+/// Every node type anywhere in a plan tree, outermost first.
+fn node_types(node: &Value, out: &mut Vec<String>) {
+    if let Some(node_type) = node.get("Node Type").and_then(Value::as_str) {
+        out.push(node_type.to_owned());
+    }
+    for child in node
+        .get("Plans")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        node_types(child, out);
+    }
+}
+
+/// `EXPLAIN` an ordered population page under the server's own settings, plus
+/// `extra` (a `SET LOCAL`), inside a rolled-back transaction.
+async fn explain_ordered_page(pool: &PgPool, aql: &str, extra: Option<&str>) -> Value {
+    let prepared = aql_sql_limited(aql, Vec::new(), Some(5));
+    let mut tx = pool.begin().await.expect("begin the explain transaction");
+    if let Some(setting) = extra {
+        tx.execute(sqlx::AssertSqlSafe(setting.to_owned()))
+            .await
+            .expect("apply the planner setting");
+    }
+    let plan: Value = sqlx::query_scalar_with(
+        sqlx::AssertSqlSafe(format!("{EXPLAIN}{}", prepared.sql)),
+        prepared.values,
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the ordered page");
+    tx.rollback().await.expect("roll the explain back");
+    plan
+}
+
+/// A population page ordered by the version uid runs in one backend, and
+/// `idx_version_hot_uid` hands the versions over in that order (#4429).
+///
+/// Without the index the only plan that sorted the version rows before the
+/// joins was a `Gather Merge`, which a pruned partition is offered however
+/// small it is, so such a query started a parallel worker on every call or,
+/// when the statistics tipped the other way, sorted the whole join. Over this
+/// small seed a sort of a sequential scan is as good a serial plan, so the
+/// index is read with sorting disabled, which only an index matching the
+/// engine's uid expression can satisfy.
+#[tokio::test]
+async fn a_page_ordered_by_the_version_uid_reads_the_uid_index_serially() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed(&svc, &pool).await;
+
+    for direction in ["ASC", "DESC"] {
+        let aql = format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+             ORDER BY c/uid/value {direction}"
+        );
+        let plan = explain_ordered_page(&pool, &aql, None).await;
+        let mut types = Vec::new();
+        node_types(
+            plan.get(0)
+                .and_then(|first| first.get("Plan"))
+                .unwrap_or(&Value::Null),
+            &mut types,
+        );
+        assert!(
+            !types.iter().any(|t| t.starts_with("Gather")),
+            "#4429: {aql} starts no parallel worker: {types:?}"
+        );
+
+        let plan = explain_ordered_page(&pool, &aql, Some("SET LOCAL enable_sort = off")).await;
+        let scans = scans(&plan);
+        assert!(
+            on(&scans, "version_hot")
+                .iter()
+                .any(|s| s.index.as_deref() == Some("idx_version_hot_uid")),
+            "#4429: {aql} can read the versions in uid order from the uid index:\n{}",
+            render(&scans)
+        );
+        let mut types = Vec::new();
+        node_types(
+            plan.get(0)
+                .and_then(|first| first.get("Plan"))
+                .unwrap_or(&Value::Null),
+            &mut types,
+        );
+        assert!(
+            !types.iter().any(|t| t == "Sort" || t.starts_with("Gather")),
+            "#4429: {aql} reads its order off the index, with no sort: {types:?}"
+        );
+    }
+}
+
 /// A template predicate on a COMPOSITION reads `idx_version_hot_template`
 /// instead of extracting the template id from every root (#4090).
 #[tokio::test]
