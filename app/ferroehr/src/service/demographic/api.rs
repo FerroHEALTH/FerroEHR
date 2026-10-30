@@ -461,16 +461,17 @@ impl FerroEhrService {
 
     /// Logically delete a party of the routed [`PartyKind`]
     /// (`delete_party(a_versioned_party_id: UUID)` — our own demographic
-    /// design): the path
-    /// carries the versioned-party id (bare `HIER_OBJECT_ID` or full
-    /// `OBJECT_VERSION_ID`). The preceding trunk version for optimistic
-    /// concurrency comes from `If-Match` when supplied, else the path OVID,
-    /// else `None` (delete the current version unconditionally).
+    /// design): the path carries the `preceding_version_uid` as a full
+    /// `OBJECT_VERSION_ID` (ITS-REST `operations/agent_delete.yaml` and its
+    /// four siblings: "The `uid_based_id` MUST be in a form of an
+    /// `OBJECT_VERSION_ID` identifier"). The expected trunk version comes from
+    /// `If-Match` when supplied, else the path OVID.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse, or a
-    ///   supplied `If-Match` is malformed (a malformed header is
-    ///   rejected, never silently ignored).
+    /// - [`SmError`] `precondition_violation` — the id does not parse, names
+    ///   the versioned object rather than one of its versions, or a supplied
+    ///   `If-Match` is malformed (a malformed header is rejected, never
+    ///   silently ignored).
     /// - [`SmError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
     ///   a version other than the current latest.
     /// - [`SmError`] mapped from `404` — unknown id or wrong kind for the route.
@@ -485,6 +486,16 @@ impl FerroEhrService {
     ) -> Result<ServiceResponse, SmError> {
         let decoded = parse_uid_based_id(&uid_based_id)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
+        // NOTE: ITS-REST `parameters/path/uid_based_id_as_version_uid.yaml` types the
+        // delete path as a `version_uid`, so a bare container id is an invalid parameter (400).
+        if path_version.is_none() {
+            return Err(ServiceError::precondition(format!(
+                "uid_based_id {uid_based_id} must be the OBJECT_VERSION_ID of the latest \
+                 {} version, not its versioned object id",
+                kind.rm_type()
+            ))
+            .into());
+        }
         // One lean resolve shared by the `If-Match` compare and the delete gate.
         let current = self.party_current(kind, vo_id).await?;
         let meta = current.as_ref().map(CurrentParty::resource_meta);
@@ -988,16 +999,14 @@ impl FerroEhrService {
     }
 
     /// Logically delete a relationship. Mirrors `party_delete`: the path
-    /// carries the versioned-relationship id (bare `HIER_OBJECT_ID` or full
-    /// `OBJECT_VERSION_ID`); the preceding version for optimistic concurrency
-    /// comes from `If-Match` when supplied, else the path OVID, else `None`
-    /// (delete the current version — ITS-REST overview §"If-Match and
-    /// accidental overwrites").
+    /// carries the `preceding_version_uid` as a full `OBJECT_VERSION_ID`;
+    /// the expected version comes from `If-Match` when supplied, else the
+    /// path OVID.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse, or a
-    ///   supplied `If-Match` is malformed (rejected, never silently
-    ///   ignored).
+    /// - [`SmError`] `precondition_violation` — the id does not parse, names
+    ///   the versioned object rather than one of its versions, or a supplied
+    ///   `If-Match` is malformed (rejected, never silently ignored).
     /// - [`SmError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
     ///   a version other than the current latest.
     /// - [`SmError`] mapped from `404` — unknown id or wrong kind.
@@ -1011,6 +1020,15 @@ impl FerroEhrService {
     ) -> Result<ServiceResponse, SmError> {
         let decoded = parse_uid_based_id(&uid_based_id)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
+        // NOTE: no openEHR spec defines this route (our own extension); it takes the
+        // party delete operations' rule that the path is a version uid, so a container id is a 400.
+        if path_version.is_none() {
+            return Err(ServiceError::precondition(format!(
+                "uid_based_id {uid_based_id} must be the OBJECT_VERSION_ID of the latest \
+                 PARTY_RELATIONSHIP version, not its versioned object id"
+            ))
+            .into());
+        }
         // One lean resolve shared by the `If-Match` compare and the delete gate.
         let current = self.relationship_current(vo_id).await?;
         let meta = current.as_ref().map(CurrentRelationship::resource_meta);

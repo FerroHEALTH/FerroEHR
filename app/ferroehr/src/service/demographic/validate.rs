@@ -31,6 +31,7 @@ use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVer
 use openehr_base::validate::Validate;
 use serde_json::Value;
 
+use crate::ids::VoId;
 use crate::service::error::{ServiceError, Violation};
 
 /// The RM `_type` a `PARTY_RELATIONSHIP` versioned object stores.
@@ -119,7 +120,7 @@ pub(crate) fn party_check(
             ServiceError::bad_request(format!("invalid canonical JSON body: {e}"), e)
         })?;
     }
-    party_invariants(rm_type, data, incomplete)
+    party_invariants(rm_type, data, incomplete, None)
 }
 
 /// The party invariants that are NOT facts of the typed decode — everything
@@ -131,12 +132,16 @@ pub(crate) fn party_check(
 /// `ARCHETYPED` presence, and the "present implies non-empty" list bounds that
 /// an absent and a present-empty list both deserialize into the same `Vec`).
 ///
+/// `container` is the versioned object an update addresses by its path; it
+/// stands in for the party's own id when the body carries no `uid`.
+///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the violated rule.
 pub(super) fn party_invariants(
     rm_type: &str,
     data: &Value,
     incomplete: bool,
+    container: Option<VoId>,
 ) -> Result<(), ServiceError> {
     // PARTY is unconditionally an archetype root (`demographic.party.adoc`
     // §Invariants `Is_archetype_root`), so `Archetyped_valid`'s "a root MUST
@@ -155,15 +160,21 @@ pub(super) fn party_invariants(
     // relationship's `source` must reference THIS party's CONTAINER id — RM
     // demographic master02 §Party Relationships requires `HIER_OBJECT_ID`s
     // there, while a served party's `uid` is the three-part
-    // `OBJECT_VERSION_ID`, so it is reduced to its `object_id`.
-    if let (Some(uid), Some(relationships)) = (
-        data.pointer("/uid/value").and_then(Value::as_str),
-        data.get("relationships").and_then(Value::as_array),
-    ) {
-        let container_id = ObjectVersionId::new(uid).map_or_else(
-            |_| uid.to_owned(),
-            |version_id| version_id.object_id().value().into_owned(),
-        );
+    // `OBJECT_VERSION_ID`, so it is reduced to its `object_id`. A body without
+    // a `uid` is judged against the container its update path names.
+    let own_id = data
+        .pointer("/uid/value")
+        .and_then(Value::as_str)
+        .map(|uid| {
+            ObjectVersionId::new(uid).map_or_else(
+                |_| uid.to_owned(),
+                |version_id| version_id.object_id().value().into_owned(),
+            )
+        })
+        .or_else(|| container.map(|vo_id| vo_id.to_string()));
+    if let (Some(container_id), Some(relationships)) =
+        (own_id, data.get("relationships").and_then(Value::as_array))
+    {
         for (i, rel) in relationships.iter().enumerate() {
             let source = rel.pointer("/source/id/value").and_then(Value::as_str);
             if source.is_some_and(|s| !composite_ids_equal(s, &container_id)) {

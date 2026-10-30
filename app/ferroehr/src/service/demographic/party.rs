@@ -160,7 +160,7 @@ impl FerroEhrService {
         body: Value,
         committal: Option<&Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
-        party_invariants(kind.rm_type(), &body, false)?;
+        party_invariants(kind.rm_type(), &body, false, None)?;
 
         // The caller's UPDATE_VERSION attributes merge with the server rules —
         // BOTH halves the committal headers carry: the `UPDATE_AUDIT` attributes
@@ -295,7 +295,7 @@ impl FerroEhrService {
                 format!("{} {} is deleted", kind.rm_type(), current.vo_id),
             ));
         }
-        party_invariants(kind.rm_type(), &body, false)?;
+        party_invariants(kind.rm_type(), &body, false, Some(current.vo_id))?;
 
         let audit = self.demographic_audit(
             committal.map(|c| &c.audit),

@@ -457,12 +457,13 @@ async fn party_write_responses_match_a_fresh_read() {
     );
 }
 
-/// The versioned-party delete shape the DEM ECC cases drive (ECC-DEM-005/006 …):
-/// the path is the **bare** versioned-object uid and the preceding version is
-/// carried by `If-Match` (the `OBJECT_VERSION_ID`). Delete succeeds (`204`) and
-/// the current read afterwards is a deleted/`204` (Null body).
+/// A party delete addressed by the bare versioned-object uid is refused as a
+/// `precondition_violation` (400) even with an `If-Match` naming the latest
+/// version, and the party stays: ITS-REST `operations/person_delete.yaml`, "The
+/// `uid_based_id` MUST be in a form of an `OBJECT_VERSION_ID` identifier taken
+/// from the last (most recent) VERSION.uid.value".
 #[tokio::test]
-async fn person_delete_by_versioned_uid_with_if_match() {
+async fn person_delete_by_versioned_uid_is_refused() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
@@ -470,22 +471,87 @@ async fn person_delete_by_versioned_uid_with_if_match() {
         .party_create(PartyKind::Person, typed(&person("Jane")), None)
         .await
         .expect("create person");
-    let ovid = ovid(&created.body).to_owned();
+    let latest = ovid(&created.body).to_owned();
     let vo = vo_uuid(&created.body);
 
-    // Bare versioned-object uid on the path, `If-Match` = the current OVID.
-    let deleted = svc
-        .party_delete(PartyKind::Person, vo.clone(), Some(ovid), None)
-        .await
-        .expect("delete by versioned uid + If-Match");
-    assert!(deleted.is_empty());
+    let refused = svc
+        .party_delete(PartyKind::Person, vo.clone(), Some(latest.clone()), None)
+        .await;
+    assert!(
+        matches!(
+            refused,
+            Err(SmError {
+                status: CallStatusType::PreconditionViolation,
+                ..
+            })
+        ),
+        "a container id is not a version_uid, got {refused:?}"
+    );
 
-    // The deleted current version reads back as 204 (Null body).
     let after = svc
         .party_get(PartyKind::Person, vo, None)
         .await
-        .expect("get after delete");
-    assert!(after.is_empty(), "deleted current read is 204 (Null body)");
+        .expect("get after the refused delete");
+    assert_eq!(ovid(&after.body), latest, "the latest version is unchanged");
+}
+
+/// A party update whose body carries no `uid` judges each relationship
+/// `source` against the container its path names: RM `party.adoc`, invariant
+/// `Relationships_validity`, "`relationships.for_all (r | r.source = self)`".
+/// A foreign source is a `422` and commits nothing.
+#[tokio::test]
+async fn update_without_uid_refuses_a_foreign_relationship_source() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+
+    let first = svc
+        .party_create(PartyKind::Person, typed(&person("First")), None)
+        .await
+        .expect("create the first person");
+    let second = svc
+        .party_create(PartyKind::Person, typed(&person("Second")), None)
+        .await
+        .expect("create the second person");
+    let v1 = ovid(&first.body).to_owned();
+    let vo = vo_uuid(&first.body);
+    let foreign = vo_uuid(&second.body);
+
+    let mut body = person("First");
+    assert!(body.get("uid").is_none(), "the update body carries no uid");
+    body["relationships"] = json!([{
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1",
+        "name": { "_type": "DV_TEXT", "value": "foreign source" },
+        "source": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": foreign } },
+        "target": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": vo } }
+    }]);
+    let refused = svc
+        .party_update(
+            PartyKind::Person,
+            vo.clone(),
+            v1.clone(),
+            typed(&body),
+            None,
+        )
+        .await;
+    assert!(
+        matches!(
+            refused,
+            Err(SmError {
+                status: CallStatusType::ContentInvalid,
+                ..
+            })
+        ),
+        "a relationship sourced at another party breaks Relationships_validity, got {refused:?}"
+    );
+
+    let after = svc
+        .party_get(PartyKind::Person, vo, None)
+        .await
+        .expect("read after the refused update");
+    assert_eq!(ovid(&after.body), v1, "the latest version is unchanged");
 }
 
 #[tokio::test]
