@@ -96,7 +96,7 @@ impl TerminologyExpander for FerroEhrService {
         service_api: &str,
         params_uri: &str,
     ) -> Result<bool, AqlError> {
-        let args = uri_query_args(params_uri);
+        let args = params_uri_args(params_uri);
         let arg = |name: &'static str| -> Result<&str, AqlError> {
             args.get(name)
                 .map(String::as_str)
@@ -184,12 +184,20 @@ fn codes_of(extract: super::types::TerminologyExtract) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// The query args of a `params_uri` (`system=…&code=…&url=…`), from the part
-/// after the first `?` when present, else the whole string. Values are
+/// The query arguments of a `params_uri` (`system=…&code=…&url=…`), which
+/// QUERY master03 §TERMINOLOGY gives as "URI path and query sections". A path
+/// ends at a `?` that comes before the first `=`; with no such path the whole
+/// string is the query. Each argument runs from its name's `=` to the next
+/// `&`, so a value-set URL keeps its own `?` and `=` (master03's `validate`
+/// example passes `url=http://snomed.info/sct?fhir_vs`). Values are
 /// form-urlencoded (`+` → space) and percent-decoded (`urlencoding`, WHATWG
 /// recovery semantics).
-fn uri_query_args(params_uri: &str) -> BTreeMap<String, String> {
-    let query = params_uri.split_once('?').map_or(params_uri, |(_, q)| q);
+fn params_uri_args(params_uri: &str) -> BTreeMap<String, String> {
+    let query = match (params_uri.find('?'), params_uri.find('=')) {
+        (Some(q), Some(eq)) if q < eq => params_uri.get(q + 1..).unwrap_or_default(),
+        (Some(q), None) => params_uri.get(q + 1..).unwrap_or_default(),
+        _ => params_uri,
+    };
     query
         .split('&')
         .filter_map(|pair| pair.split_once('='))
@@ -233,18 +241,57 @@ mod tests {
     }
 
     #[test]
-    fn uri_query_args_decode_form_encoding() {
-        let args = uri_query_args("fhir/ValueSet?system=http%3A%2F%2Fsnomed.info&code=a+b");
+    fn params_uri_args_decode_form_encoding() {
+        let args = params_uri_args("fhir/ValueSet?system=http%3A%2F%2Fsnomed.info&code=a+b");
         assert_eq!(
             args.get("system").map(String::as_str),
             Some("http://snomed.info")
         );
         assert_eq!(args.get("code").map(String::as_str), Some("a b"));
         // No `?` → the whole string is the query.
-        let bare = uri_query_args("system=s&codeA=x&codeB=y");
+        let bare = params_uri_args("system=s&codeA=x&codeB=y");
         assert_eq!(bare.get("codeA").map(String::as_str), Some("x"));
         // A literal `+` survives as %2B.
-        let plus = uri_query_args("code=a%2Bb");
+        let plus = params_uri_args("code=a%2Bb");
         assert_eq!(plus.get("code").map(String::as_str), Some("a+b"));
+    }
+
+    #[test]
+    fn validate_params_uri_keeps_a_value_set_url_whole() {
+        // QUERY master03 §TERMINOLOGY, the `validate` example.
+        let args = params_uri_args(
+            "system=http://snomed.info/sct&code=122298005\
+             &url=http://snomed.info/sct?fhir_vs&display=Astrovirus RNA assay",
+        );
+        let arg = |name: &str| args.get(name).map(String::as_str);
+        assert_eq!(arg("system"), Some("http://snomed.info/sct"));
+        assert_eq!(arg("code"), Some("122298005"));
+        assert_eq!(arg("url"), Some("http://snomed.info/sct?fhir_vs"));
+        assert_eq!(arg("display"), Some("Astrovirus RNA assay"));
+        // A value-set URL with its own query argument stays whole.
+        let refset = params_uri_args(
+            "system=http://snomed.info/sct&code=1\
+             &url=http://snomed.info/sct?fhir_vs=refset/1200161000168100",
+        );
+        assert_eq!(
+            refset.get("url").map(String::as_str),
+            Some("http://snomed.info/sct?fhir_vs=refset/1200161000168100")
+        );
+        // A leading `?` is an empty path.
+        let leading = params_uri_args("?url=http://snomed.info/sct?fhir_vs&code=1");
+        assert_eq!(
+            leading.get("url").map(String::as_str),
+            Some("http://snomed.info/sct?fhir_vs")
+        );
+    }
+
+    #[test]
+    fn subsumes_params_uri_keeps_a_system_url_whole() {
+        let args =
+            params_uri_args("system=http://snomed.info/sct?fhir_vs&codeA=235856003&codeB=3738000");
+        let arg = |name: &str| args.get(name).map(String::as_str);
+        assert_eq!(arg("system"), Some("http://snomed.info/sct?fhir_vs"));
+        assert_eq!(arg("codeA"), Some("235856003"));
+        assert_eq!(arg("codeB"), Some("3738000"));
     }
 }
