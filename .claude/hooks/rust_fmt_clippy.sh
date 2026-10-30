@@ -89,6 +89,16 @@ if [ -x "$repo_root/scripts/checks/typed-status.sh" ]; then
   }
 fi
 
+# File-size guard (.claude/rules/rust-style.md §Code is written once): a
+# hand-written file stays within 800 lines, and a listed file never grows
+# past its entry. It runs after rustfmt, so it counts the formatted file.
+if [ -x "$repo_root/scripts/checks/file-size.sh" ]; then
+  findings="$("$repo_root/scripts/checks/file-size.sh" --files "$file_path" 2>&1)" || {
+    printf '%s\n' "$findings" >&2
+    exit 2
+  }
+fi
+
 # E2E wait guard (.claude/rules/console-ui.md §5): a browser journey holds the
 # bounded `common::Element`, never a raw `WebElement`/`SelectElement`, and waits
 # on a condition rather than a timer. Whole-scope only (the guard reads every
