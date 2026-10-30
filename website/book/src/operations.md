@@ -51,11 +51,19 @@ require that separation to hold against internal actors, operators with
 database access included.
 
 Each serving role holds `SELECT`/`INSERT`/`UPDATE`/`DELETE` on its own domain's
-tables and `EXECUTE` on the `ext` helper functions, and nothing else: it is not
+tables, `EXECUTE` on the `ext` helper functions, and `MAINTAIN` on its store's
+partitioned tables (and `ehr`, for `ferroehr_clinical`), and nothing else: it is not
 a superuser, does not bypass row-level security, and cannot create, alter or
 drop a table, index, schema or role. On the audit trail it is narrower still:
 it may record an event and stamp it forwarded, and it holds no privilege that
 can rewrite or remove one (see [Audit](audit.md)).
+
+`MAINTAIN` is there so the server can keep those tables' planner statistics
+(see [Planner statistics of the partitioned tables](#planner-statistics-of-the-partitioned-tables)).
+It also allows `VACUUM`, `CLUSTER`, `REINDEX` and `LOCK TABLE` on exactly
+those tables. The role can already write every row of them, so what it adds
+is the locks and index rebuilds those commands take. The reader roles do not
+hold it.
 
 ### Turning the schema split into a role split
 
@@ -350,13 +358,15 @@ while autovacuum has never analyzed it:
 - after `load_ehrs` loads an archive;
 - at boot and then every hour, as each store's serving role.
 
-Without these statistics a revision history can walk the whole commit audit
-index and an AQL `CONTAINS` can read every COMPOSITION's nodes. `ANALYZE`
-needs the `MAINTAIN` privilege on the table. When the serving roles do not own
-the tables, which is the case under the role split above, the hourly refresh
-logs a warning naming the tables it could not analyze. Grant those roles
-`MAINTAIN` on the tables the warning names, or run the same `ANALYZE ONLY`
-from a scheduled job as the migration role.
+Without these statistics an AQL `CONTAINS` can read every COMPOSITION's
+nodes. `ANALYZE` needs the `MAINTAIN` privilege on the table, and the
+migrations grant it to `ferroehr_clinical` on `clinical.node`,
+`clinical.version`, `clinical.vo_attestation` and `clinical.ehr`, and to
+`ferroehr_party` on the three partitioned tables of `party`. When a serving
+role still lacks it, for example because the roles were absent when the
+migrations ran, the hourly refresh logs a warning naming the tables it could
+not analyze. Grant the role `MAINTAIN` on those tables, or run the same
+`ANALYZE ONLY` from a scheduled job as the migration role.
 
 ### Recovering a partially wiped database
 
