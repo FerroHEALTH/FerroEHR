@@ -1742,3 +1742,267 @@ async fn an_ehr_lookup_by_subject_enters_through_the_subject_index() {
         render(&scans)
     );
 }
+
+// ── the partitioned parents' statistics ─────────────────────────────────────
+
+/// Analyze every partition and plain table of both stores and no partitioned
+/// parent: the statistics autovacuum leaves, since "partitioned tables are not
+/// processed by autovacuum" (`PostgreSQL` 18 docs § 24.1.3).
+async fn analyze_as_autovacuum(pool: &PgPool) {
+    let leaves: Vec<String> = sqlx::query_scalar(
+        "SELECT format('%I.%I', n.nspname, c.relname) \
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace \
+         WHERE n.nspname IN ('clinical', 'party') AND c.relkind = 'r' ORDER BY 1",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("list the stores' tables");
+    for leaf in leaves {
+        pool.execute(sqlx::AssertSqlSafe(format!("ANALYZE {leaf}")))
+            .await
+            .expect("analyze one table as autovacuum would");
+    }
+}
+
+/// The statements that read one object's versions by `vo_id` and join each
+/// version row to its commit audit, under the names the failure reports.
+const READS_BY_VO_ID: [(&str, &str); 2] = [
+    ("the revision history", meta::ALL_VERSION_META_SQL),
+    ("the current version read", read::READ_CURRENT_SQL),
+];
+
+/// A read by `vo_id` probes each version's commit audit by key once the
+/// maintenance task has refreshed the parents' statistics (#4438).
+///
+/// With `version`'s statistics left from the seed, the planner took the
+/// highest commit audit id it held for the highest there is, so a merge join
+/// over `pk_commit_audit` looked as if it stopped after the seed's rows. For
+/// an object committed since, it walked the whole index: 1 318 buffers for
+/// the history of a four-version object beside 1 300 others, against 21.
+#[tokio::test]
+async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    // The storage bench's seed, analyzed whole once seeded.
+    let body = composition("parent statistics");
+    let mut ehrs = Vec::new();
+    for _ in 0..20 {
+        ehrs.push(svc.create_ehr(None).await.expect("create an EHR"));
+    }
+    for index in 0..300 {
+        svc.create_composition(ehrs[index % ehrs.len()], uv(&body, "249", None))
+            .await
+            .expect("commit a single-version composition");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seed");
+
+    // The commits that follow, with the statistics autovacuum takes of them.
+    let ehr = ehrs[0];
+    for _ in 0..1000 {
+        svc.create_composition(ehr, uv(&body, "249", None))
+            .await
+            .expect("commit a first version");
+    }
+    let mut head = svc
+        .create_composition(ehr, uv(&body, "249", None))
+        .await
+        .expect("commit the read object's first version");
+    for _ in 0..3 {
+        head = svc
+            .update_composition(ehr, head.vo_id, uv(&body, "251", None))
+            .await
+            .expect("supersede the read object");
+    }
+    analyze_as_autovacuum(&pool).await;
+    ferroehr::db::parent_statistics::refresh_pool(&pool)
+        .await
+        .expect("refresh the partitioned parents' statistics");
+
+    let mut walked = Vec::new();
+    for (read, sql) in READS_BY_VO_ID {
+        for mode in ["force_custom_plan", "force_generic_plan"] {
+            let mut tx = pool.begin().await.expect("begin the explain transaction");
+            tx.execute(sqlx::AssertSqlSafe(format!(
+                "SET LOCAL plan_cache_mode = {mode}"
+            )))
+            .await
+            .expect("set the plan cache mode");
+            tx.execute(sqlx::AssertSqlSafe(format!(
+                "PREPARE by_vo (uuid) AS {sql}"
+            )))
+            .await
+            .expect("prepare the read");
+            let plan: Value = sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+                "{EXPLAIN}EXECUTE by_vo ('{}')",
+                head.vo_id.0
+            )))
+            .fetch_one(&mut *tx)
+            .await
+            .expect("explain the read")
+            .try_get(0)
+            .expect("EXPLAIN FORMAT JSON returns one json column");
+            // A prepared statement outlives the transaction it was made in.
+            tx.execute("DEALLOCATE by_vo")
+                .await
+                .expect("drop the prepared read");
+            tx.rollback().await.expect("roll the explain back");
+
+            let scans = scans(&plan);
+            let audits = on(&scans, "commit_audit");
+            let probed = !audits.is_empty()
+                && audits.iter().all(|scan| {
+                    scan.index.as_deref() == Some("pk_commit_audit") && scan.rows <= 1.0
+                });
+            if !probed {
+                walked.push(format!("{read}, {mode}:\n{}", render(&scans)));
+            }
+        }
+    }
+    assert!(
+        walked.is_empty(),
+        "a read by vo_id reaches each version's commit audit by one primary-key \
+         probe, never by a walk over the commit audit index:\n{}",
+        walked.join("\n")
+    );
+}
+
+/// Upload one vendored CKM template and generate its committable example, as
+/// the storage bench seeds it.
+async fn ckm_example(svc: &FerroEhrService, template: &str) -> Value {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(format!("../../corpus/templates/ckm/{template}.opt"));
+    let xml = std::fs::read_to_string(path).expect("the vendored OPT is readable");
+    let template_id = openehr_its::opt14::from_xml(&xml)
+        .expect("the vendored OPT parses")
+        .template_id
+        .value;
+    svc.upload_opt(xml).await.expect("upload the template");
+    svc.template_adl14_example(template_id, Some("medium".to_owned()), None)
+        .await
+        .expect("the template generates an example composition")
+}
+
+/// The population `CONTAINS` of the storage bench's `contains_exists` enters
+/// through the archetype index once the parents carry statistics (#4453).
+///
+/// With the partitions analyzed and the parents not, the planner estimated
+/// the head join from no statistics at all and drove from every COMPOSITION
+/// root, reading all of its nodes (3 703 buffers on this seed, against 1 745).
+#[tokio::test]
+async fn a_population_contains_enters_through_the_archetype_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+
+    // The storage bench's seed: its two templates alternating over 20 EHRs.
+    let vital_signs = ckm_example(&svc, "vital-signs").await;
+    let gp_data_set = ckm_example(&svc, "gp-data-set").await;
+    let mut ehrs = Vec::new();
+    for _ in 0..20 {
+        ehrs.push(svc.create_ehr(None).await.expect("create an EHR"));
+    }
+    for index in 0..300_usize {
+        let body = if index.div_euclid(ehrs.len()).is_multiple_of(2) {
+            &vital_signs
+        } else {
+            &gp_data_set
+        };
+        svc.create_composition(ehrs[index % ehrs.len()], uv(body, "249", None))
+            .await
+            .expect("seed a composition");
+    }
+    analyze_as_autovacuum(&pool).await;
+    ferroehr::db::parent_statistics::refresh_pool(&pool)
+        .await
+        .expect("refresh the partitioned parents' statistics");
+
+    let prepared = aql_sql(
+        "SELECT count(c) FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]",
+        Vec::new(),
+    );
+    let mut tx = pool.begin().await.expect("begin the explain transaction");
+    let plan: Value = sqlx::query_scalar_with(
+        sqlx::AssertSqlSafe(format!("{EXPLAIN}{}", prepared.sql)),
+        prepared.values,
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the population CONTAINS");
+    tx.rollback().await.expect("roll the explain back");
+
+    let scans = scans(&plan);
+    assert!(
+        on(&scans, "node_hot")
+            .iter()
+            .any(|scan| scan.index.as_deref() == Some("idx_node_hot_arch_subsume")),
+        "the population CONTAINS finds the OBSERVATIONs through \
+         idx_node_hot_arch_subsume rather than every COMPOSITION's nodes:\n{}",
+        render(&scans)
+    );
+}
+
+/// The maintenance task analyzes the partitioned parents of both stores, which
+/// autovacuum never does, from its first tick (#4453).
+#[tokio::test]
+async fn the_maintenance_task_analyzes_the_partitioned_parents() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    let ehr = svc.create_ehr(None).await.expect("create an EHR");
+    for _ in 0..5 {
+        svc.create_composition(ehr, uv(&composition("maintenance"), "249", None))
+            .await
+            .expect("commit a composition");
+    }
+    // `inherited` marks the statistics of a parent over all its partitions
+    // (`PostgreSQL` 18 docs, `pg_stats`).
+    let parent_stats = || async {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM pg_stats \
+             WHERE schemaname = 'clinical' AND tablename IN ('node', 'version') AND inherited",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("count the parents' statistics")
+    };
+    assert_eq!(
+        parent_stats().await,
+        0,
+        "no ANALYZE has reached the parents"
+    );
+
+    let task = tokio::spawn(ferroehr::db::parent_statistics::scheduled(pools.clone()));
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
+    while parent_stats().await == 0 && tokio::time::Instant::now() < deadline {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    task.abort();
+    assert!(
+        parent_stats().await > 0,
+        "the maintenance task's first tick analyzed clinical.node and clinical.version"
+    );
+
+    let refreshed = ferroehr::db::parent_statistics::refresh_pools(&pools)
+        .await
+        .expect("refresh both stores");
+    for parent in [
+        "clinical.node",
+        "clinical.version",
+        "clinical.vo_attestation",
+        "party.node",
+        "party.version",
+        "party.vo_attestation",
+    ] {
+        assert!(
+            refreshed.analyzed.iter().any(|table| table == parent),
+            "{parent} is analyzed: {refreshed:?}"
+        );
+    }
+    assert!(refreshed.refused.is_empty(), "{refreshed:?}");
+}
