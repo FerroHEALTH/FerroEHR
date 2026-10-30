@@ -6460,7 +6460,9 @@ pub(crate) async fn composition_tags_get(
                                         `Last-Modified` and no `Location`.",
             headers(
                 ("Preference-Applied" = String,
-                 description = "`return=representation` — the honoured \
+                 description = "`return=representation`, or `return=identifier`, \
+                                which a tag collection answers with the same \
+                                stored list (owner decision, #4475) — the honoured \
                                 preference (`Requests_and_responses.md` \
                                 §\"Representation details negotiation\": the \
                                 service MAY include this header \"to indicate \
@@ -6493,19 +6495,14 @@ pub(crate) async fn composition_tags_get(
                                       operation was successful and the \
                                       `Prefer` header is missing or is set to \
                                       `return=minimal`\" \
-                                      (`responses/204_updated.yaml`); a \
-                                      `return=identifier` request resolves \
-                                      here too. This is the DEFAULT branch. It \
+                                      (`responses/204_updated.yaml`). This is the DEFAULT branch. It \
                                       carries no resource header of any kind — \
                                       no `ETag`, no `Last-Modified`, no \
                                       `Location` — only the \
                                       `Preference-Applied` declaration.",
          headers(
              ("Preference-Applied" = String,
-              description = "`return=minimal` — the applied preference, \
-                             including when the request asked for \
-                             `return=identifier` (an ITEM_TAG has no uid to \
-                             return)."),
+              description = "`return=minimal` — the applied preference."),
          )),
         (status = 400, description = "`ehr_id` or `uid_based_id` is malformed, \
                                       or the body is not a JSON ARRAY / not \
@@ -6983,7 +6980,9 @@ pub(crate) async fn ehr_status_tags_get(
                                         `Last-Modified` and no `Location`.",
             headers(
                 ("Preference-Applied" = String,
-                 description = "`return=representation` — the honoured \
+                 description = "`return=representation`, or `return=identifier`, \
+                                which a tag collection answers with the same \
+                                stored list (owner decision, #4475) — the honoured \
                                 preference (`Requests_and_responses.md` \
                                 §\"Representation details negotiation\": the \
                                 service MAY include this header \"to indicate \
@@ -7016,19 +7015,14 @@ pub(crate) async fn ehr_status_tags_get(
                                       operation was successful and the \
                                       `Prefer` header is missing or is set to \
                                       `return=minimal`\" \
-                                      (`responses/204_updated.yaml`); a \
-                                      `return=identifier` request resolves \
-                                      here too. This is the DEFAULT branch. It \
+                                      (`responses/204_updated.yaml`). This is the DEFAULT branch. It \
                                       carries no resource header of any kind — \
                                       no `ETag`, no `Last-Modified`, no \
                                       `Location` — only the \
                                       `Preference-Applied` declaration.",
          headers(
              ("Preference-Applied" = String,
-              description = "`return=minimal` — the applied preference, \
-                             including when the request asked for \
-                             `return=identifier` (an ITEM_TAG has no uid to \
-                             return)."),
+              description = "`return=minimal` — the applied preference."),
          )),
         (status = 400, description = "`ehr_id` or `uid_based_id` is malformed, \
                                       or the body is not a JSON ARRAY / not \

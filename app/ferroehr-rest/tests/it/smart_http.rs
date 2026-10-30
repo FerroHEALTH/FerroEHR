@@ -429,3 +429,92 @@ async fn an_unserved_method_without_a_credential_is_401() {
     let (status, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
 }
+
+/// A server trusting `issuer` with the coarse role gate switched on
+/// (`[authz.rbac] enabled`).
+async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
+    let (pg, service) = common::test_service().await;
+    let mut cfg = config(issuer, false, false);
+    cfg.rbac.enabled = true;
+    let mut authz = ferroehr::config::authz::AuthzConfig::default();
+    authz.rbac.enabled = true;
+    let authz = ferroehr_rest::extensions::access::authz::AuthzHandle::build(
+        &authz,
+        &cfg.rest.base_path,
+        None,
+        common::null_resolvers(),
+    )
+    .map(std::sync::Arc::new);
+    let app = ferroehr_rest::build_full(
+        cfg,
+        service,
+        authz,
+        ferroehr_rest::extensions::management::Observability::default(),
+    )
+    .await
+    .expect("build app");
+    (pg, app)
+}
+
+/// A token whose SMART on openEHR scopes are `system/` scopes is a backend
+/// client: it is authenticated without a role and its scopes decide access
+/// (owner ruling on #4467; master08 §Resource Scopes, `system` access is
+/// "based on pre-configured client-specific policy"). A role-less token whose
+/// scope does not cover the operation, and one holding no SMART scope, are
+/// still refused.
+#[tokio::test]
+async fn a_system_scoped_token_without_a_role_reaches_what_its_scopes_cover() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = rbac_app(&uri).await;
+    let list = format!("{BASE}/definition/template/adl1.4");
+    for scope in ["system/template-*.r", "system/template-*.crud"] {
+        let (status, body) = send(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
+        assert_eq!(status, StatusCode::OK, "{scope}: {body}");
+    }
+    let (status, body) = send(
+        &app,
+        get(&list, Some(&token(&uri, "system/aql-*.s", &json!({})))),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "an uncovering scope: {body}");
+    let (status, body) = send(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "no SMART scope and no role: {body}"
+    );
+}
+
+/// A `user/` or `patient/` token belongs to a person, so it still needs a role
+/// with the role gate on (owner ruling on #4467, #2160): without one it is
+/// refused `403` even when its scopes cover the operation, and a token mixing
+/// a `system/` scope with a person's scope is refused alike.
+#[tokio::test]
+async fn a_person_scoped_token_without_a_role_is_refused() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = rbac_app(&uri).await;
+    let list = format!("{BASE}/definition/template/adl1.4");
+    for scope in [
+        "user/template-*.r",
+        "patient/template-*.r",
+        "system/template-*.r user/template-*.r",
+    ] {
+        let (status, body) = send(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{scope}: {body}");
+    }
+    let (status, body) = send(
+        &app,
+        get(
+            &list,
+            Some(&token(
+                &uri,
+                "user/template-*.r",
+                &json!({ "roles": ["USER"] }),
+            )),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "a user/ token with a role: {body}");
+}

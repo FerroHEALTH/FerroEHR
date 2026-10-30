@@ -420,3 +420,72 @@ async fn same_key_tags_on_different_target_paths_coexist() {
         "the two identities are distinguished by target_path: {body}"
     );
 }
+
+/// A party of `kind` (`agent`, `group`, `organisation`, `person`, `role`), the
+/// PERSON body retyped; a ROLE also names its performer.
+fn party_body(kind: &str) -> Value {
+    let rm_type = kind.to_uppercase();
+    let archetype = format!("openEHR-DEMOGRAPHIC-{rm_type}.{kind}.v1");
+    let mut body = person_body();
+    let map = body.as_object_mut().expect("party object");
+    map.insert("_type".to_owned(), json!(rm_type));
+    map.insert("archetype_node_id".to_owned(), json!(archetype));
+    map.insert(
+        "archetype_details".to_owned(),
+        json!({
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.1.0"
+        }),
+    );
+    if kind == "role" {
+        map.insert(
+            "performer".to_owned(),
+            json!({
+                "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }
+            }),
+        );
+    }
+    body
+}
+
+/// A tag update with `Prefer: return=identifier` answers `200` with the stored
+/// tag list on every party kind (owner decision on #4475; the release is silent
+/// on a tag collection's identifier and RFC 7240 §4.2 lets the server choose).
+#[tokio::test]
+async fn a_party_tag_put_preferring_an_identifier_answers_the_stored_list() {
+    let (_pg, app) = app().await;
+    for kind in ["agent", "group", "organisation", "person", "role"] {
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("{BASE}/demographic/{kind}"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(party_body(kind).to_string()))
+            .unwrap();
+        let (status, h, body) = send(&app, req).await;
+        assert_eq!(status, StatusCode::CREATED, "{kind}: {body}");
+        let ovid = h
+            .get(header::ETAG)
+            .and_then(|v| v.to_str().ok())
+            .expect("ETag")
+            .trim_start_matches("W/")
+            .trim_matches('"')
+            .to_owned();
+        let req = Request::builder()
+            .method("PUT")
+            .uri(format!("{BASE}/demographic/{kind}/{}/tags", vo_of(&ovid)))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header("Prefer", "return=identifier")
+            .body(Body::from(json!([{ "key": "reviewed" }]).to_string()))
+            .unwrap();
+        let (status, h, body) = send(&app, req).await;
+        assert_eq!(status, StatusCode::OK, "{kind}: {body}");
+        assert_eq!(
+            h.get("preference-applied").and_then(|v| v.to_str().ok()),
+            Some("return=identifier"),
+            "{kind}"
+        );
+        assert_eq!(keys(&body), vec!["reviewed".to_owned()], "{kind}: {body}");
+    }
+}

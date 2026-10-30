@@ -1078,14 +1078,19 @@ pub(crate) fn set_etag(resp: &mut Response, uid: &str) {
     }
 }
 
+/// Set the `Last-Modified` header to `at`, an HTTP-date (RFC 9110 §8.8.2).
+pub(crate) fn set_last_modified(resp: &mut Response, at: jiff::Timestamp) {
+    if let Ok(lm) = HeaderValue::from_str(&http_date(at)) {
+        resp.headers_mut().insert(header::LAST_MODIFIED, lm);
+    }
+}
+
 /// Set the versioning headers on a response: the weak `ETag` and — when the
 /// metadata carries a commit time — `Last-Modified`. No `Location`.
 pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta) {
     set_etag(resp, &meta.uid);
-    if let Some(at) = meta.last_modified
-        && let Ok(lm) = HeaderValue::from_str(&http_date(at))
-    {
-        resp.headers_mut().insert(header::LAST_MODIFIED, lm);
+    if let Some(at) = meta.last_modified {
+        set_last_modified(resp, at);
     }
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditObject {
@@ -1178,21 +1183,27 @@ pub(crate) fn write_json(
 }
 
 /// Render a sub-collection write (the `ITEM_TAG` list of a target): the stored
-/// collection on `Prefer: return=representation`, otherwise the empty
-/// `minimal_status` body — and the applied preference declared either way.
+/// collection at `repr_status` on `Prefer: return=representation` or
+/// `return=identifier`, otherwise the empty `minimal_status` body, and the
+/// applied preference declared either way.
 ///
-/// The collection is not a `uid`-versioned resource of its own, so there is no
-/// identifier to return: `return=identifier` cannot be honoured here and
-/// resolves to the applied default `return=minimal` (§Representation details
-/// negotiation: "If no `Prefer` header is provided, the default behavior is
-/// assumed to be `return=minimal`"). No `ETag`/`Location` — the collection
-/// write mints no new resource.
+/// The collection is not a `uid`-versioned resource of its own, so its stored
+/// list is the identifier-level answer: each tag is identified by its key
+/// within the target. No `ETag`/`Location`: the collection write mints no new
+/// resource.
+// NOTE: the release is silent on a tag write's `return=identifier` answer, and RFC 7240 §4.2
+// lets the server pick it; by owner decision (#4475) it is the stored tag list.
 pub(crate) fn write_collection(
     headers: &HeaderMap,
     minimal_status: StatusCode,
     repr_status: StatusCode,
     body: &serde_json::Value,
 ) -> Response {
+    if !prefers_representation(headers) && prefers_identifier(headers) {
+        let mut out = respond(headers, repr_status, body);
+        set_preference_applied(&mut out, AppliedPreference::Identifier(""));
+        return out;
+    }
     write_negotiated(headers, minimal_status, repr_status, None, |status| {
         respond(headers, status, body)
     })

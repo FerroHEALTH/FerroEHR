@@ -53,9 +53,9 @@ pub(super) async fn run(
                 EhrGetBySubjectParams::from_request,
                 EhrGetBySubjectParams::PARAMS,
             )?;
-            let body = state
+            let read = state
                 .backend()
-                .ehr_object_for_subject(&p.subject_id, &p.subject_namespace)
+                .ehr_read_for_subject(&p.subject_id, &p.subject_namespace)
                 .await?;
             // 200_EHR: the weak ETag off `EHR.ehr_id.value` — the ITS-REST
             // overview's own example source for a resource with a unique
@@ -63,7 +63,7 @@ pub(super) async fn run(
             // Last-Modified": the value "is usually taken from e.g.
             // VERSIONED_OBJECT.uid.value, VERSION.uid.value,
             // EHR.ehr_id.value"). No Location on a GET (§Location).
-            Ok(ehr_read_response(h, ok, &body))
+            Ok(ehr_read_response(h, ok, &read))
         }
         "ehr_create" => {
             let _p = parts.decode(EhrCreateParams::from_request, EhrCreateParams::PARAMS)?;
@@ -95,8 +95,8 @@ pub(super) async fn run(
         "ehr_get_by_id" => {
             let p = parts.decode(EhrGetByIdParams::from_request, EhrGetByIdParams::PARAMS)?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let body = state.backend().ehr_object(ehr_id).await?;
-            Ok(ehr_read_response(h, ok, &body))
+            let read = state.backend().ehr_read(ehr_id).await?;
+            Ok(ehr_read_response(h, ok, &read))
         }
         "ehr_tags_get" => {
             let p = parts.decode(EhrTagsGetParams::from_request, EhrTagsGetParams::PARAMS)?;
@@ -145,23 +145,24 @@ fn create_committal(
 }
 
 /// Render an EHR read (`200_EHR`) with the weak `ETag` carrying
-/// `EHR.ehr_id.value` — the ITS-REST overview §"`ETag` and Last-Modified"
-/// example source, and a resource with a unique state identifier, for which
-/// the `ETag` SHOULD be present.
-///
-/// No `Last-Modified`: the RM `EHR` root is not a VERSION and has no
-/// `commit_audit`, and the spec derives the header from
-/// `VERSION.commit_audit.time_committed.value`. `EHR.time_created` is the
-/// creation instant, not the last modification (the served body changes with
-/// every `EHR_STATUS`/directory commit), so emitting it here would be wrong.
-fn ehr_read_response(h: &http::HeaderMap, status: StatusCode, body: &Value) -> Response {
-    let mut out = negotiate::respond_rm::<Ehr>(h, status, body, "ehr");
-    if let Some(id) = body
+/// `EHR.ehr_id.value` and the `Last-Modified` of the latest change to the
+/// served EHR: ITS-REST overview §"`ETag` and Last-Modified", "Both `ETag` and
+/// `Last-Modified` SHOULD be included in responses for VERSION,
+/// `VERSIONED_OBJECT`, or other resources that have versioning or unique state
+/// identifiers". The EHR's creating commit dates it until a folder hierarchy
+/// joins or leaves `EHR.folders`.
+fn ehr_read_response(h: &http::HeaderMap, status: StatusCode, read: &ServiceResponse) -> Response {
+    let mut out = negotiate::respond_rm::<Ehr>(h, status, &read.body, "ehr");
+    if let Some(id) = read
+        .body
         .get("ehr_id")
         .and_then(|i| i.get("value"))
         .and_then(Value::as_str)
     {
         negotiate::set_etag(&mut out, id);
+    }
+    if let Some(at) = read.meta.as_ref().and_then(|meta| meta.last_modified) {
+        negotiate::set_last_modified(&mut out, at);
     }
     out
 }

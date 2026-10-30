@@ -622,18 +622,12 @@ async fn a_tag_put_with_an_empty_value_is_unprocessable() {
     assert_eq!(tags[0]["key"], "alpha");
 }
 
-/// `Prefer: return=identifier` on a tag PUT resolves to the APPLIED default
-/// `return=minimal`.
-///
-/// The released identifier contract cannot apply: it demands "a non-empty
-/// response body (i.e., the status will be `201 Created` or `200 OK`, never
-/// `204 No Content`)" carrying "a single JSON object with a single `uid`
-/// attribute" (ITS-REST overview `Requests_and_responses.md` §"Prefer only
-/// identifier"), while an `ITEM_TAG` has no uid at all and the affected
-/// resource is a collection, so the fallback is our own; the `204` is
-/// itself the proof, since the identifier branch forbids that status.
+/// `Prefer: return=identifier` on a tag PUT answers `200` with the stored tag
+/// list. The release is silent on the identifier of a tag collection (an
+/// `ITEM_TAG` has no uid), RFC 7240 §4.2 lets the server choose the answer,
+/// and FerroEHR answers the stored list (owner decision on #4475).
 #[tokio::test]
-async fn a_tag_put_preferring_an_identifier_applies_the_minimal_default() {
+async fn a_tag_put_preferring_an_identifier_answers_the_stored_list() {
     let (_pg, app) = common::test_router().await;
     let ehr = create_ehr(&app).await;
     let vo = status_vo(&app, &ehr).await;
@@ -648,23 +642,16 @@ async fn a_tag_put_preferring_an_identifier_applies_the_minimal_default() {
         ))
         .unwrap();
     let (status, h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
-        status,
-        StatusCode::NO_CONTENT,
-        "an ITEM_TAG collection has no identifier to return: {body}"
+        h.get("preference-applied").and_then(|v| v.to_str().ok()),
+        Some("return=identifier")
     );
-    assert!(body.is_empty(), "204 carries no payload body: {body}");
-    if let Some(applied) = h.get("preference-applied") {
-        assert_eq!(
-            applied.to_str().unwrap(),
-            "return=minimal",
-            "the header may be omitted, but it may not claim a preference that was not applied"
-        );
-    }
-    // The write itself still landed.
-    let tags = ehr_tags(&app, &ehr).await;
-    assert_eq!(tags.len(), 1, "{tags:?}");
-    assert_eq!(tags[0]["key"], "alpha");
+    let answered: Vec<Value> = serde_json::from_str(&body).expect("a tag list");
+    assert_eq!(answered.len(), 1, "{answered:?}");
+    assert_eq!(answered[0]["key"], "alpha");
+    let stored = ehr_tags(&app, &ehr).await;
+    assert_eq!(stored.len(), 1, "the write landed: {stored:?}");
 }
 
 /// Two entries of one PUT body sharing the `ITEM_TAG` identity — the

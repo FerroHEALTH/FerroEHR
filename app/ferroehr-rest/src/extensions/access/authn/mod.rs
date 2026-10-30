@@ -47,6 +47,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::metadata::{DiscoveryError, ServerMetadata, parse_metadata};
+use ferrohealth_smart::openehr::smart_scopes::{Compartment, SmartScope};
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
@@ -60,6 +61,7 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::served::ServedMethods;
 use crate::config::AppConfig;
 use crate::extensions::access::authz::AuthzHandle;
+use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
 use crate::smart::routes::{Need, SmartRoutes};
@@ -650,6 +652,11 @@ pub(crate) async fn middleware(
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.
 ///
+/// A bearer token whose SMART on openEHR resource scopes are all `system/`
+/// scopes passes the clinical class without a role: its scopes decide access,
+/// in [`smart_refusal`]. A `user/` or `patient/` token belongs to a person and
+/// keeps the role gate, as does a Basic user.
+///
 /// A principal carrying the configured read-only role is refused on every write
 /// operation, overriding any grant. Both denials produce the same `403`,
 /// attributed to the caller so the ATNA audit layer records it. No openEHR spec
@@ -661,7 +668,17 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
         .get::<MatchedPath>()
         .map(|m| m.as_str().to_owned());
     let class = rbac.class_for(req.method(), matched.as_deref());
-    let decision = match rbac.decide(class, &principal.roles) {
+    let backend = principal.method == AuthMethod::Bearer
+        && principal
+            .access
+            .caller()
+            .is_some_and(|caller| holds_only_system_scopes(&caller.openehr_scopes()));
+    let gated = if backend && class == OperationClass::Clinical {
+        RbacDecision::Allow
+    } else {
+        rbac.decide(class, &principal.roles)
+    };
+    let decision = match gated {
         RbacDecision::Deny(reason) => RbacDecision::Deny(reason),
         RbacDecision::Allow => {
             let is_write = rbac.is_write_for(req.method(), matched.as_deref());
@@ -675,6 +692,21 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
     let mut resp = RestError::from(ApiError::Forbidden(reason)).into_response();
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
+}
+
+/// Whether `scopes` hold at least one SMART on openEHR resource scope and every
+/// one of them is a `system/` scope: a backend client, judged by its scopes alone.
+fn holds_only_system_scopes(scopes: &[SmartScope]) -> bool {
+    // NOTE: owner ruling on #4467, master08 §Resource Scopes: `system` access is "based on
+    // pre-configured client-specific policy", so only a `system/` token skips the role gate.
+    let mut resources = scopes.iter().filter_map(|scope| match scope {
+        SmartScope::Resource(resource) => Some(resource.compartment),
+        _ => None,
+    });
+    resources
+        .next()
+        .is_some_and(|first| first == Compartment::System)
+        && resources.all(|compartment| compartment == Compartment::System)
 }
 
 /// Checks the SMART on openEHR requirement of the matched route, after RBAC.

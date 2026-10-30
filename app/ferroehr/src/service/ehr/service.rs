@@ -371,8 +371,13 @@ impl FerroEhrService {
             time_created,
             &folders,
         )?;
+        // NOTE: `Requests_and_responses.md` §ETag and Last-Modified: the served EHR changes
+        // when its creation or its `folders` membership does, so the later of the two dates it.
+        let last_modified = read
+            .folders_changed_at
+            .map_or(time_created, |changed| changed.max(time_created));
         let meta = ResourceMeta::new(ehr_id.to_string(), ehr_id.to_string())
-            .with_last_modified(time_created);
+            .with_last_modified(last_modified);
         Ok(ServiceResponse::new(body, meta))
     }
 
@@ -730,6 +735,29 @@ impl FerroEhrService {
     /// a read fails.
     pub async fn ehr_object(&self, an_ehr_id: EhrId) -> Result<Value, SmError> {
         Ok(self.ehr_summary(an_ehr_id).await?.body)
+    }
+
+    /// The canonical RM `EHR` wire object with its [`ResourceMeta`]: the
+    /// `ehr_id` and the instant of the latest change to the served object.
+    ///
+    /// # Errors
+    /// [`SmError`] when the EHR or its current `EHR_STATUS` does not exist, or
+    /// a read fails.
+    pub async fn ehr_read(&self, an_ehr_id: EhrId) -> Result<ServiceResponse, SmError> {
+        Ok(self.ehr_summary(an_ehr_id).await?)
+    }
+
+    /// [`Self::ehr_read`] for the EHR located by subject.
+    ///
+    /// # Errors
+    /// [`SmError`] when no EHR names the subject (404-equivalent) or a read
+    /// fails.
+    pub async fn ehr_read_for_subject(
+        &self,
+        subject_id: &str,
+        subject_namespace: &str,
+    ) -> Result<ServiceResponse, SmError> {
+        Ok(self.ehr_by_subject(subject_id, subject_namespace).await?)
     }
 
     /// The RM `EHR` wire object for a just-created EHR — the

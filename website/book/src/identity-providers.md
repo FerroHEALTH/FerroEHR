@@ -87,7 +87,7 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
    |---|---|
    | `200`-family | roles arrived and the operation was permitted |
    | `401` | no credential, or one the server rejected (the body deliberately never says which) |
-   | `403` | the token is valid but carries no role or SMART on openEHR scope the operation needs: a clinical call needs at least one role and a matching scope, an admin call needs the admin role and the product scope |
+   | `403` | the token is valid but carries no role or SMART on openEHR scope the operation needs: a clinical call needs a matching scope and, unless every SMART on openEHR scope it holds is a `system/` scope, at least one role, an admin call needs the admin role and the product scope |
    | `400` | the `Authorization` header itself is malformed; no credential was ever read |
    | `503` | the CDR could not read your issuer's key set again, so the token was never judged: check network egress, not the token |
 

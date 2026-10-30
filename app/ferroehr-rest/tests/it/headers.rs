@@ -916,8 +916,8 @@ async fn writes_declare_the_applied_preference() {
     let ovid = etag_uid(&h);
     let vo = vo_of(&ovid).to_owned();
 
-    // The ITEM_TAG collection write is not a uid-versioned resource, so it
-    // declares minimal / representation only.
+    // The ITEM_TAG collection write is not a uid-versioned resource; its
+    // minimal answer is empty.
     let req = Request::builder()
         .method("PUT")
         .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
@@ -945,6 +945,23 @@ async fn writes_declare_the_applied_preference() {
         preference_applied(&h).as_deref(),
         Some("return=representation")
     );
+
+    // `return=identifier` answers 200 with the stored tag list (owner decision
+    // on #4475; RFC 7240 §4.2 lets the server choose the answer).
+    let req = Request::builder()
+        .method("PUT")
+        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("Prefer", "return=identifier")
+        .body(Body::from(
+            serde_json::json!([{ "key": "category", "value": "final" }]).to_string(),
+        ))
+        .unwrap();
+    let (status, h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::OK, "tags update: {body}");
+    assert_eq!(preference_applied(&h).as_deref(), Some("return=identifier"));
+    let tags: Value = serde_json::from_str(&body).expect("a tag list");
+    assert_eq!(tags[0]["key"], "category", "{body}");
 }
 
 /// "This is a variant of preference that implies minimal response semantics,
@@ -1385,12 +1402,12 @@ async fn tag_collection_disciplines() {
         { "key": "workflow", "value": "open" }
     ]);
     let (status, h, _b) = send(&app, put(seed, Some("return=identifier"))).await;
-    // return=identifier resolves to the APPLIED minimal default.
-    assert_eq!(status, StatusCode::NO_CONTENT);
+    // return=identifier answers the stored tag list (owner decision on #4475).
+    assert_eq!(status, StatusCode::OK);
     assert_eq!(
         h.get("preference-applied").and_then(|v| v.to_str().ok()),
-        Some("return=minimal"),
-        "identifier resolves to the applied minimal default"
+        Some("return=identifier"),
+        "identifier answers the stored tag list"
     );
 
     // ehr_tags_get filters: AND-combined, exact.
@@ -1542,4 +1559,111 @@ async fn an_emptied_item_tag_collection_echoes_no_header_not_an_empty_one() {
         Vec::<String>::new(),
         "the empty header removed the VERSIONED_OBJECT's tags"
     );
+}
+
+/// The EHR reads carry `Last-Modified` (overview §"`ETag` and Last-Modified":
+/// "Both `ETag` and `Last-Modified` SHOULD be included in responses for
+/// VERSION, `VERSIONED_OBJECT`, or other resources that have versioning or
+/// unique state identifiers"). An untouched EHR is dated by its creating
+/// commit, the value the create response sent, on both read routes.
+#[tokio::test]
+async fn ehr_reads_carry_the_last_modified_of_the_create() {
+    let (_pg, app) = app().await;
+    let status_body = serde_json::json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": "lm-hospital",
+                "type": "PERSON",
+                "id": { "_type": "GENERIC_ID", "value": "lm-patient-1", "scheme": "test" }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(status_body.to_string()))
+        .unwrap();
+    let (status, h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let created = last_modified(&h).expect("create Last-Modified").to_owned();
+    let ehr_id = etag(&h)
+        .expect("ETag")
+        .trim_start_matches("W/")
+        .trim_matches('"')
+        .to_owned();
+
+    for uri in [
+        format!("{BASE}/ehr/{ehr_id}"),
+        format!("{BASE}/ehr?subject_id=lm-patient-1&subject_namespace=lm-hospital"),
+    ] {
+        let req = Request::builder().uri(&uri).body(Body::empty()).unwrap();
+        let (status, h, body) = send(&app, req).await;
+        assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+        assert_eq!(last_modified(&h), Some(created.as_str()), "{uri}");
+    }
+}
+
+/// A folder hierarchy joining `EHR.folders` changes the served EHR, so the
+/// read's `Last-Modified` moves to that commit and never precedes the create.
+#[tokio::test]
+async fn an_ehr_read_is_dated_by_its_latest_folder_change() {
+    let (_pg, app) = app().await;
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let created = last_modified(&h).expect("create Last-Modified").to_owned();
+    let ehr_id = etag(&h)
+        .expect("ETag")
+        .trim_start_matches("W/")
+        .trim_matches('"')
+        .to_owned();
+    // An HTTP-date has whole seconds; cross one so the change is visible.
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+    let folder = serde_json::json!({
+        "_type": "FOLDER",
+        "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "root" }
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{ehr_id}/directory"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(folder.to_string()))
+        .unwrap();
+    let (status, h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let foldered = last_modified(&h)
+        .expect("directory Last-Modified")
+        .to_owned();
+    assert_ne!(foldered, created);
+
+    let req = Request::builder()
+        .uri(format!("{BASE}/ehr/{ehr_id}"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, h, body) = send(&app, req).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(last_modified(&h), Some(foldered.as_str()));
 }
