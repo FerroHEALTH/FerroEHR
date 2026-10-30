@@ -726,7 +726,8 @@ pub struct WebTemplateStructuralStub {
 ///
 /// Under the constrained attribute at absolute archetype `path`, an instance
 /// child bearing an `archetype_node_id` is admissible iff it matches one of
-/// `allowed_ids` (a fixed at-code / archetype-id sibling alternative) **or**
+/// `allowed_ids` (a fixed at-code / archetype-id sibling alternative) whose
+/// RM type it conforms to **or**
 /// an open `ARCHETYPE_SLOT` in `slots`. Any other archetyped child is an
 /// "unexpected node" (closed-world rejection).
 #[derive(Debug, Clone)]
@@ -736,6 +737,9 @@ pub struct WebTemplateClosedAttribute {
     /// Fixed sibling identities (constraint `node_id`s at at-code level, or the
     /// `archetype_id` of a `C_ARCHETYPE_ROOT` / `ARCHETYPE_INTERNAL_REF`).
     pub allowed_ids: Vec<String>,
+    /// The `rm_type_name` of each object constraint in `allowed_ids`, index
+    /// for index: a child matching an id must also conform to that RM type.
+    pub allowed_rm_types: Vec<String>,
     /// Open `ARCHETYPE_SLOT`s under this attribute.
     pub slots: Vec<WebTemplateArchetypeSlot>,
 }

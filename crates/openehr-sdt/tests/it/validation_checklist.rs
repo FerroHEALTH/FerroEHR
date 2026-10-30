@@ -252,6 +252,7 @@ fn bullet4_field_identifiers_match_wt_structure() {
     root.closed_attributes = vec![WebTemplateClosedAttribute {
         path: "/content".to_owned(),
         allowed_ids: vec!["at0001".to_owned()],
+        allowed_rm_types: vec!["CONTENT_ITEM".to_owned()],
         slots: Vec::new(),
     }];
     let wt = wt_of(root);

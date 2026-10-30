@@ -396,3 +396,56 @@ async fn opt_upload_with_an_empty_typed_default_value_names_the_place() {
     }
     assert!(!message.contains("xml parse error"), "{message}");
 }
+
+/// `POST …/definition/template/adl1.4` with `Prefer: return=representation`
+/// and an `Accept`.
+async fn upload_accepting(app: &Router, accept: &str) -> (StatusCode, header::HeaderMap, String) {
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("{BASE}/definition/template/adl1.4"))
+                .header(header::CONTENT_TYPE, XML_MIME)
+                .header(header::ACCEPT, accept)
+                .header("Prefer", "return=representation")
+                .body(Body::from(opt_xml()))
+                .unwrap(),
+        )
+        .await
+        .expect("response");
+    let status = resp.status();
+    let headers = resp.headers().clone();
+    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
+    (
+        status,
+        headers,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
+}
+
+/// The upload's representation follows `Accept`:
+/// `responses/201_Template_adl1_4_upload.yaml` declares the Web Template
+/// (`application/openehr.wt+json`) beside the OPT XML, and an `Accept` the
+/// service cannot fulfil is a `406` (`Resources.md` §Simplified Formats) that
+/// stores nothing.
+#[tokio::test]
+async fn upload_representation_follows_accept() {
+    let (_pg, app) = empty_app().await;
+    let (status, _h, body) = upload_accepting(&app, "text/plain").await;
+    assert_eq!(status, StatusCode::NOT_ACCEPTABLE, "{body}");
+    let (status, _ct, _body) = get(&app, Some(XML_MIME)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "the 406 stored nothing");
+
+    let (status, h, body) = upload_accepting(&app, WT_MIME).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    assert_eq!(
+        h.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()),
+        Some(WT_MIME)
+    );
+    let wt: Value = serde_json::from_str(&body).expect("a Web Template body");
+    assert_eq!(
+        wt.get("templateId").and_then(Value::as_str),
+        Some(TEMPLATE_ID)
+    );
+}
