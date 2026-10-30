@@ -621,7 +621,8 @@ impl Builder<'_> {
 
         // The version spine: the one FROM item everything joins onto.
         let v = format!("v{}", plan.root);
-        self.q.from_as(VersionRow::Table, Alias::new(v.as_str()));
+        self.vo_alias.insert(plan.root, v.clone());
+        self.stream_spine(&v)?;
         self.q.and_where(hot(&v, VersionRow::Tier));
         let kinds: Vec<String> = root.rm_type.names().to_vec();
         self.q.and_where(col(&v, VersionRow::Kind).is_in(kinds));
@@ -648,7 +649,6 @@ impl Builder<'_> {
         }
 
         let group_root = self.stream_root(plan, &root, &v)?;
-        self.vo_alias.insert(plan.root, v.clone());
         self.group_roots.push(group_root.clone());
         self.group_vos.push(v.clone());
         if plan.ehr.is_some() {
@@ -699,6 +699,40 @@ impl Builder<'_> {
                 self.q.and_where(cond);
             }
             self.node_alias.insert(*sid, alias);
+        }
+        Ok(())
+    }
+
+    /// Emits the version spine `v`, the one FROM item everything joins onto,
+    /// behind the value anchors of the WHERE clause when it has any
+    /// ([`Builder::value_anchors`]): an anchor leads the chain, so the spine
+    /// is probed by the anchor's versions even when the chain is too long for
+    /// the planner to reorder it.
+    ///
+    /// # Errors
+    /// [`AqlError`] from the anchors' predicate lowering.
+    fn stream_spine(&mut self, v: &str) -> Result<(), AqlError> {
+        let mut anchors = self.value_anchors()?.into_iter();
+        match anchors.next() {
+            Some(first) => {
+                let link = first.link();
+                self.q
+                    .from_subquery(first.select, Alias::new(first.alias.as_str()));
+                self.q
+                    .join_as(JoinType::Join, VersionRow::Table, Alias::new(v), link);
+            }
+            None => {
+                self.q.from_as(VersionRow::Table, Alias::new(v));
+            }
+        }
+        for anchor in anchors {
+            let link = anchor.link();
+            self.q.join_subquery(
+                JoinType::Join,
+                anchor.select,
+                Alias::new(anchor.alias.as_str()),
+                link,
+            );
         }
         Ok(())
     }
