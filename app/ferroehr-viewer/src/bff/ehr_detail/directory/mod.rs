@@ -138,9 +138,22 @@ pub(crate) fn folder_json(archetype_node_id: &str, name: &str, folders: &[Value]
     })
 }
 
-/// An empty directory root FOLDER (the "empty root" create choice).
+/// An empty directory root FOLDER (the "empty root" create choice), carrying
+/// the `archetype_details` an archetype root needs (RM common master03 §The
+/// LOCATABLE Class).
 pub(crate) fn empty_root_folder() -> Value {
-    folder_json(DIRECTORY_ARCHETYPE, "root", &[])
+    let mut root = folder_json(DIRECTORY_ARCHETYPE, "root", &[]);
+    if let Some(map) = root.as_object_mut() {
+        map.insert(
+            "archetype_details".to_owned(),
+            json!({
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": DIRECTORY_ARCHETYPE },
+                "rm_version": "1.1.0"
+            }),
+        );
+    }
+    root
 }
 
 /// The EHR's directory (root `FOLDER`) as a [`DirectoryState`], or `None` when
@@ -619,6 +632,10 @@ mod tests {
         assert_eq!(root["_type"], "FOLDER");
         assert_eq!(root["archetype_node_id"], DIRECTORY_ARCHETYPE);
         assert_eq!(root["folders"], serde_json::json!([]));
+        assert_eq!(
+            root["archetype_details"]["archetype_id"]["value"],
+            DIRECTORY_ARCHETYPE
+        );
     }
 
     #[test]

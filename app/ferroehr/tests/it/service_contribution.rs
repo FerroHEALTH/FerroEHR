@@ -2040,7 +2040,12 @@ async fn incomplete_relaxes_the_folder_kind_too() {
     // `LOCATABLE.name` is 1..1 — absent here.
     let nameless = json!({
         "_type": "FOLDER",
-        "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1"
+        "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        }
     });
     let body = |lifecycle_code: &str| {
         json!({

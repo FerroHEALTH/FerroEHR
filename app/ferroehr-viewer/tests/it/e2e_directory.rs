@@ -368,6 +368,11 @@ async fn commit_directory_version(
         .json(&serde_json::json!({
             "_type": "FOLDER",
             "archetype_node_id": "openEHR-EHR-FOLDER.directory.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.directory.v1" },
+                "rm_version": "1.1.0"
+            },
             "name": { "_type": "DV_TEXT", "value": name },
             "folders": [],
             "items": [],

@@ -3836,10 +3836,20 @@ pub(crate) async fn versioned_composition_version_get_by_id(
              "_type": "FOLDER",
              "uid": { "_type": "OBJECT_VERSION_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::2" },
              "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+             "archetype_details": {
+                 "_type": "ARCHETYPED",
+                 "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                 "rm_version": "1.1.0"
+             },
              "name": { "_type": "DV_TEXT", "value": "root" },
              "folders": [ {
                  "_type": "FOLDER",
                  "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                 "archetype_details": {
+                     "_type": "ARCHETYPED",
+                     "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                     "rm_version": "1.1.0"
+                 },
                  "name": { "_type": "DV_TEXT", "value": "episodes" },
                  "items": [ {
                      "_type": "OBJECT_REF",
@@ -4048,10 +4058,20 @@ pub(crate) async fn directory_get_at_time(
             (serde_json::Value = "application/json", example = json!({
                 "_type": "FOLDER",
                 "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                "archetype_details": {
+                    "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                    "rm_version": "1.1.0"
+                },
                 "name": { "_type": "DV_TEXT", "value": "root" },
                 "folders": [ {
                     "_type": "FOLDER",
                     "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                    "archetype_details": {
+                        "_type": "ARCHETYPED",
+                        "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                        "rm_version": "1.1.0"
+                    },
                     "name": { "_type": "DV_TEXT", "value": "episodes" },
                     "items": [ {
                         "_type": "OBJECT_REF",
@@ -4139,10 +4159,20 @@ pub(crate) async fn directory_get_at_time(
                         "_type": "FOLDER",
                         "uid": { "_type": "OBJECT_VERSION_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::2" },
                         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                        "archetype_details": {
+                            "_type": "ARCHETYPED",
+                            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                            "rm_version": "1.1.0"
+                        },
                         "name": { "_type": "DV_TEXT", "value": "root" },
                         "folders": [ {
                             "_type": "FOLDER",
                             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                            "archetype_details": {
+                                "_type": "ARCHETYPED",
+                                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                                "rm_version": "1.1.0"
+                            },
                             "name": { "_type": "DV_TEXT", "value": "episodes" },
                             "items": [ {
                                 "_type": "OBJECT_REF",
@@ -4422,10 +4452,20 @@ pub(crate) async fn directory_update(
             (serde_json::Value = "application/json", example = json!({
                 "_type": "FOLDER",
                 "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                "archetype_details": {
+                    "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                    "rm_version": "1.1.0"
+                },
                 "name": { "_type": "DV_TEXT", "value": "root" },
                 "folders": [ {
                     "_type": "FOLDER",
                     "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                    "archetype_details": {
+                        "_type": "ARCHETYPED",
+                        "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                        "rm_version": "1.1.0"
+                    },
                     "name": { "_type": "DV_TEXT", "value": "episodes" },
                     "items": [ {
                         "_type": "OBJECT_REF",
@@ -4512,10 +4552,20 @@ pub(crate) async fn directory_update(
                         "_type": "FOLDER",
                         "uid": { "_type": "OBJECT_VERSION_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::1" },
                         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                        "archetype_details": {
+                            "_type": "ARCHETYPED",
+                            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                            "rm_version": "1.1.0"
+                        },
                         "name": { "_type": "DV_TEXT", "value": "root" },
                         "folders": [ {
                             "_type": "FOLDER",
                             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                            "archetype_details": {
+                                "_type": "ARCHETYPED",
+                                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                                "rm_version": "1.1.0"
+                            },
                             "name": { "_type": "DV_TEXT", "value": "episodes" },
                             "items": [ {
                                 "_type": "OBJECT_REF",
@@ -4959,10 +5009,20 @@ pub(crate) async fn directory_delete(
              "_type": "FOLDER",
              "uid": { "_type": "OBJECT_VERSION_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::2" },
              "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+             "archetype_details": {
+                 "_type": "ARCHETYPED",
+                 "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                 "rm_version": "1.1.0"
+             },
              "name": { "_type": "DV_TEXT", "value": "root" },
              "folders": [ {
                  "_type": "FOLDER",
                  "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                 "archetype_details": {
+                     "_type": "ARCHETYPED",
+                     "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                     "rm_version": "1.1.0"
+                 },
                  "name": { "_type": "DV_TEXT", "value": "episodes" },
                  "items": [ {
                      "_type": "OBJECT_REF",

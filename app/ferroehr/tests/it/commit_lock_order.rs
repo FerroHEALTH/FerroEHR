@@ -170,6 +170,11 @@ async fn an_import_takes_the_ehr_row_lock_before_its_object_locks() {
                 &json!({
                     "_type": "FOLDER",
                     "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                    "archetype_details": {
+                        "_type": "ARCHETYPED",
+                        "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                        "rm_version": "1.1.0"
+                    },
                     "name": { "_type": "DV_TEXT", "value": "root" }
                 }),
                 "249",

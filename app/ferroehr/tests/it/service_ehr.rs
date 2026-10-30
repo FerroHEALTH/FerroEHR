@@ -354,7 +354,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     );
 
     // ── DIRECTORY (FOLDER) create/get/update/delete ──────────────────────────
-    let folder = json!({ "_type": "FOLDER", "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1", "name": { "_type": "DV_TEXT", "value": "root" } });
+    let folder = json!({ "_type": "FOLDER", "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1", "archetype_details": { "_type": "ARCHETYPED", "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" }, "rm_version": "1.1.0" }, "name": { "_type": "DV_TEXT", "value": "root" } });
     let dir_ovid = svc
         .create_directory(ehr_uuid, uv(&folder.clone(), "249", None))
         .await
@@ -407,7 +407,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
         .unwrap()
         .parse::<ferroehr::ids::VoId>()
         .expect("vo uuid");
-    let folder = json!({ "_type": "FOLDER", "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1", "name": { "_type": "DV_TEXT", "value": "root" } });
+    let folder = json!({ "_type": "FOLDER", "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1", "archetype_details": { "_type": "ARCHETYPED", "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" }, "rm_version": "1.1.0" }, "name": { "_type": "DV_TEXT", "value": "root" } });
     let dir_ovid = svc
         .create_directory(ehr_uuid, uv(&folder.clone(), "249", None))
         .await
@@ -1849,6 +1849,8 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
     // allowed and appends a new member of `EHR.folders` (RM ehr master04 §Folders).
     let mut secondary = folder("secondary");
     secondary["archetype_node_id"] = json!("openEHR-EHR-FOLDER.episodes.v1");
+    secondary["archetype_details"]["archetype_id"]["value"] =
+        json!("openEHR-EHR-FOLDER.episodes.v1");
     let contrib2 = svc
         .create_ehr_contribution(
             ehr_uuid,
@@ -1895,6 +1897,8 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
     // CONTRIBUTION; hierarchy 1 (the directory slot) stays at v1.
     let mut secondary_v2 = folder("secondary v2");
     secondary_v2["archetype_node_id"] = json!("openEHR-EHR-FOLDER.episodes.v1");
+    secondary_v2["archetype_details"]["archetype_id"]["value"] =
+        json!("openEHR-EHR-FOLDER.episodes.v1");
     let contrib2b = svc
         .create_ehr_contribution(
             ehr_uuid,

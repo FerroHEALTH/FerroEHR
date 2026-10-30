@@ -21,6 +21,11 @@ fn folder_with_item(namespace: &str, id_value: &str) -> Value {
     json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "root" },
         "items": [{
             "_type": "OBJECT_REF",
@@ -98,10 +103,20 @@ async fn direct_directory_routes_gate_this_system_refs() {
     let nested = json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "root" },
         "folders": [{
             "_type": "FOLDER",
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.1.0"
+            },
             "name": { "_type": "DV_TEXT", "value": "episodes" },
             "items": [{
                 "_type": "OBJECT_REF",
@@ -205,6 +220,11 @@ async fn contribution_path_gates_this_system_refs() {
             "data": {
                 "_type": "FOLDER",
                 "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+                "archetype_details": {
+                    "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                    "rm_version": "1.1.0"
+                },
                 "name": { "_type": "DV_TEXT", "value": "second hierarchy" },
                 "items": [{
                     "_type": "OBJECT_REF",

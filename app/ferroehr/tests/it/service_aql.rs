@@ -2508,6 +2508,11 @@ async fn folder_containment_resolves_references() {
         json!({
             "_type": "FOLDER",
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.1.0"
+            },
             "name": { "_type": "DV_TEXT", "value": name },
             "items": items
         })
@@ -2515,6 +2520,11 @@ async fn folder_containment_resolves_references() {
     let directory = json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "episodes" },
         "items": [folder_ref(&ca)],
         "folders": [
@@ -2665,6 +2675,11 @@ async fn folder_contains_folder_reaches_items_referenced_versioned_folders() {
         let mut f = json!({
             "_type": "FOLDER",
             "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+            "archetype_details": {
+                "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+                "rm_version": "1.1.0"
+            },
             "name": { "_type": "DV_TEXT", "value": name }
         });
         if !items.is_empty() {
@@ -3922,6 +3937,11 @@ async fn folder_referenced_or_branch_compositions_are_projected() {
     let directory = json!({
         "_type": "FOLDER",
         "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
         "name": { "_type": "DV_TEXT", "value": "root" },
         "items": [folder_ref(&uid_root(&filed))]
     });
