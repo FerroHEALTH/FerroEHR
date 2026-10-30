@@ -47,6 +47,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::metadata::{DiscoveryError, ServerMetadata, parse_metadata};
+use ferrohealth_smart::openehr::smart_scopes::SmartScope;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
@@ -60,6 +61,7 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::served::ServedMethods;
 use crate::config::AppConfig;
 use crate::extensions::access::authz::AuthzHandle;
+use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
 use crate::smart::routes::{Need, SmartRoutes};
@@ -650,6 +652,10 @@ pub(crate) async fn middleware(
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.
 ///
+/// A bearer token holding a SMART on openEHR resource scope passes the
+/// clinical class without a role: its scopes decide access, in
+/// [`smart_refusal`]. A Basic user keeps the role gate.
+///
 /// A principal carrying the configured read-only role is refused on every write
 /// operation, overriding any grant. Both denials produce the same `403`,
 /// attributed to the caller so the ATNA audit layer records it. No openEHR spec
@@ -661,7 +667,21 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
         .get::<MatchedPath>()
         .map(|m| m.as_str().to_owned());
     let class = rbac.class_for(req.method(), matched.as_deref());
-    let decision = match rbac.decide(class, &principal.roles) {
+    // NOTE: owner decision on #4467 (no openEHR spec governs the role gate): a token holding
+    // a SMART on openEHR resource scope is authenticated, and `smart_refusal` judges its scopes.
+    let scoped = principal.method == AuthMethod::Bearer
+        && principal.access.caller().is_some_and(|caller| {
+            caller
+                .openehr_scopes()
+                .iter()
+                .any(|scope| matches!(scope, SmartScope::Resource(_)))
+        });
+    let gated = if scoped && class == OperationClass::Clinical {
+        RbacDecision::Allow
+    } else {
+        rbac.decide(class, &principal.roles)
+    };
+    let decision = match gated {
         RbacDecision::Deny(reason) => RbacDecision::Deny(reason),
         RbacDecision::Allow => {
             let is_write = rbac.is_write_for(req.method(), matched.as_deref());

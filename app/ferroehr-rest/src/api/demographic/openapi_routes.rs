@@ -7175,7 +7175,9 @@ pub(crate) async fn agent_tags_get(
                                          `Last-Modified` and no `Location`.",
             headers(
                 ("Preference-Applied" = String,
-                 description = "`return=representation` — the honoured \
+                 description = "`return=representation`, or `return=identifier`, \
+                                which a tag collection answers with the same \
+                                stored list (owner decision, #4475) — the honoured \
                                 preference (`Requests_and_responses.md` \
                                 §\"Representation details negotiation\": the \
                                 service MAY include this header \"to indicate \
@@ -7208,18 +7210,13 @@ pub(crate) async fn agent_tags_get(
                                       `Prefer` header is missing or is set to \
                                       `return=minimal`.\" (ITS-REST \
                                       `specifications/responses/204_updated.yaml`) \
-                                      — the DEFAULT branch; a \
-                                      `return=identifier` request resolves \
-                                      here too. No body and no resource header \
+                                      — the DEFAULT branch. No body and no resource header \
                                       of any kind — no `ETag`, no \
                                       `Last-Modified`, no `Location` — only \
                                       the `Preference-Applied` declaration.",
          headers(
              ("Preference-Applied" = String,
-              description = "`return=minimal` — the applied preference, \
-                             including when the request asked for \
-                             `return=identifier` (an ITEM_TAG has no uid to \
-                             return).")
+              description = "`return=minimal` — the applied preference.")
          )),
         (status = 400, description = "The released trigger, verbatim: `400 Bad \
                                       Request` \"is returned when the request \
@@ -7829,7 +7826,9 @@ pub(crate) async fn group_tags_get(
                                          `Last-Modified` and no `Location`.",
             headers(
                 ("Preference-Applied" = String,
-                 description = "`return=representation` — the honoured \
+                 description = "`return=representation`, or `return=identifier`, \
+                                which a tag collection answers with the same \
+                                stored list (owner decision, #4475) — the honoured \
                                 preference (`Requests_and_responses.md` \
                                 §\"Representation details negotiation\": the \
                                 service MAY include this header \"to indicate \
@@ -7862,18 +7861,13 @@ pub(crate) async fn group_tags_get(
                                       `Prefer` header is missing or is set to \
                                       `return=minimal`.\" (ITS-REST \
                                       `specifications/responses/204_updated.yaml`) \
-                                      — the DEFAULT branch; a \
-                                      `return=identifier` request resolves \
-                                      here too. No body and no resource header \
+                                      — the DEFAULT branch. No body and no resource header \
                                       of any kind — no `ETag`, no \
                                       `Last-Modified`, no `Location` — only \
                                       the `Preference-Applied` declaration.",
          headers(
              ("Preference-Applied" = String,
-              description = "`return=minimal` — the applied preference, \
-                             including when the request asked for \
-                             `return=identifier` (an ITEM_TAG has no uid to \
-                             return).")
+              description = "`return=minimal` — the applied preference.")
          )),
         (status = 400, description = "The released trigger, verbatim: `400 Bad \
                                       Request` \"is returned when the request \
@@ -8488,7 +8482,9 @@ pub(crate) async fn organisation_tags_get(
                                          `Last-Modified` and no `Location`.",
             headers(
                 ("Preference-Applied" = String,
-                 description = "`return=representation` — the honoured \
+                 description = "`return=representation`, or `return=identifier`, \
+                                which a tag collection answers with the same \
+                                stored list (owner decision, #4475) — the honoured \
                                 preference (`Requests_and_responses.md` \
                                 §\"Representation details negotiation\": the \
                                 service MAY include this header \"to indicate \
@@ -8521,18 +8517,13 @@ pub(crate) async fn organisation_tags_get(
                                       `Prefer` header is missing or is set to \
                                       `return=minimal`.\" (ITS-REST \
                                       `specifications/responses/204_updated.yaml`) \
-                                      — the DEFAULT branch; a \
-                                      `return=identifier` request resolves \
-                                      here too. No body and no resource header \
+                                      — the DEFAULT branch. No body and no resource header \
                                       of any kind — no `ETag`, no \
                                       `Last-Modified`, no `Location` — only \
                                       the `Preference-Applied` declaration.",
          headers(
              ("Preference-Applied" = String,
-              description = "`return=minimal` — the applied preference, \
-                             including when the request asked for \
-                             `return=identifier` (an ITEM_TAG has no uid to \
-                             return).")
+              description = "`return=minimal` — the applied preference.")
          )),
         (status = 400, description = "The released trigger, verbatim: `400 Bad \
                                       Request` \"is returned when the request \
@@ -9155,7 +9146,9 @@ pub(crate) async fn person_tags_get(
                                          `Last-Modified` and no `Location`.",
             headers(
                 ("Preference-Applied" = String,
-                 description = "`return=representation` — the honoured \
+                 description = "`return=representation`, or `return=identifier`, \
+                                which a tag collection answers with the same \
+                                stored list (owner decision, #4475) — the honoured \
                                 preference (`Requests_and_responses.md` \
                                 §\"Representation details negotiation\": the \
                                 service MAY include this header \"to indicate \
@@ -9188,18 +9181,13 @@ pub(crate) async fn person_tags_get(
                                       `Prefer` header is missing or is set to \
                                       `return=minimal`.\" (ITS-REST \
                                       `specifications/responses/204_updated.yaml`) \
-                                      — the DEFAULT branch; a \
-                                      `return=identifier` request resolves \
-                                      here too. No body and no resource header \
+                                      — the DEFAULT branch. No body and no resource header \
                                       of any kind — no `ETag`, no \
                                       `Last-Modified`, no `Location` — only \
                                       the `Preference-Applied` declaration.",
          headers(
              ("Preference-Applied" = String,
-              description = "`return=minimal` — the applied preference, \
-                             including when the request asked for \
-                             `return=identifier` (an ITEM_TAG has no uid to \
-                             return).")
+              description = "`return=minimal` — the applied preference.")
          )),
         (status = 400, description = "The released trigger, verbatim: `400 Bad \
                                       Request` \"is returned when the request \
@@ -9821,7 +9809,9 @@ pub(crate) async fn role_tags_get(
                                          `Last-Modified` and no `Location`.",
             headers(
                 ("Preference-Applied" = String,
-                 description = "`return=representation` — the honoured \
+                 description = "`return=representation`, or `return=identifier`, \
+                                which a tag collection answers with the same \
+                                stored list (owner decision, #4475) — the honoured \
                                 preference (`Requests_and_responses.md` \
                                 §\"Representation details negotiation\": the \
                                 service MAY include this header \"to indicate \
@@ -9854,18 +9844,13 @@ pub(crate) async fn role_tags_get(
                                       `Prefer` header is missing or is set to \
                                       `return=minimal`.\" (ITS-REST \
                                       `specifications/responses/204_updated.yaml`) \
-                                      — the DEFAULT branch; a \
-                                      `return=identifier` request resolves \
-                                      here too. No body and no resource header \
+                                      — the DEFAULT branch. No body and no resource header \
                                       of any kind — no `ETag`, no \
                                       `Last-Modified`, no `Location` — only \
                                       the `Preference-Applied` declaration.",
          headers(
              ("Preference-Applied" = String,
-              description = "`return=minimal` — the applied preference, \
-                             including when the request asked for \
-                             `return=identifier` (an ITEM_TAG has no uid to \
-                             return).")
+              description = "`return=minimal` — the applied preference.")
          )),
         (status = 400, description = "The released trigger, verbatim: `400 Bad \
                                       Request` \"is returned when the request \

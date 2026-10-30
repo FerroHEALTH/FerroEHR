@@ -429,3 +429,58 @@ async fn an_unserved_method_without_a_credential_is_401() {
     let (status, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
 }
+
+/// A server trusting `issuer` with the coarse role gate switched on
+/// (`[authz.rbac] enabled`).
+async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
+    let (pg, service) = common::test_service().await;
+    let mut cfg = config(issuer, false, false);
+    cfg.rbac.enabled = true;
+    let mut authz = ferroehr::config::authz::AuthzConfig::default();
+    authz.rbac.enabled = true;
+    let authz = ferroehr_rest::extensions::access::authz::AuthzHandle::build(
+        &authz,
+        &cfg.rest.base_path,
+        None,
+        common::null_resolvers(),
+    )
+    .map(std::sync::Arc::new);
+    let app = ferroehr_rest::build_full(
+        cfg,
+        service,
+        authz,
+        ferroehr_rest::extensions::management::Observability::default(),
+    )
+    .await
+    .expect("build app");
+    (pg, app)
+}
+
+/// A token holding a SMART on openEHR scope is authenticated without a role,
+/// and its scopes decide access (owner decision on #4467; master08 §Resource
+/// Scopes, "`system`: For server-to-server integrations or backend
+/// services"). A role-less token whose scope does not cover the operation,
+/// and one holding no SMART scope, are still refused.
+#[tokio::test]
+async fn a_scoped_token_without_a_role_reaches_what_its_scopes_cover() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = rbac_app(&uri).await;
+    let list = format!("{BASE}/definition/template/adl1.4");
+    for scope in ["system/template-*.r", "system/template-*.crud"] {
+        let (status, body) = send(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
+        assert_eq!(status, StatusCode::OK, "{scope}: {body}");
+    }
+    let (status, body) = send(
+        &app,
+        get(&list, Some(&token(&uri, "system/aql-*.s", &json!({})))),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "an uncovering scope: {body}");
+    let (status, body) = send(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "no SMART scope and no role: {body}"
+    );
+}

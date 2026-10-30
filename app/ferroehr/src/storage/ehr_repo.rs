@@ -245,8 +245,8 @@ pub async fn ehr_header(
 /// Reads the whole `GET /ehr/{ehr_id}` representation in ONE statement.
 ///
 /// Returns the EHR header, the current `EHR_STATUS` version identity, the
-/// `EHR_ACCESS` versioned-object id, and the LIVE folder-hierarchy ids in
-/// `rank` order, in one round trip (no openEHR spec governs read batching —
+/// `EHR_ACCESS` versioned-object id, the LIVE folder-hierarchy ids in `rank`
+/// order and the latest commit that changed them, in one round trip (no openEHR spec governs read batching —
 /// our own design).
 ///
 /// # Errors
@@ -260,7 +260,7 @@ pub async fn ehr_summary_read(
                 s.vo_id AS status_vo, s.trunk_version, s.branch_number, \
                 s.branch_version, s.creating_system_id, \
                 a.vo_id AS access_vo, \
-                COALESCE(f.folders, ARRAY[]::uuid[]) AS folders \
+                COALESCE(f.folders, ARRAY[]::uuid[]) AS folders, f.folders_changed_at \
          FROM ehr e \
          LEFT JOIN LATERAL ( \
              SELECT version.vo_id, version.trunk_version, version.branch_number, \
@@ -275,11 +275,19 @@ pub async fn ehr_summary_read(
              WHERE version.ehr_id = e.id AND version.kind = 'EHR_ACCESS' \
          ) a ON true \
          LEFT JOIN LATERAL ( \
-             SELECT array_agg(f.vo_id ORDER BY f.rank) AS folders \
+             SELECT array_agg(f.vo_id ORDER BY f.rank) \
+                        FILTER (WHERE v.lifecycle_state <> '523') AS folders, \
+                    max(GREATEST( \
+                        CASE WHEN v.lifecycle_state = '523' THEN v.committed_at END, \
+                        fc.created_at \
+                    )) AS folders_changed_at \
              FROM ehr_folder f \
              JOIN version v ON v.vo_id = f.vo_id \
              JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
-             WHERE f.ehr_id = e.id AND v.lifecycle_state <> '523' \
+             CROSS JOIN LATERAL ( \
+                 SELECT min(c.committed_at) AS created_at FROM version c WHERE c.vo_id = f.vo_id \
+             ) fc \
+             WHERE f.ehr_id = e.id \
          ) f ON true \
          WHERE e.id = $1",
     )
@@ -307,6 +315,9 @@ pub async fn ehr_summary_read(
         status,
         access_vo: row.try_get("access_vo")?,
         folders: row.try_get("folders")?,
+        folders_changed_at: row
+            .try_get::<Option<jiff_sqlx::Timestamp>, _>("folders_changed_at")?
+            .map(jiff_sqlx::Timestamp::to_jiff),
     }))
 }
 
@@ -327,6 +338,10 @@ pub struct EhrSummaryRead {
     /// logically deleted (lifecycle `523`). Empty when the EHR indexes no
     /// live hierarchy.
     pub folders: Vec<Uuid>,
+    /// The latest commit instant that changed `folders`: a hierarchy's
+    /// creating commit or its logical delete. `None` when the EHR indexes no
+    /// hierarchy.
+    pub folders_changed_at: Option<jiff::Timestamp>,
 }
 
 /// The current `EHR_STATUS` version identity of the merged summary read.
