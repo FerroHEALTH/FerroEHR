@@ -47,14 +47,11 @@
 
 use std::collections::BTreeMap;
 
-use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::error::ViewerError;
 use crate::locale::Msg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
 
 /// One `ITEM_TAG` as the tag routes serve it.
@@ -116,11 +113,6 @@ pub struct TagGroup {
     pub tags: Vec<ItemTagRow>,
 }
 
-/// The resource shape every tag panel reads: `None` while the panel's tab is
-/// inactive (so an unopened tab fetches nothing), `Some(list)` once the CDR
-/// has answered.
-pub type TagList = Resource<Result<Option<Vec<ItemTagRow>>, ViewerError>>;
-
 /// The copy one tag panel renders itself with — what the collection IS, so no
 /// screen has to re-explain the openEHR tag model in its own words.
 #[derive(Debug, Clone, Copy)]
@@ -147,7 +139,6 @@ pub struct TagPanelCopy {
 /// sentence in `demographic_tags_get.yaml`). The parameter names are the
 /// released ones, which the viewer's own argument names deliberately do not
 /// repeat (`tag_key` on both sides would only stutter).
-#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
     let mut query = String::new();
@@ -174,7 +165,6 @@ pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
 /// operation names (module docs), and it emits only the three declared members
 /// (`schemas/common/UpdateItemTag.yaml` is `additionalProperties: false`, so a
 /// re-sent `target`/`owner_id` would be a `400`).
-#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn merged_tag_body(
     existing: &[ItemTagRow],
@@ -205,7 +195,6 @@ pub fn merged_tag_body(
 /// (`org.openehr.rm.common.item_tag.adoc`), and an absent `target_path` is what
 /// "tags the whole object" means — so a blank field is OMITTED, never sent as
 /// `""`.
-#[cfg(not(target_arch = "wasm32"))]
 fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
     let mut entry = serde_json::Map::new();
     drop(entry.insert("key".to_owned(), Value::String(key.to_owned())));
@@ -226,7 +215,6 @@ fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
 ///
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
     let doc: Value = serde_json::from_str(body).map_err(|e| {
         ViewerError::Internal(tr_with(
@@ -249,7 +237,6 @@ pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
 
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
-#[cfg(not(target_arch = "wasm32"))]
 fn string_at(value: &Value, path: &[&str]) -> String {
     let mut current = value;
     for key in path {
@@ -353,7 +340,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod wire_tests {
     use super::{ItemTagRow, merged_tag_body, parse_item_tags, tag_filter_query};
     use serde_json::Value;

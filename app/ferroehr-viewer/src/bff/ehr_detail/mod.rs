@@ -5,7 +5,7 @@
 //! directory / compositions / contributions / commit / tags tabs.
 //!
 //! Seven URL-driven tabs (`?tab=`) over one EHR. Each tab's data is a
-//! `#[server]` fn co-located with the tab in its own submodule: [`status`],
+//! read co-located with the tab in its own submodule: [`status`],
 //! which owns BOTH status tabs, then [`directory`], [`compositions`],
 //! [`contributions`], [`commit`] (the atomic multi-change CONTRIBUTION staging
 //! area), and the EHR-wide tag browser in [`crate::bff::ehr_tags`]. The
@@ -26,9 +26,9 @@
 //! AQL — the compositions listing's statement is assembled from compile-time
 //! fragments by [`composition_filter`] and every value travels as an AQL
 //! `query_parameters` binding; path segments are percent-encoded server-side.
-//! Every co-located `#[server]` fn guards with
+//! Every read guards with
 //! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches client-visible state.
+//! credential never reaches the page.
 
 #![allow(
     clippy::disallowed_types,
@@ -44,15 +44,10 @@ pub mod contributions;
 pub mod directory;
 pub mod status;
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 
 /// The EHR resource's own summary facts, flattened for the detail header.
@@ -97,13 +92,12 @@ pub struct EhrSummary {
 /// `ehr_id` included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_ehr_summary(
-    /// The EHR whose summary facts to read.
+    // The EHR whose summary facts to read.
     ehr_id: String,
 ) -> Result<EhrSummary, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state
         .cdr
         .rest_v1(&format!("ehr/{}", urlencoding::encode(&ehr_id)));
@@ -115,7 +109,6 @@ pub async fn fetch_ehr_summary(
     parse_ehr_summary(&response.body)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten an `EHR` resource body into an [`EhrSummary`]. Defensive throughout —
 /// a missing attribute reads as empty rather than failing, so a header still
 /// renders what the CDR did send.
@@ -135,7 +128,6 @@ fn parse_ehr_summary(body: &str) -> Result<EhrSummary, ViewerError> {
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 fn json_path(value: &Value, path: &[&str]) -> String {
@@ -149,7 +141,7 @@ fn json_path(value: &Value, path: &[&str]) -> String {
     current.as_str().unwrap_or_default().to_owned()
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::parse_ehr_summary;
 

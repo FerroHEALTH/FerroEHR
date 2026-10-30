@@ -12,6 +12,7 @@
 //! the page into its refusal. No openEHR spec governs the viewer: our own
 //! design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
@@ -20,22 +21,19 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
 use ferrohealth_ui::view::surface::{Header, Stat, page_heading, stat_card};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
-use ferrohealth_ui::widget::action_menu::{Act, Action};
-use leptos::prelude::*;
-use leptos::server;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
+use ferrohealth_ui::view::action_menu::{Act, Action};
 
 use crate::activity::ActivityPoint;
 use crate::bff::dashboard::NamespaceTile;
 use crate::error::ViewerError;
 use crate::locale::overview::OverviewMsg;
-use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::{awaited, refused, state_mark};
-use crate::session_client::SessionAwareClient;
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, t};
+use crate::pages::common::{refused, state_mark};
+use crate::routes::Drawn;
 
 /// One namespace tile and the link that opens Stored queries on it.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct NamespaceLink {
     /// The tile.
     tile: NamespaceTile,
@@ -44,7 +42,7 @@ pub struct NamespaceLink {
 }
 
 /// What the dashboard draws, read from the CDR on the server.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Dashboard {
     /// The EHRs the CDR holds.
     ehrs: i64,
@@ -65,9 +63,8 @@ pub struct Dashboard {
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session, and the
 /// refusal of the headline counts, which leaves the page nothing to draw.
-#[server(client = SessionAwareClient)]
 pub async fn load_dashboard() -> Result<Dashboard, ViewerError> {
-    crate::session::require_session().await?;
+    crate::session::require_session()?;
     let (ehrs, compositions, templates) = crate::bff::dashboard::dashboard_counts().await?;
     // NOTE: no openEHR spec governs this: our own design; a stored-query list
     // the CDR refused is an unknown count, drawn as the dash (R12), never 0.
@@ -96,7 +93,6 @@ pub async fn load_dashboard() -> Result<Dashboard, ViewerError> {
 }
 
 /// The link that opens Stored queries on the namespace of `tile`.
-#[cfg(not(target_arch = "wasm32"))]
 fn namespace_href(tile: &NamespaceTile) -> String {
     let unqualified = crate::query_namespace::group_label(None);
     let key = if tile.label == unqualified {
@@ -109,11 +105,11 @@ fn namespace_href(tile: &NamespaceTile) -> String {
 
 /// A count grouped in the page's language.
 fn grouped(count: i64) -> String {
-    ferrohealth_ui::i18n::number::grouped(u64::try_from(count).unwrap_or_default())
+    ferrohealth_ui::i18n::number::grouped(&current(), u64::try_from(count).unwrap_or_default())
 }
 
 /// The four stat cards.
-fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> AnyView {
+fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> Html {
     let cards = [
         Stat {
             glyph: Glyph::DATABASE,
@@ -144,16 +140,16 @@ fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> A
         },
     ]
     .into_iter()
-    .map(|stat| stat_card(stat).into_any())
-    .collect_view();
-    view! { <div class="fui-grid fui-grid-stats">{cards}</div> }.into_any()
+    .map(stat_card)
+    .collect::<Html>();
+    h(format!(r#"<div class="fui-grid fui-grid-stats">{cards}</div>"#))
 }
 
 /// How many days the activity chart covers.
 const ACTIVITY_DAYS: u16 = 30;
 
 /// The compositions-per-day card.
-fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> AnyView {
+fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> Html {
     let body = match points {
         Ok(points) if points.is_empty() => list_empty(
             tr(OverviewMsg::DashboardNoCompositions),
@@ -186,17 +182,15 @@ fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> AnyView {
                 points: days.counts,
                 ticks: days.ticks,
             };
-            view! {
-                <div class="fui-panel-body">
-                    {activity_chart(&chart)}
-                    <p class="fui-small fui-muted">{tr(OverviewMsg::DashboardPerDayNote)}</p>
-                </div>
-            }
-            .into_any()
+            h(format!(
+                r#"<div class="fui-panel-body">{}<p class="fui-small fui-muted">{}</p></div>"#,
+                activity_chart(&chart),
+                t(tr(OverviewMsg::DashboardPerDayNote))
+            ))
         }
         Err(error) => refused(tr(OverviewMsg::DashboardPerDayRefused), &error, None),
     };
-    list_card(ListCard {
+    list_card(&current(), ListCard {
         title: tr(OverviewMsg::DashboardPerDay),
         count: None,
         order: None,
@@ -208,7 +202,7 @@ fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> AnyView {
 }
 
 /// The matches-by-namespace card.
-fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
+fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> Html {
     let (count, body) = match tiles {
         Ok(tiles) if tiles.is_empty() => (
             None,
@@ -232,24 +226,21 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
                         &[("count", u64::from(tile.members).into())],
                     );
                     let matches = match tile.matches {
-                        Some(matches) => tr_with(
+                        Some(matches) => t(tr_with(
                             OverviewMsg::DashboardMatches,
                             &[("count", u64::try_from(matches).unwrap_or(0).into())],
-                        )
-                        .into_any(),
+                        )),
                         None => state_mark(
                             ferrohealth_ui::view::flow::FlowState::Degraded,
                             &tr(OverviewMsg::DashboardNoTotal),
                         ),
                     };
-                    let label = tile.label.clone();
-                    let sub = view! { <span class="fui-row-sub">{sub}</span> }.into_any();
-                    let title = title_cell(Some(href), label, Some(sub));
+                    let sub = h(format!(r#"<span class="fui-row-sub">{}</span>"#, t(sub)));
+                    let title = title_cell(Some(href), t(&tile.label), Some(sub));
                     let matches = cell(&columns[1], matches);
-                    view! { <tr>{title} {matches}</tr> }.into_any()
+                    h(format!("<tr>{title}{matches}</tr>"))
                 })
-                .collect_view()
-                .into_any();
+                .collect();
             let total = u64::try_from(tiles.len()).unwrap_or_default();
             let caption = tr(OverviewMsg::DashboardByNamespace);
             (
@@ -259,8 +250,7 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
                     columns: &columns,
                     sorting: Sorting::default(),
                     body: Body::Rows(rows),
-                })
-                .into_any(),
+                }),
             )
         }
         Err(error) => (
@@ -268,7 +258,7 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
             refused(tr(OverviewMsg::DashboardNamespacesRefused), &error, None),
         ),
     };
-    list_card(ListCard {
+    list_card(&current(), ListCard {
         title: tr(OverviewMsg::DashboardByNamespace),
         count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
         order: None,
@@ -280,8 +270,9 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> AnyView {
 }
 
 /// The page's heading.
-fn heading(subtitle: String, actions: ActionGroup) -> AnyView {
+fn heading(subtitle: String, actions: ActionGroup) -> Html {
     page_heading(
+        &current(),
         Header {
             title: tr(Msg::NavDashboard).into(),
             subtitle: Some(subtitle.into()),
@@ -292,69 +283,53 @@ fn heading(subtitle: String, actions: ActionGroup) -> AnyView {
         },
         actions,
     )
-    .into_any()
 }
 
 /// The dashboard.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn DashboardPage() -> impl IntoView {
-    let model = OnceResource::new(load_dashboard());
-    let body = awaited(async move {
-        let dashboard = match model.await {
-            Ok(dashboard) => dashboard,
-            Err(error) => {
-                let retry = ferrohealth_ui::view::button::link_button(
-                    "/".to_owned(),
-                    ferrohealth_ui::view::button::Variant::Primary,
-                    Some(Glyph::REFRESH_CW),
-                    tr(OverviewMsg::TryAgain),
-                );
-                return view! {
-                    {heading(tr(OverviewMsg::DashboardNoAnswer), ActionGroup::none())}
-                    <div class="fui-stack">
-                        {refused(tr(OverviewMsg::DashboardRefused), &error, None)}
-                        <div class="fui-cluster">{retry}</div>
-                    </div>
-                }
-                .into_any();
-            }
-        };
-        let Dashboard {
-            ehrs,
-            compositions,
-            templates,
-            stored,
-            trend,
-            tiles,
-        } = dashboard;
-        let actions = if ehrs == 0 && compositions == 0 && templates == 0 {
-            ActionGroup::primary(Action::new(
-                Some(Glyph::UPLOAD),
-                tr(OverviewMsg::UploadATemplate),
-                Act::Link("/templates/upload".to_owned()),
-            ))
-        } else {
-            ActionGroup::none()
-        };
-        let host = crate::request::settings().cdr_address;
-        let subtitle = tr_with(OverviewMsg::DashboardSubtitle, &[("host", host.into())]);
-        view! {
-            {heading(subtitle, actions)}
-            <div class="fui-stack fui-gap-section">
-                {stats(ehrs, compositions, templates, stored)}
-                <div class="fui-grid fui-grid-start">
-                    {activity_card(trend)} {namespaces_card(tiles)}
-                </div>
-            </div>
+/// The dashboard.
+pub async fn page() -> Drawn {
+    let dashboard = match load_dashboard().await {
+        Ok(dashboard) => dashboard,
+        Err(error) => {
+            let retry = ferrohealth_ui::view::button::link_button(
+                "/".to_owned(),
+                ferrohealth_ui::view::button::Variant::Primary,
+                Some(Glyph::REFRESH_CW),
+                tr(OverviewMsg::TryAgain),
+            );
+            let body = heading(tr(OverviewMsg::DashboardNoAnswer), ActionGroup::none()).then(
+                h(format!(
+                    r#"<div class="fui-stack">{}<div class="fui-cluster">{retry}</div></div>"#,
+                    refused(tr(OverviewMsg::DashboardRefused), &error, None)
+                )),
+            );
+            return Drawn::page(tr(Msg::NavDashboard), body);
         }
-        .into_any()
-    });
-    view! {
-        <Title text=tr(Msg::NavDashboard) />
-        {body}
-    }
+    };
+    let Dashboard {
+        ehrs,
+        compositions,
+        templates,
+        stored,
+        trend,
+        tiles,
+    } = dashboard;
+    let actions = if ehrs == 0 && compositions == 0 && templates == 0 {
+        ActionGroup::primary(Action::new(
+            Some(Glyph::UPLOAD),
+            tr(OverviewMsg::UploadATemplate),
+            Act::Link("/templates/upload".to_owned()),
+        ))
+    } else {
+        ActionGroup::none()
+    };
+    let host = crate::request::settings().cdr_address;
+    let subtitle = tr_with(OverviewMsg::DashboardSubtitle, &[("host", host.into())]);
+    let body = heading(subtitle, actions).then(h(format!(
+        r#"<div class="fui-stack fui-gap-section">{}<div class="fui-grid fui-grid-start">{}{}</div></div>"#,
+        stats(ehrs, compositions, templates, stored),
+        activity_card(trend),
+        namespaces_card(tiles)
+    )));
+    Drawn::page(tr(Msg::NavDashboard), body)
 }

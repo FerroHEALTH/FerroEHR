@@ -14,28 +14,17 @@
 //! component-free [`composition_filter`](super::composition_filter): operator
 //! input is bound as AQL `query_parameters`, never concatenated into the query.
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::uid_value_of;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::composition_filter::CompositionFilter;
 use crate::bff::ehrs::ResultPage;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
-// Server-side helpers, compiled only where the #[server] bodies exist.
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::composition_filter::composition_query;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::{aql_request_body, parse_result_set};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 
 /// List an EHR's compositions newest-first, one page at `offset`, narrowed by
@@ -52,25 +41,24 @@ use crate::locale::tr_served;
 /// instant; CDR transport errors pass through; a non-2xx CDR answer normalizes
 /// via [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the result set is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_compositions(
-    /// The EHR whose compositions to list.
+    // The EHR whose compositions to list.
     ehr_id: String,
-    /// Substring of the template id to keep; empty means every template.
+    // Substring of the template id to keep; empty means every template.
     template: String,
-    /// Inclusive lower bound on the context start time; empty means unbounded.
+    // Inclusive lower bound on the context start time; empty means unbounded.
     from: String,
-    /// Inclusive upper bound on the context start time; empty means unbounded.
+    // Inclusive upper bound on the context start time; empty means unbounded.
     to: String,
-    /// Substring of the composer's name to keep; empty means every composer.
+    // Substring of the composer's name to keep; empty means every composer.
     composer: String,
-    /// First row of the page to return.
+    // First row of the page to return.
     offset: u32,
-    /// How many rows the page holds.
+    // How many rows the page holds.
     fetch: u32,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let filter = CompositionFilter::new(&template, &from, &to, &composer);
     let query = composition_query(&ehr_id, &filter)?;
     let url = state.cdr.rest_v1("query/aql");
@@ -114,10 +102,12 @@ pub async fn all_compositions(ehr_id: String, offset: u32) -> Result<ResultPage,
     .await
 }
 
-/// Commit a new COMPOSITION to the EHR (`POST /ehr/{ehr_id}/composition`). The
-/// `format` picks the `Content-Type` (canonical JSON `application/json`,
-/// canonical XML `application/xml`, FLAT `application/openehr.wt.flat+json`);
-/// a FLAT commit additionally requires the `openehr-template-id` header.
+/// Commit a new COMPOSITION to the EHR (`POST /ehr/{ehr_id}/composition`).
+///
+/// The `format` picks the `Content-Type` (canonical JSON `application/json`,
+/// canonical XML `application/xml`, FLAT `application/openehr.wt.flat+json`); a
+/// FLAT commit additionally requires the `openehr-template-id` header.
+///
 /// `Accept: application/json` + `Prefer: return=representation` yields a
 /// canonical composition body whose `uid.value` is returned as the new
 /// version uid.
@@ -129,19 +119,18 @@ pub async fn all_compositions(ehr_id: String, offset: u32) -> Result<ResultPage,
 /// validation diagnostics, which the UI renders verbatim, included)
 /// normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn commit_composition(
-    /// The EHR to commit into.
+    // The EHR to commit into.
     ehr_id: String,
-    /// Which representation the body is written in.
+    // Which representation the body is written in.
     format: ReprFormat,
-    /// The template the composition is built from (required by the simplified formats).
+    // The template the composition is built from (required by the simplified formats).
     template_id: String,
-    /// The composition document to commit, as text.
+    // The composition document to commit, as text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::CompositionBodyEmpty)));
     }

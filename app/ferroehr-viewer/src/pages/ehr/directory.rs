@@ -28,44 +28,39 @@
 
 use std::collections::BTreeSet;
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::TreeView;
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, danger_dialog};
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, confirm_dialog, danger_form_dialog};
 use ferrohealth_ui::view::surface::{Crumb, Header, Mode, editor_heading};
 use ferrohealth_ui::view::versions::{
     Standing, Version, VersionHistory, older_version, version_history,
 };
-use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
-use ferrohealth_ui::widget::tree::{Edit, Mark, TreeData, TreeKind, TreeNode, TreeWords};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
+use ferrohealth_ui::view::tree::{Edit, Mark, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 use serde_json::Value;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::directory::edit::{
     add_item, add_subfolder, delete_folder, find_item_by_key, find_path_by_key, next_counter,
     object_ref, remove_item, rename_folder, stamp_keys, strip_keys,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::directory::{
     DirectoryAtTime, DirectoryState, DirectorySubtree, delete_directory, fetch_directory,
     fetch_directory_at_time, fetch_directory_subtree, list_directory_versions, update_directory,
 };
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, message, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{Msg, current, message, tr, tr_with};
+use crate::markup::{h, opt, t};
 use crate::pages::common::is_status;
 use crate::pages::common::{
-    EditorDock, Refused, at_time_row, card_panel, dock_editor, docked, drawn, info_note,
-    page_model, panel, plain_section, quiet, section, shortened, version_number,
+    EditorDock, Refused, at_time_row, card_panel, dock_editor, drawn, info_note, panel,
+    plain_section, quiet, section, shortened, version_number,
 };
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
+use crate::routes::Drawn;
 
 /// The id of Delete the directory's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-directory";
@@ -211,31 +206,26 @@ struct Edits {
 }
 
 /// The folder tree (E4) of `root`, in an edit when `editing`.
-fn tree(ehr_id: &str, root: &Value, editing: Option<&Edits>) -> AnyView {
+fn tree(ehr_id: &str, root: &Value, editing: Option<&Edits>) -> Html {
     let mut open = BTreeSet::new();
     let root_key = editing.map_or_else(|| "root".to_owned(), |edits| edits.root_key.clone());
     let node = node_of(ehr_id, root, &root_key, editing, &mut open);
-    view! {
-        <TreeView
-            tree=TreeData {
-                id: "directory-tree".to_owned(),
-                label: tr(RecordsMsg::DirectoryTreeLabel),
-                kind: TreeKind::Folder,
-                editing: editing.is_some(),
-                nodes: vec![node],
-                open,
-                selected: None,
-                open_field: None,
-            }
-            words=TreeWords::of_page()
-        />
-    }
-    .into_any()
+    tree_view(&Tree {
+        id: "directory-tree".to_owned(),
+        label: tr(RecordsMsg::DirectoryTreeLabel),
+        kind: TreeKind::Folder,
+        editing: editing.is_some(),
+        nodes: vec![node],
+        open,
+        selected: None,
+        open_field: None,
+        words: TreeWords::of(&current()),
+    })
 }
 
 /// The version history of the directory: each version with Restore… on an
 /// older one, the version in view marked.
-fn history(ehr_id: &str, versions: &[DirVersion], reading: Option<&str>) -> AnyView {
+fn history(ehr_id: &str, versions: &[DirVersion], reading: Option<&str>) -> Html {
     let rows = versions
         .iter()
         .map(|version| {
@@ -261,9 +251,9 @@ fn history(ehr_id: &str, versions: &[DirVersion], reading: Option<&str>) -> AnyV
                     ],
                 ),
                 committer: String::new(),
-                when: ().into_any(),
+                when: Html::empty(),
                 contribution: if version.is_latest {
-                    ().into_any()
+                    Html::empty()
                 } else {
                     restore_button(&number)
                 },
@@ -271,42 +261,39 @@ fn history(ehr_id: &str, versions: &[DirVersion], reading: Option<&str>) -> AnyV
             }
         })
         .collect();
-    version_history(VersionHistory {
-        caption: tr(RecordsMsg::DirectoryVersions),
-        versions: rows,
-        at_time: Some(at_time_row(
-            tab_href(ehr_id, EhrTab::Directory),
-            &crate::request::query("at").unwrap_or_default(),
-            tr(RecordsMsg::DirectoryAtTimeOpens),
-        )),
-    })
+    version_history(
+        &current(),
+        VersionHistory {
+            caption: tr(RecordsMsg::DirectoryVersions),
+            versions: rows,
+            at_time: Some(at_time_row(
+                tab_href(ehr_id, EhrTab::Directory),
+                &crate::request::query("at").unwrap_or_default(),
+                tr(RecordsMsg::DirectoryAtTimeOpens),
+            )),
+        },
+    )
 }
 
 /// The Restore… of an older version: the page with that version in view,
 /// whose header offers the restore.
-fn restore_button(number: &str) -> AnyView {
+fn restore_button(number: &str) -> Html {
     // NOTE: R9: the row's own link covers the row; a table action sits above it.
-    view! {
-        <span class="fui-table-actions">
-            <a
-                class="fui-button fui-button-ghost fui-button-small"
-                href=format!("?version={number}&restore=1")
-                aria-label=tr_with(
-                    RecordsMsg::DirectoryRestoreVersion,
-                    &[("version", number.to_owned().into())],
-                )
-            >
-                {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "14")}
-                {tr(RecordsMsg::DirectoryRestore)}
-            </a>
-        </span>
-    }
-    .into_any()
+    h(format!(
+        r#"<span class="fui-table-actions"><a class="fui-button fui-button-ghost fui-button-small" href="{href}" aria-label="{label}">{glyph}{words}</a></span>"#,
+        href = t(format!("?version={number}&restore=1")),
+        label = t(tr_with(
+            RecordsMsg::DirectoryRestoreVersion,
+            &[("version", number.to_owned().into())],
+        )),
+        glyph = ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "14"),
+        words = t(tr(RecordsMsg::DirectoryRestore)),
+    ))
 }
 
 /// The directory's own menu: Copy the directory id when the version names
 /// it, then Delete the directory…, last.
-fn directory_menu(version_uid: &str) -> AnyView {
+fn directory_menu(version_uid: &str) -> Html {
     let copy = version_uid
         .split("::")
         .next()
@@ -319,7 +306,8 @@ fn directory_menu(version_uid: &str) -> AnyView {
             ))
         });
     row_menu(
-        Menu::new(
+        &current(),
+        &Menu::new(
             "directory-more",
             tr(RecordsMsg::DirectoryMore),
             copy.into_iter().collect(),
@@ -335,31 +323,45 @@ fn directory_menu(version_uid: &str) -> AnyView {
 /// The confirmations of the tab: delete the directory whose latest version
 /// is `latest_uid`, and restore the version `restoring` names, whose
 /// document it holds.
-fn dialogs(ehr_id: &str, latest_uid: &str, restoring: Option<(&str, &str)>) -> AnyView {
+fn dialogs(ehr_id: &str, latest_uid: &str, restoring: Option<(&str, &str)>) -> Html {
     let action = tab_href(ehr_id, EhrTab::Directory);
-    let delete = danger_dialog(
+    let delete = danger_form_dialog(
+        &current(),
         Confirmation {
             id: DELETE_DIALOG.into(),
             title: tr(RecordsMsg::DirectoryDeleteTitle).into(),
             message: tr(RecordsMsg::DirectoryDeleteMessage).into(),
         },
-        view! {
-            <form method="post" action=action.clone()>
-                <input type="hidden" name="intent" value="delete-directory" />
-                <input type="hidden" name="version" value=latest_uid.to_owned() />
-                <button type="submit" class="fui-button fui-button-danger">
-                    {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                    {tr(RecordsMsg::DirectoryDeleteConfirm)}
-                </button>
-            </form>
+        ConfirmForm {
+            action: action.clone(),
+            fields: h(format!(
+                r#"<input type="hidden" name="intent" value="delete-directory"><input type="hidden" name="version" value="{}">"#,
+                t(latest_uid)
+            )),
         },
-    )
-    .into_any();
+        h(format!(
+            r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
+            ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
+            t(tr(RecordsMsg::DirectoryDeleteConfirm))
+        )),
+    );
     let restore = restoring.map(|(number, body)| {
         let next = version_number(latest_uid)
             .parse::<u32>()
             .map_or_else(|_| String::new(), |latest| (latest + 1).to_string());
+        let form = h(format!(
+            r#"<form method="post" action="{action}"><input type="hidden" name="intent" value="restore"><input type="hidden" name="version" value="{version}"><input type="hidden" name="body" value="{body}"><button type="submit" class="fui-button fui-button-primary">{glyph}{words}</button></form>"#,
+            action = t(&action),
+            version = t(latest_uid),
+            body = t(body),
+            glyph = ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16"),
+            words = t(tr_with(
+                RecordsMsg::DirectoryRestoreAs,
+                &[("next", next.clone().into())]
+            )),
+        ));
         confirm_dialog(
+            &current(),
             Confirmation {
                 id: RESTORE_DIALOG.into(),
                 title: tr_with(
@@ -371,34 +373,19 @@ fn dialogs(ehr_id: &str, latest_uid: &str, restoring: Option<(&str, &str)>) -> A
                     RecordsMsg::DirectoryRestoreMessage,
                     &[
                         ("version", number.to_owned().into()),
-                        ("next", next.clone().into()),
+                        ("next", next.into()),
                     ],
                 )
                 .into(),
             },
-            view! {
-                <form method="post" action=action.clone()>
-                    <input type="hidden" name="intent" value="restore" />
-                    <input type="hidden" name="version" value=latest_uid.to_owned() />
-                    <input type="hidden" name="body" value=body.to_owned() />
-                    <button type="submit" class="fui-button fui-button-primary">
-                        {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16")}
-                        {tr_with(RecordsMsg::DirectoryRestoreAs, &[("next", next.into())])}
-                    </button>
-                </form>
-            },
+            form,
         )
-        .into_any()
     });
-    view! {
-        {delete}
-        {restore}
-    }
-    .into_any()
+    delete.then(opt(restore))
 }
 
 /// A write the CDR refused.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Unsaved {
     /// The refusal.
     refusal: Refused,
@@ -406,7 +393,6 @@ struct Unsaved {
     conflict: bool,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl Unsaved {
     /// The refusal `error` of what `summary` says.
     fn new(summary: String, error: ViewerError) -> Self {
@@ -417,7 +403,6 @@ impl Unsaved {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What a post to the tab asks, done: delete the directory, restore a
 /// version. `Some` holds the refusal to draw at the top.
 async fn act(ehr_id: &str) -> Option<Unsaved> {
@@ -459,28 +444,23 @@ async fn act(ehr_id: &str) -> Option<Unsaved> {
 
 /// The refusal a post to the tab met, with Reload when the directory changed
 /// meanwhile.
-fn acted_view(ehr_id: &str, unsaved: &Unsaved) -> AnyView {
+fn acted_view(ehr_id: &str, unsaved: &Unsaved) -> Html {
     let reload = unsaved.conflict.then(|| {
-        view! {
-            <div class="fui-cluster">
-                {ferrohealth_ui::view::button::link_button(
-                    tab_href(ehr_id, EhrTab::Directory),
-                    ferrohealth_ui::view::button::Variant::Secondary,
-                    Some(Glyph::REFRESH_CW),
-                    tr(RecordsMsg::DirectoryReload),
-                )}
-            </div>
-        }
+        h(format!(
+            r#"<div class="fui-cluster">{}</div>"#,
+            ferrohealth_ui::view::button::link_button(
+                tab_href(ehr_id, EhrTab::Directory),
+                ferrohealth_ui::view::button::Variant::Secondary,
+                Some(Glyph::REFRESH_CW),
+                tr(RecordsMsg::DirectoryReload),
+            )
+        ))
     });
-    view! {
-        {unsaved.refusal.view()}
-        {reload}
-    }
-    .into_any()
+    unsaved.refusal.view().then(opt(reload))
 }
 
 /// One version of the directory's history.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct DirVersion {
     /// Its number.
     number: i32,
@@ -493,7 +473,7 @@ struct DirVersion {
 }
 
 /// The folders the tab shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Folders {
     /// The whole tree of the version shown.
     Whole,
@@ -506,7 +486,7 @@ enum Folders {
 }
 
 /// The directory version the tab shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Shown {
     /// What a post to the tab did not do.
     acted: Option<Unsaved>,
@@ -533,7 +513,7 @@ struct Shown {
 }
 
 /// The Directory tab's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum DirectoryPanel {
     /// The EHR has no directory.
     None,
@@ -545,7 +525,6 @@ enum DirectoryPanel {
     Refused(Refused),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The refusal of a directory document the CDR sent that is not JSON.
 fn unreadable(error: &serde_json::Error) -> Refused {
     Refused::new(
@@ -559,19 +538,15 @@ fn unreadable(error: &serde_json::Error) -> Refused {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_tab(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<EhrModel<DirectoryPanel>, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_tab(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_tab`] reads, on the server.
+/// What [`load_tab`] reads.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the post, the version asked for, its versions and the folder at a path"
@@ -702,13 +677,13 @@ async fn read_tab(ehr_id: String) -> EhrModel<DirectoryPanel> {
     clippy::too_many_lines,
     reason = "one tab: its notice, its folders with the path form, its versions and its dialogs"
 )]
-fn directory_panel(ehr_id: &str, model: DirectoryPanel) -> AnyView {
+fn directory_panel(ehr_id: &str, model: DirectoryPanel) -> Html {
     let shown = match model {
         DirectoryPanel::None => return panel(plain_section(quiet(tr(RecordsMsg::DirectoryNone)))),
         DirectoryPanel::NoneAtTime => {
-            return panel(
-                view! { {plain_section(info_note(tr(RecordsMsg::DirectoryNoneAtTime)))} },
-            );
+            return panel(plain_section(info_note(t(tr(
+                RecordsMsg::DirectoryNoneAtTime,
+            )))));
         }
         DirectoryPanel::Refused(refusal) => return panel(plain_section(refusal.view())),
         DirectoryPanel::Shown(shown) => *shown,
@@ -730,109 +705,86 @@ fn directory_panel(ehr_id: &str, model: DirectoryPanel) -> AnyView {
     let latest_number = latest.parse::<u32>().unwrap_or(1);
     let folder_path = path.unwrap_or_default();
     let shown_tree = match folders {
-        Folders::Path(sub) => view! {
-            {info_note(
-                tr_with(RecordsMsg::DirectoryShowingPath, &[("path", folder_path.clone().into())]),
-            )}
-            {tree(ehr_id, &sub, None)}
-        }
-        .into_any(),
-        Folders::NoPath => view! {
-            {info_note(
-                tr_with(RecordsMsg::DirectoryNoPath, &[("path", folder_path.clone().into())]),
-            )}
-            {tree(ehr_id, &root, None)}
-        }
-        .into_any(),
+        Folders::Path(sub) => info_note(t(tr_with(
+            RecordsMsg::DirectoryShowingPath,
+            &[("path", folder_path.clone().into())],
+        )))
+        .then(tree(ehr_id, &sub, None)),
+        Folders::NoPath => info_note(t(tr_with(
+            RecordsMsg::DirectoryNoPath,
+            &[("path", folder_path.clone().into())],
+        )))
+        .then(tree(ehr_id, &root, None)),
         Folders::Refused(refusal) => refusal.view(),
         Folders::Whole => tree(ehr_id, &root, None),
     };
-    let path_form = view! {
-        <form class="fui-at-time" method="get" action=tab_href(ehr_id, EhrTab::Directory)>
-            <div class="fui-field">
-                <label for="d-path" class="fui-label">
-                    {tr(RecordsMsg::DirectoryShowPath)}
-                </label>
-                <input
-                    id="d-path"
-                    name="path"
-                    type="text"
-                    class="fui-input fui-mono"
-                    placeholder=tr(RecordsMsg::DirectoryPathPlaceholder)
-                    value=folder_path.clone()
-                />
-            </div>
-            <button type="submit" class="fui-button fui-button-secondary">
-                {ferrohealth_ui::icon::icon(Glyph::FOLDER_SEARCH, "16")}
-                {tr(RecordsMsg::DirectoryShow)}
-            </button>
-        </form>
-    };
+    let path_form = h(format!(
+        r#"<form class="fui-at-time" method="get" action="{action}"><div class="fui-field"><label for="d-path" class="fui-label">{label}</label><input id="d-path" name="path" type="text" class="fui-input fui-mono" placeholder="{placeholder}" value="{value}"></div><button type="submit" class="fui-button fui-button-secondary">{glyph}{show}</button></form>"#,
+        action = t(tab_href(ehr_id, EhrTab::Directory)),
+        label = t(tr(RecordsMsg::DirectoryShowPath)),
+        placeholder = t(tr(RecordsMsg::DirectoryPathPlaceholder)),
+        value = t(&folder_path),
+        glyph = ferrohealth_ui::icon::icon(Glyph::FOLDER_SEARCH, "16"),
+        show = t(tr(RecordsMsg::DirectoryShow)),
+    ));
     let reading = older.as_deref().filter(|number| *number != latest.as_str());
-    let tools = view! {
-        {ferrohealth_ui::view::button::link_button(
-            format!("{}/edit", tab_href(ehr_id, EhrTab::Directory)),
-            ferrohealth_ui::view::button::Variant::Secondary,
-            Some(Glyph::PENCIL),
-            tr(RecordsMsg::DirectoryEdit),
-        )}
-        {directory_menu(&version_uid)}
-    }
-    .into_any();
+    let tools = ferrohealth_ui::view::button::link_button(
+        format!("{}/edit", tab_href(ehr_id, EhrTab::Directory)),
+        ferrohealth_ui::view::button::Variant::Secondary,
+        Some(Glyph::PENCIL),
+        tr(RecordsMsg::DirectoryEdit),
+    )
+    .then(directory_menu(&version_uid));
     let restore = reading.filter(|_| restoring).map(|number| {
-        view! {
-            <button
-                type="button"
-                class="fui-button fui-button-primary"
-                command="show-modal"
-                commandfor=RESTORE_DIALOG
-                aria-haspopup="dialog"
-            >
-                {ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16")}
-                {tr_with(
-                    RecordsMsg::DirectoryRestoreVersion,
-                    &[("version", number.to_owned().into())],
-                )}
-            </button>
-        }
+        h(format!(
+            r#"<button type="button" class="fui-button fui-button-primary" command="show-modal" commandfor="{RESTORE_DIALOG}" aria-haspopup="dialog">{}{}</button>"#,
+            ferrohealth_ui::icon::icon(Glyph::ROTATE_CCW, "16"),
+            t(tr_with(
+                RecordsMsg::DirectoryRestoreVersion,
+                &[("version", number.to_owned().into())],
+            ))
+        ))
     });
     let count = versions.as_ref().map_or(0, |versions| {
         u32::try_from(versions.len()).unwrap_or(u32::MAX)
     });
     let notice = reading.map(|number| {
-        plain_section(view! {
-            {older_version(number, count, tab_href(ehr_id, EhrTab::Directory))}
-            <div class="fui-cluster">{restore}</div>
-        })
+        plain_section(
+            older_version(
+                &current(),
+                number,
+                count,
+                tab_href(ehr_id, EhrTab::Directory),
+            )
+            .then(h(format!(r#"<div class="fui-cluster">{}</div>"#, opt(restore)))),
+        )
     });
     let history_section = match &versions {
         Ok(history_data) => section(
             Some(tr(RecordsMsg::DirectoryVersions)),
             Some(u64::from(count)),
             None,
-            view! {
-                {ferrohealth_ui::view::surface::section_intro(
-                    tr(RecordsMsg::DirectoryVersionsIntro),
-                )}
-                {history(ehr_id, history_data, reading)}
-                {(count < latest_number && window < HISTORY_MAX)
-                    .then(|| {
-                        view! {
-                            <div class="fui-cluster">
-                                {ferrohealth_ui::view::button::link_button(
-                                    format!(
-                                        "{}?versions={}",
-                                        tab_href(ehr_id, EhrTab::Directory),
-                                        window.saturating_add(HISTORY_WINDOW),
-                                    ),
-                                    ferrohealth_ui::view::button::Variant::Ghost,
-                                    Some(Glyph::CHEVRON_DOWN),
-                                    tr(RecordsMsg::DirectoryOlderVersions),
-                                )}
-                            </div>
-                        }
-                    })}
-            },
+            Html::join([
+                ferrohealth_ui::view::surface::section_intro(tr(
+                    RecordsMsg::DirectoryVersionsIntro,
+                )),
+                history(ehr_id, history_data, reading),
+                opt((count < latest_number && window < HISTORY_MAX).then(|| {
+                    h(format!(
+                        r#"<div class="fui-cluster">{}</div>"#,
+                        ferrohealth_ui::view::button::link_button(
+                            format!(
+                                "{}?versions={}",
+                                tab_href(ehr_id, EhrTab::Directory),
+                                window.saturating_add(HISTORY_WINDOW),
+                            ),
+                            ferrohealth_ui::view::button::Variant::Ghost,
+                            Some(Glyph::CHEVRON_DOWN),
+                            tr(RecordsMsg::DirectoryOlderVersions),
+                        )
+                    ))
+                })),
+            ]),
         ),
         Err(refusal) => section(
             Some(tr(RecordsMsg::DirectoryVersions)),
@@ -842,51 +794,38 @@ fn directory_panel(ehr_id: &str, model: DirectoryPanel) -> AnyView {
         ),
     };
     let restoring_state = reading.map(|number| (number, body.as_str()));
-    panel(view! {
-        {acted.map(|acted| acted_view(ehr_id, &acted))}
-        {notice}
-        {section(
+    panel(Html::join([
+        opt(acted.map(|acted| acted_view(ehr_id, &acted))),
+        opt(notice),
+        section(
             Some(tr(RecordsMsg::DirectoryFoldersTitle)),
             None,
             Some(tools),
-            view! {
-                {shown_tree}
-                {path_form}
-            },
-        )}
-        {history_section}
-        {dialogs(ehr_id, &latest_uid, restoring_state)}
-    })
+            shown_tree.then(path_form),
+        ),
+        history_section,
+        dialogs(ehr_id, &latest_uid, restoring_state),
+    ]))
 }
 
 /// An EHR's Directory tab.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn DirectoryTab() -> impl IntoView {
+pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(
         RecordsMsg::DirectoryTitle,
         &[("id", shortened(&ehr_id).into())],
     );
-    let model = page_model!(load_tab(ehr_id.clone()));
-    let body = drawn(model, move |model| {
+    let body = drawn(load_tab(ehr_id.clone()).await, |model| {
         ehr_view(&ehr_id, EhrTab::Directory, model, |shown| {
             directory_panel(&ehr_id, shown)
         })
     });
-    view! {
-        <Title text=title />
-        {body}
-    }
+    Drawn::page(title, body)
 }
 
 /// The id of Edit the directory's form.
 const EDIT_FORM: &str = "directory-edit";
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The working tree of an edit: the tree as posted, or `base`, the
 /// directory as the CDR holds it, stamped with the viewer-local keys.
 fn working_tree(posted: Option<&crate::posted::Posted>, base: &Value) -> Value {
@@ -903,7 +842,6 @@ fn working_tree(posted: Option<&crate::posted::Posted>, base: &Value) -> Value {
     tree
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Applies the edit a post asks to `tree`; returns the folder now in a
 /// rename, if any, and how many edits the tree carries.
 fn apply(tree: &mut Value, posted: &crate::posted::Posted) -> Option<String> {
@@ -951,7 +889,6 @@ fn apply(tree: &mut Value, posted: &crate::posted::Posted) -> Option<String> {
     None
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The tree as the CDR takes it: the viewer-local keys stripped.
 fn stripped(tree: &Value) -> String {
     let mut tree = tree.clone();
@@ -960,7 +897,7 @@ fn stripped(tree: &Value) -> String {
 }
 
 /// A composition a reference can name.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Choice {
     /// Its id.
     uid: String,
@@ -969,7 +906,7 @@ struct Choice {
 }
 
 /// The picker of a reference to add to a folder.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Picker {
     /// The folder's `_key`.
     folder: String,
@@ -978,7 +915,7 @@ struct Picker {
 }
 
 /// What Edit the directory's form holds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Editor {
     /// The id of the version the edit is based on.
     opened: String,
@@ -997,7 +934,7 @@ struct Editor {
 }
 
 /// Edit the directory's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum EditModel {
     /// The form.
     Editor(Box<Editor>),
@@ -1014,23 +951,19 @@ enum EditModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_edit(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<EditModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_edit(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_edit`] reads, on the server.
+/// What [`load_edit`] reads.
 async fn read_edit(ehr_id: String) -> EditModel {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
-        leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Directory));
+        crate::request::redirect(&tab_href(&ehr_id, EhrTab::Directory));
         return EditModel::Left;
     }
     let current = match fetch_directory(ehr_id.clone()).await {
@@ -1122,51 +1055,33 @@ async fn read_edit(ehr_id: String) -> EditModel {
 
 /// The picker of a reference to add: the EHR's compositions to choose from,
 /// or the CDR's refusal of the list where the choice would be.
-fn picker_view(Picker { folder, choices }: Picker) -> AnyView {
+fn picker_view(Picker { folder, choices }: Picker) -> Html {
     let choices = match choices {
         Ok(choices) => choices,
         Err(refusal) => return refusal.view(),
     };
-    let options = choices
+    let options: Html = choices
         .into_iter()
         .map(|choice| {
             let words = format!("{} · {}", choice.name, shortened(&choice.uid));
-            view! { <option value=choice.uid>{words}</option> }
+            h(format!(
+                r#"<option value="{}">{}</option>"#,
+                t(&choice.uid),
+                t(words)
+            ))
         })
-        .collect_view();
-    view! {
-        <div class="fui-transform-options">
-            <input type="hidden" name="reference_to" value=folder />
-            <div class="fui-field is-id">
-                <label for="d-reference" class="fui-label">
-                    {tr(RecordsMsg::DirectoryReferenceLabel)}
-                </label>
-                <select id="d-reference" name="reference" class="fui-select">
-                    {options}
-                </select>
-            </div>
-            <div class="fui-transform-run">
-                <button
-                    type="submit"
-                    name="intent"
-                    value="edit"
-                    class="fui-button fui-button-secondary"
-                >
-                    {ferrohealth_ui::icon::icon(Glyph::FILE_PLUS, "16")}
-                    {tr(RecordsMsg::DirectoryAddReference)}
-                </button>
-            </div>
-        </div>
-    }
-    .into_any()
+        .collect();
+    h(format!(
+        r#"<div class="fui-transform-options"><input type="hidden" name="reference_to" value="{folder}"><div class="fui-field is-id"><label for="d-reference" class="fui-label">{label}</label><select id="d-reference" name="reference" class="fui-select">{options}</select></div><div class="fui-transform-run"><button type="submit" name="intent" value="edit" class="fui-button fui-button-secondary">{glyph}{add}</button></div></div>"#,
+        folder = t(&folder),
+        label = t(tr(RecordsMsg::DirectoryReferenceLabel)),
+        glyph = ferrohealth_ui::icon::icon(Glyph::FILE_PLUS, "16"),
+        add = t(tr(RecordsMsg::DirectoryAddReference)),
+    ))
 }
 
 /// Edit the directory's form, its decision bar docked.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one editor: its refusal, its docked decisions, its tree, the rename and the picker"
-)]
-fn edit_form(ehr_id: &str, editor: Editor) -> AnyView {
+fn edit_form(ehr_id: &str, editor: Editor) -> Html {
     let Editor {
         opened,
         current_uid,
@@ -1186,38 +1101,23 @@ fn edit_form(ehr_id: &str, editor: Editor) -> AnyView {
     };
     let top = unsaved.map(|unsaved| {
         let ways = unsaved.conflict.then(|| {
-            view! {
-                <div class="fui-cluster">
-                    {ferrohealth_ui::view::button::link_button(
-                        format!("{}/edit", tab_href(ehr_id, EhrTab::Directory)),
-                        ferrohealth_ui::view::button::Variant::Secondary,
-                        Some(Glyph::REFRESH_CW),
-                        tr_with(
-                            RecordsMsg::EditorReloadVersion,
-                            &[("version", version_number(&current_uid).into())],
-                        ),
-                    )}
-                    <button
-                        type="submit"
-                        form=EDIT_FORM
-                        name="intent"
-                        value="overwrite"
-                        class="fui-button fui-button-danger"
-                    >
-                        {ferrohealth_ui::icon::icon(Glyph::SAVE, "16")}
-                        {tr(RecordsMsg::DirectoryOverwrite)}
-                    </button>
-                    <span class="fui-small fui-muted">
-                        {tr(RecordsMsg::DirectoryOverwriteNote)}
-                    </span>
-                </div>
-            }
+            h(format!(
+                r#"<div class="fui-cluster">{reload}<button type="submit" form="{EDIT_FORM}" name="intent" value="overwrite" class="fui-button fui-button-danger">{glyph}{overwrite}</button><span class="fui-small fui-muted">{note}</span></div>"#,
+                reload = ferrohealth_ui::view::button::link_button(
+                    format!("{}/edit", tab_href(ehr_id, EhrTab::Directory)),
+                    ferrohealth_ui::view::button::Variant::Secondary,
+                    Some(Glyph::REFRESH_CW),
+                    tr_with(
+                        RecordsMsg::EditorReloadVersion,
+                        &[("version", version_number(&current_uid).into())],
+                    ),
+                ),
+                glyph = ferrohealth_ui::icon::icon(Glyph::SAVE, "16"),
+                overwrite = t(tr(RecordsMsg::DirectoryOverwrite)),
+                note = t(tr(RecordsMsg::DirectoryOverwriteNote)),
+            ))
         });
-        view! {
-            {unsaved.refusal.view()}
-            {ways}
-        }
-        .into_any()
+        unsaved.refusal.view().then(opt(ways))
     });
     let next = version_number(&opened).parse::<u32>().map_or_else(
         |_| tr(Msg::EditorSave),
@@ -1246,66 +1146,41 @@ fn edit_form(ehr_id: &str, editor: Editor) -> AnyView {
     };
     let picker = picker.map(picker_view);
     let rename_keep = renaming.map(|key| {
-        view! {
-            <input type="hidden" name="renaming" value=key />
-            <button
-                type="submit"
-                name="intent"
-                value="edit"
-                class="fui-button fui-button-secondary fui-button-small"
-            >
-                {ferrohealth_ui::icon::icon(Glyph::CHECK, "14")}
-                {tr(RecordsMsg::DirectoryKeepName)}
-            </button>
-        }
+        h(format!(
+            r#"<input type="hidden" name="renaming" value="{}"><button type="submit" name="intent" value="edit" class="fui-button fui-button-secondary fui-button-small">{}{}</button>"#,
+            t(key),
+            ferrohealth_ui::icon::icon(Glyph::CHECK, "14"),
+            t(tr(RecordsMsg::DirectoryKeepName))
+        ))
     });
-    view! {
-        {top}
-        <form
-            id=EDIT_FORM
-            method="post"
-            action=format!("{}/edit", tab_href(ehr_id, EhrTab::Directory))
-        >
-            <input type="hidden" name="version" value=opened />
-            <input type="hidden" name="tree" value=working.to_string() />
-            {card_panel(
-                section(
-                    Some(tr(RecordsMsg::DirectoryFoldersTitle)),
-                    None,
-                    None,
-                    view! {
-                        {ferrohealth_ui::view::surface::section_intro(
-                            tr(RecordsMsg::DirectoryEditIntro),
-                        )}
-                        {tree(ehr_id, &working, Some(&edits))}
-                        {rename_keep}
-                        {picker}
-                    },
-                ),
-            )}
-        </form>
-    }
-    .into_any()
+    let body = section(
+        Some(tr(RecordsMsg::DirectoryFoldersTitle)),
+        None,
+        None,
+        Html::join([
+            ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::DirectoryEditIntro)),
+            tree(ehr_id, &working, Some(&edits)),
+            opt(rename_keep),
+            opt(picker),
+        ]),
+    );
+    opt(top).then(h(format!(
+        r#"<form id="{EDIT_FORM}" method="post" action="{action}"><input type="hidden" name="version" value="{version}"><input type="hidden" name="tree" value="{tree}">{panel}</form>"#,
+        action = t(format!("{}/edit", tab_href(ehr_id, EhrTab::Directory))),
+        version = t(&opened),
+        tree = t(working.to_string()),
+        panel = card_panel(body),
+    )))
 }
 
 /// Edit the directory.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn DirectoryEditPage() -> impl IntoView {
+pub async fn edit_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_edit(ehr_id.clone()));
-    let body = docked(model, dock_promise, {
-        let ehr_id = ehr_id.clone();
-        move |model| match model {
-            EditModel::Editor(editor) => edit_form(&ehr_id, *editor),
-            EditModel::None => quiet(tr(RecordsMsg::DirectoryNone)),
-            EditModel::Refused(refusal) => refusal.view(),
-            EditModel::Left => ().into_any(),
-        }
+    let body = drawn(load_edit(ehr_id.clone()).await, |model| match model {
+        EditModel::Editor(editor) => edit_form(&ehr_id, *editor),
+        EditModel::None => quiet(tr(RecordsMsg::DirectoryNone)),
+        EditModel::Refused(refusal) => refusal.view(),
+        EditModel::Left => Html::empty(),
     });
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(
@@ -1313,6 +1188,7 @@ pub fn DirectoryEditPage() -> impl IntoView {
         tab_href(&ehr_id, EhrTab::Directory),
     ));
     let heading = editor_heading(
+        &current(),
         message(RecordsMsg::EditorTitle),
         &Mode::Editing(tr(RecordsMsg::EhrTabDirectory)),
         Header {
@@ -1325,11 +1201,10 @@ pub fn DirectoryEditPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    view! {
-        <Title text=tr(RecordsMsg::DirectoryEditTitle) />
-        {heading}
-        <div class="fui-stack">{body}</div>
-    }
+    Drawn::page(
+        tr(RecordsMsg::DirectoryEditTitle),
+        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
+    )
 }
 
 #[cfg(test)]
@@ -1341,8 +1216,7 @@ mod tests {
     use crate::pages::common::Refused;
 
     fn drawn(picker: Picker) -> String {
-        leptos::prelude::Owner::new()
-            .with(|| leptos::prelude::RenderHtml::to_html(picker_view(picker)))
+        String::from(picker_view(picker))
     }
 
     #[test]

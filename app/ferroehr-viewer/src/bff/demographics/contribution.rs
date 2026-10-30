@@ -26,19 +26,12 @@
               hydrate target"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
 
 /// One version a CONTRIBUTION changed, as its `OBJECT_REF` carries it.
@@ -78,13 +71,12 @@ pub struct ContributionState {
 /// an EHR-scoped one, included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_demographic_contribution(
-    /// The CONTRIBUTION uid to read.
+    // The CONTRIBUTION uid to read.
     contribution_uid: String,
 ) -> Result<ContributionState, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let contribution_uid = contribution_uid.trim();
     if contribution_uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -103,7 +95,6 @@ pub async fn fetch_demographic_contribution(
     parse_contribution(&body)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a CONTRIBUTION body into a [`ContributionState`]. Defensive
 /// throughout — an absent attribute reads as empty rather than failing the
 /// screen.
@@ -144,7 +135,7 @@ fn parse_contribution(body: &str) -> Result<ContributionState, ViewerError> {
     })
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod wire_tests {
     use super::parse_contribution;
 

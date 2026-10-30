@@ -15,10 +15,8 @@
 
 use serde_json::Value;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr;
 use crate::locale::tr_with;
 
@@ -55,7 +53,6 @@ pub fn parse_other_details(draft: &str) -> Result<Option<Value>, String> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Apply the form's three edits to the loaded `EHR_STATUS` document and return
 /// the body to PUT.
 ///
@@ -131,7 +128,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod merge_tests {
     use super::apply_status_edits;
     use serde_json::Value;

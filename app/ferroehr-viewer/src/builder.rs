@@ -17,7 +17,6 @@
 //! lossily.
 
 pub mod catalog;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod lift;
 pub mod lower;
 pub mod model;

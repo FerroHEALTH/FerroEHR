@@ -1,7 +1,7 @@
 [package]
 name = "ferroehr-viewer"
 version.workspace = true
-description = "FerroEHR Viewer: Leptos SSR web app + BFF over the ITS-REST API (its own binary and OCI image; a pure REST client of the CDR, never in-process)"
+description = "FerroEHR Viewer: a server-rendered web console + BFF over the ITS-REST API (its own binary and OCI image; a pure REST client of the CDR, never in-process)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -12,15 +12,13 @@ keywords.workspace = true
 categories.workspace = true
 publish = false
 
-# Full-stack Leptos crate (cargo-leptos): the rlib feeds the server binary
-# and the cdylib is the WASM client bundle. The two halves are chosen by
-# compilation target, never by Cargo feature, so a workspace `--all-features`
-# build can never turn both on; a target dependency's features apply only to a
-# build for that target (the Cargo reference, resolver version 2 and later).
+# An axum service whose every page is a handler drawing FerroUI's
+# server-rendered parts (FerroUI `docs/migration-0.6.md`): one `cargo build`,
+# no WebAssembly half and no site bundle.
 # NOTE: no openEHR spec governs the viewer — our own design / product
 # extension; the wire it consumes is spec-bound (see CLAUDE.md).
 [lib]
-crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
 
 [[bin]]
 name = "ferroehr-viewer"
@@ -28,90 +26,39 @@ path = "src/main.rs"
 
 [dependencies]
 openehr-query = { path = "../../crates/openehr-query" }
-
 # The SMART on openEHR scope grammar (`ferrohealth_smart::openehr::smart_scopes`,
 # master08) is the ONE parser the CDR's scope gate and the viewer's scope
 # previewer share, so what the drawer explains can never drift from what the CDR
-# enforces. Parsing a scope string is a pure function, so the previewer runs in
-# the browser rather than round-tripping the BFF; built for wasm32, the crate is
-# the grammar alone, with no dependency.
+# enforces.
 ferrohealth-smart = { workspace = true, features = ["openehr-scopes"] }
-# `openehr-its` and `openehr-sdt` without default features compile empty. The
-# heavy surfaces (`openehr_its::opt14` and `openehr_sdt::flat` for the
-# query-builder path catalog) ride each crate's `full` feature, which the server
-# half below adds back, so they stay out of the WASM bundle.
-openehr-its = { path = "../../crates/openehr-its", default-features = false }
-openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false }
-
-# The whole page hydrates (FerroUI `docs/consoles.md`, "How a console
-# builds"): `hydrate` in the browser half and `ssr` in the server half, below,
-# and never the `islands` feature.
-leptos.workspace = true
-leptos_meta.workspace = true
-leptos_router.workspace = true
-# The shared FerroHEALTH console components, tokens, stylesheet, highlighters
-# and table model; it has no render-mode feature and follows leptos's.
-# The family readiness document the CDR serves (the document alone, so it
-# builds for both halves).
-ferrohealth-health.workspace = true
-ferrohealth-ui.workspace = true
-# The viewer's own string catalogs under locales/, in both halves.
-fluent-templates.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-# ISO 8601 parsing/formatting for the results chart's time axis (pure —
-# no clock access, so it needs no wasm js feature).
-jiff.workspace = true
-
-thiserror.workspace = true
-
-# Percent-encoding is ALWAYS the `urlencoding` crate (owner hard rule —
-# never hand-rolled). Both halves: the audit screen builds
-# filter-preserving pagination hrefs on every target.
-urlencoding = { workspace = true }
-# `Stream`/`Sink` name the server-fn transport's own signatures, which
-# `crate::session_client` re-implements in BOTH halves, and the BFF's bounded
-# concurrent fan-out (`cdr::FANOUT_CONCURRENCY`) rides the same crate. Already
-# in the wasm graph through leptos's own spawner, so the browser bundle carries
-# nothing new.
-futures = { workspace = true }
-# Typed status comparisons in both halves (owner directive 2026-08-06,
-# issue #2055): `http::StatusCode` names the codes the pages branch on, and
-# the crate is tiny and wasm-clean.
-http = { workspace = true }
-
-# The browser half.
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-leptos = { workspace = true, features = ["hydrate"] }
-wasm-bindgen.workspace = true
-console_error_panic_hook.workspace = true
-# A lazy route group's loading future crosses `Suspend`, which asks for
-# `Send`, on the browser's one thread (`crate::routes::lazy`).
-send_wrapper.workspace = true
-# The browser entry loads the page's lazy group before it hydrates
-# (`crate::hydrate`).
-wasm-bindgen-futures.workspace = true
-
-# The server half.
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# The per-request CSP nonce (src/server.rs): the nonce
-# `ferrohealth_server::console` mints, re-provided as `leptos::nonce::Nonce` so
-# `HydrationScripts` stamps `nonce=` on the bootstrap script. Named explicitly
-# rather than inherited from leptos_axum, so the strict script-src cannot lose
-# its nonce to a feature change upstream.
-leptos = { workspace = true, features = ["ssr", "nonce"] }
-leptos_meta = { workspace = true, features = ["ssr"] }
-leptos_router = { workspace = true, features = ["ssr"] }
-leptos_axum.workspace = true
-# The full ITS surface BFF-side (OPT parsing + WebTemplate building); the
-# scope grammar itself is in both halves (see the ferrohealth-smart comment above).
+# The full ITS surface (OPT parsing + WebTemplate building) and the Simplified
+# Formats (`openehr_sdt::flat`, the query-builder path catalog).
 openehr-its = { path = "../../crates/openehr-its", default-features = false, features = ["full"] }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false, features = ["full"] }
 # The AOM2 operational-template type the ADL2 detail screen's path catalog is
 # built from (`OperationalTemplateV2` canonical JSON in, Web Template out).
-# Server-only: the build runs BFF-side, so the WASM bundle never carries the
-# AOM2 model.
 openehr-am = { path = "../../crates/openehr-am" }
+
+# The shared FerroHEALTH console components, tokens, stylesheet, script
+# modules, highlighters and table model, with its asset router (`axum`).
+ferrohealth-ui.workspace = true
+# The family readiness document the CDR serves, and the registry and
+# lifecycle the health routes read.
+ferrohealth-health = { workspace = true, features = ["registry"] }
+# The viewer's own string catalogs under locales/.
+fluent-templates.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# ISO 8601 parsing/formatting for the results chart's time axis.
+jiff.workspace = true
+thiserror.workspace = true
+# Percent-encoding is ALWAYS the `urlencoding` crate (owner hard rule —
+# never hand-rolled).
+urlencoding = { workspace = true }
+# The BFF's bounded concurrent fan-out (`cdr::FANOUT_CONCURRENCY`).
+futures = { workspace = true }
+# Typed status comparisons (owner directive 2026-08-06, issue #2055).
+http = { workspace = true }
 axum.workspace = true
 tokio.workspace = true
 tracing.workspace = true
@@ -127,8 +74,6 @@ ferrohealth-secret.workspace = true
 # headers and same-origin check (`console`), and the outbound TLS of the OIDC
 # and CDR clients (`reqwest`).
 ferrohealth-server = { workspace = true, features = ["console", "reqwest"] }
-# The readiness registry and lifecycle the health routes read.
-ferrohealth-health = { workspace = true, features = ["registry"] }
 clap.workspace = true
 # The public URL the same-origin check compares `Origin` with.
 url.workspace = true
@@ -138,18 +83,16 @@ secrecy.workspace = true
 # viewer runs multi-instance on serverless platforms and keeps no store.
 cookie.workspace = true
 base64.workspace = true
-# The hydration bundle's file service (`ServeDir`).
-tower-http.workspace = true
 csv.workspace = true
 openidconnect.workspace = true
 
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+[dev-dependencies]
 indexmap.workspace = true
 # A test CA and a server certificate minted at run time, for the outbound TLS
 # tests of the CDR and issuer clients.
 rcgen.workspace = true
-# `ServiceExt::oneshot`: the CSP-nonce tests drive a stub router through the
-# console headers in-process, with no listener.
+# `ServiceExt::oneshot`: the in-process suites drive the router with no
+# listener.
 tower.workspace = true
 # E2E journeys (tests/e2e_*.rs): Rust-native WebDriver + the async runtime;
 # the browser-console gate reads the browser log via thirtyfour's legacy-log API.
@@ -163,20 +106,3 @@ reqwest = { workspace = true, features = ["form"] }
 
 [lints]
 workspace = true
-
-# cargo-leptos build config. The stylesheet is FerroUI's, served by the
-# viewer itself, so the site bundle is the WebAssembly and its glue only.
-[package.metadata.leptos]
-output-name = "ferroehr-viewer"
-site-root = "target/site"
-site-pkg-dir = "pkg"
-site-addr = "127.0.0.1:3000"
-reload-port = 3001
-lib-profile-release = "wasm-release"
-# Content-hashed /pkg filenames (`ferroehr-viewer.<md5>.wasm`): a rebuilt
-# asset is a different URL, so a browser revalidating its cached copy
-# (`no-cache`) never runs a stale bundle against a new page. The manifest cargo-leptos writes beside the server
-# binary (`hash.txt`) is what the renderer reads the names back from, so it
-# ships next to the binary in the image; the runtime half is the separate
-# `LEPTOS_HASH_FILES` variable, which the binary reads at startup.
-hash-files = true

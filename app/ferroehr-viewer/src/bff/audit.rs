@@ -21,15 +21,10 @@
               hydrate target"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::PAGE_SIZE;
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr, tr_with};
 
 /// One distilled audit record: the promoted facts the table shows plus the
@@ -73,9 +68,10 @@ pub struct AuditPage {
     pub rows: Vec<AuditRow>,
 }
 
-/// Retrieve one page of audit records via the ITI-81 FHIR search
-/// (`GET fhir/r4/AuditEvent`), with the supported filter subset. Empty
-/// filter strings are omitted from the query; instants are sent as
+/// Retrieve one page of audit records via the ITI-81 FHIR search (`GET
+/// fhir/r4/AuditEvent`), with the supported filter subset.
+///
+/// Empty filter strings are omitted from the query; instants are sent as
 /// `date=ge…`/`date=le…` bounds; values are percent-encoded.
 ///
 /// # Errors
@@ -85,25 +81,24 @@ pub struct AuditPage {
 /// role (the audit trail is an operator surface); [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
 /// on an unparseable Bundle.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn search_audit(
-    /// Inclusive lower bound on the record instant; empty means unbounded.
+    // Inclusive lower bound on the record instant; empty means unbounded.
     from: String,
-    /// Inclusive upper bound on the record instant; empty means unbounded.
+    // Inclusive upper bound on the record instant; empty means unbounded.
     to: String,
-    /// Patient reference to match; empty means any patient.
+    // Patient reference to match; empty means any patient.
     patient: String,
-    /// Agent (acting user) to match; empty means any agent.
+    // Agent (acting user) to match; empty means any agent.
     agent: String,
-    /// Outcome code to match; empty means any outcome.
+    // Outcome code to match; empty means any outcome.
     outcome: String,
-    /// Action code to match; empty means any action.
+    // Action code to match; empty means any action.
     action: String,
-    /// First record of the page to return.
+    // First record of the page to return.
     offset: u32,
 ) -> Result<AuditPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
 
     let mut params: Vec<String> = Vec::new();
     let mut push = |key: &str, value: &str| {
@@ -147,7 +142,6 @@ pub async fn search_audit(
 }
 
 /// `ge`/`le`-prefix a non-empty instant for the ITI-81 `date` parameter.
-#[cfg(not(target_arch = "wasm32"))]
 fn prefixed(prefix: &str, value: &str) -> String {
     let value = value.trim();
     if value.is_empty() {
@@ -159,7 +153,6 @@ fn prefixed(prefix: &str, value: &str) -> String {
 
 /// The first day of the window a search with no date asks for: 30 days
 /// back, as a FHIR date.
-#[cfg(not(target_arch = "wasm32"))]
 fn window_start() -> String {
     jiff::Timestamp::now()
         .to_zoned(jiff::tz::TimeZone::UTC)
@@ -170,7 +163,6 @@ fn window_start() -> String {
 }
 
 /// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].
-#[cfg(not(target_arch = "wasm32"))]
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
     let bundle = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
         ViewerError::Internal(tr_with(
@@ -205,7 +197,6 @@ fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
 /// Distil one stored `AuditEvent` (IHE BALP shape) into an [`AuditRow`],
 /// reading every field defensively (a missing field renders empty, never
 /// drops the record from the security log).
-#[cfg(not(target_arch = "wasm32"))]
 fn audit_row(resource: &serde_json::Value) -> AuditRow {
     let text = |v: Option<&serde_json::Value>| {
         v.and_then(serde_json::Value::as_str)
@@ -304,7 +295,7 @@ pub(crate) const ACTIONS: [(&str, ConsoleMsg); 6] = [
     ("E", ConsoleMsg::ActionExecute),
 ];
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::{audit_row, parse_bundle};
 

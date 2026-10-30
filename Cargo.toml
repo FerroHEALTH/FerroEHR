@@ -219,7 +219,7 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # (the same Licensor's BUSL-1.1 code, deny.toml): token validation against the
 # issuer's key set, Basic users, the SMART on openEHR scopes, the discovery
 # document and the client credentials grant. It checks tokens and never issues
-# them. Built for wasm32 it is the scope grammar alone (the viewer's browser half).
+# them; the viewer reads its scope grammar (`openehr-scopes`).
 # Verified on crates.io 2026-10-27 (0.8.6).
 ferrohealth-smart = { version = "=0.8.6", default-features = false, features = ["fetch"] }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
@@ -389,30 +389,18 @@ url = "2"
 urlencoding = "2.1.3"
 csv = "1.4"                        # RESULT_SET → CSV export (viewer BFF; verified live 2026-07-18)
 
-# ── Viewer (Leptos stack — app/ferroehr-viewer; pins re-verified live 2026-07-17) ──
-leptos = "0.8.22"
-leptos_axum = "0.8.10"
-leptos_meta = "0.8.7"
-leptos_router = "0.8.17"
-# The shared FerroHEALTH console components, role tokens, stylesheet and table
-# model (FerroUI), pinned exactly: a console moves its pin after looking at its
-# own screens.
-ferrohealth-ui = "=0.5.8"
+# ── Viewer (app/ferroehr-viewer: axum handlers drawing FerroUI's server-rendered parts) ──
+# The shared FerroHEALTH console components, role tokens, stylesheet, script
+# modules and table model (FerroUI), pinned exactly: a console moves its pin
+# after looking at its own screens. 0.6.0 renders every part on the server and
+# depends on no Leptos crate (FerroUI `docs/migration-0.6.md`; verified on
+# crates.io 2026-10-30).
+ferrohealth-ui = "=0.6.0"
 # The viewer's string catalogs (#300): Project Fluent messages embedded at
 # build time from app/ferroehr-viewer/locales/, the crate and version
 # ferrohealth-ui catalogs its own words with, so one locale drives both.
 # Verified against crates.io on 2026-10-19.
 fluent-templates = { version = "0.15.1", default-features = false, features = ["macros", "walkdir"] }
-wasm-bindgen = "0.2.129"
-console_error_panic_hook = "0.1"
-# The viewer's browser half awaits a lazy route group's code itself (the
-# future `LazyRoute::view` returns is not `Send`), as leptos_router's own
-# nested router does with the same crate (verified on crates.io 2026-10-27).
-send_wrapper = { version = "0.6.0", features = ["futures"] }
-# The viewer's browser entry loads the page's lazy group before it hydrates,
-# on the browser's own executor (verified on crates.io 2026-10-27, the
-# release wasm-bindgen 0.2.129 pairs with).
-wasm-bindgen-futures = "0.4.79"
 # E2E WebDriver client (dev-dep of the viewer). Default features off: the
 # `manager` feature downloads and unpacks a WebDriver binary through zip 8
 # (RUSTSEC-2026-0367/0368/0369, #3806); the journeys reach a chromedriver
@@ -540,10 +528,3 @@ lto = "off"
 [profile.e2e.package."*"]
 opt-level = 3
 
-# WASM bundle profile for the viewer (Leptos book `deployment/binary_size`):
-# size-optimized client bundle, wired via the crate's `lib-profile-release`.
-[profile.wasm-release]
-inherits = "release"
-opt-level = 'z'
-lto = true
-codegen-units = 1

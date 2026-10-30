@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The pages of the viewer, each a route of `crate::app`.
+//! The pages of the viewer, each a page of `crate::routes`.
 //!
-//! Every page draws from a serializable model its server function reads, so
-//! it compiles on both halves: the server draws the first page, and the
-//! browser every page after it. No openEHR spec governs the viewer: our own
-//! design.
+//! Every page is an async function that reads its model (answering the form
+//! a post carries, reading the CDR, redirecting) and draws it, once, whole,
+//! on the server. No openEHR spec governs the viewer: our own design.
 
 pub mod about;
 pub mod access;

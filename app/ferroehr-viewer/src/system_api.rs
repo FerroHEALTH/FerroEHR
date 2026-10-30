@@ -16,16 +16,13 @@
 //! conformance profile, which more than one screen wants.
 //!
 //! The manifest is served above CORS and outside authentication (`security:
-//! []`), so the fetch carries no CDR credential — but the server fn still
-//! guards the viewer session first, because every `#[server]` fn is a publicly
-//! reachable endpoint.
+//! []`), so the fetch carries no CDR credential — but the read still guards
+//! the viewer session first, as every read of the viewer does.
 
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served_with;
 
 /// The System API conformance manifest — the `Options` schema, field for field.
@@ -82,10 +79,9 @@ impl ConformanceManifest {
 /// [`ViewerError::CdrUnreachable`] on transport failure;
 /// [`ViewerError::Cdr`] when the CDR answers non-2xx;
 /// [`ViewerError::Internal`] when the body is not the `Options` shape.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_conformance_manifest() -> Result<ConformanceManifest, ViewerError> {
-    crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1_root();
     let response = state.cdr.options_public(&url, "application/json").await?;
     let body = crate::cdr::CdrClient::expect_success(response)?.body;
@@ -103,7 +99,6 @@ pub async fn fetch_conformance_manifest() -> Result<ConformanceManifest, ViewerE
 /// # Errors
 /// [`ViewerError::CdrUnreachable`] on transport failure; [`ViewerError::Cdr`]
 /// when the CDR answers non-2xx.
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn fetch_conformance_document(
     state: &crate::state::AppState,
 ) -> Result<String, ViewerError> {

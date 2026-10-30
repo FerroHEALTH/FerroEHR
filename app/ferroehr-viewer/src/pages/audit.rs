@@ -15,6 +15,7 @@
 //! pages: our own design.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{Paging, StateSource, Window};
@@ -29,23 +30,20 @@ use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading};
 use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
 };
-use ferrohealth_ui::widget::identifier::{Domain, KEEP, Masked};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
+use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked};
 
 use crate::bff::PAGE_SIZE;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::audit::search_audit;
 use crate::bff::audit::{ACTIONS, AuditPage as Listed, AuditRow, OUTCOMES};
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    Refused, ago, card_panel, date_range, document_section, drawn, page_model, section, state_mark,
-    when,
+    Refused, ago, card_panel, date_range, document_section, drawn, section, state_mark, when,
 };
 use crate::paging::Listing;
+use crate::routes::Drawn;
 
 /// The page sizes the audit log offers: the one the CDR is asked for.
 const SIZES: &[u32] = &[PAGE_SIZE];
@@ -112,8 +110,7 @@ impl Filters {
         !self.pairs("").is_empty()
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    /// Runs the search for the page starting at `offset`.
+        /// Runs the search for the page starting at `offset`.
     async fn search(&self, offset: u32) -> Result<Listed, ViewerError> {
         search_audit(
             self.from.clone(),
@@ -138,20 +135,19 @@ fn record_href(row: &AuditRow, filters: &Filters, place: u32) -> String {
 }
 
 /// The masked patient identifier of a record.
-fn patient(row: &AuditRow) -> AnyView {
+fn patient(row: &AuditRow) -> Html {
     if row.patient.is_empty() {
-        return view! { <span class="fui-muted">{tr(ConsoleMsg::AuditNoPatient)}</span> }
-            .into_any();
+        return h(format!(
+            r#"<span class="fui-muted">{}</span>"#,
+            t(tr(ConsoleMsg::AuditNoPatient))
+        ));
     }
-    view! {
-        <span class="fui-identifier">
-            <code>{Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn()}</code>
-        </span>
-    }
-    .into_any()
+    h(format!(
+        r#"<span class="fui-identifier"><code>{}</code></span>"#,
+        t(Masked::new(Domain::new(String::new()), &row.patient, KEEP).drawn())
+    ))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The stored record with its patient identifier masked as the list masks
 /// it.
 fn masked_record(row: &AuditRow) -> String {
@@ -166,7 +162,7 @@ fn masked_record(row: &AuditRow) -> String {
 }
 
 /// The outcome of a record as a state.
-fn outcome(row: &AuditRow) -> AnyView {
+fn outcome(row: &AuditRow) -> Html {
     if row.success {
         state_mark(FlowState::Up, &tr(ConsoleMsg::AuditSuccess))
     } else {
@@ -184,51 +180,56 @@ fn event(row: &AuditRow) -> String {
 }
 
 /// The filter toolbar.
-fn toolbar(filters: &Filters) -> AnyView {
+fn toolbar(filters: &Filters) -> Html {
     let select = |id: &'static str,
                   name: &'static str,
                   label: String,
                   choices: &[(&str, ConsoleMsg)],
                   chosen: &str| {
-        let options = choices
+        let options: Html = choices
             .iter()
             .map(|(value, words)| {
-                view! {
-                    <option value=(*value).to_owned() selected=*value == chosen>
-                        {tr(*words)}
-                    </option>
-                }
+                h(format!(
+                    r#"<option value="{}"{}>{}</option>"#,
+                    t(value),
+                    flag("selected", *value == chosen),
+                    t(tr(*words))
+                ))
             })
-            .collect_view();
-        Field::new(id, label).view(view! {
-            <select id=id name=name class="fui-select">
-                {options}
-            </select>
-        })
+            .collect();
+        Field::new(id, label).view(h(format!(
+            r#"<select id="{id}" name="{name}" class="fui-select">{options}</select>"#
+        )))
     };
-    let tools = view! {
-        {select("a-outcome", "outcome", tr(ConsoleMsg::AuditOutcome), &OUTCOMES, &filters.outcome)}
-        {select("a-action", "action", tr(ConsoleMsg::AuditAction), &ACTIONS, &filters.action)}
-        {date_range("a-when", tr(ConsoleMsg::AuditWhen), &filters.from, &filters.to)}
-        <div class="fui-list-find">
-            <label for="a-patient" class="fui-sr-only">
-                {tr(ConsoleMsg::AuditPatient)}
-            </label>
-            <input
-                id="a-patient"
-                name="patient"
-                type="text"
-                class="fui-input fui-mono"
-                value=filters.patient.clone()
-                placeholder=tr(ConsoleMsg::AuditPatient)
-                autocomplete="off"
-            />
-        </div>
-        <button type="submit" class="fui-button fui-button-secondary">
-            {ferrohealth_ui::icon::icon(Glyph::FUNNEL, "16")}
-            {tr(Msg::FilterApply)}
-        </button>
-    };
+    let tools = Html::join([
+        select(
+            "a-outcome",
+            "outcome",
+            tr(ConsoleMsg::AuditOutcome),
+            &OUTCOMES,
+            &filters.outcome,
+        ),
+        select(
+            "a-action",
+            "action",
+            tr(ConsoleMsg::AuditAction),
+            &ACTIONS,
+            &filters.action,
+        ),
+        date_range(
+            "a-when",
+            tr(ConsoleMsg::AuditWhen),
+            &filters.from,
+            &filters.to,
+        ),
+        h(format!(
+            r#"<div class="fui-list-find"><label for="a-patient" class="fui-sr-only">{label}</label><input id="a-patient" name="patient" type="text" class="fui-input fui-mono" value="{value}" placeholder="{label}" autocomplete="off"></div><button type="submit" class="fui-button fui-button-secondary">{glyph}{apply}</button>"#,
+            label = t(tr(ConsoleMsg::AuditPatient)),
+            value = t(&filters.patient),
+            glyph = ferrohealth_ui::icon::icon(Glyph::FUNNEL, "16"),
+            apply = t(tr(Msg::FilterApply)),
+        )),
+    ]);
     let label = tr(ConsoleMsg::AuditFind);
     find_form(
         Find {
@@ -245,7 +246,7 @@ fn toolbar(filters: &Filters) -> AnyView {
 }
 
 /// The active filters as chips.
-fn chips(filters: &Filters) -> Option<AnyView> {
+fn chips(filters: &Filters) -> Option<Html> {
     let chips: Vec<FilterChip> = [
         ("agent", &filters.agent, Msg::AuditChipAgent),
         ("outcome", &filters.outcome, Msg::AuditChipOutcome),
@@ -263,6 +264,7 @@ fn chips(filters: &Filters) -> Option<AnyView> {
     .collect();
     (!chips.is_empty()).then(|| {
         active_filters(
+            &current(),
             ActiveFilters {
                 chips,
                 clear: "/audit".to_owned(),
@@ -274,7 +276,7 @@ fn chips(filters: &Filters) -> Option<AnyView> {
 }
 
 /// The records of one page, as a table.
-fn table(page: &Listed, filters: &Filters) -> AnyView {
+fn table(page: &Listed, filters: &Filters) -> Html {
     let columns = [
         Column::text("event", tr(ConsoleMsg::AuditEvent)).role(Role::Title),
         Column::text("when", tr(ConsoleMsg::AuditWhen)).role(Role::Sub),
@@ -289,21 +291,23 @@ fn table(page: &Listed, filters: &Filters) -> AnyView {
         .map(|(row, place)| {
             let href = record_href(row, filters, place);
             let principal = if row.principal.is_empty() {
-                view! { <span class="fui-muted">{tr(ConsoleMsg::AuditUnknown)}</span> }.into_any()
+                h(format!(
+                    r#"<span class="fui-muted">{}</span>"#,
+                    t(tr(ConsoleMsg::AuditUnknown))
+                ))
             } else {
-                row.principal.clone().into_any()
+                t(&row.principal)
             };
-            view! {
-                <tr>
-                    {title_cell(Some(&href), event(row), None)}
-                    {cell(&columns[1], ago(&row.recorded))} {cell(&columns[2], principal)}
-                    {cell(&columns[3], patient(row))} {cell(&columns[4], outcome(row))}
-                </tr>
-            }
-            .into_any()
+            h(format!(
+                "<tr>{}{}{}{}{}</tr>",
+                title_cell(Some(&href), t(event(row)), None),
+                cell(&columns[1], ago(&row.recorded)),
+                cell(&columns[2], principal),
+                cell(&columns[3], patient(row)),
+                cell(&columns[4], outcome(row))
+            ))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     let caption = tr(ConsoleMsg::AuditRecords);
     data_table(DataTable {
         caption: &caption,
@@ -311,12 +315,12 @@ fn table(page: &Listed, filters: &Filters) -> AnyView {
         sorting: Sorting::default(),
         body: Body::Rows(rows),
     })
-    .into_any()
 }
 
 /// The heading of the Audit log.
-fn heading() -> AnyView {
+fn heading() -> Html {
     page_heading(
+        &current(),
         Header {
             title: tr(Msg::NavAudit).into(),
             subtitle: Some(tr(ConsoleMsg::AuditSubtitle).into()),
@@ -327,21 +331,19 @@ fn heading() -> AnyView {
         },
         ActionGroup::none(),
     )
-    .into_any()
 }
 
 /// The note of a CDR that keeps no local audit store.
-fn store_off() -> AnyView {
-    card_panel(view! {
-        <div class="fui-panel-body fui-stack">
-            <p>{tr(ConsoleMsg::AuditStoreOff)}</p>
-            <p class="fui-small fui-muted">{tr(ConsoleMsg::AuditStoreOffLine)}</p>
-        </div>
-    })
+fn store_off() -> Html {
+    card_panel(h(format!(
+        r#"<div class="fui-panel-body fui-stack"><p>{}</p><p class="fui-small fui-muted">{}</p></div>"#,
+        t(tr(ConsoleMsg::AuditStoreOff)),
+        t(tr(ConsoleMsg::AuditStoreOffLine))
+    )))
 }
 
 /// The Audit log's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum LogModel {
     /// The page of records the kept position finds.
     Listed(Listed),
@@ -357,17 +359,13 @@ enum LogModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_log(
-    /// The path and query of the page.
-    href: String,
 ) -> Result<LogModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_log().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_log`] reads, on the server.
+/// What [`load_log`] reads.
 async fn read_log() -> LogModel {
     let filters = Filters::read();
     let paging = Paging {
@@ -394,7 +392,7 @@ async fn read_log() -> LogModel {
 }
 
 /// The Audit log's list card over the page `page`.
-fn log_card(page: &Listed, filters: &Filters) -> AnyView {
+fn log_card(page: &Listed, filters: &Filters) -> Html {
     let paging = Paging {
         page: crate::paging::current(Listing::Audit).page,
         size: PAGE_SIZE,
@@ -415,6 +413,7 @@ fn log_card(page: &Listed, filters: &Filters) -> AnyView {
     };
     let pager = (window.pages > 1).then(|| {
         post_pager(
+            &current(),
             PagerListing::new(tr(ConsoleMsg::AuditPages)).sizes(SIZES),
             window,
             PostTo {
@@ -424,7 +423,7 @@ fn log_card(page: &Listed, filters: &Filters) -> AnyView {
             },
         )
     });
-    list_card(ListCard {
+    list_card(&current(), ListCard {
         title: tr(ConsoleMsg::AuditRecords),
         count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(
             u64::from(page.total),
@@ -438,32 +437,26 @@ fn log_card(page: &Listed, filters: &Filters) -> AnyView {
 }
 
 /// The Audit log.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn AuditPage() -> impl IntoView {
-    let model = page_model!(load_log());
-    let body = drawn(model, |model| match model {
+/// The audit log.
+pub async fn page() -> Drawn {
+    let body = drawn(load_log().await, |model| match model {
         LogModel::Listed(page) => {
             let filters = Filters::read();
             let card = log_card(&page, &filters);
-            view! { <div class="fui-list-page">{toolbar(&filters)} {chips(&filters)} {card}</div> }
-                .into_any()
+            h(format!(
+                r#"<div class="fui-list-page">{}{}{card}</div>"#,
+                toolbar(&filters),
+                opt(chips(&filters))
+            ))
         }
         LogModel::StoreOff => store_off(),
         LogModel::Refused(refusal) => refusal.view(),
     });
-    view! {
-        <Title text=tr(Msg::NavAudit) />
-        {heading()}
-        {body}
-    }
+    Drawn::page(tr(Msg::NavAudit), heading().then(body))
 }
 
 /// One audit record's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum RecordModel {
     /// The record, and its stored form with the patient identifier masked.
     Found {
@@ -485,19 +478,15 @@ enum RecordModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_record(
-    /// The path and query of the page.
-    href: String,
-    /// The record's place the route names.
+    // The record's place the route names.
     id: Option<String>,
 ) -> Result<RecordModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_record(id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_record`] reads, on the server.
+/// What [`load_record`] reads.
 async fn read_record(id: Option<String>) -> RecordModel {
     let place = id.and_then(|id| id.parse::<u32>().ok());
     if place.is_none() {
@@ -526,24 +515,21 @@ async fn read_record(id: Option<String>) -> RecordModel {
 }
 
 /// One audit record, drawn.
-fn record(row: &AuditRow, masked: String) -> AnyView {
+fn record(row: &AuditRow, masked: String) -> Html {
+    let principal = if row.principal.is_empty() {
+        tr(ConsoleMsg::AuditUnknown)
+    } else {
+        row.principal.clone()
+    };
     let facts = definitions(vec![
         (tr(ConsoleMsg::AuditWhen), when(&row.recorded)),
-        (
-            tr(ConsoleMsg::AuditPrincipal),
-            if row.principal.is_empty() {
-                tr(ConsoleMsg::AuditUnknown)
-            } else {
-                row.principal.clone()
-            }
-            .into_any(),
-        ),
+        (tr(ConsoleMsg::AuditPrincipal), t(principal)),
         (tr(ConsoleMsg::AuditPatient), patient(row)),
         (
             tr(ConsoleMsg::AuditWhat),
-            view! { <code>{row.resource.clone()}</code> }.into_any(),
+            h(format!("<code>{}</code>", t(&row.resource))),
         ),
-        (tr(ConsoleMsg::AuditAction), row.action.clone().into_any()),
+        (tr(ConsoleMsg::AuditAction), t(&row.action)),
         (tr(ConsoleMsg::AuditOutcome), outcome(row)),
     ]);
     let back = Filters::read().pairs("");
@@ -553,6 +539,7 @@ fn record(row: &AuditRow, masked: String) -> AnyView {
         format!("/audit?{}", back.join("&"))
     };
     let heading = page_heading(
+        &current(),
         Header {
             title: event(row).into(),
             subtitle: Some(tr(ConsoleMsg::AuditStoredAs).into()),
@@ -563,52 +550,38 @@ fn record(row: &AuditRow, masked: String) -> AnyView {
         },
         ActionGroup::none(),
     );
-    view! {
-        <Title text=event(row) />
-        {heading}
-        <div class="fui-stack">
-            {card_panel(
-                view! {
-                    {section(Some(tr(ConsoleMsg::AuditTheEvent)), None, None, facts)}
-                    {document_section(
-                        tr(ConsoleMsg::AuditAsStored),
-                        Language::Json,
-                        masked,
-                        "audit-record",
-                    )}
-                },
-            )}
-        </div>
-    }
-    .into_any()
+    let panel = card_panel(
+        section(Some(tr(ConsoleMsg::AuditTheEvent)), None, None, facts).then(
+            document_section(
+                tr(ConsoleMsg::AuditAsStored),
+                Language::Json,
+                masked,
+                "audit-record",
+            ),
+        ),
+    );
+    heading.then(h(format!(r#"<div class="fui-stack">{panel}</div>"#)))
 }
 
 /// One audit record.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn AuditRecordPage() -> impl IntoView {
-    let id = crate::routes::params().with(|params| params.get("id"));
-    let model = page_model!(load_record(id));
-    let page = drawn(model, |model| match model {
-        RecordModel::Found { row, masked } => record(&row, masked),
-        RecordModel::Gone => view! {
-            {heading()}
-            {crate::pages::common::info_note(tr(ConsoleMsg::AuditRecordGone))}
+/// One audit record.
+pub async fn record_page() -> Drawn {
+    let id = crate::routes::params().get("id");
+    match load_record(id).await {
+        Ok(RecordModel::Found { row, masked }) => Drawn::page(event(&row), record(&row, masked)),
+        Ok(RecordModel::Gone) => Drawn::page(
+            tr(Msg::NavAudit),
+            heading().then(crate::pages::common::info_note(t(tr(
+                ConsoleMsg::AuditRecordGone,
+            )))),
+        ),
+        Ok(RecordModel::StoreOff) => Drawn::page(tr(Msg::NavAudit), heading().then(store_off())),
+        Ok(RecordModel::Refused(refusal)) => {
+            Drawn::page(tr(Msg::NavAudit), heading().then(refusal.view()))
         }
-        .into_any(),
-        RecordModel::StoreOff => view! {
-            {heading()}
-            {store_off()}
-        }
-        .into_any(),
-        RecordModel::Refused(refusal) => view! {
-            {heading()}
-            {refusal.view()}
-        }
-        .into_any(),
-    });
-    view! { {page} }
+        Err(error) => Drawn::page(
+            tr(Msg::NavAudit),
+            heading().then(drawn(Err::<(), _>(error), |()| Html::empty())),
+        ),
+    }
 }

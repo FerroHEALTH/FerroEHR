@@ -9,98 +9,30 @@
 //! `view::dock`) and the viewer's catalog; none draws a component of its own.
 //! No openEHR spec governs the viewer's pages: our own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::dock::{Decision, DecisionBar, DecisionState, DockForm, DockLine};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::surface::{SectionHead, panel_section};
-use leptos::prelude::*;
 
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, t};
 
-/// The view `answer` draws once it resolves, awaited on the server.
-///
-/// Every route renders `SsrMode::Async`, so the page reaches the browser
-/// whole, with no streamed fragment and no WebAssembly needed.
+/// The part `draw` makes of the model `answer` holds, or the refusal of the
+/// read that did not answer.
 #[must_use]
-pub fn awaited<F>(answer: F) -> AnyView
-where
-    F: Future<Output = AnyView> + Send + 'static,
-{
-    view! { <Suspense fallback=|| ()>{Suspend::new(answer)}</Suspense> }.into_any()
-}
-
-/// The resource of a page's model, read by its server function.
-///
-/// `page_model!(load(args))` calls the server function `load` with the
-/// address of the page being drawn before `args`: on the server a plain call,
-/// in the browser a call to the viewer's server for a page it draws after a
-/// navigation. The loader is the one place a page reads or writes the CDR,
-/// answers its post and redirects; the view draws the model it resolves to on
-/// either half. A hydrating browser takes the model the server serialized and
-/// never polls the future (Leptos `OnceResource`).
-macro_rules! page_model {
-    ($load:ident ( $($arg:expr),* $(,)? )) => {
-        ::leptos::prelude::OnceResource::new($load(crate::request::path_and_query() $(, $arg)*))
-    };
-}
-pub(crate) use page_model;
-
-/// The model `answer` holds, or its refusal drawn when the server function
-/// that reads it did not answer.
-fn answered<T>(answer: Result<T, ViewerError>) -> Result<T, AnyView> {
-    answer.map_err(|error| refused(tr(Msg::PageRefused), &error, None))
-}
-
-/// The view `draw` makes of the model `model` resolves to.
-#[must_use]
-pub fn drawn<T, F>(model: OnceResource<Result<T, ViewerError>>, draw: F) -> AnyView
-where
-    T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned + 'static,
-    F: FnOnce(T) -> AnyView + Send + 'static,
-{
-    awaited(async move {
-        match answered(model.await) {
-            Ok(model) => draw(model),
-            Err(refusal) => refusal,
-        }
-    })
-}
-
-/// The view `draw` makes of the model `model` resolves to, on a page that
-/// docks a decision bar: `promise` is held until the view is drawn, so the
-/// shell waits for the dock the view sets.
-#[must_use]
-pub fn docked<T, F>(
-    model: OnceResource<Result<T, ViewerError>>,
-    promise: crate::shell::DockPromise,
-    draw: F,
-) -> AnyView
-where
-    T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned + 'static,
-    F: FnOnce(T) -> AnyView + Send + 'static,
-{
-    awaited(async move {
-        let view = match answered(model.await) {
-            Ok(model) => draw(model),
-            Err(refusal) => refusal,
-        };
-        #[cfg_attr(
-            target_arch = "wasm32",
-            expect(
-                clippy::no_effect_underscore_binding,
-                reason = "the browser's promise holds nothing; only the server waits on it"
-            )
-        )]
-        let _kept = promise;
-        view
-    })
+pub fn drawn<T>(answer: Result<T, ViewerError>, draw: impl FnOnce(T) -> Html) -> Html {
+    match answer {
+        Ok(model) => draw(model),
+        Err(error) => refused(tr(Msg::PageRefused), &error, None),
+    }
 }
 
 /// A refusal a page's model carries: the sentence saying what did not happen
 /// and the viewer error behind it.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Refused {
     /// What did not happen.
     pub summary: String,
@@ -117,7 +49,7 @@ impl Refused {
 
     /// The refusal, drawn.
     #[must_use]
-    pub fn view(&self) -> AnyView {
+    pub fn view(&self) -> Html {
         refused(self.summary.clone(), &self.error, None)
     }
 }
@@ -125,7 +57,7 @@ impl Refused {
 /// The refusal of `error`, with the sentence `summary` saying what did not
 /// happen and the request it answered, when known.
 #[must_use]
-pub fn refused(summary: String, error: &ViewerError, request: Option<String>) -> AnyView {
+pub fn refused(summary: String, error: &ViewerError, request: Option<String>) -> Html {
     let (status, issues) = match error {
         ViewerError::Cdr { status, message } => (
             Some(*status),
@@ -156,14 +88,16 @@ pub fn refused(summary: String, error: &ViewerError, request: Option<String>) ->
             vec![Issue::new(Severity::Error, tr(Msg::InternalCode)).text(message.clone())],
         ),
     };
-    refusal(&Refusal {
-        status,
-        summary,
-        issues,
-        request,
-        evidence: None,
-    })
-    .into_any()
+    refusal(
+        &current(),
+        &Refusal {
+            status,
+            summary,
+            issues,
+            request,
+            evidence: None,
+        },
+    )
 }
 
 /// A status code with its reason phrase, as an issue names it ("412
@@ -188,7 +122,7 @@ pub fn is_status(error: &ViewerError, status: http::StatusCode) -> bool {
 /// A state as its tone and its word (family rule 12): FerroUI's pill, whose
 /// dot and word say it together, never colour alone.
 #[must_use]
-pub fn state_mark(state: ferrohealth_ui::view::flow::FlowState, word: &str) -> AnyView {
+pub fn state_mark(state: ferrohealth_ui::view::flow::FlowState, word: &str) -> Html {
     ferrohealth_ui::view::state::state(state.into(), word.to_owned(), None)
 }
 
@@ -196,15 +130,12 @@ pub fn state_mark(state: ferrohealth_ui::view::flow::FlowState, word: &str) -> A
 /// whole of it in the tooltip; an identifier of twelve characters or fewer
 /// stays whole.
 #[must_use]
-pub fn short(id: &str) -> AnyView {
-    let id = id.to_owned();
-    let shown = shortened(&id);
-    view! {
-        <code title=id class="fui-nowrap">
-            {shown}
-        </code>
-    }
-    .into_any()
+pub fn short(id: &str) -> Html {
+    h(format!(
+        r#"<code title="{}" class="fui-nowrap">{}</code>"#,
+        t(id),
+        t(shortened(id))
+    ))
 }
 
 /// The words [`short`] shows for `id`.
@@ -224,10 +155,10 @@ pub fn shortened(id: &str) -> String {
 /// in `datetime`.
 ///
 /// It counts from the instant the server read for the page
-/// ([`crate::request::now`]), so both halves draw the same text.
+/// ([`crate::request::now`]), so every part of the page counts from one now.
 #[must_use]
-pub fn ago(raw: &str) -> AnyView {
-    ferrohealth_ui::view::time::relative(raw, &clock(crate::request::now())).into_any()
+pub fn ago(raw: &str) -> Html {
+    ferrohealth_ui::view::time::relative(&current(), raw, &clock(crate::request::now()))
 }
 
 /// The instant `now` in the form FerroUI's relative time reads.
@@ -237,8 +168,8 @@ fn clock(now: jiff::Timestamp) -> String {
 
 /// An absolute time for a record (family rule 11), as FerroUI draws it.
 #[must_use]
-pub fn when(raw: &str) -> AnyView {
-    ferrohealth_ui::view::time::timestamp(raw).into_any()
+pub fn when(raw: &str) -> Html {
+    ferrohealth_ui::view::time::timestamp(&current(), raw)
 }
 
 /// One part of a tab panel (B10) titled `title`, with its count and actions.
@@ -246,10 +177,11 @@ pub fn when(raw: &str) -> AnyView {
 pub fn section(
     title: Option<String>,
     count: Option<u64>,
-    actions: Option<AnyView>,
-    body: impl IntoView + 'static,
-) -> AnyView {
+    actions: Option<Html>,
+    body: Html,
+) -> Html {
     panel_section(
+        &current(),
         title.map(|title| SectionHead {
             title,
             count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
@@ -261,51 +193,53 @@ pub fn section(
 
 /// A part of a tab panel with no heading.
 #[must_use]
-pub fn plain_section(body: impl IntoView + 'static) -> AnyView {
-    panel_section(None, body)
+pub fn plain_section(body: Html) -> Html {
+    panel_section(&current(), None, body)
 }
 
 /// The panel that holds a tab's sections, edge to edge (B10).
 #[must_use]
-pub fn panel(sections: impl IntoView + 'static) -> AnyView {
-    view! { <div class="fui-panel">{sections.into_any()}</div> }.into_any()
+pub fn panel(sections: Html) -> Html {
+    h(r#"<div class="fui-panel">"#.to_owned())
+        .then(sections)
+        .then(h("</div>".to_owned()))
 }
 
 /// The sections of a page with no tabs, in one card (B10).
 #[must_use]
-pub fn card_panel(sections: impl IntoView + 'static) -> AnyView {
-    view! { <div class="fui-card fui-panel">{sections.into_any()}</div> }.into_any()
+pub fn card_panel(sections: Html) -> Html {
+    h(r#"<div class="fui-card fui-panel">"#.to_owned())
+        .then(sections)
+        .then(h("</div>".to_owned()))
 }
 
 /// One quiet line where an answer or a list will be.
 #[must_use]
-pub fn quiet(line: impl Into<String>) -> AnyView {
+pub fn quiet(line: impl Into<String>) -> Html {
     ferrohealth_ui::view::transform::transform_quiet(line)
 }
 
 /// A one-line notice in the info tone, as a page opens over an older version
 /// or a reading.
 #[must_use]
-pub fn info_note(body: impl IntoView + 'static) -> AnyView {
+pub fn info_note(body: Html) -> Html {
     ferrohealth_ui::view::notice::notice(
         ferrohealth_ui::tone::Tone::Info,
         ferrohealth_ui::view::notice::Announce::Status,
         None,
-        body.into_any(),
+        body,
     )
-    .into_any()
 }
 
 /// A one-line notice in the warn tone.
 #[must_use]
-pub fn warn_note(body: impl IntoView + 'static) -> AnyView {
+pub fn warn_note(body: Html) -> Html {
     ferrohealth_ui::view::notice::notice(
         ferrohealth_ui::tone::Tone::Warn,
         ferrohealth_ui::view::notice::Announce::Status,
         None,
-        body.into_any(),
+        body,
     )
-    .into_any()
 }
 
 /// Today in UTC, at the instant the server read for the page
@@ -339,12 +273,13 @@ pub fn first_day() -> ferrohealth_ui::calendar::Weekday {
 }
 
 /// A history filter's date range (R22): one button naming the range once
-/// the page hydrates, its From and To fields (`from`, `to`) before, posted
-/// or sent with the form around it.
+/// its module runs, its From and To fields (`from`, `to`) with no script,
+/// posted or sent with the form around it.
 #[must_use]
-pub fn date_range(id: &str, label: String, from: &str, to: &str) -> AnyView {
+pub fn date_range(id: &str, label: String, from: &str, to: &str) -> Html {
     use ferrohealth_ui::calendar::{Bounds, Preset};
-    use ferrohealth_ui::widget::date::{DateRange, DateWords, RangeEnd, RangePreset};
+    use ferrohealth_ui::view::date::{DateRange, DateWords, RangeEnd, RangePreset};
+    let locale = current();
     let today = today();
     let range = DateRange {
         id: id.to_owned(),
@@ -374,19 +309,19 @@ pub fn date_range(id: &str, label: String, from: &str, to: &str) -> AnyView {
             Preset::ThisMonth,
         ]
         .into_iter()
-        .map(RangePreset::of_page)
+        .map(|preset| RangePreset::of(&locale, preset))
         .collect(),
-        words: DateWords::of_page(false),
+        words: DateWords::of(&locale, false),
     };
-    view! { <ferrohealth_ui::island::DateRangePicker range /> }.into_any()
+    ferrohealth_ui::view::date::date_range(range)
 }
 
 /// A date field (R23) with its picker (R25), a date and a time when
 /// `with_time`: the typed text is the field's value and posts with its form.
 #[must_use]
-pub fn date_field(id: &str, name: &str, label: String, value: &str, with_time: bool) -> AnyView {
+pub fn date_field(id: &str, name: &str, label: String, value: &str, with_time: bool) -> Html {
     use ferrohealth_ui::calendar::Bounds;
-    use ferrohealth_ui::widget::date::{DateField, DateWords};
+    use ferrohealth_ui::view::date::{DateField, DateWords};
     let today = today();
     let field = DateField {
         id: id.to_owned(),
@@ -404,9 +339,9 @@ pub fn date_field(id: &str, name: &str, label: String, value: &str, with_time: b
         with_time,
         quick: Vec::new(),
         chosen: None,
-        words: DateWords::of_page(with_time),
+        words: DateWords::of(&current(), with_time),
     };
-    view! { <ferrohealth_ui::island::DatePicker field /> }.into_any()
+    ferrohealth_ui::view::date::date_field(field)
 }
 
 /// The At a time row under a version history (E2): a date and time field
@@ -422,7 +357,7 @@ pub fn at_time_row(
         field: date_field(
             "at",
             "at",
-            ferrohealth_ui::view::versions::at_time_label()
+            ferrohealth_ui::view::versions::at_time_label(&current())
                 .text()
                 .to_owned(),
             value,
@@ -440,7 +375,7 @@ pub fn document_section(
     language: ferrohealth_ui::highlight::Language,
     text: String,
     copy: &str,
-) -> AnyView {
+) -> Html {
     use ferrohealth_ui::view::code::{Code, CodeHead, code_section};
     let code = Code {
         label: title.clone(),
@@ -451,6 +386,7 @@ pub fn document_section(
         diagnostics: Vec::new(),
     };
     code_section(
+        &current(),
         CodeHead {
             title,
             tags: Vec::new(),
@@ -560,7 +496,7 @@ pub fn count(n: usize) -> ferrohealth_ui::i18n::Arg {
 
 /// The days of an activity chart: each day's count by its place, the first
 /// and the last day, and the days its axis names.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LastDays {
     /// Each day's place from 0 and its count, every day of the window.
     pub counts: Vec<(u32, u32)>,
@@ -726,8 +662,8 @@ pub fn findings_of(
 #[must_use]
 pub fn marks_of(
     findings: Option<&(String, ferrohealth_ui::view::diagnostics::FileFindings)>,
-) -> Vec<ferrohealth_ui::widget::editor::LineMark> {
-    use ferrohealth_ui::widget::editor::{LineMark, MarkKind};
+) -> Vec<ferrohealth_ui::view::editor::LineMark> {
+    use ferrohealth_ui::view::editor::{LineMark, MarkKind};
     findings.map_or_else(Vec::new, |(_, file)| {
         file.findings
             .iter()
@@ -786,8 +722,8 @@ fn locate(text: &str, path: &str) -> Option<ferrohealth_ui::view::diagnostics::P
 #[cfg(test)]
 mod tests {
     use super::{
-        axis_day, clock, findings_of, last_days, last_days_to, locate, path_in, shortened,
-        status_words, tick_places, today,
+        axis_day, clock, findings_of, last_days_to, locate, path_in, shortened, status_words,
+        tick_places,
     };
     use crate::activity::ActivityPoint;
     use crate::error::ViewerError;
@@ -812,28 +748,16 @@ mod tests {
     fn a_time_in_a_list_reads_relative_to_the_page_instant_and_an_unknown_value_as_it_stands() {
         let now = clock("2026-10-21T09:42:11Z".parse().expect("an instant"));
         assert_eq!("2026-10-21T09:42:11Z", now);
-        assert_eq!("13 s ago", relative_reading("2026-10-21T09:41:58Z", &now));
-        assert_eq!("2 h ago", relative_reading("2026-10-21T07:40:00Z", &now));
-        assert_eq!("not a time", relative_reading("not a time", &now));
-    }
-
-    #[test]
-    fn today_and_the_activity_window_count_from_the_instant_the_page_carries() {
-        let owner = leptos::prelude::Owner::new();
-        owner.with(|| {
-            crate::request::provide(crate::request::Visit {
-                now: "2026-10-23T23:30:00Z"
-                    .parse::<jiff::Timestamp>()
-                    .expect("an instant")
-                    .as_millisecond(),
-                ..crate::request::Visit::default()
-            });
-            assert_eq!(
-                ferrohealth_ui::calendar::Day::new(2026, 10, 23),
-                Some(today())
-            );
-            assert_eq!(last_days(&[], 30).last, "2026-10-23");
-        });
+        let locale = ferrohealth_ui::i18n::Locale::english();
+        assert_eq!(
+            "13 s ago",
+            relative_reading(&locale, "2026-10-21T09:41:58Z", &now)
+        );
+        assert_eq!(
+            "2 h ago",
+            relative_reading(&locale, "2026-10-21T07:40:00Z", &now)
+        );
+        assert_eq!("not a time", relative_reading(&locale, "not a time", &now));
     }
 
     #[test]

@@ -13,6 +13,7 @@
 //! only by editing the file and restarting, so nothing here can be changed.
 //! No openEHR spec governs configuration: our own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
@@ -22,48 +23,39 @@ use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::Header;
 use ferrohealth_ui::view::tabs::{Tab, TabRow};
 use ferrohealth_ui::view::template::settings::{How, Setting, SettingsPage, Source, settings_page};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{Msg, tr};
-use crate::pages::common::{Refused, drawn, page_model};
+use crate::locale::{Msg, current, tr};
+use crate::markup::{h, t};
+use crate::pages::common::{Refused, drawn};
+use crate::routes::Drawn;
 
 /// The id of the dialog the file line's How configuration works opens.
 const HOW_DIALOG: &str = "how-configuration";
 
 /// How configuration works: where the settings are read from, where the
 /// viewer shows them and how they change.
-fn how_dialog() -> AnyView {
+fn how_dialog() -> Html {
+    let icon = ferrohealth_ui::icon::icon;
     info_dialog(
+        &current(),
         Explanation {
             id: HOW_DIALOG.into(),
             title: tr(ConsoleMsg::ConfigHowTitle).into(),
         },
-        view! {
-            <p>{tr(ConsoleMsg::ConfigHowReads)}</p>
-            <div class="fui-ownership">
-                <div>
-                    <h3>
-                        {ferrohealth_ui::icon::icon(Glyph::FILE_TEXT, "16")}
-                        {tr(ConsoleMsg::ConfigHowWhereTitle)}
-                    </h3>
-                    <p class="fui-small fui-muted">{tr(ConsoleMsg::ConfigHowWhere)}</p>
-                </div>
-                <div>
-                    <h3>
-                        {ferrohealth_ui::icon::icon(Glyph::REFRESH_CW, "16")}
-                        {tr(ConsoleMsg::ConfigHowChangeTitle)}
-                    </h3>
-                    <p class="fui-small fui-muted">{tr(ConsoleMsg::ConfigHowChange)}</p>
-                </div>
-            </div>
-            <p class="fui-small fui-muted">{tr(ConsoleMsg::ConfigHowNothing)}</p>
-        },
+        h(format!(
+            r#"<p>{reads}</p><div class="fui-ownership"><div><h3>{file}{where_title}</h3><p class="fui-small fui-muted">{where_line}</p></div><div><h3>{refresh}{change_title}</h3><p class="fui-small fui-muted">{change}</p></div></div><p class="fui-small fui-muted">{nothing}</p>"#,
+            reads = t(tr(ConsoleMsg::ConfigHowReads)),
+            file = icon(Glyph::FILE_TEXT, "16"),
+            where_title = t(tr(ConsoleMsg::ConfigHowWhereTitle)),
+            where_line = t(tr(ConsoleMsg::ConfigHowWhere)),
+            refresh = icon(Glyph::REFRESH_CW, "16"),
+            change_title = t(tr(ConsoleMsg::ConfigHowChangeTitle)),
+            change = t(tr(ConsoleMsg::ConfigHowChange)),
+            nothing = t(tr(ConsoleMsg::ConfigHowNothing)),
+        )),
     )
-    .into_any()
 }
 
 /// The sections of Configuration, each with the top-level keys of the CDR's
@@ -107,7 +99,6 @@ const SECTIONS: [(&str, ConsoleMsg, &[&str]); 7] = [
     ("viewer", ConsoleMsg::ConfigViewer, &[]),
 ];
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The section a top-level key belongs to: the one that names it, else
 /// Operations.
 fn section_of(top: &str) -> &'static str {
@@ -118,7 +109,7 @@ fn section_of(top: &str) -> &'static str {
 }
 
 /// A leaf of the CDR's configuration as the page draws it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Leaf {
     /// A flag.
     Flag(bool),
@@ -134,7 +125,6 @@ enum Leaf {
     Blank,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
@@ -162,7 +152,6 @@ impl From<&serde_json::Value> for Leaf {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Every leaf of a configuration tree as its dotted key and value.
 #[expect(
     clippy::disallowed_types,
@@ -200,32 +189,28 @@ fn is_redacted(text: &str) -> bool {
 }
 
 /// The words of a setting without a value.
-fn none() -> AnyView {
-    view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any()
+fn none() -> Html {
+    h(format!(
+        r#"<span class="fui-muted">{}</span>"#,
+        t(tr(Msg::RelationshipNone))
+    ))
 }
 
 /// The value of a setting as the row draws it.
-fn value_view(value: &Leaf) -> AnyView {
+fn value_view(value: &Leaf) -> Html {
     match value {
-        Leaf::Flag(true) => badge(Tone::Ok, tr(ConsoleMsg::ConfigOn)).into_any(),
-        Leaf::Flag(false) => badge(Tone::Neutral, tr(ConsoleMsg::ConfigOff)).into_any(),
-        Leaf::Text(text) if is_redacted(text) => secret_state(&SecretState::Redacted),
+        Leaf::Flag(true) => badge(Tone::Ok, tr(ConsoleMsg::ConfigOn)),
+        Leaf::Flag(false) => badge(Tone::Neutral, tr(ConsoleMsg::ConfigOff)),
+        Leaf::Text(text) if is_redacted(text) => secret_state(&current(), &SecretState::Redacted),
         Leaf::Text(text) if text.is_empty() => none(),
-        Leaf::Text(text) => view! { <code>{text.clone()}</code> }.into_any(),
-        Leaf::Number(number) => number.clone().into_any(),
+        Leaf::Text(text) => h(format!("<code>{}</code>", t(text))),
+        Leaf::Number(number) => t(number),
         Leaf::Nothing => none(),
         Leaf::Items(items) => items
             .iter()
-            .map(|item| {
-                view! {
-                    <code>{item.clone()}</code>
-                    " "
-                }
-                .into_any()
-            })
-            .collect_view()
-            .into_any(),
-        Leaf::Blank => ().into_any(),
+            .map(|item| h(format!("<code>{}</code> ", t(item))))
+            .collect(),
+        Leaf::Blank => Html::empty(),
     }
 }
 
@@ -242,7 +227,7 @@ fn setting(key: &str, value: &Leaf) -> Setting {
 }
 
 /// A setting of the viewer's own.
-fn own(label: ConsoleMsg, description: ConsoleMsg, key: &str, value: AnyView) -> Setting {
+fn own(label: ConsoleMsg, description: ConsoleMsg, key: &str, value: Html) -> Setting {
     Setting {
         label: tr(label),
         description: tr(description),
@@ -254,7 +239,7 @@ fn own(label: ConsoleMsg, description: ConsoleMsg, key: &str, value: AnyView) ->
 }
 
 /// Where a secret of the viewer's own comes from.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum OwnSecret {
     /// Read from this file.
     File(String),
@@ -265,8 +250,7 @@ enum OwnSecret {
 }
 
 impl OwnSecret {
-    #[cfg(not(target_arch = "wasm32"))]
-    /// The secret read from `file` or set as `inline`.
+        /// The secret read from `file` or set as `inline`.
     fn of(file: &str, inline: &str) -> Self {
         if !file.is_empty() {
             Self::File(file.to_owned())
@@ -278,18 +262,18 @@ impl OwnSecret {
     }
 
     /// The secret, drawn.
-    fn view(&self) -> AnyView {
+    fn view(&self) -> Html {
         let state = match self {
             Self::File(file) => SecretState::Set(file.clone()),
             Self::Inline => SecretState::Redacted,
             Self::Unset => SecretState::Unset,
         };
-        secret_state(&state)
+        secret_state(&current(), &state)
     }
 }
 
 /// The viewer's own settings, as the configuration it loaded holds them.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Own {
     /// `cdr.base_url`.
     base_url: String,
@@ -311,7 +295,6 @@ struct Own {
     locale: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The viewer's own settings, from the configuration it loaded.
 fn read_own() -> Option<Own> {
     let state = crate::request::state()?;
@@ -341,7 +324,7 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
     let Some(config) = loaded else {
         return Vec::new();
     };
-    let code = |text: &str| view! { <code>{text.to_owned()}</code> }.into_any();
+    let code = |text: &str| h(format!("<code>{}</code>", t(text)));
     let on = |yes: bool| value_view(&Leaf::Flag(yes));
     vec![
         own(
@@ -384,11 +367,10 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
             ConsoleMsg::ConfigIdle,
             ConsoleMsg::ConfigIdleLine,
             "session.idle_minutes",
-            crate::locale::tr_with(
+            t(crate::locale::tr_with(
                 ConsoleMsg::ConfigMinutes,
                 &[("count", config.idle_minutes.into())],
-            )
-            .into_any(),
+            )),
         ),
         own(
             ConsoleMsg::ConfigSessionKey,
@@ -406,7 +388,7 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
 }
 
 /// The settings a section shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Shown {
     /// The CDR's leaves of the section, by their dotted key.
     Cdr(Vec<(String, Leaf)>),
@@ -421,19 +403,15 @@ enum Shown {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load(
-    /// The path and query of the page.
-    href: String,
-    /// The section the route names.
+    // The section the route names.
     section: String,
 ) -> Result<Shown, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_page(section).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load`] reads, on the server.
+/// What [`load`] reads.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's configuration JSON tree to draw its leaves"
@@ -465,18 +443,13 @@ async fn read_page(section: String) -> Shown {
 }
 
 /// Configuration.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn ConfigurationPage() -> impl IntoView {
+/// Configuration.
+pub async fn page() -> Drawn {
     let section = crate::routes::params()
-        .with(|params| params.get("section"))
+        .get("section")
         .filter(|section| SECTIONS.iter().any(|(key, _, _)| key == section))
         .unwrap_or_else(|| "deployment".to_owned());
-    let model = page_model!(load(section.clone()));
-    let page = drawn(model, move |shown| {
+    let page = drawn(load(section.clone()).await, |shown| {
         let viewer = section == "viewer";
         let (settings, trouble) = match shown {
             Shown::Cdr(rows) => (
@@ -499,41 +472,37 @@ pub fn ConfigurationPage() -> impl IntoView {
                 Tab::new(*key, href, tr(*words))
             })
             .collect();
-        let page = settings_page(SettingsPage {
-            header: Header {
-                title: tr(Msg::NavConfiguration).into(),
-                subtitle: Some(tr(ConsoleMsg::ConfigSubtitle).into()),
-                crumbs: Vec::new(),
-                mono: false,
-                badge: None,
-                subtitle_view: None,
-            },
-            actions: ActionGroup::none(),
-            source: Source::File {
-                file: if viewer {
-                    "ferroehr-viewer.toml".to_owned()
-                } else {
-                    "ferroehr.toml".to_owned()
+        let page = settings_page(
+            &current(),
+            SettingsPage {
+                header: Header {
+                    title: tr(Msg::NavConfiguration).into(),
+                    subtitle: Some(tr(ConsoleMsg::ConfigSubtitle).into()),
+                    crumbs: Vec::new(),
+                    mono: false,
+                    badge: None,
+                    subtitle_view: None,
                 },
-                how: How::Dialog(HOW_DIALOG.into()),
+                actions: ActionGroup::none(),
+                source: Source::File {
+                    file: if viewer {
+                        "ferroehr-viewer.toml".to_owned()
+                    } else {
+                        "ferroehr.toml".to_owned()
+                    },
+                    how: How::Dialog(HOW_DIALOG.into()),
+                },
+                tabs: Some(TabRow {
+                    label: tr(ConsoleMsg::ConfigSections),
+                    tabs,
+                    current: section.clone(),
+                }),
+                settings,
+                replica: None,
             },
-            tabs: Some(TabRow {
-                label: tr(ConsoleMsg::ConfigSections),
-                tabs,
-                current: section.clone(),
-            }),
-            settings,
-            replica: None,
-        });
-        view! {
-            {page}
-            {trouble}
-            {how_dialog()}
-        }
-        .into_any()
+        );
+        Html::join([page, trouble.unwrap_or_default(), how_dialog()])
     });
-    view! {
-        <Title text=tr(Msg::NavConfiguration) />
-        {page}
-    }
+    Drawn::page(tr(Msg::NavConfiguration), page)
 }
+

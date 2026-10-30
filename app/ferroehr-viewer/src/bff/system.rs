@@ -17,12 +17,10 @@
 //! SMART discovery document follows
 //! `docs/specs/openehr/ITS-REST/docs/smart_app_launch/master04-service_discovery.adoc`.
 //!
-//! One failing card never blanks the page: each resolves its `Result` inside
-//! its own `<Suspense>` rather than through an `<ErrorBoundary>`, whose SSR'd
-//! fallback mismatches at hydration in leptos 0.8. Every co-located
-//! `#[server]` fn guards with
+//! One failing card never blanks the page: each card draws its own `Result`.
+//! Every read guards with
 //! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches client-visible state.
+//! credential never reaches the page.
 
 #![allow(
     clippy::disallowed_types,
@@ -31,16 +29,11 @@
               hydrate target"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr;
 use crate::locale::tr_with;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::served_vocabulary::OPENAPI_FAMILIES;
 
 /// Where the CDR serves its SMART service-discovery document, relative to the
@@ -64,10 +57,9 @@ const SMART_DISCOVERY_PATH: &str = ".well-known/smart-configuration";
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
 /// errors pass through; a non-2xx, non-404 CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_smart_config() -> Result<Option<String>, ViewerError> {
-    crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_root_url(SMART_DISCOVERY_PATH);
     let response = state.cdr.get_public(&url, "application/json").await?;
     if response.is(http::StatusCode::NOT_FOUND) {
@@ -85,7 +77,6 @@ pub async fn fetch_smart_config() -> Result<Option<String>, ViewerError> {
 /// [`OPENAPI_FAMILIES`], which the server holds its own family set to, and a
 /// deployment that does not serve a family answers `404`, a first-class state
 /// on the card.
-#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn openapi_families() -> impl Iterator<Item = (&'static str, String)> {
     std::iter::once(("", tr(ConsoleMsg::CompleteSurface))).chain(
         OPENAPI_FAMILIES
@@ -103,13 +94,12 @@ pub(crate) fn openapi_families() -> impl Iterator<Item = (&'static str, String)>
 /// [`ViewerError::Invalid`] for a `family` the CDR has no document for; CDR
 /// transport errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_openapi(
-    /// Which served OpenAPI document to read, as an API-family slug.
+    // Which served OpenAPI document to read, as an API-family slug.
     family: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     // A server fn is a public endpoint: the family must be one of the documents
     // we know the CDR serves, never a caller-shaped path segment.
     let family = family.trim();
@@ -156,10 +146,9 @@ pub async fn fetch_openapi(
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR
 /// transport errors pass through; non-2xx answers normalize via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_admin_config() -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1("admin/config");
     let response = state
         .cdr
@@ -181,10 +170,8 @@ pub async fn fetch_admin_config() -> Result<String, ViewerError> {
 /// interpolation safe; the binding travels in `query_parameters`
 /// (`docs/specs/openehr/ITS-REST/specifications/docs/query/Request.md`
 /// §Query parameters) and is matched as data.
-#[cfg(not(target_arch = "wasm32"))]
 const TEMPLATE_USAGE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = $template";
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Build the `POST query/aql` request body counting the compositions committed
 /// under `template_id`.
 ///
@@ -200,11 +187,9 @@ fn template_usage_body(template_id: &str) -> String {
 }
 
 /// How many templates the repository-usage card counts.
-#[cfg(not(target_arch = "wasm32"))]
 const USAGE_TEMPLATES: usize = 25;
 
 /// Count the compositions committed under one template, via `POST query/aql`.
-#[cfg(not(target_arch = "wasm32"))]
 async fn template_count(
     state: &crate::state::AppState,
     session: &crate::session::ViewerSession,
@@ -237,11 +222,12 @@ async fn template_count(
     Ok((template_id, count))
 }
 
-/// Per-template composition counts ("repo usage") — one count AQL per
-/// template, plain AQL (no CDR stats endpoint exists). Bounded to the first
-/// `USAGE_TEMPLATES` templates, sorted by count descending; the second
-/// member is the repository's total template count, so the card can say
-/// when it is showing a truncated list.
+/// Per-template composition counts ("repo usage") — one count AQL per template,
+/// plain AQL (no CDR stats endpoint exists).
+///
+/// Bounded to the first `USAGE_TEMPLATES` templates, sorted by count
+/// descending; the second member is the repository's total template count, so
+/// the card can say when it is showing a truncated list.
 ///
 /// The counts fan out with the shared bounded concurrency
 /// ([`FANOUT_CONCURRENCY`](crate::cdr::FANOUT_CONCURRENCY)) rather than a serial
@@ -252,16 +238,15 @@ async fn template_count(
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
 /// normalized by the underlying calls.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn template_usage() -> Result<(Vec<(String, i64)>, u32), ViewerError> {
     use futures::stream::{StreamExt, TryStreamExt};
 
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let templates = crate::bff::templates::list_templates().await?;
     let total = u32::try_from(templates.len()).unwrap_or(u32::MAX);
     // Borrowed once outside the stream: each fan-out future captures the two
-    // references by copy, which keeps the `#[server]` boundary's future sized.
+    // references by copy, which keeps the read's future sized.
     let state = &state;
     let session = &session;
     let mut usage: Vec<(String, i64)> = futures::stream::iter(
@@ -343,7 +328,6 @@ pub(crate) type Endpoint = (String, String, String);
 /// to the first path segment, then `"default"`), as sorted `(group, rows)`
 /// where each row is `(METHOD, path)`. Sorted throughout so server and client
 /// render the identical structure (no non-deterministic order).
-#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn group_openapi_paths(doc: &serde_json::Value) -> Vec<(String, Vec<Endpoint>)> {
     const METHODS: [&str; 8] = [
         "get", "put", "post", "delete", "patch", "options", "head", "trace",
@@ -455,7 +439,6 @@ mod tests {
         assert!(!copy.contains("not enabled"), "{copy}");
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_template_id_travels_as_a_binding_and_never_as_query_text() {
         use super::{TEMPLATE_USAGE_AQL, template_usage_body};
@@ -489,7 +472,6 @@ mod tests {
         assert!(!TEMPLATE_USAGE_AQL.contains('\''), "{TEMPLATE_USAGE_AQL}");
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn the_repository_usage_statement_is_valid_aql() {
         // The fixed text is parsed by the real grammar, so a typo in the

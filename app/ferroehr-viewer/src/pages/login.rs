@@ -5,8 +5,8 @@
 //! and every state the page can be in.
 //!
 //! The Basic form is a plain `POST` to this page, with plain uncontrolled
-//! `username` and `current-password` inputs, so it works with no WebAssembly
-//! (FerroUI `leptos-ui.md` §5): accepted credentials send the reader on with
+//! `username` and `current-password` inputs, so it works with no script
+//! (FerroUI `console-ui.md` §5): accepted credentials send the reader on with
 //! a redirect, and refused ones draw the page again with the refusal under
 //! the password and the username kept. The OIDC action is a plain link to
 //! the viewer's own `/auth/oidc/login` route. The page shows the session
@@ -14,25 +14,23 @@
 //! (`?refused=1`, the OIDC callback's) from its address. Which methods it
 //! offers comes from [`crate::auth::fetch_login_screen`].
 //!
-//! The page's loader signs in, reads the screen and redirects on the server;
-//! the view draws the model it leaves on either half. The model carries the
-//! username as typed and never the password or a session. No openEHR spec
-//! governs the viewer: our own design.
+//! The page's handler signs in, reads the screen and redirects; the view
+//! draws the model it leaves. The model carries the username as typed and
+//! never the password or a session. No openEHR spec governs the viewer: our
+//! own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::view::shell::{brand_mark, centred, lockup_plain};
+use ferrohealth_ui::view::shell::{brand_mark, lockup_plain};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, State, sign_in};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::auth::LoginScreen;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::auth::{SignedIn, fetch_login_screen, sign_in_basic};
 use crate::error::ViewerError;
 use crate::locale::signin::SignInMsg;
-use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::{drawn, page_model};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, t};
+use crate::routes::Drawn;
 
 /// The BFF's OIDC sign-in URL, carrying the post-login destination.
 ///
@@ -71,7 +69,7 @@ fn card(
     next: &str,
     username: String,
     error: Option<String>,
-) -> AnyView {
+) -> Html {
     let (basic, oidc, notice_text, links, state) = match screen {
         Ok(screen) => (
             screen.basic,
@@ -102,15 +100,17 @@ fn card(
         .and_then(|uri| uri.host().map(str::to_owned))
         .unwrap_or_else(|| tr(SignInMsg::IdentityProvider));
     let line = (!notice_text.is_empty()).then(|| {
-        view! { <p class="fui-small fui-muted fui-sign-in-line">{notice_text}</p> }.into_any()
+        h(format!(
+            r#"<p class="fui-small fui-muted fui-sign-in-line">{}</p>"#,
+            t(&notice_text)
+        ))
     });
-    sign_in(SignIn {
+    sign_in(&current(), SignIn {
         lockup: lockup_plain(
             brand_mark(crate::shell::MARK_PATH, crate::shell::MARK_PATH),
             tr(Msg::BrandName),
             tr(Msg::BrandWord),
-        )
-        .into_any(),
+        ),
         title: Some(tr(SignInMsg::Title)),
         state,
         provider: oidc.then(|| Provider {
@@ -135,11 +135,10 @@ fn card(
             .collect(),
         caption: Some(tr(SignInMsg::Caption)),
     })
-    .into_any()
 }
 
 /// The sign-in page's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum LoginModel {
     /// The card: the methods on offer, the username as typed and the
     /// sentence under the password.
@@ -155,22 +154,7 @@ enum LoginModel {
     Left,
 }
 
-/// Loads the sign-in page: answers its Basic post and reads the screen.
-///
-/// # Errors
-/// None of its own: the server function fails only when the browser cannot
-/// reach it.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_login(
-    /// The path and query of the page.
-    href: String,
-) -> Result<LoginModel, ViewerError> {
-    crate::request::visiting_public(&href);
-    Ok(read_login().await)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_login`] reads, on the server.
+/// The sign-in page's model: the attempt a post makes, and the screen.
 async fn read_login() -> LoginModel {
     let attempt = match crate::posted::posted() {
         Some(posted) => {
@@ -187,7 +171,7 @@ async fn read_login() -> LoginModel {
     };
     let (username, error) = match attempt {
         Some((_, Ok(SignedIn::Accepted(to)))) => {
-            leptos_axum::redirect(&to);
+            crate::request::redirect(&to);
             return LoginModel::Left;
         }
         Some((username, Ok(SignedIn::Refused))) => (username, Some(tr(SignInMsg::Refused))),
@@ -207,27 +191,18 @@ async fn read_login() -> LoginModel {
     }
 }
 
-/// The sign-in page.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn LoginPage() -> impl IntoView {
+/// The sign-in page, drawn centred with no shell.
+pub async fn login_page() -> Drawn {
     let (next, state) = arrival();
-    let model = page_model!(load_login());
-    let body = drawn(model, move |model| match model {
+    let body = match read_login().await {
         LoginModel::Card {
             screen,
             username,
             error,
         } => card(screen, state, &next, username, error),
-        LoginModel::Left => ().into_any(),
-    });
-    view! {
-        <Title text=tr(SignInMsg::Title) />
-        {centred(body, crate::shell::footer())}
-    }
+        LoginModel::Left => Html::empty(),
+    };
+    Drawn::bare(tr(SignInMsg::Title), body)
 }
 
 #[cfg(test)]

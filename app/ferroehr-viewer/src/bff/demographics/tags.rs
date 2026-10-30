@@ -30,19 +30,12 @@
               hydrate target"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::demographics::PartyKind;
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::Msg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
 
 /// The demographic tag index (`GET /demographic/tags`), optionally filtered.
@@ -59,17 +52,16 @@ use crate::locale::tr_served;
 /// errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the list is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_demographic_tags(
-    /// Exact `ITEM_TAG.key` filter; empty constrains nothing.
+    // Exact `ITEM_TAG.key` filter; empty constrains nothing.
     key: String,
-    /// Exact `ITEM_TAG.value` filter; empty constrains nothing.
+    // Exact `ITEM_TAG.value` filter; empty constrains nothing.
     value: String,
-    /// Exact `ITEM_TAG.target_path` filter; empty constrains nothing.
+    // Exact `ITEM_TAG.target_path` filter; empty constrains nothing.
     target_path: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let query = crate::bff::item_tags::tag_filter_query(&key, &value, &target_path);
     let url = state.cdr.rest_v1(&format!("demographic/tags{query}"));
     let response = state
@@ -93,21 +85,19 @@ pub async fn list_demographic_tags(
 /// normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the list is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_party_tags(
-    /// The party family, as its route segment ([`PartyKind::segment`]).
+    // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
-    /// The party's version container id.
+    // The party's version container id.
     uid: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     read_party_tags(&state, &session.credential, kind, &uid).await
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Read one party's container tag collection.
 ///
 /// The plain function behind [`fetch_party_tags`], so [`set_party_tag`]'s
@@ -145,21 +135,20 @@ async fn read_party_tags(
 /// that breaks an `ITEM_TAG` invariant included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the current list is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn set_party_tag(
-    /// The party family, as its route segment ([`PartyKind::segment`]).
+    // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
-    /// The party's version container id.
+    // The party's version container id.
     uid: String,
-    /// The tag key to set.
+    // The tag key to set.
     key: String,
-    /// The tag value; blank stores a tag with no value.
+    // The tag value; blank stores a tag with no value.
     value: String,
-    /// The tag's `target_path`; blank tags the whole object.
+    // The tag's `target_path`; blank tags the whole object.
     target_path: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     if key.trim().is_empty() {
@@ -206,17 +195,16 @@ pub async fn set_party_tag(
 /// [`ViewerError::Invalid`] on an unknown kind segment or a blank key; CDR
 /// transport errors pass through; any non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_party_tag(
-    /// The party family, as its route segment ([`PartyKind::segment`]).
+    // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
-    /// The party's version container id.
+    // The party's version container id.
     uid: String,
-    /// The tag key to remove.
+    // The tag key to remove.
     key: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let key = key.trim();
@@ -233,7 +221,6 @@ pub async fn delete_party_tag(
     Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The `/demographic/{kind}/{uid_based_id}/tags` URL of a party's container tag
 /// collection.
 fn tags_url(state: &crate::state::AppState, kind: PartyKind, uid: &str) -> String {

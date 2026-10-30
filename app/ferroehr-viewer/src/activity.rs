@@ -4,11 +4,10 @@
 //! Activity timelines: the pure day-bucketing every activity chart in the
 //! viewer derives its points from.
 //!
-//! Kept out of the components (and out of the `#[server]` bodies) on purpose —
+//! Kept out of the components (and out of the BFF bodies) on purpose —
 //! business logic lives in plain, unit-tested Rust and the views stay thin. It
 //! is also a pure, deterministic function of its input: no clock, no locale,
-//! no network, so a chart derived from it renders identically on the server
-//! pass and after hydration.
+//! no network, so a chart derived from it renders identically on every draw.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
 //! The timestamps it buckets ARE spec-bound: `AUDIT_DETAILS.time_committed`

@@ -6,15 +6,14 @@
 //! A page whose work succeeded answers its post with a redirect (post,
 //! redirect, get) and keeps what it did in a short-lived cookie; the next page
 //! hands it to FerroUI's toast region as a flash toast, which shows with no
-//! WebAssembly, and clears the cookie in the same response (FerroUI
-//! `leptos-ui.md` §15.4). The browser takes the same toast with the page
-//! ([`shared`]). The cookie holds the toast's words, never patient data. No
-//! openEHR spec governs this: our own design.
+//! script, and clears the cookie in the same response (FerroUI
+//! `docs/consoles.md`, "How a console builds", step 5). The cookie holds the
+//! toast's words, never patient data. No openEHR spec governs this: our own
+//! design.
 
-#[cfg(not(target_arch = "wasm32"))]
 use base64::Engine as _;
 use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::widget::toast::{Flash, ToastLink};
+use ferrohealth_ui::view::toast::{Flash, ToastLink};
 use serde::{Deserialize, Serialize};
 
 /// The cookie a flash toast crosses its redirect in.
@@ -75,8 +74,7 @@ impl Done {
     /// # Panics
     ///
     /// Never: a toast of strings and a tone always serializes.
-    #[cfg(not(target_arch = "wasm32"))]
-    #[must_use]
+        #[must_use]
     #[expect(
         clippy::expect_used,
         reason = "serde_json serializes a struct of strings, a tone and an optional pair of strings without error: no map with non-string keys and no failing Serialize impl is reachable"
@@ -87,8 +85,7 @@ impl Done {
     }
 
     /// The toast a cookie value carries; `None` for a value no toast wrote.
-    #[cfg(not(target_arch = "wasm32"))]
-    #[must_use]
+        #[must_use]
     pub fn decode(value: &str) -> Option<Self> {
         let json = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(value.trim())
@@ -97,7 +94,6 @@ impl Done {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Ends the page being drawn with a redirect to the viewer page `to`, the
 /// toast `done` waiting for it.
 pub fn redirect_with(to: &str, done: &Done) {
@@ -105,11 +101,10 @@ pub fn redirect_with(to: &str, done: &Done) {
         "{FLASH_COOKIE}={}; Path=/; SameSite=Lax; HttpOnly; Max-Age=60",
         done.encode()
     ));
-    leptos_axum::redirect(crate::request::return_path(to));
+    crate::request::redirect(to);
 }
 
 /// The toast waiting for the page being drawn, cleared in the same response.
-#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn take() -> Vec<Flash> {
     let cookies = crate::request::cookies();
@@ -120,23 +115,6 @@ pub fn take() -> Vec<Flash> {
         "{FLASH_COOKIE}=; Path=/; SameSite=Lax; HttpOnly; Max-Age=0"
     ));
     Done::decode(value).map(Done::flash).into_iter().collect()
-}
-
-/// The toast waiting for the page, taken on the server and shared with the
-/// browser through the serialized page.
-#[must_use]
-pub fn shared() -> Vec<Flash> {
-    leptos::prelude::SharedValue::new(|| {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            take()
-        }
-        #[cfg(target_arch = "wasm32")]
-        {
-            Vec::new()
-        }
-    })
-    .into_inner()
 }
 
 #[cfg(test)]

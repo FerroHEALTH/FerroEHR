@@ -3,7 +3,7 @@
 
 //! The position of a listing that can show patient data, kept out of the URL.
 //!
-//! FerroUI's mandate (its `leptos-ui.md` §0): a listing that can show patient
+//! FerroUI's mandate (its `console-ui.md` §0): a listing that can show patient
 //! data keeps its page and size out of the address. Its pager posts them
 //! (`table::pager::post_open_pager`) to [`PAGING_ROUTE`], which keeps them in
 //! a cookie that lasts the browser's session, never a URL or the history, and
@@ -11,12 +11,11 @@
 //! position. The cookie names the listing and holds two numbers, never patient
 //! data. No openEHR spec governs this: our own design.
 
-#[cfg(not(target_arch = "wasm32"))]
 use axum::extract::Form;
-#[cfg(not(target_arch = "wasm32"))]
+
 use axum::response::{IntoResponse, Redirect, Response};
 use ferrohealth_ui::table::model::Paging;
-#[cfg(not(target_arch = "wasm32"))]
+
 use http::StatusCode;
 
 /// The route a session listing's pager posts its page and size to.
@@ -84,7 +83,6 @@ pub fn fields(listing: Listing) -> Vec<(String, String)> {
     ]
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What a session listing's pager posts.
 #[derive(Debug, serde::Deserialize)]
 pub struct PagingChoice {
@@ -98,7 +96,6 @@ pub struct PagingChoice {
     back: String,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Keeps the position a listing's pager posted in a cookie for the browser's
 /// session and sends the browser back to the listing.
 pub async fn choose_paging(Form(choice): Form<PagingChoice>) -> Response {

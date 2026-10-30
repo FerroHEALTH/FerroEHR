@@ -11,18 +11,18 @@
 //! [`DOWNLOAD_ROUTE`]. No openEHR spec governs the viewer: our own design.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::surface::Header;
 use ferrohealth_ui::view::template::about::{
     AboutPage as Page, Link, Manufacturer, SelfDescription, about_page,
 };
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::{Refused, drawn, page_model};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::t;
+use crate::pages::common::{Refused, drawn};
+use crate::routes::Drawn;
 
 /// The route the manifest's Download reads the document from.
 pub const DOWNLOAD_ROUTE: &str = "/about/manifest.json";
@@ -32,7 +32,7 @@ const BOOK: &str = "https://ferroehr.eu/docs/latest/";
 
 /// About's model: the versions it names, the release, the manufacturer's
 /// address and the manifest as the CDR sent it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Model {
     /// The CDR's version.
     cdr_version: String,
@@ -50,17 +50,13 @@ struct Model {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load(
-    /// The path and query of the page.
-    href: String,
 ) -> Result<Model, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_page().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load`] reads, on the server.
+/// What [`load`] reads.
 async fn read_page() -> Model {
     let status = crate::shell::status().await;
     let document = match crate::request::state() {
@@ -95,7 +91,7 @@ async fn read_page() -> Model {
 }
 
 /// About, drawn from its model.
-fn about(model: Model) -> AnyView {
+fn about(model: Model) -> Html {
     let Model {
         cdr_version,
         rest,
@@ -106,23 +102,21 @@ fn about(model: Model) -> AnyView {
     let versions = vec![
         (
             tr(ConsoleMsg::AboutCdr),
-            tr_with(
+            t(tr_with(
                 ConsoleMsg::AboutCdrVersion,
                 &[("version", cdr_version.into())],
-            )
-            .into_any(),
+            )),
         ),
         (
             tr(ConsoleMsg::AboutOpenEhrRest),
-            tr_with(ConsoleMsg::AboutRestVersion, &[("version", rest.into())]).into_any(),
+            t(tr_with(ConsoleMsg::AboutRestVersion, &[("version", rest.into())])),
         ),
         (
             tr(ConsoleMsg::AboutFerroUi),
-            tr_with(
+            t(tr_with(
                 ConsoleMsg::AboutFerroUiVersion,
                 &[("version", ferrohealth_ui_version().into())],
-            )
-            .into_any(),
+            )),
         ),
     ];
     let (document, cards) = match manifest {
@@ -137,7 +131,7 @@ fn about(model: Model) -> AnyView {
         copy_id: "manifest-copy".to_owned(),
         download: DOWNLOAD_ROUTE.to_owned(),
     });
-    about_page(Page {
+    about_page(&current(), Page {
         header: Header {
             title: tr(Msg::NavAbout).into(),
             subtitle: Some(tr(ConsoleMsg::AboutSubtitle).into()),
@@ -166,19 +160,13 @@ fn about(model: Model) -> AnyView {
 }
 
 /// About.
-#[component]
-pub fn AboutPage() -> impl IntoView {
-    let model = page_model!(load());
-    let body = drawn(model, about);
-    view! {
-        <Title text=tr(Msg::NavAbout) />
-        {body}
-    }
+pub async fn page() -> Drawn {
+    Drawn::page(tr(Msg::NavAbout), drawn(load().await, about))
 }
 
 /// The FerroUI release the viewer draws with: the exact pin of the
 /// workspace manifest, held to it by a test.
-const FERROHEALTH_UI: &str = "0.5.8";
+const FERROHEALTH_UI: &str = "0.6.0";
 
 /// The FerroUI release the viewer draws with.
 fn ferrohealth_ui_version() -> String {

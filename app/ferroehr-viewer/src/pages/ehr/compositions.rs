@@ -11,6 +11,7 @@
 //! session ([`crate::paging`]). No openEHR spec governs the viewer's pages:
 //! our own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{OpenWindow, StateSource};
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_open_pager};
@@ -18,22 +19,20 @@ use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
 };
 use ferrohealth_ui::view::template::list::{ActiveFilters, FilterChip, active_filters, list_empty};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::cell_text;
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::{Refused, ago, drawn, page_model, shortened};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, opt, t};
+use crate::pages::common::{Refused, ago, drawn, shortened};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, ehr_href, ehr_id_param, ehr_view};
 use crate::paging::Listing;
+use crate::routes::Drawn;
 
 /// The filters the address names.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct Filters {
     /// A part of the template id.
     template: String,
@@ -46,8 +45,7 @@ struct Filters {
 }
 
 impl Filters {
-    #[cfg(not(target_arch = "wasm32"))]
-    /// The filters of the request.
+        /// The filters of the request.
     fn read() -> Self {
         let get = |key: &str| crate::request::query(key).unwrap_or_default();
         Self {
@@ -94,34 +92,26 @@ pub fn composition_href(ehr_id: &str, uid: &str) -> String {
 
 /// The filter toolbar: the composer as the find field, the template and the
 /// start-time range beside it.
-fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
+fn toolbar(ehr_id: &str, filters: &Filters) -> Html {
     let action = ehr_href(ehr_id);
-    let tools = view! {
-        <div class="fui-list-find">
-            <label for="f-template" class="fui-sr-only">
-                {tr(Msg::FilterTemplate)}
-            </label>
-            <input
-                id="f-template"
-                name="template"
-                type="text"
-                class="fui-input"
-                value=filters.template.clone()
-                placeholder=tr(Msg::FilterTemplate)
-                autocomplete="off"
-            />
-        </div>
-        {crate::pages::common::date_range(
+    let tools = Html::join([
+        h(format!(
+            r#"<div class="fui-list-find"><label for="f-template" class="fui-sr-only">{label}</label><input id="f-template" name="template" type="text" class="fui-input" value="{value}" placeholder="{label}" autocomplete="off"></div>"#,
+            label = t(tr(Msg::FilterTemplate)),
+            value = t(&filters.template),
+        )),
+        crate::pages::common::date_range(
             "f-start",
             tr(RecordsMsg::FilterStartTime),
             &filters.from,
             &filters.to,
-        )}
-        <button type="submit" class="fui-button fui-button-secondary">
-            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "16")}
-            {tr(Msg::FilterApply)}
-        </button>
-    };
+        ),
+        h(format!(
+            r#"<button type="submit" class="fui-button fui-button-secondary">{}{}</button>"#,
+            ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "16"),
+            t(tr(Msg::FilterApply))
+        )),
+    ]);
     let label = tr(RecordsMsg::FilterComposer);
     find_form(
         Find {
@@ -138,7 +128,7 @@ fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
 }
 
 /// The active filters as chips, each with its way to remove it.
-fn chips(ehr_id: &str, filters: &Filters) -> Option<AnyView> {
+fn chips(ehr_id: &str, filters: &Filters) -> Option<Html> {
     if !filters.any() {
         return None;
     }
@@ -157,6 +147,7 @@ fn chips(ehr_id: &str, filters: &Filters) -> Option<AnyView> {
         }
     }
     Some(active_filters(
+        &current(),
         ActiveFilters {
             chips,
             clear: ehr_href(ehr_id),
@@ -167,7 +158,7 @@ fn chips(ehr_id: &str, filters: &Filters) -> Option<AnyView> {
 }
 
 /// One composition of the list.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Row {
     /// Its version id.
     uid: String,
@@ -183,7 +174,7 @@ struct Row {
 
 /// The tab's model: the filters it read and the page of compositions they
 /// found.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Panel {
     /// The filters.
     filters: Filters,
@@ -195,19 +186,12 @@ struct Panel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
-    ehr_id: String,
-) -> Result<EhrModel<Panel>, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load(ehr_id: String) -> Result<EhrModel<Panel>, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_page(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load`] reads, on the server.
+/// What [`load`] reads.
 async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
@@ -245,18 +229,16 @@ async fn read_page(ehr_id: String) -> EhrModel<Panel> {
 }
 
 /// The tab's panel.
-fn panel(ehr_id: &str, panel: Panel) -> AnyView {
+fn panel(ehr_id: &str, panel: Panel) -> Html {
     let Panel { filters, rows } = panel;
     let rows = match rows {
         Ok(rows) => rows,
         Err(refusal) => {
-            return view! {
-                <div class="fui-panel">
-                    <div class="fui-panel-body fui-stack">{toolbar(ehr_id, &filters)}</div>
-                    {refusal.view()}
-                </div>
-            }
-            .into_any();
+            return h(format!(
+                r#"<div class="fui-panel"><div class="fui-panel-body fui-stack">{}</div>{}</div>"#,
+                toolbar(ehr_id, &filters),
+                refusal.view()
+            ));
         }
     };
     let paging = crate::paging::current(Listing::Compositions);
@@ -275,15 +257,14 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
         .map(|row| {
             let version = row.uid.rsplit("::").next().unwrap_or_default().to_owned();
             let href = composition_href(ehr_id, &crate::uid::container_uid_of(&row.uid));
-            let sub = view! { <span class="fui-row-sub">{row.template}</span> }.into_any();
-            let title = title_cell(Some(&href), row.name, Some(sub));
+            let sub = h(format!(r#"<span class="fui-row-sub">{}</span>"#, t(&row.template)));
+            let title = title_cell(Some(&href), t(&row.name), Some(sub));
             let start = cell(&columns[1], ago(&row.start));
-            let composer = cell(&columns[2], row.composer);
-            let version = cell(&columns[3], version);
-            view! { <tr>{title} {start} {composer} {version}</tr> }.into_any()
+            let composer = cell(&columns[2], t(&row.composer));
+            let version = cell(&columns[3], t(version));
+            h(format!("<tr>{title}{start}{composer}{version}</tr>"))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     let table = if empty && window.page == 1 {
         let sentence = if filters.any() {
             tr(RecordsMsg::CompositionsNoMatch)
@@ -299,10 +280,10 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
             sorting: Sorting::default(),
             body: Body::Rows(body),
         })
-        .into_any()
     };
     let pager = (window.page > 1 || window.has_next()).then(|| {
-        post_open_pager(
+        let pager = post_open_pager(
+            &current(),
             PagerListing::new(tr(RecordsMsg::CompositionsPages)),
             window,
             PostTo {
@@ -310,37 +291,25 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
                 action: crate::paging::PAGING_ROUTE,
                 fields: &fields,
             },
-        )
+        );
+        h(format!(r#"<div class="fui-list-foot">{pager}</div>"#))
     });
-    view! {
-        <div class="fui-panel">
-            <div class="fui-panel-body fui-stack">
-                {toolbar(ehr_id, &filters)} {chips(ehr_id, &filters)}
-            </div>
-            {table}
-            {pager.map(|pager| view! { <div class="fui-list-foot">{pager}</div> })}
-        </div>
-    }
-    .into_any()
+    h(format!(
+        r#"<div class="fui-panel"><div class="fui-panel-body fui-stack">{}{}</div>{table}{}</div>"#,
+        toolbar(ehr_id, &filters),
+        opt(chips(ehr_id, &filters)),
+        opt(pager)
+    ))
 }
 
 /// An EHR's Compositions tab.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn CompositionsTab() -> impl IntoView {
+pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(RecordsMsg::EhrTitle, &[("id", shortened(&ehr_id).into())]);
-    let model = page_model!(load(ehr_id.clone()));
-    let body = drawn(model, move |model| {
+    let body = drawn(load(ehr_id.clone()).await, |model| {
         ehr_view(&ehr_id, EhrTab::Compositions, model, |found| {
             panel(&ehr_id, found)
         })
     });
-    view! {
-        <Title text=title />
-        {body}
-    }
+    Drawn::page(title, body)
 }

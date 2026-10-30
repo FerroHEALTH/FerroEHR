@@ -19,9 +19,9 @@
 //! [`crate::management`] does for the management surface; an error is reserved
 //! for a CDR that refused or failed.
 //!
-//! Every `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first (a server fn is a
-//! publicly reachable HTTP endpoint) and keeps the CDR credential server-side.
+//! Every read guards with
+//! [`require_session`](crate::session::require_session) first and keeps the
+//! CDR credential server-side.
 
 #![expect(
     clippy::disallowed_types,
@@ -29,13 +29,10 @@
               (#1694)"
 )]
 
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::definitions::DefinitionsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr_served, tr_with};
 
 /// One terminology's descriptor, flattened for the descriptor card.
@@ -236,10 +233,9 @@ fn string_list(value: Option<&serde_json::Value>) -> Vec<String> {
 ///
 /// Guards the viewer session first: the server fns below are publicly
 /// reachable endpoints, and this is the one place their CDR call is made.
-#[cfg(not(target_arch = "wasm32"))]
 async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1(path);
     let response = state
         .cdr
@@ -262,7 +258,6 @@ async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, Viewer
 /// The optional `at_date` query fragment, introduced by `lead` (`?` when it
 /// opens the query string, `&` when it extends one) — empty when the caller
 /// gave no date, which asks the CDR for the current definition.
-#[cfg(not(target_arch = "wasm32"))]
 fn at_date_query(at_date: &str, lead: char) -> String {
     let at_date = at_date.trim();
     if at_date.is_empty() {
@@ -273,7 +268,6 @@ fn at_date_query(at_date: &str, lead: char) -> String {
 }
 
 /// Refuse a blank identifier before it reaches a CDR path or query parameter.
-#[cfg(not(target_arch = "wasm32"))]
 fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
     let value = value.trim();
     if value.is_empty() {
@@ -297,7 +291,6 @@ fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
 /// refuses this session;
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] from the CDR;
 /// [`ViewerError::Internal`] when the body is not JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_terminologies() -> Result<Option<Vec<String>>, ViewerError> {
     let Some(body) = terminology_get("terminology").await? else {
         return Ok(None);
@@ -312,9 +305,8 @@ pub async fn list_terminologies() -> Result<Option<Vec<String>>, ViewerError> {
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank id; otherwise as
 /// [`list_terminologies`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_terminology_description(
-    /// The terminology to describe.
+    // The terminology to describe.
     terminology_id: String,
 ) -> Result<Option<TerminologyDescriptor>, ViewerError> {
     let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
@@ -334,14 +326,13 @@ pub async fn fetch_terminology_description(
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank terminology id or code; otherwise as
 /// [`list_terminologies`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_term(
-    /// The terminology holding the code.
+    // The terminology holding the code.
     terminology_id: String,
-    /// The term code to define.
+    // The term code to define.
     code: String,
-    /// An optional ISO-8601 effective date; empty asks for the current
-    /// definition.
+    // An optional ISO-8601 effective date; empty asks for the current
+    // definition.
     at_date: String,
 ) -> Result<Option<TerminologyExtractView>, ViewerError> {
     let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
@@ -366,13 +357,12 @@ pub async fn fetch_term(
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank terminology id or code; otherwise as
 /// [`list_terminologies`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn check_subsumption(
-    /// The terminology both codes belong to.
+    // The terminology both codes belong to.
     terminology_id: String,
-    /// The reference (ancestor-candidate) code.
+    // The reference (ancestor-candidate) code.
     ref_code: String,
-    /// The candidate (descendant) code.
+    // The candidate (descendant) code.
     candidate: String,
 ) -> Result<Option<bool>, ViewerError> {
     let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
@@ -397,11 +387,10 @@ pub async fn check_subsumption(
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank terminology id or value-set id;
 /// otherwise as [`list_terminologies`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_value_set(
-    /// The terminology holding the value set.
+    // The terminology holding the value set.
     terminology_id: String,
-    /// The value set to expand.
+    // The value set to expand.
     value_set_id: String,
 ) -> Result<Option<TerminologyExtractView>, ViewerError> {
     let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;
@@ -425,16 +414,15 @@ pub async fn fetch_value_set(
 /// # Errors
 /// [`ViewerError::Invalid`] for a blank terminology id, value-set id or
 /// candidate code; otherwise as [`list_terminologies`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn validate_value_set_code(
-    /// The terminology holding the value set.
+    // The terminology holding the value set.
     terminology_id: String,
-    /// The value set to test membership in.
+    // The value set to test membership in.
     value_set_id: String,
-    /// The code whose membership is in question.
+    // The code whose membership is in question.
     candidate_code: String,
-    /// An optional ISO-8601 effective date; empty asks for the current value
-    /// set.
+    // An optional ISO-8601 effective date; empty asks for the current value
+    // set.
     at_date: String,
 ) -> Result<Option<bool>, ViewerError> {
     let terminology_id = require_value(&terminology_id, &tr_served(DefinitionsMsg::TerminologyId))?;

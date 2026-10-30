@@ -12,23 +12,23 @@
 //! openEHR spec governs the viewer: our own design.
 
 use ferrohealth_ui::calendar::Weekday;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Locale;
 use ferrohealth_ui::view::preferences::{
     Post, PreferenceRow, PreferencesPage as Page, Section, SectionRoutes, SelectPreference,
     preference_row, preferences_page, select_preference,
 };
-use leptos::prelude::*;
-use leptos_meta::Title;
 
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
-use crate::locale::{tr, tr_with};
-use crate::pages::common::{drawn, page_model};
+use crate::locale::{current, tr, tr_with};
+use crate::pages::common::drawn;
+use crate::routes::Drawn;
 
 /// The tab the address names: Appearance for none.
 fn section() -> Section {
     crate::routes::params()
-        .with(|params| params.get("section"))
+        .get("section")
         .and_then(|key| match key.as_str() {
             "reading" => Some(Section::Language),
             "keyboard" => Some(Section::Keyboard),
@@ -48,7 +48,7 @@ fn routes() -> SectionRoutes {
 
 /// The viewer's own row of Reading: how long a revealed identifier stays
 /// shown.
-fn reveal_row(back: &str, saved: bool) -> AnyView {
+fn reveal_row(back: &str, saved: bool) -> Html {
     let current = crate::prefs::reveal_seconds();
     let mut choices = crate::prefs::REVEAL_CHOICES.to_vec();
     choices.sort_unstable();
@@ -69,11 +69,11 @@ fn reveal_row(back: &str, saved: bool) -> AnyView {
             (seconds.to_string(), words.into())
         })
         .collect();
-    preference_row(PreferenceRow {
+    preference_row(&crate::locale::current(), PreferenceRow {
         label: tr(ConsoleMsg::RevealLabel).into(),
         description: tr(ConsoleMsg::RevealDescription).into(),
         control_id: Some(crate::prefs::REVEAL.to_owned()),
-        control: select_preference(SelectPreference {
+        control: select_preference(&crate::locale::current(), SelectPreference {
             name: crate::prefs::REVEAL.to_owned(),
             choices,
             current: current.to_string(),
@@ -91,42 +91,29 @@ fn reveal_row(back: &str, saved: bool) -> AnyView {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load(
-    /// The path and query of the page.
-    href: String,
-) -> Result<String, ViewerError> {
-    crate::request::visiting(&href).await?;
-    Ok(read_page().await)
+fn load() -> Result<String, ViewerError> {
+    crate::session::require_session()?;
+    Ok(read_page())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load`] reads, on the server.
-#[expect(
-    clippy::unused_async,
-    reason = "a page model loads through a future, read once on the server"
-)]
-async fn read_page() -> String {
-    use_context::<http::request::Parts>()
-        .and_then(|parts| {
-            parts
-                .headers
-                .get(http::header::ACCEPT_LANGUAGE)
-                .and_then(|value| value.to_str().ok())
-                .map(str::to_owned)
-        })
-        .unwrap_or_default()
+/// What [`load`] reads: the request's `Accept-Language`.
+fn read_page() -> String {
+    crate::scope::with(|scope| {
+        scope
+            .parts
+            .headers
+            .get(http::header::ACCEPT_LANGUAGE)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned)
+    })
+    .flatten()
+    .unwrap_or_default()
 }
 
 /// Your preferences.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn PreferencesPage() -> impl IntoView {
-    let model = page_model!(load());
-    let page = drawn(model, |accepted: String| {
+#[must_use]
+pub fn page() -> Drawn {
+    let page = drawn(load(), |accepted: String| {
         let section = section();
         let routes = routes();
         let saved = crate::request::query("saved");
@@ -136,24 +123,28 @@ pub fn PreferencesPage() -> impl IntoView {
         } else {
             Vec::new()
         };
-        preferences_page(Page {
-            section,
-            routes,
-            reading: true,
-            preferences: crate::prefs::current(),
-            action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
-            saved,
-            accent: tr(ConsoleMsg::BrandAccent),
-            languages: crate::locale::shipped(),
-            browser: Locale::negotiate_with(&accepted, crate::locale::catalog(), Locale::english()),
-            week_from_language: Weekday::Monday,
-            shortcuts: None,
-            reset: crate::prefs::RESET_ROUTE.to_owned(),
-            own,
-        })
+        preferences_page(
+            &current(),
+            Page {
+                section,
+                routes,
+                reading: true,
+                preferences: crate::prefs::current(),
+                action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
+                saved,
+                accent: tr(ConsoleMsg::BrandAccent),
+                languages: crate::locale::shipped(),
+                browser: Locale::negotiate_with(
+                    &accepted,
+                    crate::locale::catalog(),
+                    Locale::english(),
+                ),
+                week_from_language: Weekday::Monday,
+                shortcuts: None,
+                reset: crate::prefs::RESET_ROUTE.to_owned(),
+                own,
+            },
+        )
     });
-    view! {
-        <Title text=tr(ConsoleMsg::YourPreferences) />
-        {page}
-    }
+    Drawn::page(tr(ConsoleMsg::YourPreferences), page)
 }
