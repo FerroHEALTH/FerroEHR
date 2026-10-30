@@ -1625,14 +1625,23 @@ pub(crate) async fn main_text(h: &Harness) -> String {
     h.wait_css("main").await.text().await
 }
 
-/// Type `text` into the field at `css`, replacing what it holds.
+/// The characters [`fill`] types in one `WebDriver` command, so a long
+/// document typed into FerroUI's editor keeps each command inside
+/// [`COMMAND_BUDGET`] (the editor re-highlights a JSON document on every key,
+/// FerroHEALTH/FerroUI#531).
+const FILL_CHUNK: usize = 256;
+
+/// Type `text` into the field at `css`, replacing what it holds, key by key.
 ///
 /// # Panics
 /// When the field is not on the page.
 pub(crate) async fn fill(h: &Harness, css: &str, text: &str) {
     let field = h.wait_css(css).await;
     field.clear().await;
-    field.send_keys(text).await;
+    let chars: Vec<char> = text.chars().collect();
+    for chunk in chars.chunks(FILL_CHUNK) {
+        field.send_keys(chunk.iter().collect::<String>()).await;
+    }
 }
 
 /// Click the submit control at `css` and wait for the page that answers the
