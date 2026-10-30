@@ -6,7 +6,7 @@
 //! A lookup form (jump straight to an EHR by id) over a recent-EHRs table
 //! sourced from an ad-hoc AQL query — ITS-REST has no unpaged EHR-list
 //! endpoint, so listing via AQL is the spec-honest route. Paging is
-//! URL-driven (`?offset=`): shareable, refresh-safe, and WASM-optional.
+//! URL-driven (`?offset=`): shareable and refresh-safe.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
 //! The wire it reads IS spec-bound: the AQL runs against `POST query/aql`
@@ -14,10 +14,9 @@
 //! into the AQL text — the fixed query is a validated const and the caller's
 //! value travels as an AQL `query_parameters` binding.
 //!
-//! Every co-located `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first — server
-//! functions are a public HTTP API — and the CDR credential never reaches
-//! client-visible state.
+//! Every read guards with
+//! [`require_session`](crate::session::require_session) first, and the CDR
+//! credential never reaches the page.
 
 #![expect(
     clippy::disallowed_types,
@@ -25,19 +24,13 @@
               (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The fixed AQL that lists EHRs newest-first for the recent-EHRs table.
 /// Validated by the `fixed_aql_parses` test; never concatenated with user
 /// input.
@@ -48,8 +41,7 @@ const LIST_EHRS_AQL: &str =
 /// headers, the raw row cells, and the offset that produced it (so the view
 /// can build prev/next links).
 ///
-/// Shared across the EHR browse surfaces; carries only fixed-size ints so it
-/// is WASM-safe over the server-fn boundary.
+/// Shared across the EHR browse surfaces.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResultPage {
     /// The result-set column names (falling back to the column path).
@@ -60,7 +52,6 @@ pub struct ResultPage {
     pub offset: u32,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Build the `POST query/aql` request body: the fixed AQL text, the caller's
 /// parameter bindings (never string-interpolated into the query), and the
 /// `fetch`/`offset` window.
@@ -74,7 +65,6 @@ pub(crate) fn aql_request_body(aql: &str, parameters: &Value, offset: u32, fetch
     .to_string()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Parse an AQL `RESULT_SET` JSON body into a [`ResultPage`]. The result-set
 /// shape (`columns: [{name, path}]`, `rows: [[…]]`) is the ITS-REST Query API
 /// contract.
@@ -126,15 +116,14 @@ pub(crate) fn parse_result_set(body: &str, offset: u32) -> Result<ResultPage, Vi
 /// errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the result set is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_ehrs(
-    /// First row of the page to return.
+    // First row of the page to return.
     offset: u32,
-    /// How many rows the page holds.
+    // How many rows the page holds.
     fetch: u32,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1("query/aql");
     let body = aql_request_body(LIST_EHRS_AQL, &serde_json::json!({}), offset, fetch);
     let response = state
@@ -152,7 +141,6 @@ pub async fn list_ehrs(
     parse_result_set(&response.body, offset)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Build a subject-bound `EHR_STATUS` for `POST /ehr`: a `PARTY_SELF` whose
 /// `external_ref` (a `PARTY_REF`) carries the subject `id.value` +
 /// `namespace`, which is exactly what `GET /ehr?subject_id&subject_namespace`
@@ -195,7 +183,6 @@ pub(crate) fn subject_ehr_status(subject_id: &str, subject_namespace: &str) -> V
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Pull the `ehr_id.value` out of an `EHR` resource body (the
 /// `Prefer: return=representation` response of `POST /ehr` and the body of
 /// `GET /ehr?subject_id…`).
@@ -214,7 +201,6 @@ pub(crate) fn parse_ehr_id(body: &str) -> Result<String, ViewerError> {
         .ok_or_else(|| ViewerError::Internal(tr(Msg::EhrResponseCarriedNoEhrId)))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Whether `value` is a UUID in the RFC 9562 §4 string representation
 /// (`8-4-4-4-12` lower- or upper-case hex with hyphens).
 ///
@@ -259,17 +245,16 @@ pub(crate) fn is_uuid(value: &str) -> bool {
 /// non-2xx CDR answer (the `409` for an id already in use, and any validation
 /// diagnostic, included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn create_ehr(
-    /// The EHR id to create under; empty lets the CDR assign one.
+    // The EHR id to create under; empty lets the CDR assign one.
     ehr_id: String,
-    /// The subject's external id.
+    // The subject's external id.
     subject_id: String,
-    /// The issuing namespace the subject id belongs to.
+    // The issuing namespace the subject id belongs to.
     subject_namespace: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let ehr_id = ehr_id.trim();
     let subject_id = subject_id.trim();
     let subject_namespace = subject_namespace.trim();
@@ -334,25 +319,25 @@ pub async fn create_ehr(
     }
 }
 
-/// Look up an EHR by `subject_id` + `subject_namespace`
-/// (`GET /ehr?subject_id&subject_namespace`). `Ok(Some(ehr_id))` when found,
-/// `Ok(None)` on a `404` (no EHR for that subject — a first-class empty
-/// state, not an error).
+/// Look up an EHR by `subject_id` + `subject_namespace` (`GET
+/// /ehr?subject_id&subject_namespace`).
+///
+/// `Ok(Some(ehr_id))` when found, `Ok(None)` on a `404` (no EHR for that
+/// subject — a first-class empty state, not an error).
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::Invalid`] when either subject field is empty; CDR transport
 /// errors pass through; a non-2xx, non-404 CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn find_ehr_by_subject(
-    /// The subject's external id to look up.
+    // The subject's external id to look up.
     subject_id: String,
-    /// The issuing namespace the subject id belongs to.
+    // The issuing namespace the subject id belongs to.
     subject_namespace: String,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let subject_id = subject_id.trim();
     let subject_namespace = subject_namespace.trim();
     if subject_id.is_empty() || subject_namespace.is_empty() {
@@ -376,14 +361,12 @@ pub async fn find_ehr_by_subject(
     parse_ehr_id(&response.body).map(Some)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The detail-route href for one EHR id ([`crate::pages::ehr::ehr_href`]).
 #[must_use]
 pub(crate) fn ehr_detail_href(ehr_id: &str) -> String {
     crate::pages::ehr::ehr_href(ehr_id)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Render one raw AQL cell value as display text: strings verbatim, JSON null
 /// as empty, anything else as compact JSON.
 pub(crate) fn cell_text(value: &Value) -> String {
@@ -394,7 +377,7 @@ pub(crate) fn cell_text(value: &Value) -> String {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::{
         LIST_EHRS_AQL, aql_request_body, cell_text, is_uuid, parse_ehr_id, parse_result_set,

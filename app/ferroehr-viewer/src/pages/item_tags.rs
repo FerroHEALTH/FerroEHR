@@ -11,26 +11,26 @@
 //! with the tag merged in ([`crate::bff::item_tags::merged_tag_body`]). No
 //! openEHR spec governs the viewer's pages: our own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, menu_cell,
 };
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::template::list::list_empty;
-use leptos::prelude::*;
-use serde::{Deserialize, Serialize};
 
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
+use crate::markup::{h, opt, t};
 use crate::pages::common::{count, refused, section};
 
 /// The prefix of a Remove's intent; the key follows it.
 const REMOVE: &str = "remove-tag:";
 
 /// What a post to a Tags tab asks.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TagAct {
     /// Set the tag `key`, with its optional value and target path.
     Set {
@@ -45,7 +45,6 @@ pub enum TagAct {
     Remove(String),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What the post asks the Tags tab, when it asks anything.
 #[must_use]
 pub fn tag_act() -> Option<TagAct> {
@@ -63,7 +62,6 @@ pub fn tag_act() -> Option<TagAct> {
         .map(|key| TagAct::Remove(key.to_owned()))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The toast that says what a tag act did to `object`.
 #[must_use]
 pub fn tag_done(act: &TagAct, object: &str) -> crate::flash::Done {
@@ -86,7 +84,7 @@ pub fn tag_done(act: &TagAct, object: &str) -> crate::flash::Done {
 }
 
 /// What a Tags tab draws.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TagPanel {
     /// What the object is, in the reader's words: "composition", "party".
     pub collection: String,
@@ -102,9 +100,9 @@ pub struct TagPanel {
 #[must_use]
 #[expect(
     clippy::too_many_lines,
-    reason = "one page component: the post it answers, the reads it waits on and the view it draws"
+    reason = "one panel: the tags, the refusal it drew and the row that sets one"
 )]
-pub fn tag_panel(panel: TagPanel) -> AnyView {
+pub fn tag_panel(panel: TagPanel) -> Html {
     let TagPanel {
         collection,
         tags,
@@ -134,55 +132,41 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
                 .into_iter()
                 .map(|tag| {
                     let path = if tag.target_path.is_empty() {
-                        view! {
-                            <span class="fui-muted">
-                                {tr_with(
-                                    RecordsMsg::TagWhole,
-                                    &[("object", collection.clone().into())],
-                                )}
-                            </span>
-                        }
-                        .into_any()
+                        h(format!(
+                            r#"<span class="fui-muted">{}</span>"#,
+                            t(tr_with(
+                                RecordsMsg::TagWhole,
+                                &[("object", collection.clone().into())],
+                            ))
+                        ))
                     } else {
-                        view! { <code>{tag.target_path.clone()}</code> }.into_any()
+                        h(format!("<code>{}</code>", t(&tag.target_path)))
                     };
-                    let remove = view! {
-                        <button
-                            type="submit"
-                            form="tag-remove"
-                            name="intent"
-                            value=format!("{REMOVE}{}", tag.key)
-                            class="fui-icon-button"
-                            aria-label=tr_with(
-                                RecordsMsg::TagRemove,
-                                &[("key", tag.key.clone().into())],
-                            )
-                        >
-                            {ferrohealth_ui::icon::icon(Glyph::X, "16")}
-                        </button>
-                    };
-                    view! {
-                        <tr>
-                            <th scope="row" data-role="title">
-                                <code>{tag.key}</code>
-                            </th>
-                            {cell(&columns[1], tag.value)}
-                            {cell(&columns[2], path)}
-                            {menu_cell(remove)}
-                        </tr>
-                    }
-                    .into_any()
+                    let remove = h(format!(
+                        r#"<button type="submit" form="tag-remove" name="intent" value="{value}" class="fui-icon-button" aria-label="{label}">{glyph}</button>"#,
+                        value = t(format!("{REMOVE}{}", tag.key)),
+                        label = t(tr_with(
+                            RecordsMsg::TagRemove,
+                            &[("key", tag.key.clone().into())],
+                        )),
+                        glyph = ferrohealth_ui::icon::icon(Glyph::X, "16"),
+                    ));
+                    h(format!(
+                        r#"<tr><th scope="row" data-role="title"><code>{}</code></th>{}{}{}</tr>"#,
+                        t(&tag.key),
+                        cell(&columns[1], t(&tag.value)),
+                        cell(&columns[2], path),
+                        menu_cell(remove)
+                    ))
                 })
-                .collect_view()
-                .into_any();
+                .collect();
             let caption = tr(RecordsMsg::EhrTabTags);
             let table = data_table(DataTable {
                 caption: &caption,
                 columns: &columns,
                 sorting: Sorting::default(),
                 body: Body::Rows(rows),
-            })
-            .into_any();
+            });
             (table, Some(total))
         }
         Err(error) => (refused(tr(RecordsMsg::TagsRefused), &error, None), None),
@@ -198,67 +182,48 @@ pub fn tag_panel(panel: TagPanel) -> AnyView {
         Some(TagAct::Set { key, value, path }) => (key, value, path),
         _ => (String::new(), String::new(), String::new()),
     };
-    let set = view! {
-        <form method="post" action=action.clone() class="fui-clause-filter">
-            {Field::new("tk", tr(RecordsMsg::TagsKey))
-                .view(
-                    view! {
-                        <input
-                            id="tk"
-                            name="tag_key"
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=key
-                            required
-                        />
-                    },
-                )}
-            {Field::new("tv", tr(RecordsMsg::TagValueOptional))
-                .view(
-                    view! {
-                        <input id="tv" name="tag_value" type="text" class="fui-input" value=value />
-                    },
-                )}
-            {Field::new("tp", tr(RecordsMsg::TagPathOptional))
-                .view(
-                    view! {
-                        <input
-                            id="tp"
-                            name="tag_path"
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=path
-                        />
-                    },
-                )}
-            <button
-                type="submit"
-                name="intent"
-                value="set-tag"
-                class="fui-button fui-button-secondary"
-            >
-                {ferrohealth_ui::icon::icon(Glyph::TAGS, "16")}
-                {tr(RecordsMsg::TagSetAction)}
-            </button>
-        </form>
-    };
-    view! {
-        <form id="tag-remove" method="post" action=action hidden></form>
-        {section(
-            Some(tr_with(RecordsMsg::TagsOf, &[("object", collection.clone().into())])),
-            shown.map(|shown| u64::try_from(shown).unwrap_or(u64::MAX)),
-            None,
-            view! {
-                {ferrohealth_ui::view::surface::section_intro(
-                    tr_with(RecordsMsg::TagIntro, &[("object", collection.clone().into())]),
-                )}
-                {top}
-                {list}
-            },
-        )}
-        {section(Some(tr(RecordsMsg::TagSetTitle)), None, None, set)}
-    }
-    .into_any()
+    let key = Field::new("tk", tr(RecordsMsg::TagsKey)).view(h(format!(
+        r#"<input id="tk" name="tag_key" type="text" class="fui-input fui-mono" value="{}" required>"#,
+        t(key)
+    )));
+    let value = Field::new("tv", tr(RecordsMsg::TagValueOptional)).view(h(format!(
+        r#"<input id="tv" name="tag_value" type="text" class="fui-input" value="{}">"#,
+        t(value)
+    )));
+    let path = Field::new("tp", tr(RecordsMsg::TagPathOptional)).view(h(format!(
+        r#"<input id="tp" name="tag_path" type="text" class="fui-input fui-mono" value="{}">"#,
+        t(path)
+    )));
+    let set = h(format!(
+        r#"<form method="post" action="{action}" class="fui-clause-filter">{key}{value}{path}<button type="submit" name="intent" value="set-tag" class="fui-button fui-button-secondary">{glyph}{words}</button></form>"#,
+        action = t(&action),
+        glyph = ferrohealth_ui::icon::icon(Glyph::TAGS, "16"),
+        words = t(tr(RecordsMsg::TagSetAction)),
+    ));
+    let held = section(
+        Some(tr_with(
+            RecordsMsg::TagsOf,
+            &[("object", collection.clone().into())],
+        )),
+        shown.map(|shown| u64::try_from(shown).unwrap_or(u64::MAX)),
+        None,
+        Html::join([
+            ferrohealth_ui::view::surface::section_intro(tr_with(
+                RecordsMsg::TagIntro,
+                &[("object", collection.clone().into())],
+            )),
+            opt(top),
+            list,
+        ]),
+    );
+    Html::join([
+        h(format!(
+            r#"<form id="tag-remove" method="post" action="{}" hidden></form>"#,
+            t(&action)
+        )),
+        held,
+        section(Some(tr(RecordsMsg::TagSetTitle)), None, None, set),
+    ])
 }
 
 /// The count words of a Tags tab.

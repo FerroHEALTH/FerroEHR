@@ -1,29 +1,51 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The viewer's axum service: the router assembly and the pre-render session
-//! guard.
+//! The viewer's axum service: the router assembly, the page handler and the
+//! session guard.
 //!
-//! The family's console headers and same-origin check
-//! (`ferrohealth_server::console`, `ferrohealth_server::same_origin`) wrap
-//! the routes, and the family stack wraps them with its health routes.
+//! Every page is a handler that draws one complete document
+//! (`page`): it reads the request, the form a post carries and the CDR,
+//! and answers with the page or with a redirect. FerroUI's stylesheet, the
+//! FerroEHR theme and FerroUI's script modules are served by the library's
+//! own asset router at `ferrohealth_ui::serve::PREFIX`. The family's console
+//! headers and same-origin check (`ferrohealth_server::console`,
+//! `ferrohealth_server::same_origin`) wrap the routes, the policy is the
+//! server-rendered console's ([`POLICY`]), and the family stack wraps them
+//! with its health routes.
 //!
-//! Lives in the lib (ssr-gated) rather than the binary so the integration
-//! tests drive the REAL request path — guard, session layer, Leptos render —
-//! with `tower::ServiceExt::oneshot`, the same way `app/ferroehr-server`
-//! keeps a testable lib run path.
+//! Lives in the lib rather than the binary so the integration tests drive the
+//! REAL request path (guard, session, page) with `tower::ServiceExt::oneshot`,
+//! the same way `app/ferroehr-server` keeps a testable lib run path.
+
+use std::sync::Arc;
 
 use axum::Extension;
-use ferrohealth_server::console::{self, ConsoleHeaders, CspNonce};
+use axum::response::IntoResponse as _;
+use ferrohealth_server::console::{self, ConsoleHeaders};
 use ferrohealth_server::health::Health;
 use ferrohealth_server::same_origin::{self, SameOrigin};
 use ferrohealth_server::stack::{self, StackPolicy};
 use ferrohealth_telemetry::request_log::RequestLog;
-use leptos::prelude::LeptosOptions;
-use leptos_axum::LeptosRoutes;
 
+use crate::scope::Scope;
 use crate::session::{SESSION_KEY, ViewerSession};
 use crate::state::AppState;
+
+/// The Content-Security-Policy of every response.
+///
+/// Scripts and styles from the viewer's own origin alone, with no nonce, no
+/// inline script or style and no `eval` (W3C Content Security Policy Level
+/// 3; FerroUI `docs/consoles.md`, "How a console builds", step 6).
+pub const POLICY: &str = "default-src 'self'; \
+     script-src 'self'; \
+     style-src 'self'; \
+     img-src 'self' data:; \
+     connect-src 'self'; \
+     object-src 'none'; \
+     base-uri 'self'; \
+     form-action 'self'; \
+     frame-ancestors 'none'";
 
 /// The viewer as it serves: [`router`] and the health routes inside the
 /// family stack (`ferrohealth_server::stack::app`).
@@ -31,15 +53,10 @@ use crate::state::AppState;
 /// The stack applies the request timeout, the body limit and the overload
 /// bound of `[server]`, and writes `request_log`
 /// ([`crate::telemetry::request_log`]).
-pub fn app(
-    app_state: AppState,
-    leptos_options: LeptosOptions,
-    health: Health,
-    request_log: RequestLog,
-) -> axum::Router {
+pub fn app(app_state: AppState, health: Health, request_log: RequestLog) -> axum::Router {
     let section = app_state.config.server.clone();
     stack::app(
-        router(app_state, leptos_options),
+        router(app_state),
         health,
         &section,
         StackPolicy {
@@ -51,55 +68,31 @@ pub fn app(
 
 /// Assembles the viewer's own routes.
 ///
-/// The OIDC routes, the export post, the preference, sidebar and sign-out
-/// posts, FerroUI's stylesheet and the FerroEHR theme, the Leptos routes with
-/// the per-request context, each route's form post drawn by the same page
-/// (`post_page`), the static-file fallback, and the layer stack (state →
-/// session guard → same-origin check → console headers). Sessions are a
-/// sealed cookie ([`crate::session`]) — no session-store layer exists, so no
-/// state is bound to any one instance.
-pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Router {
-    let routes = leptos_axum::generate_route_list(crate::app::App);
+/// FerroUI's assets, the OIDC routes, the export post, the preference,
+/// sidebar, paging and sign-out posts, the downloads, the icons, the search
+/// panel's answer route, every page (`page`, for `GET` and its own form
+/// posts), and the layer stack (state → session guard → same-origin check →
+/// console headers → policy). Sessions are a sealed cookie
+/// ([`crate::session`]): no session-store layer exists, so no state is bound
+/// to any one instance.
+pub fn router(app_state: AppState) -> axum::Router {
     let origin = same_origin_check(&app_state);
-
-    let context_state = app_state.clone();
-    // One context closure for both render entry points (the routed app and the
-    // 404 shell): the app state plus this request's CSP nonce.
-    let provide_viewer_context = move || {
-        leptos::context::provide_context(context_state.clone());
-        provide_request_nonce();
-    };
-    let pkg_route = format!("/{}", leptos_options.site_pkg_dir);
-    let headers = ConsoleHeaders::new("'self'").with_bundle(pkg_route.clone());
-    let pkg_dir = format!(
-        "{}/{}",
-        leptos_options.site_root, leptos_options.site_pkg_dir
-    );
-    let mut service = axum::Router::new()
-        // The hydration bundle, served on its own: a file the bundle lacks
-        // answers 404 and a read failure 500, never the rendered app or the
-        // sign-in guard's redirect, and either is logged with its status.
-        .nest_service(&pkg_route, pkg_service(&pkg_dir))
+    let headers = ConsoleHeaders::new("'self'").with_bundle(ferrohealth_ui::serve::PREFIX);
+    axum::Router::new()
+        .nest(
+            ferrohealth_ui::serve::PREFIX,
+            ferrohealth_ui::serve::axum_router::router(),
+        )
         .route("/auth/oidc/login", axum::routing::get(crate::oidc::login))
         .route(
             "/auth/oidc/callback",
             axum::routing::get(crate::oidc::callback),
         )
-        // Result export: a plain form-POST download (no WASM required); the
-        // handler enforces the viewer session itself like every server fn.
+        // Result export: a plain form-POST download; the handler enforces the
+        // viewer session itself like every page.
         .route(
             "/export/aql/{format}",
             axum::routing::post(crate::export::export_aql),
-        )
-        // FerroUI's stylesheet and its FerroEHR theme, served from this origin
-        // so `style-src 'self'` holds.
-        .route(
-            crate::app::STYLESHEET_PATH,
-            axum::routing::get(|| async { css(ferrohealth_ui::style::STYLESHEET) }),
-        )
-        .route(
-            crate::app::THEME_PATH,
-            axum::routing::get(|| async { css(ferrohealth_ui::style::Brand::Ehr.theme()) }),
         )
         .route(
             crate::prefs::PREFERENCE_ROUTE,
@@ -128,6 +121,12 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
             crate::pages::about::DOWNLOAD_ROUTE,
             axum::routing::get(download_manifest),
         )
+        // The search panel's answer, which the `search` module asks as the
+        // words are typed (FerroUI `docs/consoles.md`, "The top bar's search").
+        .route(
+            crate::shell::FIND_ANSWER_ROUTE,
+            axum::routing::post(find_answer),
+        )
         // The FerroEHR mark as the tab icon and in the lockup: the SVGs the
         // pages link, and the raster set at the path a browser requests
         // unasked.
@@ -142,23 +141,10 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         .route(
             FAVICON_ICO_PATH,
             axum::routing::get(|| async { icon("image/x-icon", FAVICON_ICO) }),
-        );
-    // Every page answers its own form posts: the same page drawn again with
-    // the posted fields in context (`crate::posted`).
-    for listing in &routes {
-        service = service.route(listing.path(), axum::routing::post(post_page));
-    }
-    let service = service
-        .leptos_routes_with_context(&leptos_options, routes, provide_viewer_context.clone(), {
-            let options = leptos_options.clone();
-            move || crate::app::document(options.clone())
-        })
-        .fallback(leptos_axum::file_and_error_handler_with_context(
-            provide_viewer_context,
-            crate::app::document,
-        ))
-        // Ahead of every render: a document request without a session never
-        // reaches Leptos, and an authenticated response leaves with a
+        )
+        .fallback(page)
+        // Ahead of every page: a document request without a session never
+        // reaches a handler, and an authenticated response leaves with a
         // refreshed sliding-expiry cookie.
         .layer(axum::middleware::from_fn(login_guard))
         .layer(Extension(app_state))
@@ -167,8 +153,23 @@ pub fn router(app_state: AppState, leptos_options: LeptosOptions) -> axum::Route
         }))
         .layer(axum::middleware::from_fn(move |request, next| {
             console::headers(headers.clone(), request, next)
-        }));
-    service.with_state(leptos_options)
+        }))
+        .layer(axum::middleware::from_fn(policy))
+}
+
+/// Sets [`POLICY`] on every response, over the hydrated console's policy the
+/// family's console headers write.
+// TODO(#4439): take the policy from ferrohealth-server once it writes one for a server-rendered console.
+async fn policy(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let mut response = next.run(request).await;
+    response.headers_mut().insert(
+        http::header::CONTENT_SECURITY_POLICY,
+        http::HeaderValue::from_static(POLICY),
+    );
+    response
 }
 
 /// The same-origin check of the viewer's unsafe requests: `Sec-Fetch-Site`
@@ -196,56 +197,150 @@ fn same_origin_check(state: &AppState) -> SameOrigin {
     })
 }
 
-/// Draws the page a form posted to, with the posted fields in context.
+/// The form a post to a page carries, read as
+/// `application/x-www-form-urlencoded` up to `server.body_limit_bytes`.
+async fn form_of(
+    state: &AppState,
+    parts: &http::request::Parts,
+    body: axum::body::Body,
+) -> Result<crate::posted::Posted, Box<axum::response::Response>> {
+    let Ok(bytes) = axum::body::to_bytes(body, state.config.server.body_limit_bytes).await else {
+        return Err(Box::new(
+            (http::StatusCode::PAYLOAD_TOO_LARGE, "the form is too large").into_response(),
+        ));
+    };
+    let form = axum::extract::Request::from_parts(parts.clone(), axum::body::Body::from(bytes));
+    match <axum::extract::Form<Vec<(String, String)>> as axum::extract::FromRequest<()>>::from_request(
+        form,
+        &(),
+    )
+    .await
+    {
+        Ok(axum::extract::Form(fields)) => Ok(crate::posted::Posted::new(fields)),
+        Err(rejection) => Err(Box::new(rejection.into_response())),
+    }
+}
+
+/// Draws the page the request names: a `GET` reads it, and a `POST` draws
+/// it with the form posted to it in reach ([`crate::posted::posted`]).
 ///
-/// The fields are read as `application/x-www-form-urlencoded`, at most
-/// `server.body_limit_bytes`; the page reads them through
-/// [`crate::posted::posted`] and answers with a redirect when its work
-/// succeeded or with itself, the fields as posted and the refusal beside
-/// them, when it did not. A post without a session (but to the sign-in page)
-/// goes to the sign-in page, which returns to the page posted to.
-async fn post_page(
-    axum::extract::State(options): axum::extract::State<LeptosOptions>,
+/// The page answers with a redirect when its work succeeded, or with itself,
+/// the fields as posted and the refusal beside them, when it did not. A post
+/// without a session (but to the sign-in page) goes to the sign-in page,
+/// which returns to the page posted to.
+async fn page(
     Extension(state): Extension<AppState>,
     request: axum::extract::Request,
 ) -> axum::response::Response {
-    use axum::response::IntoResponse as _;
     let (parts, body) = request.into_parts();
-    let path = parts.uri.path().to_owned();
-    let signed_in = crate::session::unseal(
-        &state.session_keys,
-        &parts.headers,
-        state.config.session.idle_minutes,
-    )
-    .get::<ViewerSession>(SESSION_KEY)
-    .is_some();
-    if !signed_in && path != "/login" {
-        let to = crate::session_client::signed_out_url(crate::request::return_path(&path), "");
-        return axum::response::Redirect::to(&to).into_response();
+    let posted = if parts.method == http::Method::POST {
+        let path = parts.uri.path().to_owned();
+        let signed_in = crate::session::unseal(
+            &state.session_keys,
+            &parts.headers,
+            state.config.session.idle_minutes,
+        )
+        .get::<ViewerSession>(SESSION_KEY)
+        .is_some();
+        if !signed_in && path != "/login" {
+            let to = crate::session_client::signed_out_url(crate::request::return_path(&path), "");
+            return found(&to);
+        }
+        match form_of(&state, &parts, body).await {
+            Ok(posted) => Some(posted),
+            Err(refusal) => return *refusal,
+        }
+    } else if parts.method == http::Method::GET || parts.method == http::Method::HEAD {
+        None
+    } else {
+        return http::StatusCode::METHOD_NOT_ALLOWED.into_response();
+    };
+    let scope = Arc::new(Scope::new(state, parts, posted));
+    let drawn = crate::scope::run(Arc::clone(&scope), async {
+        let drawn = crate::routes::draw().await;
+        if scope.answer(|answer| answer.redirect.is_some() || answer.session_over) {
+            return None;
+        }
+        let body = if drawn.bare {
+            crate::shell::centred_page(drawn.body)
+        } else {
+            crate::shell::framed(drawn.body).await
+        };
+        Some(crate::app::page_document(drawn.title, body))
+    })
+    .await;
+    let mut answer = scope.take_answer();
+    if answer.session_over {
+        let path = scope.parts.uri.path();
+        let search = scope.parts.uri.query().unwrap_or_default();
+        answer.redirect = Some(crate::session_client::signed_out_url(path, search));
     }
-    let Ok(bytes) = axum::body::to_bytes(body, state.config.server.body_limit_bytes).await else {
-        return (http::StatusCode::PAYLOAD_TOO_LARGE, "the form is too large").into_response();
+    answered(answer, drawn)
+}
+
+/// The response of a page whose draw left `answer`: its redirect, else the
+/// document `drawn` with its status, either with the cookies it set.
+fn answered(
+    answer: crate::scope::Answer,
+    drawn: Option<ferrohealth_ui::html::Html>,
+) -> axum::response::Response {
+    let mut response = match (answer.redirect, drawn) {
+        (Some(to), _) => found(&to),
+        (None, Some(document)) => {
+            let mut response = axum::response::Html(String::from(document)).into_response();
+            if let Some(status) = answer.status {
+                *response.status_mut() = status;
+            }
+            response
+        }
+        (None, None) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let form = axum::extract::Request::from_parts(parts.clone(), axum::body::Body::from(bytes));
-    let fields = match <axum::extract::Form<Vec<(String, String)>> as axum::extract::FromRequest<
-        (),
-    >>::from_request(form, &())
+    for cookie in answer.cookies {
+        response
+            .headers_mut()
+            .append(http::header::SET_COOKIE, cookie);
+    }
+    response
+}
+
+/// The `302 Found` redirect to `to`, as every page answers a post whose work
+/// succeeded (post, redirect, get).
+fn found(to: &str) -> axum::response::Response {
+    let mut response = http::StatusCode::FOUND.into_response();
+    match http::HeaderValue::from_str(to) {
+        Ok(location) => {
+            response
+                .headers_mut()
+                .insert(http::header::LOCATION, location);
+            response
+        }
+        Err(_invalid) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// Answers the search panel with what the typed words find, as JSON: `401`
+/// without a session, so the page leaves for the sign-in page.
+async fn find_answer(
+    Extension(state): Extension<AppState>,
+    request: axum::extract::Request,
+) -> axum::response::Response {
+    let (parts, body) = request.into_parts();
+    let posted = match form_of(&state, &parts, body).await {
+        Ok(posted) => posted,
+        Err(refusal) => return *refusal,
+    };
+    let words = posted.text("q");
+    let scope = Arc::new(Scope::new(state, parts, Some(posted)));
+    crate::scope::run(scope, async move {
+        match crate::pages::find::find_answer(words).await {
+            Ok(answer) => axum::Json(answer).into_response(),
+            Err(crate::error::ViewerError::Unauthenticated) => {
+                http::StatusCode::UNAUTHORIZED.into_response()
+            }
+            Err(error) => (http::StatusCode::BAD_GATEWAY, error.to_string()).into_response(),
+        }
+    })
     .await
-    {
-        Ok(axum::extract::Form(fields)) => fields,
-        Err(rejection) => return rejection.into_response(),
-    };
-    let posted = crate::posted::Posted::new(fields);
-    let request = axum::extract::Request::from_parts(parts, axum::body::Body::empty());
-    let handler = leptos_axum::render_app_async_with_context(
-        move || {
-            leptos::context::provide_context(state.clone());
-            leptos::context::provide_context(posted.clone());
-            provide_request_nonce();
-        },
-        move || crate::app::document(options.clone()),
-    );
-    handler(request).await
 }
 
 /// Answers About's Download: the CDR's conformance manifest as it sent it,
@@ -292,44 +387,6 @@ async fn sign_out(Extension(state): Extension<AppState>) -> axum::response::Resp
     }
 }
 
-/// The service of the hydration bundle under `dir`: its files as they stand,
-/// or their brotli and gzip variants when present and asked for, with a warn
-/// for any answer that is not a served body.
-///
-/// The bundle never reaches the Leptos static fallback, which renders the
-/// whole app in place of any answer other than `200`
-/// (`leptos_axum::file_and_error_handler`), so a file it cannot serve answers
-/// its own status and never the shell's session redirect.
-fn pkg_service(dir: &str) -> axum::Router {
-    let files = tower_http::services::ServeDir::new(dir)
-        .precompressed_br()
-        .precompressed_gzip();
-    axum::Router::new()
-        .fallback_service(files)
-        .layer(axum::middleware::from_fn(warn_unserved_asset))
-}
-
-/// Logs a bundle request that did not answer with a body (`2xx`) or a
-/// revalidation (`304`), naming the path and the status it got.
-async fn warn_unserved_asset(
-    request: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let path = request
-        .extensions()
-        .get::<axum::extract::OriginalUri>()
-        .map_or_else(
-            || request.uri().path().to_owned(),
-            |uri| uri.path().to_owned(),
-        );
-    let response = next.run(request).await;
-    let status = response.status();
-    if !status.is_success() && status != http::StatusCode::NOT_MODIFIED {
-        tracing::warn!(%path, %status, "a hydration bundle request was not served");
-    }
-    response
-}
-
 /// The path a browser requests the tab icon from when a page links none.
 const FAVICON_ICO_PATH: &str = "/favicon.ico";
 
@@ -353,18 +410,7 @@ fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Res
     ))
 }
 
-/// A stylesheet response.
-fn css(text: &'static str) -> axum::response::Response {
-    axum::response::IntoResponse::into_response((
-        [(
-            http::header::CONTENT_TYPE,
-            http::HeaderValue::from_static("text/css; charset=utf-8"),
-        )],
-        text,
-    ))
-}
-
-/// The pre-render session guard.
+/// The session guard, ahead of every page.
 ///
 /// A document request (`GET`/`HEAD`) for a guarded path without a live
 /// session goes to the sign-in page, which returns the reader to the page
@@ -467,36 +513,17 @@ fn sets_session_cookie(headers: &http::HeaderMap) -> bool {
 }
 
 /// Whether a path is served without a viewer session: the sign-in screen,
-/// the OIDC handshake, the hydration assets, the favicon, and the server-fn
-/// endpoints (each of which enforces the session itself with a typed
-/// refusal, which its WASM caller expects instead of a redirect).
+/// the OIDC handshake, FerroUI's assets, the icons, and the search panel's
+/// answer route (which answers `401` itself, as its module expects, instead
+/// of a redirect).
 fn is_public_path(path: &str) -> bool {
     path == "/login"
         || path == FAVICON_ICO_PATH
         || path == crate::app::ICON_PATH
-        || path == crate::app::STYLESHEET_PATH
-        || path == crate::app::THEME_PATH
         || path == crate::shell::MARK_PATH
         || path.starts_with("/auth/")
-        || path.starts_with("/pkg/")
+        || path.starts_with(&format!("{}/", ferrohealth_ui::serve::PREFIX))
         || path.starts_with("/api/")
-}
-
-/// Re-provides this request's nonce into the Leptos render context.
-///
-/// `leptos_axum` provides a nonce of its own before the per-request context
-/// closure runs, and that one is not the value the response header authorizes.
-/// Overriding it with the one `ferrohealth_server::console` minted is what
-/// makes the two the same string; without it the bootstrap script carries a
-/// nonce the browser has never been told to trust, and the viewer renders but
-/// never hydrates.
-fn provide_request_nonce() {
-    let Some(parts) = leptos::context::use_context::<http::request::Parts>() else {
-        return;
-    };
-    if let Some(nonce) = parts.extensions.get::<CspNonce>() {
-        leptos::context::provide_context(leptos::nonce::Nonce::from_value(nonce.as_str()));
-    }
 }
 
 #[cfg(test)]
@@ -507,37 +534,42 @@ mod tests {
         reason = "the exchange helpers panic to report a broken fixture, which is how a test fails (Book ch11); clippy's allow-*-in-tests scoping covers only the #[test] fns themselves"
     )]
 
-    use ferrohealth_server::console::{self, ConsoleHeaders, CspNonce};
+    use ferrohealth_server::console::{self, ConsoleHeaders};
     use tower::util::ServiceExt;
 
-    use super::{is_public_path, provide_request_nonce};
-
-    /// The response header the stub handler reports the render-context nonce
-    /// through, so a test can compare it with the policy.
-    const RENDERED_NONCE: &str = "x-test-rendered-nonce";
+    use super::{POLICY, is_public_path};
 
     /// The console headers as the viewer mounts them.
     fn viewer_headers() -> ConsoleHeaders {
-        ConsoleHeaders::new("'self'").with_bundle("/pkg")
+        ConsoleHeaders::new("'self'").with_bundle(ferrohealth_ui::serve::PREFIX)
     }
 
-    /// The sign-in surface, the OIDC handshake, the hydration assets and the
-    /// server-fn endpoints stay reachable without a session; every screen
-    /// path is guarded.
+    /// The sign-in surface, the OIDC handshake, FerroUI's assets and the
+    /// search panel's answer route stay reachable without a session; every
+    /// screen path is guarded.
     #[test]
     fn the_public_surface_is_exactly_the_sessionless_one() {
         for public in [
             "/login",
             "/favicon.ico",
             "/favicon.svg",
+            "/ferroehr-icon.svg",
             "/auth/oidc/login",
             "/auth/oidc/callback",
-            "/pkg/ferroehr-viewer.css",
-            "/api/current_session",
+            "/ferrohealth-ui/0.6.0/ferrohealth-ui.css",
+            "/ferrohealth-ui/0.6.0/scripts/fui.js",
+            "/api/find_answer",
         ] {
             assert!(is_public_path(public), "{public} must be public");
         }
-        for guarded in ["/", "/templates", "/queries/builder", "/ehrs", "/nonsense"] {
+        for guarded in [
+            "/",
+            "/templates",
+            "/queries/builder",
+            "/ehrs",
+            "/nonsense",
+            "/pkg/x.wasm",
+        ] {
             assert!(!is_public_path(guarded), "{guarded} must be guarded");
         }
     }
@@ -551,40 +583,19 @@ mod tests {
             .unwrap_or_else(|| panic!("the policy must carry a {name} directive"))
     }
 
-    /// Stands in for the Leptos render: it takes the request's `Parts` into a
-    /// reactive owner the way `leptos_axum` does, runs the viewer's context
-    /// step, and reports whatever `use_nonce` then answers.
-    async fn render_nonce(request: axum::extract::Request) -> axum::response::Response {
-        let (parts, _body) = request.into_parts();
-        let owner = leptos::prelude::Owner::new();
-        let rendered = owner.with(|| {
-            leptos::context::provide_context(parts);
-            provide_request_nonce();
-            leptos::nonce::use_nonce().map(|nonce| nonce.to_string())
-        });
-        let mut response = axum::response::Response::new(axum::body::Body::empty());
-        if let Some(rendered) = rendered {
-            response.headers_mut().insert(
-                http::HeaderName::from_static(RENDERED_NONCE),
-                http::HeaderValue::from_str(&rendered).unwrap(),
-            );
-        }
-        response
-    }
-
-    /// One response of a stub router at `uri` under the viewer's console
-    /// headers.
+    /// One response of a stub router at `uri` under the viewer's headers.
     async fn exchange(uri: &str) -> axum::response::Response {
         let headers = viewer_headers();
         axum::Router::new()
-            .route("/", axum::routing::get(render_nonce))
-            .route(
-                "/pkg/ferroehr-viewer.RUlUrl0ZR7DGPjuVWkKtwA.wasm",
-                axum::routing::get(|| async { "wasm" }),
+            .route("/", axum::routing::get(|| async { "page" }))
+            .nest(
+                ferrohealth_ui::serve::PREFIX,
+                ferrohealth_ui::serve::axum_router::router(),
             )
             .layer(axum::middleware::from_fn(move |request, next| {
                 console::headers(headers.clone(), request, next)
             }))
+            .layer(axum::middleware::from_fn(super::policy))
             .oneshot(
                 http::Request::builder()
                     .uri(uri)
@@ -606,82 +617,16 @@ mod tests {
             .to_owned()
     }
 
-    /// Drives one request through the console headers, returning the policy
-    /// the response carries and the nonce the render context saw.
-    async fn one_exchange() -> (String, String) {
-        let response = exchange("/").await;
-        (
-            header(&response, "content-security-policy"),
-            header(&response, RENDERED_NONCE),
-        )
-    }
-
-    /// The whole point of the exercise: the value the renderer stamps on the
-    /// hydration bootstrap is the value the response header authorizes. A
-    /// mismatch is invisible server-side and leaves the viewer dead in the
-    /// browser.
-    #[tokio::test]
-    async fn the_rendered_nonce_is_the_one_the_header_authorizes() {
-        let (policy, rendered) = one_exchange().await;
-        assert!(
-            directive(&policy, "script-src").contains(&format!("'nonce-{rendered}'")),
-            "script-src must authorize the rendered nonce {rendered}: {policy}"
-        );
-    }
-
-    /// Renders the component that actually stamps the attribute, and pins that
-    /// the `nonce=` it emits is the value the header authorizes. The context
-    /// test above covers our half of the handoff; this covers Leptos's half, so
-    /// an upgrade that stopped stamping the bootstrap script fails here instead
-    /// of in a browser.
-    #[test]
-    fn the_bootstrap_script_carries_the_authorized_nonce() {
-        let nonce = CspNonce::mint();
-        let policy = viewer_headers().policy(&nonce);
-        let owner = leptos::prelude::Owner::new();
-        let html = owner.with(|| {
-            leptos::context::provide_context(leptos::nonce::Nonce::from_value(nonce.as_str()));
-            let options = leptos::config::LeptosOptions::builder()
-                .output_name("ferroehr-viewer")
-                .build();
-            leptos::prelude::RenderHtml::to_html(
-                leptos::view! { <leptos::hydration::HydrationScripts options /> },
-            )
-        });
-        let stamped = html
-            .split_once("<script")
-            .and_then(|(_, rest)| rest.split_once("nonce=\""))
-            .and_then(|(_, rest)| rest.split_once('"'));
-        let Some((stamped, _)) = stamped else {
-            panic!("the bootstrap script must carry a nonce: {html}")
-        };
-        assert!(
-            directive(&policy, "script-src").contains(&format!("'nonce-{stamped}'")),
-            "the stamped nonce {stamped} is not the one script-src authorizes: {policy}"
-        );
-    }
-
-    /// A nonce reused across responses is guessable, and then worth no more
-    /// than the `'unsafe-inline'` it replaced.
-    #[tokio::test]
-    async fn every_response_carries_a_fresh_nonce() {
-        let (first_policy, first) = one_exchange().await;
-        let (second_policy, second) = one_exchange().await;
-        assert_ne!(first, second, "two responses reused one nonce");
-        assert_ne!(first_policy, second_policy);
-    }
-
     /// The directives the policy the viewer serves must carry, each for a
-    /// stated reason, and the ones it must never carry.
+    /// stated reason, and the ones it must never carry: scripts and styles
+    /// come from the viewer's own origin, with no nonce and no WebAssembly.
     #[tokio::test]
     async fn the_policy_carries_the_audited_directives() {
-        let (policy, rendered) = one_exchange().await;
+        let policy = header(&exchange("/").await, "content-security-policy");
+        assert_eq!(policy, POLICY);
         for expected in [
             "default-src 'self'",
-            // WebAssembly compilation, without permitting eval of JavaScript.
-            "'wasm-unsafe-eval'",
-            // The viewer reaches the CDR through its own server functions, so
-            // the browser never needs a cross-origin connection.
+            // FerroUI's search module asks the viewer's own answer route.
             "connect-src 'self'",
             "object-src 'none'",
             "base-uri 'self'",
@@ -693,37 +638,39 @@ mod tests {
                 "the policy must carry {expected}"
             );
         }
-        assert!(!policy.contains("'unsafe-eval'"), "{policy}");
-        let script_src = directive(&policy, "script-src");
-        assert!(script_src.contains(&format!("'nonce-{rendered}'")));
-        assert!(
-            !script_src.contains("'unsafe-inline'"),
-            "the nonce replaces the inline allowance: {script_src}"
-        );
-        // Every style is a stylesheet of the viewer's own origin.
+        assert_eq!(directive(&policy, "script-src"), "script-src 'self'");
         assert_eq!(directive(&policy, "style-src"), "style-src 'self'");
+        assert!(!policy.contains("unsafe-inline"), "{policy}");
+        assert!(!policy.contains("unsafe-eval"), "{policy}");
+        assert!(!policy.contains("nonce-"), "{policy}");
     }
 
-    /// Every document keeps `no-store`, since the viewer renders patient data
-    /// into HTML and stamps a per-request nonce on it; the hashed bundle is
-    /// revalidated (`no-cache`), and a refused bundle answer is never kept.
+    /// Every document keeps `no-store`, since the viewer draws patient data
+    /// into HTML; FerroUI's assets keep the library's own long cache, since a
+    /// new pin is a new path.
     #[tokio::test]
-    async fn only_the_bundle_is_kept_and_then_revalidated() {
+    async fn only_the_assets_are_kept() {
         assert_eq!("no-store", header(&exchange("/").await, "cache-control"));
-        assert_eq!(
-            "no-cache",
-            header(
-                &exchange("/pkg/ferroehr-viewer.RUlUrl0ZR7DGPjuVWkKtwA.wasm").await,
-                "cache-control"
-            )
-        );
+        let asset = exchange(&format!(
+            "{}/{}/ferrohealth-ui.css",
+            ferrohealth_ui::serve::PREFIX,
+            ferrohealth_ui::serve::VERSION
+        ))
+        .await;
+        assert!(asset.status().is_success(), "{}", asset.status());
+        let caching = header(&asset, "cache-control");
+        assert!(caching.contains("immutable"), "{caching}");
         assert_eq!(
             "no-store",
             header(
-                &exchange("/pkg/ferroehr-viewer.NoSuchHash0000000000.wasm").await,
+                &exchange(&format!(
+                    "{}/no-such-file.js",
+                    ferrohealth_ui::serve::PREFIX
+                ))
+                .await,
                 "cache-control"
             ),
-            "a missing bundle file must not be kept"
+            "a missing asset must not be kept"
         );
     }
 }

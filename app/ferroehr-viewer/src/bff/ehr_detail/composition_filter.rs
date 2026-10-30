@@ -17,10 +17,7 @@
 //! by using the backslash `\` character"); the same section's own example is
 //! `c/archetype_details/template_id/value LIKE '*encounter*'`.
 //!
-//! Everything here is a pure function with unit tests. The module is
-//! unconditional so the filter values can be the tab's resource source on both
-//! targets; only the server function calls [`composition_query`], so the
-//! statement fragments link out of the WASM bundle.
+//! Everything here is a pure function with unit tests.
 
 #![expect(
     clippy::disallowed_types,

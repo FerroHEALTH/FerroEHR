@@ -3,7 +3,7 @@
 
 //! The `ferroehr-viewer` command line: the family's `serve`, `config check`
 //! and `healthcheck` (`ferrohealth_server::cli::Common`), with `serve` when
-//! no subcommand is named, as cargo-leptos starts the binary.
+//! no subcommand is named.
 //!
 //! No specification governs the command line: our own design.
 
@@ -121,10 +121,9 @@ async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> anyhow::Result<()
         session_keys,
     };
 
-    let leptos_options = leptos::config::get_configuration(None)?.leptos_options;
     let lifecycle = Lifecycle::default();
     let health = Health::new(Registry::default(), lifecycle.clone());
-    let service = crate::server::app(app_state, leptos_options, health, request_log);
+    let service = crate::server::app(app_state, health, request_log);
 
     let section = &config.server;
     let listener = tokio::net::TcpListener::bind(section.listen).await?;

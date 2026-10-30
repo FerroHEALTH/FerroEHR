@@ -14,6 +14,7 @@
 //! id or one given (`POST /ehr`, `PUT /ehr/{ehr_id}`). No openEHR spec governs
 //! the viewer's pages: our own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{OpenWindow, StateSource};
@@ -22,38 +23,32 @@ use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
 };
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::identifier::{Domain, Masked};
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
 };
-use ferrohealth_ui::widget::action_menu::{Act, Action};
-#[cfg(not(target_arch = "wasm32"))]
-use ferrohealth_ui::widget::identifier::{Domain, Masked};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehrs::{
     ResultPage, cell_text, create_ehr, find_ehr_by_subject, is_uuid, list_ehrs,
 };
-use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
-use crate::pages::common::is_status;
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{attr, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, dock_editor, docked, drawn, page_model, section, short,
+    EditorDock, Refused, card_panel, dock_editor, drawn, is_status, section, short,
 };
 use crate::pages::ehr::ehr_href;
 use crate::paging::Listing;
+use crate::routes::Drawn;
 
 /// The EHRs list's heading, with New EHR.
-fn heading() -> AnyView {
+fn heading() -> Html {
     page_heading(
+        &current(),
         Header {
             title: tr(Msg::NavEhrs).into(),
             subtitle: Some(tr(RecordsMsg::EhrsSubtitle).into()),
@@ -68,7 +63,6 @@ fn heading() -> AnyView {
             Act::Link("/ehrs/new".to_owned()),
         )),
     )
-    .into_any()
 }
 
 /// The list's columns.
@@ -80,7 +74,7 @@ fn columns() -> [Column; 2] {
 }
 
 /// The table of `rows`, each `(ehr id, created)`.
-fn table(rows: &[(String, String)]) -> AnyView {
+fn table(rows: &[(String, String)]) -> Html {
     let columns = columns();
     let body = rows
         .iter()
@@ -88,10 +82,9 @@ fn table(rows: &[(String, String)]) -> AnyView {
             let href = ehr_href(ehr_id);
             let title = title_cell(Some(&href), short(ehr_id), None);
             let created = cell(&columns[1], crate::pages::common::ago(created));
-            view! { <tr>{title} {created}</tr> }.into_any()
+            h(format!("<tr>{title}{created}</tr>"))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     let caption = tr(Msg::NavEhrs);
     data_table(DataTable {
         caption: &caption,
@@ -99,10 +92,8 @@ fn table(rows: &[(String, String)]) -> AnyView {
         sorting: Sorting::default(),
         body: Body::Rows(body),
     })
-    .into_any()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The rows of a result page of the list's AQL.
 fn rows_of(page: &ResultPage) -> Vec<(String, String)> {
     page.rows
@@ -119,28 +110,14 @@ fn rows_of(page: &ResultPage) -> Vec<(String, String)> {
 
 /// The find toolbar: an EHR id or a subject id, and the subject id's
 /// namespace. It posts, since a subject id names a patient.
-fn toolbar(typed: &str, namespace: &str) -> AnyView {
-    let namespace_field = view! {
-        <div class="fui-list-find">
-            <label for="ehrs-namespace" class="fui-sr-only">
-                {tr(RecordsMsg::EhrsNamespace)}
-            </label>
-            <input
-                id="ehrs-namespace"
-                name="namespace"
-                type="text"
-                class="fui-input fui-mono"
-                value=namespace.to_owned()
-                placeholder=tr(RecordsMsg::EhrsNamespace)
-                autocomplete="off"
-                spellcheck="false"
-            />
-        </div>
-        <button type="submit" class="fui-button fui-button-secondary">
-            {ferrohealth_ui::icon::icon(Glyph::SEARCH, "16")}
-            {tr(Msg::SearchSubmit)}
-        </button>
-    };
+fn toolbar(typed: &str, namespace: &str) -> Html {
+    let namespace_field = h(format!(
+        r#"<div class="fui-list-find"><label for="ehrs-namespace" class="fui-sr-only">{label}</label><input id="ehrs-namespace" name="namespace" type="text" class="fui-input fui-mono" value="{value}" placeholder="{label}" autocomplete="off" spellcheck="false"></div><button type="submit" class="fui-button fui-button-secondary">{glyph}{submit}</button>"#,
+        label = t(tr(RecordsMsg::EhrsNamespace)),
+        value = t(namespace),
+        glyph = ferrohealth_ui::icon::icon(Glyph::SEARCH, "16"),
+        submit = t(tr(Msg::SearchSubmit)),
+    ));
     let label = tr(RecordsMsg::EhrsFindLabel);
     find_form(
         Find {
@@ -157,8 +134,9 @@ fn toolbar(typed: &str, namespace: &str) -> AnyView {
 }
 
 /// The chip of a find with its way back to the whole list.
-fn chips(label: String) -> AnyView {
+fn chips(label: String) -> Html {
     active_filters(
+        &current(),
         ActiveFilters {
             chips: vec![FilterChip {
                 label,
@@ -172,20 +150,23 @@ fn chips(label: String) -> AnyView {
 }
 
 /// The card of the list, its pager in its foot.
-fn card(body: AnyView, count: Option<u64>, pager: Option<AnyView>) -> AnyView {
-    list_card(ListCard {
-        title: tr(Msg::NavEhrs),
-        count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
-        order: None,
-        tabs: None,
-        actions: None,
-        body,
-        pager,
-    })
+fn card(body: Html, count: Option<u64>, pager: Option<Html>) -> Html {
+    list_card(
+        &current(),
+        ListCard {
+            title: tr(Msg::NavEhrs),
+            count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
+            order: None,
+            tabs: None,
+            actions: None,
+            body,
+            pager,
+        },
+    )
 }
 
 /// The EHRs list's model: the page of the list, or what a find found.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum EhrsModel {
     /// The page of the list, each row `(ehr id, created)`, or the CDR's
     /// refusal of it.
@@ -208,13 +189,12 @@ enum EhrsModel {
     Left,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What a post finding an EHR found: the EHR id's page, the one EHR the
 /// subject names, or that no EHR has it.
 async fn found(typed: String, namespace: String) -> EhrsModel {
     let id = crate::uid::container_uid_of(&typed);
     if is_uuid(&id) {
-        leptos_axum::redirect(&ehr_href(&id));
+        crate::request::redirect(&ehr_href(&id));
         return EhrsModel::Left;
     }
     if namespace.is_empty() {
@@ -223,7 +203,7 @@ async fn found(typed: String, namespace: String) -> EhrsModel {
     let masked = Masked::new(
         Domain::new(namespace.clone()),
         &typed,
-        ferrohealth_ui::widget::identifier::KEEP,
+        ferrohealth_ui::view::identifier::KEEP,
     );
     let chip = tr_with(
         RecordsMsg::EhrsSubjectChip,
@@ -242,37 +222,27 @@ async fn found(typed: String, namespace: String) -> EhrsModel {
 /// Loads the EHRs list: the find a post asks, or the page of the list.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_list(
-    /// The path and query of the page.
-    href: String,
-) -> Result<EhrsModel, ViewerError> {
-    crate::request::visiting(&href).await?;
-    Ok(read_list().await)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_list`] reads, on the server.
-async fn read_list() -> EhrsModel {
+/// [`crate::error::ViewerError::Unauthenticated`] without a viewer session.
+async fn load_list() -> Result<EhrsModel, crate::error::ViewerError> {
+    crate::session::require_session()?;
     if let Some(posted) = crate::posted::posted_for("find") {
         let typed = posted.text("find");
         let namespace = posted.text("namespace");
         if !typed.is_empty() {
-            return found(typed, namespace).await;
+            return Ok(found(typed, namespace).await);
         }
     }
     let window = OpenWindow::of(crate::paging::current(Listing::Ehrs), 0);
-    EhrsModel::List(
+    Ok(EhrsModel::List(
         list_ehrs(window.start, window.size)
             .await
             .map(|page| rows_of(&page))
             .map_err(|error| Refused::new(tr(RecordsMsg::EhrsRefused), error)),
-    )
+    ))
 }
 
 /// The EHRs list's body.
-fn list_view(model: EhrsModel) -> AnyView {
+fn list_view(model: EhrsModel) -> Html {
     match model {
         EhrsModel::List(Ok(rows)) => {
             let paging = crate::paging::current(Listing::Ehrs);
@@ -289,6 +259,7 @@ fn list_view(model: EhrsModel) -> AnyView {
             };
             let pager = (window.page > 1 || window.has_next()).then(|| {
                 post_open_pager(
+                    &current(),
                     PagerListing::new(tr(RecordsMsg::EhrsPages)),
                     window,
                     PostTo {
@@ -298,69 +269,48 @@ fn list_view(model: EhrsModel) -> AnyView {
                     },
                 )
             });
-            view! {
-                {toolbar("", "")}
-                {card(body, None, pager)}
-            }
-            .into_any()
+            toolbar("", "").then(card(body, None, pager))
         }
-        EhrsModel::List(Err(refusal)) => view! {
-            {toolbar("", "")}
-            {refusal.view()}
-        }
-        .into_any(),
+        EhrsModel::List(Err(refusal)) => toolbar("", "").then(refusal.view()),
         EhrsModel::NeedsNamespace { typed } => {
             let line = list_empty(tr(RecordsMsg::EhrsSubjectNeedsNamespace), None);
-            view! {
-                {toolbar(&typed, "")}
-                {card(line, None, None)}
-            }
-            .into_any()
+            toolbar(&typed, "").then(card(line, None, None))
         }
         EhrsModel::Found {
             namespace,
             chip,
             found,
         } => match found {
-            Ok(Some(ehr_id)) => view! {
-                {toolbar("", &namespace)}
-                {chips(chip)}
-                {card(table(&[(ehr_id, String::new())]), Some(1), None)}
-            }
-            .into_any(),
-            Ok(None) => view! {
-                {toolbar("", &namespace)}
-                {chips(chip)}
-                {card(list_empty(tr(RecordsMsg::EhrsNoMatch), None), Some(0), None)}
-            }
-            .into_any(),
-            Err(refusal) => view! {
-                {toolbar("", &namespace)}
-                {refusal.view()}
-            }
-            .into_any(),
+            Ok(Some(ehr_id)) => Html::join([
+                toolbar("", &namespace),
+                chips(chip),
+                card(table(&[(ehr_id, String::new())]), Some(1), None),
+            ]),
+            Ok(None) => Html::join([
+                toolbar("", &namespace),
+                chips(chip),
+                card(list_empty(tr(RecordsMsg::EhrsNoMatch), None), Some(0), None),
+            ]),
+            Err(refusal) => toolbar("", &namespace).then(refusal.view()),
         },
-        EhrsModel::Left => ().into_any(),
+        EhrsModel::Left => Html::empty(),
     }
 }
 
 /// The EHRs list.
-#[component]
-pub fn EhrsPage() -> impl IntoView {
-    let model = page_model!(load_list());
-    let body = drawn(model, list_view);
-    view! {
-        <Title text=tr(Msg::NavEhrs) />
-        {heading()}
-        <div class="fui-list-page">{body}</div>
-    }
+pub async fn list_page() -> Drawn {
+    let body = drawn(load_list().await, list_view);
+    Drawn::page(
+        tr(Msg::NavEhrs),
+        heading().then(h(format!(r#"<div class="fui-list-page">{body}</div>"#))),
+    )
 }
 
 /// The id of New EHR's form, which the docked bar submits.
 const NEW_EHR_FORM: &str = "ehr-new";
 
 /// What New EHR's form holds, as it was posted.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct Draft {
     /// The subject id.
     subject_id: String,
@@ -370,79 +320,75 @@ struct Draft {
     ehr_id: String,
 }
 
+/// A plain one-line text input `name` with the id `id`, holding `value`.
+fn mono_input(id: &str, name: &str, kind: &str, value: &str, extra: Html) -> Html {
+    h(format!(
+        r#"<input id="{id}" name="{name}" type="{kind}" class="fui-input fui-mono" spellcheck="false" autocomplete="off" value="{value}""#,
+        id = t(id),
+        name = t(name),
+        kind = t(kind),
+        value = t(value),
+    ))
+    .then(extra)
+    .then(h(">".to_owned()))
+}
+
 /// New EHR's form: the subject and its namespace, and an optional EHR id.
-fn new_form(draft: &Draft, ehr_id_error: Option<String>) -> AnyView {
-    let subject = Field::new("s-id", tr(RecordsMsg::EhrNewSubjectId)).view(view! {
-        <input
-            id="s-id"
-            name="subject_id"
-            type="password"
-            class="fui-input fui-mono"
-            spellcheck="false"
-            autocomplete="off"
-            value=draft.subject_id.clone()
-        />
-    });
-    let namespace = Field::new("s-ns", tr(RecordsMsg::EhrNewNamespace)).view(view! {
-        <input
-            id="s-ns"
-            name="namespace"
-            type="text"
-            class="fui-input fui-mono"
-            spellcheck="false"
-            autocomplete="off"
-            value=draft.namespace.clone()
-        />
-    });
+fn new_form(draft: &Draft, ehr_id_error: Option<String>) -> Html {
+    let subject = Field::new("s-id", tr(RecordsMsg::EhrNewSubjectId)).view(mono_input(
+        "s-id",
+        "subject_id",
+        "password",
+        &draft.subject_id,
+        Html::empty(),
+    ));
+    let namespace = Field::new("s-ns", tr(RecordsMsg::EhrNewNamespace)).view(mono_input(
+        "s-ns",
+        "namespace",
+        "text",
+        &draft.namespace,
+        Html::empty(),
+    ));
     let invalid = ehr_id_error.is_some().then_some("true");
-    let ehr_id = Field::new("e-id", tr(RecordsMsg::EhrNewEhrId))
+    let mut ehr_id = Field::new("e-id", tr(RecordsMsg::EhrNewEhrId))
         .help(tr(RecordsMsg::EhrNewEhrIdHelp))
-        .holds_id()
-        .after(ehr_id_error.map(|error| {
-            view! {
-                <p class="fui-help fui-error" id="e-id-error">
-                    {error}
-                </p>
-            }
-        }))
-        .view(view! {
-            <input
-                id="e-id"
-                name="ehr_id"
-                type="text"
-                class="fui-input fui-mono"
-                spellcheck="false"
-                autocomplete="off"
-                placeholder=tr(RecordsMsg::EhrNewEhrIdPlaceholder)
-                aria-invalid=invalid
-                value=draft.ehr_id.clone()
-            />
-        });
-    view! {
-        <form id=NEW_EHR_FORM method="post" action="/ehrs/new">
-            {card_panel(
-                view! {
-                    {section(
-                        Some(tr(RecordsMsg::EhrNewSubject)),
-                        None,
-                        None,
-                        view! {
-                            {ferrohealth_ui::view::surface::section_intro(
-                                tr(RecordsMsg::EhrNewSubjectIntro),
-                            )}
-                            <div class="fui-form-grid">{subject} {namespace}</div>
-                        },
-                    )}
-                    {section(None, None, None, view! { <div class="fui-form-grid">{ehr_id}</div> })}
-                },
-            )}
-        </form>
+        .holds_id();
+    if let Some(error) = ehr_id_error {
+        ehr_id = ehr_id.after(h(format!(
+            r#"<p class="fui-help fui-error" id="e-id-error">{}</p>"#,
+            t(error)
+        )));
     }
-    .into_any()
+    let ehr_id = ehr_id.view(mono_input(
+        "e-id",
+        "ehr_id",
+        "text",
+        &draft.ehr_id,
+        attr("placeholder", Some(tr(RecordsMsg::EhrNewEhrIdPlaceholder)))
+            .then(attr("aria-invalid", invalid)),
+    ));
+    let subject_part = section(
+        Some(tr(RecordsMsg::EhrNewSubject)),
+        None,
+        None,
+        ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::EhrNewSubjectIntro)).then(h(
+            format!(r#"<div class="fui-form-grid">{subject}{namespace}</div>"#),
+        )),
+    );
+    let id_part = section(
+        None,
+        None,
+        None,
+        h(format!(r#"<div class="fui-form-grid">{ehr_id}</div>"#)),
+    );
+    h(format!(
+        r#"<form id="{NEW_EHR_FORM}" method="post" action="/ehrs/new">{}</form>"#,
+        card_panel(subject_part.then(id_part))
+    ))
 }
 
 /// New EHR's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum NewModel {
     /// The form.
     Form {
@@ -463,23 +409,13 @@ enum NewModel {
 /// Loads New EHR: answers its post (Discard, Create).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_new(
-    /// The path and query of the page.
-    href: String,
-) -> Result<NewModel, ViewerError> {
-    crate::request::visiting(&href).await?;
-    Ok(read_new().await)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_new`] reads, on the server.
-async fn read_new() -> NewModel {
+/// [`crate::error::ViewerError::Unauthenticated`] without a viewer session.
+async fn load_new() -> Result<NewModel, crate::error::ViewerError> {
+    crate::session::require_session()?;
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
-        leptos_axum::redirect("/ehrs");
-        return NewModel::Left;
+        crate::request::redirect("/ehrs");
+        return Ok(NewModel::Left);
     }
     let draft = posted.as_ref().map_or_else(Draft::default, |posted| Draft {
         subject_id: posted.text("subject_id"),
@@ -511,7 +447,7 @@ async fn read_new() -> NewModel {
                         &Done::ok(tr(RecordsMsg::EhrCreated))
                             .line(crate::pages::common::shortened(&created)),
                     );
-                    return NewModel::Left;
+                    return Ok(NewModel::Left);
                 }
                 Err(error) => {
                     let conflict = is_status(&error, http::StatusCode::CONFLICT);
@@ -526,16 +462,16 @@ async fn read_new() -> NewModel {
             }
         }
     }
-    NewModel::Form {
+    Ok(NewModel::Form {
         draft,
         failed,
         ehr_id_error,
         refused,
-    }
+    })
 }
 
 /// New EHR's form, its decision bar docked.
-fn new_view(model: NewModel) -> AnyView {
+fn new_view(model: NewModel) -> Html {
     let NewModel::Form {
         draft,
         failed,
@@ -543,7 +479,7 @@ fn new_view(model: NewModel) -> AnyView {
         refused,
     } = model
     else {
-        return ().into_any();
+        return Html::empty();
     };
     let line = if failed {
         (Glyph::CIRCLE_X, tr(RecordsMsg::EhrNewNotCreated))
@@ -562,11 +498,10 @@ fn new_view(model: NewModel) -> AnyView {
                 ),
             )
         });
-        view! {
-            {refusal.view()}
-            <div class="fui-cluster">{open}</div>
-        }
-        .into_any()
+        refusal.view().then(h(format!(
+            r#"<div class="fui-cluster">{}</div>"#,
+            opt(open)
+        )))
     });
     dock_editor(EditorDock {
         form: NEW_EHR_FORM.to_owned(),
@@ -575,20 +510,14 @@ fn new_view(model: NewModel) -> AnyView {
         save: tr(RecordsMsg::EhrNewCreate),
         blocked: None,
     });
-    view! {
-        {top}
-        {new_form(&draft, ehr_id_error)}
-    }
-    .into_any()
+    opt(top).then(new_form(&draft, ehr_id_error))
 }
 
 /// New EHR.
-#[component]
-pub fn NewEhrPage() -> impl IntoView {
-    let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_new());
-    let body = docked(model, dock_promise, new_view);
+pub async fn new_page() -> Drawn {
+    let body = drawn(load_new().await, new_view);
     let heading = page_heading(
+        &current(),
         Header {
             title: tr(RecordsMsg::NewEhr).into(),
             subtitle: Some(tr(RecordsMsg::EhrNewSubtitle).into()),
@@ -599,9 +528,8 @@ pub fn NewEhrPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    view! {
-        <Title text=tr(RecordsMsg::NewEhr) />
-        {heading}
-        <div class="fui-stack">{body}</div>
-    }
+    Drawn::page(
+        tr(RecordsMsg::NewEhr),
+        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
+    )
 }

@@ -17,7 +17,6 @@
 //! No openEHR specification governs the viewer's test fixtures: our own
 //! design.
 
-#![cfg(not(target_arch = "wasm32"))]
 #![expect(
     clippy::expect_used,
     reason = "the recorder is test tooling: a live CDR that cannot be reached or a recording \

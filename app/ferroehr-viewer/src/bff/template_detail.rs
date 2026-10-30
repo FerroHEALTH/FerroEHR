@@ -15,20 +15,14 @@
 //!
 //! The WT catalog, the OPT source pane and the identity card are three views
 //! of ONE document, so the screen reads the operational template exactly once
-//! per render — a single page-level [`Resource`] over
-//! [`fetch_template_detail`], shared by every pane. The Example tab keeps its
-//! own tab-gated resource: it is a different CDR resource whose fetch runs the
-//! CDR's example generator.
-
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
+//! per page: one [`fetch_template_detail`], shared by every pane. The
+//! Example tab reads its own on that tab alone: it is a different CDR
+//! resource whose fetch runs the CDR's example generator.
 
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 
 /// Template identity + language metadata for the detail header card,
@@ -79,7 +73,6 @@ pub struct TemplateDetail {
 /// # Errors
 /// [`ViewerError::Internal`] when the OPT fails to parse or the Web Template
 /// fails to build (the diagnostic named, never a panic).
-#[cfg(not(target_arch = "wasm32"))]
 pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, ViewerError> {
     let opt = openehr_its::opt14::from_xml(&source).map_err(|e| {
         ViewerError::Internal(tr_with(Msg::Opt14Parse, &[("e", (e).to_string().into())]))
@@ -124,13 +117,12 @@ pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, Viewer
 /// [`ViewerError::CdrUnreachable`] from the CDR;
 /// [`ViewerError::Internal`] when the OPT fails to parse or the Web Template
 /// fails to build.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_template_detail(
-    /// The template whose OPT to read.
+    // The template whose OPT to read.
     template_id: String,
 ) -> Result<TemplateDetail, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "definition/template/adl1.4/{}",
         urlencoding::encode(&template_id)
@@ -152,9 +144,8 @@ pub async fn fetch_template_detail(
 ///
 /// # Errors
 /// As [`fetch_template_detail`].
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_template_catalog(
-    /// The template to build the path catalog from.
+    // The template to build the path catalog from.
     template_id: String,
 ) -> Result<CatalogNode, ViewerError> {
     Ok(fetch_template_detail(template_id).await?.catalog)
@@ -187,19 +178,18 @@ pub fn example_path(template_id: &str, detail: ExampleDetail, kind: ExampleType)
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_example(
-    /// The template to generate an example composition for.
+    // The template to generate an example composition for.
     template_id: String,
-    /// Which representation to negotiate for the example.
+    // Which representation to negotiate for the example.
     format: ReprFormat,
-    /// How much of the template the example fills in (`detail_level`).
+    // How much of the template the example fills in (`detail_level`).
     detail: ExampleDetail,
-    /// Which form the example is shaped for (`type`).
+    // Which form the example is shaped for (`type`).
     kind: ExampleType,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&example_path(&template_id, detail, kind));
     let response = state
         .cdr
@@ -216,13 +206,11 @@ mod tests {
     /// The operational template the viewer's own e2e stack is seeded with
     /// (`scripts/ui-e2e.sh`), so the derivation is pinned against the same
     /// document the browser journeys inspect.
-    #[cfg(not(target_arch = "wasm32"))]
     const OPT_FIXTURE: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/minimal_evaluation.opt"
     ));
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn one_parse_yields_the_source_the_meta_and_the_catalog() {
         // The screen's three panes come out of ONE parse: the source travels
@@ -246,7 +234,6 @@ mod tests {
         );
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_defective_opt_names_the_failing_stage() {
         // A refusal is a named diagnostic, never a panic — the screen renders

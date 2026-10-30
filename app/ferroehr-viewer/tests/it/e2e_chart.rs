@@ -60,7 +60,7 @@ const CHART: &str = "#results-chart-plot";
 
 /// The chart draws one series per numeric result column, names each in the
 /// legend, reads the temporal column as its X axis, and hides a series when
-/// its hydrated legend chip is pressed.
+/// its legend chip is pressed.
 #[tokio::test]
 async fn results_chart_groups_series_and_toggles_them() {
     let Some(h) = Harness::start("results-chart").await else {
@@ -81,7 +81,7 @@ async fn results_chart_groups_series_and_toggles_them() {
     h.wait_css(&format!("{CHART} [data-series-lines='1']"))
         .await;
     common::wait_main_contains(&h, "observed").await;
-    h.wait_hydrated().await;
+    h.wait_scripts().await;
     let chips = find_all(&h, ".fui-legend button.fui-legend-chip").await;
     let mut names = Vec::new();
     for chip in &chips {

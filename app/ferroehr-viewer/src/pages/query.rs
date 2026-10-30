@@ -16,53 +16,45 @@
 //! across ([`crate::builder::lift`]). No openEHR spec governs the viewer's
 //! pages: our own design; the queries are openEHR AQL.
 
-#[cfg(not(target_arch = "wasm32"))]
 use std::collections::BTreeMap;
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::code::{Code, CodeHead, code_section};
-#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::view::conditions::{ADD_CONDITION, ADD_GROUP, REMOVE, REMOVE_GROUP};
 use ferrohealth_ui::view::conditions::{
     Choice, Condition, ConditionGroup, Match, Operand, condition_groups,
 };
-#[cfg(not(target_arch = "wasm32"))]
+use ferrohealth_ui::view::diagnostics::FileFindings;
 use ferrohealth_ui::view::diagnostics::Finding;
-use ferrohealth_ui::view::diagnostics::{DiagnosticsWords, FileFindings};
+use ferrohealth_ui::view::editor::caret_at;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::popover::PopoverForm;
+use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::surface::{Header, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::widget::action_menu::{Act, Action};
-use ferrohealth_ui::widget::editor::EditorWords;
-#[cfg(not(target_arch = "wasm32"))]
-use ferrohealth_ui::widget::editor::caret_at;
-use ferrohealth_ui::widget::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
-use leptos::prelude::*;
-use leptos_meta::Title;
 use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::builder::catalog::CatalogNode;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::builder::model::{
     BoolOp, BuilderQuery, Criterion, CriterionKind, CriterionNode, OrderRule, QueryShape,
     SelectedColumn,
 };
-use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::queries::QueriesMsg;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    Refused, count, drawn, info_note, marks_of, page_model, panel, plain_section, section,
-    warn_note,
+    Refused, count, drawn, info_note, marks_of, panel, plain_section, section, warn_note,
 };
 use crate::pages::results::Answer;
+use crate::routes::Drawn;
 
 /// The id of the query's form.
 pub const QUERY_FORM: &str = "query-form";
@@ -70,7 +62,6 @@ pub const QUERY_FORM: &str = "query-form";
 /// The id of Save to the CDR's popover.
 const SAVE_POPOVER: &str = "save-query";
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What a post asks the query page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Step {
@@ -82,7 +73,6 @@ enum Step {
     Save,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The step a post asks: an add or remove is an edit whatever the form's
 /// default intent says.
 fn step(posted: Option<&crate::posted::Posted>) -> Step {
@@ -104,8 +94,9 @@ fn step(posted: Option<&crate::posted::Posted>) -> Step {
 
 /// The page heading of Query with Run, which submits the form, and Save to
 /// the CDR beside it, whose fields belong to the form too.
-fn heading(save: PopoverForm) -> AnyView {
+fn heading(save: PopoverForm) -> Html {
     page_heading(
+        &current(),
         Header {
             title: tr(Msg::NavQuery).into(),
             subtitle: Some(tr(QueriesMsg::QuerySubtitle).into()),
@@ -121,12 +112,11 @@ fn heading(save: PopoverForm) -> AnyView {
         ))
         .popover(save),
     )
-    .into_any()
 }
 
 /// Save to the CDR's fields as the page fills them, and what the version
 /// field says is wrong.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct SaveFields {
     /// The namespace.
     namespace: String,
@@ -138,7 +128,6 @@ struct SaveFields {
     problem: Option<String>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl SaveFields {
     /// The fields as the post left them, or, for a stored query opened from
     /// the CDR (`loaded`, its qualified name and version), its namespace, its
@@ -180,74 +169,49 @@ fn save_popover(fields: SaveFields) -> PopoverForm {
         version,
         problem,
     } = fields;
-    let error = problem.map(|problem| view! { <p class="fui-field-error">{problem}</p> });
+    let input = |id: &str, name: &str, value: &str, extra: &str| {
+        h(format!(
+            r#"<input id="{id}" name="{name}" form="{QUERY_FORM}" type="text" class="fui-input fui-mono" value="{}"{extra}>"#,
+            t(value)
+        ))
+    };
+    let mut version_field =
+        Field::new("sv-v", tr(Msg::ColumnVersion)).help(tr(QueriesMsg::QueryVersionHelp));
+    if let Some(problem) = problem {
+        version_field = version_field.after(h(format!(
+            r#"<p class="fui-field-error">{}</p>"#,
+            t(problem)
+        )));
+    }
     PopoverForm {
         id: SAVE_POPOVER.into(),
         variant: Variant::Secondary,
         glyph: Glyph::SAVE,
         label: tr(QueriesMsg::QuerySave).into(),
         title: tr(QueriesMsg::QuerySave).into(),
-        body: view! {
-            {Field::new("sv-ns", tr(QueriesMsg::QueryNamespace))
-                .view(
-                    view! {
-                        <input
-                            id="sv-ns"
-                            name="save_namespace"
-                            form=QUERY_FORM
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=namespace
-                        />
-                    },
-                )}
-            {Field::new("sv-n", tr(Msg::QueryName))
-                .view(
-                    view! {
-                        <input
-                            id="sv-n"
-                            name="save_name"
-                            form=QUERY_FORM
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=name
-                        />
-                    },
-                )}
-            {Field::new("sv-v", tr(Msg::ColumnVersion))
-                .help(tr(QueriesMsg::QueryVersionHelp))
-                .after(error)
-                .view(
-                    view! {
-                        <input
-                            id="sv-v"
-                            name="save_version"
-                            form=QUERY_FORM
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=version
-                            placeholder="1.0.0"
-                        />
-                    },
-                )}
-            <div class="fui-cluster">
-                <button
-                    type="submit"
-                    form=QUERY_FORM
-                    name="intent"
-                    value="save"
-                    class="fui-button fui-button-primary"
-                >
-                    {ferrohealth_ui::icon::icon(Glyph::SAVE, "16")}
-                    {tr(QueriesMsg::QuerySaveAction)}
-                </button>
-            </div>
-        }
-        .into_any(),
+        body: Html::join([
+            Field::new("sv-ns", tr(QueriesMsg::QueryNamespace)).view(input(
+                "sv-ns",
+                "save_namespace",
+                &namespace,
+                "",
+            )),
+            Field::new("sv-n", tr(Msg::QueryName)).view(input("sv-n", "save_name", &name, "")),
+            version_field.view(input(
+                "sv-v",
+                "save_version",
+                &version,
+                r#" placeholder="1.0.0""#,
+            )),
+            h(format!(
+                r#"<div class="fui-cluster"><button type="submit" form="{QUERY_FORM}" name="intent" value="save" class="fui-button fui-button-primary">{}{}</button></div>"#,
+                ferrohealth_ui::icon::icon(Glyph::SAVE, "16"),
+                t(tr(QueriesMsg::QuerySaveAction))
+            )),
+        ]),
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The newest version the CDR holds of the stored query `name`, the one it
 /// assigned to a save that named none; empty when the listing does not say.
 async fn saved_version(name: &str) -> String {
@@ -269,7 +233,6 @@ async fn saved_version(name: &str) -> String {
         .unwrap_or_default()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Saves `aql` as the stored query the post names. `Ok(())` is a save made
 /// or none asked; `Err` is what the popover says and the CDR's refusal.
 async fn save(
@@ -374,7 +337,7 @@ struct Draft {
 }
 
 /// One data point a template offers.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 struct Leaf {
     /// Its path.
     path: String,
@@ -388,7 +351,6 @@ struct Leaf {
     unit: Option<String>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Every selectable data point under `node`, named with its parents (the
 /// composition itself left out).
 fn leaves(node: &CatalogNode, trail: &[String], out: &mut Vec<Leaf>) {
@@ -444,7 +406,6 @@ fn condition_key(parent: &str, place: usize) -> String {
     format!("{parent}.c{place}")
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The group's choices as the form posted them.
 fn read_group(group: &mut UiGroup, key: &str, posted: &crate::posted::Posted) {
     if let Some(matching) = posted.get(&format!("{key}-match")) {
@@ -468,7 +429,6 @@ fn read_group(group: &mut UiGroup, key: &str, posted: &crate::posted::Posted) {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The group the key names.
 fn group_at<'a>(root: &'a mut UiGroup, key: &str) -> Option<&'a mut UiGroup> {
     let mut parts = key.split('.');
@@ -482,7 +442,6 @@ fn group_at<'a>(root: &'a mut UiGroup, key: &str) -> Option<&'a mut UiGroup> {
     Some(group)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Applies the add or remove the post names to the groups.
 fn restructure(root: &mut UiGroup, posted: &crate::posted::Posted, first: &str) {
     if let Some(key) = posted.get(ADD_CONDITION)
@@ -520,7 +479,6 @@ fn restructure(root: &mut UiGroup, posted: &crate::posted::Posted, first: &str) 
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The builder as the post leaves it: the form's previous state, its fields
 /// read over it, and its step applied.
 fn draft_of_post(posted: &crate::posted::Posted, offered: &[String]) -> Draft {
@@ -589,7 +547,6 @@ const SHAPES: [(&str, QueriesMsg); 4] = [
     ("ehrs", QueriesMsg::QueryShapeEhrs),
 ];
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The model shape of a shape key.
 fn shape_of(key: &str) -> QueryShape {
     match key {
@@ -600,7 +557,6 @@ fn shape_of(key: &str) -> QueryShape {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The shape key of a model shape.
 const fn shape_key(shape: QueryShape) -> &'static str {
     match shape {
@@ -611,7 +567,6 @@ const fn shape_key(shape: QueryShape) -> &'static str {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Why the builder cannot lower its draft.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 enum DraftError {
@@ -626,7 +581,6 @@ enum DraftError {
     Limit(String),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The constraint of one condition on a data point of `rm_type`, and whether
 /// it is negated.
 fn kind_of(
@@ -711,7 +665,6 @@ fn kind_of(
     Ok((kind, negated))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The criterion tree of a group, `None` for a group with nothing in it.
 fn node_of(group: &UiGroup, offered: &[Leaf]) -> Result<Option<CriterionNode>, DraftError> {
     let mut children = Vec::new();
@@ -747,7 +700,6 @@ fn node_of(group: &UiGroup, offered: &[Leaf]) -> Result<Option<CriterionNode>, D
     }))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The builder query a draft lowers from.
 fn query_of(draft: &Draft, offered: &[Leaf]) -> Result<BuilderQuery, DraftError> {
     let shape = shape_of(&draft.shape);
@@ -790,7 +742,6 @@ fn query_of(draft: &Draft, offered: &[Leaf]) -> Result<BuilderQuery, DraftError>
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The form conditions of one lifted criterion: a negated range becomes a
 /// group of its own that matches the opposite.
 fn conditions_of(criterion: &Criterion, group: &mut UiGroup) {
@@ -868,7 +819,6 @@ fn conditions_of(criterion: &Criterion, group: &mut UiGroup) {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The form group of a lifted criterion tree.
 fn group_of(node: &CriterionNode) -> UiGroup {
     match node {
@@ -898,7 +848,6 @@ fn group_of(node: &CriterionNode) -> UiGroup {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The draft of a lifted builder query.
 fn draft_of_query(query: &BuilderQuery) -> Draft {
     Draft {
@@ -1015,57 +964,45 @@ fn view_group(group: &UiGroup, key: &str, number: u32, offered: &[Leaf]) -> Cond
     }
 }
 
+/// One `<option>` of a select: its value, its words, and whether it is
+/// chosen.
+fn option_of(value: &str, words: &str, selected: bool) -> Html {
+    h(format!(
+        r#"<option value="{}"{}>{}</option>"#,
+        t(value),
+        flag("selected", selected),
+        t(words)
+    ))
+}
+
 /// The data points repeater.
-fn columns_view(draft: &Draft, offered: &[Leaf]) -> AnyView {
+fn columns_view(draft: &Draft, offered: &[Leaf]) -> Html {
     let rows = draft
         .columns
         .iter()
         .enumerate()
         .map(|(place, (path, alias))| {
-            let options = offered
+            let options: Html = offered
                 .iter()
-                .map(|leaf| {
-                    view! {
-                        <option value=leaf.path.clone() selected=leaf.path == *path>
-                            {leaf.label.clone()}
-                        </option>
-                    }
-                })
-                .collect_view();
+                .map(|leaf| option_of(&leaf.path, &leaf.label, leaf.path == *path))
+                .collect();
             let path_id = format!("col-{place}-path");
             let alias_id = format!("col-{place}-alias");
             RepeatRow {
                 key: place.to_string(),
                 heading: None,
-                fields: view! {
-                    <div class="fui-field">
-                        <label class="fui-sr-only" for=path_id.clone()>
-                            {tr_with(
-                                QueriesMsg::QueryDataPointN,
-                                &[("number", count(place.saturating_add(1)))],
-                            )}
-                        </label>
-                        <select id=path_id.clone() name=path_id class="fui-select">
-                            {options}
-                        </select>
-                    </div>
-                    <div class="fui-field">
-                        <label class="fui-sr-only" for=alias_id.clone()>
-                            {tr_with(
-                                QueriesMsg::QueryColumnNameN,
-                                &[("number", count(place.saturating_add(1)))],
-                            )}
-                        </label>
-                        <input
-                            id=alias_id.clone()
-                            name=alias_id
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=alias.clone()
-                        />
-                    </div>
-                }
-                .into_any(),
+                fields: h(format!(
+                    r#"<div class="fui-field"><label class="fui-sr-only" for="{path_id}">{point}</label><select id="{path_id}" name="{path_id}" class="fui-select">{options}</select></div><div class="fui-field"><label class="fui-sr-only" for="{alias_id}">{column}</label><input id="{alias_id}" name="{alias_id}" type="text" class="fui-input fui-mono" value="{alias}"></div>"#,
+                    point = t(tr_with(
+                        QueriesMsg::QueryDataPointN,
+                        &[("number", count(place.saturating_add(1)))],
+                    )),
+                    column = t(tr_with(
+                        QueriesMsg::QueryColumnNameN,
+                        &[("number", count(place.saturating_add(1)))],
+                    )),
+                    alias = t(alias),
+                )),
                 end: RowEnd::Remove {
                     label: tr_with(
                         QueriesMsg::QueryRemoveDataPoint,
@@ -1116,7 +1053,6 @@ fn state_of(draft: &Draft) -> String {
     serde_json::to_string(draft).expect("a draft of strings and bools should always serialize")
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The data points a template offers, or the refusal of its catalog.
 async fn offered(template: &str) -> Result<Vec<Leaf>, ViewerError> {
     if template.is_empty() {
@@ -1129,7 +1065,7 @@ async fn offered(template: &str) -> Result<Vec<Leaf>, ViewerError> {
 }
 
 /// The built AQL, as a code section with Open in AQL.
-fn built_view(aql: &str) -> AnyView {
+fn built_view(aql: &str) -> Html {
     let code = Code {
         label: tr(QueriesMsg::QueryBuiltAql),
         language: Language::Aql,
@@ -1139,34 +1075,24 @@ fn built_view(aql: &str) -> AnyView {
         diagnostics: Vec::new(),
     };
     code_section(
+        &current(),
         CodeHead {
             title: tr(QueriesMsg::QueryBuiltAql),
             tags: Vec::new(),
             digest: None,
             copy: Some("built-aql".to_owned()),
-            actions: Some(
-                view! {
-                    <button
-                        type="submit"
-                        form=QUERY_FORM
-                        formaction="/query/aql"
-                        name="intent"
-                        value="opened"
-                        class="fui-button fui-button-ghost fui-button-small"
-                    >
-                        {ferrohealth_ui::icon::icon(Glyph::ARROW_RIGHT, "14")}
-                        {tr(QueriesMsg::QueryOpenInAql)}
-                    </button>
-                }
-                .into_any(),
-            ),
+            actions: Some(h(format!(
+                r#"<button type="submit" form="{QUERY_FORM}" formaction="/query/aql" name="intent" value="opened" class="fui-button fui-button-ghost fui-button-small">{}{}</button>"#,
+                ferrohealth_ui::icon::icon(Glyph::ARROW_RIGHT, "14"),
+                t(tr(QueriesMsg::QueryOpenInAql))
+            ))),
         },
         &code,
     )
 }
 
 /// What stops Build before or after its step.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Top {
     /// The draft does not build, and why.
     NotBuilt(String),
@@ -1176,7 +1102,7 @@ enum Top {
 
 /// Build's model: the form as the post leaves it, what it builds, and what
 /// its step answered.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 struct Build {
     /// The composition templates the CDR holds.
     ids: Vec<String>,
@@ -1203,17 +1129,12 @@ struct Build {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_build(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Build, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_build() -> Result<Build, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_build().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_build`] reads, on the server.
+/// What [`load_build`] reads.
 async fn read_build() -> Build {
     let posted = crate::posted::posted();
     let templates = crate::bff::templates::list_templates().await;
@@ -1319,7 +1240,7 @@ async fn read_build() -> Build {
     clippy::too_many_lines,
     reason = "one page: the form and every section of it"
 )]
-fn build(model: Build) -> AnyView {
+fn build(model: Build) -> Html {
     let Build {
         ids,
         draft,
@@ -1332,68 +1253,37 @@ fn build(model: Build) -> AnyView {
         save,
     } = model;
     let lifted = lifted.map(|reason| {
-        warn_note(tr_with(
+        warn_note(t(tr_with(
             QueriesMsg::QueryCannotBuild,
             &[("reason", reason.into())],
-        ))
+        )))
     });
     let top = top.map(|top| match top {
-        Top::NotBuilt(reason) => warn_note(tr_with(
+        Top::NotBuilt(reason) => warn_note(t(tr_with(
             QueriesMsg::QueryNotBuilt,
             &[("reason", reason.into())],
-        )),
+        ))),
         Top::Refused(refusal) => refusal.view(),
     });
     let catalog = catalog.map(|refusal| refusal.view());
-    let template_options = ids
+    let template_options: Html = ids
         .iter()
-        .map(|id| {
-            view! {
-                <option value=id.clone() selected=*id == draft.template>
-                    {id.clone()}
-                </option>
-            }
-        })
-        .collect_view();
-    let shape_options = SHAPES
+        .map(|id| option_of(id, id, *id == draft.template))
+        .collect();
+    let shape_options: Html = SHAPES
         .iter()
-        .map(|(key, words)| {
-            view! {
-                <option value=*key selected=*key == draft.shape>
-                    {tr(*words)}
-                </option>
-            }
-        })
-        .collect_view();
-    let options = view! {
-        <div class="fui-transform-options">
-            {Field::new("q-t", tr(Msg::FilterTemplate))
-                .view(
-                    view! {
-                        <select id="q-t" name="template" class="fui-select">
-                            {template_options}
-                        </select>
-                    },
-                )}
-            {Field::new("q-shape", tr(QueriesMsg::QueryReturns))
-                .view(
-                    view! {
-                        <select id="q-shape" name="shape" class="fui-select">
-                            {shape_options}
-                        </select>
-                    },
-                )} <div class="fui-transform-run">
-                <button
-                    type="submit"
-                    name="intent"
-                    value="edit"
-                    class="fui-button fui-button-secondary"
-                >
-                    {tr(Msg::StagedApply)}
-                </button>
-            </div>
-        </div>
-    };
+        .map(|(key, words)| option_of(key, &tr(*words), *key == draft.shape))
+        .collect();
+    let options = h(format!(
+        r#"<div class="fui-transform-options">{}{}<div class="fui-transform-run"><button type="submit" name="intent" value="edit" class="fui-button fui-button-secondary">{}</button></div></div>"#,
+        Field::new("q-t", tr(Msg::FilterTemplate)).view(h(format!(
+            r#"<select id="q-t" name="template" class="fui-select">{template_options}</select>"#
+        ))),
+        Field::new("q-shape", tr(QueriesMsg::QueryReturns)).view(h(format!(
+            r#"<select id="q-shape" name="shape" class="fui-select">{shape_options}</select>"#
+        ))),
+        t(tr(Msg::StagedApply))
+    ));
     let points = (draft.shape == "data").then(|| {
         section(
             Some(tr(QueriesMsg::QueryDataPoints)),
@@ -1402,56 +1292,27 @@ fn build(model: Build) -> AnyView {
             columns_view(&draft, &leaves),
         )
     });
-    let conditions = condition_groups(view_group(&draft.root, "g", 1, &leaves));
-    let order_options = leaves
+    let conditions = condition_groups(&current(), view_group(&draft.root, "g", 1, &leaves));
+    let order_options: Html = leaves
         .iter()
-        .map(|leaf| {
-            view! {
-                <option value=leaf.path.clone() selected=leaf.path == draft.order>
-                    {leaf.label.clone()}
-                </option>
-            }
-        })
-        .collect_view();
-    let order = view! {
-        <div class="fui-transform-options">
-            {Field::new("q-o", tr(QueriesMsg::QueryOrderBy))
-                .view(
-                    view! {
-                        <select id="q-o" name="order" class="fui-select">
-                            <option value="">{tr(QueriesMsg::QueryNoOrder)}</option>
-                            {order_options}
-                        </select>
-                    },
-                )}
-            {Field::new("q-d", tr(QueriesMsg::QueryDirection))
-                .view(
-                    view! {
-                        <select id="q-d" name="direction" class="fui-select">
-                            <option value="desc" selected=draft.descending>
-                                {tr(QueriesMsg::QueryNewestFirst)}
-                            </option>
-                            <option value="asc" selected=!draft.descending>
-                                {tr(QueriesMsg::QueryOldestFirst)}
-                            </option>
-                        </select>
-                    },
-                )}
-            {Field::new("q-l", tr(QueriesMsg::QueryLimit))
-                .view(
-                    view! {
-                        <input
-                            id="q-l"
-                            name="limit"
-                            type="text"
-                            inputmode="numeric"
-                            class="fui-input"
-                            value=draft.limit.clone()
-                        />
-                    },
-                )}
-        </div>
-    };
+        .map(|leaf| option_of(&leaf.path, &leaf.label, leaf.path == draft.order))
+        .collect();
+    let order = h(format!(
+        r#"<div class="fui-transform-options">{}{}{}</div>"#,
+        Field::new("q-o", tr(QueriesMsg::QueryOrderBy)).view(h(format!(
+            r#"<select id="q-o" name="order" class="fui-select"><option value="">{}</option>{order_options}</select>"#,
+            t(tr(QueriesMsg::QueryNoOrder))
+        ))),
+        Field::new("q-d", tr(QueriesMsg::QueryDirection)).view(h(format!(
+            r#"<select id="q-d" name="direction" class="fui-select">{}{}</select>"#,
+            option_of("desc", &tr(QueriesMsg::QueryNewestFirst), draft.descending),
+            option_of("asc", &tr(QueriesMsg::QueryOldestFirst), !draft.descending)
+        ))),
+        Field::new("q-l", tr(QueriesMsg::QueryLimit)).view(h(format!(
+            r#"<input id="q-l" name="limit" type="text" inputmode="numeric" class="fui-input" value="{}">"#,
+            t(&draft.limit)
+        )))
+    ));
     let built_section = match &built {
         Ok(aql) => section(
             Some(tr(QueriesMsg::QueryItBuilds)),
@@ -1463,54 +1324,52 @@ fn build(model: Build) -> AnyView {
             Some(tr(QueriesMsg::QueryItBuilds)),
             None,
             None,
-            info_note(tr_with(
+            info_note(t(tr_with(
                 QueriesMsg::QueryNotBuilt,
                 &[("reason", reason.clone().into())],
-            )),
+            ))),
         ),
     };
     let state = state_of(&draft);
     let aql = built.unwrap_or_default();
-    view! {
-        <Title text=tr(Msg::NavQuery) />
-        {heading(save_popover(save))}
-        <div class="fui-stack">
-            {lifted} {top} {catalog} <form id=QUERY_FORM method="post" action="/query">
-                <input type="hidden" name="default-intent" value="run" />
-                <button type="submit" class="fui-sr-only" tabindex="-1">
-                    {tr(QueriesMsg::QueryRun)}
-                </button>
-                <input type="hidden" name="state" value=state />
-                <input type="hidden" name="aql" value=aql />
-                {binder(
-                    tr(QueriesMsg::QueryWays),
-                    tabs(),
-                    "build",
-                    panel(
-                        view! {
-                            {plain_section(options)}
-                            {points}
-                            {section(Some(tr(QueriesMsg::QueryConditions)), None, None, conditions)}
-                            {section(Some(tr(QueriesMsg::QueryOrderLimit)), None, None, order)}
-                            {built_section}
-                            {Answer::view(answer)}
-                        },
-                    ),
-                )}
-            </form>
-        </div>
-    }
-    .into_any()
+    let tabs = binder(
+        &current(),
+        tr(QueriesMsg::QueryWays),
+        tabs(),
+        "build",
+        panel(Html::join([
+            plain_section(options),
+            opt(points),
+            section(
+                Some(tr(QueriesMsg::QueryConditions)),
+                None,
+                None,
+                conditions,
+            ),
+            section(Some(tr(QueriesMsg::QueryOrderLimit)), None, None, order),
+            built_section,
+            Answer::view(answer),
+        ])),
+    );
+    let form = h(format!(
+        r#"<form id="{QUERY_FORM}" method="post" action="/query"><input type="hidden" name="default-intent" value="run"><button type="submit" class="fui-sr-only" tabindex="-1">{run}</button><input type="hidden" name="state" value="{state}"><input type="hidden" name="aql" value="{aql}">{tabs}</form>"#,
+        run = t(tr(QueriesMsg::QueryRun)),
+        state = t(state),
+        aql = t(aql),
+    ));
+    heading(save_popover(save)).then(h(format!(
+        r#"<div class="fui-stack">{}{}{}{form}</div>"#,
+        opt(lifted),
+        opt(top),
+        opt(catalog)
+    )))
 }
 
 /// Query: Build.
-#[component]
-pub fn BuildTab() -> impl IntoView {
-    let model = page_model!(load_build());
-    drawn(model, build)
+pub async fn build_page() -> Drawn {
+    Drawn::page(tr(Msg::NavQuery), drawn(load_build().await, build))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The grammar check of `aql`: its findings, placed on their lines, or
 /// `None` when it parses.
 fn grammar(aql: &str) -> Option<(String, FileFindings)> {
@@ -1575,7 +1434,6 @@ fn grammar(aql: &str) -> Option<(String, FileFindings)> {
     ))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The parameters a run binds, as the form holds them: each name and value.
 fn parameters_of(posted: Option<&crate::posted::Posted>, aql: &str) -> Vec<(String, String)> {
     let mut rows: Vec<(String, String)> = Vec::new();
@@ -1610,7 +1468,7 @@ fn parameters_of(posted: Option<&crate::posted::Posted>, aql: &str) -> Vec<(Stri
 }
 
 /// The parameters repeater.
-fn parameters_view(rows: &[(String, String)]) -> AnyView {
+fn parameters_view(rows: &[(String, String)]) -> Html {
     let rows = rows
         .iter()
         .enumerate()
@@ -1620,40 +1478,19 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
             RepeatRow {
                 key: place.to_string(),
                 heading: None,
-                fields: view! {
-                    <div class="fui-field">
-                        <label class="fui-sr-only" for=name_id.clone()>
-                            {tr_with(
-                                QueriesMsg::QueryParamNameN,
-                                &[("number", count(place.saturating_add(1)))],
-                            )}
-                        </label>
-                        <input
-                            id=name_id.clone()
-                            name=name_id
-                            type="text"
-                            class="fui-input fui-mono"
-                            value=name.clone()
-                        />
-                    </div>
-                    <div class="fui-field">
-                        <label class="fui-sr-only" for=value_id.clone()>
-                            {tr_with(
-                                QueriesMsg::QueryParamValueN,
-                                &[("number", count(place.saturating_add(1)))],
-                            )}
-                        </label>
-                        <input
-                            id=value_id.clone()
-                            name=value_id
-                            type="text"
-                            class="fui-input fui-mono"
-                            spellcheck="false"
-                            value=value.clone()
-                        />
-                    </div>
-                }
-                .into_any(),
+                fields: h(format!(
+                    r#"<div class="fui-field"><label class="fui-sr-only" for="{name_id}">{name_label}</label><input id="{name_id}" name="{name_id}" type="text" class="fui-input fui-mono" value="{name}"></div><div class="fui-field"><label class="fui-sr-only" for="{value_id}">{value_label}</label><input id="{value_id}" name="{value_id}" type="text" class="fui-input fui-mono" spellcheck="false" value="{value}"></div>"#,
+                    name_label = t(tr_with(
+                        QueriesMsg::QueryParamNameN,
+                        &[("number", count(place.saturating_add(1)))],
+                    )),
+                    value_label = t(tr_with(
+                        QueriesMsg::QueryParamValueN,
+                        &[("number", count(place.saturating_add(1)))],
+                    )),
+                    name = t(name),
+                    value = t(value),
+                )),
                 end: RowEnd::Remove {
                     label: tr_with(
                         QueriesMsg::QueryRemoveParam,
@@ -1684,7 +1521,6 @@ fn parameters_view(rows: &[(String, String)]) -> AnyView {
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The parameters as the JSON object a run sends.
 fn parameters_json(rows: &[(String, String)]) -> String {
     let bindings: BTreeMap<String, String> = rows
@@ -1696,7 +1532,7 @@ fn parameters_json(rows: &[(String, String)]) -> String {
 }
 
 /// The note above the AQL editor.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Note {
     /// The stored query opened from the CDR: its name and version.
     Opened(String, String),
@@ -1706,7 +1542,7 @@ enum Note {
 
 /// The AQL tab's model: the query as the post leaves it, its grammar check,
 /// and what its step answered.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 struct Written {
     /// The AQL.
     aql: String,
@@ -1731,17 +1567,12 @@ struct Written {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_written(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Written, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_written() -> Result<Written, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_written().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_written`] reads, on the server.
+/// What [`load_written`] reads.
 async fn read_written() -> Written {
     let posted = crate::posted::posted();
     let mut note = None;
@@ -1827,7 +1658,7 @@ async fn read_written() -> Written {
 }
 
 /// The AQL tab, drawn.
-fn written(model: Written) -> AnyView {
+fn written(model: Written) -> Html {
     let Written {
         aql,
         note,
@@ -1839,88 +1670,70 @@ fn written(model: Written) -> AnyView {
         save,
     } = model;
     let note = note.map(|note| match note {
-        Note::Opened(name, version) => info_note(tr_with(
+        Note::Opened(name, version) => info_note(t(tr_with(
             QueriesMsg::QueryOpenedStored,
             &[("name", name.into()), ("version", version.into())],
-        )),
-        Note::BuildMade => info_note(tr(QueriesMsg::QueryBuildMade)),
+        ))),
+        Note::BuildMade => info_note(t(tr(QueriesMsg::QueryBuildMade))),
     });
     let top = top.map(|refusal| refusal.view());
     let to_build = buildable.then(|| {
-        view! {
-            <button
-                type="submit"
-                form=QUERY_FORM
-                formaction="/query"
-                name="intent"
-                value="lift"
-                class="fui-button fui-button-ghost fui-button-small"
-            >
-                {ferrohealth_ui::icon::icon(Glyph::LIST_CHECKS, "14")}
-                {tr(QueriesMsg::QueryOpenInBuild)}
-            </button>
-        }
+        h(format!(
+            r#"<button type="submit" form="{QUERY_FORM}" formaction="/query" name="intent" value="lift" class="fui-button fui-button-ghost fui-button-small">{}{}</button>"#,
+            ferrohealth_ui::icon::icon(Glyph::LIST_CHECKS, "14"),
+            t(tr(QueriesMsg::QueryOpenInBuild))
+        ))
     });
-    let editor = view! {
-        <CodeEditor
-            setup=EditorSetup {
-                field: EditorField::Aql,
-                language: EditorLanguage::Aql,
-                text: aql,
-                opened: None,
-                marks: marks_of(findings.as_ref()),
-                label: tr(QueriesMsg::QueryTheAql),
-                lead: tr(QueriesMsg::QueryAql),
-                facts: vec![tr(Msg::EditorUtf8)],
-                findings,
-            }
-            words=EditorWords::of_page()
-            diagnostics=DiagnosticsWords::of_page()
-        />
-    };
-    view! {
-        <Title text=tr(QueriesMsg::QueryAqlTitle) />
-        {heading(save_popover(save))}
-        <div class="fui-stack">
-            {top} <form id=QUERY_FORM method="post" action="/query/aql">
-                <input type="hidden" name="default-intent" value="run" />
-                <button type="submit" class="fui-sr-only" tabindex="-1">
-                    {tr(QueriesMsg::QueryRun)}
-                </button>
-                {binder(
-                    tr(QueriesMsg::QueryWays),
-                    tabs(),
-                    "aql",
-                    panel(
-                        view! {
-                            {plain_section(
-                                view! {
-                                    {note}
-                                    <div class="fui-cluster">{to_build}</div>
-                                    {editor}
-                                },
-                            )}
-                            {section(
-                                Some(tr(QueriesMsg::QueryParameters)),
-                                u64::try_from(rows.len()).ok(),
-                                None,
-                                parameters_view(&rows),
-                            )}
-                            {Answer::view(answer)}
-                        },
-                    ),
-                )}
-            </form>
-        </div>
-    }
-    .into_any()
+    let editor = code_editor(EditorSetup {
+        field: EditorField::Aql,
+        language: EditorLanguage::Aql,
+        text: aql,
+        opened: None,
+        marks: marks_of(findings.as_ref()),
+        label: tr(QueriesMsg::QueryTheAql),
+        lead: tr(QueriesMsg::QueryAql),
+        facts: vec![tr(Msg::EditorUtf8)],
+        findings,
+    });
+    let tabs = binder(
+        &current(),
+        tr(QueriesMsg::QueryWays),
+        tabs(),
+        "aql",
+        panel(Html::join([
+            plain_section(Html::join([
+                opt(note),
+                h(format!(
+                    r#"<div class="fui-cluster">{}</div>"#,
+                    opt(to_build)
+                )),
+                editor,
+            ])),
+            section(
+                Some(tr(QueriesMsg::QueryParameters)),
+                u64::try_from(rows.len()).ok(),
+                None,
+                parameters_view(&rows),
+            ),
+            Answer::view(answer),
+        ])),
+    );
+    let form = h(format!(
+        r#"<form id="{QUERY_FORM}" method="post" action="/query/aql"><input type="hidden" name="default-intent" value="run"><button type="submit" class="fui-sr-only" tabindex="-1">{}</button>{tabs}</form>"#,
+        t(tr(QueriesMsg::QueryRun))
+    ));
+    heading(save_popover(save)).then(h(format!(
+        r#"<div class="fui-stack">{}{form}</div>"#,
+        opt(top)
+    )))
 }
 
 /// Query: AQL.
-#[component]
-pub fn AqlTab() -> impl IntoView {
-    let model = page_model!(load_written());
-    drawn(model, written)
+pub async fn aql_page() -> Drawn {
+    Drawn::page(
+        tr(QueriesMsg::QueryAqlTitle),
+        drawn(load_written().await, written),
+    )
 }
 
 #[cfg(test)]

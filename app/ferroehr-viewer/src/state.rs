@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Shared server state, provided to every server function via Leptos
-//! context (`leptos_routes_with_context`) and to the plain axum handlers
-//! via `Extension`.
+//! Shared server state, held in every page's request scope
+//! ([`crate::scope`]) and handed to the plain axum handlers via `Extension`.
 
 use std::sync::Arc;
 

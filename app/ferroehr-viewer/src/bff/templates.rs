@@ -12,20 +12,14 @@
 //! governs the viewer — our own design / product extension; the wire it
 //! reads/writes is the ITS-REST Definition API.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
-
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 
 use crate::adl2::TemplateFamily;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_served, tr_served_with};
 
 /// Which template a delete addresses — the id, and the family that decides
@@ -105,10 +99,9 @@ fn root_is_composition(archetype_id: &str) -> bool {
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
 /// when the CDR body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_templates() -> Result<Vec<TemplateRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1("definition/template/adl1.4?version=*");
     let response = state
         .cdr
@@ -131,7 +124,6 @@ pub async fn list_templates() -> Result<Vec<TemplateRow>, ViewerError> {
 /// Distil one Definition-list element into a [`TemplateRow`], reading each
 /// field defensively so a missing/renamed field yields an empty string rather
 /// than dropping the row.
-#[cfg(not(target_arch = "wasm32"))]
 fn template_row(item: &serde_json::Value) -> TemplateRow {
     let text = |key: &str| {
         item.get(key)
@@ -161,16 +153,15 @@ fn template_row(item: &serde_json::Value) -> TemplateRow {
 /// [`ViewerError::Invalid`] for empty content;
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR (the diagnostic verbatim).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn upload_template(
-    /// The operational-template XML to upload, as read in the browser.
+    // The operational-template XML to upload, as read in the browser.
     opt_xml: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if opt_xml.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::SelectedFileWasEmpty)));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1("definition/template/adl1.4");
     let response = state
         .cdr
@@ -202,10 +193,9 @@ pub async fn upload_template(
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
 /// when the CDR body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_adl2_templates() -> Result<Vec<TemplateRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1("definition/template/adl2?version=*");
     let response = state
         .cdr
@@ -241,18 +231,17 @@ pub async fn list_adl2_templates() -> Result<Vec<TemplateRow>, ViewerError> {
 /// [`ViewerError::Invalid`] for empty content;
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR (the diagnostic verbatim).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn upload_adl2_template(
-    /// The ADL2 operational-template source, pasted or read from a file.
+    // The ADL2 operational-template source, pasted or read from a file.
     adl2_source: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if adl2_source.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             Msg::ThereNoAdl2SourceUpload,
         )));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1("definition/template/adl2");
     let response = state
         .cdr
@@ -273,7 +262,6 @@ pub async fn upload_adl2_template(
 /// (`{"template_id": …}`), or the trimmed body when the CDR echoed something
 /// else — the upload SUCCEEDED either way, so an unexpected body shape is
 /// reported as-is rather than turned into a failure.
-#[cfg(not(target_arch = "wasm32"))]
 fn accepted_template_id(body: &str) -> String {
     if let Ok(value) = serde_json::from_str::<serde_json::Value>(body)
         && let Some(id) = value.get("template_id").and_then(serde_json::Value::as_str)
@@ -302,16 +290,15 @@ fn accepted_template_id(body: &str) -> String {
 /// [`ViewerError::Invalid`] for an empty id;
 /// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_adl2_artefact(
-    /// The AOM2 artefact HRID to remove.
+    // The AOM2 artefact HRID to remove.
     artefact_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if artefact_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::NoAdl2ArtefactIdDelete)));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state
         .cdr
         .extensions_v1(&crate::adl2::artefact_path(&artefact_id));
@@ -337,7 +324,6 @@ mod tests {
 
     /// Both families' listings are read through this one parser, so it is
     /// pinned against the four fields the Definition API returns.
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_list_element_distils_into_a_row_and_missing_fields_stay_empty() {
         let item = serde_json::json!({
@@ -360,7 +346,6 @@ mod tests {
         assert_eq!(row.created, "");
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn the_upload_answer_yields_the_echoed_template_id() {
         let body = r#"{"template_id":"openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0"}"#;

@@ -16,9 +16,8 @@
 //! point on a real time axis.
 //!
 //! Everything here is a pure, deterministic function of the fetched rows — no
-//! clock, no locale, no randomness, no I/O — which is what keeps the chart
-//! hydration-safe: the server pass and the browser hydration derive
-//! byte-identical series, axes, and tick labels.
+//! clock, no locale, no randomness, no I/O, so every draw of the chart
+//! derives byte-identical series, axes, and tick labels.
 
 #![expect(
     clippy::disallowed_types,
@@ -44,8 +43,7 @@ pub struct SeriesSpec {
     /// used as the series name in the legend.
     pub name: String,
     /// The zero-based result-set column this series reads. Unique per series,
-    /// so it is also the legend's stable, data-derived key. Fixed-size on
-    /// purpose (WASM is 32-bit).
+    /// so it is also the legend's stable, data-derived key.
     pub column: u16,
 }
 
@@ -319,8 +317,7 @@ fn any_series_plottable(series_count: usize, points: &[ChartRow]) -> bool {
 
 // ---------------------------------------------------------------------------
 // ISO 8601 <-> epoch seconds (jiff — the workspace's ISO 8601 crate; only
-// pure parsing/formatting is used, so no clock and no tzdb, which is what
-// keeps it wasm-clean)
+// pure parsing/formatting is used, so no clock and no tzdb)
 // ---------------------------------------------------------------------------
 
 /// Seconds since the Unix epoch for an ISO 8601 date or date/time, or `None`

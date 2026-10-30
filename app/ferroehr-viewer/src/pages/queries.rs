@@ -13,12 +13,14 @@
 //! own design.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, group_row, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::segmented::choice_group;
 use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading};
@@ -27,28 +29,22 @@ use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
 };
 use ferrohealth_ui::view::versions::{Standing, version_cell};
-use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu, row_menu};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::queries::QueriesMsg;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    Refused, count, document_section, drawn, info_note, page_model, panel, plain_section, section,
-    when,
+    Refused, count, document_section, drawn, info_note, panel, plain_section, section, when,
 };
 use crate::pages::results::Answer;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::queries_api::{
     StoredQueryRow, fetch_stored_query, list_stored_queries, run_stored_query,
 };
 use crate::query_namespace::{VersionResolution, bare_name_of};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::query_namespace::{group_by_namespace, resolve_version};
+use crate::routes::Drawn;
 
 /// The key the dashboard's namespace tile names the unqualified queries by.
 pub const UNQUALIFIED: &str = "-";
@@ -83,7 +79,6 @@ fn open_in_query(name: &str, version: &str) -> String {
     )
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The order of two semantic versions, newest first.
 fn newest_first(a: &str, b: &str) -> std::cmp::Ordering {
     let key = |version: &str| -> Vec<u64> {
@@ -96,24 +91,21 @@ fn newest_first(a: &str, b: &str) -> std::cmp::Ordering {
 }
 
 /// The parameters a query text names, as code, or a dash for none.
-fn parameters(names: &[String]) -> AnyView {
+fn parameters(names: &[String]) -> Html {
     if names.is_empty() {
-        return view! { <span class="fui-muted">{tr(Msg::RelationshipNone)}</span> }.into_any();
+        return h(format!(
+            r#"<span class="fui-muted">{}</span>"#,
+            t(tr(Msg::RelationshipNone))
+        ));
     }
     names
         .iter()
-        .map(|name| {
-            view! {
-                <code>{name.clone()}</code>
-                " "
-            }
-        })
-        .collect_view()
-        .into_any()
+        .map(|name| h(format!("<code>{}</code> ", t(name))))
+        .collect()
 }
 
-/// One version of a stored query, as a listing shows it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// One stored query of the list.
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Member {
     /// Its qualified name.
     name: String,
@@ -126,7 +118,7 @@ struct Member {
 }
 
 /// The stored queries of one namespace.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Group {
     /// The namespace, `None` for the unqualified ones.
     namespace: Option<String>,
@@ -137,7 +129,7 @@ struct Group {
 }
 
 /// The stored queries the listing shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Listing {
     /// The CDR holds none.
     Empty,
@@ -153,7 +145,7 @@ enum Listing {
 }
 
 /// Stored queries' model: the namespace the address keeps and the listing.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Listed {
     /// The namespace kept, if any.
     only: Option<String>,
@@ -161,7 +153,6 @@ struct Listed {
     listing: Listing,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The stored queries grouped by namespace, the groups `only` keeps.
 fn grouped(rows: &[StoredQueryRow], only: Option<&str>) -> Listing {
     let mut groups = Vec::new();
@@ -203,17 +194,12 @@ fn grouped(rows: &[StoredQueryRow], only: Option<&str>) -> Listing {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
-async fn load_listing(
-    /// The path and query of the page.
-    href: String,
-) -> Result<Listed, ViewerError> {
-    crate::request::visiting(&href).await?;
+async fn load_listing() -> Result<Listed, ViewerError> {
+    crate::session::require_session()?;
     Ok(read_listing().await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_listing`] reads, on the server.
+/// What [`load_listing`] reads.
 async fn read_listing() -> Listed {
     let only = crate::request::query("namespace").filter(|namespace| !namespace.is_empty());
     let listing = match list_stored_queries().await {
@@ -225,7 +211,7 @@ async fn read_listing() -> Listed {
 }
 
 /// The stored queries grouped by namespace, as a table.
-fn table(groups: Vec<Group>) -> AnyView {
+fn table(groups: Vec<Group>) -> Html {
     let columns = [
         Column::text("name", tr(Msg::QueryName)).role(Role::Title),
         Column::text("version", tr(Msg::ColumnVersion)).role(Role::Sub),
@@ -236,35 +222,36 @@ fn table(groups: Vec<Group>) -> AnyView {
     let mut index = 0_usize;
     for group in groups {
         let label = match &group.namespace {
-            Some(namespace) => view! { <code>{namespace.clone()}</code> }.into_any(),
-            None => tr(QueriesMsg::QueriesUnqualified).into_any(),
+            Some(namespace) => h(format!("<code>{}</code>", t(namespace))),
+            None => t(tr(QueriesMsg::QueriesUnqualified)),
         };
         body.push(group_row(
             &columns,
-            view! {
-                {label}
-                <span class="fui-small fui-muted">
-                    {format!(
-                        " · {}",
-                        tr_with(
-                            QueriesMsg::QueriesGroupCount,
-                            &[
-                                ("names", count(group.names)),
-                                ("versions", count(group.members.len())),
-                            ],
-                        ),
-                    )}
-                </span>
-            },
+            label.then(h(format!(
+                r#"<span class="fui-small fui-muted">{}</span>"#,
+                t(format!(
+                    " · {}",
+                    tr_with(
+                        QueriesMsg::QueriesGroupCount,
+                        &[
+                            ("names", count(group.names)),
+                            ("versions", count(group.members.len())),
+                        ],
+                    ),
+                ))
+            ))),
         ));
         for row in &group.members {
             let href = stored_query_href(&row.name, &row.version);
             let sub = row.older.then(|| {
-                view! { <span class="fui-row-sub">{tr(QueriesMsg::QueriesOlderVersion)}</span> }
-                    .into_any()
+                h(format!(
+                    r#"<span class="fui-row-sub">{}</span>"#,
+                    t(tr(QueriesMsg::QueriesOlderVersion))
+                ))
             });
             let menu = row_menu(
-                Menu::new(
+                &current(),
+                &Menu::new(
                     format!("stored-{index}"),
                     tr_with(
                         Msg::TemplateActionsFor,
@@ -289,16 +276,13 @@ fn table(groups: Vec<Group>) -> AnyView {
                     Act::Link(format!("{href}?confirm=delete")),
                 ))]),
             );
-            body.push(
-                view! {
-                    <tr>
-                        {title_cell(Some(&href), bare_name_of(&row.name).to_owned(), sub)}
-                        {cell(&columns[1], row.version.clone())}
-                        {cell(&columns[2], parameters(&row.parameters))} {menu_cell(menu)}
-                    </tr>
-                }
-                .into_any(),
-            );
+            body.push(h(format!(
+                "<tr>{}{}{}{}</tr>",
+                title_cell(Some(&href), t(bare_name_of(&row.name)), sub),
+                cell(&columns[1], t(&row.version)),
+                cell(&columns[2], parameters(&row.parameters)),
+                menu_cell(menu)
+            )));
             index = index.saturating_add(1);
         }
     }
@@ -307,13 +291,12 @@ fn table(groups: Vec<Group>) -> AnyView {
         caption: &caption,
         columns: &columns,
         sorting: Sorting::default(),
-        body: Body::Rows(body.collect_view().into_any()),
+        body: Body::Rows(Html::join(body)),
     })
-    .into_any()
 }
 
 /// Stored queries' list page.
-fn listed(listed: Listed) -> AnyView {
+fn listed(listed: Listed) -> Html {
     let Listed { only, listing } = listed;
     let write = ferrohealth_ui::view::button::link_button(
         "/query/aql".to_owned(),
@@ -333,6 +316,7 @@ fn listed(listed: Listed) -> AnyView {
             namespace.clone()
         };
         active_filters(
+            &current(),
             ActiveFilters {
                 chips: vec![FilterChip {
                     label: tr_with(QueriesMsg::QueriesNamespaceChip, &[("value", words.into())]),
@@ -344,22 +328,28 @@ fn listed(listed: Listed) -> AnyView {
             None,
         )
     });
-    let card = list_card(ListCard {
-        title: tr(Msg::NavStoredQueries),
-        count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
-        order: None,
-        tabs: None,
-        actions: Some(write),
-        body: list,
-        pager: None,
-    });
-    view! { <div class="fui-list-page">{chips} {card}</div> }.into_any()
+    let card = list_card(
+        &current(),
+        ListCard {
+            title: tr(Msg::NavStoredQueries),
+            count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
+            order: None,
+            tabs: None,
+            actions: Some(write),
+            body: list,
+            pager: None,
+        },
+    );
+    h(format!(
+        r#"<div class="fui-list-page">{}{card}</div>"#,
+        opt(chips)
+    ))
 }
 
-/// Stored queries.
-#[component]
-pub fn StoredQueriesPage() -> impl IntoView {
+/// The stored queries, grouped by namespace.
+pub async fn list_page() -> Drawn {
     let heading = page_heading(
+        &current(),
         Header {
             title: tr(Msg::NavStoredQueries).into(),
             subtitle: Some(tr(QueriesMsg::QueriesSubtitle).into()),
@@ -370,23 +360,17 @@ pub fn StoredQueriesPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    let model = page_model!(load_listing());
-    let body = drawn(model, listed);
-    view! {
-        <Title text=tr(Msg::NavStoredQueries) />
-        {heading}
-        {body}
-    }
+    let body = drawn(load_listing().await, listed);
+    Drawn::page(tr(Msg::NavStoredQueries), heading.then(body))
 }
 
-/// The name and the version the route names.
+/// The stored query and version the route names.
 fn params() -> (String, String) {
-    crate::routes::params().with(|params| {
-        (
-            params.get("name").unwrap_or_default(),
-            params.get("version").unwrap_or_default(),
-        )
-    })
+    let params = crate::routes::params();
+    (
+        params.get("name").unwrap_or_default(),
+        params.get("version").unwrap_or_default(),
+    )
 }
 
 /// The tabs of a stored query.
@@ -412,7 +396,7 @@ impl QueryTab {
 }
 
 /// A stored query's page around the panel of one tab.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Frame<T> {
     /// The qualified name.
     name: String,
@@ -431,7 +415,7 @@ struct Frame<T> {
 }
 
 /// A stored query's page: the deleted version's redirect, or the page.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Page<T> {
     /// The version was deleted and the reader sent to Stored queries.
     Deleted,
@@ -439,7 +423,6 @@ enum Page<T> {
     Shown(Box<Frame<T>>),
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Loads a stored query's page: the Delete version it answers, its
 /// versions, and the panel `body` loads from them and the version shown.
 async fn load_page<T, F>(name: String, version: String, body: F) -> Page<T>
@@ -508,13 +491,9 @@ where
     clippy::too_many_lines,
     reason = "one page frame: the header, the tabs and the delete confirmation"
 )]
-fn page_view<T>(
-    page: Page<T>,
-    tab: QueryTab,
-    body: impl FnOnce(&str, &str, T) -> AnyView,
-) -> AnyView {
+fn page_view<T>(page: Page<T>, tab: QueryTab, body: impl FnOnce(&str, &str, T) -> Html) -> Drawn {
     let Page::Shown(frame) = page else {
-        return ().into_any();
+        return Drawn::default();
     };
     let Frame {
         name,
@@ -566,6 +545,7 @@ fn page_view<T>(
         Act::Dialog(DELETE_DIALOG.to_owned()),
     ))]);
     let heading = page_heading(
+        &current(),
         Header {
             title: bare_name_of(&name).to_owned().into(),
             subtitle: Some(
@@ -591,7 +571,8 @@ fn page_view<T>(
         .more(more),
     );
     let confirm = confirm.then(|| delete_form(&name, &version));
-    let dialog = danger_dialog(
+    let dialog = danger_form_dialog(
+        &current(),
         Confirmation {
             id: DELETE_DIALOG.into(),
             title: tr_with(
@@ -604,71 +585,88 @@ fn page_view<T>(
             .into(),
             message: tr(QueriesMsg::QueriesDeleteMessage).into(),
         },
-        delete_button(&name, &version),
+        ConfirmForm {
+            action: stored_query_href(&name, &version),
+            fields: delete_fields(&version),
+        },
+        delete_submit(&version),
     );
     let acted = acted.map(|refusal| refusal.view());
     let panel = match panel {
         Ok(found) => body(&name, &version, found),
         Err(refusal) => refusal.view(),
     };
-    view! {
-        <Title text=bare_name_of(&name).to_owned() />
-        {heading}
-        <div class="fui-stack">
-            {acted} {confirm} {binder(tr(QueriesMsg::QueriesViews), tabs, tab.key(), panel)}
-        </div>
-        {dialog}
-    }
-    .into_any()
+    let binder = binder(
+        &current(),
+        tr(QueriesMsg::QueriesViews),
+        tabs,
+        tab.key(),
+        panel,
+    );
+    let body = Html::join([
+        heading,
+        h(format!(
+            r#"<div class="fui-stack">{}{}{binder}</div>"#,
+            opt(acted),
+            opt(confirm)
+        )),
+        dialog,
+    ]);
+    Drawn::page(bare_name_of(&name).to_owned(), body)
 }
 
 /// The form that deletes version `version` of `name`.
-fn delete_button(name: &str, version: &str) -> AnyView {
-    view! {
-        <form method="post" action=stored_query_href(name, version)>
-            <input type="hidden" name="intent" value="delete-version" />
-            <input type="hidden" name="version" value=version.to_owned() />
-            <button type="submit" class="fui-button fui-button-danger">
-                {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                {tr_with(
-                    QueriesMsg::QueriesDeleteConfirm,
-                    &[("version", version.to_owned().into())],
-                )}
-            </button>
-        </form>
-    }
-    .into_any()
+fn delete_button(name: &str, version: &str) -> Html {
+    h(format!(
+        r#"<form method="post" action="{}">{}{}</form>"#,
+        t(stored_query_href(name, version)),
+        delete_fields(version),
+        delete_submit(version)
+    ))
+}
+
+/// The fields of a version's delete: its intent and the version.
+fn delete_fields(version: &str) -> Html {
+    h(format!(
+        r#"<input type="hidden" name="intent" value="delete-version"><input type="hidden" name="version" value="{}">"#,
+        t(version)
+    ))
+}
+
+/// The submit of a version's delete.
+fn delete_submit(version: &str) -> Html {
+    h(format!(
+        r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
+        ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
+        t(tr_with(
+            QueriesMsg::QueriesDeleteConfirm,
+            &[("version", version.to_owned().into())],
+        ))
+    ))
 }
 
 /// The delete confirmation drawn in the page, for a reader who came from a
 /// list row's Delete version….
 // NOTE: FerroUI `view::dialog::Confirmation::id` is `&'static str`, so a list draws no dialog per row.
-fn delete_form(name: &str, version: &str) -> AnyView {
-    crate::pages::common::warn_note(view! {
-        <p>
-            <strong>
-                {tr_with(
-                    QueriesMsg::QueriesDeleteTitle,
-                    &[
-                        ("name", bare_name_of(name).to_owned().into()),
-                        ("version", version.to_owned().into()),
-                    ],
-                )}
-            </strong>
-            " "
-            {tr(QueriesMsg::QueriesDeleteMessage)}
-        </p>
-        <div class="fui-cluster">
-            {delete_button(name, version)}
-            <a class="fui-button fui-button-secondary" href=stored_query_href(name, version)>
-                {tr(Msg::Cancel)}
-            </a>
-        </div>
-    })
+fn delete_form(name: &str, version: &str) -> Html {
+    crate::pages::common::warn_note(h(format!(
+        r#"<p><strong>{title}</strong> {message}</p><div class="fui-cluster">{button}<a class="fui-button fui-button-secondary" href="{href}">{cancel}</a></div>"#,
+        title = t(tr_with(
+            QueriesMsg::QueriesDeleteTitle,
+            &[
+                ("name", bare_name_of(name).to_owned().into()),
+                ("version", version.to_owned().into()),
+            ],
+        )),
+        message = t(tr(QueriesMsg::QueriesDeleteMessage)),
+        button = delete_button(name, version),
+        href = t(stored_query_href(name, version)),
+        cancel = t(tr(Msg::Cancel)),
+    )))
 }
 
-/// A stored query's Definition panel.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// A stored query's definition, or why it could not be read.
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Definition {
     /// The CDR's refusal of the version.
     Refused(Refused),
@@ -689,21 +687,17 @@ enum Definition {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_definition(
-    /// The path and query of the page.
-    href: String,
-    /// The stored query the route names.
+    // The stored query the route names.
     name: String,
-    /// The version the route names.
+    // The version the route names.
     version: String,
 ) -> Result<Page<Definition>, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_definition(name, version).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_definition`] reads, on the server.
+/// What [`load_definition`] reads.
 async fn read_definition(name: String, version: String) -> Page<Definition> {
     load_page(name, version, async |name, versions, version| {
         let aql = match fetch_stored_query(name.clone(), version.clone()).await {
@@ -739,7 +733,7 @@ async fn read_definition(name: String, version: String) -> Page<Definition> {
 }
 
 /// The Definition panel, drawn.
-fn definition(name: &str, version: &str, found: Definition) -> AnyView {
+fn definition(name: &str, version: &str, found: Definition) -> Html {
     let (aql, latest, saved, names) = match found {
         Definition::Refused(refusal) => return panel(plain_section(refusal.view())),
         Definition::Shown {
@@ -750,27 +744,31 @@ fn definition(name: &str, version: &str, found: Definition) -> AnyView {
         } => (aql, latest, saved, parameters),
     };
     let older = latest.map(|latest| {
-        plain_section(info_note(view! {
-            {tr_with(
+        plain_section(info_note(h(format!(
+            r#"{} <a href="{}">{}</a>"#,
+            t(tr_with(
                 QueriesMsg::QueriesReadingOlder,
-                &[("version", version.to_owned().into()), ("latest", latest.clone().into())],
-            )}
-            " "
-            <a href=stored_query_href(
-                name,
-                &latest,
-            )>{tr_with(QueriesMsg::QueriesReadVersion, &[("version", latest.clone().into())])}</a>
-        }))
+                &[
+                    ("version", version.to_owned().into()),
+                    ("latest", latest.clone().into()),
+                ],
+            )),
+            t(stored_query_href(name, &latest)),
+            t(tr_with(
+                QueriesMsg::QueriesReadVersion,
+                &[("version", latest.clone().into())],
+            ))
+        ))))
     });
-    let mut facts = vec![(tr(QueriesMsg::QueriesType), "AQL".into_any())];
+    let mut facts = vec![(tr(QueriesMsg::QueriesType), t("AQL"))];
     if !saved.is_empty() {
         facts.push((tr(QueriesMsg::QueriesSaved), when(&saved)));
     }
     facts.push((tr(QueriesMsg::QueryParameters), parameters(&names)));
-    panel(view! {
-        {older}
-        {section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts))}
-        {document_section(
+    panel(Html::join([
+        opt(older),
+        section(Some(tr(Msg::PartyFacts)), None, None, definitions(facts)),
+        document_section(
             tr_with(
                 QueriesMsg::QueriesAqlTitle,
                 &[
@@ -781,26 +779,24 @@ fn definition(name: &str, version: &str, found: Definition) -> AnyView {
             Language::Aql,
             aql,
             "stored-aql",
-        )}
-    })
+        ),
+    ]))
 }
 
-/// A stored query's Definition.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn StoredQueryPage() -> impl IntoView {
+/// A stored query's Definition tab.
+pub async fn page() -> Drawn {
     let (name, version) = params();
-    let model = page_model!(load_definition(name, version));
-    drawn(model, |page| {
-        page_view(page, QueryTab::Definition, definition)
-    })
+    match load_definition(name, version).await {
+        Ok(page) => page_view(page, QueryTab::Definition, definition),
+        Err(error) => Drawn::page(
+            String::new(),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
+    }
 }
 
 /// A stored query's Run form as the post leaves it.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 struct RunForm {
     /// Which version a run sends.
     mode: VersionResolution,
@@ -815,7 +811,7 @@ struct RunForm {
 }
 
 /// A stored query's Run panel.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 enum Run {
     /// The CDR's refusal of the version.
     Refused(Refused),
@@ -827,21 +823,17 @@ enum Run {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_run(
-    /// The path and query of the page.
-    href: String,
-    /// The stored query the route names.
+    // The stored query the route names.
     name: String,
-    /// The version the route names.
+    // The version the route names.
     version: String,
 ) -> Result<Page<Run>, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_run(name, version).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_run`] reads, on the server.
+/// What [`load_run`] reads.
 async fn read_run(name: String, version: String) -> Page<Run> {
     let posted = crate::posted::posted();
     load_page(name, version, async move |name, _versions, version| {
@@ -908,7 +900,7 @@ async fn read_run(name: String, version: String) -> Page<Run> {
 }
 
 /// The Run panel, drawn.
-fn run(name: &str, version: &str, found: Run) -> AnyView {
+fn run(name: &str, version: &str, found: Run) -> Html {
     let RunForm {
         mode,
         typed,
@@ -923,98 +915,89 @@ fn run(name: &str, version: &str, found: Run) -> AnyView {
         .iter()
         .map(|each| (each.as_str(), tr(each.label())))
         .collect();
-    // NOTE: leptos-ui.md §15.8: the version field shows whatever the choice, so a page with no
-    // WebAssembly can pick Prefix or Exact and type the version in one post.
-    let version_field = Field::new("rv", tr(Msg::ColumnVersion))
-        .help(tr(QueriesMsg::QueriesVersionHelp))
-        .after(version_error.map(|error| view! { <p class="fui-field-error">{error}</p> }))
-        .view(view! {
-            <input
-                id="rv"
-                name="run_version"
-                type="text"
-                class="fui-input fui-mono"
-                value=typed.clone()
-                placeholder="1 or 1.1"
-            />
-        });
+    // NOTE: FerroUI console-ui.md §1: the version field shows whatever the choice, so a page
+    // with no script can pick Prefix or Exact and type the version in one post.
+    let mut version_field =
+        Field::new("rv", tr(Msg::ColumnVersion)).help(tr(QueriesMsg::QueriesVersionHelp));
+    if let Some(error) = version_error {
+        version_field =
+            version_field.after(h(format!(r#"<p class="fui-field-error">{}</p>"#, t(error))));
+    }
+    let version_field = version_field.view(h(format!(
+        r#"<input id="rv" name="run_version" type="text" class="fui-input fui-mono" value="{}" placeholder="1 or 1.1">"#,
+        t(&typed)
+    )));
     let sends = match mode {
         VersionResolution::Latest => format!("POST /query/{name}"),
         VersionResolution::Prefix | VersionResolution::Exact => {
             format!("POST /query/{name}/{}", typed.trim())
         }
     };
-    let sends = view! { <p class="fui-small fui-muted">{tr(QueriesMsg::QueriesSends)} " " <code>{sends}</code></p> };
+    let sends = h(format!(
+        r#"<p class="fui-small fui-muted">{} <code>{}</code></p>"#,
+        t(tr(QueriesMsg::QueriesSends)),
+        t(sends)
+    ));
     let names = values.len();
-    let fields = values
+    let fields: Html = values
         .into_iter()
         .map(|(param, value)| {
             let id = format!("p-{param}");
             Field::new(id.clone(), param)
                 .help(tr(QueriesMsg::QueriesParamHelp))
-                .view(view! {
-                    <input
-                        id=id.clone()
-                        name=id
-                        type="text"
-                        class="fui-input fui-mono"
-                        spellcheck="false"
-                        value=value
-                    />
-                })
+                .view(h(format!(
+                    r#"<input id="{id}" name="{id}" type="text" class="fui-input fui-mono" spellcheck="false" value="{}">"#,
+                    t(value),
+                    id = t(&id),
+                )))
         })
-        .collect_view();
-    panel(view! {
-        <form id=RUN_FORM method="post" action=format!("{}/run", stored_query_href(name, version))>
-            <input type="hidden" name="default-intent" value="run" />
-            {section(
-                Some(tr(Msg::ColumnVersion)),
-                None,
-                None,
-                view! {
-                    {choice_group(
-                        "res",
-                        tr(QueriesMsg::QueriesWhichVersion),
-                        &modes,
-                        mode.as_str(),
-                    )}
-                    {version_field}
-                    {sends}
-                },
-            )}
-            {section(
-                Some(tr(QueriesMsg::QueryParameters)),
-                u64::try_from(names).ok(),
-                None,
-                view! {
-                    <div class="fui-form-grid">{fields}</div>
-                    <div class="fui-transform-run">
-                        <button type="submit" class="fui-button fui-button-primary">
-                            {ferrohealth_ui::icon::icon(Glyph::PLAY, "16")}
-                            {tr(QueriesMsg::QueryRun)}
-                        </button>
-                    </div>
-                },
-            )}
-            {Answer::view(answer)}
-        </form>
-    })
+        .collect();
+    let version_section = section(
+        Some(tr(Msg::ColumnVersion)),
+        None,
+        None,
+        Html::join([
+            choice_group(
+                "res",
+                tr(QueriesMsg::QueriesWhichVersion),
+                &modes,
+                mode.as_str(),
+            ),
+            version_field,
+            sends,
+        ]),
+    );
+    let parameters = section(
+        Some(tr(QueriesMsg::QueryParameters)),
+        u64::try_from(names).ok(),
+        None,
+        h(format!(
+            r#"<div class="fui-form-grid">{fields}</div><div class="fui-transform-run"><button type="submit" class="fui-button fui-button-primary">{}{}</button></div>"#,
+            ferrohealth_ui::icon::icon(Glyph::PLAY, "16"),
+            t(tr(QueriesMsg::QueryRun))
+        )),
+    );
+    panel(h(format!(
+        r#"<form id="{RUN_FORM}" method="post" action="{}"><input type="hidden" name="default-intent" value="run">{version_section}{parameters}{}</form>"#,
+        t(format!("{}/run", stored_query_href(name, version))),
+        Answer::view(answer)
+    )))
 }
 
-/// A stored query's Run.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn StoredQueryRunTab() -> impl IntoView {
+/// A stored query's Run tab.
+pub async fn run_page() -> Drawn {
     let (name, version) = params();
-    let model = page_model!(load_run(name, version));
-    drawn(model, |page| page_view(page, QueryTab::Run, run))
+    match load_run(name, version).await {
+        Ok(page) => page_view(page, QueryTab::Run, run),
+        Err(error) => Drawn::page(
+            String::new(),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
+    }
 }
 
 /// One version of a stored query, as Versions lists it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct VersionRow {
     /// The version.
     version: String,
@@ -1028,19 +1011,15 @@ struct VersionRow {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_versions(
-    /// The path and query of the page.
-    href: String,
-    /// The stored query the route names.
+    // The stored query the route names.
     name: String,
 ) -> Result<Page<Vec<VersionRow>>, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_versions(name).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_versions`] reads, on the server.
+/// What [`load_versions`] reads.
 async fn read_versions(name: String) -> Page<Vec<VersionRow>> {
     load_page(name, String::new(), async |_name, versions, _version| {
         versions
@@ -1056,7 +1035,7 @@ async fn read_versions(name: String) -> Page<Vec<VersionRow>> {
 }
 
 /// The Versions panel, drawn.
-fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> AnyView {
+fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> Html {
     let columns = [
         Column::text("version", tr(Msg::ColumnVersion)).role(Role::Title),
         Column::text("saved", tr(QueriesMsg::QueriesSaved)).role(Role::Sub),
@@ -1073,19 +1052,23 @@ fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> AnyView {
                 Standing::Older
             };
             let href = stored_query_href(name, &row.version);
-            view! {
-                <tr>
-                    {title_cell(Some(&href), version_cell(&row.version, standing), None)}
-                    {cell(
-                        &columns[1],
-                        if row.saved.is_empty() { ().into_any() } else { when(&row.saved) },
-                    )} {cell(&columns[2], parameters(&row.parameters))}
-                </tr>
-            }
-            .into_any()
+            let saved = if row.saved.is_empty() {
+                Html::empty()
+            } else {
+                when(&row.saved)
+            };
+            h(format!(
+                "<tr>{}{}{}</tr>",
+                title_cell(
+                    Some(&href),
+                    version_cell(&current(), &row.version, standing),
+                    None
+                ),
+                cell(&columns[1], saved),
+                cell(&columns[2], parameters(&row.parameters))
+            ))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     let caption = tr(Msg::CompositionVersions);
     let table = data_table(DataTable {
         caption: &caption,
@@ -1097,21 +1080,20 @@ fn versions(name: &str, _version: &str, versions: Vec<VersionRow>) -> AnyView {
         Some(tr(Msg::CompositionVersions)),
         u64::try_from(total).ok(),
         None,
-        view! {
-            {ferrohealth_ui::view::surface::section_intro(tr(QueriesMsg::QueriesVersionsIntro))}
-            {table}
-        },
+        ferrohealth_ui::view::surface::section_intro(tr(QueriesMsg::QueriesVersionsIntro))
+            .then(table),
     ))
 }
 
 /// A stored query's Versions.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn StoredQueryVersionsTab() -> impl IntoView {
+/// A stored query's Versions tab.
+pub async fn versions_page() -> Drawn {
     let (name, _) = params();
-    let model = page_model!(load_versions(name));
-    drawn(model, |page| page_view(page, QueryTab::Versions, versions))
+    match load_versions(name).await {
+        Ok(page) => page_view(page, QueryTab::Versions, versions),
+        Err(error) => Drawn::page(
+            String::new(),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
+    }
 }

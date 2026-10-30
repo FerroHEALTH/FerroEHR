@@ -38,23 +38,19 @@
 //! panel; the panel's own section id comes from its caller
 //! ([`TagPanelCopy::form_id`]).
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use std::collections::BTreeMap;
 
-use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::error::ViewerError;
 use crate::locale::Msg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
 
 /// One `ITEM_TAG` as the tag routes serve it.
@@ -63,8 +59,7 @@ use crate::locale::tr_with;
 /// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.item_tag.adoc`):
 /// `key`, the optional `value`, the optional `target_path`, the `target` (a
 /// `UID_BASED_ID` — a `HIER_OBJECT_ID` for a container target, an
-/// `OBJECT_VERSION_ID` for one version) and the `owner_id` reference. Strings
-/// only, so the type is WASM-safe over the server-fn boundary.
+/// `OBJECT_VERSION_ID` for one version) and the `owner_id` reference.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ItemTagRow {
     /// `ITEM_TAG.key`.
@@ -116,11 +111,6 @@ pub struct TagGroup {
     pub tags: Vec<ItemTagRow>,
 }
 
-/// The resource shape every tag panel reads: `None` while the panel's tab is
-/// inactive (so an unopened tab fetches nothing), `Some(list)` once the CDR
-/// has answered.
-pub type TagList = Resource<Result<Option<Vec<ItemTagRow>>, ViewerError>>;
-
 /// The copy one tag panel renders itself with — what the collection IS, so no
 /// screen has to re-explain the openEHR tag model in its own words.
 #[derive(Debug, Clone, Copy)]
@@ -147,7 +137,6 @@ pub struct TagPanelCopy {
 /// sentence in `demographic_tags_get.yaml`). The parameter names are the
 /// released ones, which the viewer's own argument names deliberately do not
 /// repeat (`tag_key` on both sides would only stutter).
-#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
     let mut query = String::new();
@@ -174,7 +163,6 @@ pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
 /// operation names (module docs), and it emits only the three declared members
 /// (`schemas/common/UpdateItemTag.yaml` is `additionalProperties: false`, so a
 /// re-sent `target`/`owner_id` would be a `400`).
-#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn merged_tag_body(
     existing: &[ItemTagRow],
@@ -205,7 +193,6 @@ pub fn merged_tag_body(
 /// (`org.openehr.rm.common.item_tag.adoc`), and an absent `target_path` is what
 /// "tags the whole object" means — so a blank field is OMITTED, never sent as
 /// `""`.
-#[cfg(not(target_arch = "wasm32"))]
 fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
     let mut entry = serde_json::Map::new();
     drop(entry.insert("key".to_owned(), Value::String(key.to_owned())));
@@ -226,7 +213,6 @@ fn update_tag(key: &str, value: &str, target_path: &str) -> Value {
 ///
 /// # Errors
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
     let doc: Value = serde_json::from_str(body).map_err(|e| {
         ViewerError::Internal(tr_with(
@@ -249,7 +235,6 @@ pub fn parse_item_tags(body: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
 
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
-#[cfg(not(target_arch = "wasm32"))]
 fn string_at(value: &Value, path: &[&str]) -> String {
     let mut current = value;
     for key in path {
@@ -268,8 +253,8 @@ fn string_at(value: &Value, path: &[&str]) -> String {
 /// (`operations/ehr_tags_get.yaml` retrieves the tags "associated with any
 /// target VERSION or `VERSIONED_OBJECT` within the EHR"), so the target is what
 /// a reader groups by. Pure and deterministic: targets in `BTreeMap` order,
-/// each group's tags by identity — no clock, no hash iteration, so the server
-/// pass and hydration render the same table.
+/// each group's tags by identity: no clock, no hash iteration, so every draw
+/// renders the same table.
 #[must_use]
 pub fn group_by_target(tags: Vec<ItemTagRow>) -> Vec<TagGroup> {
     let mut by_target: BTreeMap<String, Vec<ItemTagRow>> = BTreeMap::new();
@@ -332,8 +317,8 @@ mod tests {
             row("archived", "8849182c"),
         ]);
         assert_eq!(groups.len(), 2);
-        // Targets in BTreeMap order, tags by identity inside each group — the
-        // same order on the server pass and at hydration.
+        // Targets in BTreeMap order, tags by identity inside each group: the
+        // same order on every draw.
         assert_eq!(groups[0].target, "8849182c");
         let keys: Vec<&str> = groups[0].tags.iter().map(|t| t.key.as_str()).collect();
         assert_eq!(keys, vec!["archived", "flag"]);
@@ -353,7 +338,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod wire_tests {
     use super::{ItemTagRow, merged_tag_body, parse_item_tags, tag_filter_query};
     use serde_json::Value;

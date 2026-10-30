@@ -12,7 +12,7 @@
 #   UI_E2E_IMAGE        if set, run the journeys against the COMPOSED viewer
 #                       image (docker compose build of docker/viewer/
 #                       Dockerfile + the e2e-env override) instead of a host
-#                       cargo-leptos build — the shipped-artifact battery.
+#                       cargo build, the shipped-artifact battery.
 #                       Its caller is the weekly
 #                       .github/workflows/ui-e2e-published.yml lane, which
 #                       drives the latest release's published images; measured
@@ -30,10 +30,10 @@
 #   UI_E2E_PREBUILT_VIEWER
 #                       (was UI_E2E_PREBUILT_CONSOLE before the product was
 #                       named FerroEHR Viewer; the CI job sets the new name)
-#                       if set, skip the host cargo-leptos build and run the
-#                       viewer binary + site tree already at
-#                       target/debug/ferroehr-viewer + target/site (CI builds
-#                       them in a parallel job and downloads the artifact).
+#                       if set, skip the host cargo build and run the viewer
+#                       binary already at target/debug/ferroehr-viewer (CI
+#                       builds it in a parallel job and downloads the
+#                       artifact).
 #   UI_E2E_NEXTEST_ARCHIVE
 #                       if set, run the journeys from this prebuilt nextest
 #                       archive (`cargo nextest archive -p ferroehr-viewer
@@ -302,24 +302,13 @@ if [[ -n "${UI_E2E_IMAGE:-}" ]]; then
 else
   if [[ -n "${UI_E2E_PREBUILT_VIEWER:-}" ]]; then
     echo "── using the prebuilt viewer (UI_E2E_PREBUILT_VIEWER)"
-    # hash.txt is as load-bearing as the binary: without it the renderer names
-    # the unhashed /pkg files, which the hashed bundle does not contain.
-    for p in "$ROOT/target/debug/ferroehr-viewer" "$ROOT/target/debug/hash.txt" \
-             "$ROOT/target/site/pkg"; do
-      [[ -e "$p" ]] || { echo "FATAL: UI_E2E_PREBUILT_VIEWER set but $p is missing" >&2; exit 1; }
-    done
+    [[ -e "$ROOT/target/debug/ferroehr-viewer" ]] \
+      || { echo "FATAL: UI_E2E_PREBUILT_VIEWER set but target/debug/ferroehr-viewer is missing" >&2; exit 1; }
   else
-    echo "── building the viewer (cargo-leptos)"
-    bash scripts/cargo-leptos.sh build
+    echo "── building the viewer"
+    cargo build --locked -p ferroehr-viewer --bin ferroehr-viewer
   fi
   echo "── starting the viewer on $VIEWER_ADDR"
-  # LEPTOS_HASH_FILES is the runtime half of the crate manifest's `hash-files`
-  # (leptos_config reads it from the environment, with no compile-time
-  # fallback): it is what makes the served page name the content-hashed /pkg
-  # files this build produced.
-  LEPTOS_SITE_ROOT="$ROOT/target/site" \
-  LEPTOS_OUTPUT_NAME="ferroehr-viewer" \
-  LEPTOS_HASH_FILES="true" \
   FERROEHR_VIEWER__SERVER__LISTEN="$VIEWER_ADDR" \
   FERROEHR_VIEWER__CDR__BASE_URL="$CDR_URL" \
   FERROEHR_VIEWER__SESSION__COOKIE_SECURE="false" \
@@ -334,17 +323,6 @@ else
   VIEWER_PID=$!
 fi
 wait_http "$VIEWER_URL/login"
-
-# Warm the served asset chain once: the first journey after a cold viewer
-# start otherwise pays the whole debug-build wasm read (measured 100s+ cold)
-# against the harness's hydration budget.
-curl -sf "$VIEWER_URL/login" \
-  | grep -oE '(href|src)="/pkg/[^"]+"' \
-  | sed -E 's/^(href|src)="//; s/"$//' \
-  | sort -u \
-  | while IFS= read -r asset; do
-      curl -sf -o /dev/null "$VIEWER_URL$asset" || true
-    done
 
 # ── 4. chromedriver ──────────────────────────────────────────────────────────
 # CHROMEWEBDRIVER is the GitHub runner images' own variable and the driver is

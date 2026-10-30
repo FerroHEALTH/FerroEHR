@@ -12,20 +12,17 @@
 //! (`crate::query_namespace`), so it lives in the CDR and reads identically
 //! for every API client.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::ehrs::ResultPage;
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr_served, tr_served_with};
 
 /// A stored-query listing row (ITS-REST Definition API).
@@ -41,23 +38,6 @@ pub struct StoredQueryRow {
     pub saved: String,
 }
 
-/// Validate AQL text BFF-locally through the real grammar — no CDR round
-/// trip. Returns the parser diagnostic on failure.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a session;
-/// [`ViewerError::Invalid`] carrying the parse diagnostic.
-#[server(client = crate::session_client::SessionAwareClient)]
-pub async fn validate_aql(
-    /// The AQL text to parse.
-    aql: String,
-) -> Result<(), ViewerError> {
-    crate::session::require_session().await?;
-    openehr_query::parser::parse_str(&aql)
-        .map(|_| ())
-        .map_err(|e| ViewerError::Invalid(e.to_string()))
-}
-
 /// Run ad-hoc AQL via `POST query/aql` with parameter bindings (a JSON
 /// object as text), one page at `offset`.
 ///
@@ -70,17 +50,16 @@ pub async fn validate_aql(
 /// [`ViewerError::Invalid`] when `parameters_json` is not a JSON object;
 /// CDR errors normalized via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn run_aql(
-    /// The AQL to execute.
+    // The AQL to execute.
     aql: String,
-    /// Parameter bindings as a JSON object text; empty means none.
+    // Parameter bindings as a JSON object text; empty means none.
     parameters_json: String,
-    /// First row of the page to return.
+    // First row of the page to return.
     offset: u32,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let parameters: serde_json::Value = if parameters_json.trim().is_empty() {
         serde_json::json!({})
     } else {
@@ -132,10 +111,9 @@ pub async fn run_aql(
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a session; CDR errors
 /// normalized; [`ViewerError::Internal`] on an unparseable body.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1("definition/query");
     let response = state
         .cdr
@@ -183,15 +161,14 @@ pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a session; CDR errors
 /// normalized (a `404` for an unknown name included).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_stored_query(
-    /// The qualified stored-query name.
+    // The qualified stored-query name.
     name: String,
-    /// The version to read; a partial pattern resolves by prefix.
+    // The version to read; a partial pattern resolves by prefix.
     version: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "definition/query/{}/{}",
         urlencoding::encode(&name),
@@ -245,16 +222,15 @@ pub async fn fetch_stored_query(
 /// [`ViewerError::Invalid`] for a bad name, a non-triple version, or
 /// unparseable AQL; CDR errors normalized (notably `409` for an existing
 /// `(name, version)` pair).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn store_query(
-    /// The qualified name to file the definition under.
+    // The qualified name to file the definition under.
     name: String,
-    /// The concrete `major.minor.patch` version; the CDR assigns one when absent.
+    // The concrete `major.minor.patch` version; the CDR assigns one when absent.
     version: Option<String>,
-    /// The AQL text to store.
+    // The AQL text to store.
     aql: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if name.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::StoredQueryNeedsName,
@@ -275,7 +251,7 @@ pub async fn store_query(
     }
     openehr_query::parser::parse_str(&aql)
         .map_err(|e| ViewerError::Invalid(crate::error::error_chain(&e)))?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let state = crate::scope::state()?;
     let path = match version.as_deref() {
         Some(version) => format!(
             "definition/query/{}/{}",
@@ -299,8 +275,7 @@ pub async fn store_query(
 /// The two ITS-REST stored-query execution operations are addressed by whether a
 /// `version` is supplied — which is the spec's version-resolution contract, not a
 /// viewer convention. `version` is the path segment to send, EMPTY meaning "send
-/// none" (a plain `String` rather than an `Option` so nothing about the request
-/// depends on how an optional field survives the server-fn encoding):
+/// none" (a plain `String`, as the posted form carries it):
 ///
 /// - `version` empty → `POST query/{qualified_query_name}` — "when `version` is
 ///   not supplied at all, the system must use the latest `version`".
@@ -335,21 +310,20 @@ pub async fn store_query(
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success)
 /// (notably `404` when no stored version matches the resolution form);
 /// [`ViewerError::Internal`] when the result set is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn run_stored_query(
-    /// The qualified stored-query name.
+    // The qualified stored-query name.
     name: String,
-    /// The version to run; a partial pattern resolves by prefix.
+    // The version to run; a partial pattern resolves by prefix.
     version: String,
-    /// Parameter bindings as a JSON object text; empty means none.
+    // Parameter bindings as a JSON object text; empty means none.
     parameters_json: String,
-    /// First row of the page to return.
+    // First row of the page to return.
     offset: u32,
-    /// Whether the request owns the row window (see above).
+    // Whether the request owns the row window (see above).
     paged: bool,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     if name.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::NoStoredQueryRunOpenOne,
@@ -422,15 +396,14 @@ pub async fn run_stored_query(
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a session; CDR errors
 /// normalized; [`ViewerError::Internal`] on an unparseable result.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn run_stored_count(
-    /// The qualified stored-query name.
+    // The qualified stored-query name.
     name: String,
-    /// The version to run.
+    // The version to run.
     version: String,
 ) -> Result<i64, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = leptos::prelude::expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "query/{}/{}",
         urlencoding::encode(&name),

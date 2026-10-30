@@ -14,8 +14,7 @@
 //! says which part of the form is wrong instead of dropping it silently.
 //!
 //! Everything here is a pure function of the input string (no clock, no request,
-//! no I/O), which is what makes the previewer hydration-safe by construction and
-//! lets it run in the browser rather than round-tripping the BFF for a parse.
+//! no I/O), so the previewer draws the same reading on every request.
 //!
 //! **Capability is not authorization.** A scope NARROWS what a token may ask
 //! for; it grants nothing by itself. master08 §Scopes: the Platform validates
@@ -155,7 +154,7 @@ pub struct PolicySource {
 }
 
 /// The policy source for a session's authentication method (`"basic"` /
-/// `"oidc"`, as [`crate::auth::SessionInfo::method`] reports it).
+/// `"oidc"`).
 ///
 /// The viewer states only what the session actually carries: a Basic session
 /// replays a CDR account, an OIDC session carries a token whose scopes it can

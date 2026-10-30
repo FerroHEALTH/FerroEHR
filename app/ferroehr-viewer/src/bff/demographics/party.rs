@@ -31,30 +31,20 @@
 //! (`Type_valid`: "type = name", and `type()` is "Taken from inherited `_name_`
 //! attribute"), not a person's name.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::records::RecordsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::container_uid_of;
 
 /// The viewer's view of one party version.
@@ -107,15 +97,14 @@ pub struct PartyState {
 /// unknown id, or for an id held by a DIFFERENT kind, included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_party(
-    /// The party family, as its route segment ([`PartyKind::segment`]).
+    // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
-    /// The party's `uid_based_id` (either form; the container is used).
+    // The party's `uid_based_id` (either form; the container is used).
     uid: String,
 ) -> Result<Option<PartyState>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let uid = container_uid_of(&uid);
@@ -156,15 +145,14 @@ pub async fn fetch_party(
 /// normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the created resource carries no `uid`.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn create_party(
-    /// The party family, as its route segment ([`PartyKind::segment`]).
+    // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
-    /// The party document to commit, as canonical JSON text.
+    // The party document to commit, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let body = checked_party_body(&body, kind)?;
@@ -195,8 +183,8 @@ pub async fn create_party(
 /// Commit a new version of a party (`PUT /demographic/{kind}/{uid_based_id}`).
 ///
 /// The path carries the version CONTAINER — the update's `uid_based_id` "can
-/// take only a form of an HIER_OBJECT_ID identifier taken from
-/// VERSIONED_OBJECT.uid.value" (`operations/person_update.yaml`) — and
+/// take only a form of an `HIER_OBJECT_ID` identifier taken from
+/// `VERSIONED_OBJECT.uid.value`" (`operations/person_update.yaml`) — and
 /// `If-Match` carries the version the loading read's `ETag` named, since "the
 /// existing latest `version_uid` of PERSON resource (i.e. the
 /// `preceding_version_uid`) must be
@@ -216,23 +204,22 @@ pub async fn create_party(
 /// non-2xx CDR answer (the `412` collision and the `400`/`422` diagnostics
 /// included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn update_party(
-    /// The party family, as its route segment ([`PartyKind::segment`]).
+    // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
-    /// The version container to update.
+    // The version container to update.
     versioned_object_uid: String,
-    /// The version this edit is based on, sent as `If-Match`.
+    // The version this edit is based on, sent as `If-Match`.
     current_version_uid: String,
-    /// The served party document this edit merges into, verbatim.
+    // The served party document this edit merges into, verbatim.
     base_body: String,
-    /// The replacement `identities`, as a JSON array.
+    // The replacement `identities`, as a JSON array.
     identities: String,
-    /// The replacement `details`, as a JSON object; empty removes it.
+    // The replacement `details`, as a JSON object; empty removes it.
     details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let current = current_version_uid.trim();
@@ -269,8 +256,8 @@ pub async fn update_party(
 /// Logically delete a party (`DELETE /demographic/{kind}/{uid_based_id}`).
 ///
 /// The path is the VERSION to supersede, not the container: the delete's
-/// `uid_based_id` "MUST be in a form of an OBJECT_VERSION_ID identifier taken
-/// from the last (most recent) VERSION.uid.value, representing the
+/// `uid_based_id` "MUST be in a form of an `OBJECT_VERSION_ID` identifier taken
+/// from the last (most recent) `VERSION.uid.value`, representing the
 /// `preceding_version_uid` to be deleted" (`operations/person_delete.yaml`).
 /// That operation declares no `If-Match` at all — the precondition IS the path
 /// — and answers `204`, or `409` when the supplied uid is not the latest
@@ -286,15 +273,14 @@ pub async fn update_party(
 /// non-2xx CDR answer (the `409` stale-uid and `400` already-deleted branches
 /// included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_party(
-    /// The party family, as its route segment ([`PartyKind::segment`]).
+    // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
-    /// The version to supersede, as a full `OBJECT_VERSION_ID`.
+    // The version to supersede, as a full `OBJECT_VERSION_ID`.
     version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let version_uid = version_uid.trim();
@@ -313,7 +299,6 @@ pub async fn delete_party(
     Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Check an operator-authored party body before it is sent: it must be a JSON
 /// object, and its `_type` must be the routed kind's RM type.
 ///
@@ -348,7 +333,6 @@ fn checked_party_body(body: &str, kind: PartyKind) -> Result<String, ViewerError
     Ok(doc.to_string())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a canonical party body into a [`PartyState`], keeping the body
 /// verbatim. Defensive throughout — an absent attribute reads as its empty
 /// default rather than failing the tab.
@@ -398,7 +382,6 @@ fn parse_party_state(body: &str, served_etag: Option<&str>) -> Result<PartyState
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The length of a JSON array attribute as the fixed-size int the wire type
 /// carries, saturating rather than wrapping.
 fn count_of(value: Option<&Value>) -> u32 {
@@ -407,7 +390,6 @@ fn count_of(value: Option<&Value>) -> u32 {
         .map_or(0, |items| u32::try_from(items.len()).unwrap_or(u32::MAX))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Read an `identities` draft: a JSON array with at least one entry.
 ///
 /// `PARTY.identities` is `List<PARTY_IDENTITY>` `1..1` with the invariant
@@ -434,7 +416,6 @@ fn parse_identities(draft: &str) -> Result<Value, String> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Read a `details` draft: `None` for a blank draft (the attribute is removed),
 /// `Some(value)` for a JSON object.
 ///
@@ -465,7 +446,6 @@ fn parse_details(draft: &str) -> Result<Option<Value>, String> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Apply the form's two edits to the loaded party document and return the body
 /// to PUT.
 ///

@@ -16,11 +16,12 @@
 //! the viewer's pages: our own design.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::coding::{Coding, Layout, coding};
-use ferrohealth_ui::view::diagnostics::DiagnosticsWords;
-use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value as Shown, reading};
@@ -32,40 +33,32 @@ use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::versions::{
     Standing, Version, VersionHistory, older_version, version_history,
 };
-use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
-use ferrohealth_ui::widget::editor::EditorWords;
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
 use crate::bff::composition::VersionedCompositionDetails;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::composition::{
     delete_composition, fetch_composition, fetch_version_at_time, fetch_versioned_composition,
     fetch_versions, update_composition,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_tags::{delete_ehr_tag, fetch_ehr_tags, set_ehr_tag};
 use crate::bff::wire::VersionEntry;
 use crate::clinical::{RenderedNode, RenderedSection};
-use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::format::ReprFormat;
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, message, tr, tr_with};
+use crate::locale::{Msg, current, message, tr, tr_with};
+use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, docked, document_section,
-    drawn, findings_of, info_note, marks_of, page_model, panel, plain_section, section, short,
-    shortened, state_mark, version_number, when,
+    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section, drawn,
+    findings_of, info_note, marks_of, panel, plain_section, section, short, shortened, state_mark,
+    version_number, when,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
+use crate::routes::Drawn;
 
 /// The id of Delete composition's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-composition";
@@ -84,7 +77,7 @@ pub fn composition_href(ehr_id: &str, uid: &str) -> String {
 }
 
 /// The tabs of a composition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CompTab {
     /// The clinical reading.
     Reading,
@@ -97,7 +90,6 @@ enum CompTab {
 }
 
 impl CompTab {
-    #[cfg(not(target_arch = "wasm32"))]
     /// The tab the address names, the Reading for none.
     fn asked() -> Self {
         match crate::request::query("tab").as_deref() {
@@ -138,7 +130,7 @@ fn tab_href(ehr_id: &str, uid: &str, tab: CompTab, version: Option<&str>) -> Str
 }
 
 /// The header facts of a composition document.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct Head {
     /// `name.value`.
     name: String,
@@ -151,7 +143,6 @@ struct Head {
 }
 
 impl Head {
-    #[cfg(not(target_arch = "wasm32"))]
     #[expect(
         clippy::disallowed_types,
         reason = "the viewer reads the CDR's COMPOSITION JSON wire for the header's name, template and context"
@@ -193,7 +184,7 @@ pub(crate) fn reading_section(rendered: &RenderedSection) -> Section {
                         if !system.is_empty() {
                             coded = coded.system(system);
                         }
-                        Shown::Coded(coding(coded, Layout::Inline))
+                        Shown::Coded(coding(&current(), coded, Layout::Inline))
                     }
                     None => Shown::Text(row.value.clone()),
                 };
@@ -219,8 +210,8 @@ fn reading_panel(
     ehr_id: &str,
     uid: &str,
     rendered: Option<RenderedSection>,
-    older: Option<AnyView>,
-) -> AnyView {
+    older: Option<Html>,
+) -> Html {
     let drawn = match rendered {
         Some(document) => {
             let section = reading_section(&document);
@@ -236,13 +227,16 @@ fn reading_panel(
                     },
                 );
             }
-            reading(Reading {
-                sections,
-                level: Level::Two,
-                folded: None,
-            })
+            reading(
+                &current(),
+                Reading {
+                    sections,
+                    level: Level::Two,
+                    folded: None,
+                },
+            )
         }
-        None => plain_section(info_note(tr(RecordsMsg::CompositionNoReading))),
+        None => plain_section(info_note(t(tr(RecordsMsg::CompositionNoReading)))),
     };
     let full = older.is_none().then(|| {
         plain_section(ferrohealth_ui::view::button::link_button(
@@ -252,11 +246,11 @@ fn reading_panel(
             tr(RecordsMsg::CompositionShowDocument),
         ))
     });
-    panel(view! {
-        {older.map(plain_section)}
-        {drawn}
-        {full}
-    })
+    panel(Html::join([
+        opt(older.map(plain_section)),
+        drawn,
+        opt(full),
+    ]))
 }
 
 /// The representations the Document tab offers.
@@ -267,7 +261,6 @@ const FORMATS: [(&str, ReprFormat); 4] = [
     ("structured", ReprFormat::Structured),
 ];
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The representation the address names, canonical JSON for none.
 fn asked_format() -> (usize, ReprFormat) {
     let asked = crate::request::query("format").unwrap_or_default();
@@ -280,7 +273,7 @@ fn asked_format() -> (usize, ReprFormat) {
 
 /// The Document tab's document: the representation it is in and the
 /// document as the CDR converted it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Converted {
     /// The place of the representation in [`FORMATS`].
     current: usize,
@@ -291,7 +284,6 @@ struct Converted {
     shown: Result<Option<String>, Refused>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Reads the Document tab's document: the version `version_uid` in the
 /// representation the address names.
 async fn converted(ehr_id: &str, version_uid: &str) -> Converted {
@@ -309,7 +301,7 @@ async fn converted(ehr_id: &str, version_uid: &str) -> Converted {
 
 /// The Document tab: the representation switch and the document as the CDR
 /// converted it.
-fn document_panel(ehr_id: &str, uid: &str, version: Option<&str>, converted: Converted) -> AnyView {
+fn document_panel(ehr_id: &str, uid: &str, version: Option<&str>, converted: Converted) -> Html {
     let Converted {
         current,
         format,
@@ -321,12 +313,11 @@ fn document_panel(ehr_id: &str, uid: &str, version: Option<&str>, converted: Con
         .iter()
         .map(|(key, format)| (format!("{base}{joiner}format={key}"), format.label()))
         .collect();
-    let switch = view! {
-        <div class="fui-cluster">
-            {segmented_links(tr(Msg::CompositionFormat), choices, current)}
-            <span class="fui-small fui-muted">{tr(RecordsMsg::CompositionConverts)}</span>
-        </div>
-    };
+    let switch = h(format!(
+        r#"<div class="fui-cluster">{}<span class="fui-small fui-muted">{}</span></div>"#,
+        segmented_links(tr(Msg::CompositionFormat), choices, current),
+        t(tr(RecordsMsg::CompositionConverts))
+    ));
     let shown = match shown {
         Ok(Some(body)) => document_section(
             tr_with(
@@ -341,13 +332,10 @@ fn document_panel(ehr_id: &str, uid: &str, version: Option<&str>, converted: Con
             body,
             "composition-document",
         ),
-        Ok(None) => plain_section(info_note(tr(RecordsMsg::CompositionDeletedVersion))),
+        Ok(None) => plain_section(info_note(t(tr(RecordsMsg::CompositionDeletedVersion)))),
         Err(refusal) => plain_section(refusal.view()),
     };
-    panel(view! {
-        {plain_section(switch)}
-        {shown}
-    })
+    panel(plain_section(switch).then(shown))
 }
 
 /// The revision history of the composition, the version in view marked.
@@ -357,7 +345,7 @@ fn history(
     versions: &[VersionEntry],
     reading: Option<&str>,
     deleted: bool,
-) -> AnyView {
+) -> Html {
     let latest = versions.first().map(|version| version.version_id.clone());
     let rows = versions
         .iter()
@@ -383,19 +371,22 @@ fn history(
                 change: version.change_type.clone(),
                 committer: version.committer.clone(),
                 when: ago(&version.committed),
-                contribution: ().into_any(),
+                contribution: Html::empty(),
             }
         })
         .collect();
-    version_history(VersionHistory {
-        caption: tr(Msg::CompositionVersions),
-        versions: rows,
-        at_time: Some(at_time_row(
-            composition_href(ehr_id, uid),
-            &crate::request::query("at").unwrap_or_default(),
-            tr(RecordsMsg::CompositionAtTimeOpens),
-        )),
-    })
+    version_history(
+        &current(),
+        VersionHistory {
+            caption: tr(Msg::CompositionVersions),
+            versions: rows,
+            at_time: Some(at_time_row(
+                composition_href(ehr_id, uid),
+                &crate::request::query("at").unwrap_or_default(),
+                tr(RecordsMsg::CompositionAtTimeOpens),
+            )),
+        },
+    )
 }
 
 /// The Versions tab: the history, the version in view's envelope and the
@@ -407,7 +398,7 @@ fn versions_panel(
     details: Result<VersionedCompositionDetails, Refused>,
     reading: Option<&str>,
     deleted: bool,
-) -> AnyView {
+) -> Html {
     let count = versions
         .as_ref()
         .map_or(None, |versions| u64::try_from(versions.len()).ok());
@@ -417,7 +408,7 @@ fn versions_panel(
     };
     let facts = match details {
         Ok(details) => {
-            let yes_no = |yes: bool| tr(if yes { Msg::Yes } else { Msg::No }).into_any();
+            let yes_no = |yes: bool| t(tr(if yes { Msg::Yes } else { Msg::No }));
             let version = section(
                 Some(tr_with(
                     RecordsMsg::CompositionVersionN,
@@ -426,14 +417,11 @@ fn versions_panel(
                 None,
                 None,
                 definitions(vec![
-                    (
-                        tr(RecordsMsg::FactLifecycle),
-                        details.lifecycle_state.clone().into_any(),
-                    ),
+                    (tr(RecordsMsg::FactLifecycle), t(&details.lifecycle_state)),
                     (
                         tr(RecordsMsg::CompositionPreceding),
                         if details.preceding_version_uid.is_empty() {
-                            tr(RecordsMsg::CompositionFirstVersion).into_any()
+                            t(tr(RecordsMsg::CompositionFirstVersion))
                         } else {
                             short(&details.preceding_version_uid)
                         },
@@ -460,7 +448,11 @@ fn versions_panel(
                     ),
                     (
                         tr(RecordsMsg::ColumnEhr),
-                        view! { <a href=ehr_href(ehr_id)>{short(ehr_id)}</a> }.into_any(),
+                        h(format!(
+                            r#"<a href="{}">{}</a>"#,
+                            t(ehr_href(ehr_id)),
+                            short(ehr_id)
+                        )),
                     ),
                     (
                         tr(RecordsMsg::CompositionFirstCommitted),
@@ -468,21 +460,13 @@ fn versions_panel(
                     ),
                 ]),
             );
-            view! {
-                {version}
-                {object}
-            }
-            .into_any()
+            version.then(object)
         }
         Err(refusal) => plain_section(refusal.view()),
     };
-    panel(view! {
-        {section(Some(tr(Msg::CompositionVersions)), count, None, history)}
-        {facts}
-    })
+    panel(section(Some(tr(Msg::CompositionVersions)), count, None, history).then(facts))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What a post to the composition's page asks, done: delete, set or remove a
 /// tag. `Some` holds the refusal to draw, and for a tag the draft it keeps.
 async fn act(
@@ -562,7 +546,7 @@ fn context_line(head: &Head, latest: &str, reading: Option<&str>) -> String {
                 ("template", head.template.clone().into()),
                 (
                     "started",
-                    ferrohealth_ui::view::time::reading(&head.started).into(),
+                    ferrohealth_ui::view::time::reading(&current(), &head.started).into(),
                 ),
                 ("composer", head.composer.clone().into()),
             ],
@@ -574,7 +558,7 @@ fn context_line(head: &Head, latest: &str, reading: Option<&str>) -> String {
                 ("version", version_number(latest).into()),
                 (
                     "started",
-                    ferrohealth_ui::view::time::reading(&head.started).into(),
+                    ferrohealth_ui::view::time::reading(&current(), &head.started).into(),
                 ),
                 ("composer", head.composer.clone().into()),
             ],
@@ -591,7 +575,7 @@ fn header(
     latest: &str,
     reading: Option<&str>,
     deleted: Option<&VersionEntry>,
-) -> AnyView {
+) -> Html {
     let more = Menu::new(
         "composition-more",
         tr(RecordsMsg::CompositionMore),
@@ -619,7 +603,7 @@ fn header(
                     ("template", head.template.clone().into()),
                     (
                         "when",
-                        ferrohealth_ui::view::time::reading(&deletion.committed).into(),
+                        ferrohealth_ui::view::time::reading(&current(), &deletion.committed).into(),
                     ),
                     ("who", deletion.committer.clone().into()),
                     ("version", version_number(&deletion.version_id).into()),
@@ -659,6 +643,7 @@ fn header(
         head.name.clone()
     };
     page_heading(
+        &current(),
         Header {
             title: name.into(),
             subtitle: Some(subtitle.into()),
@@ -669,16 +654,16 @@ fn header(
         },
         actions,
     )
-    .into_any()
 }
 
 /// The confirmation of Delete composition.
-fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize) -> AnyView {
+fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize) -> Html {
     let next = version_number(latest).parse::<u32>().map_or_else(
         |_| String::new(),
         |number| number.saturating_add(1).to_string(),
     );
-    danger_dialog(
+    danger_form_dialog(
+        &current(),
         Confirmation {
             id: DELETE_DIALOG.into(),
             title: tr_with(
@@ -695,29 +680,28 @@ fn delete_dialog(ehr_id: &str, uid: &str, name: &str, latest: &str, count: usize
             )
             .into(),
         },
-        view! {
-            <form method="post" action=composition_href(ehr_id, uid)>
-                <input type="hidden" name="intent" value="delete-composition" />
-                <input type="hidden" name="version" value=latest.to_owned() />
-                <button type="submit" class="fui-button fui-button-danger">
-                    {ferrohealth_ui::icon::icon(Glyph::TRASH, "16")}
-                    {tr(RecordsMsg::CompositionDeleteConfirm)}
-                </button>
-            </form>
+        ConfirmForm {
+            action: composition_href(ehr_id, uid),
+            fields: h(format!(
+                r#"<input type="hidden" name="intent" value="delete-composition"><input type="hidden" name="version" value="{}">"#,
+                t(latest)
+            )),
         },
+        h(format!(
+            r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
+            ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
+            t(tr(RecordsMsg::CompositionDeleteConfirm))
+        )),
     )
-    .into_any()
 }
 
 /// The composition id the route names.
 fn uid_param() -> String {
-    crate::routes::params()
-        .with(|params| params.get("uid"))
-        .unwrap_or_default()
+    crate::routes::params().get("uid").unwrap_or_default()
 }
 
 /// The version the Reading tab shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Read {
     /// Its clinical reading, `None` when it is not a canonical document the
     /// reading understands.
@@ -727,7 +711,7 @@ enum Read {
 }
 
 /// What a composition's tab shows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum TabBody {
     /// The version shown, or the CDR's refusal of it.
     Reading(Result<Read, Refused>),
@@ -740,7 +724,7 @@ enum TabBody {
 }
 
 /// A composition the CDR holds, as its page shows it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Composition {
     /// Its versions, newest first, or the CDR's refusal of them.
     versions: Result<Vec<VersionEntry>, Refused>,
@@ -761,7 +745,7 @@ struct Composition {
 }
 
 /// One composition's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum CompositionModel {
     /// The composition.
     Shown(Box<Composition>),
@@ -775,21 +759,17 @@ enum CompositionModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
-    /// The id the route names.
+    // The id the route names.
     uid: String,
 ) -> Result<CompositionModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_page(ehr_id, uid).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load`] reads, on the server.
+/// What [`load`] reads.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the versions, the version in view, the post and the tab's read"
@@ -916,9 +896,10 @@ async fn read_page(ehr_id: String, uid: String) -> CompositionModel {
     }))
 }
 
-/// The page of a composition the CDR cannot read.
-fn missing(ehr_id: &str, uid: &str, refusal: &Refused) -> AnyView {
+/// The page of a composition the CDR cannot read, with its title.
+fn missing(ehr_id: &str, uid: &str, refusal: &Refused) -> (String, Html) {
     let heading = page_heading(
+        &current(),
         Header {
             title: tr_with(
                 RecordsMsg::CompositionTitle,
@@ -933,12 +914,10 @@ fn missing(ehr_id: &str, uid: &str, refusal: &Refused) -> AnyView {
         },
         ActionGroup::none(),
     );
-    view! {
-        <Title text=tr(RecordsMsg::CompositionRefused) />
-        {heading}
-        {refusal.view()}
-    }
-    .into_any()
+    (
+        tr(RecordsMsg::CompositionRefused),
+        heading.then(refusal.view()),
+    )
 }
 
 /// The tabs of a composition: the version in view and the versions of a
@@ -1006,9 +985,9 @@ fn tabs(
     }
 }
 
-/// A composition's page: its header, the tab shown and Delete composition's
-/// confirmation.
-fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> AnyView {
+/// A composition's page with its title: its header, the tab shown and Delete
+/// composition's confirmation.
+fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> (String, Html) {
     let Composition {
         versions,
         latest,
@@ -1028,12 +1007,13 @@ fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> AnyVie
     let reading = reading_number.as_deref().filter(|_| deleted.is_none());
     let older = reading_number.as_deref().map(|number| {
         if deleted.is_some() {
-            info_note(tr_with(
+            info_note(t(tr_with(
                 RecordsMsg::CompositionLastBeforeDeletion,
                 &[("version", number.to_owned().into())],
-            ))
+            )))
         } else {
             older_version(
+                &current(),
                 number,
                 u32::try_from(count).unwrap_or(u32::MAX),
                 composition_href(ehr_id, uid),
@@ -1051,9 +1031,9 @@ fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> AnyVie
         TabBody::Reading(Ok(Read::Clinical(rendered))) => {
             reading_panel(ehr_id, uid, rendered, older)
         }
-        TabBody::Reading(Ok(Read::Deleted)) => panel(plain_section(info_note(tr(
+        TabBody::Reading(Ok(Read::Deleted)) => panel(plain_section(info_note(t(tr(
             RecordsMsg::CompositionDeletedVersion,
-        )))),
+        ))))),
         TabBody::Reading(Err(refusal)) => panel(plain_section(refusal.view())),
         TabBody::Document(converted) => document_panel(ehr_id, uid, reading, converted),
         TabBody::Versions(details) => {
@@ -1064,36 +1044,44 @@ fn composition_view(ehr_id: &str, uid: &str, composition: Composition) -> AnyVie
     let dialog = deleted
         .is_none()
         .then(|| delete_dialog(ehr_id, uid, &name, &latest, count));
-    view! {
-        <Title text=name.clone() />
-        {header(ehr_id, uid, &head, &latest, reading, deleted.as_ref())}
-        <div class="fui-stack">
-            {acted.map(|refusal| refusal.view())}
-            {binder(tr(RecordsMsg::CompositionViews), tabs, tab.key(), body)}
-        </div>
-        {dialog}
-    }
-    .into_any()
+    let binder = binder(
+        &current(),
+        tr(RecordsMsg::CompositionViews),
+        tabs,
+        tab.key(),
+        body,
+    );
+    let page = Html::join([
+        header(ehr_id, uid, &head, &latest, reading, deleted.as_ref()),
+        h(format!(
+            r#"<div class="fui-stack">{}{binder}</div>"#,
+            opt(acted.map(|refusal| refusal.view()))
+        )),
+        opt(dialog),
+    ]);
+    (name, page)
 }
 
 /// One composition.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn CompositionPage() -> impl IntoView {
+pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let uid = uid_param();
-    let model = page_model!(load(ehr_id.clone(), uid.clone()));
-    let page = drawn(model, move |model| match model {
-        CompositionModel::Shown(composition) => composition_view(&ehr_id, &uid, *composition),
-        CompositionModel::Missing(refusal) => missing(&ehr_id, &uid, &refusal),
-    });
-    view! { {page} }
+    match load(ehr_id.clone(), uid.clone()).await {
+        Ok(CompositionModel::Shown(composition)) => {
+            let (title, body) = composition_view(&ehr_id, &uid, *composition);
+            Drawn::page(title, body)
+        }
+        Ok(CompositionModel::Missing(refusal)) => {
+            let (title, body) = missing(&ehr_id, &uid, &refusal);
+            Drawn::page(title, body)
+        }
+        Err(error) => Drawn::page(
+            tr(RecordsMsg::CompositionRefused),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
+    }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Whether the Tags tab is offered: on the latest version of a composition
 /// that is not deleted.
 const fn tags_allowed(deleted: bool, reading: Option<&str>) -> bool {
@@ -1108,33 +1096,26 @@ fn document_editor(
     language: EditorLanguage,
     findings: Option<(String, ferrohealth_ui::view::diagnostics::FileFindings)>,
     label: String,
-) -> AnyView {
+) -> Html {
     let lead = match language {
         EditorLanguage::Xml => tr(RecordsMsg::EditorXml),
         _ => tr(RecordsMsg::EditorJson),
     };
-    view! {
-        <CodeEditor
-            setup=EditorSetup {
-                field: EditorField::Document,
-                language,
-                text,
-                opened,
-                marks: marks_of(findings.as_ref()),
-                label,
-                lead,
-                facts: vec![tr(Msg::EditorUtf8)],
-                findings,
-            }
-            words=EditorWords::of_page()
-            diagnostics=DiagnosticsWords::of_page()
-        />
-    }
-    .into_any()
+    code_editor(EditorSetup {
+        field: EditorField::Document,
+        language,
+        text,
+        opened,
+        marks: marks_of(findings.as_ref()),
+        label,
+        lead,
+        facts: vec![tr(Msg::EditorUtf8)],
+        findings,
+    })
 }
 
 /// A save the CDR refused.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Unsaved {
     /// The refusal.
     refusal: Refused,
@@ -1143,7 +1124,7 @@ struct Unsaved {
 }
 
 /// What Edit as a new version's form holds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Editor {
     /// The latest version's document, pretty-printed.
     current: String,
@@ -1160,7 +1141,7 @@ struct Editor {
 }
 
 /// Edit as a new version's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum EditModel {
     /// The form.
     Editor(Box<Editor>),
@@ -1177,25 +1158,21 @@ enum EditModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_edit(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
-    /// The id the route names.
+    // The id the route names.
     uid: String,
 ) -> Result<EditModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_edit(ehr_id, uid).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_edit`] reads, on the server.
+/// What [`load_edit`] reads.
 async fn read_edit(ehr_id: String, uid: String) -> EditModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
-        leptos_axum::redirect(&composition_href(&ehr_id, &uid));
+        crate::request::redirect(&composition_href(&ehr_id, &uid));
         return EditModel::Left;
     }
     let current =
@@ -1268,11 +1245,7 @@ async fn read_edit(ehr_id: String, uid: String) -> EditModel {
 }
 
 /// Edit as a new version's page, its decision bar docked.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one editor: its heading, its refusal, its docked decisions and its document"
-)]
-fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
+fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> (String, Html) {
     let Editor {
         current,
         latest,
@@ -1293,26 +1266,21 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
     };
     let top = unsaved.map(|unsaved| {
         let reload = unsaved.conflict.then(|| {
-            view! {
-                <div class="fui-cluster">
-                    {ferrohealth_ui::view::button::link_button(
-                        format!("{}/edit", composition_href(ehr_id, uid)),
-                        ferrohealth_ui::view::button::Variant::Secondary,
-                        Some(Glyph::REFRESH_CW),
-                        tr_with(
-                            RecordsMsg::EditorReloadVersion,
-                            &[("version", version_number(&latest).into())],
-                        ),
-                    )}
-                    <span class="fui-small fui-muted">{tr(RecordsMsg::EditorReloadReplaces)}</span>
-                </div>
-            }
+            h(format!(
+                r#"<div class="fui-cluster">{}<span class="fui-small fui-muted">{}</span></div>"#,
+                ferrohealth_ui::view::button::link_button(
+                    format!("{}/edit", composition_href(ehr_id, uid)),
+                    ferrohealth_ui::view::button::Variant::Secondary,
+                    Some(Glyph::REFRESH_CW),
+                    tr_with(
+                        RecordsMsg::EditorReloadVersion,
+                        &[("version", version_number(&latest).into())],
+                    ),
+                ),
+                t(tr(RecordsMsg::EditorReloadReplaces))
+            ))
         });
-        view! {
-            {unsaved.refusal.view()}
-            {reload}
-        }
-        .into_any()
+        unsaved.refusal.view().then(opt(reload))
     });
     let save = version_number(&opened).parse::<u32>().map_or_else(
         |_| tr(Msg::EditorSave),
@@ -1340,6 +1308,7 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
         composition_href(ehr_id, uid),
     ));
     let heading = editor_heading(
+        &crate::locale::current(),
         message(RecordsMsg::EditorTitle),
         &Mode::Editing(name.clone()),
         Header {
@@ -1358,48 +1327,45 @@ fn edit_page(ehr_id: &str, uid: &str, editor: Editor) -> AnyView {
         },
         ActionGroup::none(),
     );
-    view! {
-        <Title text=tr_with(Msg::CompositionEditTitle, &[("name", name.into())]) />
-        {heading}
-        <div class="fui-stack">
-            {top}
-            <form
-                id=EDIT_FORM
-                method="post"
-                action=format!("{}/edit", composition_href(ehr_id, uid))
-            >
-                <input type="hidden" name="version" value=opened />
-                {document_editor(
-                    text,
-                    Some(current),
-                    EditorLanguage::Json,
-                    findings,
-                    tr(RecordsMsg::CompositionEditorLabel),
-                )}
-            </form>
-        </div>
-    }
-    .into_any()
+    let form = h(format!(
+        r#"<form id="{EDIT_FORM}" method="post" action="{action}"><input type="hidden" name="version" value="{version}">{editor}</form>"#,
+        action = t(format!("{}/edit", composition_href(ehr_id, uid))),
+        version = t(&opened),
+        editor = document_editor(
+            text,
+            Some(current),
+            EditorLanguage::Json,
+            findings,
+            tr(RecordsMsg::CompositionEditorLabel),
+        ),
+    ));
+    (
+        tr_with(Msg::CompositionEditTitle, &[("name", name.into())]),
+        heading.then(h(format!(
+            r#"<div class="fui-stack">{}{form}</div>"#,
+            opt(top)
+        ))),
+    )
 }
 
 /// Edit as a new version.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn EditCompositionPage() -> impl IntoView {
+pub async fn edit_composition_page() -> Drawn {
     let ehr_id = ehr_id_param();
     let uid = uid_param();
-    let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_edit(ehr_id.clone(), uid.clone()));
-    let page = docked(model, dock_promise, move |model| match model {
-        EditModel::Editor(editor) => edit_page(&ehr_id, &uid, *editor),
-        EditModel::Deleted => info_note(tr(RecordsMsg::CompositionDeletedNoEdit)),
-        EditModel::Refused(refusal) => refusal.view(),
-        EditModel::Left => ().into_any(),
-    });
-    view! { {page} }
+    let (title, body) = match load_edit(ehr_id.clone(), uid.clone()).await {
+        Ok(EditModel::Editor(editor)) => edit_page(&ehr_id, &uid, *editor),
+        Ok(EditModel::Deleted) => (
+            tr(RecordsMsg::CompositionDeletedNoEdit),
+            info_note(t(tr(RecordsMsg::CompositionDeletedNoEdit))),
+        ),
+        Ok(EditModel::Refused(refusal)) => (tr(RecordsMsg::CompositionRefused), refusal.view()),
+        Ok(EditModel::Left) => (String::new(), Html::empty()),
+        Err(error) => (
+            tr(RecordsMsg::CompositionRefused),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
+    };
+    Drawn::page(title, body)
 }
 
 /// The formats New composition commits in.
@@ -1410,7 +1376,7 @@ const NEW_FORMATS: [(&str, ReprFormat); 3] = [
 ];
 
 /// What New composition's form holds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct NewForm {
     /// The key of the format it commits in.
     format_key: String,
@@ -1425,7 +1391,7 @@ struct NewForm {
 }
 
 /// New composition's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum NewModel {
     /// The form.
     Form(Box<NewForm>),
@@ -1446,23 +1412,19 @@ fn new_format(format_key: &str) -> ReprFormat {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_new(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<NewModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_new(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_new`] reads, on the server.
+/// What [`load_new`] reads.
 async fn read_new(ehr_id: String) -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
-        leptos_axum::redirect(&ehr_href(&ehr_id));
+        crate::request::redirect(&ehr_href(&ehr_id));
         return NewModel::Left;
     }
     let format_key = posted
@@ -1531,11 +1493,7 @@ async fn read_new(ehr_id: String) -> NewModel {
 }
 
 /// New composition's page, its decision bar docked.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one form: its heading, its refusal, the template and format, the document and the dock"
-)]
-fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
+fn new_form(ehr_id: &str, form: NewForm) -> Html {
     let NewForm {
         format_key,
         template,
@@ -1555,26 +1513,22 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
     };
     let template_field = match templates {
         Ok(ids) => {
-            let options = ids
+            let options: Html = ids
                 .into_iter()
                 .map(|id| {
-                    let selected = id == template;
-                    let value = id.clone();
-                    view! {
-                        <option value=value selected=selected>
-                            {id}
-                        </option>
-                    }
+                    h(format!(
+                        r#"<option value="{value}"{selected}>{value}</option>"#,
+                        value = t(&id),
+                        selected = crate::markup::flag("selected", id == template),
+                    ))
                 })
-                .collect_view();
+                .collect();
             Field::new("nt", tr(Msg::FilterTemplate))
                 .help(tr(RecordsMsg::CompositionTemplateHelp))
-                .view(view! {
-                    <select id="nt" name="template" class="fui-select">
-                        <option value="">{tr(RecordsMsg::StagedFromDocument)}</option>
-                        {options}
-                    </select>
-                })
+                .view(h(format!(
+                    r#"<select id="nt" name="template" class="fui-select"><option value="">{}</option>{options}</select>"#,
+                    t(tr(RecordsMsg::StagedFromDocument))
+                )))
         }
         Err(refusal) => refusal.view(),
     };
@@ -1590,6 +1544,7 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
         blocked: None,
     });
     let heading = editor_heading(
+        &current(),
         message(RecordsMsg::CompositionNewTitle),
         &Mode::Creating,
         Header {
@@ -1607,62 +1562,38 @@ fn new_page(ehr_id: &str, form: NewForm) -> AnyView {
     } else {
         EditorLanguage::Json
     };
-    view! {
-        <Title text=tr(RecordsMsg::CompositionNewPageTitle) />
-        {heading}
-        <div class="fui-stack">
-            {refused.map(|refusal| refusal.view())}
-            <form
-                id=EDIT_FORM
-                method="post"
-                action=format!("{}/compositions/new", ehr_href(ehr_id))
-            >
-                {card_panel(
-                    section(
-                        None,
-                        None,
-                        None,
-                        view! {
-                            <div class="fui-form-grid">
-                                <div class="fui-span-2">{template_field}</div>
-                                <div class="fui-span-2">
-                                    {choice_group(
-                                        "format",
-                                        tr(Msg::CompositionFormat),
-                                        &formats,
-                                        &format_key,
-                                    )}
-                                </div>
-                            </div>
-                        },
-                    ),
-                )}
-                {document_editor(
-                    text,
-                    None,
-                    language,
-                    findings,
-                    tr(RecordsMsg::CompositionNewEditorLabel),
-                )}
-            </form>
-        </div>
-    }
-    .into_any()
+    let choices = card_panel(section(
+        None,
+        None,
+        None,
+        h(format!(
+            r#"<div class="fui-form-grid"><div class="fui-span-2">{template_field}</div><div class="fui-span-2">{}</div></div>"#,
+            choice_group("format", tr(Msg::CompositionFormat), &formats, &format_key,)
+        )),
+    ));
+    let form = h(format!(
+        r#"<form id="{EDIT_FORM}" method="post" action="{action}">{choices}{editor}</form>"#,
+        action = t(format!("{}/compositions/new", ehr_href(ehr_id))),
+        editor = document_editor(
+            text,
+            None,
+            language,
+            findings,
+            tr(RecordsMsg::CompositionNewEditorLabel),
+        ),
+    ));
+    heading.then(h(format!(
+        r#"<div class="fui-stack">{}{form}</div>"#,
+        opt(refused.map(|refusal| refusal.view()))
+    )))
 }
 
 /// New composition.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn NewCompositionPage() -> impl IntoView {
+pub async fn new_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_new(ehr_id.clone()));
-    let page = docked(model, dock_promise, move |model| match model {
-        NewModel::Form(form) => new_page(&ehr_id, *form),
-        NewModel::Left => ().into_any(),
+    let body = drawn(load_new(ehr_id.clone()).await, |model| match model {
+        NewModel::Form(form) => new_form(&ehr_id, *form),
+        NewModel::Left => Html::empty(),
     });
-    view! { {page} }
+    Drawn::page(tr(RecordsMsg::CompositionNewPageTitle), body)
 }

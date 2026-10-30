@@ -31,25 +31,20 @@
 //! authorization: a mounted-but-refused group (`401`/`403`) still counts as
 //! present, and the refusal surfaces as copy on the screen that asked.
 //!
-//! Every `#[server]` fn guards with
-//! [`require_session`](crate::session::require_session) first (a server fn is a
-//! publicly reachable HTTP endpoint) and keeps the CDR credential server-side.
+//! Every read guards with
+//! [`require_session`](crate::session::require_session) first and keeps the
+//! CDR credential server-side.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::expect_context;
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{tr_served, tr_served_with};
 
 /// One subscription as the CDR serves it
@@ -57,9 +52,8 @@ use crate::locale::{tr_served, tr_served_with};
 /// created_at}`).
 ///
 /// Every wire value is a string, including the id and the timestamp: the record
-/// crosses the server-fn boundary and is rendered, never computed with (no
-/// `usize`, and no parsing the viewer would have to keep in step with the
-/// CDR's own formatting). A predicate the CDR serves as `null` — its wildcard —
+/// is rendered, never computed with (no parsing the viewer would have to keep
+/// in step with the CDR's own formatting). A predicate the CDR serves as `null` — its wildcard —
 /// arrives here as the empty string.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct SubscriptionRow {
@@ -98,9 +92,6 @@ pub struct SubscriptionPredicates {
 }
 
 /// Whether the CDR serves its event-subscription admin API.
-///
-/// Carries only fixed-size, client-safe data — it crosses the server-fn
-/// boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SubscriptionAvailability {
     /// The group answered: it is mounted, so the screen is offered. Whether
@@ -164,7 +155,7 @@ pub fn name_is_valid(name: &str) -> bool {
 /// How one predicate reads on screen: its value, or `any` for the wildcard.
 ///
 /// Pure and unit-tested, so the table cell and the summary sentence spell an
-/// absent predicate identically on the server pass and at hydration.
+/// absent predicate identically.
 #[must_use]
 pub fn predicate_label(value: &str) -> String {
     if value.trim().is_empty() {
@@ -206,7 +197,6 @@ pub fn match_summary(row: &SubscriptionRow) -> String {
 /// Names the object, carries the CDR's own diagnostic verbatim, and names the
 /// next action. The `409` here is a duplicate NAME (the CDR's unique key), not
 /// the admin deletes' "still referenced by committed data".
-#[cfg(not(target_arch = "wasm32"))]
 #[must_use]
 pub fn subscription_failure_copy(object: &str, error: &ViewerError) -> String {
     match error {
@@ -253,10 +243,9 @@ pub fn subscription_failure_copy(object: &str, error: &ViewerError) -> String {
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::CdrUnreachable`] on transport failure.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn probe_event_subscriptions() -> Result<SubscriptionAvailability, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1("admin/event_subscription");
     let response = state
         .cdr
@@ -277,10 +266,9 @@ pub async fn probe_event_subscriptions() -> Result<SubscriptionAvailability, Vie
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
 /// when the body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_event_subscriptions() -> Result<Option<Vec<SubscriptionRow>>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1("admin/event_subscription");
     let response = state
         .cdr
@@ -315,20 +303,19 @@ pub async fn list_event_subscriptions() -> Result<Option<Vec<SubscriptionRow>>, 
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
 /// when the created record is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn create_event_subscription(
-    /// The subscription name (unique on the CDR, immutable afterwards).
+    // The subscription name (unique on the CDR, immutable afterwards).
     name: String,
-    /// The predicates and the enabled flag to store.
+    // The predicates and the enabled flag to store.
     predicates: SubscriptionPredicates,
 ) -> Result<SubscriptionRow, ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if !name_is_valid(&name) {
         return Err(ViewerError::Invalid(
             { tr_served(Msg::SubscriptionNameRequiredMayHoldOnly) }.clone(),
         ));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1("admin/event_subscription");
     let response = state
         .cdr
@@ -360,18 +347,17 @@ pub async fn create_event_subscription(
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
 /// when the stored record is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn update_event_subscription(
-    /// The subscription to update, by CDR id.
+    // The subscription to update, by CDR id.
     subscription_id: String,
-    /// The predicates and the enabled flag to store, replacing what is there.
+    // The predicates and the enabled flag to store, replacing what is there.
     predicates: SubscriptionPredicates,
 ) -> Result<SubscriptionRow, ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if subscription_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdUpdate)));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1(&format!(
         "admin/event_subscription/{}",
         urlencoding::encode(&subscription_id)
@@ -398,16 +384,15 @@ pub async fn update_event_subscription(
 /// [`ViewerError::Invalid`] for an empty id;
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_event_subscription(
-    /// The subscription to delete, by CDR id.
+    // The subscription to delete, by CDR id.
     subscription_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
+    let session = crate::session::require_session()?;
     if subscription_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdDelete)));
     }
-    let state: crate::state::AppState = expect_context();
+    let state = crate::scope::state()?;
     let url = state.cdr.extensions_v1(&format!(
         "admin/event_subscription/{}",
         urlencoding::encode(&subscription_id)
@@ -422,7 +407,6 @@ pub async fn delete_event_subscription(
 ///
 /// The CDR reads absent, `null` and empty alike as "any"; `null` is sent
 /// because it says exactly that.
-#[cfg(not(target_arch = "wasm32"))]
 fn predicate_value(raw: &str) -> serde_json::Value {
     let value = raw.trim();
     if value.is_empty() {
@@ -437,7 +421,6 @@ fn predicate_value(raw: &str) -> serde_json::Value {
 ///
 /// Built through `serde_json` rather than string formatting so a value carrying
 /// a quote or a backslash is escaped by the encoder.
-#[cfg(not(target_arch = "wasm32"))]
 fn subscription_definition(name: &str, predicates: &SubscriptionPredicates) -> String {
     serde_json::json!({
         "name": name.trim(),
@@ -452,7 +435,6 @@ fn subscription_definition(name: &str, predicates: &SubscriptionPredicates) -> S
 /// The update request body: the four predicates and the enabled flag, with no
 /// name (the CDR ignores an echoed one, and sending it would suggest it could
 /// change).
-#[cfg(not(target_arch = "wasm32"))]
 fn subscription_update(predicates: &SubscriptionPredicates) -> String {
     serde_json::json!({
         "kind": predicate_value(&predicates.kind),
@@ -464,7 +446,6 @@ fn subscription_update(predicates: &SubscriptionPredicates) -> String {
 }
 
 /// Parse the stored record a create/update answered with.
-#[cfg(not(target_arch = "wasm32"))]
 fn stored_record(body: &str) -> Result<SubscriptionRow, ViewerError> {
     let value = serde_json::from_str::<serde_json::Value>(body).map_err(|e| {
         ViewerError::Internal(tr_with(
@@ -479,7 +460,6 @@ fn stored_record(body: &str) -> Result<SubscriptionRow, ViewerError> {
 /// defensively so a missing or renamed field empties that cell rather than
 /// dropping the whole row from the listing. A `null` predicate — the CDR's
 /// wildcard — reads as the empty string.
-#[cfg(not(target_arch = "wasm32"))]
 fn subscription_row(item: &serde_json::Value) -> SubscriptionRow {
     let text = |key: &str| {
         item.get(key)
@@ -657,7 +637,6 @@ mod tests {
 
     /// The wire shapes this module parses, pinned against the answers the CDR
     /// actually serves.
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_served_element_distils_into_a_row_and_a_null_predicate_is_the_wildcard() {
         let item = serde_json::json!({
@@ -687,7 +666,6 @@ mod tests {
         assert!(parsed.enabled);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn the_request_bodies_carry_each_value_under_its_own_key() {
         let predicates = super::SubscriptionPredicates {
@@ -716,7 +694,6 @@ mod tests {
         assert_eq!(updated["enabled"], false);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_value_carrying_a_quote_is_escaped_by_the_encoder() {
         let predicates = super::SubscriptionPredicates {

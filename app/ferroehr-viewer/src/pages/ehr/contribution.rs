@@ -17,8 +17,8 @@
 //! pages: our own design.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-#[cfg(not(target_arch = "wasm32"))]
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::table::model::Window;
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_pager};
@@ -27,43 +27,35 @@ use ferrohealth_ui::table::view::{
 };
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
-use ferrohealth_ui::view::diagnostics::DiagnosticsWords;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::layout::{FieldRow, field_row};
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, definitions, editor_heading, page_heading,
 };
 use ferrohealth_ui::view::template::list::list_empty;
-use ferrohealth_ui::widget::editor::EditorWords;
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::commit::commit_contribution;
 use crate::bff::ehr_detail::commit::staged::{StagedChange, StagedKind};
 use crate::bff::ehr_detail::contributions::ContributionPage as Listed;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_detail::contributions::{
     contribution_activity, fetch_contribution, list_contributions,
 };
-use crate::components::{CodeEditor, EditorField, EditorLanguage, EditorSetup};
+use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, message, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
+use crate::locale::{Msg, current, message, tr, tr_with};
+use crate::markup::{h, opt, t};
 use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, docked, document_section,
-    drawn, page_model, panel, section, shortened, version_number, when,
+    EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, document_section, drawn,
+    panel, section, shortened, version_number, when,
 };
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_href, ehr_id_param, ehr_view, tab_href};
 use crate::paging::Listing;
+use crate::routes::Drawn;
 
-#[cfg(not(target_arch = "wasm32"))]
 /// How many days the activity chart covers.
 const ACTIVITY_DAYS: u16 = 30;
 
@@ -78,7 +70,7 @@ pub fn contribution_href(ehr_id: &str, uid: &str) -> String {
 }
 
 /// The contributions per day of the last [`ACTIVITY_DAYS`] days.
-fn activity(days: Result<LastDays, Refused>) -> AnyView {
+fn activity(days: Result<LastDays, Refused>) -> Html {
     let days = match days {
         Ok(days) => days,
         Err(refusal) => return refusal.view(),
@@ -105,11 +97,11 @@ fn activity(days: Result<LastDays, Refused>) -> AnyView {
         points: days.counts,
         ticks: days.ticks,
     };
-    activity_chart(&chart).into_any()
+    activity_chart(&chart)
 }
 
 /// The contributions of one page, as a table.
-fn listing(ehr_id: &str, page: &Listed) -> AnyView {
+fn listing(ehr_id: &str, page: &Listed) -> Html {
     let columns = [
         Column::text("contribution", tr(RecordsMsg::ColumnContribution)).role(Role::Title),
         Column::text("committed", tr(RecordsMsg::ColumnCommitted)).role(Role::Sub),
@@ -121,14 +113,13 @@ fn listing(ehr_id: &str, page: &Listed) -> AnyView {
         .iter()
         .map(|row| {
             let href = contribution_href(ehr_id, &row.uid);
-            let title = title_cell(Some(&href), shortened(&row.uid), None);
+            let title = title_cell(Some(&href), t(shortened(&row.uid)), None);
             let when_cell = cell(&columns[1], ago(&row.time_committed));
-            let who_cell = cell(&columns[2], row.committer.clone());
-            let change = cell(&columns[3], change_words(&row.change_type_rubric));
-            view! { <tr>{title} {when_cell} {who_cell} {change}</tr> }.into_any()
+            let who_cell = cell(&columns[2], t(&row.committer));
+            let change = cell(&columns[3], t(change_words(&row.change_type_rubric)));
+            h(format!("<tr>{title}{when_cell}{who_cell}{change}</tr>"))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     let caption = tr(RecordsMsg::EhrTabContributions);
     data_table(DataTable {
         caption: &caption,
@@ -136,7 +127,6 @@ fn listing(ehr_id: &str, page: &Listed) -> AnyView {
         sorting: Sorting::default(),
         body: Body::Rows(rows),
     })
-    .into_any()
 }
 
 /// The words of an `audit_change_type` rubric, the rubric itself when the
@@ -153,7 +143,6 @@ fn change_words(rubric: &str) -> String {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Reads the page of contributions the paging asks for, the last page when
 /// it asks past the end.
 async fn page_of(ehr_id: &str, paging: Paging) -> Result<(Listed, Window), ViewerError> {
@@ -169,7 +158,7 @@ async fn page_of(ehr_id: &str, paging: Paging) -> Result<(Listed, Window), Viewe
 
 /// The Contributions tab's model: the contributions per day and the page of
 /// the list.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct ContributionsPanel {
     /// The contributions per day, or the CDR's refusal of them.
     activity: Result<LastDays, Refused>,
@@ -181,19 +170,15 @@ struct ContributionsPanel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_tab(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<EhrModel<ContributionsPanel>, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_tab(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_tab`] reads, on the server.
+/// What [`load_tab`] reads.
 async fn read_tab(ehr_id: String) -> EhrModel<ContributionsPanel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let activity = contribution_activity(ehr_id.clone())
@@ -210,7 +195,7 @@ async fn read_tab(ehr_id: String) -> EhrModel<ContributionsPanel> {
 }
 
 /// The Contributions tab's panel.
-fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
+fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> Html {
     let ContributionsPanel { activity, list } = model;
     let chart = self::activity(activity);
     let list = match list {
@@ -225,6 +210,7 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
             let fields = crate::paging::fields(Listing::Contributions);
             let pager = (window.pages > 1).then(|| {
                 post_pager(
+                    &current(),
                     PagerListing::new(tr(RecordsMsg::ContributionsPages)),
                     window,
                     PostTo {
@@ -238,10 +224,9 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
                 Some(tr(RecordsMsg::EhrTabContributions)),
                 Some(u64::from(page.total)),
                 None,
-                view! {
-                    {listing(ehr_id, &page)}
-                    {pager.map(|pager| view! { <div class="fui-list-foot">{pager}</div> })}
-                },
+                listing(ehr_id, &page).then(opt(
+                    pager.map(|pager| h(format!(r#"<div class="fui-list-foot">{pager}</div>"#)))
+                )),
             )
         }
         Err(refusal) => section(
@@ -251,38 +236,34 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> AnyView {
             refusal.view(),
         ),
     };
-    panel(view! {
-        {section(Some(tr(RecordsMsg::ContributionsPerDayTitle)), None, None, chart)}
-        {list}
-    })
+    panel(
+        section(
+            Some(tr(RecordsMsg::ContributionsPerDayTitle)),
+            None,
+            None,
+            chart,
+        )
+        .then(list),
+    )
 }
 
 /// An EHR's Contributions tab.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn ContributionsTab() -> impl IntoView {
+pub async fn tab_page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(
         RecordsMsg::ContributionsTitle,
         &[("id", shortened(&ehr_id).into())],
     );
-    let model = page_model!(load_tab(ehr_id.clone()));
-    let body = drawn(model, move |model| {
+    let body = drawn(load_tab(ehr_id.clone()).await, |model| {
         ehr_view(&ehr_id, EhrTab::Contributions, model, |listed| {
             contributions_panel(&ehr_id, listed)
         })
     });
-    view! {
-        <Title text=title />
-        {body}
-    }
+    Drawn::page(title, body)
 }
 
 /// One version a contribution made, as its `OBJECT_REF` names it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Made {
     /// The `OBJECT_VERSION_ID`.
     id: String,
@@ -293,7 +274,7 @@ struct Made {
 }
 
 /// The audit and the versions of a `CONTRIBUTION` document.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct Read {
     /// When it was committed.
     committed: String,
@@ -309,7 +290,6 @@ struct Read {
     made: Vec<Made>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's CONTRIBUTION JSON wire for its audit and versions"
@@ -355,7 +335,7 @@ fn read(body: &str) -> Result<Read, serde_json::Error> {
 }
 
 /// The versions a contribution made, as a table.
-fn made_table(ehr_id: &str, made: &[Made]) -> AnyView {
+fn made_table(ehr_id: &str, made: &[Made]) -> Html {
     let columns = [
         Column::text("object", tr(RecordsMsg::ColumnObject)).role(Role::Title),
         Column::text("kind", tr(Msg::ColumnKind)).role(Role::Sub),
@@ -367,13 +347,12 @@ fn made_table(ehr_id: &str, made: &[Made]) -> AnyView {
             let object = crate::uid::container_uid_of(&version.id);
             let href = (version.namespace == "local" && version.kind.contains("COMPOSITION"))
                 .then(|| crate::pages::composition::composition_href(ehr_id, &object));
-            let title = title_cell(href.as_deref(), shortened(&object), None);
-            let kind = cell(&columns[1], version.kind.clone());
-            let number = cell(&columns[2], version_number(&version.id));
-            view! { <tr>{title} {kind} {number}</tr> }.into_any()
+            let title = title_cell(href.as_deref(), t(shortened(&object)), None);
+            let kind = cell(&columns[1], t(&version.kind));
+            let number = cell(&columns[2], t(version_number(&version.id)));
+            h(format!("<tr>{title}{kind}{number}</tr>"))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     let caption = tr(RecordsMsg::ContributionVersions);
     data_table(DataTable {
         caption: &caption,
@@ -381,11 +360,10 @@ fn made_table(ehr_id: &str, made: &[Made]) -> AnyView {
         sorting: Sorting::default(),
         body: Body::Rows(rows),
     })
-    .into_any()
 }
 
 /// One contribution's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ContributionModel {
     /// Its audit and versions, and its record pretty-printed.
     Read(Box<Read>, String),
@@ -398,21 +376,17 @@ enum ContributionModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_contribution(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
-    /// The id the route names.
+    // The id the route names.
     uid: String,
 ) -> Result<ContributionModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_contribution(ehr_id, uid).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_contribution`] reads, on the server.
+/// What [`load_contribution`] reads.
 async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
     let body = match fetch_contribution(ehr_id, uid).await {
         Ok(body) => body,
@@ -442,54 +416,46 @@ async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
 }
 
 /// One contribution's audit, the versions it made and its record.
-fn contribution_view(ehr_id: &str, facts: &Read, record: String) -> AnyView {
+fn contribution_view(ehr_id: &str, facts: &Read, record: String) -> Html {
     let mut rows = vec![
         (tr(RecordsMsg::FactCommitted), when(&facts.committed)),
-        (
-            tr(RecordsMsg::FactCommitter),
-            facts.committer.clone().into_any(),
-        ),
-        (
-            tr(RecordsMsg::FactChange),
-            change_words(&facts.change).into_any(),
-        ),
+        (tr(RecordsMsg::FactCommitter), t(&facts.committer)),
+        (tr(RecordsMsg::FactChange), t(change_words(&facts.change))),
     ];
-    if let Some(description) = facts.description.clone() {
-        rows.push((tr(RecordsMsg::FactDescription), description.into_any()));
+    if let Some(description) = &facts.description {
+        rows.push((tr(RecordsMsg::FactDescription), t(description)));
     }
     rows.push((
         tr(RecordsMsg::FactSystem),
-        view! { <code>{facts.system.clone()}</code> }.into_any(),
+        h(format!("<code>{}</code>", t(&facts.system))),
     ));
     let made = u64::try_from(facts.made.len()).unwrap_or(u64::MAX);
-    card_panel(view! {
-        {section(Some(tr(RecordsMsg::ContributionAudit)), None, None, definitions(rows))}
-        {section(
+    card_panel(Html::join([
+        section(
+            Some(tr(RecordsMsg::ContributionAudit)),
+            None,
+            None,
+            definitions(rows),
+        ),
+        section(
             Some(tr(RecordsMsg::ContributionVersions)),
             Some(made),
             None,
             made_table(ehr_id, &facts.made),
-        )}
-        {document_section(
+        ),
+        document_section(
             tr(RecordsMsg::ContributionRecord),
             Language::Json,
             record,
             "contribution-record",
-        )}
-    })
+        ),
+    ]))
 }
 
 /// One contribution: its audit, the versions it made and its record.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn ContributionPage() -> impl IntoView {
+pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let uid = crate::routes::params()
-        .with(|params| params.get("uid"))
-        .unwrap_or_default();
+    let uid = crate::routes::params().get("uid").unwrap_or_default();
     let title = tr_with(
         RecordsMsg::ContributionTitle,
         &[("id", shortened(&uid).into())],
@@ -500,6 +466,7 @@ pub fn ContributionPage() -> impl IntoView {
         tab_href(&ehr_id, EhrTab::Contributions),
     ));
     let heading = page_heading(
+        &current(),
         Header {
             title: title.clone().into(),
             subtitle: Some(tr(RecordsMsg::ContributionSubtitle).into()),
@@ -510,23 +477,24 @@ pub fn ContributionPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    let model = page_model!(load_contribution(ehr_id.clone(), uid));
-    let body = drawn(model, move |model| match model {
-        ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
-        ContributionModel::Refused(refusal) => refusal.view(),
-    });
-    view! {
-        <Title text=title />
-        {heading}
-        <div class="fui-stack">{body}</div>
-    }
+    let body = drawn(
+        load_contribution(ehr_id.clone(), uid).await,
+        |model| match model {
+            ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
+            ContributionModel::Refused(refusal) => refusal.view(),
+        },
+    );
+    Drawn::page(
+        title,
+        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
+    )
 }
 
 /// The id of New contribution's form.
 const NEW_FORM: &str = "contribution-new";
 
 /// One change as the form holds it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Draft {
     /// Its number in the form, from 1.
     number: u16,
@@ -543,7 +511,6 @@ struct Draft {
 }
 
 impl Draft {
-    #[cfg(not(target_arch = "wasm32"))]
     /// A new change numbered `number`: a new composition.
     fn new(number: u16) -> Self {
         Self {
@@ -556,7 +523,6 @@ impl Draft {
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     /// The change numbered `number` as `posted` holds it.
     fn posted(posted: &crate::posted::Posted, number: u16) -> Self {
         let field = |name: &str| posted.text(&format!("{name}-{number}"));
@@ -608,7 +574,6 @@ impl Draft {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The changes the form holds after the post's own step: staged, removed or
 /// drawn again.
 fn drafts(posted: Option<&crate::posted::Posted>) -> Vec<Draft> {
@@ -644,7 +609,6 @@ fn drafts(posted: Option<&crate::posted::Posted>) -> Vec<Draft> {
     drafts
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Fills what a change of its kind starts from, when the form has none yet:
 /// the current status for a status change, the composition for an
 /// amendment. `Some` holds the refusal that kept it empty.
@@ -693,27 +657,31 @@ async fn fill(ehr_id: &str, draft: &mut Draft) -> Option<Refused> {
 }
 
 /// The choices of what a change is.
-fn kind_options(kind: StagedKind) -> AnyView {
+fn kind_options(kind: StagedKind) -> Html {
     [
         (StagedKind::CompositionCreate, RecordsMsg::StagedCreate),
         (StagedKind::CompositionAmend, RecordsMsg::StagedAmend),
         (StagedKind::StatusModify, RecordsMsg::StagedStatus),
     ]
     .into_iter()
-    .map(|(option, words)| {
-        view! {
-            <option value=option.as_value() selected=option == kind>
-                {tr(words)}
-            </option>
-        }
-    })
-    .collect_view()
-    .into_any()
+    .map(|(option, words)| option_of(option.as_value(), &tr(words), option == kind))
+    .collect()
+}
+
+/// One `<option>` of a select: its value, its words, and whether it is
+/// chosen.
+fn option_of(value: &str, words: &str, selected: bool) -> Html {
+    h(format!(
+        r#"<option value="{}"{}>{}</option>"#,
+        t(value),
+        crate::markup::flag("selected", selected),
+        t(words)
+    ))
 }
 
 /// What the form offers to pick from: the templates and the EHR's
 /// compositions.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct Choices {
     /// The operational templates' ids.
     templates: Vec<String>,
@@ -723,58 +691,48 @@ struct Choices {
 
 /// The field of what a change follows: its template, the composition it
 /// amends, or the status version it supersedes.
-fn own_field(draft: &Draft, choices: &Choices) -> AnyView {
+fn own_field(draft: &Draft, choices: &Choices) -> Html {
     let id = |name: &str| format!("{name}-{}", draft.number);
     match draft.kind {
         StagedKind::CompositionCreate => {
-            let options = choices
+            let options: Html = choices
                 .templates
                 .iter()
-                .map(|template| {
-                    view! {
-                        <option value=template.clone() selected=*template == draft.template>
-                            {template.clone()}
-                        </option>
-                    }
-                })
-                .collect_view();
-            Field::new(id("template"), tr(Msg::FilterTemplate)).view(view! {
-                <select id=id("template") name=id("template") class="fui-select">
-                    <option value="">{tr(RecordsMsg::StagedFromDocument)}</option>
-                    {options}
-                </select>
-            })
+                .map(|template| option_of(template, template, *template == draft.template))
+                .collect();
+            Field::new(id("template"), tr(Msg::FilterTemplate)).view(h(format!(
+                r#"<select id="{id}" name="{id}" class="fui-select"><option value="">{none}</option>{options}</select>"#,
+                id = t(id("template")),
+                none = t(tr(RecordsMsg::StagedFromDocument)),
+            )))
         }
         StagedKind::CompositionAmend => {
-            let options = choices
+            let options: Html = choices
                 .compositions
                 .iter()
                 .map(|(uid, name)| {
-                    view! {
-                        <option value=uid.clone() selected=*uid == draft.target>
-                            {format!("{name} · {}", shortened(uid))}
-                        </option>
-                    }
+                    option_of(
+                        uid,
+                        &format!("{name} · {}", shortened(uid)),
+                        *uid == draft.target,
+                    )
                 })
-                .collect_view();
+                .collect();
             Field::new(id("target"), tr(RecordsMsg::StagedComposition))
                 .help(tr(RecordsMsg::StagedCompositionHelp))
-                .view(view! {
-                    <select id=id("target") name=id("target") class="fui-select">
-                        <option value="">{tr(RecordsMsg::StagedPick)}</option>
-                        {options}
-                    </select>
-                })
+                .view(h(format!(
+                    r#"<select id="{id}" name="{id}" class="fui-select"><option value="">{none}</option>{options}</select>"#,
+                    id = t(id("target")),
+                    none = t(tr(RecordsMsg::StagedPick)),
+                )))
         }
-        StagedKind::StatusModify => view! {
-            <p class="fui-small fui-muted">
-                {tr_with(
-                    RecordsMsg::StagedStatusFrom,
-                    &[("version", version_number(&draft.preceding).into())],
-                )}
-            </p>
-        }
-        .into_any(),
+        StagedKind::StatusModify => h(format!(
+            r#"<p class="fui-small fui-muted">{}</p>"#,
+            t(tr_with(
+                RecordsMsg::StagedStatusFrom,
+                &[("version", version_number(&draft.preceding).into())],
+            ))
+        )),
     }
 }
 
@@ -785,7 +743,7 @@ fn change_section(
     choices: &Choices,
     removable: bool,
     trouble: Option<Refused>,
-) -> AnyView {
+) -> Html {
     let number = draft.number;
     let id = |name: &str| format!("{name}-{number}");
     let change_type = draft.kind.default_change_type();
@@ -796,53 +754,36 @@ fn change_section(
         ))
         .view(field_row(
             FieldRow::WithActions,
-            view! {
-                <select id=id("kind") name=id("kind") class="fui-select">
-                    {kind_options(draft.kind)}
-                </select>
-                <button
-                    type="submit"
-                    name="intent"
-                    value="edit"
-                    class="fui-button fui-button-secondary"
-                >
-                    {tr(Msg::StagedApply)}
-                </button>
-            },
+            h(format!(
+                r#"<select id="{id}" name="{id}" class="fui-select">{options}</select><button type="submit" name="intent" value="edit" class="fui-button fui-button-secondary">{apply}</button>"#,
+                id = t(id("kind")),
+                options = kind_options(draft.kind),
+                apply = t(tr(Msg::StagedApply)),
+            )),
         ));
-    let editor = view! {
-        <CodeEditor
-            setup=EditorSetup {
-                field: EditorField::Staged(number),
-                language: EditorLanguage::Json,
-                text: draft.body.clone(),
-                opened: None,
-                marks: Vec::new(),
-                label: tr_with(RecordsMsg::StagedDocument, &[("number", u64::from(number).into())]),
-                lead: tr(RecordsMsg::EditorJson),
-                facts: vec![tr(Msg::EditorUtf8)],
-                findings: None,
-            }
-            words=EditorWords::of_page()
-            diagnostics=DiagnosticsWords::of_page()
-        />
-    };
+    let editor = code_editor(EditorSetup {
+        field: EditorField::Staged(number),
+        language: EditorLanguage::Json,
+        text: draft.body.clone(),
+        opened: None,
+        marks: Vec::new(),
+        label: tr_with(
+            RecordsMsg::StagedDocument,
+            &[("number", u64::from(number).into())],
+        ),
+        lead: tr(RecordsMsg::EditorJson),
+        facts: vec![tr(Msg::EditorUtf8)],
+        findings: None,
+    });
     let remove = removable.then(|| {
-        view! {
-            <button
-                type="submit"
-                name="intent"
-                value=format!("remove:{number}")
-                class="fui-icon-button"
-                aria-label=tr_with(
-                    RecordsMsg::StagedRemove,
-                    &[("number", u64::from(number).into())],
-                )
-            >
-                {ferrohealth_ui::icon::icon(Glyph::X, "16")}
-            </button>
-        }
-        .into_any()
+        h(format!(
+            r#"<button type="submit" name="intent" value="remove:{number}" class="fui-icon-button" aria-label="{label}">{glyph}</button>"#,
+            label = t(tr_with(
+                RecordsMsg::StagedRemove,
+                &[("number", u64::from(number).into())],
+            )),
+            glyph = ferrohealth_ui::icon::icon(Glyph::X, "16"),
+        ))
     });
     let title = tr_with(
         RecordsMsg::StagedTitle,
@@ -855,21 +796,18 @@ fn change_section(
         Some(title),
         None,
         remove,
-        view! {
-            <input type="hidden" name="seq" value=number.to_string() />
-            <input type="hidden" name=id("was") value=draft.kind.as_value() />
-            <input type="hidden" name=id("preceding") value=draft.preceding.clone() />
-            {trouble.map(|trouble| trouble.view())}
-            <div class="fui-form-grid">
-                <div class="fui-span-2">{kind}</div>
-                <div class="fui-span-2">{own_field(draft, choices)}</div>
-            </div>
-            {editor}
-        },
+        h(format!(
+            r#"<input type="hidden" name="seq" value="{number}"><input type="hidden" name="{was}" value="{kind_value}"><input type="hidden" name="{preceding_name}" value="{preceding}">{trouble}<div class="fui-form-grid"><div class="fui-span-2">{kind}</div><div class="fui-span-2">{own}</div></div>{editor}"#,
+            was = t(id("was")),
+            kind_value = t(draft.kind.as_value()),
+            preceding_name = t(id("preceding")),
+            preceding = t(&draft.preceding),
+            trouble = opt(trouble.map(|trouble| trouble.view())),
+            own = own_field(draft, choices),
+        )),
     )
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// What the picks offer, read once for the form. `Err` is the refusal of a
 /// pick the form needs.
 async fn choices(ehr_id: &str, drafts: &[Draft]) -> Result<Choices, ViewerError> {
@@ -913,7 +851,7 @@ async fn choices(ehr_id: &str, drafts: &[Draft]) -> Result<Choices, ViewerError>
 }
 
 /// What New contribution's form holds.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct NewForm {
     /// The changes, each with the refusal that kept it empty.
     drafts: Vec<(Draft, Option<Refused>)>,
@@ -930,7 +868,7 @@ struct NewForm {
 }
 
 /// New contribution's model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum NewModel {
     /// The form.
     Form(Box<NewForm>),
@@ -943,23 +881,19 @@ enum NewModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load_new(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<NewModel, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_new(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load_new`] reads, on the server.
+/// What [`load_new`] reads.
 async fn read_new(ehr_id: String) -> NewModel {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
-        leptos_axum::redirect(&tab_href(&ehr_id, EhrTab::Contributions));
+        crate::request::redirect(&tab_href(&ehr_id, EhrTab::Contributions));
         return NewModel::Left;
     }
     let mut drafts = drafts(posted.as_ref());
@@ -1033,7 +967,7 @@ async fn read_new(ehr_id: String) -> NewModel {
 }
 
 /// New contribution's form, its decision bar docked.
-fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
+fn new_form(ehr_id: &str, form: NewForm) -> Html {
     let NewForm {
         drafts,
         description,
@@ -1055,61 +989,32 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
     };
     let staged = drafts.len();
     let removable = staged > 1;
-    let sections = drafts
+    let sections: Html = drafts
         .into_iter()
         .map(|(draft, trouble)| change_section(&draft, &choices, removable, trouble))
-        .collect_view();
+        .collect();
     let stage = (staged < usize::from(u16::MAX)).then(|| {
-        view! {
-            <div class="fui-add-row">
-                <button
-                    type="submit"
-                    name="intent"
-                    value="stage"
-                    class="fui-button fui-button-ghost fui-button-small"
-                >
-                    {ferrohealth_ui::icon::icon(Glyph::PLUS, "14")}
-                    {tr(RecordsMsg::StagedStage)}
-                </button>
-            </div>
-        }
+        h(format!(
+            r#"<div class="fui-add-row"><button type="submit" name="intent" value="stage" class="fui-button fui-button-ghost fui-button-small">{}{}</button></div>"#,
+            ferrohealth_ui::icon::icon(Glyph::PLUS, "14"),
+            t(tr(RecordsMsg::StagedStage))
+        ))
     });
-    let audit = view! {
-        <div class="fui-form-grid">
-            <div class="fui-span-2">
-                {Field::new("au-d", tr(RecordsMsg::FactDescription))
-                    .view(
-                        view! {
-                            <input
-                                id="au-d"
-                                name="description"
-                                type="text"
-                                class="fui-input"
-                                value=description
-                            />
-                        },
-                    )}
-            </div>
-            <div class="fui-span-2">
-                {Field::new("au-c", tr(RecordsMsg::FactCommitter))
-                    .view(
-                        view! {
-                            <input
-                                id="au-c"
-                                name="committer"
-                                type="text"
-                                class="fui-input"
-                                value=committer
-                                placeholder=tr_with(
-                                    RecordsMsg::ContributionCommitterPlaceholder,
-                                    &[("name", you.clone().into())],
-                                )
-                            />
-                        },
-                    )}
-            </div>
-        </div>
-    };
+    let description = Field::new("au-d", tr(RecordsMsg::FactDescription)).view(h(format!(
+        r#"<input id="au-d" name="description" type="text" class="fui-input" value="{}">"#,
+        t(description)
+    )));
+    let committer = Field::new("au-c", tr(RecordsMsg::FactCommitter)).view(h(format!(
+        r#"<input id="au-c" name="committer" type="text" class="fui-input" value="{}" placeholder="{}">"#,
+        t(committer),
+        t(tr_with(
+            RecordsMsg::ContributionCommitterPlaceholder,
+            &[("name", you.clone().into())],
+        ))
+    )));
+    let audit = h(format!(
+        r#"<div class="fui-form-grid"><div class="fui-span-2">{description}</div><div class="fui-span-2">{committer}</div></div>"#
+    ));
     dock_editor(EditorDock {
         form: NEW_FORM.to_owned(),
         line: line.1,
@@ -1117,40 +1022,35 @@ fn new_form(ehr_id: &str, form: NewForm) -> AnyView {
         save: tr_with(RecordsMsg::ContributionCommit, &[("count", count(staged))]),
         blocked: None,
     });
-    view! {
-        {refused.map(|refusal| refusal.view())}
-        {pick_trouble.map(|refusal| refusal.view())}
-        <form id=NEW_FORM method="post" action=format!("{}/contribution/new", ehr_href(ehr_id))>
-            {card_panel(
-                view! {
-                    {sections}
-                    {crate::pages::common::plain_section(stage)}
-                    {section(Some(tr(RecordsMsg::ContributionNewAudit)), None, None, audit)}
-                },
-            )}
-        </form>
-    }
-    .into_any()
+    let panel = card_panel(Html::join([
+        sections,
+        crate::pages::common::plain_section(opt(stage)),
+        section(
+            Some(tr(RecordsMsg::ContributionNewAudit)),
+            None,
+            None,
+            audit,
+        ),
+    ]));
+    Html::join([
+        opt(refused.map(|refusal| refusal.view())),
+        opt(pick_trouble.map(|refusal| refusal.view())),
+        h(format!(
+            r#"<form id="{NEW_FORM}" method="post" action="{}">{panel}</form>"#,
+            t(format!("{}/contribution/new", ehr_href(ehr_id)))
+        )),
+    ])
 }
 
 /// New contribution: several changes staged and committed together.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn NewContributionPage() -> impl IntoView {
+pub async fn new_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let dock_promise = crate::shell::promise_dock();
-    let model = page_model!(load_new(ehr_id.clone()));
-    let body = docked(model, dock_promise, {
-        let ehr_id = ehr_id.clone();
-        move |model| match model {
-            NewModel::Form(form) => new_form(&ehr_id, *form),
-            NewModel::Left => ().into_any(),
-        }
+    let body = drawn(load_new(ehr_id.clone()).await, |model| match model {
+        NewModel::Form(form) => new_form(&ehr_id, *form),
+        NewModel::Left => Html::empty(),
     });
     let heading = editor_heading(
+        &current(),
         message(RecordsMsg::ContributionNewTitle),
         &Mode::Creating,
         Header {
@@ -1163,11 +1063,10 @@ pub fn NewContributionPage() -> impl IntoView {
         },
         ActionGroup::none(),
     );
-    view! {
-        <Title text=tr(RecordsMsg::ContributionNewTitle) />
-        {heading}
-        <div class="fui-stack">{body}</div>
-    }
+    Drawn::page(
+        tr(RecordsMsg::ContributionNewTitle),
+        heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
+    )
 }
 
 #[cfg(test)]

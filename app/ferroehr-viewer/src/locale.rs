@@ -9,22 +9,20 @@
 //! `fluent_templates::static_loader!`, the mechanism FerroUI catalogs its own
 //! words with. [`Msg`] holds the words of the shell and of more than one
 //! group; each route group (`crate::routes`) has its own message type and
-//! catalog in a submodule, and so do the words only the server draws. A
-//! catalog is reached only through its own message type, so the browser loads
-//! a group's words with the group's chunks, and the entry WebAssembly carries
-//! the shell's catalog alone. English is the one language that ships and the
-//! one every lookup falls back to; a language joins as one catalog file in
-//! each part's directory and no code change.
+//! catalog in a submodule, and so do the words only the server draws.
+//! English is the one language that ships and the one every lookup falls
+//! back to; a language joins as one catalog file in each part's directory
+//! and no code change.
 //!
 //! The server chooses the locale once per request: the best language of the
 //! request's `Accept-Language` the catalog holds, else the configured
-//! `[ui] locale`. The document writes it as `<html lang>` (WCAG 2.2 SC 3.1.1),
-//! the browser reads it back from there, and [`crate::app::App`] provides it
-//! to FerroUI with `ferrohealth_ui::i18n::provide_locale`, so the viewer's
-//! words and the components' words switch together. No openEHR spec governs
-//! the viewer's localisation or the catalog layout: our own design.
+//! `[ui] locale`, and holds it in the request's scope ([`crate::scope`]). The
+//! document writes it as `<html lang>` (WCAG 2.2 SC 3.1.1), and every FerroUI
+//! part is handed the same locale ([`current`]), so the viewer's words and
+//! the components' words switch together. No openEHR spec governs the
+//! viewer's localisation or the catalog layout: our own design.
 
-use ferrohealth_ui::i18n::{Arg, Locale, Message, locale};
+use ferrohealth_ui::i18n::{Arg, Locale, Message};
 use fluent_templates::Loader;
 
 pub mod console;
@@ -32,7 +30,6 @@ pub mod definitions;
 pub mod overview;
 pub mod queries;
 pub mod records;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 pub mod signin;
 
@@ -91,6 +88,10 @@ macro_rules! messages {
             $($(#[$meta])+ $variant,)+
         }
 
+        #[expect(
+            clippy::same_name_method,
+            reason = "the inherent id is const for the catalog tests; the trait's id serves the lookups"
+        )]
         impl $name {
             /// Every message, in declaration order.
             pub const ALL: &[Self] = &[$(Self::$variant,)+];
@@ -440,8 +441,6 @@ messages! {
         FilterTemplate = "filter-template",
         /// `To`
         FilterTo = "filter-to",
-        /// `This EHR has no subject.`
-        RevealNoSubject = "reveal-no-subject",
         /// `Amendment`
         ChangeAmendment = "change-amendment",
         /// `Creation`
@@ -532,14 +531,14 @@ messages! {
 /// The viewer's message `msg` in the page's locale.
 #[must_use]
 pub fn tr<M: Catalogued>(msg: M) -> String {
-    tr_in(M::catalog(), &locale(), msg)
+    tr_in(M::catalog(), &current(), msg)
 }
 
 /// The viewer's message `msg` in the page's locale, with the placeables
 /// `args` filled in.
 #[must_use]
 pub fn tr_with<M: Catalogued>(msg: M, args: &[(&'static str, Arg)]) -> String {
-    locale().lookup_with(M::catalog(), msg.id(), args)
+    current().lookup_with(M::catalog(), msg.id(), args)
 }
 
 /// The viewer's message `msg` in `locale`, with the placeables `args`
@@ -577,59 +576,34 @@ pub fn tr_served_with<M: Catalogued>(msg: M, args: &[(&'static str, Arg)]) -> St
     current().lookup_with(M::catalog(), msg.id(), args)
 }
 
-/// The locale of the page being rendered.
-///
-/// On the server it is the best language of the request's `Accept-Language`
-/// the catalog holds, else the configured one; in the browser, the `lang` the
-/// server wrote on `<html>`.
+/// The locale of the page being drawn, English outside a request.
 #[must_use]
 pub fn current() -> Locale {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        use leptos::prelude::use_context;
-        let configured = use_context::<crate::state::AppState>()
-            .and_then(|state| Locale::parse(&state.config.ui.locale).ok())
-            .unwrap_or_default();
-        let header = use_context::<http::request::Parts>()
-            .and_then(|parts| {
-                parts
-                    .headers
-                    .get(http::header::ACCEPT_LANGUAGE)
-                    .and_then(|value| value.to_str().ok())
-                    .map(str::to_owned)
-            })
-            .unwrap_or_default();
-        // The language preference of Your preferences wins over the browser's
-        // when it names a language the viewer ships (family rule 9).
-        let chosen = use_context::<http::request::Parts>()
-            .and_then(|parts| {
-                parts
-                    .headers
-                    .get(http::header::COOKIE)
-                    .and_then(|value| value.to_str().ok())
-                    .map(|cookies| {
-                        ferrohealth_ui::theme::Preferences::read(
-                            cookies,
-                            crate::prefs::COOKIE_PREFIX,
-                        )
-                        .language
-                    })
-            })
-            .and_then(|language| language.tag().map(str::to_owned))
-            .filter(|tag| shipped().iter().any(|locale| locale.tag() == *tag))
-            .and_then(|tag| Locale::parse(&tag).ok());
-        chosen.unwrap_or_else(|| Locale::negotiate_with(&header, catalog(), configured))
-    }
-    // NOTE: no openEHR spec governs this: our own design; the browser reads the
-    // tag the server wrote, as the theme reads `data-theme`.
-    #[cfg(target_arch = "wasm32")]
-    {
-        leptos::prelude::document()
-            .document_element()
-            .and_then(|root| root.get_attribute("lang"))
-            .and_then(|tag| Locale::parse(&tag).ok())
-            .unwrap_or_default()
-    }
+    crate::scope::with(|scope| scope.locale.clone()).unwrap_or_default()
+}
+
+/// The locale of a request whose headers are `headers`.
+///
+/// The language of Your preferences when it names one the viewer ships
+/// (family rule 9), else the best language of `Accept-Language` the catalog
+/// holds, else the configured `[ui] locale`.
+#[must_use]
+pub fn negotiated(state: &crate::state::AppState, headers: &http::HeaderMap) -> Locale {
+    let configured = Locale::parse(&state.config.ui.locale).unwrap_or_default();
+    let header = headers
+        .get(http::header::ACCEPT_LANGUAGE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let chosen = headers
+        .get(http::header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .map(|cookies| {
+            ferrohealth_ui::theme::Preferences::read(cookies, crate::prefs::COOKIE_PREFIX).language
+        })
+        .and_then(|language| language.tag().map(str::to_owned))
+        .filter(|tag| shipped().iter().any(|locale| locale.tag() == *tag))
+        .and_then(|tag| Locale::parse(&tag).ok());
+    chosen.unwrap_or_else(|| Locale::negotiate_with(header, catalog(), configured))
 }
 
 #[cfg(test)]

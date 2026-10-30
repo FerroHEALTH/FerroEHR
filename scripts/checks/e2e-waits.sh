@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# E2E journey wait discipline (.claude/rules/leptos-ui.md §10).
+# E2E journey wait discipline (.claude/rules/console-ui.md §5).
 #
 # A browser journey drives a remote process over HTTP, and two shapes make a
 # journey lie about what it observed:
@@ -34,7 +34,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 readonly JOURNEY_GLOB='app/ferroehr-viewer/tests/it/e2e_*.rs'
-readonly RULE='.claude/rules/leptos-ui.md §10'
+readonly RULE='.claude/rules/console-ui.md §5'
 
 # The three banned spellings, as one extended regex. `SelectElement` is matched
 # bare as well as fully qualified: an import would make the short form legal

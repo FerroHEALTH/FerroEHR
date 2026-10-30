@@ -44,30 +44,23 @@
 //! the demographic tag surfaces use.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
-//! Every `#[server]` fn below guards with
+//! Every read below guards with
 //! [`require_session`](crate::session::require_session) first, the CDR
 //! credential never reaches client-visible state, and every path segment is
 //! percent-encoded server-side.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
 
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr, tr_with};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::uid::container_uid_of;
 
 /// Which EHR-side object an `ITEM_TAG` target turned out to be.
@@ -157,17 +150,16 @@ impl EhrTargetKind {
 /// `ehr_id`/`uid_based_id` included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the list is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_ehr_tags(
-    /// The EHR that owns the tagged object.
+    // The EHR that owns the tagged object.
     ehr_id: String,
-    /// The target kind, as its segment ([`EhrTargetKind::segment`]).
+    // The target kind, as its segment ([`EhrTargetKind::segment`]).
     kind: String,
-    /// The addressed `uid_based_id` — a container id or one `OBJECT_VERSION_ID`.
+    // The addressed `uid_based_id` — a container id or one `OBJECT_VERSION_ID`.
     uid: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = tags_url(&state, &ehr_id, &kind, &uid)?;
     let response = state
         .cdr
@@ -196,23 +188,22 @@ pub async fn fetch_ehr_tags(
 /// tag that breaks an `ITEM_TAG` invariant included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the current list is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn set_ehr_tag(
-    /// The EHR that owns the tagged object.
+    // The EHR that owns the tagged object.
     ehr_id: String,
-    /// The target kind, as its segment ([`EhrTargetKind::segment`]).
+    // The target kind, as its segment ([`EhrTargetKind::segment`]).
     kind: String,
-    /// The addressed `uid_based_id`.
+    // The addressed `uid_based_id`.
     uid: String,
-    /// The tag key to set.
+    // The tag key to set.
     key: String,
-    /// The tag value; blank stores a tag with no value.
+    // The tag value; blank stores a tag with no value.
     value: String,
-    /// The tag's `target_path`; blank tags the whole object.
+    // The tag's `target_path`; blank tags the whole object.
     target_path: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = tags_url(&state, &ehr_id, &kind, &uid)?;
     set_tag_at(
         &state,
@@ -225,12 +216,10 @@ pub async fn set_ehr_tag(
     .await
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Insert-or-replace one tag in the collection at `url`.
 ///
 /// The plain function behind [`set_ehr_tag`] and [`set_status_tag`], so neither
-/// server function calls the other (a server fn is thin and the logic it shares
-/// lives in an ordinary function).
+/// calls the other.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] on a blank key; CDR transport errors pass through;
@@ -289,24 +278,22 @@ async fn set_tag_at(
 /// [`ViewerError::Invalid`] on a kind that has no tag routes or a blank key;
 /// CDR transport errors pass through; any non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_ehr_tag(
-    /// The EHR that owns the tagged object.
+    // The EHR that owns the tagged object.
     ehr_id: String,
-    /// The target kind, as its segment ([`EhrTargetKind::segment`]).
+    // The target kind, as its segment ([`EhrTargetKind::segment`]).
     kind: String,
-    /// The addressed `uid_based_id`.
+    // The addressed `uid_based_id`.
     uid: String,
-    /// The tag key to remove.
+    // The tag key to remove.
     key: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = tags_url(&state, &ehr_id, &kind, &uid)?;
     delete_tag_at(&state, &session.credential, &url, &key).await
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Delete every tag under `key` from the collection at `url`.
 ///
 /// The plain function behind [`delete_ehr_tag`] and
@@ -347,19 +334,18 @@ async fn delete_tag_at(
 /// `ehr_id`) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the list is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn list_ehr_tags(
-    /// The EHR whose tags to list.
+    // The EHR whose tags to list.
     ehr_id: String,
-    /// Exact `ITEM_TAG.key` filter; empty constrains nothing.
+    // Exact `ITEM_TAG.key` filter; empty constrains nothing.
     key: String,
-    /// Exact `ITEM_TAG.value` filter; empty constrains nothing.
+    // Exact `ITEM_TAG.value` filter; empty constrains nothing.
     value: String,
-    /// Exact `ITEM_TAG.target_path` filter; empty constrains nothing.
+    // Exact `ITEM_TAG.target_path` filter; empty constrains nothing.
     target_path: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let query = crate::bff::item_tags::tag_filter_query(&key, &value, &target_path);
     let url = state
         .cdr
@@ -391,15 +377,14 @@ pub async fn list_ehr_tags(
 /// [`ViewerError::Invalid`] when `uid` is empty; CDR transport errors pass
 /// through; a refusal or any non-`404` failure normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn resolve_ehr_target(
-    /// The EHR that owns the tagged object.
+    // The EHR that owns the tagged object.
     ehr_id: String,
-    /// The tag's target, in either `uid_based_id` form.
+    // The tag's target, in either `uid_based_id` form.
     uid: String,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let container = container_uid_of(&uid);
     if container.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::TagTargetIdRequired)));
@@ -435,7 +420,6 @@ pub async fn resolve_ehr_target(
     Ok(None)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The `/ehr/{ehr_id}/{kind}/{uid_based_id}/tags` URL of one target's tag
 /// collection.
 ///
@@ -462,7 +446,6 @@ fn tags_url(
     )))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The `VERSIONED_EHR_STATUS` container of an EHR, read from the EHR resource's
 /// own `ehr_status` reference (`GET /ehr/{ehr_id}`).
 ///
@@ -510,13 +493,12 @@ async fn ehr_status_container(
 /// errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when a body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_status_tags(
-    /// The EHR whose status tags to read.
+    // The EHR whose status tags to read.
     ehr_id: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = status_tags_url(&state, &session.credential, &ehr_id).await?;
     let response = state
         .cdr
@@ -526,7 +508,6 @@ pub async fn fetch_status_tags(
     crate::bff::item_tags::parse_item_tags(&response.body)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The tag-collection URL of an EHR's `VERSIONED_EHR_STATUS` container.
 ///
 /// # Errors
@@ -551,19 +532,18 @@ async fn status_tags_url(
 ///
 /// # Errors
 /// As [`set_ehr_tag`], plus the EHR read's own failures.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn set_status_tag(
-    /// The EHR whose status to tag.
+    // The EHR whose status to tag.
     ehr_id: String,
-    /// The tag key to set.
+    // The tag key to set.
     key: String,
-    /// The tag value; blank stores a tag with no value.
+    // The tag value; blank stores a tag with no value.
     value: String,
-    /// The tag's `target_path`; blank tags the whole object.
+    // The tag's `target_path`; blank tags the whole object.
     target_path: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = status_tags_url(&state, &session.credential, &ehr_id).await?;
     set_tag_at(
         &state,
@@ -581,15 +561,14 @@ pub async fn set_status_tag(
 ///
 /// # Errors
 /// As [`delete_ehr_tag`], plus the EHR read's own failures.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn delete_status_tag(
-    /// The EHR whose status tag to remove.
+    // The EHR whose status tag to remove.
     ehr_id: String,
-    /// The tag key to remove.
+    // The tag key to remove.
     key: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = status_tags_url(&state, &session.credential, &ehr_id).await?;
     delete_tag_at(&state, &session.credential, &url, &key).await
 }

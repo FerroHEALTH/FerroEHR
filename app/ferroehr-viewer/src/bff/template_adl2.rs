@@ -26,17 +26,11 @@
 //! Absence (`404`) is `Ok(None)`, a first-class state rather than an error;
 //! tab and version state live in the URL.
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
-
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};
 use crate::format::ReprFormat;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::definitions::DefinitionsMsg;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_with;
 
 /// Fetch the stored ADL2 operational-template SOURCE.
@@ -53,17 +47,16 @@ use crate::locale::tr_with;
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_adl2_source(
-    /// The ADL2 template to read (a full HRID, or a partial that resolves to
-    /// the latest matching version).
+    // The ADL2 template to read (a full HRID, or a partial that resolves to
+    // the latest matching version).
     template_id: String,
-    /// The release version to pin the read to, or `None` for the artefact
-    /// `template_id` itself resolves to.
+    // The release version to pin the read to, or `None` for the artefact
+    // `template_id` itself resolves to.
     version: Option<String>,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&crate::adl2::template_path(
         &template_id,
         version.as_deref(),
@@ -88,15 +81,14 @@ pub async fn fetch_adl2_source(
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_adl2_json(
-    /// The ADL2 template to read.
+    // The ADL2 template to read.
     template_id: String,
-    /// The release version to pin the read to, or `None`.
+    // The release version to pin the read to, or `None`.
     version: Option<String>,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&crate::adl2::template_path(
         &template_id,
         version.as_deref(),
@@ -124,7 +116,6 @@ pub async fn fetch_adl2_json(
 /// # Errors
 /// [`ViewerError::Internal`] when the AOM2 JSON fails to parse or the Web
 /// Template fails to build (the diagnostic named, never a panic).
-#[cfg(not(target_arch = "wasm32"))]
 pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     let opt = openehr_its::json::from_canonical_json::<
         openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate,
@@ -160,15 +151,14 @@ pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
 /// [`ViewerError::CdrUnreachable`] from the CDR;
 /// [`ViewerError::Internal`] when the served JSON fails to parse or its Web
 /// Template fails to build.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_adl2_catalog(
-    /// The ADL2 template to build the path catalog from.
+    // The ADL2 template to build the path catalog from.
     template_id: String,
-    /// The release version to pin the read to, or `None`.
+    // The release version to pin the read to, or `None`.
     version: Option<String>,
 ) -> Result<Option<CatalogNode>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&crate::adl2::template_path(
         &template_id,
         version.as_deref(),
@@ -200,19 +190,18 @@ pub async fn fetch_adl2_catalog(
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR (a template that cannot be
 /// compiled into a Web Template answers `422`).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_adl2_example(
-    /// The ADL2 template to generate an example composition for.
+    // The ADL2 template to generate an example composition for.
     template_id: String,
-    /// Which representation to negotiate for the example.
+    // Which representation to negotiate for the example.
     format: ReprFormat,
-    /// How much of the template the example fills in (`detail_level`).
+    // How much of the template the example fills in (`detail_level`).
     detail: ExampleDetail,
-    /// Which form the example is shaped for (`type`).
+    // Which form the example is shaped for (`type`).
     kind: ExampleType,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state
         .cdr
         .rest_v1(&crate::adl2::example_path(&template_id, detail, kind));

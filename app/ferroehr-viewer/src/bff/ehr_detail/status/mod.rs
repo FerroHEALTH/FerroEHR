@@ -25,29 +25,22 @@
 //! `VERSIONED_EHR_STATUS` operations (the ITS-REST EHR API's `EHR_STATUS` +
 //! `VERSIONED_EHR_STATUS` families) over the RM `EHR_STATUS`
 //! (`docs/specs/openehr/RM/docs/ehr/master04-ehr_package.adoc` §`EHR_STATUS`).
-//! Path segments are percent-encoded server-side; every `#[server]` fn below
+//! Path segments are percent-encoded server-side; every read below
 //! authenticates the viewer session first, and the CDR credential never reaches
 //! client-visible state.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
-#[cfg(not(target_arch = "wasm32"))]
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::error::ViewerError;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::tr_served;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::locale::{Msg, tr_with};
 pub mod edit;
 
@@ -102,13 +95,12 @@ pub struct EhrStatusState {
 /// errors pass through; a non-2xx CDR answer normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_ehr_status(
-    /// The EHR whose current status document to read.
+    // The EHR whose current status document to read.
     ehr_id: String,
 ) -> Result<EhrStatusState, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state
         .cdr
         .rest_v1(&format!("ehr/{}/ehr_status", urlencoding::encode(&ehr_id)));
@@ -121,7 +113,8 @@ pub async fn fetch_ehr_status(
     parse_status_state(&response.body, served_etag.as_deref())
 }
 
-/// One VERSION of the EHR's `EHR_STATUS`, pretty-printed for the document pane
+/// One VERSION of the EHR's `EHR_STATUS`, pretty-printed for the document pane.
+///
 /// (`GET /ehr/{ehr_id}/ehr_status/{version_uid}` — "retrieves a particular
 /// version of the `EHR_STATUS` identified by `version_uid`",
 /// `GET ehr/{ehr_id}/ehr_status/{version_uid}` — the ITS-REST EHR API).
@@ -135,15 +128,14 @@ pub async fn fetch_ehr_status(
 /// through; a non-2xx CDR answer (the `404` for an unknown
 /// `ehr_id`/`version_uid` included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_ehr_status_version(
-    /// The EHR holding the versioned status.
+    // The EHR holding the versioned status.
     ehr_id: String,
-    /// The status version to read.
+    // The status version to read.
     version_uid: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let version_uid = version_uid.trim();
     if version_uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -201,23 +193,22 @@ pub async fn fetch_ehr_status_version(
 /// non-2xx CDR answer (the `412` concurrency failure and the `400`/`422`
 /// validation diagnostics, which the UI renders verbatim, included) normalizes
 /// via [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn update_ehr_status(
-    /// The EHR whose status to update.
+    // The EHR whose status to update.
     ehr_id: String,
-    /// The version this edit is based on, sent as `If-Match`.
+    // The version this edit is based on, sent as `If-Match`.
     current_version_uid: String,
-    /// The served status document this edit merges into, verbatim.
+    // The served status document this edit merges into, verbatim.
     base_body: String,
-    /// The replacement `is_queryable` flag.
+    // The replacement `is_queryable` flag.
     is_queryable: bool,
-    /// The replacement `is_modifiable` flag.
+    // The replacement `is_modifiable` flag.
     is_modifiable: bool,
-    /// The replacement `other_details`, as JSON object text; empty leaves it out.
+    // The replacement `other_details`, as JSON object text; empty leaves it out.
     other_details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -259,13 +250,12 @@ pub async fn update_ehr_status(
 /// included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when the history is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_status_revision_history(
-    /// The EHR whose status revision history to read.
+    // The EHR whose status revision history to read.
     ehr_id: String,
 ) -> Result<Vec<VersionEntry>, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&format!(
         "ehr/{}/versioned_ehr_status/revision_history",
         urlencoding::encode(&ehr_id)
@@ -300,15 +290,14 @@ pub async fn fetch_status_revision_history(
 /// `ehr_id`/version included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
 /// [`ViewerError::Internal`] when either body is not valid JSON.
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_versioned_status(
-    /// The EHR holding the versioned status.
+    // The EHR holding the versioned status.
     ehr_id: String,
-    /// The status version whose envelope facts to read.
+    // The status version whose envelope facts to read.
     version_uid: String,
 ) -> Result<VersionedObjectFacts, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let ehr = urlencoding::encode(&ehr_id);
     let object_url = state
         .cdr
@@ -338,11 +327,13 @@ pub async fn fetch_versioned_status(
     parse_versioned_status(&object_body, &version_body)
 }
 
-/// Resolve the `OBJECT_VERSION_ID` of the `EHR_STATUS` VERSION extant at
-/// `at_time` (a browser `datetime-local` value):
+/// Resolve the `OBJECT_VERSION_ID` of the `EHR_STATUS` VERSION extant at `at_time`.
+///
+/// For a browser `datetime-local` value:
 /// `GET /ehr/{ehr_id}/versioned_ehr_status/version?version_at_time=…` — "if
 /// `version_at_time` is supplied, retrieves the VERSION extant _at specified
 /// time_" (the at-time read defaults to the latest version when the parameter is omitted).
+///
 /// The `200` body is a VERSION envelope whose `uid.value` is the
 /// `OBJECT_VERSION_ID` (RM common — a VERSION's `uid` IS an
 /// `OBJECT_VERSION_ID`); that string is returned so the caller can pin it.
@@ -356,15 +347,14 @@ pub async fn fetch_versioned_status(
 /// through; a non-2xx CDR answer (the `404` for no version at that time
 /// included, which the UI renders as an inline note) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(client = crate::session_client::SessionAwareClient)]
 pub async fn fetch_status_version_at_time(
-    /// The EHR holding the versioned status.
+    // The EHR holding the versioned status.
     ehr_id: String,
-    /// The instant to resolve, as a `datetime-local` input value.
+    // The instant to resolve, as a `datetime-local` input value.
     at_time: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
     if at_time.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
@@ -382,7 +372,6 @@ pub async fn fetch_status_version_at_time(
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a canonical `EHR_STATUS` body into an [`EhrStatusState`], keeping the
 /// body itself verbatim. Defensive throughout — an absent attribute reads as its
 /// `false`/empty default rather than failing the tab.
@@ -427,7 +416,6 @@ pub(crate) fn parse_status_state(
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten a `VERSIONED_EHR_STATUS` body plus a VERSION body into
 /// [`VersionedObjectFacts`]. Defensive throughout — an absent attribute reads
 /// as empty rather than failing the card.
@@ -462,7 +450,6 @@ fn parse_versioned_status(
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 fn json_str(value: &Value, path: &[&str]) -> String {
@@ -476,7 +463,7 @@ fn json_str(value: &Value, path: &[&str]) -> String {
     current.as_str().unwrap_or_default().to_owned()
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod tests {
     use super::{parse_status_state, parse_versioned_status};
 

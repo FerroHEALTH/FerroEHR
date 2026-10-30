@@ -867,7 +867,7 @@ own chart, which cannot read this chart's switch: set
 
 ### FerroEHR Viewer (a second workload, off by default)
 
-`viewer.enabled` renders a second Deployment and Service for the Leptos viewer
+`viewer.enabled` renders a second Deployment and Service for the viewer
 beside the CDR, from its own image
 (`viewer.image.repository`, tagged `appVersion` by default so the two move
 together). It is off by default: the viewer is a separate product surface with

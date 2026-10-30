@@ -9,7 +9,7 @@
 //! answers it as an attachment: an ADL 1.4 operational template as
 //! `application/xml` (`docs/specs/openehr/ITS-REST/` definition API, Get an
 //! ADL 1.4 template), an ADL2 template as the `text/plain` artefact. The
-//! route enforces the viewer session like every server fn (the public
+//! route enforces the viewer session like every page (the public
 //! endpoint rule). No openEHR spec governs the viewer: our own design.
 
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};

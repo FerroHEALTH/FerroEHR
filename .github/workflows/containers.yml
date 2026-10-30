@@ -62,7 +62,7 @@ jobs:
   # The ci.yml owner ruling (2026-07-17) applied to images: a push that touches
   # none of an image's build inputs must not recompile and republish it. A
   # docs-only main push used to run FOUR native release compiles (two
-  # binaries × two arches) plus a cargo-leptos site build for byte-identical
+  # binaries × two arches) for byte-identical
   # images. A manual dispatch always builds everything (the per-job conditions
   # below); a release builds everything in release.yml, which has no filter at
   # all, so a release can never miss an image.
@@ -121,9 +121,7 @@ jobs:
               - '.cargo/**'
               - 'docker/viewer/**'
               - 'docker-compose.yml'
-              # The frozen-lockfile wrapper the viewer site build runs, and
-              # the battery its smoke lane drives.
-              - 'scripts/cargo-leptos.sh'
+              # The battery its smoke lane drives.
               - 'scripts/ui-e2e.sh'
               - '.github/workflows/containers.yml'
             postgres:
@@ -313,11 +311,9 @@ jobs:
         org.opencontainers.image.base.name=gcr.io/distroless/cc-debian13:nonroot
         org.opencontainers.image.base.digest=sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
 
-  # ── Viewer: server binary per arch + the arch-independent site ──────────────
-  # The WASM/JS/CSS site bundle is architecture-independent, so cargo-leptos
-  # runs ONCE (amd64: bin + site); the arm64 job builds only the ssr binary
-  # with `cargo auditable`, without cargo-leptos. Same glibc rationale as the
-  # app binary job.
+  # ── Viewer: server binary per arch ──────────────────────────────────────────
+  # The binary carries the FerroUI stylesheet, theme and scripts it serves, so
+  # it is the whole viewer. Same glibc rationale as the app binary job.
   viewer-binary:
     name: viewer binary (${{ matrix.platform }})
     needs: changes
@@ -369,16 +365,7 @@ jobs:
         with:
           tool: cargo-auditable@0.7.5
 
-      - name: Build the ssr server binary (release, native)
-        # LEPTOS_OUTPUT_NAME must be in the COMPILER's environment: leptos's
-        # HydrationScripts reads it via option_env! and appends `_bg` to the
-        # wasm file name it renders when absent (leptos-0.8 hydration/mod.rs),
-        # while cargo-leptos names the shipped file `<output>.wasm` — a binary
-        # built without it 404s its own wasm and never hydrates (found live on
-        # the published 3.20.0 image, #2164). cargo-leptos exports it for the
-        # from-source Dockerfile path; this build without cargo-leptos must match.
-        env:
-          LEPTOS_OUTPUT_NAME: ferroehr-viewer
+      - name: Build the viewer binary (release, native)
         run: cargo auditable build --release --locked -p ferroehr-viewer
 
       - name: Strip
@@ -388,53 +375,6 @@ jobs:
         with:
           name: ferroehr-viewer-${{ matrix.platform }}
           path: target/release/ferroehr-viewer
-          if-no-files-found: error
-          retention-days: 1
-
-      # The site bundle (wasm32 + JS glue) — built once, on
-      # amd64 only; it is byte-identical regardless of the server arch.
-      # NEVER `cargo install cargo-leptos` here: it unconditionally builds
-      # OpenSSL from vendored C source (its cargo-generate dependency pins
-      # `vendored-openssl`), which needs perl/make and failed inside the slim
-      # image. Prebuilt release binaries keep the pipeline Rust-toolchain-only
-      # — the same taiki-e path the ci.yml ui-e2e job uses.
-      - name: Install curl for the tool downloads (amd64 only)
-        if: matrix.platform == 'amd64'
-        run: apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
-
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
-        if: matrix.platform == 'amd64'
-        with:
-          tool: cargo-leptos@0.3.11,wasm-bindgen@0.2.129
-
-      - name: Build the site bundle (amd64 only)
-        if: matrix.platform == 'amd64'
-        shell: bash
-        # cargo-leptos runs its server leg through LEPTOS_BIN_CARGO_COMMAND
-        # (cargo-leptos 0.3.11 src/config/dotenvs.rs), so that leg builds with
-        # `cargo auditable` like the step above and reuses its artifacts.
-        env:
-          LEPTOS_BIN_CARGO_COMMAND: cargo auditable
-        run: |
-          set -euo pipefail
-          rustup target add wasm32-unknown-unknown
-          bash scripts/cargo-leptos.sh build --release
-          # hash.txt names the content hashes of the files in this bundle, so
-          # it travels WITH the bundle; the image COPYs it beside the binary,
-          # which is where leptos reads it from.
-          cp target/release/hash.txt target/site/hash.txt
-
-      - name: Hold the site bundle to its budget (amd64 only)
-        if: matrix.platform == 'amd64'
-        run: |
-          apt-get install -y --no-install-recommends brotli
-          bash scripts/checks/viewer-bundle.sh
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: matrix.platform == 'amd64'
-        with:
-          name: ferroehr-viewer-site
-          path: target/site
           if-no-files-found: error
           retention-days: 1
 
@@ -455,10 +395,9 @@ jobs:
       dockerfile: docker/viewer/Dockerfile
       target: runtime-prebuilt
       binary-artifact-prefix: ferroehr-viewer
-      site-artifact: ferroehr-viewer-site
       labels: |
         org.opencontainers.image.title=FerroEHR Viewer
-        org.opencontainers.image.description=Viewer for openEHR ITS-REST CDRs — pure-Rust Leptos web app (template manager, visual AQL query builder, EHR browser)
+        org.opencontainers.image.description=Viewer for openEHR ITS-REST CDRs — pure-Rust server-rendered web app (template manager, visual AQL query builder, EHR browser)
         org.opencontainers.image.source=https://github.com/FerroHEALTH/FerroEHR
         org.opencontainers.image.url=https://ferroehr.eu/
         org.opencontainers.image.documentation=https://ferroehr.eu/docs/latest/
@@ -534,9 +473,9 @@ jobs:
       postgres-digest: ${{ needs.postgres-image.outputs.digest }}
       postgres-tags: ${{ needs.postgres-image.outputs.tags }}
 
-  # The pushed VIEWER artifact is assembled from two jobs (the per-arch ssr
-  # binary + the once-built site bundle), so its one novel failure class is
-  # ASSEMBLY: a binary and a site tree that disagree. The from-source e2e
+  # The pushed VIEWER artifact was once assembled from two jobs (the per-arch
+  # binary and a separately built site bundle), and an assembly that
+  # disagreed published green. The from-source e2e
   # battery (ci.yml) never sees the assembled artifact — which is exactly how
   # a viewer whose pages 404 their own wasm published green (issue #2550,
   # found live on the 3.20.0 image during #2164). This smoke drives the very
@@ -592,11 +531,11 @@ jobs:
             [ "$i" = 30 ] && { echo "viewer never served /login"; docker logs viewer-smoke; exit 1; }
           done
           html=$(curl -sf http://127.0.0.1:3000/login)
-          # Every /pkg/ asset the page references (script srcs, stylesheet and
-          # preload hrefs — the wasm preload among them) must exist in the
-          # artifact serving the page.
-          assets=$(printf '%s' "$html" | grep -oE '(href|src)="/pkg/[^"]+"' | sed -E 's/^(href|src)="//; s/"$//' | sort -u)
-          [ -n "$assets" ] || { echo "the served page references no /pkg/ assets — the shell changed shape; update this smoke"; exit 1; }
+          # Every FerroUI asset the page references (the stylesheet, the
+          # theme and the script loader) must be served by the artifact
+          # serving the page.
+          assets=$(printf '%s' "$html" | grep -oE '(href|src)="/ferrohealth-ui/[^"]+"' | sed -E 's/^(href|src)="//; s/"$//' | sort -u)
+          [ -n "$assets" ] || { echo "the served page references no /ferrohealth-ui/ assets: the shell changed shape; update this smoke"; exit 1; }
           echo "$assets"
           fail=0
           while IFS= read -r a; do

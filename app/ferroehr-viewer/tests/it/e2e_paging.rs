@@ -26,7 +26,7 @@
 //! EHR's compositions and the audit log.
 //!
 //! A listing that can show patient data keeps its page out of the address
-//! (FerroUI `leptos-ui.md` §0): the pager posts the page to `/paging`, which
+//! (FerroUI `console-ui.md` §0): the pager posts the page to `/paging`, which
 //! keeps it in a session cookie and sends the browser back to the listing. So
 //! the journeys assert the window moves while the URL keeps only the
 //! listing's own filters, and that the position survives a fresh load.

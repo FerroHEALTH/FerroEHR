@@ -11,29 +11,27 @@
 //! filters, so a filtered list keeps its address. No openEHR spec governs
 //! the viewer's pages: our own design.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::StateSource;
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, group_row,
 };
 use ferrohealth_ui::view::template::list::{ActiveFilters, FilterChip, active_filters, list_empty};
-use leptos::prelude::*;
-use leptos_meta::Title;
-use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::ehr_tags::{EhrTargetKind, list_ehr_tags, resolve_ehr_target};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::bff::item_tags::{TagGroup, group_by_target};
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
-use crate::locale::{Msg, tr, tr_with};
-use crate::pages::common::{Refused, drawn, page_model, shortened};
+use crate::locale::{Msg, current, tr, tr_with};
+use crate::markup::{h, opt, t};
+use crate::pages::common::{Refused, drawn, shortened};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, ehr_id_param, ehr_view, tab_href};
+use crate::routes::Drawn;
 
 /// The filters the address names.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct Filters {
     /// The exact key.
     key: String,
@@ -42,7 +40,6 @@ struct Filters {
 }
 
 impl Filters {
-    #[cfg(not(target_arch = "wasm32"))]
     /// The filters of the request.
     fn read() -> Self {
         Self {
@@ -68,28 +65,15 @@ impl Filters {
 }
 
 /// The filter toolbar: the key as the find field, the value beside it.
-fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
+fn toolbar(ehr_id: &str, filters: &Filters) -> Html {
     let action = tab_href(ehr_id, EhrTab::Tags);
-    let tools = view! {
-        <div class="fui-list-find">
-            <label for="t-value" class="fui-sr-only">
-                {tr(Msg::TagsValue)}
-            </label>
-            <input
-                id="t-value"
-                name="value"
-                type="text"
-                class="fui-input"
-                value=filters.value.clone()
-                placeholder=tr(Msg::TagsValue)
-                autocomplete="off"
-            />
-        </div>
-        <button type="submit" class="fui-button fui-button-secondary">
-            {ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "16")}
-            {tr(Msg::FilterApply)}
-        </button>
-    };
+    let tools = h(format!(
+        r#"<div class="fui-list-find"><label for="t-value" class="fui-sr-only">{label}</label><input id="t-value" name="value" type="text" class="fui-input" value="{value}" placeholder="{label}" autocomplete="off"></div><button type="submit" class="fui-button fui-button-secondary">{glyph}{apply}</button>"#,
+        label = t(tr(Msg::TagsValue)),
+        value = t(&filters.value),
+        glyph = ferrohealth_ui::icon::icon(ferrohealth_ui::icon::Glyph::FUNNEL, "16"),
+        apply = t(tr(Msg::FilterApply)),
+    ));
     let label = tr(RecordsMsg::TagsKey);
     find_form(
         Find {
@@ -106,7 +90,7 @@ fn toolbar(ehr_id: &str, filters: &Filters) -> AnyView {
 }
 
 /// The active filters as chips.
-fn chips(ehr_id: &str, filters: &Filters) -> Option<AnyView> {
+fn chips(ehr_id: &str, filters: &Filters) -> Option<Html> {
     let chips: Vec<FilterChip> = [
         ("key", &filters.key, RecordsMsg::ChipKey),
         ("value", &filters.value, RecordsMsg::ChipValue),
@@ -120,6 +104,7 @@ fn chips(ehr_id: &str, filters: &Filters) -> Option<AnyView> {
     .collect();
     (!chips.is_empty()).then(|| {
         active_filters(
+            &current(),
             ActiveFilters {
                 chips,
                 clear: tab_href(ehr_id, EhrTab::Tags),
@@ -132,7 +117,7 @@ fn chips(ehr_id: &str, filters: &Filters) -> Option<AnyView> {
 
 /// A tagged object as its group heading names it: what it is, where it opens,
 /// and whether the tags sit on the whole object or one version.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Target {
     /// Its name.
     name: String,
@@ -143,7 +128,7 @@ struct Target {
 }
 
 /// One tag of a group.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Tag {
     /// Its key.
     key: String,
@@ -154,7 +139,7 @@ struct Tag {
 }
 
 /// The tags set on one object.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Tagged {
     /// The object.
     target: Target,
@@ -163,7 +148,7 @@ struct Tagged {
 }
 
 /// The tab's list.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum List {
     /// No tag matches.
     Empty,
@@ -174,7 +159,7 @@ enum List {
 }
 
 /// The tab's model: the filters it read and the list they found.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Panel {
     /// The filters.
     filters: Filters,
@@ -182,7 +167,6 @@ struct Panel {
     list: List,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Names the object a group of tags is set on, asking the CDR which kind it
 /// is.
 async fn target(ehr_id: &str, group: &TagGroup) -> Result<Target, ViewerError> {
@@ -221,7 +205,6 @@ async fn target(ehr_id: &str, group: &TagGroup) -> Result<Target, ViewerError> {
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// The tags of `groups`, each group's object named.
 async fn tagged(ehr_id: &str, groups: Vec<TagGroup>) -> Result<Vec<Tagged>, ViewerError> {
     let mut named = Vec::new();
@@ -245,19 +228,15 @@ async fn tagged(ehr_id: &str, groups: Vec<TagGroup>) -> Result<Vec<Tagged>, View
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-#[server(client = crate::session_client::SessionAwareClient)]
 async fn load(
-    /// The path and query of the page.
-    href: String,
-    /// The EHR the route names.
+    // The EHR the route names.
     ehr_id: String,
 ) -> Result<EhrModel<Panel>, ViewerError> {
-    crate::request::visiting(&href).await?;
+    crate::session::require_session()?;
     Ok(read_page(ehr_id).await)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-/// What [`load`] reads, on the server.
+/// What [`load`] reads.
 async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
@@ -282,7 +261,7 @@ async fn read_page(ehr_id: String) -> EhrModel<Panel> {
 }
 
 /// The tags, grouped by their object.
-fn table(groups: Vec<Tagged>) -> AnyView {
+fn table(groups: Vec<Tagged>) -> Html {
     let columns = [
         Column::text("key", tr(RecordsMsg::TagsKey)).role(Role::Title),
         Column::text("value", tr(Msg::TagsValue)).role(Role::Sub),
@@ -292,35 +271,31 @@ fn table(groups: Vec<Tagged>) -> AnyView {
     for group in groups {
         let target = group.target;
         let name = match target.href {
-            Some(href) => view! { <a href=href>{target.name}</a> }.into_any(),
-            None => target.name.into_any(),
+            Some(href) => h(format!(r#"<a href="{}">{}</a>"#, t(href), t(&target.name))),
+            None => t(&target.name),
         };
         rows.push(group_row(
             &columns,
-            view! {
-                {name}
-                <span class="fui-small fui-muted">{format!(" · {}", target.form)}</span>
-            },
+            name.then(h(format!(
+                r#"<span class="fui-small fui-muted">{}</span>"#,
+                t(format!(" · {}", target.form))
+            ))),
         ));
         for tag in group.tags {
             let path = if tag.target_path.is_empty() {
-                view! { <span class="fui-muted">{tr(RecordsMsg::TagsWholeObject)}</span> }
-                    .into_any()
+                h(format!(
+                    r#"<span class="fui-muted">{}</span>"#,
+                    t(tr(RecordsMsg::TagsWholeObject))
+                ))
             } else {
-                view! { <code>{tag.target_path}</code> }.into_any()
+                h(format!("<code>{}</code>", t(&tag.target_path)))
             };
-            rows.push(
-                view! {
-                    <tr>
-                        <th scope="row" data-role="title">
-                            <code>{tag.key}</code>
-                        </th>
-                        {cell(&columns[1], tag.value)}
-                        {cell(&columns[2], path)}
-                    </tr>
-                }
-                .into_any(),
-            );
+            rows.push(h(format!(
+                r#"<tr><th scope="row" data-role="title"><code>{}</code></th>{}{}</tr>"#,
+                t(&tag.key),
+                cell(&columns[1], t(&tag.value)),
+                cell(&columns[2], path)
+            )));
         }
     }
     let caption = tr(RecordsMsg::TagsCaption);
@@ -328,13 +303,12 @@ fn table(groups: Vec<Tagged>) -> AnyView {
         caption: &caption,
         columns: &columns,
         sorting: Sorting::default(),
-        body: Body::Rows(rows.collect_view().into_any()),
+        body: Body::Rows(Html::join(rows)),
     })
-    .into_any()
 }
 
 /// The tab's panel.
-fn panel(ehr_id: &str, panel: Panel) -> AnyView {
+fn panel(ehr_id: &str, panel: Panel) -> Html {
     let Panel { filters, list } = panel;
     let list = match list {
         List::Empty => list_empty(
@@ -348,34 +322,20 @@ fn panel(ehr_id: &str, panel: Panel) -> AnyView {
         List::Groups(groups) => table(groups),
         List::Refused(refusal) => refusal.view(),
     };
-    view! {
-        <div class="fui-panel">
-            <div class="fui-panel-body fui-stack">
-                <p class="fui-small fui-muted">{tr(RecordsMsg::TagsIntro)}</p>
-                {toolbar(ehr_id, &filters)}
-                {chips(ehr_id, &filters)}
-            </div>
-            {list}
-        </div>
-    }
-    .into_any()
+    h(format!(
+        r#"<div class="fui-panel"><div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">{}</p>{}{}</div>{list}</div>"#,
+        t(tr(RecordsMsg::TagsIntro)),
+        toolbar(ehr_id, &filters),
+        opt(chips(ehr_id, &filters))
+    ))
 }
 
 /// An EHR's Tags tab.
-#[expect(
-    clippy::must_use_candidate,
-    reason = "#[component] rewrites the fn; the router always consumes the value"
-)]
-#[component]
-pub fn TagsTab() -> impl IntoView {
+pub async fn page() -> Drawn {
     let ehr_id = ehr_id_param();
     let title = tr_with(RecordsMsg::TagsTitle, &[("id", shortened(&ehr_id).into())]);
-    let model = page_model!(load(ehr_id.clone()));
-    let body = drawn(model, move |model| {
+    let body = drawn(load(ehr_id.clone()).await, |model| {
         ehr_view(&ehr_id, EhrTab::Tags, model, |found| panel(&ehr_id, found))
     });
-    view! {
-        <Title text=title />
-        {body}
-    }
+    Drawn::page(title, body)
 }

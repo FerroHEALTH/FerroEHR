@@ -1,21 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The viewer-wide error type, shared by both compilation targets so the UI
-//! can render domain errors (CDR status + diagnostic) instead of opaque
-//! strings.
+//! The viewer-wide error type, so a page can draw domain errors (CDR status +
+//! diagnostic) instead of opaque strings.
 //!
-//! Implements `FromServerFnError` per the Leptos book (`server/25`).
-//!
-//! NOTE: the variants carry their cause as text because this type crosses the
-//! server-fn boundary — `FromServerFnError` requires `Serialize`/`Deserialize`
-//! (Leptos book `server/25`), which no underlying `reqwest` or parser error
-//! implements, so an `#[source]` here would be unrepresentable rather than
-//! merely inconvenient.
+//! NOTE: the variants carry their cause as text because a page's model holds the
+//! refusal it draws and is compared and cloned with it, which no `reqwest` error allows.
 
 use serde::{Deserialize, Serialize};
 
-/// Every failure a server function can hand the UI.
+/// Every failure a read of the CDR can hand a page.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
 pub enum ViewerError {
     /// No viewer session — the UI redirects to `/login`.
@@ -71,8 +65,8 @@ pub fn error_chain(error: &(dyn std::error::Error + 'static)) -> String {
 impl ViewerError {
     /// The CDR's HTTP status, typed, when this error carries one.
     ///
-    /// [`ViewerError::Cdr`] transports the status as a `u16` because the enum
-    /// crosses the server-fn boundary as JSON; every branch on it reads it back
+    /// [`ViewerError::Cdr`] carries the status as a `u16`; every branch on it
+    /// reads it back
     /// through here, so a status comparison names an [`http::StatusCode`]
     /// constant instead of a bare literal. The two refusals answer their own
     /// status, so a caller can tell "sign in again" from "sign in as someone
@@ -89,14 +83,6 @@ impl ViewerError {
             | Self::Invalid(_)
             | Self::Internal(_) => None,
         }
-    }
-}
-
-impl leptos::server_fn::error::FromServerFnError for ViewerError {
-    type Encoder = leptos::server_fn::codec::JsonEncoding;
-
-    fn from_server_fn_error(value: leptos::server_fn::error::ServerFnErrorErr) -> Self {
-        Self::Internal(value.to_string())
     }
 }
 

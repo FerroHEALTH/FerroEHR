@@ -23,23 +23,19 @@
 //! posts is assembled by the component-free, unit-tested [`staged`] module.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
-//! The wire it writes IS spec-bound. The `#[server]` fn guards with
+//! The wire it writes IS spec-bound. The commit guards with
 //! [`require_session`](crate::session::require_session) first, and the CDR
 //! credential never reaches client-visible state.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 pub mod staged;
 
-use leptos::prelude::*;
-use leptos::server;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
 
 use crate::bff::ehr_detail::commit::staged::StagedChange;
@@ -50,8 +46,7 @@ use crate::error::ViewerError;
 /// The CONTRIBUTION's own uid plus the `OBJECT_VERSION_ID` of every version the
 /// commit MINTED — the `201` representation's `versions` are the `OBJECT_REF`s
 /// of exactly those (ITS-REST
-/// `specifications/responses/201_CONTRIBUTION.yaml`). All strings, so the type
-/// is safe across the server-fn boundary on the 32-bit WASM target.
+/// `specifications/responses/201_CONTRIBUTION.yaml`).
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct CommitOutcome {
     /// `CONTRIBUTION.uid.value` — the id the contributions tab looks up.
@@ -78,19 +73,18 @@ pub struct CommitOutcome {
 /// answer (its validation diagnostics, which the UI renders verbatim,
 /// included) normalizes via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-#[server(input = server_fn::codec::Json, client = crate::session_client::SessionAwareClient)]
 pub async fn commit_contribution(
-    /// The EHR to commit the change set into.
+    // The EHR to commit the change set into.
     ehr_id: String,
-    /// The staged changes, in the order they were staged.
+    // The staged changes, in the order they were staged.
     changes: Vec<StagedChange>,
-    /// The `AUDIT_DETAILS.committer` name; blank uses the session identity.
+    // The `AUDIT_DETAILS.committer` name; blank uses the session identity.
     committer: String,
-    /// The optional `AUDIT_DETAILS.description`; blank omits the attribute.
+    // The optional `AUDIT_DETAILS.description`; blank omits the attribute.
     description: String,
 ) -> Result<CommitOutcome, ViewerError> {
-    let session = crate::session::require_session().await?;
-    let state: crate::state::AppState = expect_context();
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     let committer = if committer.trim().is_empty() {
         session.identity.clone()
     } else {
@@ -117,7 +111,6 @@ pub async fn commit_contribution(
     Ok(parse_commit_outcome(&response.body))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 /// Flatten the committed CONTRIBUTION into a [`CommitOutcome`].
 ///
 /// Defensive throughout — a body the CDR served without the representation
@@ -150,7 +143,7 @@ fn parse_commit_outcome(body: &str) -> CommitOutcome {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod outcome_tests {
     use super::parse_commit_outcome;
 

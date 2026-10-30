@@ -440,6 +440,8 @@ impl CdrClient {
     /// authorization) — one asks the operator to sign in again, the other to
     /// sign in as someone else.
     ///
+    /// A `401` also ends the page's session ([`crate::session_client`]).
+    ///
     /// # Errors
     /// [`ViewerError::CdrUnauthorized`] on 401, [`ViewerError::Forbidden`] on
     /// 403, [`ViewerError::Cdr`] on any other non-2xx status.
@@ -449,10 +451,11 @@ impl CdrClient {
         }
         let message = diagnostic_of(&response);
         match response.status {
-            http::StatusCode::UNAUTHORIZED => Err(ViewerError::CdrUnauthorized(without_lead(
-                &message,
-                "unauthorized",
-            ))),
+            http::StatusCode::UNAUTHORIZED => {
+                let refused = ViewerError::CdrUnauthorized(without_lead(&message, "unauthorized"));
+                crate::session_client::note_if_over(&refused);
+                Err(refused)
+            }
             http::StatusCode::FORBIDDEN => {
                 Err(ViewerError::Forbidden(without_lead(&message, "forbidden")))
             }

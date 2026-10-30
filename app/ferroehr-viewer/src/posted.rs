@@ -3,21 +3,17 @@
 
 //! A form a page posts to itself, and the page drawn again around it.
 //!
-//! Every form the viewer draws is a plain `POST` to the page that draws it, so
-//! it works with no WebAssembly (FerroUI `leptos-ui.md` §1 and §5). The server
-//! answers the post by drawing the same page with the posted fields in
-//! context: a page whose work succeeded sends the browser on with a redirect
-//! and a flash toast, and a page whose work the CDR refused draws the refusal
-//! beside the fields as they were posted, so a draft is never lost. A field
-//! that can carry clinical content therefore never reaches a URL. The app
-//! shares the form with the browser as the page's other request state is
-//! shared ([`provide_posted`]), and the browser lets it go as it draws the
-//! first page after the one posted to ([`let_go`]). No openEHR spec governs
-//! this: our own design.
+//! Every form the viewer draws is a plain `POST` to the page that draws it,
+//! so it works with no script (FerroUI `.claude/rules/console-ui.md` §5).
+//! The server answers the post by drawing the same page with the posted
+//! fields in reach ([`posted`]): a page whose work succeeded sends the
+//! browser on with a redirect and a flash toast, and a page whose work the
+//! CDR refused draws the refusal beside the fields as they were posted, so a
+//! draft is never lost. A field that can carry clinical content therefore
+//! never reaches a URL. No openEHR spec governs this: our own design.
 
 use std::sync::Arc;
 
-use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// The fields of the form the page answers, in the order they were posted.
@@ -100,42 +96,10 @@ impl Posted {
     }
 }
 
-/// The form the page answers, shared by both halves until the first
-/// navigation within the page.
-#[derive(Debug, Clone)]
-pub struct PostedNow(ArcRwSignal<Option<Posted>>);
-
-impl PostedNow {
-    /// Lets the form go: a page drawn after a navigation answers no post.
-    pub fn navigated(&self) {
-        if self.0.with_untracked(Option::is_some) {
-            self.0.set(None);
-        }
-    }
-}
-
-/// Provides the form the page answers to both halves: the request's on the
-/// server, the serialized page's in the browser.
-pub fn provide_posted() {
-    let posted = SharedValue::new(use_context::<Posted>).into_inner();
-    provide_context(PostedNow(ArcRwSignal::new(posted)));
-}
-
-/// Lets the shared form go: the browser draws a page after the one posted
-/// to, which answers no post.
-pub fn let_go() {
-    if let Some(now) = use_context::<PostedNow>() {
-        now.navigated();
-    }
-}
-
 /// The form the page answers, when the request posted one.
 #[must_use]
 pub fn posted() -> Option<Posted> {
-    match use_context::<PostedNow>() {
-        Some(PostedNow(now)) => now.get_untracked(),
-        None => use_context::<Posted>(),
-    }
+    crate::scope::with(|scope| scope.posted.clone()).flatten()
 }
 
 /// The form the page answers, when the request posted one asking `intent`.
@@ -146,21 +110,7 @@ pub fn posted_for(intent: &str) -> Option<Posted> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Posted, posted, provide_posted};
-
-    #[test]
-    fn the_shared_form_answers_until_the_first_navigation() {
-        let owner = leptos::prelude::Owner::new();
-        owner.with(|| {
-            let form = Posted::new(vec![("intent".to_owned(), "save".to_owned())]);
-            leptos::prelude::provide_context(form.clone());
-            provide_posted();
-            assert_eq!(Some(form), posted());
-            let now = leptos::prelude::use_context::<super::PostedNow>();
-            now.iter().for_each(super::PostedNow::navigated);
-            assert_eq!(None, posted());
-        });
-    }
+    use super::Posted;
 
     #[test]
     fn the_form_crosses_to_the_browser_whole() {

@@ -401,7 +401,7 @@ bin is still named `ferroehr`), `ferroehr-ext` (the feature-gated
 optional-integration crate — events transport, multimedia store — one
 additive cargo feature per integration, default all-on,
 slim builds compile them out with loud boot refusals for enabled-but-unbuilt
-integrations), and `ferroehr-viewer` (the Leptos SSR viewer — its own
+integrations), and `ferroehr-viewer` (the server-rendered viewer on FerroUI, its own
 binary/OCI image, consuming the CDR strictly over ITS-REST);
 **`tools/*`** holds the dev/verification
 tooling that is *not* part of the shipped application
@@ -477,7 +477,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `ferroehr` | The platform library: storage, service layer (one module per domain area), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (FerroEHR's status, route groups and PostgreSQL state store for the `start` and `daily` installation reports that `ferrohealth-usage-report` sends to FerroPULSE, on by default, envelope v2 in FerroHEALTH/FerroPULSE `docs/report-v2.md`, vendored schema in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
 | `ferroehr-ext` | Optional integrations behind additive features (`events`, `multimedia`): the AMQP events transport, the content-addressed multimedia store | application |
-| `ferroehr-viewer` | The Leptos SSR viewer: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
+| `ferroehr-viewer` | The server-rendered viewer on FerroUI: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
 | `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
 
 ## Regulatory position (EHDS and CRA)

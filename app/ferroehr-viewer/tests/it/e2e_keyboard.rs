@@ -36,11 +36,11 @@ use thirtyfour::prelude::*;
 /// unreachable.
 const TAB_BUDGET: usize = 80;
 
-/// After a route change the focus starts at the new page: a page the router
-/// draws takes the focus at its heading, as FerroUI's page announcer moves it
-/// (WCAG 2.2 SC 2.4.3), and the next Tab stays in the main area; on a page
-/// the browser loads, the first Tab reaches the skip link, and following it
-/// puts the focus in the main area, past the top bar and the sidebar.
+/// After a route change the focus starts at the new page: a link followed by
+/// the keyboard loads the page's document, whose first Tab reaches the skip
+/// link (FerroUI `docs/migration-0.6.md`: the browser moves the focus on a
+/// document load; WCAG 2.2 SC 2.4.1 and SC 2.4.3), and following it puts the
+/// focus in the main area, past the top bar and the sidebar.
 ///
 /// Each focus check after a key waits on the condition it asserts (#4315):
 /// the key's command returns once the key is dispatched, and the browser's
@@ -56,18 +56,26 @@ async fn a_route_change_starts_the_focus_at_the_skip_link() {
         h.tab_to("main a[href='/ehrs']", TAB_BUDGET).await,
         "the dashboard's EHRs card is reachable by Tab"
     );
+    h.mark_document().await;
     h.press(Key::Enter).await;
     h.wait_url_contains("/ehrs").await;
     h.wait_css("main table").await;
     assert!(
-        poll_until(async || h.focus_matches("main h1").await).await,
-        "a page the router draws takes the focus at its heading (focus: {})",
-        h.focused().await
+        !h.document_kept().await,
+        "the followed link loads the page's document"
     );
     h.press(Key::Tab).await;
     assert!(
+        poll_until(async || h.focus_matches("a.fui-skip").await).await,
+        "the first Tab on the page a followed link loads reaches the skip link (focus: {})",
+        h.focused().await
+    );
+    h.press(Key::Enter).await;
+    h.wait_url_contains("#main").await;
+    h.press(Key::Tab).await;
+    assert!(
         poll_until(async || h.focus_matches("main *").await).await,
-        "the first Tab after the heading stays in the main area (focus: {})",
+        "after the skip link the next Tab lands in the main area (focus: {})",
         h.focused().await
     );
 

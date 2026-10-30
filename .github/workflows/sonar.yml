@@ -184,12 +184,10 @@ jobs:
           name: coverage-lcov-${{ matrix.shard }}
           path: lcov-shard-${{ matrix.shard }}.info
 
-  # The viewer measured under the `ssr` shape it ships (it is excluded from the
-  # --all-features lane: hydrate and ssr are mutually exclusive). Its own job
-  # because that feature configuration shares no build cache with the rest, and
-  # it needs no database.
+  # The viewer measured in its own job: it shares little build cache with the
+  # CDR's crates, and it needs no database.
   coverage-viewer:
-    name: coverage (viewer, ssr)
+    name: coverage (viewer)
     needs: changes
     if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository && needs.changes.outputs.code == 'true')
     runs-on: ubuntu-26.04

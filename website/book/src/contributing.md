@@ -61,17 +61,11 @@ cargo build --workspace
 cargo nextest run --workspace          # unit + integration (real PostgreSQL 18)
 cargo fmt --all --check
 
-# clippy is three lanes: the viewer's `hydrate` and `ssr` features are
-# mutually exclusive, so it is excluded from the workspace lane and linted
-# per-feature on both of its targets.
-cargo clippy --workspace --exclude ferroehr-viewer --all-targets --all-features -- -D warnings
-cargo clippy -p ferroehr-viewer --all-targets -- -D warnings
-cargo clippy -p ferroehr-viewer --lib --target wasm32-unknown-unknown -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # rustdoc lints + doctests (the rustdoc lint table is inert without a doc run)
-RUSTDOCFLAGS='-D warnings' cargo doc --workspace --exclude ferroehr-viewer \
-  --all-features --no-deps --document-private-items
-RUSTDOCFLAGS='-D warnings' cargo doc -p ferroehr-viewer --no-deps
+RUSTDOCFLAGS='-D warnings' cargo doc --workspace --all-features --no-deps \
+  --document-private-items
 cargo test --workspace --doc
 
 cargo deny check                       # subsumes cargo-audit: same RustSec DB, plus yanked/licenses/bans/sources

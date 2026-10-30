@@ -107,18 +107,19 @@ async fn login_oidc_round_trips_through_keycloak() {
     h.finish().await;
 }
 
-/// Hydration proof: after first paint an interaction actually mutates the
-/// DOM (WASM attached), and the browser console log carries no hydration error.
+/// Script proof: after first paint an interaction actually mutates the DOM
+/// (FerroUI's modules attached), and the browser console log carries no
+/// script error.
 #[tokio::test]
-async fn hydration_attaches_interactivity() {
-    let Some(h) = Harness::start("hydration").await else {
+async fn the_modules_attach_interactivity() {
+    let Some(h) = Harness::start("modules").await else {
         return;
     };
     login_basic(&h).await;
     h.shot(1, "shell-before-toggle").await;
-    // The browser opens the user menu's popover by itself; only the hydrated
-    // component says so on the button (`aria-expanded`), so that attribute is
-    // the proof the WebAssembly attached.
+    // The browser opens the user menu's popover by itself; only FerroUI's
+    // `user_menu` module says so on the button (`aria-expanded`), so that
+    // attribute is the proof the modules attached.
     let user_button = h.wait_css("button[popovertarget='user-menu']").await;
     user_button.click().await;
     h.wait_css("#user-menu:popover-open").await;
@@ -131,7 +132,7 @@ async fn hydration_attaches_interactivity() {
 }
 
 /// An unauthenticated deep link redirects to `/login`; the login page
-/// renders (the streaming-SSR client redirect completes).
+/// renders.
 #[tokio::test]
 async fn unauthenticated_deep_link_redirects_to_login() {
     let Some(h) = Harness::start("auth-redirect").await else {
