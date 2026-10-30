@@ -290,9 +290,13 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
     let (second_template_id, second_payload) = seed_template(svc, SECOND_TEMPLATE).await;
 
     let ehrs: Vec<EhrId> = futures::stream::iter(0..class.ehrs)
-        .map(|_| {
+        .map(|index| {
             let svc = Arc::clone(svc);
-            async move { svc.create_ehr(None).await.expect("create_ehr") }
+            async move {
+                svc.create_ehr(Some(ehr_status(index)))
+                    .await
+                    .expect("create_ehr")
+            }
         })
         .buffer_unordered(SEED_CONCURRENCY)
         .collect()
@@ -376,6 +380,40 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         seconds,
         storage,
     }
+}
+
+/// The subject uid of the `index`th seed EHR.
+fn subject_uid(index: usize) -> String {
+    format!("00000000-0000-4000-8000-{index:012}")
+}
+
+/// The `EHR_STATUS` of the `index`th seed EHR: its subject a `PARTY_REF` to a
+/// PERSON by uid in the `local` namespace, the shape a lookup of an EHR by
+/// its subject matches (#4442).
+fn ehr_status(index: usize) -> openehr_rm::prelude::EhrStatus {
+    openehr_its::json::from_canonical_value(&json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": "local",
+                "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": subject_uid(index) }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    }))
+    .expect("the seed EHR_STATUS decodes")
 }
 
 /// The party store: one PERSON per identifier, each carrying a
@@ -1513,7 +1551,8 @@ impl AqlHotPath {
 /// existence test, a node predicate on archetype and name, a WHERE on a
 /// quantity, a coded value, a date-time and a text value, the widest
 /// projection, whole-object projections, a lookup of a person by an
-/// identifier value over the party store, and a version at a point in time.
+/// identifier value over the party store, a lookup of an EHR by its subject,
+/// and a version at a point in time.
 fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
     let leaves = payload_leaves(&[&corpus.payload, &corpus.second_payload]);
     let bp_from =
@@ -1593,6 +1632,7 @@ fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
             parameters: BTreeMap::new(),
         },
         person_identifier_lookup(corpus),
+        ehr_by_subject(corpus),
         AqlHotPath::population(
             "aql_version_at_time",
             format!(
@@ -1619,6 +1659,26 @@ fn person_identifier_lookup(corpus: &Corpus) -> AqlHotPath {
             .to_owned(),
         one_ehr: false,
         parameters: BTreeMap::from([("v".to_owned(), Value::from(person_identifier(middle)))]),
+    }
+}
+
+/// A lookup of one EHR by the subject of its `EHR_STATUS`, the middle seed EHR
+/// (#4442).
+fn ehr_by_subject(corpus: &Corpus) -> AqlHotPath {
+    AqlHotPath {
+        name: "ehr_by_subject",
+        aql: "SELECT e/ehr_id/value FROM EHR e \
+              WHERE e/ehr_status/subject/external_ref/id/value = $u \
+              AND e/ehr_status/subject/external_ref/namespace = $n"
+            .to_owned(),
+        one_ehr: false,
+        parameters: BTreeMap::from([
+            (
+                "u".to_owned(),
+                Value::from(subject_uid(corpus.ehrs.len().div_euclid(2))),
+            ),
+            ("n".to_owned(), Value::from("local")),
+        ]),
     }
 }
 

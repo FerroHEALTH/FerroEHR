@@ -1650,3 +1650,95 @@ async fn a_lookup_by_an_element_text_reads_the_one_composition() {
         assert_value_lookup(name, &plan, COMPOSITIONS);
     }
 }
+
+// ── a lookup of an EHR by its subject (#4442) ────────────────────────────────
+
+/// The `EHR_STATUS` of the `index`th seeded EHR: its subject is a `PARTY_REF`
+/// to a PERSON by its uid, in the `local` namespace.
+fn ehr_status_with_subject(index: u32) -> openehr_rm::prelude::EhrStatus {
+    openehr_its::json::from_canonical_value(&json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": "local",
+                "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": subject_uid(index) }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    }))
+    .expect("the EHR_STATUS fixture decodes")
+}
+
+/// The subject uid of the `index`th seeded EHR.
+fn subject_uid(index: u32) -> String {
+    format!("00000000-0000-4000-8000-{index:012}")
+}
+
+/// A lookup of an EHR by the subject of its `EHR_STATUS` enters through
+/// `uq_ehr_subject` and reads no `EHR_STATUS` version (#4442).
+#[tokio::test]
+async fn an_ehr_lookup_by_subject_enters_through_the_subject_index() {
+    const EHRS: u32 = 200;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    for index in 0..EHRS {
+        svc.create_ehr(Some(ehr_status_with_subject(index)))
+            .await
+            .expect("create an EHR with a subject");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded EHRs");
+
+    let params = Params::new()
+        .with("u", ParamValue::Str(subject_uid(EHRS.div_euclid(2))))
+        .with("n", ParamValue::Str("local".to_owned()));
+    let prepared = aql_sql_with(
+        "SELECT e/ehr_id/value FROM EHR e \
+         WHERE e/ehr_status/subject/external_ref/id/value = $u \
+         AND e/ehr_status/subject/external_ref/namespace = $n",
+        &params,
+        Vec::new(),
+        None,
+    );
+    let plan = explain_aql(&pool, prepared).await;
+    let root = plan
+        .get(0)
+        .expect("EXPLAIN FORMAT JSON returns a one-element array");
+    let returned = root
+        .pointer("/Plan/Actual Rows")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its rows");
+    assert!(
+        (returned - 1.0).abs() < f64::EPSILON,
+        "the lookup finds the one EHR of the subject: {returned} rows"
+    );
+    let scans = scans(&plan);
+    assert!(
+        scans
+            .iter()
+            .any(|scan| scan.index.as_deref() == Some("uq_ehr_subject")),
+        "#4442: the lookup enters through the subject index:\n{}",
+        render(&scans)
+    );
+    assert!(
+        scans
+            .iter()
+            .all(|scan| !scan.relation.starts_with("version") && !scan.relation.starts_with("node")),
+        "#4442: the lookup reads no EHR_STATUS version or node:\n{}",
+        render(&scans)
+    );
+}
