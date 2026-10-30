@@ -47,7 +47,7 @@
 
 use std::sync::Arc;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 use sqlx::{Executor as _, PgPool, Postgres, Row as _, Transaction};
 
 use ferroehr::aql::ir::Params;
@@ -1220,4 +1220,198 @@ async fn a_commit_time_range_serves_from_the_brin_index() {
         "the archived tier carries no commit-time index:\n{}",
         render(&scans)
     );
+}
+
+// ── the row estimate of a chain of path bindings ─────────────────────────────
+
+/// The archetype of the OBSERVATION the binding-chain tests commit.
+const WIDE_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.plan_shapes.v1";
+
+/// The at-codes of the ELEMENTs under that OBSERVATION's one event.
+const WIDE_ITEMS: [&str; 8] = [
+    "at0004", "at0005", "at0006", "at0007", "at0008", "at0009", "at0010", "at0011",
+];
+
+/// The path from the OBSERVATION to the magnitude of the ELEMENT `item`.
+fn wide_leaf(item: &str) -> String {
+    format!("o/data[at0001]/events[at0002]/data[at0003]/items[{item}]/value/magnitude")
+}
+
+/// A COMPOSITION carrying one OBSERVATION whose one event holds a
+/// `DV_QUANTITY` ELEMENT per [`WIDE_ITEMS`] entry, the shape of the storage
+/// bench's wide projection.
+fn wide_observation_composition(name: &str, magnitude: f64) -> Value {
+    let items: Vec<Value> = WIDE_ITEMS
+        .iter()
+        .zip(0_u8..)
+        .map(|(item, offset)| {
+            json!({
+                "_type": "ELEMENT",
+                "name": { "_type": "DV_TEXT", "value": format!("reading {item}") },
+                "archetype_node_id": item,
+                "value": {
+                    "_type": "DV_QUANTITY",
+                    "magnitude": magnitude + f64::from(offset),
+                    "units": "mm[Hg]"
+                }
+            })
+        })
+        .collect();
+    let mut body = composition(name);
+    let content = json!([{
+        "_type": "OBSERVATION",
+        "name": { "_type": "DV_TEXT", "value": "Readings" },
+        "archetype_node_id": WIDE_ARCHETYPE,
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": WIDE_ARCHETYPE },
+            "rm_version": "1.1.0"
+        },
+        "language": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ISO_639-1" },
+            "code_string": "en"
+        },
+        "encoding": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "IANA_character-sets" },
+            "code_string": "UTF-8"
+        },
+        "subject": { "_type": "PARTY_SELF" },
+        "data": {
+            "_type": "HISTORY",
+            "name": { "_type": "DV_TEXT", "value": "History" },
+            "archetype_node_id": "at0001",
+            "origin": { "_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z" },
+            "events": [{
+                "_type": "POINT_EVENT",
+                "name": { "_type": "DV_TEXT", "value": "Any event" },
+                "archetype_node_id": "at0002",
+                "time": { "_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z" },
+                "data": {
+                    "_type": "ITEM_TREE",
+                    "name": { "_type": "DV_TEXT", "value": "Tree" },
+                    "archetype_node_id": "at0003",
+                    "items": items
+                }
+            }]
+        }
+    }]);
+    body.as_object_mut()
+        .expect("the composition fixture is a JSON object")
+        .insert("content".to_owned(), content);
+    body
+}
+
+/// Every `Plan Rows` estimate of a plan tree, its subplans included.
+fn plan_row_estimates(node: &Value, out: &mut Vec<f64>) {
+    if let Some(rows) = node.get("Plan Rows").and_then(Value::as_f64) {
+        out.push(rows);
+    }
+    for child in node
+        .get("Plans")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        plan_row_estimates(child, out);
+    }
+}
+
+/// A chain of path bindings is estimated at the rows it can produce, so its
+/// cost neither picks the join order of a statement many times larger nor
+/// switches on JIT compilation (#4430, #4431).
+///
+/// Each binding of a path step probes the children of one node row. Lowered
+/// as a set-returning function over an array the planner cannot see into, a
+/// binding was estimated at ten rows (PostgreSQL 18 `estimate_array_length`'s
+/// default), so a chain of eleven multiplied the estimate by 10^11: the
+/// storage bench's wide projection over one EHR spent a second in LLVM
+/// compilation on every execution, because the planner JIT-compiles a
+/// statement whose estimated cost passes `jit_above_cost` (PostgreSQL 18
+/// §30.2 "When to JIT?"). The flat shape's bindings are probed in the same
+/// order and are planned from their own subquery plans. No estimate of a
+/// binding chain can exceed the node rows the store holds: each binding
+/// yields the children of one row, or one all-`NULL` row.
+#[tokio::test]
+async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let mut ehrs = Vec::new();
+    for index in 0..4_u8 {
+        let ehr = svc.create_ehr(None).await.expect("create an EHR");
+        for reading in 0..10_u8 {
+            let body = wide_observation_composition(
+                &format!("readings {index}.{reading}"),
+                f64::from(reading) * 10.0,
+            );
+            svc.create_composition(ehr, uv(&body, "249", None))
+                .await
+                .expect("commit an observation");
+        }
+        ehrs.push(ehr);
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded corpus");
+    let node_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM node")
+        .fetch_one(&pool)
+        .await
+        .expect("count the node rows");
+
+    let magnitude = wide_leaf(WIDE_ITEMS[0]);
+    let ordered = format!(
+        "SELECT c/uid/value, {magnitude} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}] \
+         WHERE {magnitude} >= 0 ORDER BY {magnitude} DESC"
+    );
+    let wide = format!(
+        "SELECT c/uid/value, {} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}]",
+        WIDE_ITEMS.map(wide_leaf).join(", ")
+    );
+    let one_ehr = ehrs.first().copied().expect("a seeded EHR");
+    for (name, prepared, expected) in [
+        (
+            "the ordered population page",
+            aql_sql_limited(&ordered, Vec::new(), Some(50)),
+            40,
+        ),
+        (
+            "the wide projection over one EHR",
+            aql_sql(&wide, vec![one_ehr]),
+            10,
+        ),
+    ] {
+        let plan = explain_aql(&pool, prepared).await;
+        let root = plan
+            .get(0)
+            .expect("EXPLAIN FORMAT JSON returns a one-element array");
+        let returned = root
+            .pointer("/Plan/Actual Rows")
+            .and_then(Value::as_f64)
+            .expect("the root plan node reports its rows");
+        assert!(
+            (returned - f64::from(expected)).abs() < f64::EPSILON,
+            "{name} returns {expected} rows, so the statement read what was seeded: {returned}"
+        );
+        let mut estimates = Vec::new();
+        plan_row_estimates(root.get("Plan").expect("a Plan"), &mut estimates);
+        let widest = estimates.iter().copied().fold(0.0, f64::max);
+        let ceiling = f64::from(
+            i32::try_from(node_rows).expect("a test seed holds fewer than 2^31 node rows"),
+        );
+        assert!(
+            widest <= ceiling,
+            "#4430, #4431: no plan node of {name} is estimated at more rows than the {node_rows} \
+             node rows the store holds ({widest}):\n{}",
+            render(&scans(&plan))
+        );
+        assert!(
+            root.get("JIT").is_none(),
+            "#4430, #4431: {name} is not JIT-compiled: {}",
+            root.get("JIT").map(Value::to_string).unwrap_or_default()
+        );
+    }
 }

@@ -1034,12 +1034,10 @@ impl Builder<'_> {
     /// ever removing one. `conds` builds its conditions over the inner node
     /// alias it is handed. On the streaming shape the binding is a
     /// `LEFT JOIN LATERAL` behind the `OFFSET 0` fence; on the flat shape, whose
-    /// comma-separated FROM list a join could not reference, it is the
-    /// implicitly lateral FROM function `unnest(ARRAY(<node rows>))` over a
-    /// one-row left join, whose result columns are the `node` row type's
-    /// (PostgreSQL 18 §7.2.1.4 Table Functions and §7.2.1.5 LATERAL
-    /// Subqueries). No openEHR spec governs the join mechanics — our own
-    /// design.
+    /// comma-separated FROM list a join could not reference, it is a `LATERAL`
+    /// subquery item of that list over a one-row left join, behind the same
+    /// fence (PostgreSQL 18 §7.2.1.5 LATERAL Subqueries). No openEHR spec
+    /// governs the join mechanics — our own design.
     ///
     /// # Errors
     /// Whatever `conds` returns.
@@ -1856,23 +1854,31 @@ pub(super) fn is_root_only(types: &crate::aql::ir::TypeSet) -> bool {
             .all(|t| matches!(t.as_str(), "COMPOSITION" | "EHR_STATUS" | "EHR_ACCESS"))
 }
 
-/// The implicitly lateral FROM function of a left binding on a comma-separated
-/// FROM list: `unnest(ARRAY(<node rows>))` over a one-row left join, so the
-/// binding yields one row per node `on` admits and one
-/// all-`NULL` row when it admits none. Its result columns are the `node` row
-/// type's (PostgreSQL 18 §7.2.1.4 Table Functions, §7.2.1.5 LATERAL
-/// Subqueries). `inner` is the node alias `on` is written over.
+/// The `LATERAL` FROM item of a left binding on a comma-separated FROM list:
+/// a subquery over a one-row left join, so the binding yields one row per node
+/// `on` admits and one all-`NULL` row when it admits none, with the `node`
+/// columns. `inner` is the node alias `on` is written over.
 pub(super) fn left_binding_rows(alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
     binding_rows(BoundTable::Node, alias, inner, on)
 }
 
-/// The implicitly lateral FROM function of a left binding over `table`, in the
-/// shape [`left_binding_rows`] describes; `node` rows come in document order.
+/// The `LATERAL` FROM item of a left binding over `table`, in the shape
+/// [`left_binding_rows`] describes; `node` rows come in document order.
+///
+/// The planner estimates the rows of a subquery from its own plan, about one
+/// per probe of a node's children, where a set-returning function over an
+/// array it cannot see into is estimated at ten rows: a chain of such
+/// bindings multiplied the estimate tenfold per step, which chose the join
+/// order and switched on JIT compilation from the inflated total cost
+/// (PostgreSQL 18 §30.2 When to JIT?, #4430, #4431). sea-query builds a
+/// `LATERAL` subquery only as a join, which a comma-separated item cannot be,
+/// so the item is written as a call of `LATERAL` on the parenthesized
+/// subquery, which PostgreSQL's grammar reads as `LATERAL select_with_parens`.
 fn binding_rows(table: BoundTable, alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
     let mut one = Query::select();
     one.expr(Expr::val(1));
     let mut rows = Query::select();
-    rows.expr(Expr::col(Alias::new(inner)))
+    rows.column((Alias::new(inner), Asterisk))
         .from_subquery(one, Alias::new(format!("{alias}_one")));
     match table {
         BoundTable::Node => rows
@@ -1882,6 +1888,6 @@ fn binding_rows(table: BoundTable, alias: &str, inner: &str, on: Expr) -> sea_qu
             rows.join_as(JoinType::LeftJoin, VersionRow::Table, Alias::new(inner), on)
         }
     };
-    let array = Expr::cust_with_exprs("ARRAY($1)", [Expr::from(rows)]);
-    sea_query::Func::cust(Alias::new("unnest")).arg(array)
+    rows.offset(0);
+    sea_query::Func::cust(Alias::new("LATERAL")).arg(Expr::from(rows))
 }
