@@ -19,7 +19,7 @@
 
 use std::fmt::Write as _;
 
-use sea_query::{Alias, Expr, ExprTrait as _, Order, Query};
+use sea_query::{Alias, BinOper, Expr, ExprTrait as _, Order, Query};
 
 use crate::aql::error::{AnalysisError, AqlError, SqlError};
 use crate::aql::ir::{
@@ -847,7 +847,16 @@ pub(super) fn coerce_value(base: Expr, mode: ValueMode, leaf: &LeafPath) -> Expr
         // NOTE: RM data_types master07 §Partial Date/Times admits reduced
         // precision, so the leaf reads through the total `ext.openehr_timestamp`
         // — floor completion, NULL for garbage.
-        ValueMode::Value(Coercion::Temporal) => call("openehr_timestamp", vec![as_text(base)]),
+        ValueMode::Value(Coercion::Temporal) => {
+            // NOTE: QUERY master03 §Dates and Times compares `context/start_time`, the DV
+            // object itself, as a date/time quantity, so an object leaf reads its `value`.
+            let text = if leaf.types.names().iter().any(|t| t.starts_with("DV_")) {
+                as_text(base.binary(BinOper::Custom("->"), cast(Expr::val("value"), "text")))
+            } else {
+                as_text(base)
+            };
+            call("openehr_timestamp", vec![text])
+        }
         ValueMode::Value(Coercion::Text | Coercion::Raw) => as_text(base),
         // a mixed-type (`Raw`) leaf being compared/matched against a
         // numeric literal — extract numerically, but guard on the stored jsonb
