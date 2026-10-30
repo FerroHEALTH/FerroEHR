@@ -27,6 +27,7 @@
 pub mod acquire;
 pub mod domain;
 pub mod iden;
+pub mod parent_statistics;
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -1663,6 +1664,14 @@ async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result
             .await?;
         migrator.run(&mut *conn).await?;
     }
+    // A store's partitioned parents get their first statistics here, where the
+    // migration credential that owns them holds the connection (#4453).
+    let stores: Vec<&str> = parent_statistics::STORES
+        .into_iter()
+        .filter(|store| domains.contains(store))
+        .map(Domain::schema)
+        .collect();
+    parent_statistics::refresh(&mut *conn, &stores).await?;
     for schema in named_only {
         if preexisting.contains(&schema) {
             continue;

@@ -77,6 +77,8 @@ use openehr_rm::v1_2::demographic::party_relationship::PartyRelationship;
 use serde::de::DeserializeOwned;
 
 use crate::db::acquire::acquire;
+use crate::db::domain::Domain;
+use crate::db::parent_statistics;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::types::{
@@ -1450,6 +1452,15 @@ impl FerroEhrService {
                     reports.push(report);
                 }
             }
+        }
+        // A load writes whole stores at once, so the partitioned parents'
+        // statistics are taken again; a failed refresh leaves the loaded data
+        // as it is and is logged (#4453).
+        for (pool, store) in [
+            (&self.pool, Domain::Clinical),
+            (&self.demographic_pool, Domain::Party),
+        ] {
+            parent_statistics::report(&parent_statistics::refresh_store(pool, store).await);
         }
         Ok(reports)
     }
