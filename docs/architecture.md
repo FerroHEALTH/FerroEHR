@@ -249,8 +249,15 @@ CONTAINS chains; `jsonb_path_query_first` for leaf extraction and
 ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
-emits no GIN-servable operator; the baseline removed the index). The feature
-envelope is documented per construct; rejections are explicit typed errors.
+emits no GIN-servable operator; the baseline removed the index). The one
+value index is `idx_node_hot_value_search` on `ext.node_search_text`, the
+text an equality on a text leaf of an ELEMENT value compares against from
+the typed value columns or the stored fragment: the WHERE lowering adds, for
+such an equality, a FROM item of the distinct versions some ELEMENT row of
+which carries the value (`aql::sql::condition`, the value anchor), so a
+lookup by a value reads the one object instead of every node of the
+archetype (#4437). The feature envelope is documented per construct;
+rejections are explicit typed errors.
 
 A query whose outermost `FROM` class is `PERSON`, `ORGANISATION` or `ROLE` is
 the experimental demographic extension (no openEHR spec governs it; QUERY

@@ -72,6 +72,10 @@ pub const VERSION_TREE_READ: &str =
 pub const VERSION_UID_ORDER: &str =
     include_str!("../../migrations/templates/version_uid_order.sql.in");
 
+/// The value search template: the expression index and statistics an AQL
+/// lookup by an ELEMENT value enters through (#4437).
+pub const VALUE_SEARCH: &str = include_str!("../../migrations/templates/value_search.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -171,6 +175,16 @@ mod tests {
             "migrations/party/0015_version_uid_order.sql",
             PARTY,
             VERSION_UID_ORDER,
+        ),
+        (
+            "migrations/clinical/0025_value_search.sql",
+            CLINICAL,
+            VALUE_SEARCH,
+        ),
+        (
+            "migrations/party/0016_value_search.sql",
+            PARTY,
+            VALUE_SEARCH,
         ),
     ];
 

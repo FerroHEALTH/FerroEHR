@@ -73,6 +73,7 @@ use ferroehr::aql::sql::SqlCtx;
 use ferroehr::config::profile::SpecProfile;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_base::prelude::ObjectVersionId;
@@ -123,6 +124,8 @@ struct BenchClass {
     ehrs: usize,
     /// How many compositions are spread over them.
     compositions: usize,
+    /// How many persons the party store holds, each with one identifier.
+    persons: usize,
 }
 
 impl BenchClass {
@@ -141,11 +144,13 @@ impl BenchClass {
                 name: "s",
                 ehrs: 100,
                 compositions: 3_000,
+                persons: 20_000,
             },
             _ => Self {
                 name: "poc",
                 ehrs: 20,
                 compositions: 300,
+                persons: 2_000,
             },
         }
     }
@@ -180,6 +185,8 @@ struct Corpus {
     entry_rm_type: String,
     /// One kept composition per EHR, each with two versions.
     kept: Vec<Seeded>,
+    /// How many persons the party store holds ([`person`]).
+    persons: usize,
     /// An instant after the seed, for `version_at_time`.
     at: String,
     /// How long seeding took.
@@ -345,13 +352,16 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         .collect()
         .await;
 
+    seed_persons(svc, class.persons).await;
+
     let seconds = start.elapsed().as_secs_f64();
     let versions = class.compositions + 2 * kept.len();
     let storage = storage_facts(pool, &before, versions).await;
     println!(
-        "seeded {} EHRs and {} compositions in {seconds:.1}s",
+        "seeded {} EHRs, {} compositions and {} persons in {seconds:.1}s",
         ehrs.len(),
-        class.compositions + kept.len()
+        class.compositions + kept.len(),
+        class.persons
     );
     Corpus {
         entry_rm_type: entry_rm_type(&payload),
@@ -362,9 +372,91 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         second_template_id,
         template_id,
         kept,
+        persons: class.persons,
         seconds,
         storage,
     }
+}
+
+/// The party store: one PERSON per identifier, each carrying a
+/// `person_identifier` CLUSTER, for the lookup by an identifier value.
+async fn seed_persons(svc: &Arc<FerroEhrService>, persons: usize) {
+    futures::stream::iter(0..persons)
+        .map(|index| {
+            let svc = Arc::clone(svc);
+            async move {
+                svc.party_create(
+                    PartyKind::Person,
+                    openehr_its::json::from_canonical_value(&person(index))
+                        .expect("the seed person decodes as a PERSON"),
+                    None,
+                )
+                .await
+                .expect("seed a person");
+            }
+        })
+        .buffer_unordered(SEED_CONCURRENCY)
+        .collect::<Vec<()>>()
+        .await;
+}
+
+/// The `person_identifier` CLUSTER archetype of the seed persons.
+const PERSON_IDENTIFIER_CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2";
+
+/// The identifier of the `index`th seed person.
+fn person_identifier(index: usize) -> String {
+    format!("MRN-{index:07}")
+}
+
+/// A PERSON with one identity and one `person_identifier` CLUSTER whose ELEMENT
+/// holds a `DV_IDENTIFIER` with its issuer, assigner and type.
+fn person(index: usize) -> Value {
+    json!({
+        "_type": "PERSON",
+        "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1" },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": format!("Person {index}") },
+        "identities": [{
+            "_type": "PARTY_IDENTITY",
+            "archetype_node_id": "at0003",
+            "name": { "_type": "DV_TEXT", "value": "legal name" },
+            "details": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "at0004",
+                "name": { "_type": "DV_TEXT", "value": "structure" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0005",
+                    "name": { "_type": "DV_TEXT", "value": "name" },
+                    "value": { "_type": "DV_TEXT", "value": format!("Person {index}") }
+                }]
+            }
+        }],
+        "details": {
+            "_type": "ITEM_TREE",
+            "archetype_node_id": "at0001",
+            "name": { "_type": "DV_TEXT", "value": "details" },
+            "items": [{
+                "_type": "CLUSTER",
+                "archetype_node_id": PERSON_IDENTIFIER_CLUSTER,
+                "archetype_details": { "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": PERSON_IDENTIFIER_CLUSTER },
+                    "rm_version": "1.1.0" },
+                "name": { "_type": "DV_TEXT", "value": "person identifier" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0001",
+                    "name": { "_type": "DV_TEXT", "value": "identifier" },
+                    "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:issuer:hospital",
+                        "assigner": "urn:issuer:hospital", "type": "MRN",
+                        "id": person_identifier(index) }
+                }]
+            }]
+        }
+    })
 }
 
 /// The physical size of the stores a composition commit writes to, read at
@@ -1400,13 +1492,28 @@ struct AqlHotPath {
     aql: String,
     /// Whether it runs over one EHR (`true`) or the whole population.
     one_ehr: bool,
+    /// The query parameters it binds.
+    parameters: BTreeMap<String, Value>,
+}
+
+impl AqlHotPath {
+    /// A hot path over the whole population with no parameter.
+    fn population(name: &'static str, aql: String) -> Self {
+        Self {
+            name,
+            aql,
+            one_ehr: false,
+            parameters: BTreeMap::new(),
+        }
+    }
 }
 
 /// The AQL hot paths the storage layout decides the cost of, built from the
 /// seed payload so every statement matches what was committed: CONTAINS as an
 /// existence test, a node predicate on archetype and name, a WHERE on a
 /// quantity, a coded value, a date-time and a text value, the widest
-/// projection, whole-object projections, and a version at a point in time.
+/// projection, whole-object projections, a lookup of a person by an
+/// identifier value over the party store, and a version at a point in time.
 fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
     let leaves = payload_leaves(&[&corpus.payload, &corpus.second_payload]);
     let bp_from =
@@ -1434,6 +1541,7 @@ fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
                 }
             ),
             one_ehr: false,
+            parameters: BTreeMap::new(),
         })
     };
     let named = leaves
@@ -1455,6 +1563,7 @@ fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
             if one_ehr { "" } else { " LIMIT 50" }
         ),
         one_ehr,
+        parameters: BTreeMap::new(),
     };
     let filters = [
         filter("where_magnitude", &["DV_QUANTITY", "DV_COUNT"], ">=", true),
@@ -1463,45 +1572,54 @@ fn aql_hot_paths(corpus: &Corpus) -> Vec<AqlHotPath> {
         filter("where_text", &["DV_TEXT"], "=", false),
     ];
     let mut paths = vec![
-        AqlHotPath {
-            name: "contains_exists",
-            aql: format!("SELECT count(c) {bp_from}"),
-            one_ehr: false,
-        },
-        AqlHotPath {
-            name: "node_predicate",
-            aql: format!(
+        AqlHotPath::population("contains_exists", format!("SELECT count(c) {bp_from}")),
+        AqlHotPath::population(
+            "node_predicate",
+            format!(
                 "SELECT c/uid/value {bp_from} CONTAINS ELEMENT x[{}, '{}'] LIMIT 50",
                 named.0, named.1
             ),
-            one_ehr: false,
-        },
+        ),
     ];
     paths.extend(filters.into_iter().flatten());
     paths.extend([
         wide("wide_projection_one_ehr", true),
         wide("wide_projection_population", false),
-        AqlHotPath {
-            name: "select_observation",
-            aql: format!("SELECT o {bp_from} LIMIT 50"),
-            one_ehr: false,
-        },
+        AqlHotPath::population("select_observation", format!("SELECT o {bp_from} LIMIT 50")),
         AqlHotPath {
             name: "select_composition_one_ehr",
             aql: "SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned(),
             one_ehr: true,
+            parameters: BTreeMap::new(),
         },
-        AqlHotPath {
-            name: "aql_version_at_time",
-            aql: format!(
+        person_identifier_lookup(corpus),
+        AqlHotPath::population(
+            "aql_version_at_time",
+            format!(
                 "SELECT c/uid/value FROM EHR e CONTAINS VERSION \
                  v[commit_audit/time_committed <= '{}'] CONTAINS COMPOSITION c LIMIT 50",
                 corpus.at
             ),
-            one_ehr: false,
-        },
+        ),
     ]);
     paths
+}
+
+/// A partner's lookup of one person by an identifier value over the party
+/// store, the one hot path with a parameter (#4437).
+fn person_identifier_lookup(corpus: &Corpus) -> AqlHotPath {
+    // The middle person, so the lookup walks nothing the seed order favours.
+    let middle = corpus.persons.div_euclid(2);
+    AqlHotPath {
+        name: "person_identifier_lookup",
+        aql: "SELECT p/uid/value, id/items[at0001]/value/type, \
+              id/items[at0001]/value/issuer, id/items[at0001]/value/assigner \
+              FROM PERSON p CONTAINS CLUSTER id[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2] \
+              WHERE id/items[at0001]/value/id = $v"
+            .to_owned(),
+        one_ehr: false,
+        parameters: BTreeMap::from([("v".to_owned(), Value::from(person_identifier(middle)))]),
+    }
 }
 
 /// The rows one AQL execution returned.
@@ -1535,7 +1653,10 @@ fn bench_aql(
         let request = if path.one_ehr {
             one_ehr.clone()
         } else {
-            AqlQueryRequest::default()
+            AqlQueryRequest {
+                parameters: path.parameters.clone(),
+                ..AqlQueryRequest::default()
+            }
         };
         println!("storage_aql: `{}` runs {}", path.name, path.aql);
         let rows = rt.block_on(async {

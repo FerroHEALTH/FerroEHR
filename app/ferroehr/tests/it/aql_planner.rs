@@ -2836,3 +2836,121 @@ fn a_composition_template_predicate_reads_the_version_column() {
         build_sql("SELECT c/archetype_details/template_id/value FROM EHR e CONTAINS COMPOSITION c");
     assert!(!sql.contains(r#""v1"."template_id""#), "{sql}");
 }
+
+// ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────
+
+/// Plan `q` with `params` bound and lower it to SQL.
+fn build_sql_with(q: &str, params: &Params) -> String {
+    let ir = plan_with(q, params).unwrap_or_else(|e| panic!("plan failed for {q:?}: {e}"));
+    let ctx = SqlCtx {
+        system_id: "sys.example.com".to_owned(),
+        ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
+        subject_scope: None,
+        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+        limit: None,
+        offset: None,
+        archetype_lineage: Arc::new(ArchetypeLineage::default()),
+    };
+    ferroehr::aql::sql::build(&ir, params, &ctx)
+        .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
+        .sql
+}
+
+/// The value anchors of a statement: the FROM items of the versions whose
+/// ELEMENT rows carry a search text.
+fn value_anchors(sql: &str) -> usize {
+    sql.matches("node_search_text(").count()
+}
+
+const PERSON_LOOKUP: &str =
+    "FROM PERSON p CONTAINS CLUSTER id[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]";
+
+/// An equality on a text leaf of an ELEMENT value with a parameter is
+/// anchored on the ELEMENT rows of the same version: an `EXISTS` on the
+/// ELEMENT rows, under the leaf step's at-code, by their search text (#4437).
+#[test]
+fn a_value_equality_with_a_parameter_is_anchored_on_the_element_rows() {
+    let params = Params::new().with("v", ParamValue::Str("MRN-1".to_owned()));
+    let sql = build_sql_with(
+        &format!(
+            "SELECT p/uid/value, id/items[at0001]/value/issuer {PERSON_LOOKUP} \
+             WHERE id/items[at0001]/value/id = $v"
+        ),
+        &params,
+    );
+    assert_eq!(value_anchors(&sql), 1, "one anchor: {sql}");
+    assert!(
+        sql.contains(
+            r#"(SELECT DISTINCT "va1_n"."vo_id", "va1_n"."sys_version" FROM "node" AS "va1_n""#
+        ) && sql.contains(r#""va1_n"."rm_type" = ('ELEMENT')"#),
+        "the anchor is a FROM item of the distinct versions with such an ELEMENT row, the \
+         type a literal the partial index predicate is proven from: {sql}"
+    );
+    assert!(
+        sql.contains(r#""va1"."vo_id" = "v0"."vo_id""#)
+            && sql.contains(r#""va1"."sys_version" = "v0"."sys_version""#),
+        "the anchor is linked to the version row of the path's versioned object: {sql}"
+    );
+    assert!(
+        sql.contains(r#""archetype" = $"#),
+        "the leaf step's at-code narrows the anchor: {sql}"
+    );
+}
+
+/// The same equality with a literal, on a WHERE-only path, is anchored too.
+#[test]
+fn a_value_equality_with_a_literal_is_anchored() {
+    let sql = build_sql(&format!(
+        "SELECT p/uid/value {PERSON_LOOKUP} WHERE id/items[at0001]/value/id = 'MRN-1'"
+    ));
+    assert_eq!(value_anchors(&sql), 1, "{sql}");
+}
+
+/// A `value/value` equality is anchored on a text, which a `DV_ORDINAL` or
+/// `DV_SCALE` value (a number whose search text is its symbol) cannot equal,
+/// and not on a text a number renders as.
+#[test]
+fn a_value_value_equality_is_anchored_on_a_text_no_number_renders_as() {
+    let leaf = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/value";
+    let from = "FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o";
+    let text = build_sql(&format!("SELECT c/uid/value {from} WHERE {leaf} = 'Mild'"));
+    assert_eq!(value_anchors(&text), 1, "{text}");
+    let number = build_sql(&format!("SELECT c/uid/value {from} WHERE {leaf} = '2'"));
+    assert_eq!(value_anchors(&number), 0, "{number}");
+}
+
+/// A conjunct under `OR` or `NOT`, a comparison other than equality, a
+/// numeric leaf and a leaf the typed columns do not carry imply no anchor.
+#[test]
+fn only_a_top_level_text_equality_is_anchored() {
+    let leaf = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value";
+    let from = "FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o";
+    for (name, filter) in [
+        (
+            "an OR",
+            format!("{leaf}/units = 'kg' OR {leaf}/value = 'x'"),
+        ),
+        ("a NOT", format!("NOT {leaf}/units = 'kg'")),
+        ("a LIKE", format!("{leaf}/units LIKE 'k%'")),
+        ("an inequality", format!("{leaf}/units != 'kg'")),
+        ("a magnitude", format!("{leaf}/magnitude = 70")),
+        (
+            "a code",
+            format!("{leaf}/defining_code/code_string = 'at0005'"),
+        ),
+        ("a name", "o/name/value = 'Weight'".to_owned()),
+    ] {
+        let sql = build_sql(&format!("SELECT c/uid/value {from} WHERE {filter}"));
+        assert_eq!(value_anchors(&sql), 0, "{name} is not anchored: {sql}");
+    }
+    let both = build_sql(&format!(
+        "SELECT c/uid/value {from} WHERE {leaf}/units = 'kg' AND {leaf}/value = 'x' \
+         AND o/name/value = 'Weight'"
+    ));
+    assert_eq!(
+        value_anchors(&both),
+        2,
+        "each text equality of a conjunction is anchored: {both}"
+    );
+}

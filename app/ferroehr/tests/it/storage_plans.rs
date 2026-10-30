@@ -50,7 +50,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 use sqlx::{Executor as _, PgPool, Postgres, Row as _, Transaction};
 
-use ferroehr::aql::ir::Params;
+use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::sql::SqlCtx;
 use ferroehr::config::profile::SpecProfile;
@@ -811,9 +811,18 @@ fn aql_sql_limited(
     ehr_ids: Vec<EhrId>,
     limit: Option<i64>,
 ) -> ferroehr::aql::sql::PreparedQuery {
+    aql_sql_with(aql, &Params::new(), ehr_ids, limit)
+}
+
+/// [`aql_sql_limited`] with the query parameters bound.
+fn aql_sql_with(
+    aql: &str,
+    params: &Params,
+    ehr_ids: Vec<EhrId>,
+    limit: Option<i64>,
+) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
-    let params = Params::new();
-    let ir = ferroehr::aql::plan(&ast, &params, SpecProfile::default()).expect("the AQL plans");
+    let ir = ferroehr::aql::plan(&ast, params, SpecProfile::default()).expect("the AQL plans");
     let ctx = SqlCtx {
         system_id: "plan.shapes.test".to_owned(),
         ehr_ids,
@@ -824,7 +833,7 @@ fn aql_sql_limited(
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    ferroehr::aql::sql::build(&ir, &params, &ctx).expect("the AQL lowers to SQL")
+    ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }
 
 /// `EXPLAIN` a lowered AQL statement inside a rolled-back transaction.
@@ -909,34 +918,42 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
     assert_no_policy_qual(&plan, &scans);
 }
 
-/// The archetype columns carry one statistics object, so the planner sees that
-/// an archetype fixes its RM type, entity and major version instead of
-/// multiplying their selectivities (PostgreSQL 18, "Extended Statistics").
+/// The archetype columns carry one statistics object in each store, so the
+/// planner sees that an archetype fixes its RM type, entity and major version
+/// instead of multiplying their selectivities (PostgreSQL 18, "Extended
+/// Statistics"; clinical #4399, party #4437).
 #[tokio::test]
 async fn the_archetype_columns_carry_dependency_statistics() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let (columns, kinds): (Vec<String>, Vec<String>) = sqlx::query_as(
-        "SELECT ARRAY(SELECT a.attname::text FROM unnest(s.stxkeys) AS k(n) \
+    for schema in ["clinical", "party"] {
+        let (columns, kinds): (Vec<String>, Vec<String>) = sqlx::query_as(
+            "SELECT ARRAY(SELECT a.attname::text FROM unnest(s.stxkeys) AS k(n) \
                       JOIN pg_attribute a ON a.attrelid = s.stxrelid AND a.attnum = k.n \
                       ORDER BY a.attnum), \
                 s.stxkind::text[] \
          FROM pg_statistic_ext s \
          WHERE s.stxname = 'st_node_hot_archetype' \
-           AND s.stxrelid = 'clinical.node_hot'::regclass",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("the archetype statistics object exists");
-    assert_eq!(
-        columns,
-        ["rm_type", "arch_entity", "arch_concept", "arch_major"]
-    );
-    assert!(kinds.contains(&"f".to_owned()), "dependencies: {kinds:?}");
-    assert!(
-        kinds.contains(&"m".to_owned()),
-        "most common values: {kinds:?}"
-    );
+           AND s.stxrelid = $1::regclass",
+        )
+        .bind(format!("{schema}.node_hot"))
+        .fetch_one(&pool)
+        .await
+        .expect("the archetype statistics object of each store exists");
+        assert_eq!(
+            columns,
+            ["rm_type", "arch_entity", "arch_concept", "arch_major"],
+            "{schema}"
+        );
+        assert!(
+            kinds.contains(&"f".to_owned()),
+            "{schema} dependencies: {kinds:?}"
+        );
+        assert!(
+            kinds.contains(&"m".to_owned()),
+            "{schema} most common values: {kinds:?}"
+        );
+    }
 }
 
 /// A population count of a whole object reads no node row (#4286).
@@ -1413,5 +1430,223 @@ async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
             "#4430, #4431: {name} is not JIT-compiled: {}",
             root.get("JIT").map(Value::to_string).unwrap_or_default()
         );
+    }
+}
+
+// ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────
+
+/// The `person_identifier` CLUSTER archetype the lookup walks.
+const PERSON_IDENTIFIER_CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2";
+
+/// A partner's lookup of a person by an identifier value (#4437).
+const PERSON_LOOKUP_AQL: &str = "SELECT p/uid/value, id/items[at0001]/value/type, \
+     id/items[at0001]/value/issuer, id/items[at0001]/value/assigner \
+     FROM PERSON p CONTAINS CLUSTER id[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2] \
+     WHERE id/items[at0001]/value/id = $v";
+
+/// The identifier of the `index`th seeded person.
+fn person_identifier(index: u32) -> String {
+    format!("MRN-{index:07}")
+}
+
+/// A PERSON carrying one `person_identifier` CLUSTER whose ELEMENT holds a
+/// `DV_IDENTIFIER` with its issuer, assigner and type, the shape whose value
+/// stays in the stored fragment (`crate::storage::slim` moves a bare id to
+/// the typed columns and nothing wider).
+fn person_with_identifier(index: u32) -> Value {
+    json!({
+        "_type": "PERSON",
+        "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1" },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": format!("Person {index}") },
+        "identities": [{
+            "_type": "PARTY_IDENTITY",
+            "archetype_node_id": "at0003",
+            "name": { "_type": "DV_TEXT", "value": "legal name" },
+            "details": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "at0004",
+                "name": { "_type": "DV_TEXT", "value": "structure" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0005",
+                    "name": { "_type": "DV_TEXT", "value": "name" },
+                    "value": { "_type": "DV_TEXT", "value": format!("Person {index}") }
+                }]
+            }
+        }],
+        "details": {
+            "_type": "ITEM_TREE",
+            "archetype_node_id": "at0001",
+            "name": { "_type": "DV_TEXT", "value": "details" },
+            "items": [{
+                "_type": "CLUSTER",
+                "archetype_node_id": PERSON_IDENTIFIER_CLUSTER,
+                "archetype_details": { "_type": "ARCHETYPED",
+                    "archetype_id": { "_type": "ARCHETYPE_ID", "value": PERSON_IDENTIFIER_CLUSTER },
+                    "rm_version": "1.1.0" },
+                "name": { "_type": "DV_TEXT", "value": "person identifier" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0001",
+                    "name": { "_type": "DV_TEXT", "value": "identifier" },
+                    "value": { "_type": "DV_IDENTIFIER", "issuer": "urn:issuer:hospital",
+                        "assigner": "urn:issuer:hospital", "type": "MRN",
+                        "id": person_identifier(index) }
+                }]
+            }]
+        }
+    })
+}
+
+/// The at-code of the one `DV_TEXT` ELEMENT of [`text_observation_composition`].
+const TEXT_ITEM: &str = "at0004";
+
+/// The path from the OBSERVATION to the text of that ELEMENT.
+fn text_leaf() -> String {
+    format!("o/data[at0001]/events[at0002]/data[at0003]/items[{TEXT_ITEM}]/value/value")
+}
+
+/// A COMPOSITION carrying one OBSERVATION whose one event holds one `DV_TEXT`
+/// ELEMENT reading `text`, the clinical shape of a lookup by a value.
+fn text_observation_composition(name: &str, text: &str) -> Value {
+    let mut body = wide_observation_composition(name, 0.0);
+    let items = json!([{
+        "_type": "ELEMENT",
+        "name": { "_type": "DV_TEXT", "value": "note" },
+        "archetype_node_id": TEXT_ITEM,
+        "value": { "_type": "DV_TEXT", "value": text }
+    }]);
+    *body
+        .pointer_mut("/content/0/data/events/0/data/items")
+        .expect("the observation fixture holds its items") = items;
+    body
+}
+
+/// Asserts that the plan of a lookup by an ELEMENT value found its one row
+/// through `idx_node_hot_value_search` and read no scan of the population.
+fn assert_value_lookup(name: &str, plan: &Value, population: u32) {
+    let root = plan
+        .get(0)
+        .expect("EXPLAIN FORMAT JSON returns a one-element array");
+    let returned = root
+        .pointer("/Plan/Actual Rows")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its rows");
+    assert!(
+        (returned - 1.0).abs() < f64::EPSILON,
+        "{name} finds the one object carrying the value: {returned} rows"
+    );
+    let scans = scans(plan);
+    assert!(
+        scans
+            .iter()
+            .any(|scan| scan.index.as_deref() == Some("idx_node_hot_value_search")),
+        "#4437: {name} enters through the value index:\n{}",
+        render(&scans)
+    );
+    let population = f64::from(population);
+    for scan in on(&scans, "node_hot") {
+        assert!(
+            scan.rows * scan.loops < population,
+            "#4437: no node scan of {name} walks the {population} objects of the store, \
+             {} read {} rows over {} loops:\n{}",
+            scan.node_type,
+            scan.rows,
+            scan.loops,
+            render(&scans)
+        );
+    }
+    let buffers = root
+        .pointer("/Plan/Shared Hit Blocks")
+        .and_then(Value::as_f64)
+        .expect("the root plan node reports its buffers");
+    assert!(
+        buffers < population,
+        "#4437: {name} reads fewer buffers than the store holds objects ({buffers}):\n{}",
+        render(&scans)
+    );
+}
+
+/// A lookup of a person by an identifier value reads the one person (#4437).
+///
+/// A path binding is a correlated subquery, so the lookup read every
+/// `person_identifier` CLUSTER of the store, probed its version, head and root
+/// and tested the value last: 16 buffers a person, 350 ms at 50 000 persons.
+/// The engine now anchors such an equality on the ELEMENT rows of the same
+/// version by their search text (`ext.node_search_text`), which
+/// `idx_node_hot_value_search` serves, on the flat shape and on the
+/// streaming one (a LIMIT without an ORDER BY) alike.
+#[tokio::test]
+async fn a_lookup_by_a_person_identifier_reads_the_one_person() {
+    const PERSONS: u32 = 200;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    for index in 0..PERSONS {
+        let body = person_with_identifier(index);
+        svc.party_create(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            openehr_its::json::from_canonical_value(&body).expect("the fixture is a PERSON"),
+            None,
+        )
+        .await
+        .expect("create a person");
+    }
+    pools
+        .party
+        .execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded parties");
+
+    let params = Params::new().with(
+        "v",
+        ParamValue::Str(person_identifier(PERSONS.div_euclid(2))),
+    );
+    for (name, limit) in [("the lookup", None), ("the lookup with a limit", Some(10))] {
+        let prepared = aql_sql_with(PERSON_LOOKUP_AQL, &params, Vec::new(), limit);
+        let plan = explain_aql(&pools.party, prepared).await;
+        assert_value_lookup(name, &plan, PERSONS);
+    }
+}
+
+/// A lookup of a composition by a text value reads the one composition
+/// (#4437): the clinical store serves an equality on an ELEMENT value the
+/// same way.
+#[tokio::test]
+async fn a_lookup_by_an_element_text_reads_the_one_composition() {
+    const COMPOSITIONS: u32 = 400;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    for index in 0..COMPOSITIONS {
+        let ehr = svc.create_ehr(None).await.expect("create an EHR");
+        let body =
+            text_observation_composition(&format!("note {index}"), &format!("needle {index}"));
+        svc.create_composition(ehr, uv(&body, "249", None))
+            .await
+            .expect("commit an observation");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded corpus");
+
+    let text = text_leaf();
+    let aql = format!(
+        "SELECT c/uid/value, {text} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}] WHERE {text} = $needle"
+    );
+    let params = Params::new().with(
+        "needle",
+        ParamValue::Str(format!("needle {}", COMPOSITIONS.div_euclid(2))),
+    );
+    for (name, limit) in [("the lookup", None), ("the lookup with a limit", Some(10))] {
+        let prepared = aql_sql_with(&aql, &params, Vec::new(), limit);
+        let plan = explain_aql(&pool, prepared).await;
+        assert_value_lookup(name, &plan, COMPOSITIONS);
     }
 }
