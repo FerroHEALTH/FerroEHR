@@ -82,7 +82,7 @@ six retired ones (`bug`, `enhancement`, `P0`–`P3`) wherever they reappear.
   `cnf-triage.md`).
 - **Workflow:** `on-hold`, `dependencies` (Dependabot).
 - **Pull-request escape hatches** CI reads: `no-changelog`, `no-crate-bump`,
-  `no-chart-bump`, `no-ui-visual-change`, `no-conformance-run`.
+  `no-chart-bump`, `no-ui-visual-change`.
 
 A new label goes into `labels.sh` in the same change that first uses it.
 
@@ -144,9 +144,7 @@ labels** (CI escape hatches, on PRs not issues): `no-changelog`
 (ui-screenshot-guard; viewer source change with zero visual effect — see
 `.claude/rules/console-ui.md` §5), `no-crate-bump` (crate-version-guard; a
 `crates/*` diff that provably does not alter packaged bytes — see
-`.claude/rules/crates-publishing.md`), and `no-conformance-run`
-(veredictum-pin-guard; a `VEREDICTUM_VERSION` bump whose acceptance run is
-deliberately deferred — #2867). These guards read labels from the PR event
+`.claude/rules/crates-publishing.md`). These guards read labels from the PR event
 payload; `ci.yml` listens for the `labeled`/`unlabeled` types (#2777), so
 applying a label raises a fresh run with the current label set by itself — a
 RE-RUN of the failed job still re-uses its stale payload, so let the new run

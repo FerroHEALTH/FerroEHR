@@ -42,10 +42,8 @@ Two of the three bins now live in another repository (the instrument is
 Veredictum, pinned in `scripts/lib/veredictum.sh`). The attribution work is
 unchanged — read the case core, the binding and the spec first-hand in the
 pinned checkout — but the FIX lands there and reaches this repository as a pin
-bump, re-proven by a full `scripts/conformance.sh` run against the committed
-baseline, unless the catalogue (`artifacts/`), `specs/`, `schemas/` and runner
-(`app/veredictum/src/`) trees are all unchanged between the two tags
-(`scripts/checks/veredictum-pin.sh`). A red row attributed away from the application never becomes a reason
+bump. The bumping pull request runs the new pin's catalogue against its own build
+in the conformance workflow (`.github/workflows/conformance.yml`). A red row attributed away from the application never becomes a reason
 to leave the row red here: the FerroEHR issue carries a native `blocked-by`
 edge to the pin-bump work.
 

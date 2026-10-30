@@ -203,6 +203,9 @@ retire() {
 
 echo "== retired labels (the native issue type and the Priority field carry these now) =="
 for l in bug enhancement P0 P1 P2 P3; do retire "$l"; done
+# The pin-bump deferral of the Veredictum 0.1 pin guard, gone with that guard
+# since the conformance workflow runs the pinned catalogue on every pin (#4449).
+retire no-conformance-run
 
 echo "== work-kind labels (on a Task only; picks the conventional-commit type) =="
 label documentation 0075ca "Docs-only work. Maps to a docs/ branch and a docs: commit."
@@ -244,6 +247,5 @@ label no-changelog        bfdadc "Skip the changelog-guard CI job (change is not
 label no-crate-bump       fbca04 "crate-version-guard escape: diff provably does not alter packaged crate bytes"
 label no-chart-bump       bfd4f2 "chart-version-guard: packaged chart diff that cannot change consumer output"
 label no-ui-visual-change bfdadc "Skip the ui-screenshot-guard: viewer source change with no visual effect"
-label no-conformance-run  d4c5f9 "veredictum-pin-guard escape: the pin bump's acceptance run is deliberately deferred"
 
 echo "done."

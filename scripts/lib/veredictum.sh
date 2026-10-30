@@ -33,8 +33,11 @@
 #   CONTAINER_ENGINE  `docker` or `podman` (default: docker when it is on PATH,
 #                     else podman)
 
-# The pin. A bump moves the version and the image digest together: the digest
-# is the one `docker buildx imagetools inspect` reports for the tag's index.
+# The pin. A bump moves the version, the image digest and the Veredictum Action
+# step of .github/workflows/conformance.yml (its commit SHA, its version
+# comment and its `image:`) together: the digest is the one `docker buildx
+# imagetools inspect` reports for the tag's index, and
+# scripts/checks/veredictum-action.sh fails while the three disagree (#4449).
 VEREDICTUM_VERSION="0.3.0"
 VEREDICTUM_REPO="https://github.com/Vernum-Projecten/Veredictum"
 # shellcheck disable=SC2034 # read by the scripts that source this file
