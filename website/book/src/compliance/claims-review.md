@@ -839,3 +839,55 @@ run FerroPIX 0.0.12 (#4392); chart 21.0.0-rc3 with `appVersion` 5.6.0-rc3.
 
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
+
+## The review of 2026-10-31, for 5.6.0-rc4
+
+Read on the tree after commit `80d1dfdda`, for the FerroEHR release candidate
+5.6.0-rc4. The review of 2026-10-29 for 5.6.0-rc3 stands for everything that
+release candidate carried. The facts added since and checked in every text in
+scope: an AQL lookup by an ELEMENT value reads a value index in both stores
+(#4437), and a lookup of an EHR by its `EHR_STATUS.subject` reads the EHR row
+(#4442); a request on a kept-alive connection idle past the head bound is
+answered (#4381); the server keeps planner statistics on the partitioned
+tables and the serving roles hold `MAINTAIN` on them (#4453), and a version
+read probes its commit audit by key (#4438); `EHR e NOT CONTAINS` runs
+(#4465); a `DV_DATE_TIME` comparison compares instants (#4466); the REST,
+party, template and Simplified Format fixes of the Veredictum 0.3.0 catalogue
+(#4458 to #4464, #4468 to #4475); a token holding only `system/` SMART on
+openEHR scopes passes the role gate on clinical operations (#4467); the viewer
+draws every page on its server with FerroUI 0.6, with no WebAssembly (#4433);
+the conformance pipeline runs the Veredictum 0.3.0 catalogue against one
+deployment and keeps no EHRbase comparison (#4448); chart 21.0.0-rc4 with
+`appVersion` 5.6.0-rc4.
+
+### Changed on 2026-10-31, for 5.6.0-rc4
+
+- **The threat model**: its grant table listed what each credential reaches
+  and left out the `MAINTAIN` grant clinical migration 0026 and party
+  migration 0018 give the serving roles; the `ferroehr_clinical` and
+  `ferroehr_party` rows name it (#4453).
+
+### Read and kept on 2026-10-31, for 5.6.0-rc4
+
+- **The viewer pages**: [the viewer](../viewer/index.md) and
+  [security](../security.md) describe the server-drawn viewer, its
+  Content-Security-Policy and its configuration as the image runs them.
+- **The operations pages**: [operations](../operations.md) states the
+  `MAINTAIN` grant and the statistics refresh as the server applies them.
+- **The API and query pages**: [querying with AQL](../querying-aql.md) lists
+  `NOT CONTAINS` as supported and refuses only a read through its variable;
+  [security](../security.md) states the `system/` scope rule of the role gate.
+- **The hazard log and the technical documentation**: the logging component is
+  unchanged since 5.6.0-rc3, so neither gains a row.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc4 and image 5.6.0-rc4 in the book of main.
+- **The landing page, `SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-31, for 5.6.0-rc4
+
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths and the old error body until 5.6.0 ships.
