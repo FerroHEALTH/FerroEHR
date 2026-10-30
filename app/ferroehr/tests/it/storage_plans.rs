@@ -1771,20 +1771,16 @@ const READS_BY_VO_ID: [(&str, &str); 2] = [
     ("the current version read", read::READ_CURRENT_SQL),
 ];
 
-/// A read by `vo_id` probes each version's commit audit by key once the
-/// maintenance task has refreshed the parents' statistics (#4438).
+/// A store whose partitioned `version` table still holds the statistics of
+/// its seed, beside one four-version object committed since: the state in
+/// which the storage bench's reads walked `pk_commit_audit` (#4438). Returns
+/// that object.
 ///
-/// With `version`'s statistics left from the seed, the planner took the
-/// highest commit audit id it held for the highest there is, so a merge join
-/// over `pk_commit_audit` looked as if it stopped after the seed's rows. For
-/// an object committed since, it walked the whole index: 1 318 buffers for
-/// the history of a four-version object beside 1 300 others, against 21.
-#[tokio::test]
-async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-
+/// The partitions carry the statistics autovacuum takes of them; `version`
+/// itself keeps the seed's highest commit audit id, which the planner reads as
+/// the highest there is, so a merge join over the audit index looks as if it
+/// stops after the seed's rows.
+async fn seed_stale_parent_statistics(svc: &FerroEhrService, pool: &PgPool) -> VoId {
     // The storage bench's seed, analyzed whole once seeded.
     let body = composition("parent statistics");
     let mut ehrs = Vec::new();
@@ -1792,7 +1788,8 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
         ehrs.push(svc.create_ehr(None).await.expect("create an EHR"));
     }
     for index in 0..300 {
-        svc.create_composition(ehrs[index % ehrs.len()], uv(&body, "249", None))
+        let ehr = *ehrs.get(index % ehrs.len()).expect("the seed holds EHRs");
+        svc.create_composition(ehr, uv(&body, "249", None))
             .await
             .expect("commit a single-version composition");
     }
@@ -1801,7 +1798,7 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
         .expect("give the planner statistics over the seed");
 
     // The commits that follow, with the statistics autovacuum takes of them.
-    let ehr = ehrs[0];
+    let ehr = *ehrs.first().expect("the seed holds EHRs");
     for _ in 0..1000 {
         svc.create_composition(ehr, uv(&body, "249", None))
             .await
@@ -1817,11 +1814,14 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
             .await
             .expect("supersede the read object");
     }
-    analyze_as_autovacuum(&pool).await;
-    ferroehr::db::parent_statistics::refresh_pool(&pool)
-        .await
-        .expect("refresh the partitioned parents' statistics");
+    analyze_as_autovacuum(pool).await;
+    head.vo_id
+}
 
+/// The reads of [`READS_BY_VO_ID`] whose custom or generic plan for `vo`
+/// reaches a commit audit row other than by one `pk_commit_audit` probe, each
+/// with its plan.
+async fn reads_walking_the_commit_audit(pool: &PgPool, vo: VoId) -> Vec<String> {
     let mut walked = Vec::new();
     for (read, sql) in READS_BY_VO_ID {
         for mode in ["force_custom_plan", "force_generic_plan"] {
@@ -1838,7 +1838,7 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
             .expect("prepare the read");
             let plan: Value = sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
                 "{EXPLAIN}EXECUTE by_vo ('{}')",
-                head.vo_id.0
+                vo.0
             )))
             .fetch_one(&mut *tx)
             .await
@@ -1862,10 +1862,49 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
             }
         }
     }
+    walked
+}
+
+/// A read by `vo_id` probes each version's commit audit by key once the
+/// maintenance task has refreshed the parents' statistics (#4438, #4453).
+#[tokio::test]
+async fn a_read_by_vo_id_probes_each_commit_audit_by_key() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let vo = seed_stale_parent_statistics(&svc, &pool).await;
+    ferroehr::db::parent_statistics::refresh_pool(&pool)
+        .await
+        .expect("refresh the partitioned parents' statistics");
+
+    let walked = reads_walking_the_commit_audit(&pool, vo).await;
     assert!(
         walked.is_empty(),
         "a read by vo_id reaches each version's commit audit by one primary-key \
          probe, never by a walk over the commit audit index:\n{}",
+        walked.join("\n")
+    );
+}
+
+/// A read by `vo_id` probes each version's commit audit by key while the
+/// parents' statistics are stale, as they are between two refreshes (#4438).
+///
+/// With a plain join this state walked the whole audit index in a merge join:
+/// 1 318 buffers for the history of a four-version object beside 1 300
+/// others, against 21. The lateral audit probe leaves the planner no join to
+/// choose.
+#[tokio::test]
+async fn a_read_by_vo_id_probes_each_commit_audit_by_key_over_stale_parent_statistics() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let vo = seed_stale_parent_statistics(&svc, &pool).await;
+
+    let walked = reads_walking_the_commit_audit(&pool, vo).await;
+    assert!(
+        walked.is_empty(),
+        "over stale parent statistics, a read by vo_id still reaches each version's \
+         commit audit by one primary-key probe:\n{}",
         walked.join("\n")
     );
 }
@@ -2005,4 +2044,52 @@ async fn the_maintenance_task_analyzes_the_partitioned_parents() {
         );
     }
     assert!(refreshed.refused.is_empty(), "{refreshed:?}");
+}
+
+/// Each serving role may analyze its store's partitioned parents and `ehr`,
+/// so the maintenance task works under the role split (#4453).
+#[tokio::test]
+async fn the_serving_roles_may_analyze_the_partitioned_parents() {
+    let db = testkit::db().await.expect("testkit database");
+    for (store, role, tables) in [
+        (
+            ferroehr::db::domain::Domain::Clinical,
+            "ferroehr_clinical",
+            &[
+                "clinical.ehr",
+                "clinical.node",
+                "clinical.version",
+                "clinical.vo_attestation",
+            ][..],
+        ),
+        (
+            ferroehr::db::domain::Domain::Party,
+            "ferroehr_party",
+            &["party.node", "party.version", "party.vo_attestation"][..],
+        ),
+    ] {
+        let dsn = crate::fixtures::dsn_as(&db, &format!("{role}_stats"), role).await;
+        let pool = PgPool::connect(&dsn)
+            .await
+            .expect("connect as the serving role");
+        for table in tables {
+            let allowed: bool = sqlx::query_scalar("SELECT has_table_privilege($1, 'MAINTAIN')")
+                .bind(*table)
+                .fetch_one(&pool)
+                .await
+                .expect("read the role's privilege");
+            assert!(allowed, "{role} holds MAINTAIN on {table}");
+            pool.execute(sqlx::AssertSqlSafe(format!("ANALYZE ONLY {table}")))
+                .await
+                .expect("the serving role analyzes the table");
+        }
+        let refreshed = ferroehr::db::parent_statistics::refresh_store(&pool, store)
+            .await
+            .expect("refresh the store as its serving role");
+        assert!(
+            refreshed.refused.is_empty() && refreshed.analyzed.len() >= 3,
+            "{role}: {refreshed:?}"
+        );
+        pool.close().await;
+    }
 }
