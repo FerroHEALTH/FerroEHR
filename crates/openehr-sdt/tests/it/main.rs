@@ -29,6 +29,7 @@ mod example_rm_validity;
 mod example_roots;
 mod example_stub;
 mod flat;
+mod flat_context_and_flags;
 mod format_parity;
 mod master05_tables;
 mod model_walkgen;

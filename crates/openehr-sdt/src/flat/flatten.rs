@@ -156,7 +156,10 @@ fn walk(node: &WebTemplateNode, rm: &Value, out: &mut SimNode) {
 
     let names = name_fallback(node);
     for child in &node.children {
-        if !covered_by_ctx(node, child) {
+        // master05 §ACTIVITY: `/action_archetype_id` is the bare String, which
+        // `emit_activity_paths` writes; its C_STRING template child holds no object.
+        let direct = node.rm_type == "ACTIVITY" && child.id == "action_archetype_id";
+        if !covered_by_ctx(node, child) && !direct {
             walk_child(node, child, rm, out, &names);
         }
     }
@@ -361,7 +364,8 @@ fn attr_emitted(node: &WebTemplateNode, out: &SimNode, attr: &str) -> bool {
 /// `master05-rm_mapping.adoc` §§ACTION (`/time`, `/ism_transition`),
 /// INSTRUCTION (`/narrative`), OBSERVATION (`/history_origin`), ACTIVITY
 /// (`/timing`, `/action_archetype_id`), POINT_EVENT/INTERVAL_EVENT (`/time`),
-/// INTERVAL_EVENT (`/width`, `/math_function`, `|sample_count`). EVENT_CONTEXT `start_time`/
+/// INTERVAL_EVENT (`/width`, `/math_function`, `|sample_count`), DV_INTERVAL
+/// (the `|lower_unbounded` family). EVENT_CONTEXT `start_time`/
 /// `setting` are NOT emitted here — they surface through the `ctx/` vocabulary
 /// (master06; [`crate::flat::ctx`]) to avoid a duplicate encoding of the same datum.
 fn emit_direct_rm_paths(node: &WebTemplateNode, rm: &Value, out: &mut SimNode) {
@@ -390,7 +394,34 @@ fn emit_direct_rm_paths(node: &WebTemplateNode, rm: &Value, out: &mut SimNode) {
             emit_direct_leaf(node, out, "time", "DV_DATE_TIME", rm.get("time"));
         }
         "INTERVAL_EVENT" => emit_interval_event_paths(node, rm, out),
+        "DV_INTERVAL" => emit_interval_flags(rm, out),
         _ => {}
+    }
+}
+
+/// Emits the four DV_INTERVAL flags of an interval whose bounds are template
+/// nodes: an unbounded flag when true and an included flag when false
+/// (master05 §DV_INTERVAL: "only in output if true", "only in output if
+/// false").
+///
+/// The build derives an absent flag from whether its bound is present, so a
+/// flag that contradicts that derivation is written too, which keeps the round
+/// trip lossless.
+fn emit_interval_flags(rm: &Value, out: &mut SimNode) {
+    for side in ["lower", "upper"] {
+        let has_bound = rm.get(side).is_some_and(|v| !v.is_null());
+        let unbounded = format!("{side}_unbounded");
+        let included = format!("{side}_included");
+        if let Some(flag) = rm.get(&unbounded).and_then(Value::as_bool)
+            && (flag || flag == has_bound)
+        {
+            out.attrs.insert(unbounded, Value::Bool(flag));
+        }
+        if let Some(flag) = rm.get(&included).and_then(Value::as_bool)
+            && (!flag || flag != has_bound)
+        {
+            out.attrs.insert(included, Value::Bool(flag));
+        }
     }
 }
 
