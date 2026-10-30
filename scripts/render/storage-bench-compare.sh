@@ -8,12 +8,18 @@
 # build and a candidate build measured in turn on ONE runner, several rounds
 # each, judged against each other. A latency read on one GitHub-hosted runner
 # and compared with a record from another said little (two runs of the same
-# code differed by up to 156 %). An operation regresses only when its median
-# across the rounds rose beyond the tolerance AND every candidate round is
-# slower than every baseline round at that percentile; a rise inside the
-# spread of the rounds is reported as within the noise, never as a pass of the
-# tolerance. The storage sizes do not depend on the machine and are still
-# judged against the committed record.
+# code differed by up to 156 %). Two verdicts come out of the rounds. The plan
+# verdict reads pages per call, which the runner's speed does not change: an
+# operation fails when the candidate's median is more than the page tolerance
+# and one page above the baseline's highest round. The time verdict divides
+# each round by its machine factor, so a round where the whole runner slowed
+# does not read as the code; an operation then regresses only when its median
+# rose beyond the tolerance AND every candidate round is slower than every
+# baseline round at that percentile, and the candidate build as a whole
+# regresses when every one of its rounds ran slower across the board than
+# every baseline round, by more than the tolerance at the median. The storage
+# sizes do not depend on the machine and are still judged against the
+# committed record.
 #
 # The harness (`app/ferroehr/benches/storage.rs`) writes its record over
 # `docs/benchmarks/storage/<generation>/<class>/record.json`, which is where the
@@ -39,6 +45,10 @@
 #                          from HEAD)
 #     --tolerance <pct>    how far p50 or p99 may rise before the run fails
 #                          (default 15)
+#     --page-tolerance <pct>
+#                          A/B mode: how far an operation's median pages per
+#                          call may rise above the baseline's highest round
+#                          before the run fails (default 10)
 #     --size-budget <pct>  how far the bytes per composition version or the
 #                          heap bytes per node row may grow before the run
 #                          fails (default 5)
@@ -63,13 +73,14 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/render/storage-bench-compare.sh [--measured <file>] [--baseline <file>] [--tolerance <pct>] [--size-budget <pct>] [--summary <file>] [--runner <text>] [--ab <dir>] | --self-test" >&2
+  echo "usage: scripts/render/storage-bench-compare.sh [--measured <file>] [--baseline <file>] [--tolerance <pct>] [--page-tolerance <pct>] [--size-budget <pct>] [--summary <file>] [--runner <text>] [--ab <dir>] | --self-test" >&2
   exit 2
 }
 
 MEASURED=""
 BASELINE=""
 TOLERANCE="15"
+PAGE_TOLERANCE="10"
 SIZE_BUDGET="5"
 SUMMARY="${GITHUB_STEP_SUMMARY:-}"
 RUNNER=""
@@ -81,6 +92,7 @@ while [[ $# -gt 0 ]]; do
     --measured) MEASURED="${2:-}"; shift 2 || usage ;;
     --baseline) BASELINE="${2:-}"; shift 2 || usage ;;
     --tolerance) TOLERANCE="${2:-}"; shift 2 || usage ;;
+    --page-tolerance) PAGE_TOLERANCE="${2:-}"; shift 2 || usage ;;
     --size-budget) SIZE_BUDGET="${2:-}"; shift 2 || usage ;;
     --summary) SUMMARY="${2:-}"; shift 2 || usage ;;
     --runner) RUNNER="${2:-}"; shift 2 || usage ;;
@@ -91,6 +103,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 command -v jq >/dev/null || { echo "error: jq is required" >&2; exit 2; }
+
+# A rise of less than one page per call is never read as a plan change: the
+# counters are the whole database's, and an operation that reads one or two
+# pages moved by about a page between rounds of one build (`retention_prune`
+# 1.3 to 2.6, `ehr_by_subject` 1.2 to 4.2, runs 41105458534 and 41105463959).
+readonly PAGE_FLOOR=1
 
 # The formatting and verdict program, shared by every invocation below.
 #
@@ -142,59 +160,123 @@ $b[0] as $base | $m[0] as $meas |
 | .[]
 '
 
-# The A/B latency program (#4318): `$b` and `$m` are the baseline's and the
-# candidate's round records. Each side's p50 and p99 are the medians across its
-# rounds, shown with the range of the rounds. A rise beyond the tolerance is a
-# regression only when the ranges at the worse percentile do not overlap, so a
-# difference the rounds cannot separate is reported as noise.
+# The A/B programs (#4318) share these definitions. `$B` and `$M` are the
+# baseline's and the candidate's round records. A round's machine factor is the
+# median, over the operations, of the round's p50 divided by that operation's
+# median p50 across every round of both builds: 1.22 says the whole runner ran
+# 22 % slow in that round. One factor is taken from the p50s and applies to both
+# percentiles, because a p99 over ten samples is the slowest sample and says
+# little about the machine. Pages per call are the database's shared-buffer
+# hits plus reads over the operation's iterations, a count of the plan's work
+# that the runner's speed does not change.
 # shellcheck disable=SC2016 # every $name below is a jq variable, never a shell expansion
-readonly COMPARE_AB_JQ='
+readonly AB_DEFS_JQ='
 def t: if . == null then "—"
        elif . >= 1000000000 then ((. / 100000000 | round) / 10 | tostring) + " s"
        elif . >= 1000000 then ((. / 100000 | round) / 10 | tostring) + " ms"
        else ((. / 100 | round) / 10 | tostring) + " µs" end;
 def pc: if . == null then "—"
         else (if . >= 0 then "+" else "" end) + ((. * 10 | round) / 10 | tostring) + "%" end;
+def pg: if . == null then "—" else ((. * 10 | round) / 10 | tostring) end;
 def rise($base; $meas): if ($base == null or $meas == null or $base == 0) then null
                         else (($meas - $base) / $base * 100) end;
 def med: sort | if length == 0 then null
                 elif length % 2 == 1 then .[(length - 1) / 2]
                 else (.[length / 2 - 1] + .[length / 2]) / 2 end;
-def series($records; $name; $field):
-  [$records[] | [.groups[]? | .operations[]? | select(.name == $name) | .[$field]] | .[0]
-   | select(. != null)];
+def ops: [.groups[]? | .operations[]?];
+def op($name): [ops[] | select(.name == $name)] | .[0];
+def pages: if . == null or .database == null or (.iterations // 0) == 0
+              or .database.blks_hit_delta == null or .database.blks_read_delta == null then null
+           else (.database.blks_hit_delta + .database.blks_read_delta) / .iterations end;
+def op_medians($all): [$all[] | ops[] | select(.p50_ns != null)] | group_by(.name)
+                      | map({key: .[0].name, value: (map(.p50_ns) | med)}) | from_entries;
+def factor($meds): [ops[] | select(.p50_ns != null and ($meds[.name] // 0) > 0) | .p50_ns / $meds[.name]]
+                   | if length == 0 then 1 else med end;
+def series($records; $factors; $name; $field):
+  [range(0; $records | length) as $i | ($records[$i] | op($name) | .[$field]?) as $v
+   | select($v != null) | $v / $factors[$i]];
+def page_series($records; $name): [$records[] | op($name) | pages | select(. != null)];
 def shown($xs): if ($xs | length) == 0 then "—"
                 elif ($xs | length) == 1 then ($xs[0] | t)
                 else "\($xs | med | t) (\($xs | min | t)–\($xs | max | t))" end;
+def worst($d50; $d99): if $d50 == null and $d99 == null then null
+                       elif $d50 == null then {value: $d99, at: "p99"}
+                       elif $d99 == null then {value: $d50, at: "p50"}
+                       elif $d99 > $d50 then {value: $d99, at: "p99"}
+                       else {value: $d50, at: "p50"} end;
+$b[0] as $B | $m[0] as $M
+| op_medians($B + $M) as $meds
+| ($B | map(factor($meds))) as $bf | ($M | map(factor($meds))) as $mf
+'
 
-([$m[] | .groups[]? | .operations[]? | .name] + [$b[] | .groups[]? | .operations[]? | .name]
+# One row per operation. The latency verdict reads the round-adjusted times
+# (each round's p50 and p99 divided by its machine factor), and the table shows
+# the raw rounds beside the adjusted change. A rise beyond the tolerance is a
+# regression only when every candidate round is slower than every baseline
+# round at that percentile; a rise the rounds cannot separate reads as noise.
+# The page verdict fails an operation whose candidate median reads more than
+# the page tolerance, and at least one page, above the baseline's highest
+# round: the counters are the whole database's, so a round can carry
+# background work, and a plan the baseline reached in one round is not new.
+# shellcheck disable=SC2016 # every $name below is a jq variable, never a shell expansion
+readonly COMPARE_AB_JQ='
+([$M[] | ops[] | .name] + [$B[] | ops[] | .name]
  | reduce .[] as $n ([]; if index($n) then . else . + [$n] end)) as $names
+| ($B | map(1)) as $b1 | ($M | map(1)) as $m1
 | $names[]
 | . as $n
-| series($b; $n; "p50_ns") as $b50s | series($b; $n; "p99_ns") as $b99s
-| series($m; $n; "p50_ns") as $m50s | series($m; $n; "p99_ns") as $m99s
-| ($b50s | med) as $b50 | ($b99s | med) as $b99
-| ($m50s | med) as $m50 | ($m99s | med) as $m99
-| rise($b50; $m50) as $d50 | rise($b99; $m99) as $d99
-| (if $d50 == null and $d99 == null then null
-   elif $d50 == null then {value: $d99, at: "p99"}
-   elif $d99 == null then {value: $d50, at: "p50"}
-   elif $d99 > $d50 then {value: $d99, at: "p99"}
-   else {value: $d50, at: "p50"} end) as $worst
-| (if $worst == null then false
-   elif $worst.at == "p99" then ($m99s | min) <= ($b99s | max)
-   else ($m50s | min) <= ($b50s | max) end) as $overlap
+| series($B; $b1; $n; "p50_ns") as $b50s | series($B; $b1; $n; "p99_ns") as $b99s
+| series($M; $m1; $n; "p50_ns") as $m50s | series($M; $m1; $n; "p99_ns") as $m99s
+| series($B; $bf; $n; "p50_ns") as $a50s | series($B; $bf; $n; "p99_ns") as $a99s
+| series($M; $mf; $n; "p50_ns") as $c50s | series($M; $mf; $n; "p99_ns") as $c99s
+| worst(rise($b50s | med; $m50s | med); rise($b99s | med; $m99s | med)) as $raw
+| worst(rise($a50s | med; $c50s | med); rise($a99s | med; $c99s | med)) as $adj
+| (if $adj == null then false
+   elif $adj.at == "p99" then ($c99s | min) <= ($a99s | max)
+   else ($c50s | min) <= ($a50s | max) end) as $overlap
 | (if ($b50s | length) == 0 and ($b99s | length) == 0 then ["no-baseline", "not measured on the baseline"]
    elif ($m50s | length) == 0 and ($m99s | length) == 0 then ["not-measured", "not measured on the candidate"]
    elif $compare | not then ["not-compared", "not compared"]
-   elif $worst == null then ["not-measured", "not measured on the candidate"]
-   elif $worst.value < 0 then ["faster", "faster"]
-   elif $worst.value <= $tolerance then ["within", "within tolerance"]
+   elif $adj == null then ["not-measured", "not measured on the candidate"]
+   elif $adj.value < 0 then ["faster", "faster"]
+   elif $adj.value <= $tolerance then ["within", "within tolerance"]
    elif $overlap then ["noise", "within the noise of the rounds"]
    else ["regressed", "**regressed**"] end) as $verdict
-| "\($verdict[0])\t| `\($n)` | \(shown($b50s)) | \(shown($b99s)) | \(shown($m50s)) | \(shown($m99s)) | " +
-  (if $worst == null then "— | " else "\($worst.value|pc) (\($worst.at)) | " end) +
-  "\($verdict[1]) |"
+| page_series($B; $n) as $bps | page_series($M; $n) as $mps
+| (if ($bps | length) == 0 or ($mps | length) == 0 then ["unpaged", "not counted"]
+   elif $compare | not then ["not-compared", "not compared"]
+   elif ($mps | med) > ($bps | max) * (1 + $page_tolerance / 100)
+        and ($mps | med) - ($bps | max) >= $page_floor then ["more-pages", "**more pages**"]
+   else ["same-pages", "same plan"] end) as $plan
+| "\($verdict[0])\t\($plan[0])\t| `\($n)` | \(shown($b50s)) | \(shown($b99s)) | \(shown($m50s)) | \(shown($m99s)) | " +
+  (if $adj == null then "— | " else "\($adj.value|pc) (\($adj.at)) | " end) +
+  (if $raw == null then "— | " else "\($raw.value|pc) | " end) +
+  "\($verdict[1]) | \($bps | med | pg) (≤ \($bps | max | pg)) | \($mps | med | pg) | \($plan[1]) |"
+'
+
+# The rounds in the order they ran, each with its machine factor, then the
+# build-wide verdict: the candidate's rounds as a whole regress when the
+# median of their factors is more than the tolerance above the baseline's AND
+# every candidate round's factor is above every baseline round's. Interleaved
+# rounds share the runner's slow spells, so a slowdown in every candidate
+# round and in no baseline round is the code's.
+# shellcheck disable=SC2016 # every $name below is a jq variable, never a shell expansion
+readonly ROUNDS_AB_JQ='
+( [range(0; $B | length) as $i | {side: "baseline", at: $B[$i].measured_at, f: $bf[$i]}]
+  + [range(0; $M | length) as $i | {side: "candidate", at: $M[$i].measured_at, f: $mf[$i]}]
+  | sort_by(.at)
+  | .[]
+  | "round\t| \(.at[0:19] | sub("T"; " ")) | \(.side) | \((.f * 1000 | round) / 1000) | " +
+    (if .f > 1 + $tolerance / 100 then "slower across the board"
+     elif .f < 1 - $tolerance / 100 then "faster across the board"
+     else "" end) + " |" ),
+( rise($bf | med; $mf | med) as $d
+  | (($mf | min) > ($bf | max)) as $separated
+  | (if $compare | not then "not-compared"
+     elif $d <= $tolerance then "within"
+     elif $separated then "regressed"
+     else "noise" end) as $v
+  | "build\t\($v)\t\($d | pc)" )
 '
 
 # The storage-size verdicts (#4303): bytes per composition version and heap
@@ -381,13 +463,15 @@ compare() {
   return 0
 }
 
-# The A/B verdict (#4318): latency between the round records in `$1`, sizes of
-# the first candidate round against the committed record `$2` (empty when the
-# candidate's generation has none, which fails the run as before).
+# The A/B verdict (#4318): latency and pages per call between the round records
+# in `$1`, sizes of the first candidate round against the committed record `$2`
+# (empty when the candidate's generation has none, which fails the run as
+# before).
 compare_ab() {
-  local dir="$1" committed="$2" tolerance="$3" runner="$4" budget="${5:-5}"
+  local dir="$1" committed="$2" tolerance="$3" runner="$4" budget="${5:-5}" page_tolerance="${6:-10}"
   local -a base=() cand=()
-  local classes compare_flag rows verdict row regressed=0 noise=0 grew=0 generation
+  local classes compare_flag rows verdict plan row regressed=0 noise=0 grew=0 paged=0 generation
+  local build_verdict="" build_rise="" failed=0
   shopt -s nullglob
   base=("$dir"/baseline-*.json)
   cand=("$dir"/candidate-*.json)
@@ -401,6 +485,18 @@ compare_ab() {
   [[ "$classes" != *" "* ]] || compare_flag=false
   generation="$(jq -r '.schema_generation' "${cand[0]}")"
 
+  # Both programs read the rounds the same way, so they run over one input.
+  ab_jq() {
+    jq -r -n \
+      --slurpfile b <(jq -s '.' "${base[@]}") \
+      --slurpfile m <(jq -s '.' "${cand[@]}") \
+      --argjson tolerance "$tolerance" \
+      --argjson page_tolerance "$page_tolerance" \
+      --argjson page_floor "$PAGE_FLOOR" \
+      --argjson compare "$compare_flag" \
+      "$AB_DEFS_JQ | $1"
+  }
+
   emit "## Storage benchmark, baseline against candidate on one runner" ""
   emit "Exploration, never a conformance record: this lane measures the storage" \
        "layer below the wire and earns no performance class. The procedure is in" \
@@ -408,33 +504,48 @@ compare_ab() {
   emit "- Baseline (${#base[@]} rounds): $(describe_record "${base[0]}")"
   emit "- Candidate (${#cand[@]} rounds): $(describe_record "${cand[0]}")"
   [[ -z "$runner" ]] || emit "- Runner: $runner"
-  emit "- Tolerance: an operation regresses when the median of its rounds' p50 or" \
-       "  p99 rose more than ${tolerance}% above the baseline's and every candidate" \
-       "  round is slower than every baseline round at that percentile. A rise" \
-       "  beyond the tolerance inside the rounds' spread reads as noise: dispatch" \
-       "  more rounds to separate it." ""
+  emit "- Plan: an operation fails when the candidate's median pages per call (shared" \
+       "  buffers hit plus read, over the iterations) is more than ${page_tolerance}% and at" \
+       "  least ${PAGE_FLOOR} page above the baseline's highest round, whatever its time." \
+       "- Time: each round's p50 and p99 are divided by the round's machine factor (the" \
+       "  median, over the operations, of the round's p50 against that operation's" \
+       "  median of every round). An operation regresses when its adjusted median p50" \
+       "  or p99 rose more than ${tolerance}% above the baseline's and every candidate round" \
+       "  is slower than every baseline round at that percentile; a rise the rounds" \
+       "  cannot separate reads as noise. The candidate build as a whole regresses" \
+       "  when the median of its rounds' factors is more than ${tolerance}% above the" \
+       "  baseline's and every candidate round's factor is above every baseline round's." ""
   if [[ "$compare_flag" == false ]]; then
     emit "The rounds measured different corpora (\`$classes\`), so the deltas below" \
          "are reported and nothing is judged." ""
   fi
 
-  rows="$(jq -r -n \
-    --slurpfile b <(jq -s '.' "${base[@]}") \
-    --slurpfile m <(jq -s '.' "${cand[@]}") \
-    --argjson tolerance "$tolerance" \
-    --argjson compare "$compare_flag" \
-    '$b[0] as $b | $m[0] as $m | '"$COMPARE_AB_JQ")"
+  emit "Rounds in the order they ran:" "" \
+       "| Recorded at | Build | Machine factor | Flag |" \
+       "|---|---|---|---|"
+  while IFS=$'\t' read -r verdict plan row; do
+    case "$verdict" in
+      round) emit "$plan" ;;
+      build) build_verdict="$plan"; build_rise="$row" ;;
+    esac
+  done < <(ab_jq "$ROUNDS_AB_JQ")
+  emit ""
 
-  emit "| Operation | Baseline p50 | Baseline p99 | Candidate p50 | Candidate p99 | Delta | Verdict |" \
-       "|---|---|---|---|---|---|---|"
+  rows="$(ab_jq "$COMPARE_AB_JQ")"
+  emit "| Operation | Baseline p50 | Baseline p99 | Candidate p50 | Candidate p99 | Delta, adjusted | Delta, raw | Time | Baseline pages (highest) | Candidate pages | Plan |" \
+       "|---|---|---|---|---|---|---|---|---|---|---|"
   local -a red=()
-  while IFS=$'\t' read -r verdict row; do
+  while IFS=$'\t' read -r verdict plan row; do
     [[ -n "$row" ]] || continue
     emit "$row"
     case "$verdict" in
       regressed) regressed=$((regressed + 1)); red+=("$row") ;;
       noise) noise=$((noise + 1)) ;;
     esac
+    if [[ "$plan" == "more-pages" ]]; then
+      paged=$((paged + 1))
+      [[ "$verdict" == "regressed" ]] || red+=("$row")
+    fi
   done <<< "$rows"
   emit ""
   for row in "${red[@]+"${red[@]}"}"; do
@@ -466,18 +577,32 @@ compare_ab() {
   emit ""
 
   [[ "$noise" -eq 0 ]] || emit "$noise operation(s) rose more than ${tolerance}% inside the spread of the rounds." ""
+  case "$build_verdict" in
+    within|not-compared) emit "The candidate's rounds ran ${build_rise} against the baseline's across the board (the median machine factor)." "" ;;
+    noise) emit "The candidate's rounds ran ${build_rise} against the baseline's across the board, inside the spread of the rounds' machine factors." "" ;;
+    regressed)
+      emit "**The candidate build ran ${build_rise} against the baseline across the board, in every round.**" ""
+      echo "storage-bench-compare: the candidate build ran ${build_rise} across the board, beyond the ${tolerance}% tolerance." >&2
+      failed=1 ;;
+  esac
+  if [[ "$paged" -gt 0 ]]; then
+    emit "$paged operation(s) read more than ${page_tolerance}% more pages per call than the baseline's highest round: a plan change." ""
+    echo "storage-bench-compare: $paged operation(s) beyond the ${page_tolerance}% page tolerance." >&2
+    failed=1
+  fi
   if [[ "$grew" -gt 0 ]]; then
     emit "$grew storage fact(s) grew more than ${budget}% above the committed record." ""
     echo "storage-bench-compare: $grew storage fact(s) beyond the ${budget}% budget." >&2
-    return 1
+    failed=1
   fi
   if [[ "$regressed" -gt 0 ]]; then
     emit "$regressed operation(s) rose more than ${tolerance}% above the baseline, outside the spread of the rounds." ""
     echo "storage-bench-compare: $regressed operation(s) beyond the ${tolerance}% tolerance." >&2
-    return 1
+    failed=1
   fi
-  emit "No operation rose more than ${tolerance}% above the baseline outside the spread of the rounds." ""
-  echo "storage-bench-compare: nothing beyond the ${tolerance}% tolerance."
+  [[ "$failed" -eq 0 ]] || return 1
+  emit "No operation read more pages per call than the baseline and none rose more than ${tolerance}% above it outside the spread of the rounds." ""
+  echo "storage-bench-compare: nothing beyond the ${tolerance}% tolerance or the ${page_tolerance}% page tolerance."
   return 0
 }
 
@@ -489,8 +614,19 @@ compare_ab() {
 
 record_fixture() {
   local path="$1" generation="$2" class="$3" ehrs="$4" p50="$5" p99="$6" when="${7:-2026-09-15T11:00:00Z}"
-  # $8 and $9 are the bytes per composition version and per node row.
+  # $8 and $9 are the bytes per composition version and per node row, $10 the
+  # pages per call of `create_first_version`, and $11 a factor on the four
+  # other operations' times, the way a slow machine moves every operation.
+  local pages="${10:-20}" scale="${11:-1}"
   mkdir -p "$(dirname "$path")"
+  fixed_op() {
+    local name="$1" p50_ns="$2" p99_ns="$3" per_call="$4"
+    printf '        { "name": "%s", "iterations": 100, "samples": 10, "mean_ns": %s, "median_ns": %s,\n' \
+      "$name" "$(awk -v v="$p50_ns" -v s="$scale" 'BEGIN { print v * s }')" "$(awk -v v="$p50_ns" -v s="$scale" 'BEGIN { print v * s }')"
+    printf '          "p50_ns": %s, "p95_ns": %s, "p99_ns": %s,\n' \
+      "$(awk -v v="$p50_ns" -v s="$scale" 'BEGIN { print v * s }')" "$(awk -v v="$p99_ns" -v s="$scale" 'BEGIN { print v * s }')" "$(awk -v v="$p99_ns" -v s="$scale" 'BEGIN { print v * s }')"
+    printf '          "database": { "blks_hit_delta": %s, "blks_read_delta": 0 } }' "$((per_call * 100))"
+  }
   cat > "$path" <<EOF
 {
   "schema_generation": "$generation",
@@ -507,10 +643,12 @@ record_fixture() {
     { "name": "storage_commit",
       "operations": [
         { "name": "create_first_version", "iterations": 100, "samples": 10,
-          "mean_ns": $p50, "median_ns": $p50, "p50_ns": $p50, "p95_ns": $p99, "p99_ns": $p99 },
-        { "name": "supersede", "iterations": 100, "samples": 10,
-          "mean_ns": 2000000, "median_ns": 2000000,
-          "p50_ns": 2000000, "p95_ns": 3000000, "p99_ns": 3000000 }
+          "mean_ns": $p50, "median_ns": $p50, "p50_ns": $p50, "p95_ns": $p99, "p99_ns": $p99,
+          "database": { "blks_hit_delta": $(awk -v v="$pages" 'BEGIN { print v * 100 }'), "blks_read_delta": 0 } },
+$(fixed_op supersede 2000000 3000000 2400),
+$(fixed_op by_version_uid 250000 300000 17),
+$(fixed_op revision_history 140000 160000 16),
+$(fixed_op contains_one_ehr 2800000 3100000 560)
       ] } ],
   "storage": { "composition_versions": 340, "bytes_per_composition_version": ${8:-20000},
                "node_rows_per_version": 34.2, "node_heap_bytes_per_row": ${9:-461},
@@ -664,6 +802,72 @@ self_test() {
   [[ "$status" -eq 1 ]] || { echo "self-test: A/B storage growth did not fail the run" >&2; failures=1; }
   grep -q 'bytes per composition version.*grew' <<<"$out" \
     || { echo "self-test: A/B storage growth was not reported against its fact" >&2; failures=1; }
+  # 9f. Both candidate rounds ran on a slower machine (every operation 5 and
+  # 12 % up) and `create_first_version` 18 and 25 %: raw, it rose 21 % with the
+  # rounds separated. Divided by each round's machine factor it rose 12 %, and
+  # the build as a whole 8.5 %: within tolerance.
+  rm -rf "$ab" && mkdir -p "$ab"
+  record_fixture "$ab/baseline-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:00:00Z
+  record_fixture "$ab/baseline-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:30:00Z
+  record_fixture "$ab/candidate-1.json" generation-1 poc 20 1180000 2360000 2026-09-15T12:10:00Z 20000 461 20 1.05
+  record_fixture "$ab/candidate-2.json" generation-1 poc 20 1250000 2500000 2026-09-15T12:20:00Z 20000 461 20 1.12
+  status=0
+  compare_ab "$ab" "$tmp/baseline.json" 15 "$runner" 5 > "$tmp/ab-machine.out" 2>&1 || status=$?
+  out="$(cat "$tmp/ab-machine.out")"
+  [[ "$status" -eq 0 ]] || { echo "self-test: a slow machine in the candidate's rounds failed the run" >&2; failures=1; }
+  grep -q 'create_first_version.*+12%.*+21.5%.*within tolerance' <<<"$out" \
+    || { echo "self-test: a slow machine was not divided out of the candidate's rounds" >&2; failures=1; }
+  # 9g. Every operation 30 % slower in every candidate round: the machine
+  # factors cannot tell that from the code, and the build regresses.
+  rm -rf "$ab" && mkdir -p "$ab"
+  record_fixture "$ab/baseline-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:00:00Z
+  record_fixture "$ab/baseline-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:30:00Z
+  record_fixture "$ab/candidate-1.json" generation-1 poc 20 1300000 2600000 2026-09-15T12:10:00Z 20000 461 20 1.3
+  record_fixture "$ab/candidate-2.json" generation-1 poc 20 1300000 2600000 2026-09-15T12:20:00Z 20000 461 20 1.3
+  status=0
+  compare_ab "$ab" "$tmp/baseline.json" 15 "$runner" 5 > "$tmp/ab-build.out" 2>&1 || status=$?
+  out="$(cat "$tmp/ab-build.out")"
+  [[ "$status" -eq 1 ]] || { echo "self-test: a build-wide slowdown in every candidate round did not fail the run" >&2; failures=1; }
+  grep -q 'candidate build ran +30% against the baseline across the board, in every round' <<<"$out" \
+    || { echo "self-test: a build-wide slowdown was not named" >&2; failures=1; }
+  # 9h. The same times with fifteen times the pages per call: a plan change
+  # fails the run whatever the clock says.
+  rm -rf "$ab" && mkdir -p "$ab"
+  record_fixture "$ab/baseline-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:00:00Z
+  record_fixture "$ab/baseline-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:30:00Z
+  record_fixture "$ab/candidate-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:10:00Z 20000 461 300
+  record_fixture "$ab/candidate-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:20:00Z 20000 461 300
+  status=0
+  compare_ab "$ab" "$tmp/baseline.json" 15 "$runner" 5 10 > "$tmp/ab-plan.out" 2>&1 || status=$?
+  out="$(cat "$tmp/ab-plan.out")"
+  [[ "$status" -eq 1 ]] || { echo "self-test: fifteen times the pages per call did not fail the run" >&2; failures=1; }
+  grep -q 'create_first_version.*within tolerance.*more pages' <<<"$out" \
+    || { echo "self-test: a plan change at an unchanged time was not named" >&2; failures=1; }
+  grep -q 'supersede.*same plan' <<<"$out" \
+    || { echo "self-test: an unchanged plan beside a plan change was misjudged" >&2; failures=1; }
+  # 9i. Pages a baseline round already read (background work in the database
+  # counters, 20 and 60) and a rise under one page (1.3 to 2.2) are no plan change.
+  rm -rf "$ab" && mkdir -p "$ab"
+  record_fixture "$ab/baseline-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:00:00Z 20000 461 20
+  record_fixture "$ab/baseline-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:30:00Z 20000 461 60
+  record_fixture "$ab/candidate-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:10:00Z 20000 461 21
+  record_fixture "$ab/candidate-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:20:00Z 20000 461 64
+  status=0
+  compare_ab "$ab" "$tmp/baseline.json" 15 "$runner" 5 10 > "$tmp/ab-pages-noise.out" 2>&1 || status=$?
+  out="$(cat "$tmp/ab-pages-noise.out")"
+  [[ "$status" -eq 0 ]] || { echo "self-test: pages inside the baseline's highest round failed the run" >&2; failures=1; }
+  grep -q 'create_first_version.*same plan' <<<"$out" \
+    || { echo "self-test: pages inside the baseline's highest round read as a plan change" >&2; failures=1; }
+  record_fixture "$ab/baseline-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:00:00Z 20000 461 1.3
+  record_fixture "$ab/baseline-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:30:00Z 20000 461 1.3
+  record_fixture "$ab/candidate-1.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:10:00Z 20000 461 2.1
+  record_fixture "$ab/candidate-2.json" generation-1 poc 20 1000000 2000000 2026-09-15T12:20:00Z 20000 461 2.2
+  status=0
+  compare_ab "$ab" "$tmp/baseline.json" 15 "$runner" 5 10 > "$tmp/ab-pages-floor.out" 2>&1 || status=$?
+  out="$(cat "$tmp/ab-pages-floor.out")"
+  [[ "$status" -eq 0 ]] || { echo "self-test: a rise under one page per call failed the run" >&2; failures=1; }
+  grep -q 'create_first_version.*same plan' <<<"$out" \
+    || { echo "self-test: a rise under one page per call read as a plan change" >&2; failures=1; }
   # 9e. No round on one side is a usage error.
   rm -f "$ab"/candidate-*.json
   status=0
@@ -674,7 +878,7 @@ self_test() {
     echo "storage-bench-compare: SELF-TEST FAILED" >&2
     return 1
   fi
-  echo "storage-bench-compare: self-test passed (14 cases)."
+  echo "storage-bench-compare: self-test passed (19 cases)."
   return 0
 }
 
@@ -700,6 +904,9 @@ cd "$(dirname "$0")/../.."
 [[ "$SIZE_BUDGET" =~ ^[0-9]+(\.[0-9]+)?$ ]] \
   || { echo "error: --size-budget takes a non-negative number, not '$SIZE_BUDGET'" >&2; exit 2; }
 
+[[ "$PAGE_TOLERANCE" =~ ^[0-9]+(\.[0-9]+)?$ ]] \
+  || { echo "error: --page-tolerance takes a non-negative number, not '$PAGE_TOLERANCE'" >&2; exit 2; }
+
 if [[ -n "$AB_DIR" ]]; then
   [[ -d "$AB_DIR" ]] || { echo "error: no such directory: $AB_DIR" >&2; exit 2; }
   first="$(find "$AB_DIR" -maxdepth 1 -name 'candidate-*.json' | sort | sed -n 1p)"
@@ -711,7 +918,7 @@ if [[ -n "$AB_DIR" ]]; then
     trap 'rm -f "$committed_tmp"' EXIT
     git show "HEAD:$committed" > "$committed_tmp"
   fi
-  compare_ab "$AB_DIR" "$committed_tmp" "$TOLERANCE" "$RUNNER" "$SIZE_BUDGET"
+  compare_ab "$AB_DIR" "$committed_tmp" "$TOLERANCE" "$RUNNER" "$SIZE_BUDGET" "$PAGE_TOLERANCE"
   exit $?
 fi
 

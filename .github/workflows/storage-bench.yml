@@ -20,16 +20,20 @@
 # WHY THE SAME RUNNER (#4318). A hosted runner is shared hardware with noisy
 # neighbours: two runs of the same bench code on 2026-10-28 differed by up to
 # 156 %, so a latency compared with a record from another runner said little.
-# Both builds now run on this runner, alternating (A B, B A, ...), and an
-# operation regresses only when its median rose beyond the tolerance AND every
-# candidate round is slower than every baseline round at that percentile
-# (scripts/render/storage-bench-compare.sh --ab). Two rounds a build were too
-# few: unchanged code read one p99 15 % apart with the rounds separated (run
-# 40897166186), and with k rounds a build an unchanged operation separates
-# by chance once in C(2k, k) orders, 1 in 6 at two rounds, 1 in 70 at four,
-# so four is the default. The baseline defaults to the
-# candidate's merge base with main, so a dispatch on main measures the same
-# code twice: the lane's own noise check.
+# Both builds now run on this runner, alternating (A B, B A, ...), and two
+# verdicts come out of the rounds (scripts/render/storage-bench-compare.sh
+# --ab, docs/benchmarks/storage/README.md). The plan verdict fails an
+# operation whose pages per call rose beyond the page tolerance, whatever its
+# time. The time verdict divides each round by its machine factor, so one slow
+# spell of the runner does not read as the code, and an operation regresses
+# only when its median rose beyond the tolerance AND every candidate round is
+# slower than every baseline round at that percentile. With k rounds a build
+# an unchanged operation separates by chance once in C(2k, k) orders, 1 in 70
+# at four rounds and 1 in 12 870 at eight, so eight is the default: at four,
+# unchanged code read 18 operations 15 to 27 % slower when one candidate round
+# ran 22 % slow across the board (run 41105458534). The baseline defaults to
+# the candidate's merge base with main, so a dispatch on main measures the
+# same code twice: the lane's own noise check.
 #
 # The service container is NOT given the non-durable tuning the test job
 # applies (fsync, synchronous_commit, full_page_writes off): a commit's WAL
@@ -50,9 +54,14 @@ on:
           - poc
           - s
       tolerance_percent:
-        description: "How far an operation's median p50 or p99 may rise above the baseline's, outside the spread of the rounds, before the run fails"
+        description: "How far an operation's median p50 or p99, each round divided by its machine factor, may rise above the baseline's, outside the spread of the rounds, before the run fails"
         required: false
         default: "15"
+        type: string
+      page_tolerance_percent:
+        description: "How far an operation's median pages per call may rise above the baseline's highest round (and by at least one page) before the run fails"
+        required: false
+        default: "10"
         type: string
       size_budget_percent:
         description: "How far the bytes per composition version or per node row may grow above the committed record before the run fails"
@@ -60,9 +69,9 @@ on:
         default: "5"
         type: string
       rounds:
-        description: "Interleaved rounds per build (3 to 6); the spread of the rounds is the noise band"
+        description: "Interleaved rounds per build (4 to 8); the spread of the rounds is the noise band"
         required: false
-        default: "4"
+        default: "8"
         type: string
       baseline:
         description: "The baseline revision (empty = the candidate's merge base with main)"
@@ -88,9 +97,10 @@ jobs:
   bench:
     name: measure + compare
     runs-on: ubuntu-latest
-    # Two release builds and 2 x rounds bench runs of about 15 minutes each:
-    # about 160 minutes at the default 4 rounds, 220 at 6.
-    timeout-minutes: 300
+    # Two release builds of about 20 minutes each and 2 x rounds bench runs of
+    # about 15 minutes each: about 280 minutes at the default 8 rounds, the
+    # most a hosted job's 360 allows with a margin.
+    timeout-minutes: 360
     permissions:
       contents: read
     services:
@@ -125,7 +135,7 @@ jobs:
           ROUNDS: ${{ inputs.rounds }}
         run: |
           set -euo pipefail
-          [[ "$ROUNDS" =~ ^[3-6]$ ]] || { echo "::error::rounds takes 3 to 6, not '$ROUNDS'"; exit 1; }
+          [[ "$ROUNDS" =~ ^[4-8]$ ]] || { echo "::error::rounds takes 4 to 8, not '$ROUNDS'"; exit 1; }
           candidate="$(git rev-parse --verify "${CANDIDATE:-HEAD}^{commit}")"
           if [ -n "$BASELINE" ]; then
             baseline="$(git rev-parse --verify "${BASELINE}^{commit}")"
@@ -209,6 +219,7 @@ jobs:
       - name: Compare the candidate with the baseline
         env:
           TOLERANCE_PERCENT: ${{ inputs.tolerance_percent }}
+          PAGE_TOLERANCE_PERCENT: ${{ inputs.page_tolerance_percent }}
           SIZE_BUDGET_PERCENT: ${{ inputs.size_budget_percent }}
         # RUNNER_OS, RUNNER_ARCH and RUNNER_NAME are the runner's own default
         # environment, so the machine reaches the summary without a `${{ }}`
@@ -217,5 +228,6 @@ jobs:
           bash scripts/render/storage-bench-compare.sh \
             --ab "$RUNNER_TEMP/ab" \
             --tolerance "$TOLERANCE_PERCENT" \
+            --page-tolerance "$PAGE_TOLERANCE_PERCENT" \
             --size-budget "$SIZE_BUDGET_PERCENT" \
             --runner "GitHub-hosted $RUNNER_OS/$RUNNER_ARCH ($RUNNER_NAME), $(nproc) cores, both builds"
