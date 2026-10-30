@@ -29,7 +29,6 @@
               hydrate target"
 )]
 
-
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
 use crate::locale::tr;

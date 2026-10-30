@@ -74,7 +74,7 @@ impl Done {
     /// # Panics
     ///
     /// Never: a toast of strings and a tone always serializes.
-        #[must_use]
+    #[must_use]
     #[expect(
         clippy::expect_used,
         reason = "serde_json serializes a struct of strings, a tone and an optional pair of strings without error: no map with non-string keys and no failing Serialize impl is reachable"
@@ -85,7 +85,7 @@ impl Done {
     }
 
     /// The toast a cookie value carries; `None` for a value no toast wrote.
-        #[must_use]
+    #[must_use]
     pub fn decode(value: &str) -> Option<Self> {
         let json = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(value.trim())

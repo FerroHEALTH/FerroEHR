@@ -243,9 +243,8 @@ async fn page(
         .get::<ViewerSession>(SESSION_KEY)
         .is_some();
         if !signed_in && path != "/login" {
-            let to =
-                crate::session_client::signed_out_url(crate::request::return_path(&path), "");
-            return axum::response::Redirect::to(&to).into_response();
+            let to = crate::session_client::signed_out_url(crate::request::return_path(&path), "");
+            return found(&to);
         }
         match form_of(&state, &parts, body).await {
             Ok(posted) => Some(posted),
@@ -286,7 +285,7 @@ fn answered(
     drawn: Option<ferrohealth_ui::html::Html>,
 ) -> axum::response::Response {
     let mut response = match (answer.redirect, drawn) {
-        (Some(to), _) => axum::response::Redirect::to(&to).into_response(),
+        (Some(to), _) => found(&to),
         (None, Some(document)) => {
             let mut response = axum::response::Html(String::from(document)).into_response();
             if let Some(status) = answer.status {
@@ -302,6 +301,21 @@ fn answered(
             .append(http::header::SET_COOKIE, cookie);
     }
     response
+}
+
+/// The `302 Found` redirect to `to`, as every page answers a post whose work
+/// succeeded (post, redirect, get).
+fn found(to: &str) -> axum::response::Response {
+    let mut response = http::StatusCode::FOUND.into_response();
+    match http::HeaderValue::from_str(to) {
+        Ok(location) => {
+            response
+                .headers_mut()
+                .insert(http::header::LOCATION, location);
+            response
+        }
+        Err(_invalid) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 /// Answers the search panel with what the typed words find, as JSON: `401`
@@ -512,7 +526,6 @@ fn is_public_path(path: &str) -> bool {
         || path.starts_with("/api/")
 }
 
-
 #[cfg(test)]
 mod tests {
     #![allow(
@@ -549,7 +562,14 @@ mod tests {
         ] {
             assert!(is_public_path(public), "{public} must be public");
         }
-        for guarded in ["/", "/templates", "/queries/builder", "/ehrs", "/nonsense", "/pkg/x.wasm"] {
+        for guarded in [
+            "/",
+            "/templates",
+            "/queries/builder",
+            "/ehrs",
+            "/nonsense",
+            "/pkg/x.wasm",
+        ] {
             assert!(!is_public_path(guarded), "{guarded} must be guarded");
         }
     }
@@ -643,7 +663,11 @@ mod tests {
         assert_eq!(
             "no-store",
             header(
-                &exchange(&format!("{}/no-such-file.js", ferrohealth_ui::serve::PREFIX)).await,
+                &exchange(&format!(
+                    "{}/no-such-file.js",
+                    ferrohealth_ui::serve::PREFIX
+                ))
+                .await,
                 "cache-control"
             ),
             "a missing asset must not be kept"

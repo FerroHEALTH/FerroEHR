@@ -20,7 +20,6 @@
 //! own tab-gated resource: it is a different CDR resource whose fetch runs the
 //! CDR's example generator.
 
-
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};

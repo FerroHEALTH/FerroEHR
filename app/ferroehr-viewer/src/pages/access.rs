@@ -179,7 +179,11 @@ pub fn page() -> Drawn {
     let previewed = if typed.is_empty() {
         quiet(tr(ConsoleMsg::AccessPreviewEmpty))
     } else {
-        scope_grants(&current(), &tr(ConsoleMsg::AccessPreviewed), grants_of(&typed))
+        scope_grants(
+            &current(),
+            &tr(ConsoleMsg::AccessPreviewed),
+            grants_of(&typed),
+        )
     };
     let field = Field::new("scope", tr(ConsoleMsg::AccessScopeField))
         .holds_id()

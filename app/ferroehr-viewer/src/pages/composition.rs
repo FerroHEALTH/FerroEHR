@@ -19,8 +19,8 @@ use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
+use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
@@ -49,16 +49,16 @@ use crate::format::ReprFormat;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
-use crate::routes::Drawn;
 use crate::pages::common::{
-    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section,
-    drawn, findings_of, info_note, marks_of, panel, plain_section, section, short,
-    shortened, state_mark, version_number, when,
+    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section, drawn,
+    findings_of, info_note, marks_of, panel, plain_section, section, short, shortened, state_mark,
+    version_number, when,
 };
 use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
 use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
+use crate::routes::Drawn;
 
 /// The id of Delete composition's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-composition";
@@ -90,7 +90,7 @@ enum CompTab {
 }
 
 impl CompTab {
-        /// The tab the address names, the Reading for none.
+    /// The tab the address names, the Reading for none.
     fn asked() -> Self {
         match crate::request::query("tab").as_deref() {
             Some("document") => Self::Document,
@@ -143,7 +143,7 @@ struct Head {
 }
 
 impl Head {
-        #[expect(
+    #[expect(
         clippy::disallowed_types,
         reason = "the viewer reads the CDR's COMPOSITION JSON wire for the header's name, template and context"
     )]
@@ -246,7 +246,11 @@ fn reading_panel(
             tr(RecordsMsg::CompositionShowDocument),
         ))
     });
-    panel(Html::join([opt(older.map(plain_section)), drawn, opt(full)]))
+    panel(Html::join([
+        opt(older.map(plain_section)),
+        drawn,
+        opt(full),
+    ]))
 }
 
 /// The representations the Document tab offers.
@@ -413,10 +417,7 @@ fn versions_panel(
                 None,
                 None,
                 definitions(vec![
-                    (
-                        tr(RecordsMsg::FactLifecycle),
-                        t(&details.lifecycle_state),
-                    ),
+                    (tr(RecordsMsg::FactLifecycle), t(&details.lifecycle_state)),
                     (
                         tr(RecordsMsg::CompositionPreceding),
                         if details.preceding_version_uid.is_empty() {
@@ -447,7 +448,11 @@ fn versions_panel(
                     ),
                     (
                         tr(RecordsMsg::ColumnEhr),
-                        h(format!(r#"<a href="{}">{}</a>"#, t(ehr_href(ehr_id)), short(ehr_id))),
+                        h(format!(
+                            r#"<a href="{}">{}</a>"#,
+                            t(ehr_href(ehr_id)),
+                            short(ehr_id)
+                        )),
                     ),
                     (
                         tr(RecordsMsg::CompositionFirstCommitted),
@@ -598,8 +603,7 @@ fn header(
                     ("template", head.template.clone().into()),
                     (
                         "when",
-                        ferrohealth_ui::view::time::reading(&current(), &deletion.committed)
-                            .into(),
+                        ferrohealth_ui::view::time::reading(&current(), &deletion.committed).into(),
                     ),
                     ("who", deletion.committer.clone().into()),
                     ("version", version_number(&deletion.version_id).into()),
@@ -1564,12 +1568,7 @@ fn new_form(ehr_id: &str, form: NewForm) -> Html {
         None,
         h(format!(
             r#"<div class="fui-form-grid"><div class="fui-span-2">{template_field}</div><div class="fui-span-2">{}</div></div>"#,
-            choice_group(
-                "format",
-                tr(Msg::CompositionFormat),
-                &formats,
-                &format_key,
-            )
+            choice_group("format", tr(Msg::CompositionFormat), &formats, &format_key,)
         )),
     ));
     let form = h(format!(

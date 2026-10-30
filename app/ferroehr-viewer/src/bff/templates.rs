@@ -19,7 +19,6 @@
               hydrate target"
 )]
 
-
 use crate::adl2::TemplateFamily;
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr_served, tr_served_with};

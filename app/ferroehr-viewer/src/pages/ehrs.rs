@@ -498,9 +498,10 @@ fn new_view(model: NewModel) -> Html {
                 ),
             )
         });
-        refusal
-            .view()
-            .then(h(format!(r#"<div class="fui-cluster">{}</div>"#, opt(open))))
+        refusal.view().then(h(format!(
+            r#"<div class="fui-cluster">{}</div>"#,
+            opt(open)
+        )))
     });
     dock_editor(EditorDock {
         form: NEW_EHR_FORM.to_owned(),

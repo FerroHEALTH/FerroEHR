@@ -223,7 +223,10 @@ fn chart(plot: Plot) -> Html {
     };
     line_chart(&chart, ChartWords::of(&current())).then(h(format!(
         r#"<p class="fui-small fui-muted">{}</p>"#,
-        t(tr_with(QueriesMsg::ResultsAxis, &[("axis", plot.axis.into())]))
+        t(tr_with(
+            QueriesMsg::ResultsAxis,
+            &[("axis", plot.axis.into())]
+        ))
     )))
 }
 
@@ -285,7 +288,7 @@ pub enum Answer {
 }
 
 impl Answer {
-        /// The answer of a run of `aql` with `parameters`.
+    /// The answer of a run of `aql` with `parameters`.
     #[must_use]
     pub fn of(outcome: Result<ResultPage, ViewerError>, aql: &str, parameters: &str) -> Self {
         match outcome {
@@ -346,17 +349,20 @@ fn results(ran: Ran) -> Html {
         t(&ran.aql),
         t(&ran.parameters)
     ));
-    results_pane(&current(), ResultsPane {
-        title: tr(QueriesMsg::ResultsTitle),
-        count: u64::try_from(total).unwrap_or(u64::MAX),
-        numeric,
-        shown,
-        switch: Switch::Form { form: None },
-        csv: export(&ran.export, "csv"),
-        json: export(&ran.export, "json"),
-        window,
-        body,
-    })
+    results_pane(
+        &current(),
+        ResultsPane {
+            title: tr(QueriesMsg::ResultsTitle),
+            count: u64::try_from(total).unwrap_or(u64::MAX),
+            numeric,
+            shown,
+            switch: Switch::Form { form: None },
+            csv: export(&ran.export, "csv"),
+            json: export(&ran.export, "json"),
+            window,
+            body,
+        },
+    )
 }
 
 /// The Results section before a run.

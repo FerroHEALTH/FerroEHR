@@ -22,21 +22,21 @@ use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::code::{Code, CodeHead, code_section};
 use ferrohealth_ui::view::conditions::{ADD_CONDITION, ADD_GROUP, REMOVE, REMOVE_GROUP};
 use ferrohealth_ui::view::conditions::{
     Choice, Condition, ConditionGroup, Match, Operand, condition_groups,
 };
-use ferrohealth_ui::view::diagnostics::Finding;
 use ferrohealth_ui::view::diagnostics::FileFindings;
+use ferrohealth_ui::view::diagnostics::Finding;
+use ferrohealth_ui::view::editor::caret_at;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::popover::PopoverForm;
+use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::surface::{Header, page_heading};
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::view::action_menu::{Act, Action};
-use ferrohealth_ui::view::editor::caret_at;
-use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use serde::{Deserialize, Serialize};
 
 use crate::builder::catalog::CatalogNode;
@@ -1129,8 +1129,7 @@ struct Build {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_build(
-) -> Result<Build, ViewerError> {
+async fn load_build() -> Result<Build, ViewerError> {
     crate::session::require_session()?;
     Ok(read_build().await)
 }
@@ -1341,7 +1340,12 @@ fn build(model: Build) -> Html {
         panel(Html::join([
             plain_section(options),
             opt(points),
-            section(Some(tr(QueriesMsg::QueryConditions)), None, None, conditions),
+            section(
+                Some(tr(QueriesMsg::QueryConditions)),
+                None,
+                None,
+                conditions,
+            ),
             section(Some(tr(QueriesMsg::QueryOrderLimit)), None, None, order),
             built_section,
             Answer::view(answer),
@@ -1563,8 +1567,7 @@ struct Written {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_written(
-) -> Result<Written, ViewerError> {
+async fn load_written() -> Result<Written, ViewerError> {
     crate::session::require_session()?;
     Ok(read_written().await)
 }
@@ -1700,7 +1703,10 @@ fn written(model: Written) -> Html {
         panel(Html::join([
             plain_section(Html::join([
                 opt(note),
-                h(format!(r#"<div class="fui-cluster">{}</div>"#, opt(to_build))),
+                h(format!(
+                    r#"<div class="fui-cluster">{}</div>"#,
+                    opt(to_build)
+                )),
                 editor,
             ])),
             section(
@@ -1724,7 +1730,10 @@ fn written(model: Written) -> Html {
 
 /// Query: AQL.
 pub async fn aql_page() -> Drawn {
-    Drawn::page(tr(QueriesMsg::QueryAqlTitle), drawn(load_written().await, written))
+    Drawn::page(
+        tr(QueriesMsg::QueryAqlTitle),
+        drawn(load_written().await, written),
+    )
 }
 
 #[cfg(test)]

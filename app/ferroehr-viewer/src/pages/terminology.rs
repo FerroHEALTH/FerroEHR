@@ -162,11 +162,7 @@ where
 
 /// A tab of Terminology over what `body` draws of its model; the note alone
 /// when the API is off.
-fn term_page<T>(
-    tab: TermTab,
-    model: TabModel<T>,
-    body: impl FnOnce(&[String], T) -> Html,
-) -> Html {
+fn term_page<T>(tab: TermTab, model: TabModel<T>, body: impl FnOnce(&[String], T) -> Html) -> Html {
     let Tabbed { ids, read } = match model {
         Ok(Some(tabbed)) => tabbed,
         Ok(None) => {
@@ -781,7 +777,12 @@ pub async fn subsumption_page() -> Drawn {
             r#"<form method="get" action="/terminology/subsumption" class="fui-transform-options">{}{}{}{}</form>"#,
             terminology_field("s-t", ids, &terminology),
             code_field("s-a", "broader", tr(DefinitionsMsg::TermBroader), &broader),
-            code_field("s-b", "narrower", tr(DefinitionsMsg::TermNarrower), &narrower),
+            code_field(
+                "s-b",
+                "narrower",
+                tr(DefinitionsMsg::TermNarrower),
+                &narrower
+            ),
             run(Glyph::NETWORK, tr(DefinitionsMsg::TermTest))
         ));
         let words = |msg| {

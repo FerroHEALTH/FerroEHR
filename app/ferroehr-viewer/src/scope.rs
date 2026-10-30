@@ -150,15 +150,18 @@ mod tests {
 
     #[tokio::test]
     async fn a_page_reads_the_path_and_the_query_of_its_request() {
-        let read = run(scope("/ehrs?q=a+b&empty=&q=c", None, "2026-10-21T09:42:11Z"), async {
-            (
-                crate::request::path(),
-                crate::request::path_and_query(),
-                crate::request::query("q"),
-                crate::request::query("empty"),
-                crate::request::query_pairs().len(),
-            )
-        })
+        let read = run(
+            scope("/ehrs?q=a+b&empty=&q=c", None, "2026-10-21T09:42:11Z"),
+            async {
+                (
+                    crate::request::path(),
+                    crate::request::path_and_query(),
+                    crate::request::query("q"),
+                    crate::request::query("empty"),
+                    crate::request::query_pairs().len(),
+                )
+            },
+        )
         .await;
         assert_eq!(
             (
@@ -186,8 +189,14 @@ mod tests {
         })
         .await;
         assert_eq!(read, first);
-        assert_eq!(read, second, "every read of the page answers the same instant");
-        assert_eq!(ferrohealth_ui::calendar::Day::new(2026, 10, 23), Some(today));
+        assert_eq!(
+            read, second,
+            "every read of the page answers the same instant"
+        );
+        assert_eq!(
+            ferrohealth_ui::calendar::Day::new(2026, 10, 23),
+            Some(today)
+        );
         assert_eq!("2026-10-23", last);
     }
 

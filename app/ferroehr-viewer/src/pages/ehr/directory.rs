@@ -34,10 +34,10 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
 use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, confirm_dialog, danger_form_dialog};
 use ferrohealth_ui::view::surface::{Crumb, Header, Mode, editor_heading};
+use ferrohealth_ui::view::tree::{Edit, Mark, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 use ferrohealth_ui::view::versions::{
     Standing, Version, VersionHistory, older_version, version_history,
 };
-use ferrohealth_ui::view::tree::{Edit, Mark, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 use serde_json::Value;
 
 use crate::bff::ehr_detail::directory::edit::{
@@ -756,7 +756,10 @@ fn directory_panel(ehr_id: &str, model: DirectoryPanel) -> Html {
                 count,
                 tab_href(ehr_id, EhrTab::Directory),
             )
-            .then(h(format!(r#"<div class="fui-cluster">{}</div>"#, opt(restore)))),
+            .then(h(format!(
+                r#"<div class="fui-cluster">{}</div>"#,
+                opt(restore)
+            ))),
         )
     });
     let history_section = match &versions {
@@ -1232,7 +1235,10 @@ mod tests {
             )),
         });
         assert!(
-            html.contains(&tr(RecordsMsg::DirectoryCompositionsRefused)),
+            html.contains(
+                ferrohealth_ui::html::Html::text(tr(RecordsMsg::DirectoryCompositionsRefused))
+                    .as_str()
+            ),
             "the refusal's summary is drawn: {html}"
         );
         assert!(
@@ -1259,6 +1265,8 @@ mod tests {
             html.contains("value=\"0199c2a4-7e1b-4c3e-9a51-4f2d8b6e1a01\""),
             "the composition is offered: {html}"
         );
-        assert!(!html.contains(&tr(RecordsMsg::DirectoryCompositionsRefused)));
+        assert!(!html.contains(
+            ferrohealth_ui::html::Html::text(tr(RecordsMsg::DirectoryCompositionsRefused)).as_str()
+        ));
     }
 }

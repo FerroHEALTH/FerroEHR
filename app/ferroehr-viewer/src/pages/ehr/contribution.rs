@@ -224,9 +224,9 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> Html {
                 Some(tr(RecordsMsg::EhrTabContributions)),
                 Some(u64::from(page.total)),
                 None,
-                listing(ehr_id, &page).then(opt(pager.map(|pager| {
-                    h(format!(r#"<div class="fui-list-foot">{pager}</div>"#))
-                }))),
+                listing(ehr_id, &page).then(opt(
+                    pager.map(|pager| h(format!(r#"<div class="fui-list-foot">{pager}</div>"#)))
+                )),
             )
         }
         Err(refusal) => section(
@@ -236,7 +236,15 @@ fn contributions_panel(ehr_id: &str, model: ContributionsPanel) -> Html {
             refusal.view(),
         ),
     };
-    panel(section(Some(tr(RecordsMsg::ContributionsPerDayTitle)), None, None, chart).then(list))
+    panel(
+        section(
+            Some(tr(RecordsMsg::ContributionsPerDayTitle)),
+            None,
+            None,
+            chart,
+        )
+        .then(list),
+    )
 }
 
 /// An EHR's Contributions tab.
@@ -469,10 +477,13 @@ pub async fn page() -> Drawn {
         },
         ActionGroup::none(),
     );
-    let body = drawn(load_contribution(ehr_id.clone(), uid).await, |model| match model {
-        ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
-        ContributionModel::Refused(refusal) => refusal.view(),
-    });
+    let body = drawn(
+        load_contribution(ehr_id.clone(), uid).await,
+        |model| match model {
+            ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
+            ContributionModel::Refused(refusal) => refusal.view(),
+        },
+    );
     Drawn::page(
         title,
         heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
@@ -500,7 +511,7 @@ struct Draft {
 }
 
 impl Draft {
-        /// A new change numbered `number`: a new composition.
+    /// A new change numbered `number`: a new composition.
     fn new(number: u16) -> Self {
         Self {
             number,
@@ -512,7 +523,7 @@ impl Draft {
         }
     }
 
-        /// The change numbered `number` as `posted` holds it.
+    /// The change numbered `number` as `posted` holds it.
     fn posted(posted: &crate::posted::Posted, number: u16) -> Self {
         let field = |name: &str| posted.text(&format!("{name}-{number}"));
         let kind = StagedKind::from_value(&field("kind"));

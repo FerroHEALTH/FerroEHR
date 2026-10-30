@@ -26,7 +26,6 @@
 //! Absence (`404`) is `Ok(None)`, a first-class state rather than an error;
 //! tab and version state live in the URL.
 
-
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::example_options::{ExampleDetail, ExampleType};

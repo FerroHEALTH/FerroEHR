@@ -60,11 +60,15 @@ use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{attr, flag, h, opt, t};
-use crate::routes::Drawn;
-use crate::pages::common::{EditorDock, Refused, ago, at_time_row, card_panel, count, dock_editor, document_section, drawn, findings_of, info_note, marks_of, panel, plain_section, section, short, shortened, state_mark, version_number, when};
+use crate::pages::common::{
+    EditorDock, Refused, ago, at_time_row, card_panel, count, dock_editor, document_section, drawn,
+    findings_of, info_note, marks_of, panel, plain_section, section, short, shortened, state_mark,
+    version_number, when,
+};
 use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
+use crate::routes::Drawn;
 
 /// The id of Delete party's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-party";
@@ -308,8 +312,7 @@ enum PartiesModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_parties(
-) -> Result<PartiesModel, ViewerError> {
+async fn load_parties() -> Result<PartiesModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_parties().await)
 }
@@ -388,15 +391,18 @@ fn parties_view(model: PartiesModel) -> Html {
         Ok(rows) => (index_table(&rows), u64::try_from(rows.len()).ok()),
         Err(refusal) => (refusal.view(), None),
     };
-    let card = list_card(&current(), ListCard {
-        title: tr(RecordsMsg::PartiesTagsTitle),
-        count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
-        order: None,
-        tabs: None,
-        actions: None,
-        body: index,
-        pager: None,
-    });
+    let card = list_card(
+        &current(),
+        ListCard {
+            title: tr(RecordsMsg::PartiesTagsTitle),
+            count: total.map(ferrohealth_ui::view::template::list::HeadingCount::All),
+            order: None,
+            tabs: None,
+            actions: None,
+            body: index,
+            pager: None,
+        },
+    );
     let top = refused.map(|refusal| refusal.view());
     h(format!(
         r#"<div class="fui-list-page">{}{form}{}{card}</div>"#,
@@ -509,8 +515,7 @@ enum Creating<T> {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_new_party(
-) -> Result<Creating<NewParty>, ViewerError> {
+async fn load_new_party() -> Result<Creating<NewParty>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_new_party().await)
 }
@@ -662,7 +667,7 @@ impl PartyTab {
         Self::Tags,
     ];
 
-        /// The tab the address names.
+    /// The tab the address names.
     fn asked() -> Self {
         let asked = crate::request::query("tab").unwrap_or_default();
         Self::ALL
@@ -736,20 +741,18 @@ fn identities(rendered: &[RenderedSection]) -> Html {
     if sections.is_empty() {
         return info_note(t(tr(RecordsMsg::PartyNoIdentities)));
     }
-    reading(&current(), Reading {
-        sections,
-        level: Level::Three,
-        folded: None,
-    })
+    reading(
+        &current(),
+        Reading {
+            sections,
+            level: Level::Three,
+            folded: None,
+        },
+    )
 }
 
 /// The Overview tab.
-fn overview(
-    kind: PartyKind,
-    uid: &str,
-    state: &PartyState,
-    rendered: &[RenderedSection],
-) -> Html {
+fn overview(kind: PartyKind, uid: &str, state: &PartyState, rendered: &[RenderedSection]) -> Html {
     let relationships = state.relationships.len();
     let facts = definitions(vec![
         (tr(Msg::ColumnKind), t(kind_words(kind))),
@@ -881,15 +884,18 @@ fn demographic_history(
             }
         })
         .collect();
-    version_history(&current(), VersionHistory {
-        caption: tr(Msg::CompositionVersions),
-        versions: rows,
-        at_time: Some(at_time_row(
-            at_action,
-            &crate::request::query("at").unwrap_or_default(),
-            tr(RecordsMsg::PartyAtTimeOpens),
-        )),
-    })
+    version_history(
+        &current(),
+        VersionHistory {
+            caption: tr(Msg::CompositionVersions),
+            versions: rows,
+            at_time: Some(at_time_row(
+                at_action,
+                &crate::request::query("at").unwrap_or_default(),
+                tr(RecordsMsg::PartyAtTimeOpens),
+            )),
+        },
+    )
 }
 
 /// The revision history of the versioned object `uid` of `family`, newest
@@ -911,7 +917,10 @@ async fn history_of(family: VersionedFamily, uid: &str) -> Result<Vec<VersionEnt
 fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> Html {
     match facts {
         Ok(facts) => section(
-            Some(tr_with(RecordsMsg::CompositionVersionN, &[("version", version_number(&facts.version_id).into())])),
+            Some(tr_with(
+                RecordsMsg::CompositionVersionN,
+                &[("version", version_number(&facts.version_id).into())],
+            )),
             None,
             None,
             definitions(vec![
@@ -1387,7 +1396,13 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
             )),
         )
     });
-    let binder = binder(&crate::locale::current(), tr(RecordsMsg::PartyViews), tabs, tab.key(), body);
+    let binder = binder(
+        &crate::locale::current(),
+        tr(RecordsMsg::PartyViews),
+        tabs,
+        tab.key(),
+        body,
+    );
     let page = Html::join([
         header,
         h(format!(
@@ -1461,8 +1476,7 @@ fn party_header(
                     ("kind", kind_words(kind).into()),
                     (
                         "when",
-                        ferrohealth_ui::view::time::reading(&current(), &deletion.committed)
-                            .into(),
+                        ferrohealth_ui::view::time::reading(&current(), &deletion.committed).into(),
                     ),
                     ("who", deletion.committer.clone().into()),
                     ("version", version_number(&deletion.version_id).into()),
@@ -2130,8 +2144,7 @@ struct NewRelationship {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_new_relationship(
-) -> Result<Creating<NewRelationship>, ViewerError> {
+async fn load_new_relationship() -> Result<Creating<NewRelationship>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_new_relationship().await)
 }

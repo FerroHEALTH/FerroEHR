@@ -38,8 +38,8 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section, drawn,
-    panel, plain_section, section, short, shortened, version_number,
+    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section, drawn, panel,
+    plain_section, section, short, shortened, version_number,
 };
 use crate::pages::common::{is_status, version_uid_at};
 use crate::pages::ehr::EhrModel;
@@ -219,10 +219,7 @@ fn fact_rows(version_uid: &str, facts: Option<&VersionedObjectFacts>) -> Vec<(St
             tr(RecordsMsg::FactSigned),
             t(tr(if facts.signed { Msg::Yes } else { Msg::No })),
         ));
-        rows.push((
-            tr(RecordsMsg::FactLifecycle),
-            t(&facts.lifecycle_state),
-        ));
+        rows.push((tr(RecordsMsg::FactLifecycle), t(&facts.lifecycle_state)));
     }
     rows
 }
@@ -547,15 +544,14 @@ fn edit_form(ehr_id: &str, editor: Editor) -> Html {
         facts: vec![tr(Msg::EditorUtf8)],
         findings: None,
     });
-    let sections = section(Some(tr(RecordsMsg::StatusCapabilities)), None, None, flags).then(
-        section(
+    let sections =
+        section(Some(tr(RecordsMsg::StatusCapabilities)), None, None, flags).then(section(
             Some(tr(RecordsMsg::StatusOtherDetails)),
             None,
             None,
             ferrohealth_ui::view::surface::section_intro(tr(RecordsMsg::StatusOtherDetailsIntro))
                 .then(editor),
-        ),
-    );
+        ));
     opt(top).then(h(format!(
         r#"<form id="{EDIT_FORM}" method="post" action="{action}"><input type="hidden" name="version" value="{version}">{panel}</form>"#,
         action = t(format!("{}/edit", tab_href(ehr_id, EhrTab::Status))),
@@ -632,7 +628,9 @@ mod tests {
             ))
         };
         assert!(
-            html.contains(&tr(RecordsMsg::StatusFactsRefused)),
+            html.contains(
+                ferrohealth_ui::html::Html::text(tr(RecordsMsg::StatusFactsRefused)).as_str()
+            ),
             "the refusal's summary is drawn: {html}"
         );
         assert!(

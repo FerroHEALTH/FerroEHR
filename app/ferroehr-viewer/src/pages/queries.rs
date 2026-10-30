@@ -43,8 +43,8 @@ use crate::queries_api::{
     StoredQueryRow, fetch_stored_query, list_stored_queries, run_stored_query,
 };
 use crate::query_namespace::{VersionResolution, bare_name_of};
-use crate::routes::Drawn;
 use crate::query_namespace::{group_by_namespace, resolve_version};
+use crate::routes::Drawn;
 
 /// The key the dashboard's namespace tile names the unqualified queries by.
 pub const UNQUALIFIED: &str = "-";
@@ -194,8 +194,7 @@ fn grouped(rows: &[StoredQueryRow], only: Option<&str>) -> Listing {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_listing(
-) -> Result<Listed, ViewerError> {
+async fn load_listing() -> Result<Listed, ViewerError> {
     crate::session::require_session()?;
     Ok(read_listing().await)
 }
@@ -341,7 +340,10 @@ fn listed(listed: Listed) -> Html {
             pager: None,
         },
     );
-    h(format!(r#"<div class="fui-list-page">{}{card}</div>"#, opt(chips)))
+    h(format!(
+        r#"<div class="fui-list-page">{}{card}</div>"#,
+        opt(chips)
+    ))
 }
 
 /// The stored queries, grouped by namespace.
@@ -489,11 +491,7 @@ where
     clippy::too_many_lines,
     reason = "one page frame: the header, the tabs and the delete confirmation"
 )]
-fn page_view<T>(
-    page: Page<T>,
-    tab: QueryTab,
-    body: impl FnOnce(&str, &str, T) -> Html,
-) -> Drawn {
+fn page_view<T>(page: Page<T>, tab: QueryTab, body: impl FnOnce(&str, &str, T) -> Html) -> Drawn {
     let Page::Shown(frame) = page else {
         return Drawn::default();
     };
@@ -790,7 +788,10 @@ pub async fn page() -> Drawn {
     let (name, version) = params();
     match load_definition(name, version).await {
         Ok(page) => page_view(page, QueryTab::Definition, definition),
-        Err(error) => Drawn::page(String::new(), drawn(Err::<(), _>(error), |()| Html::empty())),
+        Err(error) => Drawn::page(
+            String::new(),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
     }
 }
 
@@ -916,13 +917,11 @@ fn run(name: &str, version: &str, found: Run) -> Html {
         .collect();
     // NOTE: leptos-ui.md §15.8: the version field shows whatever the choice, so a page with no
     // WebAssembly can pick Prefix or Exact and type the version in one post.
-    let mut version_field = Field::new("rv", tr(Msg::ColumnVersion))
-        .help(tr(QueriesMsg::QueriesVersionHelp));
+    let mut version_field =
+        Field::new("rv", tr(Msg::ColumnVersion)).help(tr(QueriesMsg::QueriesVersionHelp));
     if let Some(error) = version_error {
-        version_field = version_field.after(h(format!(
-            r#"<p class="fui-field-error">{}</p>"#,
-            t(error)
-        )));
+        version_field =
+            version_field.after(h(format!(r#"<p class="fui-field-error">{}</p>"#, t(error))));
     }
     let version_field = version_field.view(h(format!(
         r#"<input id="rv" name="run_version" type="text" class="fui-input fui-mono" value="{}" placeholder="1 or 1.1">"#,
@@ -990,7 +989,10 @@ pub async fn run_page() -> Drawn {
     let (name, version) = params();
     match load_run(name, version).await {
         Ok(page) => page_view(page, QueryTab::Run, run),
-        Err(error) => Drawn::page(String::new(), drawn(Err::<(), _>(error), |()| Html::empty())),
+        Err(error) => Drawn::page(
+            String::new(),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
     }
 }
 
@@ -1089,6 +1091,9 @@ pub async fn versions_page() -> Drawn {
     let (name, _) = params();
     match load_versions(name).await {
         Ok(page) => page_view(page, QueryTab::Versions, versions),
-        Err(error) => Drawn::page(String::new(), drawn(Err::<(), _>(error), |()| Html::empty())),
+        Err(error) => Drawn::page(
+            String::new(),
+            drawn(Err::<(), _>(error), |()| Html::empty()),
+        ),
     }
 }

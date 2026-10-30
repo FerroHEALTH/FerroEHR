@@ -26,11 +26,11 @@ use ferrohealth_ui::table::view::{
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked};
 use ferrohealth_ui::view::surface::{Crumb, Header, definitions, page_heading};
 use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, ListCard, active_filters, list_card, list_empty,
 };
-use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked};
 
 use crate::bff::PAGE_SIZE;
 use crate::bff::audit::search_audit;
@@ -110,7 +110,7 @@ impl Filters {
         !self.pairs("").is_empty()
     }
 
-        /// Runs the search for the page starting at `offset`.
+    /// Runs the search for the page starting at `offset`.
     async fn search(&self, offset: u32) -> Result<Listed, ViewerError> {
         search_audit(
             self.from.clone(),
@@ -359,8 +359,7 @@ enum LogModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_log(
-) -> Result<LogModel, ViewerError> {
+async fn load_log() -> Result<LogModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_log().await)
 }
@@ -423,17 +422,20 @@ fn log_card(page: &Listed, filters: &Filters) -> Html {
             },
         )
     });
-    list_card(&current(), ListCard {
-        title: tr(ConsoleMsg::AuditRecords),
-        count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(
-            u64::from(page.total),
-        )),
-        order: None,
-        tabs: None,
-        actions: None,
-        body: list,
-        pager,
-    })
+    list_card(
+        &current(),
+        ListCard {
+            title: tr(ConsoleMsg::AuditRecords),
+            count: Some(ferrohealth_ui::view::template::list::HeadingCount::All(
+                u64::from(page.total),
+            )),
+            order: None,
+            tabs: None,
+            actions: None,
+            body: list,
+            pager,
+        },
+    )
 }
 
 /// The Audit log.
@@ -551,14 +553,12 @@ fn record(row: &AuditRow, masked: String) -> Html {
         ActionGroup::none(),
     );
     let panel = card_panel(
-        section(Some(tr(ConsoleMsg::AuditTheEvent)), None, None, facts).then(
-            document_section(
-                tr(ConsoleMsg::AuditAsStored),
-                Language::Json,
-                masked,
-                "audit-record",
-            ),
-        ),
+        section(Some(tr(ConsoleMsg::AuditTheEvent)), None, None, facts).then(document_section(
+            tr(ConsoleMsg::AuditAsStored),
+            Language::Json,
+            masked,
+            "audit-record",
+        )),
     );
     heading.then(h(format!(r#"<div class="fui-stack">{panel}</div>"#)))
 }

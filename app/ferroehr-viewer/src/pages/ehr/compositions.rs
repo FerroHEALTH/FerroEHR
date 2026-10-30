@@ -45,7 +45,7 @@ struct Filters {
 }
 
 impl Filters {
-        /// The filters of the request.
+    /// The filters of the request.
     fn read() -> Self {
         let get = |key: &str| crate::request::query(key).unwrap_or_default();
         Self {
@@ -257,7 +257,10 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
         .map(|row| {
             let version = row.uid.rsplit("::").next().unwrap_or_default().to_owned();
             let href = composition_href(ehr_id, &crate::uid::container_uid_of(&row.uid));
-            let sub = h(format!(r#"<span class="fui-row-sub">{}</span>"#, t(&row.template)));
+            let sub = h(format!(
+                r#"<span class="fui-row-sub">{}</span>"#,
+                t(&row.template)
+            ));
             let title = title_cell(Some(&href), t(&row.name), Some(sub));
             let start = cell(&columns[1], ago(&row.start));
             let composer = cell(&columns[2], t(&row.composer));

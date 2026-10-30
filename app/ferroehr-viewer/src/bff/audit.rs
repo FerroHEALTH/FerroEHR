@@ -21,7 +21,6 @@
               hydrate target"
 )]
 
-
 use crate::bff::PAGE_SIZE;
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;

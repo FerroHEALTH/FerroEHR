@@ -105,36 +105,39 @@ fn card(
             t(&notice_text)
         ))
     });
-    sign_in(&current(), SignIn {
-        lockup: lockup_plain(
-            brand_mark(crate::shell::MARK_PATH, crate::shell::MARK_PATH),
-            tr(Msg::BrandName),
-            tr(Msg::BrandWord),
-        ),
-        title: Some(tr(SignInMsg::Title)),
-        state,
-        provider: oidc.then(|| Provider {
-            href: oidc_login_href(next),
-            label: tr_with(SignInMsg::At, &[("host", host.clone().into())]),
-            busy: tr_with(SignInMsg::Redirecting, &[("host", host.into())]),
-            glyph: Glyph::LOG_IN,
-        }),
-        basic: basic.then(|| Basic {
-            action: "/login".to_owned(),
-            next: next.to_owned(),
-            divider: None,
-            submit: Some(tr(SignInMsg::BasicSubmit)),
-            username,
-            error,
-        }),
-        line,
-        note: None,
-        links: links
-            .into_iter()
-            .map(|link| (link.label, link.href))
-            .collect(),
-        caption: Some(tr(SignInMsg::Caption)),
-    })
+    sign_in(
+        &current(),
+        SignIn {
+            lockup: lockup_plain(
+                brand_mark(crate::shell::MARK_PATH, crate::shell::MARK_PATH),
+                tr(Msg::BrandName),
+                tr(Msg::BrandWord),
+            ),
+            title: Some(tr(SignInMsg::Title)),
+            state,
+            provider: oidc.then(|| Provider {
+                href: oidc_login_href(next),
+                label: tr_with(SignInMsg::At, &[("host", host.clone().into())]),
+                busy: tr_with(SignInMsg::Redirecting, &[("host", host.into())]),
+                glyph: Glyph::LOG_IN,
+            }),
+            basic: basic.then(|| Basic {
+                action: "/login".to_owned(),
+                next: next.to_owned(),
+                divider: None,
+                submit: Some(tr(SignInMsg::BasicSubmit)),
+                username,
+                error,
+            }),
+            line,
+            note: None,
+            links: links
+                .into_iter()
+                .map(|link| (link.label, link.href))
+                .collect(),
+            caption: Some(tr(SignInMsg::Caption)),
+        },
+    )
 }
 
 /// The sign-in page's model.

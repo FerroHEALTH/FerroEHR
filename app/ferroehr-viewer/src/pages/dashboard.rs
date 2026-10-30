@@ -18,10 +18,10 @@ use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
 };
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
 use ferrohealth_ui::view::surface::{Header, Stat, page_heading, stat_card};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
-use ferrohealth_ui::view::action_menu::{Act, Action};
 
 use crate::activity::ActivityPoint;
 use crate::bff::dashboard::NamespaceTile;
@@ -142,7 +142,9 @@ fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> H
     .into_iter()
     .map(stat_card)
     .collect::<Html>();
-    h(format!(r#"<div class="fui-grid fui-grid-stats">{cards}</div>"#))
+    h(format!(
+        r#"<div class="fui-grid fui-grid-stats">{cards}</div>"#
+    ))
 }
 
 /// How many days the activity chart covers.
@@ -190,15 +192,18 @@ fn activity_card(points: Result<Vec<ActivityPoint>, ViewerError>) -> Html {
         }
         Err(error) => refused(tr(OverviewMsg::DashboardPerDayRefused), &error, None),
     };
-    list_card(&current(), ListCard {
-        title: tr(OverviewMsg::DashboardPerDay),
-        count: None,
-        order: None,
-        tabs: None,
-        actions: None,
-        body,
-        pager: None,
-    })
+    list_card(
+        &current(),
+        ListCard {
+            title: tr(OverviewMsg::DashboardPerDay),
+            count: None,
+            order: None,
+            tabs: None,
+            actions: None,
+            body,
+            pager: None,
+        },
+    )
 }
 
 /// The matches-by-namespace card.
@@ -258,15 +263,18 @@ fn namespaces_card(tiles: Result<Vec<NamespaceLink>, ViewerError>) -> Html {
             refused(tr(OverviewMsg::DashboardNamespacesRefused), &error, None),
         ),
     };
-    list_card(&current(), ListCard {
-        title: tr(OverviewMsg::DashboardByNamespace),
-        count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
-        order: None,
-        tabs: None,
-        actions: None,
-        body,
-        pager: None,
-    })
+    list_card(
+        &current(),
+        ListCard {
+            title: tr(OverviewMsg::DashboardByNamespace),
+            count: count.map(ferrohealth_ui::view::template::list::HeadingCount::All),
+            order: None,
+            tabs: None,
+            actions: None,
+            body,
+            pager: None,
+        },
+    )
 }
 
 /// The page's heading.
@@ -297,12 +305,11 @@ pub async fn page() -> Drawn {
                 Some(Glyph::REFRESH_CW),
                 tr(OverviewMsg::TryAgain),
             );
-            let body = heading(tr(OverviewMsg::DashboardNoAnswer), ActionGroup::none()).then(
-                h(format!(
+            let body =
+                heading(tr(OverviewMsg::DashboardNoAnswer), ActionGroup::none()).then(h(format!(
                     r#"<div class="fui-stack">{}<div class="fui-cluster">{retry}</div></div>"#,
                     refused(tr(OverviewMsg::DashboardRefused), &error, None)
-                )),
-            );
+                )));
             return Drawn::page(tr(Msg::NavDashboard), body);
         }
     };

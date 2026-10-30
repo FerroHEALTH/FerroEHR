@@ -26,15 +26,17 @@ pub fn t(text: impl AsRef<str>) -> Html {
 /// The attribute `name="value"` with `value` escaped, or nothing for `None`.
 #[must_use]
 pub fn attr(name: &str, value: Option<impl AsRef<str>>) -> Html {
-    value.map_or_else(Html::empty, |value| {
-        h(format!(" {name}=\"{}\"", t(value)))
-    })
+    value.map_or_else(Html::empty, |value| h(format!(" {name}=\"{}\"", t(value))))
 }
 
 /// The boolean attribute ` name` when `on`, else nothing.
 #[must_use]
 pub fn flag(name: &str, on: bool) -> Html {
-    if on { h(format!(" {name}")) } else { Html::empty() }
+    if on {
+        h(format!(" {name}"))
+    } else {
+        Html::empty()
+    }
 }
 
 /// The part `part` makes, or nothing for `None`.
@@ -51,7 +53,10 @@ mod tests {
     fn text_is_escaped_and_markup_is_kept() {
         assert_eq!("a &#60;b&#62;", t("a <b>").as_str());
         assert_eq!("<b>x</b>", h("<b>x</b>".to_owned()).as_str());
-        assert_eq!(" title=\"&#34;x&#34;\"", attr("title", Some("\"x\"")).as_str());
+        assert_eq!(
+            " title=\"&#34;x&#34;\"",
+            attr("title", Some("\"x\"")).as_str()
+        );
         assert_eq!("", attr("title", None::<&str>).as_str());
         assert_eq!(" open", flag("open", true).as_str());
         assert_eq!("", flag("open", false).as_str());

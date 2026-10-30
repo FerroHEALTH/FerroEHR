@@ -5,10 +5,7 @@
 //! answer the `healthcheck` subcommand, and the CDR and issuer clients trust
 //! a private CA named by `[cdr.tls]` and `[auth.oidc.tls]` beside the
 //! platform's roots, on every platform.
-//!
-//! `ssr`-gated like its siblings: the service exists on the server build only.
 
-#![cfg(not(target_arch = "wasm32"))]
 #![expect(
     clippy::expect_used,
     reason = "every step here is fixture construction: a certificate, a listener, a file; a \
@@ -94,15 +91,10 @@ fn app_state() -> ferroehr_viewer::state::AppState {
 /// readiness so the same probe turns unhealthy.
 #[tokio::test]
 async fn the_healthcheck_asks_the_readiness_of_the_served_viewer() {
-    drop(leptos_axum::generate_route_list(|| ()));
-    let options = leptos::prelude::LeptosOptions::builder()
-        .output_name(env!("CARGO_PKG_NAME"))
-        .build();
     let lifecycle = Lifecycle::default();
     let health = Health::new(Registry::default(), lifecycle.clone());
     let app = ferroehr_viewer::server::app(
         app_state(),
-        options,
         health,
         ferrohealth_telemetry::request_log::RequestLog::new(&[]),
     );
@@ -133,13 +125,8 @@ async fn the_healthcheck_asks_the_readiness_of_the_served_viewer() {
 #[tokio::test]
 async fn an_unknown_address_without_a_session_meets_the_sign_in_through_the_stack() {
     use tower::util::ServiceExt as _;
-    drop(leptos_axum::generate_route_list(|| ()));
-    let options = leptos::prelude::LeptosOptions::builder()
-        .output_name(env!("CARGO_PKG_NAME"))
-        .build();
     let app = ferroehr_viewer::server::app(
         app_state(),
-        options,
         Health::new(Registry::default(), Lifecycle::default()),
         ferrohealth_telemetry::request_log::RequestLog::new(&[]),
     );

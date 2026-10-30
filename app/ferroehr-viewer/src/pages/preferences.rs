@@ -69,22 +69,28 @@ fn reveal_row(back: &str, saved: bool) -> Html {
             (seconds.to_string(), words.into())
         })
         .collect();
-    preference_row(&crate::locale::current(), PreferenceRow {
-        label: tr(ConsoleMsg::RevealLabel).into(),
-        description: tr(ConsoleMsg::RevealDescription).into(),
-        control_id: Some(crate::prefs::REVEAL.to_owned()),
-        control: select_preference(&crate::locale::current(), SelectPreference {
-            name: crate::prefs::REVEAL.to_owned(),
-            choices,
-            current: current.to_string(),
-            post: Post {
-                action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
-                back: back.to_owned(),
-            },
+    preference_row(
+        &crate::locale::current(),
+        PreferenceRow {
+            label: tr(ConsoleMsg::RevealLabel).into(),
+            description: tr(ConsoleMsg::RevealDescription).into(),
+            control_id: Some(crate::prefs::REVEAL.to_owned()),
+            control: select_preference(
+                &crate::locale::current(),
+                SelectPreference {
+                    name: crate::prefs::REVEAL.to_owned(),
+                    choices,
+                    current: current.to_string(),
+                    post: Post {
+                        action: crate::prefs::PREFERENCE_ROUTE.to_owned(),
+                        back: back.to_owned(),
+                    },
+                    saved,
+                },
+            ),
             saved,
-        }),
-        saved,
-    })
+        },
+    )
 }
 
 /// Loads the languages the browser asks for, its `Accept-Language` header.

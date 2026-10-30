@@ -21,8 +21,7 @@ use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::diagnostics::{DiagnosticsWords, FileFindings, Position};
 use ferrohealth_ui::view::editor::{
-    Editor, EditorWords, LineMark, Opened, Panel, editor_diagnostics, editor_panel,
-    editor_split,
+    Editor, EditorWords, LineMark, Opened, Panel, editor_diagnostics, editor_panel, editor_split,
 };
 use ferrohealth_ui::view::identifier::{Identifier, IdentifierWords, Masked, Reveal, identifier};
 use ferrohealth_ui::view::upload::{Sending, Upload, UploadWords, upload_field};

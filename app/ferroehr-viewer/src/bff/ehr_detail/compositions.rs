@@ -14,15 +14,14 @@
 //! component-free [`composition_filter`](super::composition_filter): operator
 //! input is bound as AQL `query_parameters`, never concatenated into the query.
 
-
 use crate::uid::uid_value_of;
 
 use crate::bff::ehr_detail::composition_filter::CompositionFilter;
+use crate::bff::ehr_detail::composition_filter::composition_query;
 use crate::bff::ehrs::ResultPage;
+use crate::bff::ehrs::{aql_request_body, parse_result_set};
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
-use crate::bff::ehr_detail::composition_filter::composition_query;
-use crate::bff::ehrs::{aql_request_body, parse_result_set};
 use crate::locale::Msg;
 use crate::locale::records::RecordsMsg;
 use crate::locale::tr_served;

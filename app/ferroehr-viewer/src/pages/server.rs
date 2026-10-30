@@ -31,12 +31,10 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::tabs::{Tab, binder};
 
 use crate::bff::system::Endpoint;
-use crate::routes::Drawn;
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, current, tr, tr_with};
-use crate::markup::{attr, flag, h, opt, t};
 use crate::management::{
     BuildInfoView, LoggerView, MetricDetailView, MetricTile, ReadinessView, format_metric,
 };
@@ -44,9 +42,11 @@ use crate::management::{
     fetch_build_info, fetch_headline_metrics, fetch_loggers, fetch_metric_detail,
     fetch_metric_names, fetch_readiness, probe_management_api, reset_log_filter, set_log_filter,
 };
+use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
     Refused, count, document_section, drawn, info_note, panel, plain_section, section, state_mark,
 };
+use crate::routes::Drawn;
 
 /// The id of Apply the log filter's confirmation.
 const APPLY_DIALOG: &str = "apply-log-filter";
@@ -156,8 +156,7 @@ fn server_page<T>(tab: ServerTab, tabbed: Tabbed<T>, draw: impl FnOnce(T) -> Htm
         .filter(|each| managed || !each.managed())
         .map(|each| Tab::new(each.key(), each.href(), each.words().0))
         .collect();
-    let content =
-        body.map_or_else(|| info_note(t(tr(ConsoleMsg::ServerNoManagement))), draw);
+    let content = body.map_or_else(|| info_note(t(tr(ConsoleMsg::ServerNoManagement))), draw);
     let heading = page_heading(
         &current(),
         Header {
@@ -231,8 +230,7 @@ struct Overview {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_overview(
-) -> Result<Tabbed<Overview>, ViewerError> {
+async fn load_overview() -> Result<Tabbed<Overview>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_overview().await)
 }
@@ -418,8 +416,7 @@ fn flow_of(status: &str) -> FlowState {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_health(
-) -> Result<Tabbed<Result<ReadinessView, Refused>>, ViewerError> {
+async fn load_health() -> Result<Tabbed<Result<ReadinessView, Refused>>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_health().await)
 }
@@ -500,8 +497,7 @@ struct Metrics {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_metrics(
-) -> Result<Tabbed<Metrics>, ViewerError> {
+async fn load_metrics() -> Result<Tabbed<Metrics>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_metrics().await)
 }
@@ -679,8 +675,7 @@ enum Logging {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_logging(
-) -> Result<Tabbed<Logging>, ViewerError> {
+async fn load_logging() -> Result<Tabbed<Logging>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_logging().await)
 }
@@ -856,8 +851,7 @@ struct Api {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_api(
-) -> Result<Tabbed<Api>, ViewerError> {
+async fn load_api() -> Result<Tabbed<Api>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_api().await)
 }
@@ -1013,8 +1007,7 @@ struct Smart {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_smart(
-) -> Result<Tabbed<Result<Option<Smart>, Refused>>, ViewerError> {
+async fn load_smart() -> Result<Tabbed<Result<Option<Smart>, Refused>>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_smart().await)
 }

@@ -70,7 +70,9 @@ mod tests {
 
     #[test]
     fn only_the_two_session_refusals_end_the_session() {
-        assert!(!ends_session(&ViewerError::CdrUnreachable("down".to_owned())));
+        assert!(!ends_session(&ViewerError::CdrUnreachable(
+            "down".to_owned()
+        )));
         assert!(!ends_session(&ViewerError::Forbidden("nope".to_owned())));
         assert!(!ends_session(&ViewerError::Cdr {
             status: 500,
@@ -78,6 +80,8 @@ mod tests {
         }));
         assert!(!ends_session(&ViewerError::Invalid("bad".to_owned())));
         assert!(ends_session(&ViewerError::Unauthenticated));
-        assert!(ends_session(&ViewerError::CdrUnauthorized("gone".to_owned())));
+        assert!(ends_session(&ViewerError::CdrUnauthorized(
+            "gone".to_owned()
+        )));
     }
 }

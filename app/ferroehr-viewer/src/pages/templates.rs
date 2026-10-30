@@ -27,10 +27,10 @@ use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, Sorting, cell, data_table, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
 use ferrohealth_ui::view::browser::{BrowserPane, Heading, Panes, PathNode, browser, path_node};
 use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::diagnostics::diagnostics;
-use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
 use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::segmented::segmented_links;
@@ -64,9 +64,12 @@ use crate::format::ReprFormat;
 use crate::locale::definitions::DefinitionsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
-use crate::routes::Drawn;
 use crate::pages::common::discarded;
-use crate::pages::common::{EditorDock, ago, card_panel, count, dock_editor, document_section, findings_of, info_note, panel, plain_section, refused, section, when};
+use crate::pages::common::{
+    EditorDock, ago, card_panel, count, dock_editor, document_section, findings_of, info_note,
+    panel, plain_section, refused, section, when,
+};
+use crate::routes::Drawn;
 
 /// The id of Delete template's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-template";
@@ -130,7 +133,10 @@ fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> Html {
                     )
                 }
             };
-            let sub = h(format!(r#"<span class="fui-row-sub">{}</span>"#, t(&row.concept)));
+            let sub = h(format!(
+                r#"<span class="fui-row-sub">{}</span>"#,
+                t(&row.concept)
+            ));
             let confirm = format!(
                 "{href}{}confirm=delete",
                 if href.contains('?') { '&' } else { '?' }
@@ -711,43 +717,43 @@ fn paths_panel(template_id: &str, base: &str, root: &CatalogNode, note: Option<S
         }),
     );
     let detail_pane = match selected.as_deref().and_then(|key| node_at(root, key)) {
-        Some(picked) => path_node(&current(), PathNode {
-            name: picked.label.clone(),
-            path: picked.aql_path.clone(),
-            rm_type: picked.rm_type.clone(),
-            occurrences: String::new(),
-            units: (!picked.unit_options.is_empty())
-                .then(|| t(picked.unit_options.join(", "))),
-            flat_path: None,
-            codes: picked
-                .code_options
-                .iter()
-                .map(|option| {
-                    coding(
-                        &current(),
-                        Coding::new(option.code.clone(), option.label.clone()),
-                        Layout::Inline,
-                    )
-                })
-                .collect(),
-            more: None,
-            query: (root.rm_type == "COMPOSITION")
-                .then(|| query_href(template_id, Some(&picked.aql_path))),
-        }),
+        Some(picked) => path_node(
+            &current(),
+            PathNode {
+                name: picked.label.clone(),
+                path: picked.aql_path.clone(),
+                rm_type: picked.rm_type.clone(),
+                occurrences: String::new(),
+                units: (!picked.unit_options.is_empty()).then(|| t(picked.unit_options.join(", "))),
+                flat_path: None,
+                codes: picked
+                    .code_options
+                    .iter()
+                    .map(|option| {
+                        coding(
+                            &current(),
+                            Coding::new(option.code.clone(), option.label.clone()),
+                            Layout::Inline,
+                        )
+                    })
+                    .collect(),
+                more: None,
+                query: (root.rm_type == "COMPOSITION")
+                    .then(|| query_href(template_id, Some(&picked.aql_path))),
+            },
+        ),
         None => BrowserPane::new(
             tr(DefinitionsMsg::TemplateNode),
             info_note(t(tr(DefinitionsMsg::TemplatePickNode))),
         ),
     };
     panel(
-        browser(Panes::Two, Heading::Three, vec![left, detail_pane]).then(opt(note.map(
-            |note| {
-                plain_section(h(format!(
-                    r#"<p class="fui-small fui-muted">{}</p>"#,
-                    t(note)
-                )))
-            },
-        ))),
+        browser(Panes::Two, Heading::Three, vec![left, detail_pane]).then(opt(note.map(|note| {
+            plain_section(h(format!(
+                r#"<p class="fui-small fui-muted">{}</p>"#,
+                t(note)
+            )))
+        }))),
     )
 }
 
@@ -1112,8 +1118,14 @@ pub async fn page() -> Drawn {
             let mut facts = vec![
                 (tr(DefinitionsMsg::TemplateConcept), t(&meta.concept)),
                 (tr(DefinitionsMsg::TemplateVersion), t(&meta.version)),
-                (tr(DefinitionsMsg::TemplateDefaultLanguage), t(&meta.language)),
-                (tr(DefinitionsMsg::TemplateLanguages), t(meta.languages.join(", "))),
+                (
+                    tr(DefinitionsMsg::TemplateDefaultLanguage),
+                    t(&meta.language),
+                ),
+                (
+                    tr(DefinitionsMsg::TemplateLanguages),
+                    t(meta.languages.join(", ")),
+                ),
                 (
                     tr(DefinitionsMsg::TemplateUid),
                     h(format!("<code>{}</code>", t(&meta.uid))),

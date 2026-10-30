@@ -514,9 +514,7 @@ where
     let EhrModel { acted, head, panel } = model;
     let acted = acted.map(|acted| match acted {
         Acted::Refused(refusal) => refusal.view(),
-        Acted::Mismatch => {
-            crate::pages::common::warn_note(t(tr(RecordsMsg::EhrDeleteMismatch)))
-        }
+        Acted::Mismatch => crate::pages::common::warn_note(t(tr(RecordsMsg::EhrDeleteMismatch))),
     });
     let head = match head {
         Ok(head) => head,
@@ -525,13 +523,7 @@ where
     let header = header(ehr_id, &head);
     let tabs = tabs(ehr_id, &head);
     let body = opt(panel.map(draw));
-    let binder = binder(
-        &current(),
-        tr(RecordsMsg::EhrViews),
-        tabs,
-        tab.key(),
-        body,
-    );
+    let binder = binder(&current(), tr(RecordsMsg::EhrViews), tabs, tab.key(), body);
     header.then(h(format!(
         r#"<div class="fui-stack">{}{binder}</div>"#,
         opt(acted)

@@ -50,8 +50,7 @@ struct Model {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load(
-) -> Result<Model, ViewerError> {
+async fn load() -> Result<Model, ViewerError> {
     crate::session::require_session()?;
     Ok(read_page().await)
 }
@@ -109,7 +108,10 @@ fn about(model: Model) -> Html {
         ),
         (
             tr(ConsoleMsg::AboutOpenEhrRest),
-            t(tr_with(ConsoleMsg::AboutRestVersion, &[("version", rest.into())])),
+            t(tr_with(
+                ConsoleMsg::AboutRestVersion,
+                &[("version", rest.into())],
+            )),
         ),
         (
             tr(ConsoleMsg::AboutFerroUi),
@@ -131,32 +133,35 @@ fn about(model: Model) -> Html {
         copy_id: "manifest-copy".to_owned(),
         download: DOWNLOAD_ROUTE.to_owned(),
     });
-    about_page(&current(), Page {
-        header: Header {
-            title: tr(Msg::NavAbout).into(),
-            subtitle: Some(tr(ConsoleMsg::AboutSubtitle).into()),
-            crumbs: Vec::new(),
-            mono: false,
-            badge: None,
-            subtitle_view: None,
-        },
-        release,
-        versions,
-        manufacturer: Manufacturer {
-            licence: tr(ConsoleMsg::AboutLicence),
-            support: Link {
-                label: support.clone(),
-                href: format!("mailto:{support}"),
+    about_page(
+        &current(),
+        Page {
+            header: Header {
+                title: tr(Msg::NavAbout).into(),
+                subtitle: Some(tr(ConsoleMsg::AboutSubtitle).into()),
+                crumbs: Vec::new(),
+                mono: false,
+                badge: None,
+                subtitle_view: None,
             },
-            documentation: Some(Link {
-                label: tr(ConsoleMsg::AboutBook),
-                href: BOOK.to_owned(),
-            }),
+            release,
+            versions,
+            manufacturer: Manufacturer {
+                licence: tr(ConsoleMsg::AboutLicence),
+                support: Link {
+                    label: support.clone(),
+                    href: format!("mailto:{support}"),
+                },
+                documentation: Some(Link {
+                    label: tr(ConsoleMsg::AboutBook),
+                    href: BOOK.to_owned(),
+                }),
+            },
+            cards,
+            self_description,
+            replica: None,
         },
-        cards,
-        self_description,
-        replica: None,
-    })
+    )
 }
 
 /// About.

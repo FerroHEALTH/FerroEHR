@@ -172,8 +172,7 @@ enum ListModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_list(
-) -> Result<ListModel, ViewerError> {
+async fn load_list() -> Result<ListModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_list().await)
 }
@@ -241,15 +240,33 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> Html {
                     &current(),
                     &Menu::new(
                         format!("subscription-{index}"),
-                        tr_with(Msg::TemplateActionsFor, &[("name", row.name.clone().into())]),
+                        tr_with(
+                            Msg::TemplateActionsFor,
+                            &[("name", row.name.clone().into())],
+                        ),
                         vec![
-                            Item::new(Action::new(Some(Glyph::PENCIL), tr(Msg::PartyEdit), Act::Link(href.clone()))),
                             Item::new(Action::new(
-                                Some(if row.enabled { Glyph::BAN } else { Glyph::CHECK }),
-                                tr(if row.enabled { ConsoleMsg::SubDisable } else { ConsoleMsg::SubEnable }),
+                                Some(Glyph::PENCIL),
+                                tr(Msg::PartyEdit),
+                                Act::Link(href.clone()),
+                            )),
+                            Item::new(Action::new(
+                                Some(if row.enabled {
+                                    Glyph::BAN
+                                } else {
+                                    Glyph::CHECK
+                                }),
+                                tr(if row.enabled {
+                                    ConsoleMsg::SubDisable
+                                } else {
+                                    ConsoleMsg::SubEnable
+                                }),
                                 Act::Post {
                                     action: "/subscriptions".to_owned(),
-                                    fields: vec![("intent".to_owned(), "toggle".to_owned()), ("id".to_owned(), row.id.clone())],
+                                    fields: vec![
+                                        ("intent".to_owned(), "toggle".to_owned()),
+                                        ("id".to_owned(), row.id.clone()),
+                                    ],
                                 },
                             )),
                         ],
@@ -279,19 +296,25 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> Html {
             body: Body::Rows(body),
         })
     };
-    let card = list_card(&current(), ListCard {
-        title: tr(Msg::NavSubscriptions),
-        count: u64::try_from(rows.len())
-            .ok()
-            .map(ferrohealth_ui::view::template::list::HeadingCount::All),
-        order: None,
-        tabs: None,
-        actions: None,
-        body: list,
-        pager: None,
-    });
+    let card = list_card(
+        &current(),
+        ListCard {
+            title: tr(Msg::NavSubscriptions),
+            count: u64::try_from(rows.len())
+                .ok()
+                .map(ferrohealth_ui::view::template::list::HeadingCount::All),
+            order: None,
+            tabs: None,
+            actions: None,
+            body: list,
+            pager: None,
+        },
+    );
     let top = top.map(|refusal| refusal.view());
-    h(format!(r#"<div class="fui-list-page">{}{card}</div>"#, opt(top)))
+    h(format!(
+        r#"<div class="fui-list-page">{}{card}</div>"#,
+        opt(top)
+    ))
 }
 
 /// Subscriptions.
@@ -361,12 +384,7 @@ impl Form {
 
 /// The editor's sections: the name (fixed once created), what it selects,
 /// and its delivery.
-fn form_view(
-    form: &Form,
-    editing: bool,
-    name_error: Option<&str>,
-    templates: &[String],
-) -> Html {
+fn form_view(form: &Form, editing: bool, name_error: Option<&str>, templates: &[String]) -> Html {
     let option = |value: &str, words: &str, selected: bool| {
         h(format!(
             r#"<option value="{}"{}>{}</option>"#,
@@ -499,8 +517,7 @@ enum NewModel {
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
-async fn load_new(
-) -> Result<NewModel, ViewerError> {
+async fn load_new() -> Result<NewModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_new().await)
 }

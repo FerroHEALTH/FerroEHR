@@ -40,7 +40,7 @@ struct Filters {
 }
 
 impl Filters {
-        /// The filters of the request.
+    /// The filters of the request.
     fn read() -> Self {
         Self {
             key: crate::request::query("key").unwrap_or_default(),

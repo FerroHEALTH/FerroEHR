@@ -250,7 +250,7 @@ enum OwnSecret {
 }
 
 impl OwnSecret {
-        /// The secret read from `file` or set as `inline`.
+    /// The secret read from `file` or set as `inline`.
     fn of(file: &str, inline: &str) -> Self {
         if !file.is_empty() {
             Self::File(file.to_owned())
@@ -505,4 +505,3 @@ pub async fn page() -> Drawn {
     });
     Drawn::page(tr(Msg::NavConfiguration), page)
 }
-

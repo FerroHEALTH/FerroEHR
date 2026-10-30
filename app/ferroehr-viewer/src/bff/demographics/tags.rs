@@ -30,7 +30,6 @@
               hydrate target"
 )]
 
-
 use crate::bff::demographics::PartyKind;
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;

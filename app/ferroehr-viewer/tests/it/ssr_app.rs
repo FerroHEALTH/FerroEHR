@@ -3,7 +3,7 @@
 
 //! The viewer through its REAL service, in process: the router the binary
 //! serves, a session made by signing in through the sign-in form, and every
-//! screen drawn whole on the server, as islands mode draws it.
+//! screen drawn whole on the server, as the binary draws it.
 //!
 //! The CDR is a replay of a recording (`tests/fixtures/cdr/recording.json`):
 //! every exchange the viewer made with the FerroEHR of this checkout while it
@@ -17,9 +17,8 @@
 //! What these tests pin is the server half of every page: the heading, the
 //! fields and their names the forms post, the words a reader reads, and the
 //! posts that sign in, sign out, run a query and keep a preference. The
-//! browser journeys (`e2e_*`) drive the same pages with WebAssembly.
+//! browser journeys (`e2e_*`) drive the same pages with FerroUI's modules.
 
-#![cfg(not(target_arch = "wasm32"))]
 #![expect(
     clippy::expect_used,
     reason = "every step here is fixture construction: a loopback listener, the recorded \
@@ -35,7 +34,6 @@
 use std::sync::Arc;
 
 use base64::Engine as _;
-use leptos::prelude::LeptosOptions;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
@@ -255,14 +253,9 @@ impl Viewer {
 
     /// The viewer over a fresh replayed CDR answering `stubs` first.
     async fn start_with(stubs: Vec<Value>) -> Self {
-        // Initializes the reactive executor the way the viewer's own server does.
-        drop(leptos_axum::generate_route_list(|| ()));
         let cdr = replayed_cdr_with(stubs).await;
-        let options = LeptosOptions::builder()
-            .output_name(env!("CARGO_PKG_NAME"))
-            .build();
         Self {
-            service: ferroehr_viewer::server::router(app_state(&cdr), options),
+            service: ferroehr_viewer::server::router(app_state(&cdr)),
         }
     }
 
@@ -500,8 +493,14 @@ async fn the_shell_carries_the_lockup_the_sidebar_the_user_menu_and_the_footer()
         body.contains("<title>Dashboard · FerroEHR Viewer</title>"),
         "{body}"
     );
-    for link in ["/ferrohealth-ui.css", "/theme.css", "/favicon.svg"] {
-        assert!(body.contains(link), "{link} in the head");
+    let assets = ferrohealth_ui::serve::Assets::of(ferrohealth_ui::style::Brand::Ehr);
+    for link in [
+        assets.stylesheet(),
+        assets.theme(),
+        assets.loader(),
+        "/favicon.svg".to_owned(),
+    ] {
+        assert!(body.contains(&link), "{link} in the head");
     }
     // The sidebar names every screen group, in order.
     let mut at = 0;
@@ -629,7 +628,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/about".to_owned(),
-            vec!["ferrohealth-ui 0.5.8", "The conformance manifest"],
+            vec!["ferrohealth-ui 0.6.0", "The conformance manifest"],
         ),
         ("/access".to_owned(), vec!["Signed in as", "ferroehr"]),
         (
@@ -832,12 +831,10 @@ async fn a_run_draws_the_rows_and_the_exports_post_the_query_again() {
     let main = answer.main();
     assert!(main.contains(&id("ehr")), "{main}");
     let csv = main
-        .find(
-            r#"type="submit" formaction="/export/aql/csv" data-ferroui-reloads="" role="menuitem""#,
-        )
+        .find(r#"type="submit" formaction="/export/aql/csv" role="menuitem""#)
         .unwrap_or_else(|| panic!("Export's CSV item submits the run's form: {main}"));
     let json = main
-        .find(r#"type="submit" formaction="/export/aql/json" data-ferroui-reloads="" role="menuitem""#)
+        .find(r#"type="submit" formaction="/export/aql/json" role="menuitem""#)
         .unwrap_or_else(|| panic!("Export's JSON item submits the run's form: {main}"));
     assert!(csv < json, "Export lists CSV before JSON: {main}");
     assert!(
@@ -1090,15 +1087,15 @@ async fn a_composition_template_node_offers_a_query_on_its_path() {
     assert_eq!(node.status, http::StatusCode::OK, "{}", node.body);
     assert!(
         node.main()
-            .contains("/query?template=minimal_evaluation.en.v1&amp;path="),
+            .contains("/query?template=minimal_evaluation.en.v1&#38;path="),
         "{}",
         node.main()
     );
 }
 
-/// The server reads a page's model once: the page is drawn outside the route
-/// group's view closure, which the server's render runs once per pass, so the
-/// browser hydrates over the one model the page was drawn from.
+/// The server reads and draws a page's model once: the page arrives as one
+/// document with one heading, and carries no serialized model for a script
+/// to draw it again.
 #[tokio::test]
 async fn the_server_reads_a_page_model_once() {
     let viewer = Viewer::start().await;
@@ -1106,13 +1103,19 @@ async fn the_server_reads_a_page_model_once() {
     for path in ["/templates", "/audit", "/query/aql", "/ehrs"] {
         let page = viewer.page(&cookie, path).await;
         assert_eq!(page.status, http::StatusCode::OK, "{path}: {}", page.body);
-        let models = page
-            .body
-            .split("__RESOLVED_RESOURCES[")
-            .skip(1)
-            .filter_map(|entry| entry.split_once("] = ").map(|(_, rest)| rest))
-            .filter(|rest| rest.starts_with("\"{\\\"Ok\\\""))
-            .count();
-        assert_eq!(models, 1, "{path} serializes its model once");
+        assert_eq!(
+            1,
+            page.main().matches("<h1").count(),
+            "{path} draws its page once"
+        );
+        assert!(
+            !page.body.contains("__RESOLVED_RESOURCES"),
+            "{path} serializes no model"
+        );
+        assert_eq!(
+            1,
+            page.body.matches("<script").count(),
+            "{path} loads FerroUI's loader alone"
+        );
     }
 }
