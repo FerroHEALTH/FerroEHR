@@ -69,6 +69,7 @@ use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use http::{HeaderMap, HeaderValue, StatusCode, header};
 
+use openehr_its::json::JsonParseError;
 use openehr_its::rest::runtime::ApiError;
 use openehr_its::xml::runtime::{FromXml, Namespace, ToXml};
 use serde::Serialize;
@@ -601,17 +602,16 @@ pub(crate) fn text_body(body: &Bytes) -> Result<String, ApiError> {
 /// `openehr_its::json::from_canonical_json`, whose emitted `Deserialize` impls
 /// ARE the strict canonical reader: an undeclared key, a repeated key, an
 /// absent mandatory attribute, a present-but-wrong `_type`, an empty `1..*`
-/// list and a malformed identifier are all refused there, path-named. That is
-/// the PARSE class, so every one of them answers **400**: ITS-REST overview
-/// `Requests_and_responses.md` §HTTP status codes assigns 400 to a request
-/// whose content "could not be parsed or is invalid" and reserves 422 for a
-/// body that is "well-formed but was unable to be followed due to semantic
-/// errors" — a structurally impossible RM instance never becomes an RM value
-/// at all, so it cannot reach the semantic pass.
+/// list and a malformed identifier are all refused there, path-named. A
+/// refused body the published ITS-JSON schema refuses too could not be parsed
+/// (**400**, ITS-REST `responses/400.yaml`); one the schema admits parses and
+/// breaks an RM rule, such as a mandatory member ITS-JSON leaves optional
+/// (**422**, `responses/422.yaml`, [`ferroehr::service::error::its_json_admits`]).
 ///
 /// # Errors
 /// [`ApiError::BadRequest`] if the body cannot be parsed in the declared
-/// format; [`ApiError::UnsupportedMediaType`] for any `Content-Type` other than
+/// format; [`ApiError::Unprocessable`] for canonical JSON the ITS-JSON schema
+/// admits and the RM refuses; [`ApiError::UnsupportedMediaType`] for any `Content-Type` other than
 /// canonical JSON or XML (a Simplified-Formats or unknown type on a canonical
 /// RM endpoint, Resources.md §Simplified Formats MUST), and for canonical XML
 /// declared in an unrecognized ITS-XML lineage (see
@@ -625,7 +625,7 @@ where
             let json = std::str::from_utf8(body)
                 .map_err(|e| ApiError::BadRequest(format!("body is not UTF-8: {e}")))?;
             openehr_its::json::from_canonical_json::<T>(json)
-                .map_err(|e| ApiError::BadRequest(format!("invalid canonical JSON body: {e}")))
+                .map_err(|e| canonical_json_refusal(json, &e))
         }
         Some(WireFormat::CanonicalXml) => {
             require_known_xml_lineage(headers)?;
@@ -637,6 +637,18 @@ where
             "this operation accepts application/json or application/xml only, got {}",
             header_str(headers, header::CONTENT_TYPE).unwrap_or("<none>")
         ))),
+    }
+}
+
+/// The refusal of a canonical-JSON body the strict typed reader could not
+/// decode: `422` when it parses and the ITS-JSON schema admits it, else `400`.
+pub(crate) fn canonical_json_refusal(json: &str, error: &JsonParseError) -> ApiError {
+    let admitted = serde_json::from_str::<serde_json::Value>(json)
+        .is_ok_and(|value| ferroehr::service::error::its_json_admits(&value));
+    if admitted {
+        ApiError::Unprocessable(format!("content does not satisfy the RM: {error}"))
+    } else {
+        ApiError::BadRequest(format!("invalid canonical JSON body: {error}"))
     }
 }
 

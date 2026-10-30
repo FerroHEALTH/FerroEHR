@@ -401,6 +401,70 @@ async fn bare_type_composition_stub_is_400() {
     );
 }
 
+/// A data value that lacks a member the RM makes mandatory and the published
+/// ITS-JSON schema leaves optional parses as canonical JSON, so its refusal is
+/// a `422` naming the member (ITS-REST `Resources.md` §JSON Format names the
+/// ITS-JSON schemas; `responses/422.yaml`: "could be converted to a resource,
+/// but there are semantic validation errors"). ITS-JSON `DV_URI.json` has
+/// `"required": []`, and `DV_INTERVAL.json` types `lower` as a bare object.
+#[tokio::test]
+async fn a_data_value_missing_an_rm_mandatory_member_is_422() {
+    let values = [
+        ("DV_URI without value", json!({ "_type": "DV_URI" })),
+        ("DV_EHR_URI without value", json!({ "_type": "DV_EHR_URI" })),
+        (
+            "DV_INTERVAL<DV_ORDINAL> lower without symbol",
+            json!({
+                "_type": "DV_INTERVAL",
+                "lower": { "_type": "DV_ORDINAL", "value": 1 },
+                "lower_unbounded": false,
+                "upper_unbounded": true,
+                "lower_included": true,
+                "upper_included": false
+            }),
+        ),
+    ];
+    let (_pg, app) = app(true).await;
+    for (label, value) in values {
+        let mut composition: serde_json::Value =
+            serde_json::from_str(&minimal_composition_json()).expect("composition");
+        composition["content"] = json!([{
+            "_type": "ADMIN_ENTRY",
+            "name": { "_type": "DV_TEXT", "value": "Admin" },
+            "archetype_node_id": "openEHR-EHR-ADMIN_ENTRY.admin.v1",
+            "language": composition["language"].clone(),
+            "encoding": { "_type": "CODE_PHRASE",
+                          "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "IANA_character-sets" },
+                          "code_string": "UTF-8" },
+            "subject": { "_type": "PARTY_SELF" },
+            "data": {
+                "_type": "ITEM_TREE",
+                "name": { "_type": "DV_TEXT", "value": "Tree" },
+                "archetype_node_id": "at0001",
+                "items": [{
+                    "_type": "ELEMENT",
+                    "name": { "_type": "DV_TEXT", "value": "Value" },
+                    "archetype_node_id": "at0002",
+                    "value": value
+                }]
+            }
+        }]);
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("{BASE}/ehr/{EHR}/composition"))
+            .header(header::AUTHORIZATION, basic("alice", "pw"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(composition.to_string()))
+            .unwrap();
+        let (status, _h, body) = send(app.clone(), req).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{label}: {body}");
+        assert!(
+            body.contains("missing field"),
+            "{label} names the member: {body}"
+        );
+    }
+}
+
 /// A minimal COMPOSITION that satisfies every mandatory attribute of the RM
 /// class, as canonical JSON (the wire form a client posts).
 fn minimal_composition_json() -> String {

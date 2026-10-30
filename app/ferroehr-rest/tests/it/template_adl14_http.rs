@@ -312,6 +312,19 @@ async fn opt_upload_malformed_xml_is_400() {
     );
 }
 
+/// A document cut off inside an open element is not well-formed XML, so the
+/// upload is the released `400` branch (`responses/400.yaml`), never `422`.
+#[tokio::test]
+async fn opt_upload_truncated_xml_is_400() {
+    let (_pg, app) = empty_app().await;
+    let (status, body) = upload_body(
+        &app,
+        r#"<template xmlns="http://schemas.openehr.org/v1"><template_id><value>vdef"#,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+}
+
 #[tokio::test]
 async fn opt_upload_empty_body_is_400() {
     let (_pg, app) = empty_app().await;

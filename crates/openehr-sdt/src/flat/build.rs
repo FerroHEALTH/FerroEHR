@@ -371,8 +371,8 @@ fn merge_root_ctx_spellings(ctx_node: Option<&SimNode>, data_root: &SimNode) -> 
 /// suffix spelling of the same attribute has not already set it.
 ///
 /// # Errors
-/// [`FlatError::InvalidRaw`] for a `|raw` value without `_type`, one whose
-/// `_type` is not the attribute's RM type (`CODE_PHRASE`, or a `PARTY_PROXY`
+/// [`FlatError::RawWithoutType`] for a `|raw` value without `_type`;
+/// [`FlatError::InvalidRaw`] for one whose `_type` is not the attribute's RM type (`CODE_PHRASE`, or a `PARTY_PROXY`
 /// subtype for `composer`; RM ehr §COMPOSITION), or one beside other content.
 fn apply_root_raw(
     defaults: &mut ctx::CtxDefaults,
@@ -422,9 +422,8 @@ fn has_explicit_event_context(ctx_node: Option<&SimNode>) -> bool {
 /// (`master04 §Raw canonical JSON`).
 fn build_raw(raw: &Value, path: &str) -> Result<Value, FlatError> {
     if raw.get("_type").and_then(Value::as_str).is_none() {
-        return Err(FlatError::InvalidRaw {
+        return Err(FlatError::RawWithoutType {
             path: path.to_owned(),
-            reason: "the |raw value must be a canonical-JSON object with _type".to_owned(),
         });
     }
     Ok(raw.clone())
@@ -1094,7 +1093,8 @@ fn place_direct_rm_path(
 /// # Errors
 /// [`FlatError::MissingRequiredSuffix`] naming the first absent suffix,
 /// [`FlatError::UnknownSuffix`] for any other suffix, and
-/// [`FlatError::InvalidRaw`] for a `|raw` value that is no lone `PARTY_REF`.
+/// [`FlatError::RawWithoutType`] or [`FlatError::InvalidRaw`] for a `|raw`
+/// value that is no lone `PARTY_REF`.
 fn build_party_ref(node: &SimNode, path: &str) -> Result<Value, FlatError> {
     if let Some(raw) = map::raw_value(node, path, &["PARTY_REF"]) {
         return raw;

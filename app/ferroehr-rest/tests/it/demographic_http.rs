@@ -1123,6 +1123,88 @@ async fn stale_delete_conflict_echoes_latest_version_etag() {
     );
 }
 
+/// A CONTRIBUTION body holding one creation member of `data`.
+fn contribution_of(data: &Value) -> Value {
+    let creation = json!({
+        "_type": "DV_CODED_TEXT",
+        "value": "creation",
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+            "code_string": "249" }
+    });
+    json!({
+        "versions": [{
+            "data": data,
+            "lifecycle_state": {
+                "_type": "DV_CODED_TEXT",
+                "value": "complete",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "532" }
+            },
+            "commit_audit": {
+                "change_type": creation,
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "committer" }
+            }
+        }],
+        "audit": {
+            "change_type": creation,
+            "committer": { "_type": "PARTY_IDENTIFIED", "name": "committer" }
+        }
+    })
+}
+
+/// A CONTRIBUTION member outside the operation's `UVersionable` set fails the
+/// request schema, so it is a `400` in both directions: ITS-REST
+/// `schemas/ehr/UVersionable.yaml` (`oneOf` COMPOSITION, `EHR_STATUS`, FOLDER)
+/// and `schemas/demographic/UVersionable.yaml` (the five PARTY kinds), with
+/// `responses/400_CONTRIBUTION.yaml` for an invalid content.
+#[tokio::test]
+async fn a_contribution_member_of_the_wrong_kind_is_400() {
+    let (_pg, app) = app().await;
+    let folder = json!({
+        "_type": "FOLDER",
+        "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "name": { "_type": "DV_TEXT", "value": "root" }
+    });
+    let post = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/demographic/contribution"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(contribution_of(&folder).to_string()))
+        .unwrap();
+    let (status, _h, body) = send(&app, post).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "FOLDER in a demographic CONTRIBUTION: {body}"
+    );
+
+    let post = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr"))
+        .body(Body::empty())
+        .unwrap();
+    let (status, h, body) = send(&app, post).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let ehr_id = location(&h)
+        .and_then(|l| l.rsplit('/').next())
+        .expect("EHR location")
+        .to_owned();
+    let post = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{ehr_id}/contribution"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(contribution_of(&person_body()).to_string()))
+        .unwrap();
+    let (status, _h, body) = send(&app, post).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "PERSON in an EHR CONTRIBUTION: {body}"
+    );
+}
+
 /// The demographic CONTRIBUTION read carries the weak `ETag` (the contribution
 /// uid — the same identity the 201's `ETag` carries) and `Last-Modified` from
 /// `audit.time_committed`, mirroring the EHR sibling's adjudicated

@@ -84,9 +84,9 @@ fn validate_party_ref(reference: &Value, context: &str) -> Result<(), ServiceErr
 /// the commit.
 ///
 /// # Errors
-/// [`ServiceError::BadRequest`] when the strict reader refuses the body;
-/// [`ServiceError::Unprocessable`] when it violates an enforceable
-/// PARTY/ACTOR/ROLE invariant.
+/// [`ServiceError::BadRequest`] when the strict reader refuses a body the
+/// ITS-JSON schema also refuses; [`ServiceError::Unprocessable`] when the
+/// schema admits it, or it violates an enforceable PARTY/ACTOR/ROLE invariant.
 pub(crate) fn party_check(
     rm_type: &str,
     data: &Value,
@@ -113,12 +113,7 @@ pub(crate) fn party_check(
     // — the generated party types make mandatory attributes structural, and RM
     // common master06 §Incomplete Content lifts precisely those bounds.
     if !incomplete {
-        // NOTE: the released `responses/422.yaml` scopes 422 to content that
-        // "could be converted to a resource" — a body the strict reader
-        // refuses is the 400 row, as on every direct commit route.
-        typed.map_err(|e| {
-            ServiceError::bad_request(format!("invalid canonical JSON body: {e}"), e)
-        })?;
+        typed.map_err(|e| ServiceError::canonical_decode(data, e))?;
     }
     party_invariants(rm_type, data, incomplete, None)
 }
@@ -234,15 +229,7 @@ pub(crate) fn relationship_check(data: &Value, incomplete: bool) -> Result<(), S
     let typed = match decoded {
         Ok(typed) => Some(typed),
         Err(_) if incomplete => None,
-        // NOTE: the released `responses/422.yaml` scopes 422 to content that
-        // "could be converted to a resource" — a body the strict reader
-        // refuses is the 400 row, as on every direct commit route.
-        Err(e) => {
-            return Err(ServiceError::bad_request(
-                format!("invalid canonical JSON body: {e}"),
-                e,
-            ));
-        }
+        Err(e) => return Err(ServiceError::canonical_decode(data, e)),
     };
     for (field, reference) in typed
         .iter()

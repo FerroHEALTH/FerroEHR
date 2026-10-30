@@ -377,3 +377,15 @@ fn preview_str(s: &str) -> String {
         None => s.to_string(),
     }
 }
+
+/// `validate_canonical_class` judges a class the published root does not
+/// list (a FOLDER needs its `name`) and admits what the class leaves optional
+/// (ITS-JSON `DV_URI.json` has `"required": []`); an unknown `_type` fails.
+#[test]
+fn validate_canonical_class_judges_every_class() {
+    use openehr_its::json::validate_canonical_class;
+    let nameless = serde_json::json!({ "_type": "FOLDER", "archetype_node_id": "at0001" });
+    assert!(validate_canonical_class(&nameless).is_err());
+    assert!(validate_canonical_class(&serde_json::json!({ "_type": "DV_URI" })).is_ok());
+    assert!(validate_canonical_class(&serde_json::json!({ "_type": "NOT_A_CLASS" })).is_err());
+}

@@ -320,7 +320,7 @@ archetype constraints exactly as an ADL 1.4 commit is.
 > [!NOTE]
 > The FLAT and STRUCTURED formats are always relative to a template: the paths
 > are template paths, and the target template comes from the
-> `openehr-template-id` request header, without which a commit is a **422**. Use
+> `openehr-template-id` request header, without which a commit is a **400**. Use
 > them for form-driven capture; use canonical JSON/XML for full-fidelity
 > exchange and archival.
 
