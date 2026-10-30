@@ -1574,8 +1574,9 @@ fn limit_without_order_by_streams() {
     // syntactic (an OFFSET clause of any value), so the fence holds.
     assert_eq!(
         sql.matches("OFFSET $").count(),
-        2,
-        "every lateral carries the pull-up fence: {sql}"
+        2 + sql.matches("LATERAL((").count(),
+        "every lateral carries the pull-up fence, the predicate probe's step \
+         bindings included: {sql}"
     );
     // The multi-valued-path predicate stays a CORRELATED probe: the EXISTS
     // lives inside a lateral (never a bare WHERE sublink the planner could
@@ -2089,7 +2090,7 @@ fn sibling_leaves_share_their_bound_prefix() {
          FROM EHR e CONTAINS COMPOSITION CONTAINS OBSERVATION obs[openEHR-EHR-OBSERVATION.blood_pressure.v1]",
     );
     assert_eq!(
-        sql.matches("unnest(ARRAY(").count(),
+        sql.matches("LATERAL((").count(),
         5,
         "three shared step bindings plus one per leaf: {sql}"
     );
@@ -2129,7 +2130,7 @@ fn where_reads_through_the_projected_binding() {
          WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 140",
     );
     assert_eq!(anchor_exists(&sql), 0, "no existential walk remains: {sql}");
-    assert_eq!(sql.matches("unnest(ARRAY(").count(), 4, "{sql}");
+    assert_eq!(sql.matches("LATERAL((").count(), 4, "{sql}");
 }
 
 /// QUERY master03 §Containment: the left operand is the PARENT of the right,
@@ -2185,7 +2186,7 @@ fn or_branch_variables_are_readable() {
          CONTAINS (OBSERVATION o OR EVALUATION ev)",
     );
     assert_eq!(
-        sql.matches("unnest(ARRAY(").count(),
+        sql.matches("LATERAL((").count(),
         2,
         "one left binding per read branch: {sql}"
     );
@@ -2199,7 +2200,7 @@ fn unread_or_branches_stay_filters() {
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
          CONTAINS (OBSERVATION o OR EVALUATION ev)",
     );
-    assert!(!sql.contains("unnest("), "no binding: {sql}");
+    assert!(!sql.contains("LATERAL(("), "no binding: {sql}");
 }
 
 /// A variable declared under NOT CONTAINS names an object no row holds
@@ -2256,7 +2257,7 @@ const OR_COMPOSITIONS: &str = "SELECT c1/uid/value, c2/uid/value FROM EHR e CONT
 fn or_branch_versioned_objects_are_readable() {
     let sql = build_sql(OR_COMPOSITIONS);
     assert_eq!(
-        sql.matches("unnest(ARRAY(").count(),
+        sql.matches("LATERAL((").count(),
         4,
         "a node and a version binding per read branch: {sql}"
     );
@@ -2306,7 +2307,7 @@ fn a_variable_under_an_or_branch_versioned_object_is_readable() {
          ((COMPOSITION c1 CONTAINS OBSERVATION o) OR COMPOSITION c2)",
     );
     assert_eq!(
-        sql.matches("unnest(ARRAY(").count(),
+        sql.matches("LATERAL((").count(),
         3,
         "c1's node and version, then o under c1: {sql}"
     );
@@ -2319,7 +2320,7 @@ fn a_folder_referenced_or_branch_is_readable() {
     let sql =
         build_sql("SELECT c1/uid/value FROM FOLDER f CONTAINS (COMPOSITION c1 OR COMPOSITION c2)");
     assert_eq!(
-        sql.matches("unnest(ARRAY(").count(),
+        sql.matches("LATERAL((").count(),
         2,
         "the read branch's node and version: {sql}"
     );
@@ -2552,7 +2553,7 @@ fn or_branch_bindings_are_logged_as_served_roots() {
 fn a_limited_or_branch_read_keeps_the_flat_shape() {
     let sql = prepare(OR_COMPOSITIONS, Vec::new(), None, Some(10)).sql;
     assert!(!sql.contains("JOIN LATERAL"), "{sql}");
-    assert_eq!(sql.matches("unnest(ARRAY(").count(), 4, "{sql}");
+    assert_eq!(sql.matches("LATERAL((").count(), 4, "{sql}");
 }
 
 /// QUERY master03 §Aggregate functions: an aggregate's inputs are the data
@@ -2566,7 +2567,7 @@ fn aggregate_arguments_add_no_row_binding() {
                 MAX(o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude) \
          FROM EHR e CONTAINS OBSERVATION o",
     );
-    assert!(!sql.contains("unnest("), "no row binding: {sql}");
+    assert!(!sql.contains("LATERAL(("), "no row binding: {sql}");
     assert_eq!(
         sql.matches("MAX(").count(),
         2,
@@ -2583,7 +2584,7 @@ fn different_repeated_attributes_bind_independently() {
          FROM EHR e CONTAINS OBSERVATION o",
     );
     assert_eq!(
-        sql.matches("unnest(ARRAY(").count(),
+        sql.matches("LATERAL((").count(),
         4,
         "data and events, then protocol and items: {sql}"
     );
@@ -2623,7 +2624,7 @@ fn where_binds_each_step_once_for_the_whole_clause() {
         ));
         assert_eq!(anchor_exists(&sql), 1, "one assignment EXISTS: {sql}");
         assert_eq!(
-            sql.matches("unnest(ARRAY(").count(),
+            sql.matches("LATERAL((").count(),
             5,
             "three shared step bindings plus one per items step: {sql}"
         );
@@ -2639,7 +2640,7 @@ fn differently_predicated_steps_are_not_shared() {
          WHERE o/data[at0001]/events/data[at0003]/items[at0004]/value/magnitude >= 140 \
            AND o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude >= 90",
     );
-    assert_eq!(sql.matches("unnest(ARRAY(").count(), 7, "{sql}");
+    assert_eq!(sql.matches("LATERAL((").count(), 7, "{sql}");
 }
 
 /// An aggregate's items are filtered by the WHERE clause with the steps they
@@ -2680,7 +2681,7 @@ fn exists_is_path_level() {
            AND o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140",
     );
     assert_eq!(
-        sql.matches("unnest(ARRAY(").count(),
+        sql.matches("LATERAL((").count(),
         4,
         "the EXISTS path binds nothing: {sql}"
     );

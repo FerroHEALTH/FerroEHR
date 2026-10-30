@@ -1098,7 +1098,8 @@ fn sibling_leaves_aql(leaves: usize, ordered: bool) -> String {
 
 /// The FROM shape `aql` lowers to for a population query, read off the SQL
 /// the generator emits: `streaming` binds each structure step with
-/// `LEFT JOIN LATERAL`, `flat` with an `unnest(ARRAY(...))` probe (#3733).
+/// `LEFT JOIN LATERAL`, `flat` with a comma-listed `LATERAL` subquery probe
+/// (#3733, #4431).
 fn from_shape(aql: &str) -> &'static str {
     let ast = openehr_query::parser::parse_str(aql).expect("the path AQL parses");
     let params = Params::new();
