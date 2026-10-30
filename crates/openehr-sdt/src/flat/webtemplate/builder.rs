@@ -1100,22 +1100,25 @@ fn closed_attribute(
     }) {
         return None;
     }
-    let (allowed_ids, slots) = admissible_children(attr);
-    if allowed_ids.is_empty() && slots.is_empty() {
+    let (allowed, slots) = admissible_children(attr);
+    if allowed.is_empty() && slots.is_empty() {
         return None;
     }
+    let (allowed_ids, allowed_rm_types) = allowed.into_iter().unzip();
     Some(WebTemplateClosedAttribute {
         path: format!("{node_path}/{attr_name}"),
         allowed_ids,
+        allowed_rm_types,
         slots,
     })
 }
 
-/// The archetype node ids and slots one attribute admits as children.
+/// The `(archetype node id, rm_type_name)` alternatives and the slots one
+/// attribute admits as children.
 fn admissible_children(
     attr: &openehr_its::opt14::types::CAttribute,
-) -> (Vec<String>, Vec<WebTemplateArchetypeSlot>) {
-    let mut allowed_ids: Vec<String> = Vec::new();
+) -> (Vec<(String, String)>, Vec<WebTemplateArchetypeSlot>) {
+    let mut allowed: Vec<(String, String)> = Vec::new();
     let mut slots: Vec<WebTemplateArchetypeSlot> = Vec::new();
     for child in inputs::attribute_children(attr) {
         if let CObject::ArchetypeSlot(s) = child {
@@ -1124,10 +1127,10 @@ fn admissible_children(
         }
         let id = object_archetype_node_id(child);
         if !id.is_empty() {
-            allowed_ids.push(id);
+            allowed.push((id, object_rm_type(child).to_owned()));
         }
     }
-    (allowed_ids, slots)
+    (allowed, slots)
 }
 
 // ── structural stubs (constrained-but-content-less structural attrs) ─────────
