@@ -135,7 +135,7 @@ async fn composition_viewer_switches_formats_and_versions() {
 }
 
 /// The document is highlighted (FerroUI's token spans, the text unchanged),
-/// the hydrated Copy button appears, and Reading shows the clinical reading as
+/// the Copy button appears with the scripts, and Reading shows the clinical reading as
 /// label and value rows.
 #[tokio::test]
 async fn composition_viewer_highlights_and_renders_the_document() {

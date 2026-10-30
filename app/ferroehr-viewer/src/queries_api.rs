@@ -12,11 +12,10 @@
 //! (`crate::query_namespace`), so it lives in the CDR and reads identically
 //! for every API client.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use serde::{Deserialize, Serialize};
@@ -276,8 +275,7 @@ pub async fn store_query(
 /// The two ITS-REST stored-query execution operations are addressed by whether a
 /// `version` is supplied — which is the spec's version-resolution contract, not a
 /// viewer convention. `version` is the path segment to send, EMPTY meaning "send
-/// none" (a plain `String` rather than an `Option` so nothing about the request
-/// depends on how an optional field survives the server-fn encoding):
+/// none" (a plain `String`, as the posted form carries it):
 ///
 /// - `version` empty → `POST query/{qualified_query_name}` — "when `version` is
 ///   not supplied at all, the system must use the latest `version`".

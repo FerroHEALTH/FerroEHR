@@ -112,8 +112,7 @@ pub struct TerminologyExtractView {
     pub terminology_id: String,
     /// `terminology_version` — empty when the CDR published none.
     pub version: String,
-    /// The extract's terms, code-sorted so both render passes agree
-    /// (hydration determinism).
+    /// The extract's terms, code-sorted so every draw agrees.
     pub terms: Vec<TermRow>,
     /// The extract's relationships, in the order the CDR listed them.
     pub relationships: Vec<TermRelationshipRow>,
@@ -231,8 +230,8 @@ fn string_list(value: Option<&serde_json::Value>) -> Vec<String> {
 /// `404` to `Ok(None)` — the extension being off, and the addressed
 /// terminology/code/value set not existing, are all that one status.
 ///
-/// Guards the viewer session first: the server fns below are publicly
-/// reachable endpoints, and this is the one place their CDR call is made.
+/// Guards the viewer session first: the pages reading through the reads
+/// below are publicly reachable endpoints, and this is the one place their CDR call is made.
 async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, ViewerError> {
     let session = crate::session::require_session()?;
     let state = crate::scope::state()?;

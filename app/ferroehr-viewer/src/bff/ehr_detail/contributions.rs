@@ -4,11 +4,10 @@
 //! The EHR-detail Contributions tab: the per-EHR activity timeline, the paged
 //! contribution list, and the by-uid CONTRIBUTION lookup box.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use serde::{Deserialize, Serialize};
@@ -45,8 +44,7 @@ pub struct ContributionRow {
 }
 
 /// One page of an EHR's contributions: the rows plus the total count (for
-/// prev/next). Carries only fixed-size ints so it is WASM-safe over the
-/// server-fn boundary.
+/// prev/next).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContributionPage {
     /// The contribution rows on this page.

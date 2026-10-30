@@ -142,7 +142,7 @@ upstream release, collected under an on-demand `upstream:<comp>-<ver>` label
 labels** (CI escape hatches, on PRs not issues): `no-changelog`
 (changelog-guard; genuinely invisible changes only), `no-ui-visual-change`
 (ui-screenshot-guard; viewer source change with zero visual effect — see
-`.claude/rules/leptos-ui.md` §10), `no-crate-bump` (crate-version-guard; a
+`.claude/rules/console-ui.md` §5), `no-crate-bump` (crate-version-guard; a
 `crates/*` diff that provably does not alter packaged bytes — see
 `.claude/rules/crates-publishing.md`), and `no-conformance-run`
 (veredictum-pin-guard; a `VEREDICTUM_VERSION` bump whose acceptance run is

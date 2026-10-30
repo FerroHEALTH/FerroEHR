@@ -4,8 +4,7 @@
 //! Namespace-derived stored-query grouping: the pure rules the `/queries`
 //! screen, the dashboard tiles, and both save flows share.
 //!
-//! Component-free plain Rust with ordinary unit tests, compiled for both
-//! the `ssr` and `hydrate` targets.
+//! Component-free plain Rust with ordinary unit tests.
 //!
 //! A stored query's group **is** the namespace of its qualified name. ITS-REST
 //! defines the stored-query identifier as `[{namespace}::]{query-name}`, with

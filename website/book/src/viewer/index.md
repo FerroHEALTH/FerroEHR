@@ -4,9 +4,10 @@
 ITS-REST-1.1.0 CDR, this server or any other. It is a **pure REST client**:
 everything it does goes through the CDR's public API (never the database),
 so what you see in the viewer is exactly what the API serves. The whole
-application is Rust (Leptos, drawn on the server and hydrated in the browser,
-which then draws each page after the first itself) on FerroUI, the component library the FerroHEALTH consoles share; there is no
-hand-written JavaScript anywhere, including its browser tests.
+application is Rust, drawn on the server as plain HTML with FerroUI, the
+component library the FerroHEALTH consoles share; the only scripts are
+FerroUI's own small modules, and there is no hand-written JavaScript
+anywhere, including its browser tests.
 
 <!-- toc -->
 
@@ -204,14 +205,15 @@ family's health routes: `/health/liveness`, `/health/readiness` and `/health`.
 
 ### Browser security headers
 
-Every response carries a Content-Security-Policy whose script source is a
-nonce minted for that response alone, with `'wasm-unsafe-eval'` for the
-WebAssembly and neither `'unsafe-inline'` nor `'unsafe-eval'`, beside
-`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+Every response carries a Content-Security-Policy that admits scripts and
+styles from the viewer's own origin alone (`script-src 'self'; style-src
+'self'`), with no nonce and neither `'unsafe-inline'` nor `'unsafe-eval'`,
+beside `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 `Referrer-Policy: no-referrer` and `Cross-Origin-Opener-Policy: same-origin`.
-Every document is `Cache-Control: no-store`; the content-hashed bundle under
-`/pkg/` is `no-cache`, so a browser revalidates it. A request that is not a
-safe method (a form post, a server function call) is refused `403` unless the
+Every document is `Cache-Control: no-store`; FerroUI's stylesheet, theme and
+scripts under `/ferrohealth-ui/<version>/` are `no-cache`, so a browser
+revalidates them. A request that is not a
+safe method (a form post, the search panel's answer) is refused `403` unless the
 browser's `Sec-Fetch-Site` says it came from the viewer's own pages; without
 that header its `Origin` or `Referer` must name `auth.oidc.public_base_url`.
 
@@ -231,11 +233,12 @@ it in readable form.
 
 The viewer draws every page on its server and sends it complete. Every link
 is a link and every action is a form that posts to the page it sits on, so
-the whole viewer works with JavaScript off. The browser then loads a small
-WebAssembly bundle that adds behaviour to a few parts of a page (the code
-editor, the path trees, the chart legend, the date pickers, the user menu's
-keyboard handling, the subject reveal and Copy buttons); nothing on a page
-waits for it. There is no hand-written JavaScript.
+the whole viewer works with JavaScript off. The browser then loads FerroUI's
+small script modules, which add behaviour to a few parts of a page (the code
+editor, the path trees, the chart legend, the date pickers, the search
+panel's suggestions, the user menu's keyboard handling, the subject reveal
+and Copy buttons); nothing on a page waits for them. There is no
+hand-written JavaScript.
 
 An editor (a new EHR, a composition, the EHR status, the directory, a party, a
 subscription, a template upload) ends in a bar docked at the foot of the page:

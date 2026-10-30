@@ -96,10 +96,10 @@ async fn template_upload_lists_and_inspects_path_catalog() {
         .await;
     h.wait_css("ul.fui-tree[role='tree'] li[role='treeitem']")
         .await;
-    h.wait_hydrated().await;
-    // The tree hydrates with the page and its lazy group:
-    // its toggles are disabled in the server's HTML and come alive with it,
-    // and a collapsed branch then opens on a click.
+    h.wait_scripts().await;
+    // The tree's toggles are disabled in the server's HTML and come alive
+    // with FerroUI's tree module, and a collapsed branch then opens on a
+    // click.
     let toggle = h
         .wait_css("li[aria-expanded='false'] button.fui-tree-toggle:not([disabled])")
         .await;
@@ -149,7 +149,7 @@ async fn query_builder_generates_and_runs_aql() {
     h.shot(1, "builder-template-picked").await;
 
     // A condition on the composition's start time. Add a condition posts the
-    // form before the page hydrates and adds the row in place after.
+    // form, and the server answers with the row added.
     h.wait_css("button[name='add-condition'][value='g']")
         .await
         .click()

@@ -915,8 +915,8 @@ fn run(name: &str, version: &str, found: Run) -> Html {
         .iter()
         .map(|each| (each.as_str(), tr(each.label())))
         .collect();
-    // NOTE: leptos-ui.md §15.8: the version field shows whatever the choice, so a page with no
-    // WebAssembly can pick Prefix or Exact and type the version in one post.
+    // NOTE: FerroUI console-ui.md §1: the version field shows whatever the choice, so a page
+    // with no script can pick Prefix or Exact and type the version in one post.
     let mut version_field =
         Field::new("rv", tr(Msg::ColumnVersion)).help(tr(QueriesMsg::QueriesVersionHelp));
     if let Some(error) = version_error {

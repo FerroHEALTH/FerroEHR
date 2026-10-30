@@ -27,11 +27,10 @@
 //! [`require_session`](crate::session::require_session) first, and the CDR
 //! credential never reaches client-visible state.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 pub mod staged;
@@ -47,8 +46,7 @@ use crate::error::ViewerError;
 /// The CONTRIBUTION's own uid plus the `OBJECT_VERSION_ID` of every version the
 /// commit MINTED — the `201` representation's `versions` are the `OBJECT_REF`s
 /// of exactly those (ITS-REST
-/// `specifications/responses/201_CONTRIBUTION.yaml`). All strings, so the type
-/// is safe across the server-fn boundary on the 32-bit WASM target.
+/// `specifications/responses/201_CONTRIBUTION.yaml`).
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct CommitOutcome {
     /// `CONTRIBUTION.uid.value` — the id the contributions tab looks up.

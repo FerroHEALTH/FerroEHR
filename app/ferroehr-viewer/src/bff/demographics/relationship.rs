@@ -32,11 +32,10 @@
 //! says so rather than implying the list it shows is complete; the relationship
 //! detail links BOTH endpoints, which is the reachable direction.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use serde::{Deserialize, Serialize};

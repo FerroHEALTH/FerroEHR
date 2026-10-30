@@ -275,8 +275,8 @@ pub enum ConfigError {
     Invalid(String),
 }
 
-/// The variable cargo-leptos names the listen address with, which
-/// `server.listen` replaced.
+/// The variable the viewer's former build tool named the listen address
+/// with, which `server.listen` replaced.
 const LEPTOS_SITE_ADDR: &str = "LEPTOS_SITE_ADDR";
 
 /// The loader of the `FERROEHR_VIEWER` namespace, with the viewer's own
@@ -625,7 +625,7 @@ mod tests {
         let same = BTreeMap::from([("LEPTOS_SITE_ADDR".to_owned(), "127.0.0.1:3000".to_owned())]);
         assert!(
             load_sources(None, &same).is_ok(),
-            "cargo-leptos's own value"
+            "the former build tool's own value"
         );
     }
 

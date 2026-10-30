@@ -38,11 +38,10 @@
 //! panel; the panel's own section id comes from its caller
 //! ([`TagPanelCopy::form_id`]).
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use std::collections::BTreeMap;
@@ -60,8 +59,7 @@ use crate::locale::tr_with;
 /// (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.item_tag.adoc`):
 /// `key`, the optional `value`, the optional `target_path`, the `target` (a
 /// `UID_BASED_ID` — a `HIER_OBJECT_ID` for a container target, an
-/// `OBJECT_VERSION_ID` for one version) and the `owner_id` reference. Strings
-/// only, so the type is WASM-safe over the server-fn boundary.
+/// `OBJECT_VERSION_ID` for one version) and the `owner_id` reference.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ItemTagRow {
     /// `ITEM_TAG.key`.
@@ -255,8 +253,8 @@ fn string_at(value: &Value, path: &[&str]) -> String {
 /// (`operations/ehr_tags_get.yaml` retrieves the tags "associated with any
 /// target VERSION or `VERSIONED_OBJECT` within the EHR"), so the target is what
 /// a reader groups by. Pure and deterministic: targets in `BTreeMap` order,
-/// each group's tags by identity — no clock, no hash iteration, so the server
-/// pass and hydration render the same table.
+/// each group's tags by identity: no clock, no hash iteration, so every draw
+/// renders the same table.
 #[must_use]
 pub fn group_by_target(tags: Vec<ItemTagRow>) -> Vec<TagGroup> {
     let mut by_target: BTreeMap<String, Vec<ItemTagRow>> = BTreeMap::new();
@@ -319,8 +317,8 @@ mod tests {
             row("archived", "8849182c"),
         ]);
         assert_eq!(groups.len(), 2);
-        // Targets in BTreeMap order, tags by identity inside each group — the
-        // same order on the server pass and at hydration.
+        // Targets in BTreeMap order, tags by identity inside each group: the
+        // same order on every draw.
         assert_eq!(groups[0].target, "8849182c");
         let keys: Vec<&str> = groups[0].tags.iter().map(|t| t.key.as_str()).collect();
         assert_eq!(keys, vec!["archived", "flag"]);

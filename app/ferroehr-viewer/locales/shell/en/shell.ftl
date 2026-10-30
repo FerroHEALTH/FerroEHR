@@ -192,7 +192,6 @@ filter-to = To
 filter-apply = Apply
 chip-from = From { $value }
 chip-to = To { $value }
-reveal-no-subject = This EHR has no subject.
 
 column-kind = Kind
 change-creation = Creation

@@ -50,9 +50,6 @@ use crate::system_api::ConformanceManifest;
 const ADMIN_ENDPOINT: &str = "/admin";
 
 /// Whether the CDR advertises its Admin API as mounted.
-///
-/// Carries only fixed-size, client-safe data — it crosses the server-fn
-/// boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AdminAvailability {
     /// The conformance manifest lists `/admin`: the group is mounted, so the

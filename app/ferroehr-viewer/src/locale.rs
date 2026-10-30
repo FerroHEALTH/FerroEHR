@@ -441,8 +441,6 @@ messages! {
         FilterTemplate = "filter-template",
         /// `To`
         FilterTo = "filter-to",
-        /// `This EHR has no subject.`
-        RevealNoSubject = "reveal-no-subject",
         /// `Amendment`
         ChangeAmendment = "change-amendment",
         /// `Creation`

@@ -3,8 +3,8 @@
 
 //! Sealed-cookie session state and the auth guard every read of the CDR calls.
 //!
-//! Server functions are a public HTTP API (the Leptos book's `server/25`
-//! security rule) — "only my UI calls this" is never assumed.
+//! Every route is a public HTTP endpoint: "only my UI calls this" is never
+//! assumed.
 //!
 //! The whole session lives in ONE encrypted, authenticated cookie
 //! (AES-256-GCM via the `cookie` crate's private jar), so any viewer
@@ -337,7 +337,14 @@ pub fn http_session() -> Result<CookieSession, ViewerError> {
             scope.state.config.session.idle_minutes,
         )
     })
-    .ok_or_else(|| ViewerError::Internal("no request in scope".to_owned()))
+    .ok_or_else(outside_request)
+}
+
+/// The error of a read that needs the request but runs outside one, a defect
+/// of its caller.
+#[must_use]
+pub fn outside_request() -> ViewerError {
+    ViewerError::Internal("no request in scope".to_owned())
 }
 
 /// Persists a mutated session: appends the sealed `Set-Cookie` to the
@@ -354,7 +361,7 @@ pub fn commit(session: &CookieSession) -> Result<(), ViewerError> {
         state.config.session.idle_minutes,
     )?;
     crate::scope::with(|scope| scope.answer(|answer| answer.cookies.push(header)))
-        .ok_or_else(|| ViewerError::Internal("no request in scope".to_owned()))
+        .ok_or_else(outside_request)
 }
 
 /// The guard: return the authenticated session or `Unauthenticated`.

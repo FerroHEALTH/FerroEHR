@@ -6,11 +6,9 @@
 //!
 //! The filters (template, a context-start-time window, composer) live in the
 //! query string — `?template=`/`?from=`/`?to=`/`?composer=`, submitted by a GET
-//! `<Form>` — so a filtered view is shareable, refresh-safe and reproducible
-//! before the WASM bundle loads. They are read in SETUP and feed the list
-//! resource's source, so a filter change refetches exactly once and a
-//! submission drops `?offset=`, putting the reader on the first page of the new
-//! result set. The statement they produce is assembled by the pure,
+//! form, so a filtered view is shareable, refresh-safe and reproducible. A
+//! submission drops `?offset=`, putting the reader on the first page of the
+//! new result set. The statement they produce is assembled by the pure,
 //! component-free [`composition_filter`](super::composition_filter): operator
 //! input is bound as AQL `query_parameters`, never concatenated into the query.
 

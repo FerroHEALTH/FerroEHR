@@ -12,11 +12,10 @@
 //! governs the viewer — our own design / product extension; the wire it
 //! reads/writes is the ITS-REST Definition API.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use crate::adl2::TemplateFamily;

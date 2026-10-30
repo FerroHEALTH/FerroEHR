@@ -340,7 +340,7 @@ async fn directory_history_and_restore_journey() {
 /// `OBJECT_VERSION_ID`. `previous` is the `If-Match` precondition — `None`
 /// creates the directory (v1), `Some(uid)` supersedes that version.
 ///
-/// Seeding a deep history through the tree editor would be dozens of hydrated
+/// Seeding a deep history through the tree editor would be dozens of
 /// click/save cycles; what this journey is about is the READ side of that
 /// history, so the versions arrive at the wire.
 ///

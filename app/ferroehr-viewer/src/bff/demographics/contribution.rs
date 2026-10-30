@@ -19,11 +19,10 @@
 //! surface serves as an `OBJECT_REF` whose `type` names the RM class of the
 //! object that changed, which is what lets each row link to that object.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use serde::{Deserialize, Serialize};

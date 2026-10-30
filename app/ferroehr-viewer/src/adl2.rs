@@ -315,9 +315,8 @@ pub fn example_path(template_id: &str, detail: ExampleDetail, kind: ExampleType)
 /// The `/templates/adl2/{template_id}` detail href for one list row.
 ///
 /// The id is percent-encoded because it is CDR-supplied text: a reserved
-/// character would otherwise split the path segment. `leptos_router`
-/// percent-decodes route params on both targets, so the read side needs no
-/// decode.
+/// character would otherwise split the path segment. The route table
+/// percent-decodes route params, so the read side needs no decode.
 #[must_use]
 pub fn detail_href(template_id: &str) -> String {
     format!("/templates/adl2/{}", urlencoding::encode(template_id))

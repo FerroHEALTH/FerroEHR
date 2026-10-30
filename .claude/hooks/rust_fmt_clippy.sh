@@ -89,7 +89,7 @@ if [ -x "$repo_root/scripts/checks/typed-status.sh" ]; then
   }
 fi
 
-# E2E wait guard (.claude/rules/leptos-ui.md §10): a browser journey holds the
+# E2E wait guard (.claude/rules/console-ui.md §5): a browser journey holds the
 # bounded `common::Element`, never a raw `WebElement`/`SelectElement`, and waits
 # on a condition rather than a timer. Whole-scope only (the guard reads every
 # journey file), so it runs when the edited file IS one.

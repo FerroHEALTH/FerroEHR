@@ -27,9 +27,6 @@ use crate::locale::tr_served_with;
 
 /// The System API conformance manifest — the `Options` schema, field for field.
 ///
-/// Every field is a plain `String`/`Vec<String>` (no `usize`), so the type is
-/// safe across the server-fn boundary on the 32-bit WASM target.
-///
 /// Every member is optional-tolerant: `Options.yaml` declares no `required`
 /// list at all, so a conformant peer may omit any of them and the reader fills
 /// the gap from [`Default`] rather than failing the whole manifest — which

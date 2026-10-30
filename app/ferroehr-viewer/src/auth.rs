@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Viewer authentication: the login/logout/session server functions.
+//! Viewer authentication: sign-in, sign-out and the session's state.
 //!
-//! Server functions are a public HTTP API — each one enforces auth itself
-//! (Leptos book `server/25`); the CDR credential never leaves the server.
+//! Every route is a public HTTP endpoint, so each one enforces the session
+//! itself; the CDR credential never leaves the server.
 
 use serde::{Deserialize, Serialize};
 
@@ -35,25 +35,6 @@ pub struct LoginScreen {
     pub notice: String,
     /// Links rendered under the sign-in card.
     pub links: Vec<LoginLink>,
-}
-
-/// What the UI may know about the current session (never the credential).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SessionInfo {
-    /// Display identity.
-    pub identity: String,
-    /// `"basic"` or `"oidc"`.
-    pub method: String,
-    /// OIDC token scopes (empty for Basic).
-    pub scopes: Vec<String>,
-    /// Seconds left before this session's idle window closes, as of the cookie
-    /// the request carried.
-    ///
-    /// The anchor slides on every authenticated response, so this is a lower
-    /// bound on the real deadline; the browser schedules its own re-check on
-    /// it, which is what catches an expiry nobody clicks through. A `u32`
-    /// because WASM is 32-bit and this crosses the server-fn boundary.
-    pub expires_in_secs: u32,
 }
 
 /// The shell root, and the destination every refused `next` falls back to.
@@ -163,32 +144,11 @@ pub async fn sign_in_basic(
     Ok(SignedIn::Accepted(same_origin_next(next.as_deref())))
 }
 
-/// The current session, if any — drives the shell's user menu and the
-/// scope panel. Deliberately NOT guarded: "no session" is a valid answer.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when called outside a request (a bug).
-pub fn current_session() -> Result<Option<SessionInfo>, ViewerError> {
-    let state = crate::scope::state()?;
-    let session = crate::session::http_session()?;
-    let expires_in_secs = session.expires_in_secs(state.config.session.idle_minutes);
-    let admin = session.get::<crate::session::ViewerSession>(crate::session::SESSION_KEY);
-    Ok(admin.map(|s| SessionInfo {
-        identity: s.identity,
-        method: match s.credential {
-            crate::session::Credential::Basic { .. } => "basic".to_owned(),
-            crate::session::Credential::Bearer { .. } => "oidc".to_owned(),
-        },
-        scopes: s.scopes,
-        expires_in_secs,
-    }))
-}
-
 /// Which login modes the login screen should offer, plus the configured
 /// notice and links it renders.
 ///
 /// # Errors
-/// None in practice; the signature is fallible per the server-fn contract.
+/// [`ViewerError::Internal`] outside a request.
 pub async fn fetch_login_screen() -> Result<LoginScreen, ViewerError> {
     let state = crate::scope::state()?;
     // The viewer offers only what BOTH sides support: its own configured

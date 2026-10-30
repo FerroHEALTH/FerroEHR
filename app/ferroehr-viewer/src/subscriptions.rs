@@ -35,11 +35,10 @@
 //! [`require_session`](crate::session::require_session) first and keeps the
 //! CDR credential server-side.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use serde::{Deserialize, Serialize};
@@ -53,9 +52,8 @@ use crate::locale::{tr_served, tr_served_with};
 /// created_at}`).
 ///
 /// Every wire value is a string, including the id and the timestamp: the record
-/// crosses the server-fn boundary and is rendered, never computed with (no
-/// `usize`, and no parsing the viewer would have to keep in step with the
-/// CDR's own formatting). A predicate the CDR serves as `null` — its wildcard —
+/// is rendered, never computed with (no parsing the viewer would have to keep
+/// in step with the CDR's own formatting). A predicate the CDR serves as `null` — its wildcard —
 /// arrives here as the empty string.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct SubscriptionRow {
@@ -94,9 +92,6 @@ pub struct SubscriptionPredicates {
 }
 
 /// Whether the CDR serves its event-subscription admin API.
-///
-/// Carries only fixed-size, client-safe data — it crosses the server-fn
-/// boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SubscriptionAvailability {
     /// The group answered: it is mounted, so the screen is offered. Whether
@@ -160,7 +155,7 @@ pub fn name_is_valid(name: &str) -> bool {
 /// How one predicate reads on screen: its value, or `any` for the wildcard.
 ///
 /// Pure and unit-tested, so the table cell and the summary sentence spell an
-/// absent predicate identically on the server pass and at hydration.
+/// absent predicate identically.
 #[must_use]
 pub fn predicate_label(value: &str) -> String {
     if value.trim().is_empty() {

@@ -74,9 +74,6 @@ const HEADLINE_METRICS: [HeadlineMetric; 3] = [
 ];
 
 /// Whether the CDR serves its management surface at the configured base URL.
-///
-/// Carries only fixed-size, client-safe data — it crosses the server-fn
-/// boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManagementAvailability {
     /// The surface answered: it is mounted, so the operations panel is offered.
@@ -139,8 +136,8 @@ pub struct ReadinessView {
 /// [`ReadinessView`].
 ///
 /// Both carry the family readiness document; only the management body adds
-/// each indicator's `detail`. The indicators are sorted by name so both render
-/// passes agree (hydration determinism).
+/// each indicator's `detail`. The indicators are sorted by name so every draw
+/// agrees.
 ///
 /// # Errors
 /// The parse error when `body` is not the readiness document.
@@ -278,8 +275,7 @@ impl InfoSection {
 /// members, so every top-level member is rendered rather than a fixed list.
 /// Non-object members become fact rows; each object member (`spec`,
 /// `manufacturer`, `support`, `audit`, …) becomes its own section, one level
-/// deep. Every list is key-sorted, so the render order is deterministic and
-/// hydration-safe.
+/// deep. Every list is key-sorted, so the render order is deterministic.
 #[must_use]
 pub fn build_info_view(body: &serde_json::Value) -> BuildInfoView {
     let mut view = BuildInfoView::default();
@@ -671,8 +667,8 @@ pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
 /// `404` to `Ok(None)` — the "endpoint not mounted" state every management read
 /// renders as a first-class absence rather than an error.
 ///
-/// Guards the viewer session first: the server fns above are publicly
-/// reachable endpoints, and this is the one place their CDR call is made.
+/// Guards the viewer session first: the pages reading through the reads
+/// above are publicly reachable endpoints, and this is the one place their CDR call is made.
 async fn management_get(path: &str) -> Result<Option<String>, ViewerError> {
     let session = crate::session::require_session()?;
     let state = crate::scope::state()?;

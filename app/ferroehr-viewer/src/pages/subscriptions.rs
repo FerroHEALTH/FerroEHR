@@ -209,6 +209,10 @@ async fn read_list() -> ListModel {
 }
 
 /// The subscriptions as a list card.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one listing: its rows with their menus, its empty state and its card"
+)]
 fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> Html {
     let columns = [
         Column::text("name", tr(Msg::NavSubscriptions)).role(Role::Title),

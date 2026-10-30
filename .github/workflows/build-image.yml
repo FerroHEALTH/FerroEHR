@@ -72,11 +72,6 @@ on:
         required: false
         type: string
         default: ""
-      site-artifact:
-        description: If set, download this run artifact into site/ (the viewer's site bundle).
-        required: false
-        type: string
-        default: ""
       labels:
         description: The per-image OCI labels (multiline, metadata-action syntax).
         required: true
@@ -126,11 +121,6 @@ jobs:
         with:
           name: ${{ inputs.binary-artifact-prefix }}-arm64
           path: bin/arm64
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        if: inputs.site-artifact != ''
-        with:
-          name: ${{ inputs.site-artifact }}
-          path: site
 
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         if: inputs.qemu

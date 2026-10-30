@@ -6,8 +6,7 @@
 //!
 //! Which `$placeholders` it declares, whether it carries its own row window,
 //! and how typed parameter values become the `query_parameters` JSON object.
-//! Component-free plain Rust with ordinary unit tests, compiled for both the
-//! `ssr` and `hydrate` targets.
+//! Component-free plain Rust with ordinary unit tests.
 //!
 //! The readings go through the real AQL lexer (`openehr_query::lexer`) rather
 //! than a hand-rolled scan, so a `$name` inside a string literal is never

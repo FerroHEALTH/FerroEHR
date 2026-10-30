@@ -24,11 +24,10 @@
 //! delete), `create` (the empty-directory create flow), and the pure
 //! [`edit`] helpers.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 pub mod edit;
@@ -61,9 +60,6 @@ pub struct DirectoryState {
 
 /// One row of the directory version history: a past (or the current) FOLDER
 /// version summarized for the history panel.
-///
-/// Carries fixed-size ints only so it is WASM-safe over the server-fn
-/// boundary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DirectoryVersion {
     /// The version's `OBJECT_VERSION_ID` (`uid.value`).

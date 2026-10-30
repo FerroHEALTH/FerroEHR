@@ -6,7 +6,7 @@
 //! A lookup form (jump straight to an EHR by id) over a recent-EHRs table
 //! sourced from an ad-hoc AQL query — ITS-REST has no unpaged EHR-list
 //! endpoint, so listing via AQL is the spec-honest route. Paging is
-//! URL-driven (`?offset=`): shareable, refresh-safe, and WASM-optional.
+//! URL-driven (`?offset=`): shareable and refresh-safe.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
 //! The wire it reads IS spec-bound: the AQL runs against `POST query/aql`
@@ -41,8 +41,7 @@ const LIST_EHRS_AQL: &str =
 /// headers, the raw row cells, and the offset that produced it (so the view
 /// can build prev/next links).
 ///
-/// Shared across the EHR browse surfaces; carries only fixed-size ints so it
-/// is WASM-safe over the server-fn boundary.
+/// Shared across the EHR browse surfaces.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResultPage {
     /// The result-set column names (falling back to the column path).

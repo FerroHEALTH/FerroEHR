@@ -116,8 +116,7 @@ pub fn with<R>(read: impl FnOnce(&Scope) -> R) -> Option<R> {
 /// [`ViewerError::Internal`] outside a request, which is a defect of the
 /// caller.
 pub fn state() -> Result<AppState, ViewerError> {
-    with(|scope| scope.state.clone())
-        .ok_or_else(|| ViewerError::Internal("no request in scope".to_owned()))
+    with(|scope| scope.state.clone()).ok_or_else(crate::session::outside_request)
 }
 
 #[cfg(test)]

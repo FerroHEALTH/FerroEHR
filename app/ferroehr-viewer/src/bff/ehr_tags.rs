@@ -49,11 +49,10 @@
 //! credential never reaches client-visible state, and every path segment is
 //! percent-encoded server-side.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use serde::{Deserialize, Serialize};
@@ -220,8 +219,7 @@ pub async fn set_ehr_tag(
 /// Insert-or-replace one tag in the collection at `url`.
 ///
 /// The plain function behind [`set_ehr_tag`] and [`set_status_tag`], so neither
-/// server function calls the other (a server fn is thin and the logic it shares
-/// lives in an ordinary function).
+/// calls the other.
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] on a blank key; CDR transport errors pass through;

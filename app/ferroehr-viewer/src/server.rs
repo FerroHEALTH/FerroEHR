@@ -5,7 +5,7 @@
 //! session guard.
 //!
 //! Every page is a handler that draws one complete document
-//! ([`page`]): it reads the request, the form a post carries and the CDR,
+//! (`page`): it reads the request, the form a post carries and the CDR,
 //! and answers with the page or with a redirect. FerroUI's stylesheet, the
 //! FerroEHR theme and FerroUI's script modules are served by the library's
 //! own asset router at `ferrohealth_ui::serve::PREFIX`. The family's console
@@ -70,7 +70,7 @@ pub fn app(app_state: AppState, health: Health, request_log: RequestLog) -> axum
 ///
 /// FerroUI's assets, the OIDC routes, the export post, the preference,
 /// sidebar, paging and sign-out posts, the downloads, the icons, the search
-/// panel's answer route, every page ([`page`], for `GET` and its own form
+/// panel's answer route, every page (`page`, for `GET` and its own form
 /// posts), and the layer stack (state → session guard → same-origin check →
 /// console headers → policy). Sessions are a sealed cookie
 /// ([`crate::session`]): no session-store layer exists, so no state is bound
@@ -159,7 +159,7 @@ pub fn router(app_state: AppState) -> axum::Router {
 
 /// Sets [`POLICY`] on every response, over the hydrated console's policy the
 /// family's console headers write.
-// TODO(#POLICYISSUE): take the policy from ferrohealth-server once it writes one for a server-rendered console.
+// TODO(#4439): take the policy from ferrohealth-server once it writes one for a server-rendered console.
 async fn policy(
     request: axum::extract::Request,
     next: axum::middleware::Next,

@@ -4,9 +4,8 @@
 //! The Commit tab's staged-change model and the CONTRIBUTION envelope it
 //! assembles.
 //!
-//! Component-free and unit-tested, compiled on BOTH targets: the browser
-//! stages and checks a change, the server fn assembles the body it posts,
-//! and both answer from this one module.
+//! Component-free and unit-tested: the page stages and checks a change and
+//! assembles the body it posts from this one module.
 //!
 //! The envelope is the RELAXED `NewContribution` the released operation defines
 //! (ITS-REST `specifications/operations/contribution_create.yaml` +
@@ -163,9 +162,7 @@ impl ChangeType {
 /// One pending change in the staging area.
 ///
 /// Viewer-session state only: the list lives in the tab's component state, so
-/// navigating away discards it (the viewer stores nothing of its own). Every
-/// field is fixed-size-safe so the row crosses the server-fn boundary on the
-/// 32-bit WASM target.
+/// navigating away discards it (the viewer stores nothing of its own).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StagedChange {
     /// The row's stable identity — the staging sequence number, carried IN the

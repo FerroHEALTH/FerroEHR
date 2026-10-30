@@ -6,7 +6,7 @@
 //!
 //! - [`subject_reveal`]: an EHR's masked subject id (R13), whose Reveal
 //!   leads to the EHR's page drawn with the id revealed for the reader's
-//!   seconds ([`reveal_subject`]).
+//!   seconds.
 //! - [`code_editor`]: the code editor (B2) of a document a form posts, with
 //!   the CDR's diagnostics beside it in step with the cursor (B3).
 //! - [`source_upload`]: the upload field of a template source, whose file is
@@ -26,31 +26,7 @@ use ferrohealth_ui::view::editor::{
 use ferrohealth_ui::view::identifier::{Identifier, IdentifierWords, Masked, Reveal, identifier};
 use ferrohealth_ui::view::upload::{Sending, Upload, UploadWords, upload_field};
 
-use crate::error::ViewerError;
 use crate::markup::{h, t};
-
-/// Reads the subject id of the EHR `ehr_id` from its current `EHR_STATUS`,
-/// for the masked identifier's Reveal.
-///
-/// The CDR records the read in its own audit log, as it records every read
-/// of the status; the viewer's log names the reader and the EHR, never the
-/// value.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; the CDR's
-/// refusal of the status read; [`ViewerError::Invalid`] when the EHR names no
-/// external subject.
-pub async fn reveal_subject(ehr_id: String) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let status = crate::bff::ehr_detail::status::fetch_ehr_status(ehr_id.clone()).await?;
-    if status.subject.is_empty() {
-        return Err(ViewerError::Invalid(crate::locale::tr_served(
-            crate::locale::Msg::RevealNoSubject,
-        )));
-    }
-    tracing::info!(reader = %session.identity, ehr = %ehr_id, "revealed an EHR's subject id");
-    Ok(status.subject)
-}
 
 /// The masked subject id of an EHR and its Reveal (R13).
 ///

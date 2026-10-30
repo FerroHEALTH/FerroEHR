@@ -30,11 +30,10 @@
 //! [`require_session`](crate::session::require_session) first, and the CDR
 //! credential never reaches the page.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 pub mod commit;
@@ -51,9 +50,6 @@ use crate::error::ViewerError;
 use crate::locale::{Msg, tr_with};
 
 /// The EHR resource's own summary facts, flattened for the detail header.
-///
-/// All fields are plain strings (no `usize`), so the type is safe across the
-/// server-fn boundary on the 32-bit WASM target.
 ///
 /// The attributes are the RM `EHR` class's own: `system_id` ("the identifier of
 /// the logical EHR management system in which this EHR was created"),

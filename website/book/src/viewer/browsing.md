@@ -34,8 +34,8 @@ query it.
 **Paths** is its Web Template as a tree: pick a node to read its path, type
 and codes, and on a COMPOSITION template **Build a query on this path**. A
 demographic template's nodes offer no query, since the query builder reads
-compositions. With the page's WebAssembly loaded the tree expands in place and
-answers the arrow keys; without it each node is a link.
+compositions. With FerroUI's scripts loaded the tree folds in place and
+answers the arrow keys; without them each node is a link.
 
 ![Paths](img/templates/template-paths.png)
 

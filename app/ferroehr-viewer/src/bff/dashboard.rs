@@ -11,16 +11,13 @@
 //!
 //! Every read guards with
 //! [`require_session`](crate::session::require_session) first, and the CDR
-//! credential never reaches the page. Each tile resolves its
-//! `Result` inside its own suspense rather than through an `<ErrorBoundary>`,
-//! whose SSR'd fallback mismatches at hydration in leptos 0.8, so one failing
-//! section never blanks the dashboard.
+//! credential never reaches the page. Each tile draws its own `Result`, so
+//! one failing section never blanks the dashboard.
 
-#![allow(
+#![expect(
     clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST — not the CDR internal seams \
-              (#1694); the carriers here are ssr-only, so #[expect] would be unfulfilled on the \
-              hydrate target"
+    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
+              (#1694)"
 )]
 
 use serde::{Deserialize, Serialize};
@@ -91,8 +88,6 @@ pub async fn dashboard_counts() -> Result<(i64, i64, u32), ViewerError> {
 
 /// One dashboard namespace tile: the derived group's heading, the summed match
 /// count of its member stored queries, and how many members that sum covers.
-///
-/// Fixed-size ints only, so it is WASM-safe over the server-fn boundary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NamespaceTile {
     /// The namespace, or the label for the bucket of names that carry none

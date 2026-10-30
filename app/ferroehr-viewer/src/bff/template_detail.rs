@@ -15,10 +15,9 @@
 //!
 //! The WT catalog, the OPT source pane and the identity card are three views
 //! of ONE document, so the screen reads the operational template exactly once
-//! per render — a single page-level [`Resource`] over
-//! [`fetch_template_detail`], shared by every pane. The Example tab keeps its
-//! own tab-gated resource: it is a different CDR resource whose fetch runs the
-//! CDR's example generator.
+//! per page: one [`fetch_template_detail`], shared by every pane. The
+//! Example tab reads its own on that tab alone: it is a different CDR
+//! resource whose fetch runs the CDR's example generator.
 
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
