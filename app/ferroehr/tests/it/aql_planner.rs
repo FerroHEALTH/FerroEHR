@@ -734,10 +734,10 @@ fn demographic_sql_names_no_ehr_relation() {
         "SELECT p/uid/value FROM PERSON p \
          WHERE p/details[at0001]/items[at0002]/value/id = 'x' ORDER BY p/uid/value",
     );
-    assert!(!sql.contains("\"ehr\""), "{sql}");
+    assert!(!sql.contains("\"ehr\""));
     assert!(
         sql.contains("\"vo_head\""),
-        "the head join gates the version: {sql}"
+        "the head join gates the version"
     );
 }
 
@@ -923,13 +923,13 @@ fn multi_valued_fragment_predicate_lowers_existentially() {
     );
     assert!(
         sql.contains("jsonb_path_query("),
-        "set-returning per-match extraction: {sql}"
+        "set-returning per-match extraction"
     );
     assert!(
         !sql.contains("jsonb_path_query_first"),
-        "no first-match scalar remains on the links predicate: {sql}"
+        "no first-match scalar remains on the links predicate"
     );
-    assert!(sql.contains("EXISTS"), "existential shape: {sql}");
+    assert!(sql.contains("EXISTS"), "existential shape");
 }
 
 /// The same existential lowering applies when the multi-valued fragment sits
@@ -943,9 +943,9 @@ fn anchored_multi_valued_fragment_predicate_is_existential() {
     );
     assert!(
         sql.contains("jsonb_path_query(") && sql.contains(r#""parent_num""#),
-        "anchored attribute-step walk + per-match extraction: {sql}"
+        "anchored attribute-step walk + per-match extraction"
     );
-    assert!(sql.contains("EXISTS"), "existential shape: {sql}");
+    assert!(sql.contains("EXISTS"), "existential shape");
 }
 
 /// Projection over a multi-valued fragment path yields every match as ONE
@@ -957,11 +957,11 @@ fn multi_valued_fragment_projection_is_an_array_cell() {
     let sql = build_sql("SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c");
     assert!(
         sql.contains("jsonb_path_query_array("),
-        "array-cell projection: {sql}"
+        "array-cell projection"
     );
     assert!(
         sql.contains("nullif("),
-        "an empty match set is a NULL cell, not []: {sql}"
+        "an empty match set is a NULL cell, not []"
     );
 }
 
@@ -1018,11 +1018,11 @@ fn single_valued_fragment_predicate_keeps_the_scalar_extraction() {
     );
     assert!(
         sql.contains("jsonb_path_query_first"),
-        "single-valued stays scalar: {sql}"
+        "single-valued stays scalar"
     );
     assert!(
         !sql.contains("jsonb_path_query("),
-        "no set-returning extraction for a single-valued leaf: {sql}"
+        "no set-returning extraction for a single-valued leaf"
     );
 }
 
@@ -1037,7 +1037,7 @@ fn exists_over_multi_valued_fragment_is_per_match() {
     );
     assert!(
         sql.contains("jsonb_path_query(") && sql.contains("IS NOT NULL"),
-        "existence probes every match: {sql}"
+        "existence probes every match"
     );
 }
 
@@ -1053,7 +1053,7 @@ fn path_root_predicate_reaches_the_sql() {
     );
     assert!(
         sql.contains("arch_concept"),
-        "the root archetype predicate is lowered, not dropped: {sql}"
+        "the root archetype predicate is lowered, not dropped"
     );
     // Projection context: the guarded read is a CASE over the same condition.
     let sql = build_sql(
@@ -1062,7 +1062,7 @@ fn path_root_predicate_reaches_the_sql() {
     );
     assert!(
         sql.contains("CASE WHEN") && sql.contains("arch_concept"),
-        "the projected read is guarded by the root predicate: {sql}"
+        "the projected read is guarded by the root predicate"
     );
 }
 
@@ -1078,11 +1078,11 @@ fn fragment_step_predicate_lowers_to_a_jsonpath_filter() {
     );
     assert!(
         sql.contains("AS jsonb)"),
-        "the filter variables bind as the jsonb vars argument: {sql}"
+        "the filter variables bind as the jsonb vars argument"
     );
     assert!(
         sql.contains("jsonb_path_query("),
-        "the predicated multi-valued fragment stays existential: {sql}"
+        "the predicated multi-valued fragment stays existential"
     );
 }
 
@@ -1097,11 +1097,11 @@ fn whole_object_root_predicate_guards_the_locator() {
     );
     assert!(
         sql.contains("CASE WHEN") && sql.contains("arch_concept"),
-        "the vo_id locator is CASE-guarded by the predicate: {sql}"
+        "the vo_id locator is CASE-guarded by the predicate"
     );
     assert!(
         sql.contains(r#""vo_id" END"#),
-        "the guard wraps the vo_id locator: {sql}"
+        "the guard wraps the vo_id locator"
     );
 }
 
@@ -1116,12 +1116,8 @@ fn or_contains_under_ehr_lowers_to_disjunctive_exists() {
          (OBSERVATION o1[openEHR-EHR-OBSERVATION.lab.v1] \
           OR OBSERVATION o2[openEHR-EHR-OBSERVATION.glucose.v1])",
     );
-    assert_eq!(
-        anchor_exists(&sql),
-        2,
-        "one anchor EXISTS per OR branch: {sql}"
-    );
-    assert!(sql.contains(" OR "), "the branches are OR-combined: {sql}");
+    assert_eq!(anchor_exists(&sql), 2, "one anchor EXISTS per OR branch");
+    assert!(sql.contains(" OR "), "the branches are OR-combined");
 }
 
 /// OR-containment under a COMPOSITION shares the parent VO and
@@ -1136,15 +1132,15 @@ fn or_contains_under_vo_interval_anchors_each_branch() {
          (OBSERVATION o[openEHR-EHR-OBSERVATION.lab.v1] \
           OR OBSERVATION o1[openEHR-EHR-OBSERVATION.glucose.v1])",
     );
-    assert_eq!(anchor_exists(&sql), 2, "{sql}");
-    assert!(sql.contains(" OR "), "{sql}");
+    assert_eq!(anchor_exists(&sql), 2);
+    assert!(sql.contains(" OR "));
     assert!(
         sql.contains(r#""num" > "n1"."num""#) && sql.contains(r#""num" <= "n1"."num_cap""#),
-        "each branch is anchored on the strict interval of the parent VO: {sql}"
+        "each branch is anchored on the strict interval of the parent VO"
     );
     assert!(
         !sql.contains("BETWEEN"),
-        "no inclusive interval lets the anchor contain itself: {sql}"
+        "no inclusive interval lets the anchor contain itself"
     );
 }
 
@@ -1159,12 +1155,8 @@ fn nested_and_or_contains_tree_builds() {
           OR (OBSERVATION o2[openEHR-EHR-OBSERVATION.glucose.v1] \
               AND OBSERVATION o3[openEHR-EHR-OBSERVATION.bp.v1]))",
     );
-    assert_eq!(
-        anchor_exists(&sql),
-        3,
-        "one anchor EXISTS per operand: {sql}"
-    );
-    assert!(sql.contains(" OR ") && sql.contains(" AND "), "{sql}");
+    assert_eq!(anchor_exists(&sql), 3, "one anchor EXISTS per operand");
+    assert!(sql.contains(" OR ") && sql.contains(" AND "));
 }
 
 /// NOT CONTAINS generalises to a negated `EXISTS` over an arbitrary
@@ -1178,8 +1170,8 @@ fn not_contains_compound_operand_builds() {
          (OBSERVATION o1[openEHR-EHR-OBSERVATION.lab.v1] \
           OR OBSERVATION o2[openEHR-EHR-OBSERVATION.glucose.v1])",
     );
-    assert!(sql.contains("NOT"), "the exclusion is negated: {sql}");
-    assert_eq!(anchor_exists(&sql), 2, "{sql}");
+    assert!(sql.contains("NOT"), "the exclusion is negated");
+    assert_eq!(anchor_exists(&sql), 2);
 }
 
 /// a mixed-type (`Raw`) leaf compared to a numeric literal extracts
@@ -1194,7 +1186,7 @@ fn raw_leaf_numeric_comparison_dispatches_to_numeric() {
     );
     assert!(
         sql.contains("jsonb_typeof") && sql.contains("'number'"),
-        "the polymorphic value leaf is compared numerically under a type guard: {sql}"
+        "the polymorphic value leaf is compared numerically under a type guard"
     );
 }
 
@@ -1209,7 +1201,7 @@ fn raw_leaf_text_comparison_stays_text() {
     );
     assert!(
         !sql.contains("jsonb_typeof"),
-        "a text comparison must not use the numeric guard: {sql}"
+        "a text comparison must not use the numeric guard"
     );
 }
 
@@ -1221,7 +1213,7 @@ fn min_max_over_text_leaf_is_not_forced_numeric() {
     let sql = build_sql("SELECT MAX(c/name/value) FROM COMPOSITION c");
     assert!(
         !sql.contains("numeric") && !sql.contains("openehr_magnitude"),
-        "MAX over a text leaf is not coerced numeric: {sql}"
+        "MAX over a text leaf is not coerced numeric"
     );
 }
 
@@ -1234,7 +1226,7 @@ fn min_max_over_numeric_leaf_is_numeric() {
     );
     assert!(
         sql.contains("numeric"),
-        "MAX over a numeric leaf casts to numeric: {sql}"
+        "MAX over a numeric leaf casts to numeric"
     );
 }
 
@@ -1250,12 +1242,12 @@ fn dashboard_order_by_uses_context_start_column() {
     );
     assert!(
         sql.contains(r#""context_start" DESC"#),
-        "ORDER BY reads the promoted column: {sql}"
+        "ORDER BY reads the promoted column"
     );
     // The ordering no longer casts an extracted EVENT_CONTEXT value to timestamptz.
     assert!(
         !sql.contains("timestamptz"),
-        "no per-row ::timestamptz cast for the ordering: {sql}"
+        "no per-row ::timestamptz cast for the ordering"
     );
 }
 
@@ -1270,7 +1262,7 @@ fn where_temporal_compare_uses_context_start_column() {
     );
     assert!(
         sql.contains(r#""context_start""#),
-        "WHERE comparison reads the promoted column: {sql}"
+        "WHERE comparison reads the promoted column"
     );
 }
 
@@ -1285,11 +1277,11 @@ fn non_promoted_temporal_leaf_falls_back_to_subquery() {
     );
     assert!(
         !sql.contains("context_start"),
-        "OBSERVATION time is not the promoted composition leaf: {sql}"
+        "OBSERVATION time is not the promoted composition leaf"
     );
     assert!(
         sql.contains("jsonb_path_query_first") && sql.contains("openehr_timestamp("),
-        "the general temporal lowering (extraction + the total floor) is used: {sql}"
+        "the general temporal lowering (extraction + the total floor) is used"
     );
 }
 
@@ -1303,7 +1295,7 @@ fn other_composition_context_path_falls_back() {
     );
     assert!(
         !sql.contains("context_start"),
-        "only the registered context/start_time/value promotes: {sql}"
+        "only the registered context/start_time/value promotes"
     );
 }
 
@@ -1315,11 +1307,11 @@ fn projection_of_context_start_time_is_not_promoted() {
     let sql = build_sql("SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c");
     assert!(
         !sql.contains("context_start"),
-        "projection must extract the canonical value, not the timestamptz column: {sql}"
+        "projection must extract the canonical value, not the timestamptz column"
     );
     assert!(
         sql.contains("jsonb_path_query_first"),
-        "projection extracts the leaf from the fragment: {sql}"
+        "projection extracts the leaf from the fragment"
     );
 }
 
@@ -1331,7 +1323,7 @@ fn composition_uid_value_is_synthesized_from_the_version_row() {
     let sql = build_sql("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
     assert!(
         sql.contains("creating_system_id"),
-        "uid/value is composed from version columns: {sql}"
+        "uid/value is composed from version columns"
     );
 }
 
@@ -1341,11 +1333,11 @@ fn composition_uid_object_is_built() {
     let sql = build_sql("SELECT c/uid FROM EHR e CONTAINS COMPOSITION c");
     assert!(
         sql.contains("jsonb_build_object"),
-        "uid projects the OBJECT_VERSION_ID object: {sql}"
+        "uid projects the OBJECT_VERSION_ID object"
     );
     assert!(
         sql.contains("creating_system_id"),
-        "the object's value is the synthesized version id: {sql}"
+        "the object's value is the synthesized version id"
     );
 }
 
@@ -1360,7 +1352,7 @@ fn contained_object_uid_is_not_synthesized() {
     );
     assert!(
         sql.contains("jsonb_path_query_first"),
-        "the observation uid is read from its stored fragment: {sql}"
+        "the observation uid is read from its stored fragment"
     );
 }
 
@@ -1378,11 +1370,11 @@ fn ehr_id_equality_is_uuid_typed() {
     );
     assert!(
         sql.contains("CAST($") && sql.contains("AS uuid)"),
-        "uuid-typed RHS expected: {sql}"
+        "uuid-typed RHS expected"
     );
     assert!(
         !sql.contains(r#"CAST("e0"."id" AS text) ="#),
-        "the text-cast equality must be gone: {sql}"
+        "the text-cast equality must be gone"
     );
 }
 
@@ -1393,11 +1385,11 @@ fn ehr_id_equality_with_a_non_uuid_literal_is_constant() {
     let sql = build_sql("SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = 'not-a-uuid'");
     assert!(
         sql.contains("FALSE") || sql.contains('$'),
-        "constant lowering: {sql}"
+        "constant lowering"
     );
     assert!(
         !sql.contains("AS uuid)"),
-        "no uuid cast for a non-uuid literal: {sql}"
+        "no uuid cast for a non-uuid literal"
     );
 }
 
@@ -1412,7 +1404,7 @@ fn ehr_id_ordering_stays_textual() {
     );
     assert!(
         sql.contains(r#"CAST("e0"."id" AS text)"#),
-        "ordering keeps the text form: {sql}"
+        "ordering keeps the text form"
     );
 }
 
@@ -1426,16 +1418,16 @@ fn order_by_ehr_id_uses_the_raw_uuid_column() {
     let sql = build_sql("SELECT e/ehr_id/value FROM EHR e ORDER BY e/ehr_id/value DESC");
     assert!(
         sql.contains(r#"ORDER BY "e0"."id" DESC"#),
-        "ORDER BY sorts by the raw uuid column: {sql}"
+        "ORDER BY sorts by the raw uuid column"
     );
     assert!(
         !sql.contains(r#"ORDER BY CAST("e0"."id" AS text)"#),
-        "the ORDER BY no longer casts the id to text: {sql}"
+        "the ORDER BY no longer casts the id to text"
     );
     // The projected cell still renders the id as text (to_jsonb of the cast).
     assert!(
         sql.contains(r#"CAST("e0"."id" AS text)"#),
-        "the projection keeps the text cast: {sql}"
+        "the projection keeps the text cast"
     );
 }
 
@@ -1457,11 +1449,11 @@ fn population_gate_is_single_and_column_filtered() {
     assert_eq!(
         sql.matches(r#""e0"."is_queryable" = $"#).count(),
         1,
-        "exactly one population gate on the EHR alias: {sql}"
+        "exactly one population gate on the EHR alias"
     );
     assert!(
         !sql.contains("AS \"qgv") && anchor_exists(&sql) == 0,
-        "the per-EHR_STATUS EXISTS gate is gone: {sql}"
+        "the per-EHR_STATUS EXISTS gate is gone"
     );
 }
 
@@ -1474,15 +1466,15 @@ fn unlinked_vo_root_keeps_its_own_gate() {
     assert_eq!(
         sql.matches(r#""qg0"."is_queryable" = $"#).count(),
         1,
-        "the bare root is gated on the joined ehr row: {sql}"
+        "the bare root is gated on the joined ehr row"
     );
     assert!(
         sql.contains(r#""qg0"."id" = "n0"."ehr_id""#),
-        "the gate correlates the joined ehr row to the VO root's ehr_id: {sql}"
+        "the gate correlates the joined ehr row to the VO root's ehr_id"
     );
     assert!(
         anchor_exists(&sql) == 0,
-        "the gate is a join + column filter, not an EXISTS probe: {sql}"
+        "the gate is a join + column filter, not an EXISTS probe"
     );
 }
 
@@ -1509,10 +1501,10 @@ fn every_partitioned_relation_is_pinned_to_the_hot_tier_by_a_literal() {
         // sea-query parenthesises a custom expression, so the emitted form is
         // `"x"."tier" = ('hot')` — a literal either way.
         let literals = sql.matches(r#""tier" = ('hot')"#).count();
-        assert!(comparisons > 0, "no tier predicate at all in: {sql}");
+        assert!(comparisons > 0, "no tier predicate at all in");
         assert_eq!(
             literals, comparisons,
-            "every tier predicate must be the literal 'hot', never a bind: {sql}"
+            "every tier predicate must be the literal 'hot', never a bind"
         );
     }
 }
@@ -1553,7 +1545,7 @@ fn limit_without_order_by_streams() {
     let sql = build_sql_limited(WARD_QUERY);
     assert!(
         sql.contains(r#"FROM "version" AS "v"#),
-        "the version spine drives: {sql}"
+        "the version spine drives"
     );
     // The dead-root elision (the post-streaming ladder's rung 1): this query
     // reads nothing from the COMPOSITION root's node row (`c/uid/value` is
@@ -1564,11 +1556,11 @@ fn limit_without_order_by_streams() {
     assert_eq!(
         sql.matches("JOIN LATERAL").count(),
         2,
-        "one lateral for the observation source plus the correlated predicate probe (no dead root lateral): {sql}"
+        "one lateral for the observation source plus the correlated predicate probe (no dead root lateral)"
     );
     assert!(
         !sql.contains(r#""num" = "#),
-        "no root `num = 0` probe survives the dead-root elision: {sql}"
+        "no root `num = 0` probe survives the dead-root elision"
     );
     // sea-query binds the fence's 0 as a parameter — the pull-up block is
     // syntactic (an OFFSET clause of any value), so the fence holds.
@@ -1576,24 +1568,24 @@ fn limit_without_order_by_streams() {
         sql.matches("OFFSET $").count(),
         2 + sql.matches("LATERAL((").count(),
         "every lateral carries the pull-up fence, the predicate probe's step \
-         bindings included: {sql}"
+         bindings included"
     );
     // The multi-valued-path predicate stays a CORRELATED probe: the EXISTS
     // lives inside a lateral (never a bare WHERE sublink the planner could
     // decorrelate into a corpus-wide materialize).
     assert!(
         sql.contains("EXISTS(SELECT") && sql.contains(r#""hit""#),
-        "the predicate EXISTS is hosted in the lateral boolean probe: {sql}"
+        "the predicate EXISTS is hosted in the lateral boolean probe"
     );
     assert!(
         sql.contains(r#""kind" IN"#),
-        "the spine pre-filters by versioned-object kind: {sql}"
+        "the spine pre-filters by versioned-object kind"
     );
-    assert!(sql.contains("LIMIT"), "the paging window survives: {sql}");
+    assert!(sql.contains("LIMIT"), "the paging window survives");
     // The dead-audit fix: nothing projects an audit field, so no audit join.
     assert!(
         !sql.contains(r#""audit""#),
-        "no audit join without an audit-field projection: {sql}"
+        "no audit join without an audit-field projection"
     );
 }
 
@@ -1612,7 +1604,7 @@ fn referenced_streaming_root_keeps_its_lateral() {
     assert_eq!(
         sql.matches("JOIN LATERAL").count(),
         3,
-        "an archetype-constrained root keeps its lateral: {sql}"
+        "an archetype-constrained root keeps its lateral"
     );
     // A projected data path from the root pins the root node row too.
     let sql = build_sql_limited(
@@ -1623,7 +1615,7 @@ fn referenced_streaming_root_keeps_its_lateral() {
     );
     assert!(
         sql.matches("JOIN LATERAL").count() >= 3,
-        "a root-projecting query keeps the root lateral: {sql}"
+        "a root-projecting query keeps the root lateral"
     );
 }
 
@@ -1632,14 +1624,14 @@ fn referenced_streaming_root_keeps_its_lateral() {
 #[test]
 fn order_by_keeps_the_flat_shape() {
     let sql = build_sql_limited(&format!("{WARD_QUERY} ORDER BY c/uid/value"));
-    assert!(!sql.contains("JOIN LATERAL"), "flat under ORDER BY: {sql}");
+    assert!(!sql.contains("JOIN LATERAL"), "flat under ORDER BY");
 }
 
 /// Without a LIMIT there is nothing to stream toward — flat.
 #[test]
 fn no_limit_keeps_the_flat_shape() {
     let sql = build_sql(WARD_QUERY);
-    assert!(!sql.contains("JOIN LATERAL"), "flat without LIMIT: {sql}");
+    assert!(!sql.contains("JOIN LATERAL"), "flat without LIMIT");
 }
 
 /// An EHR-scoped execution is already bounded by the `ehr_id` indexes — flat.
@@ -1659,20 +1651,17 @@ fn ehr_scoped_execution_keeps_the_flat_shape() {
     let sql = ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed: {e}"))
         .sql;
-    assert!(!sql.contains("JOIN LATERAL"), "flat when EHR-scoped: {sql}");
+    assert!(!sql.contains("JOIN LATERAL"), "flat when EHR-scoped");
 }
 
 /// Aggregates and DISTINCT consume the full row set — flat.
 #[test]
 fn aggregates_and_distinct_keep_the_flat_shape() {
     let agg = build_sql_limited("SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c");
-    assert!(!agg.contains("JOIN LATERAL"), "flat under COUNT: {agg}");
+    assert!(!agg.contains("JOIN LATERAL"), "flat under COUNT");
     let distinct =
         build_sql_limited("SELECT DISTINCT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
-    assert!(
-        !distinct.contains("JOIN LATERAL"),
-        "flat under DISTINCT: {distinct}"
-    );
+    assert!(!distinct.contains("JOIN LATERAL"), "flat under DISTINCT");
 }
 
 /// OR-containment needs the disjunctive EXISTS machinery — falls back flat.
@@ -1683,10 +1672,7 @@ fn or_containment_keeps_the_flat_shape() {
          (OBSERVATION o [openEHR-EHR-OBSERVATION.blood_pressure.v2] OR \
           EVALUATION ev [openEHR-EHR-EVALUATION.problem_diagnosis.v1])",
     );
-    assert!(
-        !sql.contains("JOIN LATERAL"),
-        "flat under OR containment: {sql}"
-    );
+    assert!(!sql.contains("JOIN LATERAL"), "flat under OR containment");
 }
 
 /// The streaming shape keeps the population gate: a bare root (no EHR
@@ -1698,11 +1684,11 @@ fn streaming_shape_keeps_the_population_gate() {
     assert_eq!(
         linked.matches(r#""is_queryable" = $"#).count(),
         1,
-        "exactly one gate: {linked}"
+        "exactly one gate"
     );
     assert!(
         linked.contains(r#""e0"."is_queryable" = $"#),
-        "the gate sits on the EHR alias: {linked}"
+        "the gate sits on the EHR alias"
     );
     // A bare VO root projecting only `uid/value` needs no node row at all
     // (dead-root elision): the whole query is the spine + the gate join —
@@ -1710,11 +1696,11 @@ fn streaming_shape_keeps_the_population_gate() {
     let bare = build_sql_limited("SELECT c/uid/value FROM COMPOSITION c");
     assert!(
         bare.contains(r#"FROM "version""#) && !bare.contains("JOIN LATERAL"),
-        "a bare uid-only VO root streams as the spine alone: {bare}"
+        "a bare uid-only VO root streams as the spine alone"
     );
     assert!(
         bare.contains(r#""is_queryable" = $"#),
-        "the bare root keeps its queryable gate: {bare}"
+        "the bare root keeps its queryable gate"
     );
 }
 
@@ -1744,11 +1730,11 @@ fn name_term_code_predicate_decomposes() {
     );
     assert!(
         sql.contains(r#"("n2"."name_code" = $"#) && sql.contains(r#""n2"."name_terminology" = $"#),
-        "code_string AND terminology_id both compared as promoted columns: {sql}"
+        "code_string AND terminology_id both compared as promoted columns"
     );
     assert!(
         !sql.contains(r#"jsonb_path_query_first("n2"."data""#),
-        "the coded-name predicate opens no JSON fragment: {sql}"
+        "the coded-name predicate opens no JSON fragment"
     );
 }
 
@@ -1822,7 +1808,7 @@ fn version_coded_field_subpaths() {
     );
     assert!(
         code.contains(r#""change_type" = CAST"#),
-        "the code form compares the stored column directly: {code}"
+        "the code form compares the stored column directly"
     );
 
     let rubric = build_sql(
@@ -1831,7 +1817,7 @@ fn version_coded_field_subpaths() {
     );
     assert!(
         rubric.contains("CASE") && rubric.contains(r#""change_type""#),
-        "rubric renders as a CASE over the group: {rubric}"
+        "rubric renders as a CASE over the group"
     );
 
     let lifecycle_rubric = build_sql(
@@ -1839,7 +1825,7 @@ fn version_coded_field_subpaths() {
     );
     assert!(
         lifecycle_rubric.contains("CASE") && lifecycle_rubric.contains(r#""lifecycle_state""#),
-        "lifecycle rubric CASE: {lifecycle_rubric}"
+        "lifecycle rubric CASE"
     );
 
     let term = build_sql(
@@ -1851,7 +1837,7 @@ fn version_coded_field_subpaths() {
     // the comparison at all.
     assert!(
         !term.contains(r#""change_type""#) && term.contains("= CAST"),
-        "terminology form is a constant comparison: {term}"
+        "terminology form is a constant comparison"
     );
 
     // The bare coded object has no defined scalar comparison form.
@@ -1879,11 +1865,11 @@ fn like_and_matches_lower_existentially_on_anchored_leaves() {
     );
     assert!(
         like_sql.contains("EXISTS(SELECT") && like_sql.contains("LIKE"),
-        "LIKE on an anchored leaf is existential: {like_sql}"
+        "LIKE on an anchored leaf is existential"
     );
     assert!(
         !like_sql.contains("LIMIT 1"),
-        "no scalar LIMIT-1 extraction remains under the LIKE: {like_sql}"
+        "no scalar LIMIT-1 extraction remains under the LIKE"
     );
 
     let matches_sql = build_sql(
@@ -1892,7 +1878,7 @@ fn like_and_matches_lower_existentially_on_anchored_leaves() {
     );
     assert!(
         matches_sql.contains("EXISTS(SELECT") && matches_sql.contains("IN ("),
-        "matches on an anchored leaf is existential: {matches_sql}"
+        "matches on an anchored leaf is existential"
     );
     // NOT flips the polarity back to the scalar shape (three-valued SQL
     // semantics preserved for absent leaves) — same rule as the comparisons;
@@ -1904,7 +1890,7 @@ fn like_and_matches_lower_existentially_on_anchored_leaves() {
     assert_eq!(
         anchor_exists(&negated),
         1,
-        "negative polarity keeps the scalar lowering: {negated}"
+        "negative polarity keeps the scalar lowering"
     );
 }
 
@@ -1977,11 +1963,11 @@ fn folder_contains_composition_resolves_items_refs() {
     let sql = build_sql("SELECT c/uid/value FROM EHR e CONTAINS FOLDER f CONTAINS COMPOSITION c");
     assert!(
         sql.contains("jsonb_array_elements") && sql.contains("'items'"),
-        "the edge is the items reference lookup: {sql}"
+        "the edge is the items reference lookup"
     );
     assert!(
         sql.contains("split_part"),
-        "the ref uid root is compared, not the full OBJECT_VERSION_ID: {sql}"
+        "the ref uid root is compared, not the full OBJECT_VERSION_ID"
     );
 }
 
@@ -1996,15 +1982,15 @@ fn folder_contains_folder_unites_subtree_and_items_reference() {
     assert!(
         sql.contains(r#""n2"."num" > "n1"."num""#)
             && sql.contains(r#""n2"."num" <= "n1"."num_cap""#),
-        "the by-value branch is a strict interval, no self-pair: {sql}"
+        "the by-value branch is a strict interval, no self-pair"
     );
     assert!(
         sql.contains(") OR EXISTS") || sql.contains(") OR (EXISTS"),
-        "the by-value branch is united with the items-reference branch: {sql}"
+        "the by-value branch is united with the items-reference branch"
     );
     assert!(
         sql.contains("jsonb_array_elements") && sql.contains("'items'"),
-        "the reference branch is the items lookup: {sql}"
+        "the reference branch is the items lookup"
     );
 }
 
@@ -2030,19 +2016,19 @@ fn not_contains_folder_negates_the_union_edge() {
         build_sql("SELECT f1/name/value FROM EHR e CONTAINS FOLDER f1 NOT CONTAINS FOLDER f2");
     assert!(
         sql.contains("NOT EXISTS") || sql.contains("NOT (EXISTS"),
-        "the exclusion is an anti-join: {sql}"
+        "the exclusion is an anti-join"
     );
     assert!(
         sql.contains(") OR EXISTS") || sql.contains(") OR (EXISTS"),
-        "the negated edge unites the by-value branch with the reference branch: {sql}"
+        "the negated edge unites the by-value branch with the reference branch"
     );
     assert!(
         sql.contains("jsonb_array_elements") && sql.contains("'items'"),
-        "the reference branch is the items lookup: {sql}"
+        "the reference branch is the items lookup"
     );
     assert!(
         sql.contains(r#""xv1"."sys_version" = "xv1_head"."trunk_head_sys_version""#),
-        "the branch folder binds its own version spine at latest scope: {sql}"
+        "the branch folder binds its own version spine at latest scope"
     );
 }
 
@@ -2054,11 +2040,11 @@ fn not_contains_under_folder_uses_the_reference_edge() {
         build_sql("SELECT f/name/value FROM EHR e CONTAINS FOLDER f NOT CONTAINS COMPOSITION c");
     assert!(
         sql.contains("NOT EXISTS") || sql.contains("NOT (EXISTS"),
-        "the exclusion is an anti-join: {sql}"
+        "the exclusion is an anti-join"
     );
     assert!(
         sql.contains("jsonb_array_elements") && sql.contains("'items'"),
-        "the negated edge is the items reference lookup: {sql}"
+        "the negated edge is the items reference lookup"
     );
 }
 
@@ -2071,7 +2057,7 @@ fn folder_root_never_streams() {
     let sql = build_sql_limited("SELECT f/name/value FROM EHR e CONTAINS FOLDER f");
     assert!(
         !sql.contains("JOIN LATERAL"),
-        "FOLDER roots take the flat shape: {sql}"
+        "FOLDER roots take the flat shape"
     );
 }
 
@@ -2092,15 +2078,15 @@ fn sibling_leaves_share_their_bound_prefix() {
     assert_eq!(
         sql.matches("LATERAL((").count(),
         5,
-        "three shared step bindings plus one per leaf: {sql}"
+        "three shared step bindings plus one per leaf"
     );
     assert!(
         !sql.contains("LIMIT"),
-        "no projected leaf is a first-match subquery: {sql}"
+        "no projected leaf is a first-match subquery"
     );
     assert!(
         sql.contains(r#""parent_num""#),
-        "every bound step is an attribute child of its parent: {sql}"
+        "every bound step is an attribute child of its parent"
     );
 }
 
@@ -2116,7 +2102,7 @@ fn streaming_binds_projected_steps_as_left_laterals() {
     assert_eq!(
         sql.matches("LEFT JOIN LATERAL").count(),
         4,
-        "data, events (shared), then data and items below the event: {sql}"
+        "data, events (shared), then data and items below the event"
     );
 }
 
@@ -2129,8 +2115,8 @@ fn where_reads_through_the_projected_binding() {
          FROM EHR e CONTAINS OBSERVATION o \
          WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 140",
     );
-    assert_eq!(anchor_exists(&sql), 0, "no existential walk remains: {sql}");
-    assert_eq!(sql.matches("LATERAL((").count(), 4, "{sql}");
+    assert_eq!(anchor_exists(&sql), 0, "no existential walk remains");
+    assert_eq!(sql.matches("LATERAL((").count(), 4);
 }
 
 /// QUERY master03 §Containment: the left operand is the PARENT of the right,
@@ -2142,9 +2128,9 @@ fn contains_is_strict() {
     assert!(
         sql.contains(r#""n2"."num" > "n1"."num""#)
             && sql.contains(r#""n2"."num" <= "n1"."num_cap""#),
-        "the child lies strictly inside the parent's interval: {sql}"
+        "the child lies strictly inside the parent's interval"
     );
-    assert!(!sql.contains("BETWEEN"), "no inclusive interval: {sql}");
+    assert!(!sql.contains("BETWEEN"), "no inclusive interval");
 }
 
 /// `NOT CONTAINS` negates the same strict edge, so a CLUSTER without a nested
@@ -2155,8 +2141,8 @@ fn not_contains_is_strict() {
     let sql = build_sql(
         "SELECT cl1/archetype_node_id FROM EHR e CONTAINS CLUSTER cl1 NOT CONTAINS CLUSTER cl2",
     );
-    assert!(sql.contains(r#"> "n1"."num""#), "strict anti-join: {sql}");
-    assert!(!sql.contains("BETWEEN"), "no inclusive interval: {sql}");
+    assert!(sql.contains(r#"> "n1"."num""#), "strict anti-join");
+    assert!(!sql.contains("BETWEEN"), "no inclusive interval");
 }
 
 /// The streaming shape keeps the flat shape's answer for a logically deleted
@@ -2166,13 +2152,10 @@ fn not_contains_is_strict() {
 #[test]
 fn elided_streaming_root_excludes_deleted_versions() {
     let sql = build_sql_limited("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
-    assert!(
-        !sql.contains("JOIN LATERAL"),
-        "the root lateral is elided: {sql}"
-    );
+    assert!(!sql.contains("JOIN LATERAL"), "the root lateral is elided");
     assert!(
         sql.contains(r#""lifecycle_state" <> $"#),
-        "the spine drops deleted versions: {sql}"
+        "the spine drops deleted versions"
     );
 }
 
@@ -2188,9 +2171,9 @@ fn or_branch_variables_are_readable() {
     assert_eq!(
         sql.matches("LATERAL((").count(),
         2,
-        "one left binding per read branch: {sql}"
+        "one left binding per read branch"
     );
-    assert_eq!(anchor_exists(&sql), 2, "the OR filter stays: {sql}");
+    assert_eq!(anchor_exists(&sql), 2, "the OR filter stays");
 }
 
 /// An OR branch nobody reads stays a containment filter: no binding.
@@ -2200,7 +2183,7 @@ fn unread_or_branches_stay_filters() {
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
          CONTAINS (OBSERVATION o OR EVALUATION ev)",
     );
-    assert!(!sql.contains("LATERAL(("), "no binding: {sql}");
+    assert!(!sql.contains("LATERAL(("), "no binding");
 }
 
 /// A variable declared under NOT CONTAINS names an object no row holds
@@ -2259,24 +2242,24 @@ fn or_branch_versioned_objects_are_readable() {
     assert_eq!(
         sql.matches("LATERAL((").count(),
         4,
-        "a node and a version binding per read branch: {sql}"
+        "a node and a version binding per read branch"
     );
     assert_eq!(
         sql.matches(r#"LEFT JOIN "version" AS"#).count(),
         2,
-        "one version binding per branch: {sql}"
+        "one version binding per branch"
     );
     assert_eq!(
         sql.matches(r#""creating_system_id""#).count(),
         2,
-        "each uid synthesizes from its own branch's version row: {sql}"
+        "each uid synthesizes from its own branch's version row"
     );
     // Each branch filter links its node and its version to the EHR (4); each
     // binding links its node directly and again inside its scope test (6).
     assert_eq!(
         sql.matches(r#""ehr_id" = "e0"."id""#).count(),
         10,
-        "the branch nodes belong to the EHR: {sql}"
+        "the branch nodes belong to the EHR"
     );
 }
 
@@ -2289,12 +2272,12 @@ fn an_or_branch_binding_reads_the_latest_unrestricted_version() {
     assert_eq!(
         sql.matches(r#""trunk_head_sys_version""#).count(),
         4,
-        "each filter and each binding reads the trunk head: {sql}"
+        "each filter and each binding reads the trunk head"
     );
     assert_eq!(
         sql.matches(r#""restricted_at" IS NULL"#).count(),
         5,
-        "four head gates plus the EHR row's own gate: {sql}"
+        "four head gates plus the EHR row's own gate"
     );
 }
 
@@ -2309,7 +2292,7 @@ fn a_variable_under_an_or_branch_versioned_object_is_readable() {
     assert_eq!(
         sql.matches("LATERAL((").count(),
         3,
-        "c1's node and version, then o under c1: {sql}"
+        "c1's node and version, then o under c1"
     );
 }
 
@@ -2322,17 +2305,17 @@ fn a_folder_referenced_or_branch_is_readable() {
     assert_eq!(
         sql.matches("LATERAL((").count(),
         2,
-        "the read branch's node and version: {sql}"
+        "the read branch's node and version"
     );
     assert_eq!(
         sql.matches("jsonb_array_elements(").count(),
         3,
-        "two branch filters and the binding resolve the folder's items: {sql}"
+        "two branch filters and the binding resolve the folder's items"
     );
     assert_eq!(
         sql.matches(r#""is_queryable" = $"#).count(),
         2,
-        "the folder root's gate and the unlinked binding's own: {sql}"
+        "the folder root's gate and the unlinked binding's own"
     );
 }
 
@@ -2350,17 +2333,17 @@ const SUBJECT_GUARD: &str = r#""subject_other"."subject_id" = "e0"."subject_id""
 #[test]
 fn an_or_branch_under_the_ehr_is_covered_by_the_ehr_patient_scope() {
     let unscoped = prepare(OR_COMPOSITIONS, Vec::new(), None, None).sql;
-    assert!(!unscoped.contains(r#""subject_id""#), "{unscoped}");
+    assert!(!unscoped.contains(r#""subject_id""#));
     let scoped = prepare(OR_COMPOSITIONS, Vec::new(), Some("patient-1"), None).sql;
     assert_eq!(
         scoped.matches(EHR_SUBJECT).count(),
         1,
-        "the EHR row carries the patient scope: {scoped}"
+        "the EHR row carries the patient scope"
     );
     assert_eq!(
         scoped.matches(ROOT_SUBJECT).count(),
         0,
-        "no branch binding repeats it: {scoped}"
+        "no branch binding repeats it"
     );
 }
 
@@ -2377,7 +2360,7 @@ fn an_or_branch_without_an_ehr_carries_the_patient_scope() {
     assert_eq!(
         scoped.matches(ROOT_SUBJECT).count(),
         2,
-        "the folder root and the unlinked binding: {scoped}"
+        "the folder root and the unlinked binding"
     );
 }
 
@@ -2393,17 +2376,17 @@ fn an_ehr_only_query_carries_the_patient_scope() {
         "SELECT e/ehr_status/subject FROM EHR e",
     ] {
         let unscoped = prepare(q, Vec::new(), None, None).sql;
-        assert!(!unscoped.contains(r#""subject_id""#), "{q}: {unscoped}");
+        assert!(!unscoped.contains(r#""subject_id""#), "{q}");
         let scoped = prepare(q, Vec::new(), Some("patient-1"), None).sql;
         assert_eq!(
             scoped.matches(EHR_SUBJECT).count(),
             1,
-            "{q}: the EHR row carries the patient scope: {scoped}"
+            "{q}: the EHR row carries the patient scope"
         );
         assert_eq!(
             scoped.matches(SUBJECT_GUARD).count(),
             1,
-            "{q}: with its ambiguity guard: {scoped}"
+            "{q}: with its ambiguity guard"
         );
     }
 }
@@ -2418,7 +2401,7 @@ fn an_ehr_scoped_query_keeps_the_patient_scope() {
         None,
     )
     .sql;
-    assert!(scoped.contains(EHR_SUBJECT), "{scoped}");
+    assert!(scoped.contains(EHR_SUBJECT));
 }
 
 /// The patient claim names a subject id with no namespace, so a match is
@@ -2435,11 +2418,10 @@ fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
     .sql;
     assert!(
         scoped.contains("NOT EXISTS(SELECT") && scoped.contains(r#"FROM "ehr" AS "subject_other""#),
-        "{scoped}"
     );
     assert!(
         scoped.contains(r#""subject_other"."subject_namespace" <> "e0"."subject_namespace""#),
-        "the guard compares the namespaces: {scoped}"
+        "the guard compares the namespaces"
     );
 }
 
@@ -2453,19 +2435,16 @@ fn rooted_queries_carry_the_patient_scope_on_both_shapes() {
         assert_eq!(
             scoped.matches(EHR_SUBJECT).count(),
             1,
-            "limit {limit:?}: the EHR row carries the patient scope: {scoped}"
+            "limit {limit:?}: the EHR row carries the patient scope"
         );
         assert_eq!(
             scoped.matches(ROOT_SUBJECT).count(),
             1,
-            "limit {limit:?}: and the composition root: {scoped}"
+            "limit {limit:?}: and the composition root"
         );
     }
     let streaming = prepare(EHR_COMPOSITION, Vec::new(), Some("patient-1"), Some(10)).sql;
-    assert!(
-        streaming.contains("LATERAL"),
-        "the streaming shape: {streaming}"
-    );
+    assert!(streaming.contains("LATERAL"), "the streaming shape");
     for q in [
         "SELECT s/uid/value FROM EHR_STATUS s",
         "SELECT a/uid/value FROM EHR_ACCESS a",
@@ -2477,7 +2456,7 @@ fn rooted_queries_carry_the_patient_scope_on_both_shapes() {
             assert_eq!(
                 scoped.matches(ROOT_SUBJECT).count(),
                 1,
-                "{q} (limit {limit:?}): the root carries the patient scope: {scoped}"
+                "{q} (limit {limit:?}): the root carries the patient scope"
             );
         }
     }
@@ -2519,8 +2498,7 @@ fn the_scope_collection_reports_ehr_sources() {
         );
         assert!(
             scope.sql.contains(r#""e0"."id" AS "scope_ehr_0""#),
-            "{q}: {}",
-            scope.sql
+            "{q}: the scope selects the EHR source's id",
         );
     }
     let ir = plan_ok("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
@@ -2543,8 +2521,8 @@ fn or_branch_bindings_are_logged_as_served_roots() {
         None,
         None,
     );
-    assert_eq!(prepared.access_ehr_cols.len(), 2, "{}", prepared.sql);
-    assert_eq!(prepared.access_version_cols.len(), 2, "{}", prepared.sql);
+    assert_eq!(prepared.access_ehr_cols.len(), 2);
+    assert_eq!(prepared.access_version_cols.len(), 2);
 }
 
 /// A LIMIT does not move an OR read onto the streaming shape: the bindings
@@ -2552,8 +2530,8 @@ fn or_branch_bindings_are_logged_as_served_roots() {
 #[test]
 fn a_limited_or_branch_read_keeps_the_flat_shape() {
     let sql = prepare(OR_COMPOSITIONS, Vec::new(), None, Some(10)).sql;
-    assert!(!sql.contains("JOIN LATERAL"), "{sql}");
-    assert_eq!(sql.matches("LATERAL((").count(), 4, "{sql}");
+    assert!(!sql.contains("JOIN LATERAL"));
+    assert_eq!(sql.matches("LATERAL((").count(), 4);
 }
 
 /// QUERY master03 §Aggregate functions: an aggregate's inputs are the data
@@ -2567,11 +2545,11 @@ fn aggregate_arguments_add_no_row_binding() {
                 MAX(o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude) \
          FROM EHR e CONTAINS OBSERVATION o",
     );
-    assert!(!sql.contains("LATERAL(("), "no row binding: {sql}");
+    assert!(!sql.contains("LATERAL(("), "no row binding");
     assert_eq!(
         sql.matches("MAX(").count(),
         2,
-        "the per-row maximum combined by an outer maximum: {sql}"
+        "the per-row maximum combined by an outer maximum"
     );
 }
 
@@ -2586,7 +2564,7 @@ fn different_repeated_attributes_bind_independently() {
     assert_eq!(
         sql.matches("LATERAL((").count(),
         4,
-        "data and events, then protocol and items: {sql}"
+        "data and events, then protocol and items"
     );
 }
 
@@ -2600,8 +2578,8 @@ fn path_to_path_comparison_shares_its_steps() {
          WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude \
              > o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude",
     );
-    assert_eq!(anchor_exists(&sql), 1, "one walk binds both paths: {sql}");
-    assert!(!sql.contains("LIMIT"), "no first-match read remains: {sql}");
+    assert_eq!(anchor_exists(&sql), 1, "one walk binds both paths");
+    assert!(!sql.contains("LIMIT"), "no first-match read remains");
 }
 
 /// The WHERE clause binds each structure step its paths descend ONCE, at its
@@ -2622,11 +2600,11 @@ fn where_binds_each_step_once_for_the_whole_clause() {
         let sql = build_sql(&format!(
             "SELECT o/name/value FROM EHR e CONTAINS OBSERVATION o WHERE {clause}"
         ));
-        assert_eq!(anchor_exists(&sql), 1, "one assignment EXISTS: {sql}");
+        assert_eq!(anchor_exists(&sql), 1, "one assignment EXISTS");
         assert_eq!(
             sql.matches("LATERAL((").count(),
             5,
-            "three shared step bindings plus one per items step: {sql}"
+            "three shared step bindings plus one per items step"
         );
     }
 }
@@ -2640,7 +2618,7 @@ fn differently_predicated_steps_are_not_shared() {
          WHERE o/data[at0001]/events/data[at0003]/items[at0004]/value/magnitude >= 140 \
            AND o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude >= 90",
     );
-    assert_eq!(sql.matches("LATERAL((").count(), 7, "{sql}");
+    assert_eq!(sql.matches("LATERAL((").count(), 7);
 }
 
 /// An aggregate's items are filtered by the WHERE clause with the steps they
@@ -2659,13 +2637,13 @@ fn aggregate_items_are_filtered_by_a_shared_where() {
     assert_eq!(
         anchor_exists(&sql),
         1,
-        "the row-level assignment EXISTS only: {sql}"
+        "the row-level assignment EXISTS only"
     );
     assert_eq!(
         sql.matches(" < ").count(),
         4,
         "the test applies once per row and once per item walk of each per-row aggregate \
-         (COUNT, and SUM and COUNT inside AVG): {sql}"
+         (COUNT, and SUM and COUNT inside AVG)"
     );
 }
 
@@ -2683,12 +2661,12 @@ fn exists_is_path_level() {
     assert_eq!(
         sql.matches("LATERAL((").count(),
         4,
-        "the EXISTS path binds nothing: {sql}"
+        "the EXISTS path binds nothing"
     );
     assert_eq!(
         anchor_exists(&sql),
         2,
-        "the assignment EXISTS plus the operand's own: {sql}"
+        "the assignment EXISTS plus the operand's own"
     );
 }
 
@@ -2702,11 +2680,7 @@ fn the_scope_collection_reports_the_ehr_status_template() {
         .unwrap_or_else(|| panic!("an EHR source is something to collect"));
     assert_eq!(scope.ehr_columns, vec!["scope_ehr_0".to_owned()]);
     assert_eq!(scope.template_columns, vec!["scope_template_1".to_owned()]);
-    assert!(
-        scope.sql.contains(r#""template_id" AS "scope_template_1""#),
-        "{}",
-        scope.sql
-    );
+    assert!(scope.sql.contains(r#""template_id" AS "scope_template_1""#),);
 }
 
 /// With a configured patient namespace the claim names the (id, namespace)
@@ -2730,11 +2704,11 @@ fn a_configured_patient_namespace_matches_the_pair_exactly() {
             .sql;
         assert!(
             sql.contains(r#""subject_namespace" = $"#),
-            "{q}: the namespace is compared: {sql}"
+            "{q}: the namespace is compared"
         );
         assert!(
             !sql.contains(r#""subject_other""#),
-            "{q}: no ambiguity guard: {sql}"
+            "{q}: no ambiguity guard"
         );
     }
 }
@@ -2812,10 +2786,10 @@ fn a_root_only_class_binds_the_root_row() {
         "SELECT s/uid/value FROM EHR e CONTAINS EHR_STATUS s",
     ] {
         let sql = build_sql(q);
-        assert!(sql.contains(r#""n1"."num" = $"#), "{q}: {sql}");
+        assert!(sql.contains(r#""n1"."num" = $"#), "{q}");
     }
     let sql = build_sql("SELECT f/uid/value FROM EHR e CONTAINS FOLDER f");
-    assert!(!sql.contains(r#""n1"."num" = $"#), "{sql}");
+    assert!(!sql.contains(r#""n1"."num" = $"#));
 }
 
 /// A `COMPOSITION`'s template id compares through the indexed
@@ -2828,13 +2802,13 @@ fn a_composition_template_predicate_reads_the_version_column() {
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o WHERE c/archetype_details/template_id/value = 'vital_signs'",
     ] {
         let sql = build_sql(q);
-        assert!(sql.contains(r#""v1"."template_id" = "#), "{q}: {sql}");
-        assert!(!sql.contains("jsonpath"), "{q}: {sql}");
+        assert!(sql.contains(r#""v1"."template_id" = "#), "{q}");
+        assert!(!sql.contains("jsonpath"), "{q}");
     }
     // A projection still returns the stored leaf.
     let sql =
         build_sql("SELECT c/archetype_details/template_id/value FROM EHR e CONTAINS COMPOSITION c");
-    assert!(!sql.contains(r#""v1"."template_id""#), "{sql}");
+    assert!(!sql.contains(r#""v1"."template_id""#));
 }
 
 // ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────
@@ -2879,22 +2853,22 @@ fn a_value_equality_with_a_parameter_is_anchored_on_the_element_rows() {
         ),
         &params,
     );
-    assert_eq!(value_anchors(&sql), 1, "one anchor: {sql}");
+    assert_eq!(value_anchors(&sql), 1, "one anchor");
     assert!(
         sql.contains(
             r#"(SELECT DISTINCT "va1_n"."vo_id", "va1_n"."sys_version" FROM "node" AS "va1_n""#
         ) && sql.contains(r#""va1_n"."rm_type" = ('ELEMENT')"#),
         "the anchor is a FROM item of the distinct versions with such an ELEMENT row, the \
-         type a literal the partial index predicate is proven from: {sql}"
+         type a literal the partial index predicate is proven from"
     );
     assert!(
         sql.contains(r#""va1"."vo_id" = "v0"."vo_id""#)
             && sql.contains(r#""va1"."sys_version" = "v0"."sys_version""#),
-        "the anchor is linked to the version row of the path's versioned object: {sql}"
+        "the anchor is linked to the version row of the path's versioned object"
     );
     assert!(
         sql.contains(r#""archetype" = $"#),
-        "the leaf step's at-code narrows the anchor: {sql}"
+        "the leaf step's at-code narrows the anchor"
     );
 }
 
@@ -2904,7 +2878,7 @@ fn a_value_equality_with_a_literal_is_anchored() {
     let sql = build_sql(&format!(
         "SELECT p/uid/value {PERSON_LOOKUP} WHERE id/items[at0001]/value/id = 'MRN-1'"
     ));
-    assert_eq!(value_anchors(&sql), 1, "{sql}");
+    assert_eq!(value_anchors(&sql), 1);
 }
 
 /// A `value/value` equality is anchored on a text, which a `DV_ORDINAL` or
@@ -2915,9 +2889,9 @@ fn a_value_value_equality_is_anchored_on_a_text_no_number_renders_as() {
     let leaf = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/value";
     let from = "FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o";
     let text = build_sql(&format!("SELECT c/uid/value {from} WHERE {leaf} = 'Mild'"));
-    assert_eq!(value_anchors(&text), 1, "{text}");
+    assert_eq!(value_anchors(&text), 1);
     let number = build_sql(&format!("SELECT c/uid/value {from} WHERE {leaf} = '2'"));
-    assert_eq!(value_anchors(&number), 0, "{number}");
+    assert_eq!(value_anchors(&number), 0);
 }
 
 /// A conjunct under `OR` or `NOT`, a comparison other than equality, a
@@ -2942,7 +2916,7 @@ fn only_a_top_level_text_equality_is_anchored() {
         ("a name", "o/name/value = 'Weight'".to_owned()),
     ] {
         let sql = build_sql(&format!("SELECT c/uid/value {from} WHERE {filter}"));
-        assert_eq!(value_anchors(&sql), 0, "{name} is not anchored: {sql}");
+        assert_eq!(value_anchors(&sql), 0, "{name} is not anchored");
     }
     let both = build_sql(&format!(
         "SELECT c/uid/value {from} WHERE {leaf}/units = 'kg' AND {leaf}/value = 'x' \
@@ -2951,7 +2925,7 @@ fn only_a_top_level_text_equality_is_anchored() {
     assert_eq!(
         value_anchors(&both),
         2,
-        "each text equality of a conjunction is anchored: {both}"
+        "each text equality of a conjunction is anchored"
     );
 }
 
@@ -2968,17 +2942,17 @@ fn an_ehr_lookup_by_subject_reads_the_ehr_columns() {
     );
     assert!(
         sql.contains(r#""e0"."subject_id" = "#) && sql.contains(r#""e0"."subject_namespace" = "#),
-        "the subject leaves are the ehr columns: {sql}"
+        "the subject leaves are the ehr columns"
     );
     assert!(
         !sql.contains(r#""version" AS "esv"#),
-        "no EHR_STATUS version is joined for the subject: {sql}"
+        "no EHR_STATUS version is joined for the subject"
     );
     let other = build_sql(
         "SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_status/subject/external_ref/type = 'PERSON'",
     );
     assert!(
         other.contains(r#""version" AS "esv"#),
-        "any other EHR_STATUS leaf still reads the root's fragment: {other}"
+        "any other EHR_STATUS leaf still reads the root's fragment"
     );
 }
