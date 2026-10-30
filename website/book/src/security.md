@@ -571,6 +571,8 @@ not sent its request head in time, counted from accept, is disconnected, on the
 plain and the TLS listener alike. On a kept-alive connection the bound counts
 from the first byte of each later request head, and `[server] idle_timeout_ms`
 (120 s by default) closes a connection that waits that long for its next request.
+Keep it longer than the idle timeout of your clients (90 s for a Go client) and
+of any load balancer in front, so they close an idle connection first.
 
 **Body size:** `[server] body_limit_bytes` and `[rest] body_limit_bytes`. Two
 tiers: the routes that accept bulk by design (template upload and
