@@ -456,13 +456,14 @@ async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
     (pg, app)
 }
 
-/// A token holding a SMART on openEHR scope is authenticated without a role,
-/// and its scopes decide access (owner decision on #4467; master08 §Resource
-/// Scopes, "`system`: For server-to-server integrations or backend
-/// services"). A role-less token whose scope does not cover the operation,
-/// and one holding no SMART scope, are still refused.
+/// A token whose SMART on openEHR scopes are `system/` scopes is a backend
+/// client: it is authenticated without a role and its scopes decide access
+/// (owner ruling on #4467; master08 §Resource Scopes, `system` access is
+/// "based on pre-configured client-specific policy"). A role-less token whose
+/// scope does not cover the operation, and one holding no SMART scope, are
+/// still refused.
 #[tokio::test]
-async fn a_scoped_token_without_a_role_reaches_what_its_scopes_cover() {
+async fn a_system_scoped_token_without_a_role_reaches_what_its_scopes_cover() {
     let issuer = issuer().await;
     let uri = issuer.uri();
     let (_pg, app) = rbac_app(&uri).await;
@@ -483,4 +484,37 @@ async fn a_scoped_token_without_a_role_reaches_what_its_scopes_cover() {
         StatusCode::FORBIDDEN,
         "no SMART scope and no role: {body}"
     );
+}
+
+/// A `user/` or `patient/` token belongs to a person, so it still needs a role
+/// with the role gate on (owner ruling on #4467, #2160): without one it is
+/// refused `403` even when its scopes cover the operation, and a token mixing
+/// a `system/` scope with a person's scope is refused alike.
+#[tokio::test]
+async fn a_person_scoped_token_without_a_role_is_refused() {
+    let issuer = issuer().await;
+    let uri = issuer.uri();
+    let (_pg, app) = rbac_app(&uri).await;
+    let list = format!("{BASE}/definition/template/adl1.4");
+    for scope in [
+        "user/template-*.r",
+        "patient/template-*.r",
+        "system/template-*.r user/template-*.r",
+    ] {
+        let (status, body) = send(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{scope}: {body}");
+    }
+    let (status, body) = send(
+        &app,
+        get(
+            &list,
+            Some(&token(
+                &uri,
+                "user/template-*.r",
+                &json!({ "roles": ["USER"] }),
+            )),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "a user/ token with a role: {body}");
 }

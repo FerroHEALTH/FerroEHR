@@ -572,9 +572,10 @@ async fn app() -> (testkit::TestDb, Router) {
 /// A bearer token carrying `roles` — the RFC 9068 §2.2.3.1 carrier the gate
 /// reads. An empty list is a valid authenticated principal with no roles.
 ///
-/// The role-less token carries no SMART on openEHR scope: a token holding one
-/// passes the role gate and is judged by its scopes (owner decision on #4467,
-/// pinned in `smart_http`), so the role gate is what this principal probes.
+/// The role-less token carries no SMART on openEHR scope: a token holding only
+/// `system/` scopes passes the role gate and is judged by its scopes (owner
+/// ruling on #4467, pinned in `smart_http`), so the role gate is what this
+/// principal probes.
 fn bearer(roles: &[&str]) -> String {
     let exp = u64::try_from(jiff::Timestamp::now().as_second()).expect("timestamp") + 3600;
     let mut claims: Value = json!({

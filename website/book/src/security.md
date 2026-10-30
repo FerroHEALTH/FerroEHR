@@ -375,9 +375,10 @@ carrying a single string and one carrying an array are both accepted.
 needs the admin role.** A Basic user holds the roles its `roles` list names
 and nothing else, so a user with none is refused every Clinical operation;
 `roles = ["USER"]` satisfies the Clinical class and no Admin operation. A
-bearer token that carries a SMART on openEHR resource scope, such as
-`system/template-*.r`, needs no role for a Clinical operation: its scopes
-decide what it reaches. The former `user_role` key is refused at boot.
+bearer token whose SMART on openEHR resource scopes are all `system/` scopes,
+such as `system/template-*.r`, is a backend client and needs no role for a
+Clinical operation: its scopes decide what it reaches. A `user/` or `patient/`
+token belongs to a person and still needs a role. The former `user_role` key is refused at boot.
 Disabling RBAC restores authentication-only behaviour.
 
 > [!IMPORTANT]
