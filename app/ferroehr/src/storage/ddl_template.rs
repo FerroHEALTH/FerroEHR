@@ -67,6 +67,11 @@ pub const VERSION_TREE_KEY: &str =
 pub const VERSION_TREE_READ: &str =
     include_str!("../../migrations/templates/version_tree_read.sql.in");
 
+/// The version-uid order template: an index on the uid the AQL engine
+/// synthesizes, so a page ordered by it reads the index (#4429).
+pub const VERSION_UID_ORDER: &str =
+    include_str!("../../migrations/templates/version_uid_order.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -156,6 +161,16 @@ mod tests {
             "migrations/party/0014_version_tree_read.sql",
             PARTY,
             VERSION_TREE_READ,
+        ),
+        (
+            "migrations/clinical/0024_version_uid_order.sql",
+            CLINICAL,
+            VERSION_UID_ORDER,
+        ),
+        (
+            "migrations/party/0015_version_uid_order.sql",
+            PARTY,
+            VERSION_UID_ORDER,
         ),
     ];
 

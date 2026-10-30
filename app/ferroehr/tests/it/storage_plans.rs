@@ -1036,6 +1036,78 @@ async fn the_newest_compositions_page_reads_the_start_time_index() {
     );
 }
 
+/// Every node type anywhere in a plan tree, outermost first.
+fn node_types(node: &Value, out: &mut Vec<String>) {
+    if let Some(node_type) = node.get("Node Type").and_then(Value::as_str) {
+        out.push(node_type.to_owned());
+    }
+    for child in node
+        .get("Plans")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        node_types(child, out);
+    }
+}
+
+/// A population page ordered by the version uid reads `idx_version_hot_uid`
+/// in order and stops at the limit, in one backend (#4429).
+///
+/// Without the index the only plan that sorted the version rows before the
+/// joins was a `Gather Merge`, which a pruned partition is offered however
+/// small it is, so every such query started a parallel worker or, when the
+/// statistics tipped the other way, sorted the whole join. The plan is read
+/// under the server's own settings, sequential scans allowed.
+#[tokio::test]
+async fn a_page_ordered_by_the_version_uid_reads_the_uid_index_serially() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed(&svc, &pool).await;
+
+    for direction in ["ASC", "DESC"] {
+        let aql = format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+             ORDER BY c/uid/value {direction}"
+        );
+        let prepared = aql_sql_limited(&aql, Vec::new(), Some(5));
+        let mut tx = pool.begin().await.expect("begin the explain transaction");
+        let plan: Value = sqlx::query_scalar_with(
+            sqlx::AssertSqlSafe(format!("{EXPLAIN}{}", prepared.sql)),
+            prepared.values,
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .expect("explain the ordered page");
+        tx.rollback().await.expect("roll the explain back");
+        let scans = scans(&plan);
+        assert!(
+            on(&scans, "version_hot")
+                .iter()
+                .any(|s| s.index.as_deref() == Some("idx_version_hot_uid")),
+            "#4429: {aql} enters the versions through the uid index:\n{}",
+            render(&scans)
+        );
+        let mut types = Vec::new();
+        node_types(
+            plan.get(0)
+                .and_then(|first| first.get("Plan"))
+                .unwrap_or(&Value::Null),
+            &mut types,
+        );
+        assert!(
+            !types.iter().any(|t| t.starts_with("Gather")),
+            "#4429: {aql} starts no parallel worker: {types:?}"
+        );
+        assert_ne!(
+            types.get(1).map(String::as_str),
+            Some("Sort"),
+            "#4429: {aql} sorts nothing under its limit: {types:?}"
+        );
+    }
+}
+
 /// A template predicate on a COMPOSITION reads `idx_version_hot_template`
 /// instead of extracting the template id from every root (#4090).
 #[tokio::test]
