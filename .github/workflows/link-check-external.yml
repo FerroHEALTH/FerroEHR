@@ -62,10 +62,8 @@ jobs:
       - name: Render the generated includes the book expects
         run: |
           bash scripts/render/conformance-stats.sh includes
-          bash scripts/render/comparison.sh
           bash scripts/render/perf-assets.sh
           bash scripts/render/conformance-assets.sh
-          CONF_SUT=ehrbase bash scripts/render/conformance-assets.sh
 
       - name: Assemble the site
         run: bash scripts/site/build.sh --dev-only

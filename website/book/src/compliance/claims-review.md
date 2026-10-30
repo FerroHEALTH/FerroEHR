@@ -91,8 +91,8 @@ Read on the tree after commit `d6539d470`, before FerroEHR 4.3.5.
   about any regulation.
 - **"aims to be the first openly developed, source-available openEHR CDR with a
   published, tracker-backed EU compliance posture"** (the
-  [compliance overview](index.md), [Why FerroEHR exists](../why-ferroehr.md),
-  [Comparison](../comparison.md)): stated as an aim, beside the statement that
+  [compliance overview](index.md), [Why FerroEHR exists](../why-ferroehr.md)):
+  stated as an aim, beside the statement that
   FerroEHR holds no certification and no declaration.
 - **The compliance pages, the DPIA and the go-live checklist**: each says it
   does not make a deployment compliant with anything.

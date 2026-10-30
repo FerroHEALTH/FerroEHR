@@ -19,16 +19,15 @@
 #
 # The reference conformance pipeline composes it UNCONDITIONALLY for
 # ferroehr (scripts/conformance.sh), so the ONE committed record covers the
-# terminology-backed surface. The ixit declares the resulting posture as the
-# `terminology` block on the `sut` instance's party default: one reachable
-# server serving the two seeded namespaces, and the fail-open branch.
+# terminology-backed surface: one reachable server serving the two seeded
+# namespaces, and the fail-open branch.
 #
 # WHY FAIL-OPEN HERE. `[terminology.server] fail_on_error` decides what a
 # deployment does with a bound value set it cannot resolve, and a running
 # server realizes exactly ONE branch. This deployment realizes the shipped
-# default (accept); the fail-CLOSED branch is a second deployment
-# (docker/sut-terminology-failclosed.yml). Register AMB-172 records that no
-# released openEHR text decides between them.
+# default (accept), the arm the party statement selects for the
+# terminology-binding-unresolvable option; no released openEHR text decides
+# between the two.
 services:
   ferroehr:
     environment:

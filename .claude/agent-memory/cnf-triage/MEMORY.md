@@ -21,7 +21,6 @@
 - [ctx/ never creates an EVENT_CONTEXT](ctx-event-context-synthesis.md) — ctx defaults FILL rm-tree nodes; `context/start_time` assertions need an event-context ctx key in the fixture
 - [XML offering is a service choice](xml-offering-is-a-service-choice.md) — AMB-167 "DOCUMENTED" ≠ mandatory offering; a 406 on Accept: application/xml is always conformant
 - [Runner masking mechanisms](runner-masking-mechanisms.md) — patched_body's RM-invalid EHR_STATUS fallback, `errored` contributing no capability evidence, report_only de-gating
-- [Upstream upstream EHRbase non-conformance (#266)](upstream-ehrbase-nonconformance.md) — EHRbase 2.34.0 400s the spec-standard QUOTED If-Match (composition/ehr_status update classes) + 404s the STABLE item-tag surface; our driver/pack spec-valid, outcome (b), record stands
 - [ETag `W/` is 1.1.0-scoped](etag-weak-indicator-is-1-1-0-scoped.md) — form=MUST from 1.1.0, presence=SHOULD always; the catalogue applies the `its_rest` floor inconsistently (141 in-scope vs 108 out-of-scope rows, same matcher)
 - [Query ETag presence is a SHOULD](query-etag-presence-is-should.md) — no released source requires the header on a query 200; the `pattern:` matcher over-gates presence
 - [results.json records out-of-scope rows](results-json-records-out-of-scope-rows.md) — 542 red vs 227 in verdict scope on the java record; `binding.applies` is dead metadata
@@ -44,9 +43,9 @@
 - [Authz class is EXPLICIT SM deferral](authz-class-is-explicit-sm-deferral.md) — a role 403 is never the app bin; SM master02 §Functional Style also grounds driving semantics cases as an authorized principal
 - [Definition-delete routes are Admin (#2071)](definition-delete-routes-are-admin-class.md) — the class move stands; 5 red rows = catalogue bin (`on: admin`), plus the readonly/uncased-branch fallout
 - [TERMINOLOGY_ID has no declared invariant](terminology-id-value-has-no-invariant.md) — BASE declares no Invariants row; master05's production is refuted by its own examples AND released QUERY `snomed_ct(3.1)`
-- [PGP subkey signature the runner cannot verify](pgp-subkey-signature-runner-cannot-verify.md) — RUNNER bin: rpgp 0.20 `SignedPublicKey::verify` is primary-only; the app signs with the `[S]` subkey since 7a8a8c9a3
 - [Baseline commit = where the run was RECORDED](baseline-commit-is-where-the-run-was-recorded.md) — diff the whole range since the previous results.json, never trust a handed-down "prime suspect"
 - [ehr_id scope is SM-grounded](ehr-id-scope-semantics-is-sm-grounded.md) — SM `_ehr_ids_` defines the effect (AMB-101 overstates the silence); EHRbase 2.34.0 discards both carriers
 - [`equivalent` refused on text-document grounds](equivalent-refused-on-text-document-grounds.md) — RUNNER bin: 0.1.4 keys the refusal on the served media type, not the ground; OPT-XML/ADL2-text compares are judgeable
 - [IXIT `administrative` posture](ixit-administrative-posture.md) — AMB-228: 6 role-boundary rows guard out until OUR ixit declares the split; fixed in this repo, not Veredictum
 - [PARTY_RELATED name != subject identification](party-related-name-is-not-subject-identification.md) — APP overreach class; SM `content_valid` == RM validity is the oracle for "may we refuse this"; `self` is openehr::0
+

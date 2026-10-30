@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# The ferroehr CNF SUT stack (compose BASE — self-contained, like
-# docker/sut-ehrbase.yml): the conformance lanes compose THIS file, never
-# the end-user quickstart docker-compose.yml, so the quickstart artifact and
-# the conformance instrument evolve independently.
+# The ferroehr CNF SUT stack (compose BASE, self-contained): the conformance
+# lanes compose THIS file, never the end-user quickstart docker-compose.yml,
+# so the quickstart artifact and the conformance instrument evolve
+# independently.
 #
 # ALL relative paths in this file (and the sut-*.yml overlays stacked on it)
 # are REPO-ROOT-relative: the lanes compose with `--project-directory` at the
@@ -12,22 +12,10 @@
 # resolve against the project directory, which defaults to the first -f
 # file's directory and must therefore be pinned explicitly here).
 #
-#   | Lane      | Invocation                                   | Project           |
-#   |-----------|----------------------------------------------|-------------------|
-#   | CNF (rs)  | scripts/conformance.sh                       | ferroehr-cnf      |
-#   | CNF (pgp) | (same run — the parallel signing posture)    | ferroehr-cnf-pgp  |
-#   | CNF (open)| (same run, fail-open, unreachable terminology) | ferroehr-cnf-failopen |
-#   | CNF(java) | CONF_SUT=ehrbase scripts/conformance.sh | cnf-ehrbase  |
-#
-# The CNF (rs) run brings up ALL THREE of its projects: this stack, a second
-# deployment of the same image in the openPGP version-signing posture
-# (docker/sut-pgp-parallel.yml remaps it to 8081/5433 so the two coexist, so
-# one record covers both claimed signing modes), and a third project in the
-# fail-open posture wired to an unreachable terminology server
-# (docker/sut-terminology-failopen.yml, 8083/5434). The standard conformance
-# posture stacks docker/sut-smart.yml + docker/sut-terminology.yml on top
-# (scripts/conformance.sh), with `--profile terminology` starting the seeded
-# FHIR R4B server below.
+# scripts/conformance.sh composes it as the project `ferroehr-cnf`, one
+# deployment, with docker/sut-smart.yml + docker/sut-terminology.yml on top
+# and `--profile terminology` starting the seeded FHIR R4B server below; the
+# instrument logs in with the Basic users of docker/ferroehr.dev.toml.
 #
 # The SUT builds FROM SOURCE (`runtime-from-source` — a conformance verdict on
 # this server is only meaningful against the current sources; SKIP_BUILD pulls
@@ -59,8 +47,8 @@ services:
       dockerfile: Dockerfile
     # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic shared
     # memory under load (parallel workers error `could not resize shared
-    # memory segment … No space left on device`); measured runs share this
-    # floor with the upstream comparison stack (docker/sut-ehrbase.yml).
+    # memory segment … No space left on device`), so measured runs keep this
+    # floor.
     shm_size: ${BENCH_PG_SHM_SIZE:-1gb}
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}

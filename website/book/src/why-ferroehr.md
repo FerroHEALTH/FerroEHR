@@ -46,9 +46,8 @@ and published*.
   spec crates that embed it say so in their own metadata; see
   [Licensing & legal](licensing.md).)
 - **Every claim checkable.** Conformance is executed by a runner against a
-  live server, and the run records, per-case results, measured performance and
-  the [comparison with another CDR](comparison.md) (in both directions) are
-  committed to the repository. If a number appears on this site, the record it
+  live server, and the run records, per-case results and measured performance
+  are committed to the repository. If a number appears on this site, the record it
   came from is in the tree, and a change that moves a verdict cannot land
   quietly.
 - **The specification is the authority.** The normative openEHR text is
@@ -168,9 +167,8 @@ commercial licence is how they and this foundation support each other.
 It is also not a claim to be the only good openEHR CDR. FerroEHR began as a
 fork of EHRbase and records that lineage in the labelled import commit at the
 root of its history; today it is an
-independent Rust implementation with none of that code left in the tree, and
-we measure ourselves against EHRbase with the same instrument, publishing both
-directions of the result. FerroEHR is an independent implementation of the
+independent Rust implementation with none of that code left in the tree.
+FerroEHR is an independent implementation of the
 openEHR® specifications and is not affiliated with or endorsed by the openEHR
 Foundation.
 

@@ -292,8 +292,7 @@ FerroHEALTH book.
   in the labelled import commit at the root of its history. EHRbase itself
   remains Apache-2.0; no code from it is present
   in this tree, and it is consulted as prior art only. FerroEHR is not affiliated
-  with or endorsed by the EHRbase project. The measured
-  [comparison](comparison.md) between the two is published in both directions.
+  with or endorsed by the EHRbase project.
 
 ## Questions
 

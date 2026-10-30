@@ -61,17 +61,13 @@ FORBIDDEN:
    — there is no in-process mode (owner ruling).
 2. **Run.** Default (our server, from the current tree):
    ```bash
-   bash scripts/conformance.sh          # optionally: <case-id-filter>
+   bash scripts/conformance.sh          # optionally: CONF_DOCUMENTS="<id> …"
    ```
-   Foreign/BYO SUT: `CONF_SUT=byo CONF_BASE_URL=<url>` (supply
-   `CONF_IXIT`/`CONF_STATEMENT` for a non-default party set; credentials via
-   the `SUT_*` env variables the ixit references).
-   Measured performance stage (hour-plus; exclusive SUT):
-   `CONF_PERF_CLASS=POC|S|L|R` (+ `CONF_PERF_HOURS=1|2|4|6|8|12` for an
-   extended sustained hold; every run seeds the freshly composed server
-   from empty — there is no seed reuse). The step-load STRESS ladder is a
+   It drives one FerroEHR deployment through the pinned Veredictum release
+   image with Basic login. The measured performance lane moves to
+   Veredictum's `perf/` tree (#4452); the step-load STRESS ladder is a
    separate, non-conformance instrument:
-   `veredictum stress --root "$(veredictum_artifacts)"
+   `veredictum stress --root "$(veredictum_perf)"
    --ixit docs/conformance/party/<sut>/ixit.json
    --out docs/conformance/<sut>/stress.json [--corpus-class POC]` (source
    `scripts/lib/veredictum.sh` first) — it writes stress.json only, never
