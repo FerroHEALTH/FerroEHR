@@ -2954,3 +2954,31 @@ fn only_a_top_level_text_equality_is_anchored() {
         "each text equality of a conjunction is anchored: {both}"
     );
 }
+
+// ── a lookup of an EHR by its subject (#4442) ────────────────────────────────
+
+/// The two subject leaves of the current `EHR_STATUS` read the `ehr` row's
+/// promoted columns, which `uq_ehr_subject` indexes, and join no `EHR_STATUS`.
+#[test]
+fn an_ehr_lookup_by_subject_reads_the_ehr_columns() {
+    let sql = build_sql(
+        "SELECT e/ehr_id/value FROM EHR e \
+         WHERE e/ehr_status/subject/external_ref/id/value = 'p-1' \
+         AND e/ehr_status/subject/external_ref/namespace = 'local'",
+    );
+    assert!(
+        sql.contains(r#""e0"."subject_id" = "#) && sql.contains(r#""e0"."subject_namespace" = "#),
+        "the subject leaves are the ehr columns: {sql}"
+    );
+    assert!(
+        !sql.contains(r#""version" AS "esv"#),
+        "no EHR_STATUS version is joined for the subject: {sql}"
+    );
+    let other = build_sql(
+        "SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_status/subject/external_ref/type = 'PERSON'",
+    );
+    assert!(
+        other.contains(r#""version" AS "esv"#),
+        "any other EHR_STATUS leaf still reads the root's fragment: {other}"
+    );
+}

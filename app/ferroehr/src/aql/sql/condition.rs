@@ -335,11 +335,11 @@ impl Builder<'_> {
         });
         let mut bound = false;
         for (ehr_status, leaf) in leaves {
-            if ehr_status {
-                self.ensure_ehr_status_root(leaf.source.0)?;
-            }
             if self.has_column_read(&leaf, ValueMode::Value(leaf.coercion)) {
                 continue;
+            }
+            if ehr_status {
+                self.ensure_ehr_status_root(leaf.source.0)?;
             }
             let (start, rest) = self.walk_start(&leaf)?;
             let rest: Vec<StructureStep> = rest.to_vec();

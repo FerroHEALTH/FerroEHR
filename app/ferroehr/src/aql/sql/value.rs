@@ -63,6 +63,9 @@ impl Builder<'_> {
             // its node subtree via the same path split as any data leaf. RM 1.2.0
             // `EHR.ehr_status` (`docs/specs/openehr/RM/docs/ehr/`).
             PathTarget::EhrStatus(leaf) => {
+                if let Some(expr) = self.subject_column_expr(leaf, mode) {
+                    return Ok(expr);
+                }
                 self.ensure_ehr_status_root(leaf.source.0)?;
                 self.data_leaf_expr(leaf, mode)
             }
@@ -235,6 +238,9 @@ impl Builder<'_> {
         let leaf = match target {
             PathTarget::Data(leaf) => leaf,
             PathTarget::EhrStatus(leaf) => {
+                if self.subject_column_expr(leaf, mode).is_some() {
+                    return Ok(None);
+                }
                 self.ensure_ehr_status_root(leaf.source.0)?;
                 leaf
             }
@@ -338,6 +344,7 @@ impl Builder<'_> {
         self.version_uid_expr(leaf, mode).is_some()
             || self.promoted_leaf_expr(leaf, mode).is_some()
             || self.version_template_expr(leaf, mode).is_some()
+            || self.subject_column_expr(leaf, mode).is_some()
     }
 
     /// Hosts a correlated `EXISTS` of the WHERE clause so the planner keeps it
@@ -442,6 +449,35 @@ impl Builder<'_> {
         }
         let voa = self.vo_alias.get(&leaf.source.0)?;
         Some(col(voa, VersionRow::TemplateId))
+    }
+
+    /// The subject of the current `EHR_STATUS`, compared as text:
+    /// `ehr.subject_id` and `ehr.subject_namespace`, the copy of
+    /// `subject/external_ref` the commit path keeps on the EHR row under
+    /// `uq_ehr_subject` (clinical migration 0002), instead of joining every
+    /// `EHR_STATUS` root and reading the leaf out of its fragment (#4442).
+    /// `None` for any other leaf, source or mode. No openEHR spec governs the
+    /// lowering: our own design.
+    fn subject_column_expr(&self, leaf: &LeafPath, mode: ValueMode) -> Option<Expr> {
+        // `id/value` is a String on every OBJECT_ID, so the mixed-type (`Raw`)
+        // read of the abstract `id` compares it as text, as `Text` does.
+        if !matches!(mode, ValueMode::Value(Coercion::Text | Coercion::Raw))
+            || !leaf.anchor.is_empty()
+            || leaf.root_predicate.is_some()
+            || leaf.fragment.iter().any(|s| s.predicate.is_some())
+        {
+            return None;
+        }
+        let Some(Source::Ehr(_)) = self.ir.sources.get(leaf.source.0) else {
+            return None;
+        };
+        let ehr = self.ehr_alias.get(&leaf.source.0)?;
+        let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
+        match names.as_slice() {
+            ["subject", "external_ref", "id", "value"] => Some(col(ehr, Ehr::SubjectId)),
+            ["subject", "external_ref", "namespace"] => Some(col(ehr, Ehr::SubjectNamespace)),
+            _ => None,
+        }
     }
 
     /// The promoted-leaf fast path:
