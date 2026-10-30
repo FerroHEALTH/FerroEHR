@@ -295,7 +295,8 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   suppression.
 - **A migration that has shipped is never edited** (owner rulings 2026-09-09
   and 2026-09-15; the policy is `sqlx-conventions.md` §Migrations). Shipped
-  means present at the latest release tag: sqlx refuses a database whose
+  means present at the latest release tag or at a pre-release tag of a version
+  above it (#4425): sqlx refuses a database whose
   recorded checksum no longer matches the migration file, so editing one an
   installation has applied does not revise history, it locks that installation
   out of its own database at boot, reporting a checksum rather than the edit.
@@ -312,10 +313,11 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   description of its version 1 where the name survives the rewrite. Enforcement
   (tier 4): `scripts/checks/migration-immutability.sh`, run per-PR by the
   `migration-immutability` CI job against the pull request's merge base over
-  the files the highest release tag in the repository carries (ancestry not
-  required: a rewritten `main` leaves the tags on the old lineage), and refusing any
-  modification or partial turnover of those under
-  `app/ferroehr/migrations/`; it accepts a retirement only after verifying both
+  the files the highest release tag in the repository and every pre-release tag
+  above it carry (ancestry not required: a rewritten `main` leaves the tags on
+  the old lineage), and refusing any modification or partial turnover of those
+  under `app/ferroehr/migrations/` other than a restoration to the released
+  bytes; it accepts a retirement only after verifying both
   halves itself — every shipped file of that directory gone at head, the schema
   named in that table — so the acceptance cannot be claimed in prose. Its detector is mutation-proven
   by its own `--self-test`, which the CI job runs first. There is deliberately
