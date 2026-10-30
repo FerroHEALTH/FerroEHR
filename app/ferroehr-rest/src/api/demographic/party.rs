@@ -317,7 +317,7 @@ where
     let json = std::str::from_utf8(body)
         .map_err(|e| ApiError::BadRequest(format!("body is not UTF-8: {e}")))?;
     let released: Stable = openehr_its::json::from_canonical_json(json)
-        .map_err(|e| ApiError::BadRequest(format!("invalid canonical JSON body: {e}")))?;
+        .map_err(|e| negotiate::canonical_json_refusal(json, &e))?;
     let mut value = openehr_its::json::to_canonical_value(&released);
     if let serde_json::Value::Object(map) = &mut value {
         map.remove("reverse_relationships");

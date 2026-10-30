@@ -55,7 +55,9 @@ repeated member, a wrong `_type` or a malformed identifier is refused with the
 JSON path of the offending node. `to_canonical_json` writes `_type` first and
 the fields in BMM order, omitting absent optionals. With the
 `schema-validation` feature, `json::validate_canonical` checks a
-`serde_json::Value` against the embedded ITS-JSON RM schema.
+`serde_json::Value` against the embedded ITS-JSON RM schema, and
+`json::validate_canonical_class` checks it against the definition of every
+class the schema defines, the published root listing only some of them.
 
 ## Features
 
@@ -67,7 +69,7 @@ layered, so a consumer takes only what it reads:
 | `json` | `json`, `json_codec`, `wire_validate` | serde, the five spec crates |
 | `xml` | `xml`, `aom2`, `aom2_model` | `json` + `quick-xml` |
 | `opt14` | `opt14`, `opt14_writer` | `xml` + `regex` |
-| `schema-validation` | `json::validate_canonical` | `json` + `jsonschema`, the embedded RM schema |
+| `schema-validation` | `json::validate_canonical`, `json::validate_canonical_class` | `json` + `jsonschema`, the embedded RM schema |
 | `rest` | `rest::generated` (DTOs, param structs, route tables), `rest::runtime::ApiError` | `json` + `http` |
 | `rest-server` | the per-group `#[async_trait]` server traits, the `axum` response mapping of `ApiError` | `rest` + `axum`, `async-trait` |
 | `rest-client` | the per-group clients `rest::generated::<group>::client`, the client runtime `rest::client` | `rest` + `reqwest`, `url`, `urlencoding`, `base64`, `backon`, `secrecy`, `async-trait` |

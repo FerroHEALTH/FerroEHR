@@ -684,6 +684,41 @@ impl ServiceError {
     ) -> Self {
         ServiceError::BadRequest(SmError::precondition(detail).with_source(source))
     }
+
+    /// The refusal of a canonical-JSON `data` the strict typed reader could
+    /// not decode: `422` when the published ITS-JSON schema admits it (it
+    /// parses, and an RM rule such as a mandatory member is what fails),
+    /// `400` when it does not ([`its_json_admits`]).
+    #[must_use]
+    pub fn canonical_decode(data: &serde_json::Value, error: JsonParseError) -> Self {
+        if its_json_admits(data) {
+            ServiceError::content_invalid(
+                Violation::new(format!("content does not satisfy the RM: {error}"))
+                    .with_decode_failure(&error)
+                    .with_source(error),
+            )
+        } else {
+            ServiceError::bad_request(format!("invalid canonical JSON body: {error}"), error)
+        }
+    }
+}
+
+/// Whether the published ITS-JSON RM schema admits a canonical-JSON body the
+/// strict typed reader refused, which makes the refusal an RM violation
+/// (`422`) and not a parse failure (`400`).
+///
+/// NOTE: ITS-REST `Resources.md` §JSON Format names the ITS-JSON schemas as the
+/// canonical JSON a payload "SHOULD be valid against"; `responses/422.yaml` is content that parses.
+///
+/// The body must name its `_type` and declare no key its RM class lacks, the
+/// two facts the schema root cannot judge.
+#[must_use]
+pub fn its_json_admits(data: &serde_json::Value) -> bool {
+    data.get("_type")
+        .and_then(serde_json::Value::as_str)
+        .is_some()
+        && openehr_its::json::reject_undeclared_keys(data).is_ok()
+        && openehr_its::json::validate_canonical_class(data).is_ok()
 }
 
 impl From<ServiceError> for SmError {
