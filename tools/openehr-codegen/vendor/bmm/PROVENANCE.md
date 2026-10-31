@@ -8,9 +8,9 @@ here reads it).
 Reproduced by: `scripts/vendor/codegen-inputs.sh` (`--check` proves the
 committed tree, overlays included, matches the pins below byte for byte).
 License: Apache-2.0 (the ITS-BMM repo's `LICENSE`; root reference copy
-`LICENSE-APACHE-2.0`). The three component-repo overlay files below come from
-`specifications-BASE`, `specifications-RM` and `specifications-TERM`, whose
-repos are CC-BY-SA 3.0 — each is the same BMM artifact ITS-BMM redistributes
+`LICENSE-APACHE-2.0`). The four component-repo overlay files below come from
+`specifications-BASE`, `specifications-RM`, `specifications-TERM` and
+`specifications-LANG`, whose repos are CC-BY-SA 3.0 — each is the same BMM artifact ITS-BMM redistributes
 under Apache-2.0, taken from the component repo only until ITS-BMM
 republishes it.
 
@@ -21,7 +21,7 @@ file is vendored verbatim from the component repo ITS-BMM redistributes from.
 Each is byte-identical to its reference twin under
 `docs/specs/openehr/<C>/computable/BMM/`, and `codegen-inputs.sh` fails when a
 twin is missing or differs. The component repos publish json only, so the
-ITS-BMM `odin/` serialization of each of these three versions predates the
+ITS-BMM `odin/` serialization of each of these four versions predates the
 overlay; `codegen-inputs.sh` drops it rather than vendor a second, different
 text of the release (see "The odin serialization" below). Fold each back to a plain ITS-BMM pin at
 the next ITS-BMM bump.
@@ -31,6 +31,7 @@ the next ITS-BMM bump.
 | `components/BASE/json/openehr_base_1.3.0.bmm.json` | specifications-BASE | `93abaf9f656b7bc87019458303c9d88f3f688ef8` | 2026-10-26 | SPECBASE-42 `TEMPLATE_ID` aligned with the HRID (its `value: Hrid` with `Value_valid` and the HRID functions), and the bracketed `Interval.has()` post-condition; before it, SPECBASE-49 `Hrid` primitive, SPECBASE-35/50 `ARCHETYPE_ID.value: Hrid` with `Value_valid` and the namespace/major/minor/patch functions; before it, SPECBASE-48 invariants, SPECAM-82 CODE_PHRASE package move, SPECPR-426/386/460 fixes |
 | `components/RM/json/openehr_rm_1.2.0.bmm.json` | specifications-RM | `654296bb027b03b4b076101e7171f3359f44cebc` | 2026-10-19 | SPECRM-103: the `INTERVAL_EVENT.time` documentation states the time is where the interval ends (documentation string only); before it, the asterisk-entity normalization of upstream PR #33 |
 | `components/TERM/json/openehr_term_3.1.0.bmm.json` | specifications-TERM | `b2dd077d268dff881e81899db58c22b1ed015fad` | 2026-10-26 | BMM unchanged since `1232e59b` (SPECTERM-31 and SPECTERM-36 touch the computable XML only); | `status` default facet `""` -> `"active"` on CODE_SET, TERMINOLOGY_GROUP, CODE, TERMINOLOGY_CONCEPT; `includes` names `openehr_base_1.3.0` |
+| `components/LANG/json/openehr_lang_1.1.0.bmm.json` | specifications-LANG | `f80763abda184aa6cc94957152df83f3ef5d8f5e` | 2026-10-31 | SPECLANG-16: `P_BMM_SCHEMA.primitive_types` and `class_definitions`, `P_BMM_CLASS.ancestor_defs` and `P_BMM_GENERIC_TYPE.generic_parameter_defs` become keyed `Hash` collections, with the `Generic_parameters_valid` invariant; `root_type` marked persisted; schema revision `1.1.0.3`. The `-bmm3` file is byte-identical at both pins and stays on the ITS-BMM pin |
 
 One knock-on of the BASE overlay: ITS-BMM had independently fixed a doc typo
 (`senstive`->`sensitive`) in `RESOURCE_DESCRIPTION_ITEM.other_details` (see
@@ -38,8 +39,8 @@ the 2026-07-04 note below); the specifications-BASE file still carries the
 typo, so the generated doc comment regresses to authentic component-repo text.
 
 The ITS-BMM `components/` tree is vendored under `components/` here — all
-released versions in two serializations (**json**: 18 files; **odin**: 15, the
-three overlaid versions dropped).
+released versions in two serializations (**json**: 18 files; **odin**: 14, the
+four overlaid versions dropped).
 The `json` files are upstream's source of truth (`odin`/`yaml` are generated
 from them by `bmm-publisher`); we consume **json** for codegen. Upstream's
 `yaml/` serialization is excluded by `codegen-inputs.sh` because no code,
@@ -82,7 +83,8 @@ The `odin/` files are not codegen input. `openehr-lang`'s
 both P_BMM readers and requires the same `P_BMM_SCHEMA` value. The other
 `openehr-lang` tests over the component schemas (`tests/it/vendor_bmm_schema.rs`,
 `tests/it/el_assertions.rs`) read the json files codegen reads. For BASE 1.3.0,
-RM 1.2.0 and TERM 3.1.0 no ODIN file is vendored: the ITS-BMM copies at
+RM 1.2.0, TERM 3.1.0 and LANG 1.1.0 (the P_BMM file; its `-bmm3` twin keeps its
+ODIN file) no ODIN file is vendored: the ITS-BMM copies at
 `37b31739…` predate the json overlays above, and `codegen-inputs.sh` drops them.
 
 Note (drift caught 2026-07-04): re-vendoring verbatim at this commit corrected a

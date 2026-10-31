@@ -35667,11 +35667,7 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_class::PBmmClass
         if self.bmm_class.is_some() {
             __n += 1;
         }
-        if self
-            .ancestor_defs
-            .as_ref()
-            .is_some_and(|__v| !__v.is_empty())
-        {
+        if self.ancestor_defs.is_some() {
             __n += 1;
         }
         let mut __st = ::serde::Serializer::serialize_struct(__serializer, "P_BMM_CLASS", __n)?;
@@ -35719,9 +35715,7 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_class::PBmmClass
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "bmm_class", __v)?;
         }
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "uid", &self.uid)?;
-        if let Some(__v) = &self.ancestor_defs
-            && !__v.is_empty()
-        {
+        if let Some(__v) = &self.ancestor_defs {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "ancestor_defs", __v)?;
         }
         ::serde::ser::SerializeStruct::end(__st)
@@ -35835,7 +35829,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v2_4::bmm_persistence::p_bmm_clas
                 let mut __s10: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s11: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s12: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s13: ::core::option::Option<_> = None;
+                let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -35985,7 +35979,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v2_4::bmm_persistence::p_bmm_clas
                         uid: __s12
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("uid"))?,
-                        ancestor_defs: __s13,
+                        ancestor_defs: __s13.flatten(),
                     },
                 )
             }
@@ -36790,11 +36784,7 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_enumeration::PBm
         if self.bmm_class.is_some() {
             __n += 1;
         }
-        if self
-            .ancestor_defs
-            .as_ref()
-            .is_some_and(|__v| !__v.is_empty())
-        {
+        if self.ancestor_defs.is_some() {
             __n += 1;
         }
         if self.item_names.as_ref().is_some_and(|__v| !__v.is_empty()) {
@@ -36856,9 +36846,7 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_enumeration::PBm
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "bmm_class", __v)?;
         }
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "uid", &self.uid)?;
-        if let Some(__v) = &self.ancestor_defs
-            && !__v.is_empty()
-        {
+        if let Some(__v) = &self.ancestor_defs {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "ancestor_defs", __v)?;
         }
         if let Some(__v) = &self.item_names
@@ -36998,7 +36986,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s10: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s11: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s12: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s13: ::core::option::Option<_> = None;
+                let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s14: ::core::option::Option<_> = None;
                 let mut __s15: ::core::option::Option<_> = None;
                 let mut __s16: ::core::option::Option<_> = None;
@@ -37175,7 +37163,7 @@ impl<'de> ::serde::Deserialize<'de>
                         uid: __s12
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("uid"))?,
-                        ancestor_defs: __s13,
+                        ancestor_defs: __s13.flatten(),
                         item_names: __s14,
                         item_values: __s15,
                         item_documentations: __s16,
@@ -37299,11 +37287,7 @@ impl ::serde::Serialize
         if self.bmm_class.is_some() {
             __n += 1;
         }
-        if self
-            .ancestor_defs
-            .as_ref()
-            .is_some_and(|__v| !__v.is_empty())
-        {
+        if self.ancestor_defs.is_some() {
             __n += 1;
         }
         if self.item_names.as_ref().is_some_and(|__v| !__v.is_empty()) {
@@ -37369,9 +37353,7 @@ impl ::serde::Serialize
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "bmm_class", __v)?;
         }
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "uid", &self.uid)?;
-        if let Some(__v) = &self.ancestor_defs
-            && !__v.is_empty()
-        {
+        if let Some(__v) = &self.ancestor_defs {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "ancestor_defs", __v)?;
         }
         if let Some(__v) = &self.item_names
@@ -37512,7 +37494,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s10: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s11: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s12: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s13: ::core::option::Option<_> = None;
+                let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s14: ::core::option::Option<_> = None;
                 let mut __s15: ::core::option::Option<_> = None;
                 let mut __s16: ::core::option::Option<_> = None;
@@ -37684,7 +37666,7 @@ generic_parameter_defs: __s9.flatten(),
 source_schema_id: __s10.flatten().ok_or_else(|| ::serde::de::Error::missing_field("source_schema_id"))?,
 bmm_class: __s11.flatten(),
 uid: __s12.flatten().ok_or_else(|| ::serde::de::Error::missing_field("uid"))?,
-ancestor_defs: __s13,
+ancestor_defs: __s13.flatten(),
 item_names: __s14,
 item_values: __s15,
 item_documentations: __s16,
@@ -37738,11 +37720,7 @@ impl ::serde::Serialize
         if self.bmm_class.is_some() {
             __n += 1;
         }
-        if self
-            .ancestor_defs
-            .as_ref()
-            .is_some_and(|__v| !__v.is_empty())
-        {
+        if self.ancestor_defs.is_some() {
             __n += 1;
         }
         if self.item_names.as_ref().is_some_and(|__v| !__v.is_empty()) {
@@ -37808,9 +37786,7 @@ impl ::serde::Serialize
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "bmm_class", __v)?;
         }
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "uid", &self.uid)?;
-        if let Some(__v) = &self.ancestor_defs
-            && !__v.is_empty()
-        {
+        if let Some(__v) = &self.ancestor_defs {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "ancestor_defs", __v)?;
         }
         if let Some(__v) = &self.item_names
@@ -37951,7 +37927,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s10: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s11: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s12: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s13: ::core::option::Option<_> = None;
+                let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s14: ::core::option::Option<_> = None;
                 let mut __s15: ::core::option::Option<_> = None;
                 let mut __s16: ::core::option::Option<_> = None;
@@ -38130,7 +38106,7 @@ impl<'de> ::serde::Deserialize<'de>
                         uid: __s12
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("uid"))?,
-                        ancestor_defs: __s13,
+                        ancestor_defs: __s13.flatten(),
                         item_names: __s14,
                         item_values: __s15,
                         item_documentations: __s16,
@@ -39105,7 +39081,7 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_generic_type::PB
         if self.value_constraint.is_some() {
             __n += 1;
         }
-        if !self.generic_parameter_defs.is_empty() {
+        if self.generic_parameter_defs.is_some() {
             __n += 1;
         }
         if self
@@ -39125,11 +39101,11 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_generic_type::PB
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "value_constraint", __v)?;
         }
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "root_type", &self.root_type)?;
-        if !self.generic_parameter_defs.is_empty() {
+        if let Some(__v) = &self.generic_parameter_defs {
             ::serde::ser::SerializeStruct::serialize_field(
                 &mut __st,
                 "generic_parameter_defs",
-                &self.generic_parameter_defs,
+                __v,
             )?;
         }
         if let Some(__v) = &self.generic_parameters
@@ -39213,7 +39189,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s3: ::core::option::Option<_> = None;
+                let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s4: ::core::option::Option<_> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -39278,7 +39254,7 @@ impl<'de> ::serde::Deserialize<'de>
                         root_type: __s2
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("root_type"))?,
-                        generic_parameter_defs: __s3.unwrap_or_default(),
+                        generic_parameter_defs: __s3.flatten(),
                         generic_parameters: __s4,
                     },
                 )
@@ -40665,18 +40641,10 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_schema::PBmmSche
         if self.includes.is_some() {
             __n += 1;
         }
-        if self
-            .primitive_types
-            .as_ref()
-            .is_some_and(|__v| !__v.is_empty())
-        {
+        if self.primitive_types.is_some() {
             __n += 1;
         }
-        if self
-            .class_definitions
-            .as_ref()
-            .is_some_and(|__v| !__v.is_empty())
-        {
+        if self.class_definitions.is_some() {
             __n += 1;
         }
         let mut __st = ::serde::Serializer::serialize_struct(__serializer, "P_BMM_SCHEMA", __n)?;
@@ -40758,14 +40726,10 @@ impl ::serde::Serialize for crate::v2_4::bmm_persistence::p_bmm_schema::PBmmSche
         if let Some(__v) = &self.includes {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "includes", __v)?;
         }
-        if let Some(__v) = &self.primitive_types
-            && !__v.is_empty()
-        {
+        if let Some(__v) = &self.primitive_types {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "primitive_types", __v)?;
         }
-        if let Some(__v) = &self.class_definitions
-            && !__v.is_empty()
-        {
+        if let Some(__v) = &self.class_definitions {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "class_definitions", __v)?;
         }
         ::serde::ser::SerializeStruct::end(__st)
@@ -40896,8 +40860,8 @@ impl<'de> ::serde::Deserialize<'de> for crate::v2_4::bmm_persistence::p_bmm_sche
                 let mut __s12: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s14: ::core::option::Option<::core::option::Option<_>> = None;
-                let mut __s15: ::core::option::Option<_> = None;
-                let mut __s16: ::core::option::Option<_> = None;
+                let mut __s15: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s16: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -41088,8 +41052,8 @@ impl<'de> ::serde::Deserialize<'de> for crate::v2_4::bmm_persistence::p_bmm_sche
                         .flatten()
                         .ok_or_else(|| ::serde::de::Error::missing_field("bmm_version"))?,
                     includes: __s14.flatten(),
-                    primitive_types: __s15,
-                    class_definitions: __s16,
+                    primitive_types: __s15.flatten(),
+                    class_definitions: __s16.flatten(),
                 })
             }
         }

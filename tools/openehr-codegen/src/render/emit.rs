@@ -1230,7 +1230,7 @@ fn single_field_type(
     if cyclic {
         format!("Box<{inner}>")
     } else {
-        inner
+        crate::plan::ordered_hashes::retype(model, class, &p.name, inner)
     }
 }
 

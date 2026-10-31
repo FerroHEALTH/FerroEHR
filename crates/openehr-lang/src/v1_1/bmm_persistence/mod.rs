@@ -42,6 +42,7 @@ pub mod create_bmm3_assertion;
 pub mod create_bmm3_model;
 pub mod create_model;
 pub mod error;
+pub mod generic_binding;
 pub mod include_resolution;
 pub mod json_reader;
 pub mod loader;

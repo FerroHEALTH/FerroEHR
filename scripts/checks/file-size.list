@@ -86,9 +86,9 @@ crates/openehr-lang/src/v1_0/odin/mod.rs 921
 crates/openehr-lang/src/v1_0/odin/parser.rs 829
 crates/openehr-lang/src/v1_1/bmm/core/bmm_model_impl.rs 1097
 crates/openehr-lang/src/v1_1/bmm3/core/entity/bmm_type_impl.rs 1324
-crates/openehr-lang/src/v1_1/bmm_persistence/create_bmm3_model.rs 2289
-crates/openehr-lang/src/v1_1/bmm_persistence/create_model.rs 1134
-crates/openehr-lang/src/v1_1/bmm_persistence/reader.rs 2538
+crates/openehr-lang/src/v1_1/bmm_persistence/create_bmm3_model.rs 2261
+crates/openehr-lang/src/v1_1/bmm_persistence/create_model.rs 1121
+crates/openehr-lang/src/v1_1/bmm_persistence/reader.rs 2487
 crates/openehr-lang/src/v1_1/lexer/mod.rs 891
 crates/openehr-query/src/ast.rs 833
 crates/openehr-query/src/parser.rs 1577
@@ -109,12 +109,12 @@ tools/loadtest/src/main.rs 824
 tools/openehr-codegen/src/analyze/mod.rs 812
 tools/openehr-codegen/src/cli.rs 1435
 tools/openehr-codegen/src/load/bmm.rs 883
-tools/openehr-codegen/src/plan/overrides.rs 3416
+tools/openehr-codegen/src/plan/overrides.rs 3397
 tools/openehr-codegen/src/render/emit.rs 2317
 tools/openehr-codegen/src/render/emit_json.rs 1068
 tools/openehr-codegen/src/render/emit_opt.rs 1085
 tools/openehr-codegen/src/render/emit_rest.rs 2700
 tools/openehr-codegen/src/render/emit_rm_model.rs 879
 tools/openehr-codegen/src/render/emit_xml.rs 1035
-tools/openehr-codegen/src/testsupport.rs 2509
+tools/openehr-codegen/src/testsupport.rs 2465
 tools/testkit/src/lib.rs 1215
