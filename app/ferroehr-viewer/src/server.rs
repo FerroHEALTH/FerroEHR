@@ -11,8 +11,8 @@
 //! own asset router at `ferrohealth_ui::serve::PREFIX`. The family's console
 //! headers and same-origin check (`ferrohealth_server::console`,
 //! `ferrohealth_server::same_origin`) wrap the routes, the policy is the
-//! server-rendered console's ([`POLICY`]), and the family stack wraps them
-//! with its health routes.
+//! server-rendered console's (`ConsoleHeaders::server_rendered`), and the
+//! family stack wraps them with its health routes.
 //!
 //! Lives in the lib rather than the binary so the integration tests drive the
 //! REAL request path (guard, session, page) with `tower::ServiceExt::oneshot`,
@@ -31,21 +31,6 @@ use ferrohealth_telemetry::request_log::RequestLog;
 use crate::scope::Scope;
 use crate::session::{SESSION_KEY, ViewerSession};
 use crate::state::AppState;
-
-/// The Content-Security-Policy of every response.
-///
-/// Scripts and styles from the viewer's own origin alone, with no nonce, no
-/// inline script or style and no `eval` (W3C Content Security Policy Level
-/// 3; FerroUI `docs/consoles.md`, "How a console builds", step 6).
-pub const POLICY: &str = "default-src 'self'; \
-     script-src 'self'; \
-     style-src 'self'; \
-     img-src 'self' data:; \
-     connect-src 'self'; \
-     object-src 'none'; \
-     base-uri 'self'; \
-     form-action 'self'; \
-     frame-ancestors 'none'";
 
 /// The viewer as it serves: [`router`] and the health routes inside the
 /// family stack (`ferrohealth_server::stack::app`).
@@ -72,12 +57,13 @@ pub fn app(app_state: AppState, health: Health, request_log: RequestLog) -> axum
 /// sidebar, paging and sign-out posts, the downloads, the icons, the search
 /// panel's answer route, every page (`page`, for `GET` and its own form
 /// posts), and the layer stack (state → session guard → same-origin check →
-/// console headers → policy). Sessions are a sealed cookie
+/// console headers). Sessions are a sealed cookie
 /// ([`crate::session`]): no session-store layer exists, so no state is bound
 /// to any one instance.
 pub fn router(app_state: AppState) -> axum::Router {
     let origin = same_origin_check(&app_state);
-    let headers = ConsoleHeaders::new("'self'").with_bundle(ferrohealth_ui::serve::PREFIX);
+    let headers =
+        ConsoleHeaders::server_rendered("'self'").with_bundle(ferrohealth_ui::serve::PREFIX);
     axum::Router::new()
         .nest(
             ferrohealth_ui::serve::PREFIX,
@@ -154,22 +140,6 @@ pub fn router(app_state: AppState) -> axum::Router {
         .layer(axum::middleware::from_fn(move |request, next| {
             console::headers(headers.clone(), request, next)
         }))
-        .layer(axum::middleware::from_fn(policy))
-}
-
-/// Sets [`POLICY`] on every response, over the hydrated console's policy the
-/// family's console headers write.
-// TODO(#4439): take the policy from ferrohealth-server once it writes one for a server-rendered console.
-async fn policy(
-    request: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let mut response = next.run(request).await;
-    response.headers_mut().insert(
-        http::header::CONTENT_SECURITY_POLICY,
-        http::HeaderValue::from_static(POLICY),
-    );
-    response
 }
 
 /// The same-origin check of the viewer's unsafe requests: `Sec-Fetch-Site`
@@ -537,11 +507,26 @@ mod tests {
     use ferrohealth_server::console::{self, ConsoleHeaders};
     use tower::util::ServiceExt;
 
-    use super::{POLICY, is_public_path};
+    use super::is_public_path;
+
+    /// The Content-Security-Policy the family's server-rendered console
+    /// headers write: scripts and styles from the viewer's own origin alone,
+    /// with no nonce, no inline script or style and no `eval` (W3C Content
+    /// Security Policy Level 3; FerroUI `docs/consoles.md`, "How a console
+    /// builds", step 6).
+    const POLICY: &str = "default-src 'self'; \
+         script-src 'self'; \
+         style-src 'self'; \
+         img-src 'self' data:; \
+         connect-src 'self'; \
+         object-src 'none'; \
+         base-uri 'self'; \
+         form-action 'self'; \
+         frame-ancestors 'none'";
 
     /// The console headers as the viewer mounts them.
     fn viewer_headers() -> ConsoleHeaders {
-        ConsoleHeaders::new("'self'").with_bundle(ferrohealth_ui::serve::PREFIX)
+        ConsoleHeaders::server_rendered("'self'").with_bundle(ferrohealth_ui::serve::PREFIX)
     }
 
     /// The sign-in surface, the OIDC handshake, FerroUI's assets and the
@@ -595,7 +580,6 @@ mod tests {
             .layer(axum::middleware::from_fn(move |request, next| {
                 console::headers(headers.clone(), request, next)
             }))
-            .layer(axum::middleware::from_fn(super::policy))
             .oneshot(
                 http::Request::builder()
                     .uri(uri)
@@ -619,10 +603,26 @@ mod tests {
 
     /// The directives the policy the viewer serves must carry, each for a
     /// stated reason, and the ones it must never carry: scripts and styles
-    /// come from the viewer's own origin, with no nonce and no WebAssembly.
+    /// come from the viewer's own origin, with no nonce and no WebAssembly,
+    /// on a page, an asset and a refusal under the assets alike.
     #[tokio::test]
     async fn the_policy_carries_the_audited_directives() {
-        let policy = header(&exchange("/").await, "content-security-policy");
+        for uri in [
+            "/".to_owned(),
+            format!(
+                "{}/{}/ferrohealth-ui.css",
+                ferrohealth_ui::serve::PREFIX,
+                ferrohealth_ui::serve::VERSION
+            ),
+            format!("{}/no-such-file.js", ferrohealth_ui::serve::PREFIX),
+        ] {
+            assert_policy(&header(&exchange(&uri).await, "content-security-policy"));
+        }
+    }
+
+    /// Asserts that `policy` is exactly [`POLICY`] and carries each audited
+    /// directive and none of the forbidden sources.
+    fn assert_policy(policy: &str) {
         assert_eq!(policy, POLICY);
         for expected in [
             "default-src 'self'",
@@ -638,8 +638,8 @@ mod tests {
                 "the policy must carry {expected}"
             );
         }
-        assert_eq!(directive(&policy, "script-src"), "script-src 'self'");
-        assert_eq!(directive(&policy, "style-src"), "style-src 'self'");
+        assert_eq!(directive(policy, "script-src"), "script-src 'self'");
+        assert_eq!(directive(policy, "style-src"), "style-src 'self'");
         assert!(!policy.contains("unsafe-inline"), "{policy}");
         assert!(!policy.contains("unsafe-eval"), "{policy}");
         assert!(!policy.contains("nonce-"), "{policy}");
