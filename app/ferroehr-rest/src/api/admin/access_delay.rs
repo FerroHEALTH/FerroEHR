@@ -9,9 +9,9 @@
 //! professional is able to properly communicate and explain" it
 //! (`docs/law/eu/ehds/text.html`, recital 10). A deployment that enables
 //! `[access_delay]` holds new compositions of the configured categories at
-//! creation; these routes let a health professional hold an object, release it
-//! early, and read the register. No openEHR ITS-REST operation and no SM
-//! interface governs any of it.
+//! creation; these routes let a health professional hold a composition,
+//! release it early, and read the register. No openEHR ITS-REST operation and
+//! no SM interface governs any of it.
 //!
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
 //! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
@@ -23,18 +23,17 @@
               operational JSON, not RM content"
 )]
 
-use axum::extract::State;
+use axum::extract::{Request, State};
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
-use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use super::body::{optional_str, required_str};
+use super::body::{AdminRefusal, optional_str, required_query, required_str};
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
-use crate::{negotiate, params};
 
 /// The access-delay extension routes — **no ITS-REST contract** (module docs).
 pub(crate) fn access_delay_routes() -> OpenApiRouter<AppState> {
@@ -70,24 +69,19 @@ pub(crate) fn access_delay_routes() -> OpenApiRouter<AppState> {
                                       not in the future or past the limit, or \
                                       the object is not a COMPOSITION.",
          body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown, or the named object is \
-                                      not in it. Nothing is recorded.",
+        (status = 404, description = "No such EHR, or no such object in it; \
+                                      nothing is held.",
          body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
+        (status = 415, description = "The body is not `application/json`.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        AdminRefusal
     )
 )]
 pub(crate) async fn admin_delay_access(
     State(state): State<AppState>,
-    request: axum::extract::Request,
+    request: Request,
 ) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_delay_access", parts, dispatch).await
+    handle(state, request, "admin_delay_access").await
 }
 
 /// Read one EHR's access-delay register (`GET /admin/access-delay`).
@@ -95,26 +89,24 @@ pub(crate) async fn admin_delay_access(
 /// **Our own extension — no ITS-REST operation governs this** (module docs).
 #[utoipa::path(
     get, path = "/admin/access-delay", tag = "admin-marks",
-    params(("ehr_id" = String, Query, description = "The EHR whose register to read.")),
+    params(("ehr_id" = String, Query, description = "The EHR whose holds to read.")),
     responses(
-        (status = 200, description = "The register rows, newest hold first; a \
-                                      release is a row with `released_at` set.",
+        (status = 200, description = "The register rows, newest hold first, each \
+                                      with its `basis` (`category` or \
+                                      `professional`), `withheld_until` and \
+                                      `released_at`.",
          body = serde_json::Value),
         (status = 400, description = "`ehr_id` is missing or not a UUID.",
          body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
-         body = serde_json::Value)
+        (status = 404, description = "No such EHR.", body = serde_json::Value),
+        AdminRefusal
     )
 )]
 pub(crate) async fn admin_access_delay_register(
     State(state): State<AppState>,
-    request: axum::extract::Request,
+    request: Request,
 ) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_access_delay_register", parts, dispatch).await
+    handle(state, request, "admin_access_delay_register").await
 }
 
 /// Release a held composition to the person
@@ -134,105 +126,60 @@ pub(crate) async fn admin_access_delay_register(
     responses(
         (status = 204, description = "Every hold still in force carries a \
                                       release instant, and the person reads the \
-                                      composition. Idempotent: releasing \
-                                      nothing succeeds."),
-        (status = 400, description = "The body is not the object above.",
+                                      composition. Releasing nothing succeeds."),
+        (status = 400, description = "The body does not name both ids.",
          body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
-        (status = 404, description = "The EHR is unknown, or the named object is \
-                                      not in it.",
+        (status = 404, description = "No such EHR, or no such object in it.",
          body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server.",
+        (status = 415, description = "The body is not `application/json`.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        AdminRefusal
     )
 )]
 pub(crate) async fn admin_release_access_delay(
     State(state): State<AppState>,
-    request: axum::extract::Request,
+    request: Request,
 ) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(state, "admin_release_access_delay", parts, dispatch).await
+    handle(state, request, "admin_release_access_delay").await
 }
 
-// ── dispatch ─────────────────────────────────────────────────────────────────
+/// Run `op` through the uniform per-request stack.
+async fn handle(state: AppState, request: Request, op: &'static str) -> Response {
+    let parts = crate::api::into_parts(request).await;
+    guarded_dispatch(state, op, parts, dispatch).await
+}
 
-pub(crate) fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
+fn dispatch(state: AppState, op: &'static str, parts: RequestParts) -> BoxResponse {
     Box::pin(async move {
-        run(state, op, parts)
-            .await
-            .unwrap_or_else(IntoResponse::into_response)
+        match run(&state, op, &parts).await {
+            Ok(response) => response,
+            Err(error) => error.into_response(),
+        }
     })
 }
 
-async fn run(
-    state: AppState,
-    op: &'static str,
-    parts: RequestParts,
-) -> Result<Response, RestError> {
-    if let Some(refusal) = super::dispatch::admin_group_gate(&state) {
+async fn run(state: &AppState, op: &str, parts: &RequestParts) -> Result<Response, RestError> {
+    if let Some(refusal) = super::dispatch::admin_group_gate(state) {
         return Ok(refusal);
     }
-    let h = &parts.headers;
-    match op {
-        "admin_delay_access" => {
-            let body = negotiate::json_value(h, &parts.body)?;
-            state
-                .backend()
-                .delay_person_access(
-                    required_str(&body, "ehr_id")?,
-                    required_str(&body, "vo_id")?,
-                    optional_str(&body, "until")?,
-                    optional_str(&body, "note")?,
-                )
-                .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
-        }
-        "admin_access_delay_register" => {
-            let ehr_id =
-                params::query_param(parts.query.as_deref(), "ehr_id").ok_or_else(|| {
-                    RestError::from(ApiError::BadRequest(
-                        "the `ehr_id` query parameter is required".to_owned(),
-                    ))
-                })?;
-            let rows = state.backend().access_delay_register(&ehr_id).await?;
-            let body: Vec<serde_json::Value> = rows
-                .iter()
-                .map(|row| {
-                    serde_json::json!({
-                        "id": row.id,
-                        "ehr_id": row.ehr_id.to_string(),
-                        "vo_id": row.vo_id.to_string(),
-                        "basis": row.basis,
-                        "withheld_at": row.withheld_at.to_string(),
-                        "withheld_until": row.withheld_until.to_string(),
-                        "released_at": row.released_at.map(|at| at.to_string()),
-                        "note": row.note,
-                    })
-                })
-                .collect();
-            Ok(negotiate::respond(
-                h,
-                StatusCode::OK,
-                &serde_json::json!({ "access_delays": body }),
-            ))
-        }
-        "admin_release_access_delay" => {
-            let body = negotiate::json_value(h, &parts.body)?;
-            state
-                .backend()
-                .release_person_access(
-                    required_str(&body, "ehr_id")?,
-                    required_str(&body, "vo_id")?,
-                )
-                .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
-        }
-        other => Err(RestError::from(ApiError::Internal(format!(
-            "unrouted admin access delay operation: {other}"
-        )))),
+    let backend = state.backend();
+    if op == "admin_access_delay_register" {
+        let ehr_id = required_query(parts, "ehr_id")?;
+        let rows = backend.access_delay_register(&ehr_id).await?;
+        let body = serde_json::json!({ "access_delays": rows });
+        return Ok(negotiate::respond(&parts.headers, StatusCode::OK, &body));
     }
+    let body = negotiate::json_value(&parts.headers, &parts.body)?;
+    let ehr_id = required_str(&body, "ehr_id")?;
+    let vo_id = required_str(&body, "vo_id")?;
+    if op == "admin_delay_access" {
+        let until = optional_str(&body, "until")?;
+        let note = optional_str(&body, "note")?;
+        backend
+            .delay_person_access(ehr_id, vo_id, until, note)
+            .await?;
+    } else {
+        backend.release_person_access(ehr_id, vo_id).await?;
+    }
+    Ok(negotiate::empty(StatusCode::NO_CONTENT))
 }

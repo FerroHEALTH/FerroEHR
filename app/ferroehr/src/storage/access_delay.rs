@@ -26,8 +26,9 @@ pub const BASIS_CATEGORY: &str = "category";
 /// A health professional placed the hold.
 pub const BASIS_PROFESSIONAL: &str = "professional";
 
-/// One row of the access-delay register.
-#[derive(Debug, Clone)]
+/// One row of the access-delay register, serialized as the admin register
+/// route answers it.
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct AccessDelayRow {
     /// The register row id.
     pub id: Uuid,

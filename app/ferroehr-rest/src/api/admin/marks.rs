@@ -42,7 +42,7 @@ use utoipa_axum::routes;
 use ferroehr::storage::marks::RetentionPeriod;
 use openehr_its::rest::runtime::ApiError;
 
-use super::body::{optional_str, required_str};
+use super::body::{optional_str, required_query, required_str};
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -605,12 +605,7 @@ async fn run(
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
         "admin_restriction_register" => {
-            let ehr_id =
-                params::query_param(parts.query.as_deref(), "ehr_id").ok_or_else(|| {
-                    RestError::from(ApiError::BadRequest(
-                        "the `ehr_id` query parameter is required".to_owned(),
-                    ))
-                })?;
+            let ehr_id = required_query(&parts, "ehr_id")?;
             let rows = state.backend().restriction_register(&ehr_id).await?;
             let body: Vec<serde_json::Value> = rows
                 .iter()
@@ -791,12 +786,7 @@ async fn run(
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
         "admin_access_restriction_register" => {
-            let ehr_id =
-                params::query_param(parts.query.as_deref(), "ehr_id").ok_or_else(|| {
-                    RestError::from(ApiError::BadRequest(
-                        "the `ehr_id` query parameter is required".to_owned(),
-                    ))
-                })?;
+            let ehr_id = required_query(&parts, "ehr_id")?;
             let rows = state.backend().access_restriction_register(&ehr_id).await?;
             let body: Vec<serde_json::Value> = rows
                 .iter()

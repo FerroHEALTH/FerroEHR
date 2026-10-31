@@ -51,6 +51,7 @@ pub(crate) const FHIR: &str = "/ferroehr/rest/fhir/r4";
 /// The paths below [`EXT`] the tests name relative to their namespace: every
 /// route ITS-REST does not define that is no FHIR interface.
 const EXTENSION_ROOTS: &[&str] = &[
+    "/admin/access-delay",
     "/admin/access-restriction",
     "/admin/archive",
     "/admin/config",

@@ -5,7 +5,7 @@
 # scripts/checks/file-size.sh admits, each with the length it may not
 # pass. An entry may fall and never rise; --update lowers and removes
 # entries.
-app/ferroehr-rest/src/api/admin/marks.rs 863
+app/ferroehr-rest/src/api/admin/marks.rs 825
 app/ferroehr-rest/src/api/definition/openapi_routes.rs 2112
 app/ferroehr-rest/src/api/demographic/openapi_routes.rs 10077
 app/ferroehr-rest/src/api/demographic/relationship.rs 1258
@@ -17,7 +17,7 @@ app/ferroehr-rest/src/extensions/access/pep.rs 1501
 app/ferroehr-rest/src/extensions/management/mod.rs 831
 app/ferroehr-rest/src/extensions/openapi.rs 1045
 app/ferroehr-rest/src/overview/negotiate.rs 2503
-app/ferroehr-server/src/lib.rs 1424
+app/ferroehr-server/src/lib.rs 1423
 app/ferroehr-viewer/src/builder/lift.rs 1270
 app/ferroehr-viewer/src/cdr.rs 891
 app/ferroehr-viewer/src/locale/records.rs 922
