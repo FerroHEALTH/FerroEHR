@@ -316,12 +316,15 @@ fn object_to_odin(path: &str, members: &[(String, JsonNode)]) -> Result<OdinValu
 /// `lower_unbounded`, `upper_unbounded`, `lower_included`, `upper_included`
 /// (`BASE/docs/UML/classes/org.openehr.base.foundation_types.interval.adoc`
 /// §Attributes); the published schemas write only the ones they need
-/// (`{"lower": 1, "upper_unbounded": true}`). An absent `*_unbounded` reads as
-/// "no limit written", and an absent `*_included` as the opposite of
-/// `*_unbounded`, which is what the invariants `Lower_included_valid` and
-/// `Upper_included_valid` leave for an unbounded side and what the ODIN form
-/// `|>=1|` denotes for a bounded one. NOTE: no openEHR spec defines the JSON
-/// interval members' defaults; this reading is our own design, chosen to match the ODIN range.
+/// (`{"lower": 1, "upper_unbounded": true}`). `master04-syntax.adoc`
+/// §Serialisation Formats (Intervals) fixes the upper side: "A reader treats a
+/// missing `_upper_unbounded_` as `true` when `_upper_` is also missing, and as
+/// `false` when `_upper_` is present". The lower side is read the same way, and
+/// an absent `*_included` as the opposite of `*_unbounded`, which is what the
+/// invariants `Lower_included_valid` and `Upper_included_valid` leave for an
+/// unbounded side and what the ODIN form `|>=1|` denotes for a bounded one.
+/// NOTE: the chapter says writers never write `lower_unbounded` or either
+/// `*_included`; reading them, and a missing `lower`, is our own design.
 fn cardinality(path: &str, members: &[(String, JsonNode)]) -> Result<OdinValue, PBmmReadError> {
     let mut lower = None;
     let mut upper = None;
