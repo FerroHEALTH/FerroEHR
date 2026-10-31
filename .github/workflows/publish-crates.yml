@@ -16,6 +16,11 @@
 # path when a release's crates leg fails (re-running it here finishes the set,
 # because "already exists" counts as done).
 #
+#   - The lockstep version is set HERE, never in a pull request (#4555):
+#     `publish-crates.sh plan` reads crates.io and the commit its newest
+#     archive was packaged from, and `stamp` writes the result into this
+#     checkout only (manifests, internal requirements, both lockfiles). The
+#     publish refuses changed content under a version crates.io already holds.
 #   - The default dispatch is a DRY RUN (`cargo publish --workspace --dry-run` —
 #     package + verify, no upload), mirroring publish-chart.yml; a real publish
 #     requires the `publish` input set to `true`.
@@ -55,16 +60,24 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The full history: the plan compares HEAD with the commit crates.io's
+      # newest archive was packaged from.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       # No cache in a publishing lane: the dry run must verify the same bytes
       # the real publish will upload (setup-rust-toolchain caches by default).
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
+      - name: Plan and stamp the lockstep version
+        run: |
+          set -euo pipefail
+          version="$(bash scripts/release/publish-crates.sh plan)"
+          bash scripts/release/publish-crates.sh stamp "$version"
       - name: Package + verify every publishable crate (no upload)
-        run: cargo publish --workspace --dry-run --locked
+        run: cargo publish --workspace --dry-run --locked --allow-dirty
 
   publish:
     if: ${{ inputs.publish }}
@@ -89,14 +102,22 @@ jobs:
       # OIDC token exchange (rust-lang/crates-io-auth-action).
       id-token: write
     steps:
+      # The full history: the plan and the publish compare HEAD with the
+      # commits crates.io's archives were packaged from.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       # No cache in the lane that uploads to crates.io: a published version is
       # immutable, so it must be built from this checkout and nothing else.
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
+      - name: Plan and stamp the lockstep version
+        run: |
+          set -euo pipefail
+          version="$(bash scripts/release/publish-crates.sh plan)"
+          bash scripts/release/publish-crates.sh stamp "$version"
       - id: auth
         name: Exchange OIDC identity for a temporary crates.io token
         uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6

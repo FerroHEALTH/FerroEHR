@@ -14,7 +14,9 @@
 # The archive is the attestation subject because it is what a consumer
 # downloads (`cargo` verifies it against the index checksum). A version crates.io
 # already holds is fetched from there and checked against that checksum. A new
-# version is packaged here from the release commit; `cargo package` writes
+# version is packaged here from the release commit, stamped with the planned
+# version by `publish-crates.sh stamp` as the crates leg stamps it, so both
+# record the same commit and the same `"dirty": true`; `cargo package` writes
 # deterministic archive headers (cargo src/ops/cargo_package, the
 # DETERMINISTIC_TIMESTAMP comment), so the crates leg's `cargo publish` uploads
 # the same bytes, and `verify-published` refuses the release record otherwise.
@@ -76,7 +78,8 @@ do_archive() {
   local -a packages=()
   local c
   while IFS= read -r c; do packages+=(-p "$c"); done < <(crate_list)
-  cargo package "${packages[@]}" --no-verify --locked
+  # --allow-dirty: the version is stamped into the checkout, uncommitted.
+  cargo package "${packages[@]}" --no-verify --locked --allow-dirty
   [[ -f "target/package/${out}" ]] || die "cargo package wrote no target/package/${out}"
   cp "target/package/${out}" "$out"
   echo "${out}: packaged from this commit, not yet on crates.io (sha256 $(sha256sum "$out" | cut -d' ' -f1))"

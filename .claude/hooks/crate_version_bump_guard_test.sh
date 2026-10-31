@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# Proves crate_version_bump_guard.sh end to end (#3573): a scratch repository
+# Proves crate_version_bump_guard.sh end to end (#3573, #4555): a scratch repository
 # with an `origin/main` ref stands in for the project, each outgoing change is
 # committed on a branch, a `git push` tool call is fed to the hook, and the
 # exit code is asserted. Run by the shellcheck CI job beside the lane, and by
@@ -74,24 +74,28 @@ change() {
   git_ commit -qam "$1"
 }
 
+# A pull request changes packaged content and leaves the version alone; the
+# publish step bumps (#4555).
 change bare-licence crates/openehr-sdt/LICENSE
-expect 2 'a bare LICENSE change without a bump'
-write_version 0.0.2
-git_ commit -qam bump
-expect 0 'a bare LICENSE change with the lockstep bump'
+expect 0 'a bare LICENSE change without a version edit'
 
 change suffixed-licence crates/openehr-rm/LICENSE-APACHE-2.0
-expect 2 'a LICENSE-APACHE-2.0 change without a bump'
+expect 0 'a LICENSE-APACHE-2.0 change without a version edit'
 
-# A refusal only the shared guard makes: the nine bumped, one internal
-# requirement left behind (#4217).
-change requirement-behind crates/openehr-sdt/LICENSE
-write_version 0.0.2 0.0.1
+change bumped crates/openehr-sdt/LICENSE
+write_version 0.0.2
 git_ commit -qam bump
-expect 2 'a bump that leaves an internal version requirement behind'
+expect 2 'a lockstep bump in the pushed commits'
+
+change requirement-moved crates/openehr-sdt/LICENSE
+write_version 0.0.1 0.0.2
+git_ commit -qam bump
+expect 2 'an internal version requirement moved by hand'
 
 # The escape passes even a refused push.
 change escaped crates/openehr-sdt/LICENSE
+write_version 0.0.2
+git_ commit -qam bump
 expect_escape 0 'a refused push with FERROEHR_SKIP_CRATE_BUMP_GUARD=1'
 
 change test-only crates/openehr-sdt/tests/flat.rs
@@ -100,4 +104,4 @@ expect 0 'a change outside the packaged content'
 if [[ "$failures" -ne 0 ]]; then
   exit 1
 fi
-echo "crate_version_bump_guard_test: OK (bare and suffixed licence changes refused without a bump, allowed with one, an internal requirement left behind refused, the escape honoured, unpackaged changes ignored)."
+echo "crate_version_bump_guard_test: OK (packaged changes pass without a version edit, a hand bump and a moved internal requirement refused, the escape honoured, unpackaged changes ignored)."

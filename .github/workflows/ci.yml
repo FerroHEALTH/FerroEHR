@@ -455,7 +455,7 @@ jobs:
         run: bash scripts/lib/gh-retry.sh --self-test
       - name: The dangerous-command hook refuses and allows the shapes it documents
         run: bash .claude/hooks/block_dangerous_test.sh
-      - name: The crate-version hook refuses a packaged change without a bump
+      - name: The crate-version hook refuses a hand edit of the lockstep crate version
         run: bash .claude/hooks/crate_version_bump_guard_test.sh
       - name: The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
         run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
@@ -2358,13 +2358,14 @@ jobs:
           bash scripts/checks/ui-screenshot.sh --self-test
           bash scripts/checks/ui-screenshot.sh "$BASE" "$HEAD"
 
-  # Crate-version guard (the changelog-guard pattern): a PR that changes
-  # PACKAGED content of the published crates/* members must bump the lockstep
-  # 0.0.x crate version in the same PR — published versions are immutable
-  # (.claude/rules/crates-publishing.md; local twin:
+  # Crate-version guard: a PR never edits the lockstep 0.0.x version of the
+  # published crates/* members or their internal requirements, because the
+  # publish step stamps it from crates.io (#4555,
+  # .claude/rules/crates-publishing.md; local twin:
   # .claude/hooks/crate_version_bump_guard.sh). The check is
-  # scripts/checks/crate-version-guard.sh, which runs locally too. Escape hatch: the
-  # `no-crate-bump` label for diffs that provably do not alter packaged bytes.
+  # scripts/checks/crate-version-guard.sh, which runs locally too and reports
+  # whether packaged content changed. Escape hatch: the `no-crate-bump` label
+  # for a PR that must set the version by hand.
   #
   # PULL-REQUEST ONLY, deliberately (#2777): it compares the pull request's
   # base and head trees and reads a pull-request label, neither of which a
@@ -2382,7 +2383,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Require a lockstep version bump for packaged-content changes
+      - name: Refuse a hand edit of the lockstep crate version
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
