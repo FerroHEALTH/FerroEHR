@@ -4,4 +4,5 @@
   (AOM 2 VCOSU, "unique within the archetype"), and on an operational template
   the codes and interior node ids below a root are judged against that
   constituent's entry in `component_terminologies` (OPT 2 `master03-opt_raw`).
-  A duplicate node id inside one archetype is still refused.
+  A duplicate node id inside one archetype is still refused. The nine
+  `openehr-*` crates step to 0.0.125.
