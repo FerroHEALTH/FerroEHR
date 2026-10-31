@@ -158,6 +158,7 @@ jobs:
       deploy: ${{ steps.filter.outputs.deploy }}
       workflows: ${{ steps.filter.outputs.workflows }}
       vex: ${{ steps.filter.outputs.vex }}
+      conformance: ${{ steps.filter.outputs.conformance }}
       msrv: ${{ steps.filter.outputs.msrv }}
       test_shards: ${{ steps.shards.outputs.test_list }}
       test_shard_count: ${{ steps.shards.outputs.test_count }}
@@ -228,6 +229,7 @@ jobs:
               echo "deploy=true"
               echo "workflows=true"
               echo "vex=true"
+              echo "conformance=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -237,6 +239,9 @@ jobs:
           # gate is written deliberately. The lanes and their reasons are in
           # the script, which matches from a here-string (#4208).
           bash scripts/lib/change-lanes.sh ci <<<"$changed" | tee -a "$GITHUB_OUTPUT"
+          # The conformance lane (#4539): the catalogue runs in this workflow on a
+          # pull request and in the merge queue.
+          bash scripts/lib/change-lanes.sh conformance <<<"$changed" | tee -a "$GITHUB_OUTPUT"
 
   # ── Required for code changes: formatting ───────────────────────────────────
   fmt:
@@ -1816,10 +1821,16 @@ jobs:
   # job, which boots the chart's values overlays against an image packaged from
   # this same binary. Hence the widened condition — the job id and name are
   # unchanged on purpose, because they are branch-protection check names.
+  # The third (#4539) is the `conformance` job, on a pull request and in the
+  # merge queue: it judges this binary, so the server compiles once per change.
+  # A push to main judges the image containers.yml pushes instead.
   ui-e2e-binary:
     name: ui-e2e server binary
     needs: changes
-    if: needs.changes.outputs.viewer == 'true' || needs.changes.outputs.chart_boot == 'true'
+    if: >-
+      needs.changes.outputs.viewer == 'true' ||
+      needs.changes.outputs.chart_boot == 'true' ||
+      (needs.changes.outputs.conformance == 'true' && github.event_name != 'push')
     runs-on: ubuntu-latest
     # Generous: a binary-cache miss with a cold sccache is a full release
     # build of the ~190 kLoC first-party graph (714 s measured cold, plus
@@ -2779,6 +2790,24 @@ jobs:
   # Action at the commit of the tag VEREDICTUM_VERSION names, on the image
   # digest VEREDICTUM_IMAGE names, both in scripts/lib/veredictum.sh. The tag
   # and the digest are read from GitHub and ghcr.io, failing closed.
+  # ── openEHR conformance: the Veredictum catalogue (#4449, #4539) ─────────────
+  # The reusable conformance.yml against the binary `ui-e2e-binary` compiled,
+  # so a change compiles the server once. A pull request and the merge queue
+  # only: a push to main judges the image containers.yml pushes for that
+  # commit, by digest. The reusable job asks for `contents: write`, which the
+  # Action uses only to push badges from a run on main that is not a pull
+  # request, so it never pushes from here; a fork's token is read-only anyway.
+  conformance:
+    name: conformance
+    needs: [changes, ui-e2e-binary]
+    if: needs.changes.outputs.conformance == 'true' && github.event_name != 'push'
+    permissions:
+      contents: write # the reusable job's badge push, which never happens off main
+      packages: read # the reusable job's GHCR pulls, unused beside an artifact
+    uses: ./.github/workflows/conformance.yml
+    with:
+      server-binary-artifact: ui-e2e-server-binary
+
   veredictum-action:
     name: veredictum-action
     runs-on: ubuntu-latest
@@ -2868,6 +2897,7 @@ jobs:
       - quickstart-config
       - ferropix-pins
       - veredictum-action
+      - conformance
       - crate-version
       - chart-version
       - chart-appversion
@@ -2879,7 +2909,14 @@ jobs:
       - name: Every needed job succeeded or was skipped
         env:
           NEEDS: ${{ toJSON(needs) }}
+          # THE SWITCH (#4455): jobs that run and report here but do not gate
+          # yet. `conformance` leaves this list, making it required, once the
+          # released run on main is green; while main has red rows it would
+          # block every pull request.
+          ADVISORY: '["conformance"]'
         run: |
           set -euo pipefail
-          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          echo "$NEEDS" | jq -e 'all(.[] | .result; . == "success" or . == "skipped")' >/dev/null
+          echo "$NEEDS" | jq -r --argjson advisory "$ADVISORY" \
+            'to_entries[] | "\(.key): \(.value.result)\(if (.key | IN($advisory[])) then " (advisory)" else "" end)"'
+          echo "$NEEDS" | jq -e --argjson advisory "$ADVISORY" \
+            'with_entries(select(.key | IN($advisory[]) | not)) | all(.[] | .result; . == "success" or . == "skipped")' >/dev/null

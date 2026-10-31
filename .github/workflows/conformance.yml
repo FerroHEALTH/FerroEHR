@@ -1,15 +1,28 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# openEHR conformance: the Veredictum catalogue against FerroEHR built from
-# this commit, through the Veredictum GitHub Action (#4449).
+# openEHR conformance: the Veredictum catalogue against one FerroEHR, through
+# the Veredictum GitHub Action (#4449). This file compiles no server: it judges
+# a server another lane built (#4539).
+#
+#   pull request, merge queue  ci.yml calls it with `server-binary-artifact`,
+#                              the e2e-profile binary its `ui-e2e-binary` job
+#                              uploaded, packaged here COPY-only with the
+#                              postgres image this tree defines.
+#   push to main               containers.yml calls it with the server and
+#                              postgres images it pushed for that commit, by
+#                              digest (`:main` for an image the push did not
+#                              rebuild).
+#   release tag                release.yml calls it with the digests of its own
+#                              cold-built images.
+#   schedule, dispatch         ghcr.io/ferrohealth/ferroehr:main, the scanned
+#                              and tagged image, unless a dispatch names one.
 #
 # The deployment is the one scripts/conformance.sh composes locally:
 # docker/sut-ferroehr.yml with the SMART and terminology overlays, on fresh
 # volumes, with FerroTERM beside FerroEHR (the `terminology` profile, pinned by
-# digest) and `[terminology.server]` pointed at it (#4476). The server image
-# packages the binary compiled natively below (`runtime-prebuilt`), and the
-# instrument logs in with the Basic users of docker/ferroehr.dev.toml.
+# digest) and `[terminology.server]` pointed at it (#4476). The instrument logs
+# in with the Basic users of docker/ferroehr.dev.toml.
 #
 # The Action runs the catalogue twice, each time on fresh volumes. The
 # `released` profile reads every citation against the frozen openEHR release:
@@ -29,75 +42,68 @@
 # results views of each profile as its own artifact. recording.har holds the
 # server's response bodies and is never uploaded.
 #
-# Runs on a pull request whose paths scripts/lib/change-lanes.sh classifies
-# into the `conformance` lane (server code, the party set, the conformance
-# compose files, this workflow), on main, on a release tag and on a schedule.
-# A release is published by the release workflow's own token, which starts no
-# workflow, so the tag push is the release trigger here.
-#
-# Each run draws its Veredictum badges and, on main, pushes them to a branch
-# of its own the README reads: the released run to veredictum-badges, the
-# development run to veredictum-badges-development (Veredictum book, Badges).
+# Each run draws its Veredictum badges and, from a run on main that is not a
+# pull request, pushes them to a branch of its own the README reads: the
+# released run to veredictum-badges, the development run to
+# veredictum-badges-development (Veredictum book, Badges). A caller grants
+# `contents: write` for that push and `packages: read` for the pulls.
 #
 # No openEHR specification governs how CI runs the instrument: our own design.
 name: Conformance
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  push:
-    branches: [main]
-    tags: ["v*"]
+  workflow_call:
+    inputs:
+      server-binary-artifact:
+        description: >-
+          A run artifact holding the server binary at its root, packaged with
+          docker/Dockerfile's runtime-prebuilt target. Exclusive with
+          server-image.
+        required: false
+        type: string
+        default: ""
+      server-image:
+        description: >-
+          The FerroEHR image to judge, ghcr.io/ferrohealth/ferroehr by digest
+          or tag. Empty with no artifact: the `:main` tag.
+        required: false
+        type: string
+        default: ""
+      postgres-image:
+        description: >-
+          The database image, ghcr.io/ferrohealth/ferroehr-postgres by digest
+          or tag. Empty: built from docker/postgres beside an artifact, the
+          `:main` tag beside an image.
+        required: false
+        type: string
+        default: ""
   schedule:
     # Tue + Fri 04:37 UTC, off the hour and in a slot of its own (read the
     # estate's slots with `grep -rE '^ +- cron:' .github/workflows/`).
     - cron: "37 4 * * 2,5"
   workflow_dispatch:
+    inputs:
+      server-image:
+        description: "FerroEHR image by digest or tag (empty: ghcr.io/ferrohealth/ferroehr:main)"
+        required: false
+        type: string
+        default: ""
+      postgres-image:
+        description: "Database image by digest or tag (empty: ghcr.io/ferrohealth/ferroehr-postgres:main)"
+        required: false
+        type: string
+        default: ""
 
-concurrency:
-  group: conformance-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
+# No workflow-level concurrency: the callers own it (ci.yml cancels a
+# superseded pull-request run, containers.yml and release.yml queue), and a
+# group here would be shared between callers and pending-cancel one of them.
 permissions: {}
 
 jobs:
-  changes:
-    name: change detection
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    outputs:
-      conformance: ${{ steps.filter.outputs.conformance }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - id: filter
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          # Every event but a pull request runs the catalogue; so does a pull
-          # request whose base cannot be diffed against.
-          if [ "$EVENT_NAME" != "pull_request" ] \
-            || ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null \
-            || ! changed=$(bash scripts/lib/changed-paths.sh "$PR_BASE" "$PR_HEAD"); then
-            echo "conformance=true" | tee -a "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          bash scripts/lib/change-lanes.sh conformance <<<"$changed" | tee -a "$GITHUB_OUTPUT"
-
   # `veredictum validate --statement` in the pinned image: the party statement
-  # against the catalogue, before any server is built.
+  # against the catalogue, before any server is started.
   statement:
     name: conformance statement review
-    needs: changes
-    if: needs.changes.outputs.conformance == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -113,78 +119,8 @@ jobs:
           CONF_PROFILE: development
         run: bash scripts/conformance.sh review
 
-  # The server binary, compiled as ci.yml's `ui-e2e-binary` compiles it: in
-  # the pinned rust:*-slim-trixie image (glibc of the distroless runtime), e2e
-  # profile, behind the same exact-key binary cache, so a commit CI has
-  # already built reuses that binary.
-  binary:
-    name: conformance server binary
-    needs: changes
-    if: needs.changes.outputs.conformance == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: read
-    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
-    env:
-      SOURCE_DATE_EPOCH: "1700000000"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Verify toolchain pins (container == rust-toolchain.toml)
-        shell: bash
-        run: |
-          set -euo pipefail
-          channel=$(grep -E '^channel' rust-toolchain.toml | sed -E 's/.*"(.*)".*/\1/')
-          have=$(rustc --version | awk '{print $2}')
-          if [ "$channel" != "$have" ]; then
-            echo "::error::Job container rustc ($have) != rust-toolchain.toml ($channel). Bump the container: tag."
-            exit 1
-          fi
-      # The release-tag run builds cold: no cache is restored on a tag, so the
-      # verdict on a release never rests on bytes a cache handed it. The other
-      # runs publish nothing and read the caches ci.yml writes.
-      - id: binary-cache
-        if: github.ref_type != 'tag'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with: # zizmor: ignore[cache-poisoning]
-          path: bin/amd64/ferroehr
-          key: ui-e2e-server-bin-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr/**', 'app/ferroehr-rest/**', 'app/ferroehr-server/**', 'tools/**') }}
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        if: github.ref_type != 'tag' && steps.binary-cache.outputs.cache-hit != 'true'
-        with: # zizmor: ignore[cache-poisoning]
-          shared-key: ui-e2e-server-binary
-          cache-targets: false
-          save-if: false
-      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11 # zizmor: ignore[cache-poisoning]
-        if: github.ref_type != 'tag' && steps.binary-cache.outputs.cache-hit != 'true'
-      - name: Build the server binary (e2e profile, native)
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-        env:
-          SCCACHE_GHA_ENABLED: ${{ github.ref_type != 'tag' }}
-          # ci.yml's binary job is the writer; this lane only reads.
-          SCCACHE_GHA_RW_MODE: READ_ONLY
-          RUSTC_WRAPPER: ${{ github.ref_type != 'tag' && 'sccache' || '' }}
-          CARGO_INCREMENTAL: "0"
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo build --profile e2e --locked -p ferroehr-server
-          strip target/e2e/ferroehr
-          mkdir -p bin/amd64
-          install -m0755 target/e2e/ferroehr bin/amd64/ferroehr
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: conformance-server-binary
-          path: bin/amd64/ferroehr
-          if-no-files-found: error
-          retention-days: 1
-
   conformance:
     name: conformance
-    needs: [changes, binary]
-    if: needs.changes.outputs.conformance == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -192,16 +128,83 @@ jobs:
       # veredictum-badges-development.
       # The Action pushes only from a run on main that is not a pull request.
       contents: write
+      packages: read # pull the images under test from GHCR
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      # Which server and database this run judges. An image reference must name
+      # this repository's GHCR images by digest or tag, so an input cannot point
+      # the run at anything else.
+      - id: images
+        name: Resolve the images under test
+        env:
+          SERVER_ARTIFACT: ${{ inputs.server-binary-artifact }}
+          SERVER_IMAGE: ${{ inputs.server-image }}
+          POSTGRES_IMAGE: ${{ inputs.postgres-image }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref_re='^ghcr\.io/ferrohealth/%s(@sha256:[0-9a-f]{64}|:[A-Za-z0-9_][A-Za-z0-9._-]{0,127})$'
+          # shellcheck disable=SC2059 # the pattern is the format on purpose
+          server_re=$(printf "$ref_re" ferroehr)
+          # shellcheck disable=SC2059 # the pattern is the format on purpose
+          postgres_re=$(printf "$ref_re" ferroehr-postgres)
+          if [ -n "$SERVER_ARTIFACT" ] && [ -n "$SERVER_IMAGE" ]; then
+            echo "::error::server-binary-artifact and server-image name two servers; pass one" >&2
+            exit 1
+          fi
+          if [ -n "$SERVER_ARTIFACT" ]; then
+            echo "server=artifact" >> "$GITHUB_OUTPUT"
+            postgres_default=build
+          else
+            SERVER_IMAGE="${SERVER_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}"
+            [[ "$SERVER_IMAGE" =~ $server_re ]] || { echo "::error::server-image '$SERVER_IMAGE' is not ghcr.io/ferrohealth/ferroehr by digest or tag" >&2; exit 1; }
+            { echo "server=image"; echo "server-ref=$SERVER_IMAGE"; } >> "$GITHUB_OUTPUT"
+            postgres_default=ghcr.io/ferrohealth/ferroehr-postgres:main
+          fi
+          POSTGRES_IMAGE="${POSTGRES_IMAGE:-$postgres_default}"
+          if [ "$POSTGRES_IMAGE" = build ]; then
+            echo "postgres=build" >> "$GITHUB_OUTPUT"
+          else
+            [[ "$POSTGRES_IMAGE" =~ $postgres_re ]] || { echo "::error::postgres-image '$POSTGRES_IMAGE' is not ghcr.io/ferrohealth/ferroehr-postgres by digest or tag" >&2; exit 1; }
+            { echo "postgres=image"; echo "postgres-ref=$POSTGRES_IMAGE"; } >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        if: steps.images.outputs.server == 'image' || steps.images.outputs.postgres == 'image'
         with:
-          name: conformance-server-binary
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # The images a lane pushed, pulled as they were pushed: nothing is
+      # compiled or rebuilt, so the run judges what ships.
+      - name: Pull the images under test
+        if: steps.images.outputs.server == 'image' || steps.images.outputs.postgres == 'image'
+        env:
+          SERVER_REF: ${{ steps.images.outputs.server-ref }}
+          POSTGRES_REF: ${{ steps.images.outputs.postgres-ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pull() {
+            docker pull "$1"
+            docker tag "$1" "$2"
+            printf -- '- %s: %s\n' "$2" "$(docker inspect --format '{{index .RepoDigests 0}}' "$1")" >> "$GITHUB_STEP_SUMMARY"
+          }
+          printf '## The images under test\n\n' >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$SERVER_REF" ]; then pull "$SERVER_REF" ferroehr:conformance; fi
+          if [ -n "$POSTGRES_REF" ]; then pull "$POSTGRES_REF" ferroehr-postgres:conformance; fi
+          printf '\n' >> "$GITHUB_STEP_SUMMARY"
+      # The binary the caller's run compiled, packaged COPY-only.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: steps.images.outputs.server == 'artifact'
+        with:
+          name: ${{ inputs.server-binary-artifact }}
           path: bin/amd64
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.images.outputs.server == 'artifact' || steps.images.outputs.postgres == 'build'
       - name: Package the server image (COPY-only)
+        if: steps.images.outputs.server == 'artifact'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -212,6 +215,7 @@ jobs:
       # The database image this tree defines: the compose fallback names a tag
       # no registry serves.
       - name: Package the postgres image
+        if: steps.images.outputs.postgres == 'build'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: docker/postgres
