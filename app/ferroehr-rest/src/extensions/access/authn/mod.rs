@@ -39,6 +39,7 @@
 )]
 
 pub(crate) mod assurance;
+mod issuer;
 
 use std::sync::Arc;
 
@@ -46,13 +47,12 @@ use axum::extract::{FromRequestParts, MatchedPath, OriginalUri, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
-use ferrohealth_smart::metadata::{DiscoveryError, ServerMetadata, parse_metadata};
 use ferrohealth_smart::openehr::smart_scopes::{Compartment, SmartScope};
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
 use ferrohealth_smart::resource::{
-    Access, Caller, Honoured, IssuerSet, ResourceError, ResourceServer, Via,
+    Access, Caller, Honoured, IssuerSet, PatientClaim, ResourceServer, Via,
 };
 use http::request::Parts;
 use http::{HeaderValue, StatusCode, header};
@@ -332,27 +332,37 @@ impl Authenticator {
     /// # Errors
     /// A message naming the refused setting, the issuer that could not be
     /// read, or the metadata file that could not be read or does not fit the
-    /// first issuer.
-    pub async fn new(config: &AppConfig) -> Result<Arc<Self>, String> {
+    /// first issuer, or a `patient_claim` that names no claim.
+    ///
+    /// Every caller an issuer admits carries `patient_claim`, the live ABAC
+    /// patient claim, as the `ferrohealth-smart` `PatientClaim`.
+    pub async fn new(config: &AppConfig, patient_claim: Option<&str>) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth)
             .map_err(|e| ferroehr::service::error::ErrorChain::new(&e).to_string())?;
         let mut gate = Gate::open();
         let mut primary = None;
+        let claim = patient_claim
+            .map(PatientClaim::new)
+            .transpose()
+            .map_err(|e| format!("authz.abac.patient_claim is refused: {e}"))?;
         if resolved.enabled {
             if let Some(settings) = resolved.introspection {
                 let issuer = settings.issuer.clone();
-                let introspector =
-                    Arc::new(Introspector::discover(settings).await.map_err(|e| {
-                        format!(
-                            "the introspection endpoint of {issuer} could not be read: {}",
-                            ferroehr::service::error::ErrorChain::new(&e)
-                        )
-                    })?);
+                let mut introspector = Introspector::discover(settings).await.map_err(|e| {
+                    format!(
+                        "the introspection endpoint of {issuer} could not be read: {}",
+                        ferroehr::service::error::ErrorChain::new(&e)
+                    )
+                })?;
+                if let Some(claim) = &claim {
+                    introspector = introspector.with_extension(claim.clone());
+                }
+                let introspector = Arc::new(introspector);
                 primary = Some(Primary::Introspection(Arc::clone(&introspector)));
                 gate = gate.with_bearer(introspector);
             } else if !resolved.issuers.is_empty() {
                 let mut supplied = match config.smart.issuer_metadata_file.as_deref() {
-                    Some(path) => Some(issuer_metadata(path).await?),
+                    Some(path) => Some(issuer::issuer_metadata(path).await?),
                     None => None,
                 };
                 let mut issuers = IssuerSet::new();
@@ -360,7 +370,7 @@ impl Authenticator {
                     let issuer = settings.issuer.clone();
                     let mut server = ResourceServer::discover(settings)
                         .await
-                        .map_err(|e| unreadable_issuer(&issuer, &e))?;
+                        .map_err(|e| issuer::unreadable_issuer(&issuer, &e))?;
                     if let Some(metadata) = supplied.take() {
                         server = server.with_metadata(metadata).map_err(|e| {
                             format!(
@@ -369,6 +379,9 @@ impl Authenticator {
                                 ferroehr::service::error::ErrorChain::new(&e)
                             )
                         })?;
+                    }
+                    if let Some(claim) = &claim {
+                        server = server.with_extension(claim.clone());
                     }
                     let server = Arc::new(server);
                     primary.get_or_insert_with(|| Primary::Jwt(Arc::clone(&server)));
@@ -482,62 +495,6 @@ fn upper_cased(roles: &[String]) -> Vec<String> {
         }
     }
     out
-}
-
-/// The boot refusal of an issuer whose metadata or key set could not be read.
-///
-/// A key set that does not parse is named by its JSON failure class and
-/// position, never by the parser's message, which quotes the offending value;
-/// every other failure carries its whole cause chain.
-fn unreadable_issuer(issuer: &str, error: &ResourceError) -> String {
-    match error {
-        ResourceError::KeySet { error: json, .. } => format!(
-            "the authorization server {issuer} could not be read: {error}: {:?} error at \
-             line {}, column {}",
-            json.classify(),
-            json.line(),
-            json.column()
-        ),
-        _ => format!(
-            "the authorization server {issuer} could not be read: {}",
-            ferroehr::service::error::ErrorChain::new(error)
-        ),
-    }
-}
-
-/// Reads the RFC 8414 §2 authorization-server metadata at `path`
-/// (`[smart] issuer_metadata_file`) through the shared parse, which refuses a
-/// repeated member name (RFC 8259 §4); `ResourceServer::with_metadata` then
-/// refuses another issuer (RFC 8414 §3.3).
-///
-/// A document that does not parse is named by its JSON failure class and
-/// position, never by the parser's message, which quotes the input.
-///
-/// # Errors
-/// A message naming the file that could not be read or parsed.
-async fn issuer_metadata(path: &str) -> Result<ServerMetadata, String> {
-    let text = tokio::fs::read_to_string(path)
-        .await
-        .map_err(|e| format!("smart.issuer_metadata_file {path} could not be read: {e}"))?;
-    let absolute = std::path::absolute(path)
-        .map_err(|e| format!("smart.issuer_metadata_file {path} could not be resolved: {e}"))?;
-    let location = url::Url::from_file_path(&absolute)
-        .map_err(|()| format!("smart.issuer_metadata_file {path} is not a file path"))?;
-    parse_metadata(&location, &text).map_err(|e| {
-        let position = match &e {
-            DiscoveryError::Metadata { source, .. }
-            | DiscoveryError::RepeatedName { source, .. } => {
-                format!(
-                    ": {:?} error at line {}, column {}",
-                    source.classify(),
-                    source.line(),
-                    source.column()
-                )
-            }
-            _ => String::new(),
-        };
-        format!("smart.issuer_metadata_file {path} is refused: {e}{position}")
-    })
 }
 
 tokio::task_local! {
@@ -1057,10 +1014,13 @@ mod tests {
             }),
             ..ferroehr::config::FerroEhrConfig::default().auth
         };
-        let authenticator = Authenticator::new(&AppConfig {
-            auth,
-            ..AppConfig::default()
-        })
+        let authenticator = Authenticator::new(
+            &AppConfig {
+                auth,
+                ..AppConfig::default()
+            },
+            None,
+        )
         .await
         .expect("an introspecting authenticator");
         (server, authenticator)
@@ -1130,11 +1090,11 @@ mod tests {
         for bearer in [false, true] {
             let config =
                 introspecting_through(&issuer.base_url, bearer, Some(issuer.ca_file.clone()));
-            Authenticator::new(&config)
+            Authenticator::new(&config, None)
                 .await
                 .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting ca_file: {e}"));
             let untrusted = introspecting_through(&issuer.base_url, bearer, None);
-            let refused = Authenticator::new(&untrusted)
+            let refused = Authenticator::new(&untrusted, None)
                 .await
                 .expect_err("the platform roots alone do not trust the private authority");
             assert!(
@@ -1143,7 +1103,7 @@ mod tests {
             );
             let no_certificate =
                 introspecting_through(&issuer.base_url, bearer, Some(empty.clone()));
-            let refused = Authenticator::new(&no_certificate)
+            let refused = Authenticator::new(&no_certificate, None)
                 .await
                 .expect_err("a ca_file without a certificate refuses the start");
             assert!(
@@ -1202,16 +1162,19 @@ mod tests {
     }
 
     async fn basic_only() -> Arc<Authenticator> {
-        Authenticator::new(&basic_config(60))
+        Authenticator::new(&basic_config(60), None)
             .await
             .expect("a Basic-only authenticator")
     }
 
     async fn bearer_only() -> Arc<Authenticator> {
-        Authenticator::new(&AppConfig {
-            auth: test_support::bearer_auth(),
-            ..AppConfig::default()
-        })
+        Authenticator::new(
+            &AppConfig {
+                auth: test_support::bearer_auth(),
+                ..AppConfig::default()
+            },
+            None,
+        )
         .await
         .expect("a bearer authenticator")
     }
@@ -1235,7 +1198,7 @@ mod tests {
     #[tokio::test]
     async fn a_cached_credential_never_admits_a_wrong_password() {
         for ttl in [60, 0] {
-            let auth = Authenticator::new(&basic_config(ttl)).await.unwrap();
+            let auth = Authenticator::new(&basic_config(ttl), None).await.unwrap();
             let h = headers("Basic YWxpY2U6cHc="); // alice:pw
             let first = auth.authenticate(&h).await.expect("first verifies");
             let second = auth.authenticate(&h).await.expect("second verifies");
@@ -1346,7 +1309,7 @@ mod tests {
         {
             alice.roles = vec!["admin".to_owned(), "user".to_owned()];
         }
-        let auth = Authenticator::new(&config).await.unwrap();
+        let auth = Authenticator::new(&config, None).await.unwrap();
         let p = auth
             .authenticate(&headers("Basic YWxpY2U6cHc="))
             .await
@@ -1555,10 +1518,13 @@ mod tests {
     async fn the_jwt_profile_admits_a_plain_jwt_and_refuses_another_kind() {
         let mut auth = test_support::bearer_auth();
         auth.token_profile = ferrohealth_smart::resource::TokenProfile::Jwt;
-        let authenticator = Authenticator::new(&AppConfig {
-            auth,
-            ..AppConfig::default()
-        })
+        let authenticator = Authenticator::new(
+            &AppConfig {
+                auth,
+                ..AppConfig::default()
+            },
+            None,
+        )
         .await
         .expect("authenticator");
         let key = jsonwebtoken::EncodingKey::from_rsa_pem(include_bytes!(
@@ -1797,7 +1763,9 @@ mod tests {
             ..AppConfig::default()
         };
         let layer = AuthLayer {
-            authenticator: Authenticator::new(&config).await.expect("authenticator"),
+            authenticator: Authenticator::new(&config, None)
+                .await
+                .expect("authenticator"),
             authz: None,
             patient_data: None,
             smart: Arc::new(SmartRoutes::new(
@@ -1892,7 +1860,7 @@ mod tests {
             ..AppConfig::default()
         };
         config.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
-        Authenticator::new(&config).await
+        Authenticator::new(&config, None).await
     }
 
     /// SMART App Launch 2.2.0, Conformance, §Metadata requires a
@@ -2019,10 +1987,13 @@ mod tests {
         }
 
         async fn authenticator(section: AuthSection) -> Result<Arc<Authenticator>, String> {
-            Authenticator::new(&AppConfig {
-                auth: section,
-                ..AppConfig::default()
-            })
+            Authenticator::new(
+                &AppConfig {
+                    auth: section,
+                    ..AppConfig::default()
+                },
+                None,
+            )
             .await
         }
 

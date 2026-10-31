@@ -232,6 +232,7 @@ anything.
 | `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within `access_delay.hours` of now) or for `access_delay.hours`; **400** while `[access_delay]` is off |
 | `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
 | `POST {ext}/admin/access-delay/release` | `{"ehr_id": "…", "vo_id": "…"}` | **204**: every hold of the composition still in force is released, and the person reads it |
+| `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release` | none | **204**: the treating professional's release from the clinical surface, with the checks of a write to that EHR; **403** to a request that may be the person's |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in

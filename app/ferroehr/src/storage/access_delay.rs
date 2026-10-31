@@ -196,26 +196,46 @@ pub async fn register(pool: &PgPool, ehr_id: EhrId) -> Result<Vec<AccessDelayRow
     .bind(ehr_id)
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
-    rows.iter()
-        .map(|row| {
-            Ok(AccessDelayRow {
-                id: row.try_get("id")?,
-                ehr_id: row.try_get("ehr_id")?,
-                vo_id: row.try_get("vo_id")?,
-                basis: row.try_get("basis")?,
-                withheld_at: row
-                    .try_get::<jiff_sqlx::Timestamp, _>("withheld_at")?
-                    .to_jiff(),
-                withheld_until: row
-                    .try_get::<jiff_sqlx::Timestamp, _>("withheld_until")?
-                    .to_jiff(),
-                released_at: row
-                    .try_get::<Option<jiff_sqlx::Timestamp>, _>("released_at")?
-                    .map(jiff_sqlx::Timestamp::to_jiff),
-                note: row.try_get("note")?,
-            })
-        })
-        .collect()
+    rows.iter().map(row_of).collect()
+}
+
+/// Every hold of the EHRs `ehr_ids`, oldest hold first, so a replay of them
+/// in order ends in the state each object is in now.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn holds_of(
+    pool: &PgPool,
+    ehr_ids: &[Uuid],
+) -> Result<Vec<AccessDelayRow>, StorageError> {
+    let rows = sqlx::query(
+        "SELECT id, ehr_id, vo_id, basis, withheld_at, withheld_until, released_at, note \
+         FROM access_delay WHERE ehr_id = ANY($1) ORDER BY withheld_at, id",
+    )
+    .bind(ehr_ids)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?;
+    rows.iter().map(row_of).collect()
+}
+
+/// One register row as the two reads above select it.
+fn row_of(row: &sqlx::postgres::PgRow) -> Result<AccessDelayRow, StorageError> {
+    Ok(AccessDelayRow {
+        id: row.try_get("id")?,
+        ehr_id: row.try_get("ehr_id")?,
+        vo_id: row.try_get("vo_id")?,
+        basis: row.try_get("basis")?,
+        withheld_at: row
+            .try_get::<jiff_sqlx::Timestamp, _>("withheld_at")?
+            .to_jiff(),
+        withheld_until: row
+            .try_get::<jiff_sqlx::Timestamp, _>("withheld_until")?
+            .to_jiff(),
+        released_at: row
+            .try_get::<Option<jiff_sqlx::Timestamp>, _>("released_at")?
+            .map(jiff_sqlx::Timestamp::to_jiff),
+        note: row.try_get("note")?,
+    })
 }
 
 /// Stamp every hold whose end passed unreleased and unrecorded, and return

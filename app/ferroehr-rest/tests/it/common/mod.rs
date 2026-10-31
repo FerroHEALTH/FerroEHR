@@ -125,7 +125,7 @@ pub(crate) async fn test_service() -> (testkit::TestDb, Arc<FerroEhrService>) {
 /// the same wiring as [`ferroehr_rest::build_with`], split open so tests can
 /// hand-tune `AppConfig` (auth modes, admin/extension toggles).
 pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
-    let authenticator = Authenticator::new(&config)
+    let authenticator = Authenticator::new(&config, None)
         .await
         .expect("test auth config is valid");
     // A router a test drives is serving, as `build_with` marks it.

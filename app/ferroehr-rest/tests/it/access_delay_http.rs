@@ -387,6 +387,50 @@ async fn a_professional_holds_a_composition_within_the_limit() {
     assert_eq!(bases, ["professional", "category"], "newest hold first");
 }
 
+/// The treating professional releases a held composition from a clinical
+/// route on the EHR (the owner's ruling of 2026-10-31), and a token that may
+/// be the person's, a mixed one among them, neither reads it while held nor
+/// releases it.
+#[tokio::test]
+async fn the_treating_professional_releases_from_a_clinical_route() {
+    let (_db, _pool, _svc, app) = app(true).await;
+    let (ehr, vo) = record(&app).await;
+    let mixed = common::bearer(&json!({ "sub": "patient-7", "iss": ISSUER, "aud": AUDIENCE,
+        "exp": jiff::Timestamp::now().as_second() + 3600,
+        "scope": "patient/composition-*.r user/composition-*.cruds", "ehrId": ehr }));
+    let person = common::bearer(&json!({ "sub": "patient-7", "iss": ISSUER, "aud": AUDIENCE,
+        "exp": jiff::Timestamp::now().as_second() + 3600,
+        "scope": "patient/composition-*.ru", "ehrId": ehr }));
+    let release = format!("{EXT}/ehr/{ehr}/versioned_composition/{vo}/access-delay/release");
+
+    assert_eq!(read(&app, &ehr, &vo, &mixed).await, StatusCode::NOT_FOUND);
+    let (status, body) = send(&app, "POST", &release, &person, None).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "held reads as absent: {body}"
+    );
+    assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::NOT_FOUND);
+
+    let (status, body) = send(&app, "POST", &release, &professional(), None).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "release: {body}");
+    assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::OK);
+    assert_eq!(read(&app, &ehr, &vo, &mixed).await, StatusCode::OK);
+
+    let (status, body) = send(&app, "POST", &release, &person, None).await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "the person never releases: {body}"
+    );
+    let (status, body) = send(&app, "POST", &release, &mixed, None).await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "nor does a mixed token: {body}"
+    );
+}
+
 /// Without `[access_delay]` the person reads new data immediately (Art. 3(1))
 /// and no hold may be placed.
 #[tokio::test]

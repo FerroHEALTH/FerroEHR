@@ -93,6 +93,8 @@ pub mod store;
 
 use crate::system_log::sender::AuditSender;
 pub mod syslog;
+#[cfg(feature = "fhir")]
+mod withheld;
 
 use event::{AuditEvent, EmitOutcome};
 

@@ -222,6 +222,21 @@ pub(crate) fn render(
     stored: StoredRecord,
     policy: &CompiledPolicy,
 ) -> Result<serde_json::Value, AuditError> {
+    let (event, subject) = classified(stored, policy)?;
+    crate::system_log::fhir::to_fhir(&event, &policy.context, subject.as_deref())
+}
+
+/// The event of `stored` with its classification computed again under
+/// `policy`, and the patient behind its EHR.
+///
+/// # Errors
+/// [`AuditError::Unreadable`] when the policy's map is not the one that
+/// classified the record.
+#[cfg(feature = "fhir")]
+pub(crate) fn classified(
+    stored: StoredRecord,
+    policy: &CompiledPolicy,
+) -> Result<(AuditEvent, Option<String>), AuditError> {
     let StoredRecord {
         chain_seq,
         mut event,
@@ -243,7 +258,7 @@ pub(crate) fn render(
                 .classify(&content.content, content.written),
         );
     }
-    crate::system_log::fhir::to_fhir(&event, &policy.context, subject.as_deref())
+    Ok((event, subject))
 }
 
 #[cfg(test)]

@@ -373,24 +373,42 @@ default, so the person's access stays immediate.
   is held: a composition the person has already seen stays visible when it is
   amended, and a professional holds an amendment by hand if it needs
   explaining. A composition the person commits is never held from them.
-- **Who it is held from.** A patient-context request: a token carrying a
-  SMART `patient/` grant, or the ABAC patient claim
+- **Who it is held from.** A request that may be the person's own: a bearer
+  token carrying a SMART `patient/` grant, or the ABAC patient claim
   (`authz.abac.patient_claim`). A token that carries either is treated as the
-  person's, whatever else it carries. To that request a held composition reads
+  person's, whatever `user/` or `system/` grant it also carries, so a mixed
+  token is withheld from rather than shown the data too early. The rule is the
+  FerroHEALTH family's, shared with the other products through
+  `ferrohealth-smart`. To that request a held composition reads
   as absent: a read answers **404** as for an unknown composition, a query and
   an export leave it out, a CONTRIBUTION lists none of its versions, and a write
   to it is refused as a write to an unknown target.
 - **What a professional sees.** Everything, as before. The hold changes no
   professional route, query or export.
-- **Releasing it.** A health professional releases a composition once it has
-  been explained with `POST /ferroehr/rest/extensions/v1/admin/access-delay/release`, and holds
-  one by hand with `POST /ferroehr/rest/extensions/v1/admin/access-delay`, for at most
-  `access_delay.hours` ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
+- **Releasing it.** The treating professional releases a composition once it
+  has been explained, from the clinical surface with
+  `POST /ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release`.
+  The route takes the checks of a write to that EHR: the EHR access list, the
+  ABAC check of a composition update and the SMART `composition-` update
+  grant. A request that may be the person's is refused with **403**. The
+  controller releases with
+  `POST /ferroehr/rest/extensions/v1/admin/access-delay/release`, and holds
+  one by hand with `POST /ferroehr/rest/extensions/v1/admin/access-delay`, for
+  at most `access_delay.hours`
+  ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
 - **The limit.** Every hold ends by itself when its period passes, released or
   not, because Art. 3(3) allows a delay "for a limited period of time" only.
 - **The record.** Placing a hold, releasing it and its expiry are each an
   access record: the release names the professional who made it, and the
   server writes the expiry record within a minute of the limit passing.
+- **The person's access trail (Art. 9).** A record about a held composition
+  would tell the person a result exists. The subject-scoped ITI-81 read, the
+  one a patient portal serves the person's own trail from, leaves out every
+  record that names a held composition, its hold included, until the hold is
+  released or expires; the records then appear unchanged, with their original
+  times. The filter is `ehds-logging`'s, the FerroHEALTH family's EHDS
+  logging component. The controller's unscoped read shows every record at
+  all times.
 
 Turning the section off makes every held composition readable to the person at
 once: the holds stay in the register, and no new one can be placed.

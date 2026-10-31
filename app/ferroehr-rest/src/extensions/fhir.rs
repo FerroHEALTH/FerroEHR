@@ -152,7 +152,7 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
              the `patient` parameter is required (the unscoped retrieval needs the admin role)",
         );
     }
-    match state.backend().audit_event_search(&filter.store).await {
+    match searched(state, subject_scoped, &filter.store).await {
         Ok((total, documents)) => {
             let total_count = u32::try_from(total).unwrap_or(u32::MAX);
             let served = u64::try_from(documents.len()).unwrap_or(u64::MAX);
@@ -206,6 +206,27 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
             resp
         }
         Err(e) => sm_error_outcome(e),
+    }
+}
+
+/// The store search of `filter`: the person's own trail for a subject-scoped
+/// read, every record for the controller's.
+#[expect(
+    clippy::disallowed_types,
+    reason = "the store hands back the stored FHIR R4 AuditEvent documents as JSON, the \
+              searchset entries this handler deserializes"
+)]
+async fn searched(
+    state: &AppState,
+    subject_scoped: bool,
+    filter: &ferroehr::system_log::store::AuditSearchFilter,
+) -> Result<(i64, Vec<serde_json::Value>), SmError> {
+    // NOTE: EHDS Art. 9 and Art. 3(3), the subject-scoped read is the person's own trail, which
+    // leaves out the records about data held from them until it is released or expires.
+    if subject_scoped {
+        state.backend().person_audit_event_search(filter).await
+    } else {
+        state.backend().audit_event_search(filter).await
     }
 }
 

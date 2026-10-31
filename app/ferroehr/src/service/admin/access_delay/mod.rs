@@ -187,6 +187,74 @@ impl FerroEhrService {
         Ok(expired.len())
     }
 
+    /// The ITI-81 retrieval of one person's own access trail (EHDS Art. 9):
+    /// a record about a composition held from them (Art. 3(3)) is left out
+    /// until the hold is released or expires, and then served with its
+    /// original time.
+    ///
+    /// # Errors
+    /// `precondition_violation` when no local store is wired, or `exception`
+    /// when a store query fails.
+    #[cfg(feature = "fhir")]
+    pub async fn person_audit_event_search(
+        &self,
+        filter: &crate::system_log::store::AuditSearchFilter,
+    ) -> Result<(i64, Vec<serde_json::Value>), SmError> {
+        let Some(audit_store) = &self.audit_store else {
+            return self.audit_event_search(filter).await;
+        };
+        let fault = |e: crate::system_log::AuditError| {
+            crate::service::error::internal_fault_caused("search the audit record repository", &e)
+        };
+        let ehrs = audit_store.ehrs_of(filter).await.map_err(fault)?;
+        let now = jiff::Timestamp::now();
+        match self.person_holds(&ehrs, now).await? {
+            Some(holds) => audit_store.search_for_person(filter, &holds, now).await,
+            None => audit_store.search(filter).await,
+        }
+        .map_err(fault)
+    }
+
+    /// The register of the holds on the EHRs `ehrs`, replayed oldest first,
+    /// or `None` when none of them is in force at `now`, so nothing is
+    /// withheld from the person's trail.
+    #[cfg(feature = "fhir")]
+    async fn person_holds(
+        &self,
+        ehrs: &[String],
+        now: jiff::Timestamp,
+    ) -> Result<Option<ehds_logging::withheld::Holds>, SmError> {
+        // NOTE: an audit record names its EHR as text, and one that is no UUID names no EHR
+        // of this store, so it is absent from the register, never an error.
+        let ids: Vec<uuid::Uuid> = ehrs
+            .iter()
+            .filter_map(|ehr| uuid::Uuid::parse_str(ehr).ok())
+            .collect();
+        let rows = access_delay::holds_of(&self.pool, &ids)
+            .await
+            .map_err(ServiceError::Storage)?;
+        if !rows
+            .iter()
+            .any(|row| row.released_at.is_none() && row.withheld_until > now)
+        {
+            return Ok(None);
+        }
+        let mut holds = ehds_logging::withheld::Holds::default();
+        for row in &rows {
+            // NOTE: EHDS Art. 3(3), the hold's own mark (`access-delay:<vo>`) would tell the
+            // person a result exists, so it is held with the composition.
+            for key in [row.vo_id.to_string(), format!("{REGISTER}:{}", row.vo_id)] {
+                holds.hold(key.as_str(), row.withheld_until);
+                if let Some(released) = row.released_at {
+                    holds.release(&key, released).map_err(|e| {
+                        crate::service::error::internal_fault_caused("replay the access delays", &e)
+                    })?;
+                }
+            }
+        }
+        Ok(Some(holds))
+    }
+
     /// Record the expiries every `every` in a detached task that ends with the
     /// runtime; nothing is spawned while the delay is off.
     pub fn spawn_access_delay_expiries(self: &Arc<Self>, every: Duration) {

@@ -7,8 +7,8 @@
 //! access to their data "for a limited period of time until a health
 //! professional is able to properly communicate and explain" it
 //! (`docs/law/eu/ehds/text.html`). On a deployment that enables
-//! `[access_delay]`, a patient-context request runs with the delay enforced,
-//! published to the platform layer through
+//! `[access_delay]`, a request that acts for the person runs with the delay
+//! enforced, published to the platform layer through
 //! `ferroehr::system_log::access_context`, where the version reads, the AQL
 //! builder, the exports and the write guard treat withheld data as absent.
 //! Here, before dispatch, a route naming a withheld object answers `404` as
@@ -17,6 +17,7 @@
 //! person's access: our own design/extension.
 
 use axum::response::{IntoResponse, Response};
+use ferrohealth_smart::resource::Caller;
 
 use super::authn::{Principal, current_principal};
 use crate::api::RequestParts;
@@ -25,38 +26,26 @@ use crate::state::AppState;
 
 /// Whether the EHDS Art. 3(3) delay holds for `op` from the current caller.
 ///
-/// It holds on a deployment that enables `[access_delay]`, for a
-/// patient-context caller, on every operation but the controller's own
+/// It holds on a deployment that enables `[access_delay]`, for a caller that
+/// acts for the person, on every operation but the controller's own
 /// (`admin_*`).
 pub(crate) fn applies(state: &AppState, op: &str) -> bool {
     if op.starts_with("admin_") || !state.backend().access_delay_enabled() {
         return false;
     }
-    current_principal().is_some_and(|principal| is_patient_context(state, &principal))
+    current_principal().is_some_and(|principal| acts_for_the_person(&principal))
 }
 
-/// Whether `principal` is the person's own access: a SMART `patient/` grant
-/// (master08 §Resource Scopes), or the configured ABAC patient claim.
-///
-/// A token carrying either is judged the person's, whatever else it carries.
-fn is_patient_context(state: &AppState, principal: &Principal) -> bool {
-    // NOTE: EHDS Art. 3(3), our own design: a token that names the patient is read as the
-    // person's own access, so a mixed token is withheld from rather than shown too early.
-    if principal
-        .scopes
-        .iter()
-        .any(|scope| scope.starts_with("patient/"))
-    {
-        return true;
-    }
-    let authz = state.authz();
-    let claim = authz
-        .as_deref()
-        .and_then(|handle| handle.abac())
-        .and_then(|abac| abac.patient_claim.as_deref());
-    claim.is_some_and(|claim| {
-        ferrohealth_smart::roles::claim_text(&principal.claims, claim).is_some()
-    })
+/// Whether `principal` may be the person's own access: a token carrying a
+/// SMART `patient/` grant or the configured patient claim, whatever else it
+/// carries (`Caller::acts_for_the_person` of `ferrohealth-smart`).
+pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
+    // NOTE: EHDS Art. 3(3), the owner's ruling of 2026-10-31: a mixed token is withheld
+    // from, so the person never reads held data early; the rule is the family crate's.
+    principal
+        .access
+        .caller()
+        .is_some_and(Caller::acts_for_the_person)
 }
 
 /// Answer, as an unknown object would be answered, a request whose path names

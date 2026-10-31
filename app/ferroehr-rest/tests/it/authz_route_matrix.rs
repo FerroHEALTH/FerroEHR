@@ -316,6 +316,12 @@ const CLINICAL_WRITE: &[(&str, &str)] = &[
         "/ehr/{ehr_id}/composition/{uid_based_id}/tags/{key}",
     ),
     ("POST", "/ehr/{ehr_id}/contribution"),
+    // The treating professional's release of a composition held from the
+    // person, an EHDS Art. 3(3) extension spelled at its full path (#4351).
+    (
+        "POST",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release",
+    ),
     ("POST", "/ehr/{ehr_id}/directory"),
     ("PUT", "/ehr/{ehr_id}/directory"),
     ("DELETE", "/ehr/{ehr_id}/directory"),

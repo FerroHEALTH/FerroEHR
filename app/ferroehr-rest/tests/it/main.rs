@@ -29,6 +29,7 @@ mod common;
 
 mod abac_e2e;
 mod access_delay_http;
+mod access_delay_trail;
 mod access_restriction_http;
 mod admin_extension_http;
 mod admin_http;

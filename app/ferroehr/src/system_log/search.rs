@@ -28,7 +28,9 @@ use sqlx::{PgPool, Row};
 
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
-use crate::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
+use crate::system_log::store::{
+    AuditCriterion, AuditElement, AuditSearchFilter, AuditToken, AuditTokenSystem,
+};
 
 /// The `address` parameter (`RESTful` ATNA §3.81.4.1.2.2).
 pub(crate) const ADDRESS: &str = "address";
@@ -305,6 +307,28 @@ async fn token_ids(
     } else {
         Err(AuditError::SearchToken)
     }
+}
+
+/// The token ids each criterion of `filter` resolved to, in its order, or
+/// `None` when a criterion no stored token matches, which leaves no record.
+///
+/// # Errors
+/// [`AuditError::Store`] when a lookup fails.
+pub(crate) async fn resolve_criteria(
+    pool: &PgPool,
+    filter: &AuditSearchFilter,
+) -> Result<Option<Vec<Option<Vec<i32>>>>, AuditError> {
+    let mut resolved = Vec::with_capacity(filter.criteria.len());
+    for criterion in &filter.criteria {
+        let ids = criterion_ids(pool, criterion).await?;
+        if ids.as_ref().is_some_and(Vec::is_empty) {
+            // NOTE: `RESTful` ATNA §3.81.4.1.2.2 combines parameters with AND, so a parameter
+            // no stored token matches leaves no record.
+            return Ok(None);
+        }
+        resolved.push(ids);
+    }
+    Ok(Some(resolved))
 }
 
 /// The `search_tokens` ids that answer `criterion`, any of which a record must

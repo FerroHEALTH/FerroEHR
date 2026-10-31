@@ -11,9 +11,9 @@ app/ferroehr-rest/src/api/demographic/openapi_routes.rs 10077
 app/ferroehr-rest/src/api/demographic/relationship.rs 1258
 app/ferroehr-rest/src/api/ehr/openapi_routes.rs 7226
 app/ferroehr-rest/src/api/query/openapi_routes.rs 2062
-app/ferroehr-rest/src/extensions/access/authn/mod.rs 2190
+app/ferroehr-rest/src/extensions/access/authn/mod.rs 2161
 app/ferroehr-rest/src/extensions/access/authz/mod.rs 892
-app/ferroehr-rest/src/extensions/access/pep.rs 1501
+app/ferroehr-rest/src/extensions/access/pep.rs 1465
 app/ferroehr-rest/src/extensions/management/mod.rs 831
 app/ferroehr-rest/src/extensions/openapi.rs 1045
 app/ferroehr-rest/src/overview/negotiate.rs 2503
@@ -34,7 +34,7 @@ app/ferroehr-viewer/src/pages/subscriptions.rs 817
 app/ferroehr-viewer/src/pages/templates.rs 1567
 app/ferroehr-viewer/src/pages/terminology.rs 813
 app/ferroehr/src/aql/ir.rs 822
-app/ferroehr/src/aql/sql/from.rs 1560
+app/ferroehr/src/aql/sql/from.rs 1558
 app/ferroehr/src/aql/sql/value.rs 1143
 app/ferroehr/src/config/auth.rs 993
 app/ferroehr/src/config/authz.rs 849
@@ -62,7 +62,7 @@ app/ferroehr/src/storage/version_repo/read.rs 1009
 app/ferroehr/src/system_log/categories.rs 989
 app/ferroehr/src/system_log/fhir.rs 1374
 app/ferroehr/src/system_log/sender.rs 1181
-app/ferroehr/src/system_log/store.rs 2161
+app/ferroehr/src/system_log/store.rs 2159
 app/ferroehr/src/versioning/attestation.rs 992
 app/ferroehr/src/versioning/audit.rs 889
 app/ferroehr/src/versioning/change.rs 1592

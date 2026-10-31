@@ -27,6 +27,7 @@
               negotiate seam produced once (stored-content serving / commit interior)"
 )]
 
+pub mod access_delay;
 pub mod composition;
 pub mod contribution;
 pub mod directory;
