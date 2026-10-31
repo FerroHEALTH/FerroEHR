@@ -159,8 +159,10 @@ verdicts() {
 
 write_list() {
   {
+    # REUSE-IgnoreStart
     printf '# SPDX-FileCopyrightText: Cadasto B.V.\n'
     printf '# SPDX-License-Identifier: BUSL-1.1\n'
+    # REUSE-IgnoreEnd
     printf '# The hand-written files under app/*/src/, crates/*/src/ and\n'
     printf '# tools/*/src/ over the budget of %s lines that\n' "$BUDGET"
     printf '# scripts/checks/file-size.sh admits, each with the length it may not\n'
