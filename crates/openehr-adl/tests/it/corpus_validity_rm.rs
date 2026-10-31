@@ -709,6 +709,84 @@ fn vcaca_production_model_lower_bound() {
     assert_clean(ok, &production);
 }
 
+// ── VCARM on computed attributes (production model) ─────────────────────────
+
+/// An openEHR RM archetype over `definition`, with every `ids` code defined.
+fn rm_archetype(rm_class: &str, concept: &str, definition: &str, ids: &[&str]) -> String {
+    let terms: String = ids.iter().map(|c| term(c)).collect();
+    format!(
+        "archetype (adl_version=2.0.5; rm_release=1.0.2)\n\
+         \topenEHR-EHR-{rm_class}.{concept}.v1.0.0\n\n\
+         language\n\toriginal_language = <[ISO_639-1::en]>\n\n\
+         description\n\tlifecycle_state = <\"draft\">\n\n\
+         definition\n{definition}\n\n\
+         terminology\n\tterm_definitions = <\n\t\t[\"en\"] = <\n{terms}\t\t>\n\t>\n"
+    )
+}
+
+/// A `CLUSTER` whose one `ELEMENT` value is a `value_type` constrained by `body`.
+fn cluster_value(concept: &str, value_type: &str, body: &str) -> String {
+    rm_archetype(
+        "CLUSTER",
+        concept,
+        &format!(
+            "\tCLUSTER[id1] matches {{\n\t\titems matches {{\n\
+             \t\t\tELEMENT[id2] matches {{\n\t\t\t\tvalue matches {{\n\
+             \t\t\t\t\t{value_type}[id3] matches {{\n{body}\n\t\t\t\t\t}}\n\
+             \t\t\t\t}}\n\t\t\t}}\n\t\t}}\n\t}}"
+        ),
+        &["id1", "id2", "id3"],
+    )
+}
+
+/// VCARM admits an attribute "stored or computed" (AOM2 `master04.5`
+/// §Validity Rules: `C_ATTRIBUTE`), and a function with no arguments is a
+/// computed attribute (`master04.2` §Attribute Nodes): the RM defines
+/// `is_integral()` on `DV_PROPORTION` and `DV_QUANTITY` and `offset()` on
+/// `EVENT`, so constraints on them are clean.
+#[test]
+fn vcarm_admits_rm_computed_attributes() {
+    let production = ProductionRmModel;
+    for value_type in ["DV_PROPORTION", "DV_QUANTITY"] {
+        let src = cluster_value(
+            "vcarm_is_integral",
+            value_type,
+            "\t\t\t\t\t\tis_integral matches {False}",
+        );
+        assert_clean(&src, &production);
+    }
+    let offset = rm_archetype(
+        "OBSERVATION",
+        "vcarm_offset",
+        "\tOBSERVATION[id1] matches {\n\t\tdata matches {\n\
+         \t\t\tHISTORY[id2] matches {\n\t\t\t\tevents matches {\n\
+         \t\t\t\t\tPOINT_EVENT[id3] matches {\n\
+         \t\t\t\t\t\toffset matches {\n\t\t\t\t\t\t\tDV_DURATION[id4]\n\t\t\t\t\t\t}\n\
+         \t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}",
+        &["id1", "id2", "id3", "id4"],
+    );
+    assert_clean(&offset, &production);
+}
+
+/// The computed-attribute reading stops at functions with no arguments and at
+/// the RM: `DV_QUANTITY.add(other)` takes an argument, and `DV_QUANTITY.property`
+/// is defined by no RM release, so VCARM still refuses both.
+#[test]
+fn vcarm_refuses_a_function_with_arguments_and_an_undefined_attribute() {
+    let production = ProductionRmModel;
+    for (concept, attribute) in [("vcarm_add", "add"), ("vcarm_property", "property")] {
+        let src = cluster_value(
+            concept,
+            "DV_QUANTITY",
+            &format!(
+                "\t\t\t\t\t\t{attribute} matches {{\n\
+                 \t\t\t\t\t\t\tCODE_PHRASE[id4]\n\t\t\t\t\t\t}}"
+            ),
+        );
+        assert_raises(&src, &production, "VCARM");
+    }
+}
+
 // ── VCORMEN / VCORMENV / VCORMENU (enumeration-literal validity) ────────────
 
 /// A minimal reference model with two enumeration-typed attributes, for the

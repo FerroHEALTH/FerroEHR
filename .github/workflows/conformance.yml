@@ -35,6 +35,9 @@
 # A release is published by the release workflow's own token, which starts no
 # workflow, so the tag push is the release trigger here.
 #
+# The released run draws the Veredictum badges and, on main, pushes them to
+# the veredictum-badges branch the README reads (Veredictum book, Badges).
+#
 # No openEHR specification governs how CI runs the instrument: our own design.
 name: Conformance
 
@@ -184,7 +187,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: read
+      # The released run pushes its badges to the veredictum-badges branch.
+      # The Action pushes only from a run on main that is not a pull request.
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -230,11 +235,12 @@ jobs:
           printf '## Released profile: the record of record\n\nThe catalogue read against the frozen openEHR release. This run is the verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: released
         if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@e728441e01146eb0b390037be10127391f079d23 # v0.3.1
+        uses: Vernum-Projecten/Veredictum@085adc11b0ce1b6e268ab4298af68dd2241ced53 # v0.3.2
         # The verdict step below fails the job on this run's exit-code output,
         # after the views of both runs are uploaded.
         continue-on-error: true
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VEREDICTUM_CDR_USER: ferroehr
           VEREDICTUM_CDR_PASSWORD: ferroehr
           VEREDICTUM_CDR_ADMIN_USER: ferroehr-admin
@@ -249,7 +255,8 @@ jobs:
           admin-auth: basic
           profile: released
           out-dir: conformance-results/released
-          image: ghcr.io/vernum-projecten/veredictum@sha256:1f901f8de57abc7e5f5a5130eaaf49e530aba49ca82bb8cb7351233b65f0ca19
+          badge-branch: veredictum-badges
+          image: ghcr.io/vernum-projecten/veredictum@sha256:df50feb4df9de262be64502ff999d0bbe784ba623ffbfa32313b52769a594efd
       # Fresh volumes again, so the development run starts on the ground the
       # released run had.
       - id: recompose
@@ -266,7 +273,7 @@ jobs:
           printf '## Development profile: published beside the record\n\nThe same catalogue read against the pinned master of each openEHR repository. It is never counted toward the released record and is no verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: development
         if: ${{ !cancelled() && steps.recompose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@e728441e01146eb0b390037be10127391f079d23 # v0.3.1
+        uses: Vernum-Projecten/Veredictum@085adc11b0ce1b6e268ab4298af68dd2241ced53 # v0.3.2
         continue-on-error: true
         env:
           VEREDICTUM_CDR_USER: ferroehr
@@ -283,7 +290,7 @@ jobs:
           admin-auth: basic
           profile: development
           out-dir: conformance-results/development
-          image: ghcr.io/vernum-projecten/veredictum@sha256:1f901f8de57abc7e5f5a5130eaaf49e530aba49ca82bb8cb7351233b65f0ca19
+          image: ghcr.io/vernum-projecten/veredictum@sha256:df50feb4df9de262be64502ff999d0bbe784ba623ffbfa32313b52769a594efd
       # The views each run's outputs name, one directory per profile, so the
       # two are never mixed. recording.har is never among them.
       - name: Collect the views the Action wrote
@@ -338,6 +345,7 @@ jobs:
           case "$DEVELOPMENT_EXIT" in
             0) echo "the development-profile run passed" ;;
             1) echo "::warning::the development-profile run has failed or errored rows; it is published beside the record and is no verdict" ;;
+            3) echo "::warning::the development-profile run has inconclusive rows; it is published beside the record and is no verdict" ;;
             *) echo "::error::the development-profile run could not run (exit status ${DEVELOPMENT_EXIT:-none})"; bad=1 ;;
           esac
           if [ "$RELEASED_EXIT" != 0 ]; then

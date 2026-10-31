@@ -9,6 +9,7 @@
 //! way — they are an input the emitter reads, never something it decides.
 
 pub(crate) mod bmm;
+pub(crate) mod bmm_function;
 pub(crate) mod impls;
 pub(crate) mod oas;
 pub(crate) mod xsd;
