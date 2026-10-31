@@ -18,6 +18,7 @@
     reason = "test diagnostics: a fixture that does not read, or an assertion, is how these tests fail"
 )]
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use openehr_lang::v1_1::bmm_persistence::error::PBmmReadError;
@@ -152,11 +153,23 @@ fn assert_same_reading(label: &str, json: &PBmmSchema, odin: &PBmmSchema) {
             &odin.class_definitions,
         ),
     ] {
-        let json_list = json_list.as_deref().unwrap_or_default();
-        let odin_list = odin_list.as_deref().unwrap_or_default();
+        let json_list = json_list
+            .iter()
+            .flat_map(BTreeMap::values)
+            .collect::<Vec<_>>();
+        let odin_list = odin_list
+            .iter()
+            .flat_map(BTreeMap::values)
+            .collect::<Vec<_>>();
         assert_eq!(
-            json_list.iter().map(PBmmClass::name).collect::<Vec<_>>(),
-            odin_list.iter().map(PBmmClass::name).collect::<Vec<_>>(),
+            json_list
+                .iter()
+                .map(|class| class.name())
+                .collect::<Vec<_>>(),
+            odin_list
+                .iter()
+                .map(|class| class.name())
+                .collect::<Vec<_>>(),
             "{label}: the {list} differ in membership or order"
         );
         for (json_class, odin_class) in json_list.iter().zip(odin_list) {
@@ -226,10 +239,10 @@ fn every_component_schema_published_in_both_serialisations_reads_to_one_value() 
         assert_same_reading(file, &json, &odin);
         pairs += 1;
     }
-    // Eighteen json schemas; the ODIN twins of BASE 1.3.0, RM 1.2.0 and
-    // TERM 3.1.0 are not vendored, since only their json carries the release,
-    // and AM 2.4.0's json does not read (`REFUSED_JSON`).
-    assert_eq!(pairs, 14);
+    // Eighteen json schemas; the ODIN twins of BASE 1.3.0, RM 1.2.0, TERM 3.1.0
+    // and LANG 1.1.0 are not vendored, since only their json carries the
+    // release, and AM 2.4.0's json does not read (`REFUSED_JSON`).
+    assert_eq!(pairs, 13);
 }
 
 #[test]
@@ -379,8 +392,8 @@ fn class<'a>(schema: &'a PBmmSchema, name: &str) -> &'a PBmmClass {
     schema
         .primitive_types
         .iter()
-        .flatten()
-        .chain(schema.class_definitions.iter().flatten())
+        .flat_map(BTreeMap::values)
+        .chain(schema.class_definitions.iter().flat_map(BTreeMap::values))
         .find(|class| class.name() == name)
         .unwrap_or_else(|| panic!("{name} was not read"))
 }

@@ -21,6 +21,7 @@ mod el_assertions;
 mod escape_validation;
 mod lexer_equivalence;
 mod odin_spec_examples;
+mod p_bmm_keyed_collections;
 mod rm_access;
 mod vendor_bmm_odin;
 mod vendor_bmm_schema;

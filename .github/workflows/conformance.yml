@@ -11,21 +11,23 @@
 # packages the binary compiled natively below (`runtime-prebuilt`), and the
 # instrument logs in with the Basic users of docker/ferroehr.dev.toml.
 #
+# The Action runs the catalogue twice, each time on fresh volumes. The
+# `released` profile reads every citation against the frozen openEHR release:
+# it is the record of record and the verdict of this job. The `development`
+# profile reads them against the pinned master of each openEHR repository,
+# which FerroEHR builds on; it is published beside the record under a heading
+# and an artifact of its own and is never counted toward it. Each run covers
+# the `smart` documents: the Action passes the SMART Platform base URL and
+# hands the committed test issuer's key to the container by name (#4503).
+#
 # The Action is pinned by full commit SHA with its version in a trailing
 # comment and runs the release image by digest; scripts/checks/veredictum-action.sh
 # (the `veredictum-action` job in ci.yml) fails while either disagrees with
 # VEREDICTUM_VERSION and VEREDICTUM_IMAGE in scripts/lib/veredictum.sh. The
-# job fails on a failed or errored row, writes the Markdown summary to the job
-# summary, and uploads the JUnit, CTRF and results views. recording.har holds
-# the server's response bodies and is never uploaded.
-#
-# The Action forwards no SMART Platform base URL and no scoped tokens, so the
-# `smart` documents run in a step of their own after it (#4450): the same
-# pinned image drives them against the same deployment through
-# `scripts/conformance.sh smart`, minting each token in memory from the
-# committed test issuer docker/sut-smart.yml trusts. Their views are uploaded
-# beside the Action's and follow them in the job summary under a heading of
-# their own; Veredictum 0.3.0 merges no two results documents.
+# job reads the paths and the exit status from the Action's outputs, writes
+# both Markdown summaries to the job summary, and uploads the JUnit, CTRF and
+# results views of each profile as its own artifact. recording.har holds the
+# server's response bodies and is never uploaded.
 #
 # Runs on a pull request whose paths scripts/lib/change-lanes.sh classifies
 # into the `conformance` lane (server code, the party set, the conformance
@@ -100,7 +102,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Review the party statement against the pinned catalogue
+      - name: Review the party statement against the pinned catalogue (released)
+        run: bash scripts/conformance.sh review
+      - name: Review the party statement against the pinned catalogue (development)
+        env:
+          CONF_PROFILE: development
         run: bash scripts/conformance.sh review
 
   # The server binary, compiled as ci.yml's `ui-e2e-binary` compiles it: in
@@ -212,61 +218,133 @@ jobs:
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
           SKIP_BUILD: "1"
         run: bash scripts/conformance.sh up
-      - name: Head the catalogue's job summary
-        run: printf '## The catalogue (the Veredictum Action)\n\n' >> "$GITHUB_STEP_SUMMARY"
-      # The Basic users of docker/ferroehr.dev.toml, committed test material:
-      # the dev password guards nothing but this runner's throwaway stack.
-      - id: veredictum
-        uses: Vernum-Projecten/Veredictum@f6e99c97b322e0846ae62f28969a2b092d5cb167 # v0.3.0
+      # The Basic users of docker/ferroehr.dev.toml and the SMART test issuer
+      # under docs/conformance/party/smart/ are committed test material: they
+      # guard nothing but this runner's throwaway stack. The IXIT's
+      # `scoped_tokens.mint` signs each SMART token with that key, which the
+      # Action mounts into the container by name; no token is written to the
+      # workspace.
+      - name: Head the released run's job summary
+        if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
+        run: |
+          printf '## Released profile: the record of record\n\nThe catalogue read against the frozen openEHR release. This run is the verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
+      - id: released
+        if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
+        uses: Vernum-Projecten/Veredictum@e728441e01146eb0b390037be10127391f079d23 # v0.3.1
+        # The verdict step below fails the job on this run's exit-code output,
+        # after the views of both runs are uploaded.
+        continue-on-error: true
         env:
           VEREDICTUM_CDR_USER: ferroehr
           VEREDICTUM_CDR_PASSWORD: ferroehr
           VEREDICTUM_CDR_ADMIN_USER: ferroehr-admin
           VEREDICTUM_CDR_ADMIN_PASSWORD: ferroehr
+          VEREDICTUM_SCOPED_TOKEN_KEY_FILE: docs/conformance/party/smart/cnf-smart-test.key.pem
         with:
           base-url: http://127.0.0.1:8080/ferroehr/rest/openehr/v1
+          platform-url: http://127.0.0.1:8080/ferroehr/rest
           statement: docs/conformance/party/ferroehr/statement.json
           ixit: docs/conformance/party/ferroehr/ixit.json
           auth: basic
           admin-auth: basic
-          out-dir: conformance-results
-          image: ghcr.io/vernum-projecten/veredictum@sha256:64ab6ee89db9efa093630d65e6f878b1b62c66193129fd3128d49291e28b4d8c
-      # The image is VEREDICTUM_IMAGE of scripts/lib/veredictum.sh, the digest
-      # the Action step above is held to. The key it mints with is committed
-      # test material (docs/conformance/party/smart/README.md); no token is
-      # written to the workspace, and the recording is never uploaded.
-      - id: smart
-        name: Drive the SMART documents beside the Action
+          profile: released
+          out-dir: conformance-results/released
+          image: ghcr.io/vernum-projecten/veredictum@sha256:1f901f8de57abc7e5f5a5130eaaf49e530aba49ca82bb8cb7351233b65f0ca19
+      # Fresh volumes again, so the development run starts on the ground the
+      # released run had.
+      - id: recompose
+        name: Recompose FerroEHR and FerroTERM on fresh volumes
         if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
         env:
-          CONF_BASE_URL: http://127.0.0.1:8080/ferroehr/rest/openehr/v1
-          CONF_PLATFORM_URL: http://127.0.0.1:8080/ferroehr/rest
-          CONF_SMART_OUT: conformance-results-smart
+          FERROEHR_IMAGE: ferroehr:conformance
+          FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
+          SKIP_BUILD: "1"
+        run: bash scripts/conformance.sh up
+      - name: Head the development run's job summary
+        if: ${{ !cancelled() && steps.recompose.outcome == 'success' }}
+        run: |
+          printf '## Development profile: published beside the record\n\nThe same catalogue read against the pinned master of each openEHR repository. It is never counted toward the released record and is no verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
+      - id: development
+        if: ${{ !cancelled() && steps.recompose.outcome == 'success' }}
+        uses: Vernum-Projecten/Veredictum@e728441e01146eb0b390037be10127391f079d23 # v0.3.1
+        continue-on-error: true
+        env:
+          VEREDICTUM_CDR_USER: ferroehr
+          VEREDICTUM_CDR_PASSWORD: ferroehr
+          VEREDICTUM_CDR_ADMIN_USER: ferroehr-admin
+          VEREDICTUM_CDR_ADMIN_PASSWORD: ferroehr
+          VEREDICTUM_SCOPED_TOKEN_KEY_FILE: docs/conformance/party/smart/cnf-smart-test.key.pem
+        with:
+          base-url: http://127.0.0.1:8080/ferroehr/rest/openehr/v1
+          platform-url: http://127.0.0.1:8080/ferroehr/rest
+          statement: docs/conformance/party/ferroehr/statement.json
+          ixit: docs/conformance/party/ferroehr/ixit.json
+          auth: basic
+          admin-auth: basic
+          profile: development
+          out-dir: conformance-results/development
+          image: ghcr.io/vernum-projecten/veredictum@sha256:1f901f8de57abc7e5f5a5130eaaf49e530aba49ca82bb8cb7351233b65f0ca19
+      # The views each run's outputs name, one directory per profile, so the
+      # two are never mixed. recording.har is never among them.
+      - name: Collect the views the Action wrote
+        if: ${{ !cancelled() }}
+        env:
+          RELEASED_RESULTS: ${{ steps.released.outputs.results }}
+          RELEASED_JUNIT: ${{ steps.released.outputs.junit }}
+          RELEASED_CTRF: ${{ steps.released.outputs.ctrf }}
+          RELEASED_SUMMARY: ${{ steps.released.outputs.summary }}
+          DEVELOPMENT_RESULTS: ${{ steps.development.outputs.results }}
+          DEVELOPMENT_JUNIT: ${{ steps.development.outputs.junit }}
+          DEVELOPMENT_CTRF: ${{ steps.development.outputs.ctrf }}
+          DEVELOPMENT_SUMMARY: ${{ steps.development.outputs.summary }}
+        shell: bash
         run: |
           set -euo pipefail
-          rc=0
-          bash scripts/conformance.sh smart || rc=$?
-          if [ -f conformance-results-smart/summary.md ]; then
-            {
-              printf '## The SMART on openEHR documents (the step beside the Action)\n\n'
-              cat conformance-results-smart/summary.md
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit "$rc"
+          for profile in released development; do
+            prefix="${profile^^}"
+            mkdir -p "conformance-views/$profile"
+            for view in RESULTS JUNIT CTRF SUMMARY; do
+              var="${prefix}_${view}"
+              path="${!var}"
+              if [ -n "$path" ] && [ -f "$path" ]; then
+                cp "$path" "conformance-views/$profile/"
+              fi
+            done
+          done
+          ls -lR conformance-views
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
-          name: conformance-views
-          path: |
-            conformance-results/results.json
-            conformance-results/junit.xml
-            conformance-results/ctrf.json
-            conformance-results/summary.md
-            conformance-results-smart/results.json
-            conformance-results-smart/junit.xml
-            conformance-results-smart/ctrf.json
-            conformance-results-smart/summary.md
+          name: conformance-views-released
+          path: conformance-views/released
           if-no-files-found: warn
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: conformance-views-development
+          path: conformance-views/development
+          if-no-files-found: warn
+      # The released run decides the job. The development run fails it only
+      # when it could not run at all, which is a defect of this pipeline.
+      - name: The verdict of the released run
+        if: ${{ !cancelled() }}
+        env:
+          RELEASED_EXIT: ${{ steps.released.outputs.exit-code }}
+          DEVELOPMENT_EXIT: ${{ steps.development.outputs.exit-code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=0
+          case "$DEVELOPMENT_EXIT" in
+            0) echo "the development-profile run passed" ;;
+            1) echo "::warning::the development-profile run has failed or errored rows; it is published beside the record and is no verdict" ;;
+            *) echo "::error::the development-profile run could not run (exit status ${DEVELOPMENT_EXIT:-none})"; bad=1 ;;
+          esac
+          if [ "$RELEASED_EXIT" != 0 ]; then
+            echo "::error::the released-profile run exited ${RELEASED_EXIT:-without a status}"
+            bad=1
+          fi
+          exit "$bad"
       - name: The deployment's state, when the run did not pass
         if: ${{ failure() }}
         run: docker compose -p ferroehr-cnf ps --all

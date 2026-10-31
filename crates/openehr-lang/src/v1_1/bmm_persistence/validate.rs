@@ -262,12 +262,20 @@ pub fn validate_schema(schema: &PBmmSchema, model: &BmmModel) -> Vec<PBmmValidit
 /// Types: primitive types "are just normal class definitions within a
 /// `primitive_types` block … otherwise are processed in the same way as types
 /// defined in the main `class_definitions` group".
+///
+/// Both lists are keyed by class name, so schema order is recovered from
+/// `P_BMM_CLASS.uid`, which the reader numbers in document order.
 fn schema_classes(schema: &PBmmSchema) -> impl Iterator<Item = &PBmmClass> {
-    schema
-        .primitive_types
-        .iter()
-        .flatten()
-        .chain(schema.class_definitions.iter().flatten())
+    in_document_order(schema.primitive_types.as_ref())
+        .into_iter()
+        .chain(in_document_order(schema.class_definitions.as_ref()))
+}
+
+/// The classes of one keyed class list, ordered by `uid`.
+fn in_document_order(list: Option<&BTreeMap<String, PBmmClass>>) -> Vec<&PBmmClass> {
+    let mut classes: Vec<&PBmmClass> = list.into_iter().flat_map(BTreeMap::values).collect();
+    classes.sort_by_key(|class| class.uid());
+    classes
 }
 
 /// Reports every class not contained within exactly one package.
@@ -310,14 +318,15 @@ fn collect_class_listings(
 
 /// Reports every set of class definitions sharing one case-insensitive name.
 fn check_class_name_uniqueness(schema: &PBmmSchema, findings: &mut Vec<PBmmValidityFinding>) {
-    let mut spellings: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut spellings: BTreeMap<String, Vec<&PBmmClass>> = BTreeMap::new();
     for class in schema_classes(schema) {
         spellings
             .entry(class.name().to_uppercase())
             .or_default()
-            .push(class.name().to_owned());
+            .push(class);
     }
-    for definitions in spellings.into_values() {
+    for classes in spellings.into_values() {
+        let definitions: Vec<String> = classes.iter().map(|c| c.name().to_owned()).collect();
         if definitions.len() > 1 {
             findings.push(PBmmValidityFinding::ClassNameNotUnique { definitions });
         }

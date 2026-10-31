@@ -149,7 +149,7 @@ mod tests {
             source_schema_id: "openehr_test_1.0.0".to_owned(),
             bmm_class: None,
             uid: 1,
-            ancestor_defs: openehr_base::containers::present(Vec::new()),
+            ancestor_defs: None,
             item_names: Some(vec!["pk_ratio".to_owned(), "pk_unitary".to_owned()]),
             item_values: Some(vec![
                 serde_json::Value::from(0),
@@ -184,7 +184,7 @@ mod tests {
             source_schema_id: "openehr_test_1.0.0".to_owned(),
             bmm_class: None,
             uid: 1,
-            ancestor_defs: openehr_base::containers::present(Vec::new()),
+            ancestor_defs: None,
             item_names: openehr_base::containers::present(Vec::new()),
             item_values: openehr_base::containers::present(Vec::new()),
             item_documentations: openehr_base::containers::present(Vec::new()),

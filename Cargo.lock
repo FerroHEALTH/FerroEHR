@@ -2126,7 +2126,7 @@ dependencies = [
 
 [[package]]
 name = "docs-meta"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 
 [[package]]
 name = "dotenvy"
@@ -2443,7 +2443,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "aes-gcm 0.11.1",
  "argon2 0.6.0",
@@ -2524,7 +2524,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-ext"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2544,7 +2544,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-rest"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "argon2 0.6.0",
  "assert_fs",
@@ -2608,7 +2608,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-server"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2632,7 +2632,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-viewer"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "anyhow",
  "axum",
@@ -4438,7 +4438,7 @@ checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
 name = "loadtest"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "anyhow",
  "clap",
@@ -5004,7 +5004,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
@@ -5020,8 +5020,9 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
+ "indexmap 2.14.2",
  "openehr-base",
  "openehr-lang",
  "serde",
@@ -5030,7 +5031,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "serde",
  "serde_json",
@@ -5040,7 +5041,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-codegen"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "http",
  "roxmltree",
@@ -5050,7 +5051,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "async-trait",
  "axum",
@@ -5085,7 +5086,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "assert_fs",
  "chumsky",
@@ -5099,7 +5100,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "chumsky",
  "logos",
@@ -5108,7 +5109,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "insta",
  "jsonschema",
@@ -5126,7 +5127,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "fancy-regex",
  "indexmap 2.14.2",
@@ -5149,7 +5150,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.122"
+version = "0.0.123"
 dependencies = [
  "openehr-base",
  "roxmltree",
@@ -7664,7 +7665,7 @@ dependencies = [
 
 [[package]]
 name = "testkit"
-version = "5.6.0-rc4"
+version = "5.6.0-rc5"
 dependencies = [
  "ferroehr",
  "jiff",

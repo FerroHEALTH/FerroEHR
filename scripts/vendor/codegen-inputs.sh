@@ -60,6 +60,7 @@ OVERLAYS=(
   "tools/openehr-codegen/vendor/bmm/components/BASE/json/openehr_base_1.3.0.bmm.json|specifications-BASE|93abaf9f656b7bc87019458303c9d88f3f688ef8|computable/BMM/openehr_base_1.3.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
   "tools/openehr-codegen/vendor/bmm/components/RM/json/openehr_rm_1.2.0.bmm.json|specifications-RM|654296bb027b03b4b076101e7171f3359f44cebc|computable/BMM/openehr_rm_1.2.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
   "tools/openehr-codegen/vendor/bmm/components/TERM/json/openehr_term_3.1.0.bmm.json|specifications-TERM|b2dd077d268dff881e81899db58c22b1ed015fad|computable/BMM/openehr_term_3.1.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+  "tools/openehr-codegen/vendor/bmm/components/LANG/json/openehr_lang_1.1.0.bmm.json|specifications-LANG|f80763abda184aa6cc94957152df83f3ef5d8f5e|computable/BMM/openehr_lang_1.1.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
 )
 
 # The provenance records must name every pin before anything is fetched.

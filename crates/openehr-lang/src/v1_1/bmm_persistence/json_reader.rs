@@ -57,10 +57,10 @@ use crate::v1_1::odin::{OdinInterval, OdinKey, OdinValue};
 /// `_class_definitions_`, `_properties_`, `_functions_`, function
 /// `_parameters_`, and `_packages_` are keyed by name". The full set is every
 /// attribute the P_BMM class docs type `Hash<…>` (`includes`, `packages`,
-/// `constants`, `properties`, `functions`, `invariants`,
-/// `generic_parameter_defs`, `aliases`, `parameters`, `pre_conditions`,
-/// `post_conditions`), plus the class lists and `ancestor_defs`, which the
-/// syntax chapter writes keyed (§Classes for Primitive Types, §Inheritance).
+/// `primitive_types`, `class_definitions`, `constants`, `properties`,
+/// `functions`, `invariants`, `generic_parameter_defs`, `ancestor_defs`,
+/// `aliases`, `parameters`, `pre_conditions`, `post_conditions`; the class
+/// lists and `ancestor_defs` since SPECLANG-16).
 pub const KEYED_COLLECTIONS: &[&str] = &[
     "includes",
     "packages",

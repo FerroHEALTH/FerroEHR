@@ -893,3 +893,40 @@ the Veredictum GitHub Action, and keeps no EHRbase comparison (#4448, #4449,
 
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
+
+## The review of 2026-10-31, for 5.6.0-rc5
+
+Read on the tree after commit `b3df38e01`, for the FerroEHR release candidate
+5.6.0-rc5. 5.6.0-rc4 was tagged and not published, so its review above stands
+for everything it carried. The facts added since and checked in every text in
+scope: CVE-2026-84243 is judged `not_affected` in every image (#4500); AQL
+`TERMINOLOGY('validate', …)` and `TERMINOLOGY('subsumes', …)` keep a
+`params_uri` value that carries a `?` whole (#4490); an AQL query aimed at
+named EHRs reads their objects first (#4487); the viewer takes its
+Content-Security-Policy from `ferrohealth-server` 0.4.2, with the same policy
+(#4439); the Conformance workflow runs the Veredictum SMART documents (#4450);
+the storage bench measures on one runner (#4318); the LANG specification is
+re-vendored and the `openehr-*` crates step to 0.0.122 (#4377); chart
+21.0.0-rc5 with `appVersion` 5.6.0-rc5.
+
+### Read and kept on 2026-10-31, for 5.6.0-rc5
+
+- **The viewer and security pages**: [the viewer](../viewer/index.md) and
+  [security](../security.md) state the Content-Security-Policy the viewer
+  sends on `ferrohealth-server` 0.4.2.
+- **The query page**: [querying with AQL](../querying-aql.md) describes
+  `TERMINOLOGY()` as the engine answers it.
+- **The hazard log and the technical documentation**: the logging component is
+  unchanged since 5.6.0-rc4, so neither gains a row.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc5 and image 5.6.0-rc5 in the book of main.
+- **The landing page, `SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-10-31, for 5.6.0-rc5
+
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths and the old error body until 5.6.0 ships.

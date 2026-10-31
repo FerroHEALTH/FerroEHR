@@ -8,17 +8,23 @@
 # `veredictum test` against it through the release image the pin in
 # scripts/lib/veredictum.sh names, and writes the views `export` renders:
 #
-#   $CONF_OUT/ferroehr/results.json   one row per workflow row
-#   $CONF_OUT/ferroehr/recording.har  every exchange (holds response bodies;
-#                                     gitignored, never published)
-#   $CONF_OUT/ferroehr/junit.xml, ctrf.json, summary.md
+#   $OUT/results.json   one row per workflow row
+#   $OUT/recording.har  every exchange (holds response bodies; gitignored,
+#                       never published)
+#   $OUT/junit.xml, ctrf.json, summary.md
 #
-# then drives the `smart` documents in a second `test` of the same image
-# (#4450), with the SMART Platform base URL and tokens it mints from the
-# committed test issuer under docs/conformance/party/smart/, which the
-# Veredictum Action forwards neither of, and writes the same views under
-# $CONF_SMART_OUT. No token is written anywhere: the instrument mints each one
-# in memory for the run, and the recording carries none.
+# One run covers the `smart` documents too (#4503): it passes the SMART
+# Platform base URL and the committed test issuer's key under
+# docs/conformance/party/smart/, which the IXIT's `scoped_tokens.mint` signs
+# with, as VEREDICTUM_SCOPED_TOKEN_KEY_FILE, as the Veredictum Action does. No
+# token is written anywhere: the instrument mints each one in memory, and the
+# recording carries none.
+#
+# The specification profile (CONF_PROFILE) is the text every case citation is
+# read against. `released`, the frozen release, is the record of record and
+# alone backs a released claim; `development`, the pinned master of each
+# openEHR repository, is published beside it under its own directory and never
+# mixed into the record.
 #
 # Usage:
 #   scripts/conformance.sh [run]   compose, review, drive, export, tear down
@@ -28,9 +34,6 @@
 #                                  leave it serving, for a driver of its own
 #                                  (the conformance workflow runs the
 #                                  Veredictum Action against it)
-#   scripts/conformance.sh smart   drive the `smart` documents against the
-#                                  deployment already serving (the conformance
-#                                  workflow runs it after the Action)
 #   scripts/conformance.sh down    tear the deployment and its volumes down
 #
 # The deployment runs FerroTERM beside FerroEHR (the `terminology` profile,
@@ -39,18 +42,18 @@
 # statement selects runs against a real terminology server (#4476).
 #
 # Env:
-#   CONF_OUT          artefact root (default: docs/conformance; `ferroehr` is
-#                     appended).
+#   CONF_PROFILE      released (default) or development.
+#   CONF_OUT          artefact root (default: docs/conformance); `ferroehr`
+#                     is appended for the released profile and
+#                     `ferroehr-development` for the development profile.
 #   CONF_DOCUMENTS    space-separated document ids to narrow the run to
 #                     (`--document`); a narrowed run is a working tool, never
-#                     the record, and drives no SMART run.
+#                     the record.
 #   CONF_NO_COMPOSE   if set, compose nothing and drive the deployment already
 #                     serving CONF_BASE_URL (the bulk-delete workflows then run
 #                     against whatever state it holds).
 #   CONF_BASE_URL     the openEHR REST base (default: the composed deployment,
 #                     http://localhost:8080/ferroehr/rest/openehr/v1).
-#   CONF_SMART_OUT    where the SMART run writes its views (default:
-#                     the artefact root with `ferroehr-smart` appended).
 #   CONF_PLATFORM_URL the SMART Platform base URL (default: the composed
 #                     deployment's REST root, http://localhost:8080/ferroehr/rest,
 #                     where it serves /.well-known/smart-configuration).
@@ -63,21 +66,27 @@
 #                     the Basic logins (default: the users of
 #                     docker/ferroehr.dev.toml).
 #
-# Exit status is the instrument's, the worse of the two runs: 0 when every row passed, was skipped or
-# failed only as advisory, 1 when a row failed or errored, 2 when the run could
-# not start. No openEHR specification governs this pipeline: our own design.
+# Exit status is the instrument's: 0 when every row passed, was skipped or
+# failed only as a warning, 1 when a row failed or errored, 2 when the run
+# could not start. No openEHR specification governs this pipeline: our own
+# design.
 set -Eeuo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="${CONF_OUT:-$REPO_ROOT/docs/conformance}/ferroehr"
-SMART_OUT="${CONF_SMART_OUT:-${CONF_OUT:-$REPO_ROOT/docs/conformance}/ferroehr-smart}"
+PROFILE="${CONF_PROFILE:-released}"
+case "$PROFILE" in
+  released) OUT="${CONF_OUT:-$REPO_ROOT/docs/conformance}/ferroehr" ;;
+  development) OUT="${CONF_OUT:-$REPO_ROOT/docs/conformance}/ferroehr-development" ;;
+  *)
+    echo "conformance: CONF_PROFILE is \"$PROFILE\" (accepted: released, development)" >&2
+    exit 2
+    ;;
+esac
 PARTY="$REPO_ROOT/docs/conformance/party/ferroehr"
 STATEMENT="$PARTY/statement.json"
 IXIT="$PARTY/ixit.json"
-# The SMART run's IXIT declares the test issuer it mints with
-# (`scoped_tokens.mint`); the Action's run must not read it, because every
-# issuer it declares needs the key in the run's environment.
-SMART_IXIT="$PARTY/ixit-smart.json"
+# The test issuer the IXIT's `scoped_tokens.mint` declares; the SMART overlay
+# (docker/sut-smart.yml) trusts its public half.
 SMART_KEY="$REPO_ROOT/docs/conformance/party/smart/cnf-smart-test.key.pem"
 PLATFORM_URL="${CONF_PLATFORM_URL:-http://localhost:8080/ferroehr/rest}"
 BASE_URL="${CONF_BASE_URL:-http://localhost:8080/ferroehr/rest/openehr/v1}"
@@ -85,13 +94,13 @@ NETWORK="${CONF_NETWORK:-host}"
 
 STAGE="${1:-run}"
 case "$STAGE" in
-  run | review | up | smart | down) ;;
+  run | review | up | down) ;;
   *)
-    echo "usage: scripts/conformance.sh [run|review|up|smart|down]" >&2
+    echo "usage: scripts/conformance.sh [run|review|up|down]" >&2
     exit 2
     ;;
 esac
-[[ "$#" -le 1 ]] || { echo "usage: scripts/conformance.sh [run|review|up|smart|down]" >&2; exit 2; }
+[[ "$#" -le 1 ]] || { echo "usage: scripts/conformance.sh [run|review|up|down]" >&2; exit 2; }
 
 # shellcheck source=scripts/lib/veredictum.sh
 source "$REPO_ROOT/scripts/lib/veredictum.sh"
@@ -105,7 +114,6 @@ fi
 
 [[ -f "$IXIT" ]] || { echo "conformance: ixit not found: $IXIT" >&2; exit 2; }
 [[ -f "$STATEMENT" ]] || { echo "conformance: statement not found: $STATEMENT" >&2; exit 2; }
-[[ -f "$SMART_IXIT" ]] || { echo "conformance: ixit not found: $SMART_IXIT" >&2; exit 2; }
 [[ -f "$SMART_KEY" ]] || { echo "conformance: test issuer key not found: $SMART_KEY" >&2; exit 2; }
 
 ENGINE="$(veredictum_engine)"
@@ -156,9 +164,9 @@ pull_instrument() {
 }
 
 review_statement() {
-  echo "==> Reviewing the party statement against the catalogue"
+  echo "==> Reviewing the party statement against the catalogue ($PROFILE profile)"
   instrument --network none -- validate --root /work/catalogue --specs /work/specs/openehr \
-    --statement /work/input/statement.json
+    --profile "$PROFILE" --statement /work/input/statement.json
 }
 
 compose_down() {
@@ -187,33 +195,6 @@ export_views() {
     --ctrf /work/out/ctrf.json --markdown /work/out/summary.md
 }
 
-# Drives the `smart` documents against the deployment serving BASE_URL and
-# PLATFORM_URL, with the tokens the instrument mints from the committed test
-# issuer the SMART overlay (docker/sut-smart.yml) trusts. Sets SMART_RC to the
-# instrument's exit status; exits 2 when the run wrote no results.
-drive_smart() {
-  mkdir -p "$SMART_OUT"
-  SMART_OUT="$(cd "$SMART_OUT" && pwd -P)"
-  rm -f "$SMART_OUT/results.json" "$SMART_OUT/recording.har" "$SMART_OUT/junit.xml" \
-    "$SMART_OUT/ctrf.json" "$SMART_OUT/summary.md"
-  echo "==> Driving the SMART documents against $BASE_URL (Platform $PLATFORM_URL)"
-  SMART_RC=0
-  instrument --network "$NETWORK" --user "$(id -u):$(id -g)" -v "$SMART_OUT:/work/out" \
-    -v "$SMART_IXIT:/work/input/ixit-smart.json:ro" \
-    -v "$SMART_KEY:/work/input/smart-issuer.key.pem:ro" \
-    -e VEREDICTUM_SCOPED_TOKEN_KEY_FILE=/work/input/smart-issuer.key.pem \
-    -e VEREDICTUM_CDR_USER -e VEREDICTUM_CDR_PASSWORD \
-    -- test --base-url "$BASE_URL" --platform-url "$PLATFORM_URL" --auth basic \
-    --statement /work/input/statement.json --ixit /work/input/ixit-smart.json \
-    --document smart_discovery --document smart_scopes --out /work/out || SMART_RC=$?
-  if [[ ! -f "$SMART_OUT/results.json" ]]; then
-    echo "conformance: the SMART run wrote no results (exit $SMART_RC)" >&2
-    exit 2
-  fi
-  export_views "$SMART_OUT"
-  echo "==> SMART artefacts in $SMART_OUT (instrument exit $SMART_RC)"
-}
-
 case "$STAGE" in
   review)
     pull_instrument
@@ -223,11 +204,6 @@ case "$STAGE" in
   up)
     compose_up
     exit 0
-    ;;
-  smart)
-    pull_instrument
-    drive_smart
-    exit "$SMART_RC"
     ;;
   down)
     compose_down
@@ -247,16 +223,19 @@ mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd -P)"
 rm -f "$OUT/results.json" "$OUT/recording.har" "$OUT/junit.xml" "$OUT/ctrf.json" "$OUT/summary.md"
 
-test_args=(test --base-url "$BASE_URL" --auth basic --admin-auth basic
+test_args=(test --base-url "$BASE_URL" --platform-url "$PLATFORM_URL" --profile "$PROFILE"
+  --auth basic --admin-auth basic
   --statement /work/input/statement.json --ixit /work/input/ixit.json --out /work/out)
 read -r -a documents <<< "${CONF_DOCUMENTS:-}"
 for document in ${documents[@]+"${documents[@]}"}; do
   test_args+=(--document "$document")
 done
 
-echo "==> Driving the catalogue against $BASE_URL"
+echo "==> Driving the catalogue against $BASE_URL (Platform $PLATFORM_URL, $PROFILE profile)"
 test_rc=0
 instrument --network "$NETWORK" --user "$(id -u):$(id -g)" -v "$OUT:/work/out" \
+  -v "$SMART_KEY:/work/secrets/smart-issuer.key.pem:ro" \
+  -e VEREDICTUM_SCOPED_TOKEN_KEY_FILE=/work/secrets/smart-issuer.key.pem \
   -e VEREDICTUM_CDR_USER -e VEREDICTUM_CDR_PASSWORD \
   -e VEREDICTUM_CDR_ADMIN_USER -e VEREDICTUM_CDR_ADMIN_PASSWORD \
   -- "${test_args[@]}" || test_rc=$?
@@ -267,12 +246,6 @@ fi
 
 export_views "$OUT"
 
-echo "==> Artefacts in $OUT (instrument exit $test_rc)"
+echo "==> Artefacts in $OUT ($PROFILE profile, instrument exit $test_rc)"
 ls -1 "$OUT"
-
-if [[ "${#documents[@]}" -eq 0 ]]; then
-  drive_smart
-  # 2 (could not run) outranks 1 (a failed row), which outranks 0.
-  [[ "$SMART_RC" -le "$test_rc" ]] || test_rc="$SMART_RC"
-fi
 exit "$test_rc"

@@ -40,5 +40,5 @@ pub struct BmmGenericClass {
     /// True if this definition overrides a class of the same name in an included schema.
     pub is_override: bool,
     /// List of generic parameter definitions, keyed by name of generic parameter; these are defined either directly on this class or by the addition of an ancestor class which is generic.
-    pub generic_parameters: std::collections::BTreeMap<String, BmmGenericParameter>,
+    pub generic_parameters: indexmap::IndexMap<String, BmmGenericParameter>,
 }
