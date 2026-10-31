@@ -12,6 +12,8 @@
 //! the transport (a task-local) is spec-silent: no openEHR spec governs this
 //! — our own design.
 
+use openehr_base::prelude::{GenericId, ObjectId, PartyRef};
+use openehr_rm::prelude::{PartyProxy, PartySelf};
 use tokio::task_local;
 
 /// The authenticated identity a protocol adapter attributes commits to.
@@ -38,6 +40,11 @@ pub struct CommitterIdentity {
     /// maps to the origin a direct commit is stamped with: the Basic user, or
     /// an access token's `client_id`, failing that its `azp` (RFC 9068 §2.2).
     pub client: Option<String>,
+    /// Whether the identity is the record's person, or their representative,
+    /// writing through a patient-context credential: a commit it makes is
+    /// marked as inserted by the person, and it may alter only what such a
+    /// commit inserted (EHDS Art. 5, `docs/law/eu/ehds/text.html`).
+    pub person: bool,
 }
 
 task_local! {
@@ -51,6 +58,54 @@ task_local! {
 #[must_use]
 pub fn current_committer() -> Option<CommitterIdentity> {
     REQUEST_COMMITTER.try_with(Clone::clone).ok().flatten()
+}
+
+/// Whether the current request's committer is a person writing in their own
+/// EHR ([`CommitterIdentity::person`]); `false` outside a request.
+#[must_use]
+pub fn person_commits() -> bool {
+    current_committer().is_some_and(|identity| identity.person)
+}
+
+/// The committer of a write a person makes in their own EHR: `PARTY_SELF`, its
+/// `external_ref` naming the login that committed it.
+///
+/// RM common master04 §Audit Details: committer is a `PARTY_PROXY`, "allowing
+/// for `PARTY_SELF` to be used when the committer is the record subject", and
+/// a `PARTY_PROXY.external_ref` is a reference to "identification information
+/// for this party, in an external system" (RM common
+/// `UML/classes/org.openehr.rm.common.party_proxy.adoc`). This is how EHDS Art.
+/// 5 makes what a person inserts "clearly distinguishable".
+// NOTE: no openEHR spec governs which `PARTY_REF` names a login; ours is
+// namespace `local`, type `PERSON`, a `GENERIC_ID` of the subject in its issuer's scheme.
+#[must_use]
+pub fn person_committer(identity: CommitterIdentity) -> PartyProxy {
+    PartyProxy::PartySelf(PartySelf {
+        external_ref: Some(PartyRef {
+            namespace: "local".to_owned(),
+            r#type: "PERSON".to_owned(),
+            id: ObjectId::GenericId(GenericId {
+                value: identity.subject,
+                scheme: identity
+                    .issuer
+                    .unwrap_or_else(|| crate::service::ehr::meta::LOCAL_ISSUER.to_owned()),
+            }),
+        }),
+    })
+}
+
+/// The committer a commit records: the person's own [`person_committer`] when
+/// the request's committer is a person ([`person_commits`]), else `supplied`.
+///
+/// A person's committer is the server's statement, so whatever committer the
+/// client supplied is replaced (EHDS Art. 5: what the person inserts is
+/// "clearly distinguishable"); our own design, as no openEHR spec governs it.
+#[must_use]
+pub fn attributed(supplied: PartyProxy) -> PartyProxy {
+    match current_committer() {
+        Some(identity) if identity.person => person_committer(identity),
+        _ => supplied,
+    }
 }
 
 /// Run `fut` with `identity` published as the request's committer.

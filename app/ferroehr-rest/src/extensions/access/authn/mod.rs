@@ -47,7 +47,6 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::metadata::{DiscoveryError, ServerMetadata, parse_metadata};
-use ferrohealth_smart::openehr::smart_scopes::{Compartment, SmartScope};
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
@@ -672,7 +671,7 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
         && principal
             .access
             .caller()
-            .is_some_and(|caller| holds_only_system_scopes(&caller.openehr_scopes()));
+            .is_some_and(|caller| crate::smart::holds_only_system_scopes(&caller.openehr_scopes()));
     let gated = if backend && class == OperationClass::Clinical {
         RbacDecision::Allow
     } else {
@@ -692,21 +691,6 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
     let mut resp = RestError::from(ApiError::Forbidden(reason)).into_response();
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
-}
-
-/// Whether `scopes` hold at least one SMART on openEHR resource scope and every
-/// one of them is a `system/` scope: a backend client, judged by its scopes alone.
-fn holds_only_system_scopes(scopes: &[SmartScope]) -> bool {
-    // NOTE: owner ruling on #4467, master08 §Resource Scopes: `system` access is "based on
-    // pre-configured client-specific policy", so only a `system/` token skips the role gate.
-    let mut resources = scopes.iter().filter_map(|scope| match scope {
-        SmartScope::Resource(resource) => Some(resource.compartment),
-        _ => None,
-    });
-    resources
-        .next()
-        .is_some_and(|first| first == Compartment::System)
-        && resources.all(|compartment| compartment == Compartment::System)
 }
 
 /// Checks the SMART on openEHR requirement of the matched route, after RBAC.
@@ -832,6 +816,7 @@ fn committer_identity(principal: &Principal) -> ferroehr::service::committer::Co
                 .map(str::to_owned),
         },
         client: client_of(principal),
+        person: crate::smart::acts_as_person(principal),
     }
 }
 

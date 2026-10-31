@@ -455,7 +455,9 @@ fn version_entry(item: &Value) -> VersionEntry {
             .map(|a| json_str(a, &["change_type", "value"]))
             .unwrap_or_default(),
         committer: audit
-            .map(|a| json_str(a, &["committer", "name"]))
+            .map(|a| {
+                crate::bff::wire::committer_label(|key| Some(json_str(a, &["committer", key])))
+            })
             .unwrap_or_default(),
     }
 }
@@ -564,5 +566,20 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].version_id, "a::b::1");
         assert_eq!(entries[0].committed, "");
+    }
+
+    /// EHDS Art. 5: a version the person inserted names its committer as the
+    /// person, never by a name a `PARTY_SELF` does not carry.
+    #[test]
+    fn a_party_self_committer_reads_as_the_person() {
+        let history = r#"[{
+            "version_id": {"value": "7d44::sys::1"},
+            "audits": [{"committer": {"_type": "PARTY_SELF"}}]
+        }]"#;
+        let entries = parse_versions(history).expect("valid history");
+        assert_eq!(
+            entries[0].committer,
+            crate::locale::tr(crate::locale::Msg::CommitterPerson)
+        );
     }
 }

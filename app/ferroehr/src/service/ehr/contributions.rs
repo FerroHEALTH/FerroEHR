@@ -195,14 +195,16 @@ impl FerroEhrService {
 
     /// The EHR contribution-list extension (`GET /ehr/{ehr_id}/contribution`,
     /// no uid): the EHR's CONTRIBUTIONs newest-first, paged, as
-    /// `{ "rows": [ { uid, time_committed, committer, change_type,
-    /// change_type_rubric } ], "total" }`.
+    /// `{ "rows": [ { uid, time_committed, committer, inserted_by_person,
+    /// change_type, change_type_rubric } ], "total" }`.
     ///
     /// NOTE: no openEHR spec governs this listing — our own design/extension;
     /// the ITS-REST contract defines only the by-uid CONTRIBUTION GET.
     ///
     /// `committer` is the audit committer `PARTY_PROXY`'s `name`, a summary
-    /// string rather than the full rendering the by-uid GET returns;
+    /// string rather than the full rendering the by-uid GET returns, and
+    /// `inserted_by_person` whether that committer is `PARTY_SELF`, the
+    /// record's person (EHDS Art. 5);
     /// `change_type` is the stored `audit.change_type` code and
     /// `change_type_rubric` its display rubric from the `audit_change_type`
     /// group, so consumers never map codes locally. `offset` and `fetch` are
@@ -229,6 +231,7 @@ impl FerroEhrService {
                     "uid": r.uid.to_string(),
                     "time_committed": r.time_committed.to_string(),
                     "committer": r.committer,
+                    "inserted_by_person": r.person,
                     "change_type_rubric":
                         crate::versioning::audit::change_type_rubric(&r.change_type),
                     "change_type": r.change_type,

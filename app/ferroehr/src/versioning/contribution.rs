@@ -1334,7 +1334,7 @@ fn parse_audit(
         system_id,
         change_type,
         description,
-        committer,
+        committer: crate::service::committer::attributed(committer),
         attestation,
     })
 }

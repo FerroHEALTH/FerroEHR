@@ -196,6 +196,34 @@ pub async fn next_placement(
     })
 }
 
+/// The `_type` of the committer `PARTY_PROXY` of version `(t, b, v)` of
+/// `vo_id`, or `None` when no such version exists.
+///
+/// No openEHR spec governs the SQL — our own design; the committer is
+/// `AUDIT_DETAILS.committer` (RM common master04 §Audit Details).
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn committer_type(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    (t, b, v): (i32, i32, i32),
+) -> Result<Option<String>, StorageError> {
+    let committer: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT a.committer ->> '_type' FROM version v \
+         JOIN commit_audit a ON a.id = v.commit_audit_id \
+         WHERE v.vo_id = $1 AND v.trunk_version = $2 \
+           AND v.branch_number = $3 AND v.branch_version = $4",
+    )
+    .bind(vo_id)
+    .bind(t)
+    .bind(b)
+    .bind(v)
+    .fetch_optional(&mut *tx)
+    .await?;
+    Ok(committer.flatten())
+}
+
 /// The composition-update mega-read: [`next_placement`]'s current-trunk-tip
 /// form plus every column the update pre-checks need
 /// ([`UpdatePlacement`]).

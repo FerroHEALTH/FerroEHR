@@ -92,7 +92,10 @@ openEHR EHR id of the launch context in the token's `ehrId` claim
 - a query runs only within the launch context's EHR, named by its single-EHR
   `ehr_id` parameter or `openehr-ehr-id` header; a query naming no EHR, or
   another one, is refused;
-- it reaches EHR data alone, never a template definition.
+- it reaches EHR data alone, never a template definition;
+- a write under a grant of `patient/` scopes alone is the person's own: it is
+  marked as inserted by the person and may not alter a version a professional
+  committed ([EHDS Art. 5](security.md#information-a-person-inserts-ehds-art-5)).
 
 `user/` and `system/` grants carry no such binding, and when a `user/` grant
 covers the same operation the wider grant wins.

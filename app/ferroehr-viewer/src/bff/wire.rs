@@ -31,8 +31,23 @@ pub struct VersionEntry {
     pub committed: String,
     /// `AUDIT_DETAILS.change_type` value (the `DV_CODED_TEXT` label).
     pub change_type: String,
-    /// `AUDIT_DETAILS.committer` name.
+    /// `AUDIT_DETAILS.committer`, as [`committer_label`] words it.
     pub committer: String,
+}
+
+/// How the viewer names an `AUDIT_DETAILS.committer` whose attribute `key`
+/// reads as `attribute(key)`: the person, or their representative, for
+/// `PARTY_SELF`, else its `name`.
+///
+/// RM common master04 §Audit Details: the committer is `PARTY_SELF` "when the
+/// committer is the record subject", and what a person inserts is "clearly
+/// distinguishable" as theirs (EHDS Art. 5).
+pub fn committer_label(attribute: impl Fn(&str) -> Option<String>) -> String {
+    if attribute("_type").as_deref() == Some("PARTY_SELF") {
+        crate::locale::tr(crate::locale::Msg::CommitterPerson)
+    } else {
+        attribute("name").unwrap_or_default()
+    }
 }
 
 /// A versioned object's container facts plus one of its VERSIONs' envelope
