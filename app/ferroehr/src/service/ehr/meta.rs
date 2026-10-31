@@ -307,7 +307,7 @@ pub(in crate::service) fn committer() -> PartyProxy {
 // ── ITS-REST version-metadata adapter (adapter-support extension) ─────────────
 //
 // The protocol adapter's `412`/`ETag` pre-reads. No openEHR spec governs this
-// adapter seam — our own extension over the SM-governed version identities.
+// adapter seam — our own extension over the RM version identities.
 
 impl FerroEhrService {
     /// The current COMPOSITION version metadata (the latest `version_uid` a

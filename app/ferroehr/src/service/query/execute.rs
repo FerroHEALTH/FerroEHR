@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_QUERY_SERVICE` (`i_query_service.adoc`) — ad-hoc + stored AQL execution,
+//! Ad-hoc + stored AQL execution,
 //! and the orchestration behind it: parse → plan → execute → assemble the
 //! ITS-REST 1.1.0 `RESULT_SET`, the paging composition, the `ehr_ids`
 //! resolution, and the per-query execution budget.
@@ -41,15 +41,14 @@ use super::result_set::{build_params, result_set_json, substitute_params};
 
 impl FerroEhrService {
     /// `execute_ad_hoc_query` — execute an ad hoc query, supplying the query
-    /// text (`i_query_service.adoc`).
+    /// text.
     ///
     /// # Errors
     ///
     /// - a query that does not parse, an unsupported AQL construct, a path/
     ///   typing error, an unbound `$parameter`, a REST-vs-AQL paging
     ///   collision, or a malformed `ehr_id` → precondition (`400`);
-    /// - a listed EHR that does not exist → `ehr_id_does_not_exist`
-    ///   (`i_query_service.adoc` Errors);
+    /// - a listed EHR that does not exist → `ehr_id_does_not_exist`;
     /// - a whole-object projection that would serve a stored version body the
     ///   active `spec_profile` cannot express → conflict (`409`), our own
     ///   extension (`crate::versioning::profile::gate_result_bodies`);
@@ -65,7 +64,7 @@ impl FerroEhrService {
 
     /// `execute_stored_query` — execute a query stored in the definition
     /// service by its qualified name (`version` a semver.org string, latest
-    /// when absent) (`i_query_service.adoc`).
+    /// when absent).
     ///
     /// # Errors
     ///
@@ -173,7 +172,7 @@ impl FerroEhrService {
         let limit = apply_result_ceiling(limit, self.query_result_ceiling)?;
         // Multi-EHR scoping (`ehr_ids: List<UUID>`): a malformed id is a
         // client precondition (`400`); a well-formed but absent id raises
-        // `ehr_id_does_not_exist` (`i_query_service.adoc`).
+        // `ehr_id_does_not_exist`.
         let ehr_ids = self.resolve_ehr_ids(&request.ehr_ids).await?;
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
@@ -306,7 +305,7 @@ impl FerroEhrService {
     }
 
     /// Resolve the request's `ehr_ids` (string form) into the scoped `Uuid`
-    /// set (`i_query_service.adoc` `ehr_ids: List<UUID> [0..1]`): a malformed
+    /// set: a malformed
     /// id is a client precondition (`400`); a well-formed but non-existent id
     /// raises `ehr_id_does_not_exist`. An empty list scopes nothing (the
     /// population gate over `is_queryable` EHRs applies).
@@ -655,7 +654,7 @@ fn map_exec_error(e: AqlError) -> StatusError {
             internal_fault_caused("assemble the RESULT_SET", &a)
         }
         AqlError::Exec(ExecError::Terminology(msg)) => StatusError::exception(msg),
-        // The `spec_profile` refusal is already the SM `conflict` the resource
+        // The `spec_profile` refusal is already the `conflict` the resource
         // reads carry (→ `409`), so it crosses unchanged: same cause, same
         // status, same remedy, whichever route reached the stored body.
         AqlError::Exec(ExecError::Profile(e)) => StatusError::from(e),
@@ -669,7 +668,7 @@ fn map_exec_error(e: AqlError) -> StatusError {
 }
 
 impl From<AqlError> for StatusError {
-    /// Bridges an AQL-engine failure to the SM call-status model as a query
+    /// Bridges an AQL-engine failure to the call-status model as a query
     /// execution reports it (`map_exec_error`): a connection that cannot be
     /// obtained is `service_overloaded` (`503` plus `Retry-After`).
     fn from(e: AqlError) -> Self {

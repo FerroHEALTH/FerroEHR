@@ -18,7 +18,7 @@
 //!   Identifiers and Case rule (see [`crate::templates::identity`]).
 //!
 //! NOTE (dual identity): the `template_store` row carries **both**
-//! a surrogate `UUID` handle (the SM `I_DEFINITION_ADL14` OPT key,
+//! a surrogate `UUID` handle (the native OPT key,
 //! `service/definition/adl14.rs`) and the wire `template_id` string (the
 //! ITS-REST `adl1.4/{template_id}` address). Both are load-bearing; the DB
 //! schema is spec-silent by construction ("no openEHR spec governs SQL").

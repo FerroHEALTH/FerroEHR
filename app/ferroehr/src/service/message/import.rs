@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! EHR-Extract import (SM `I_EHR_EXTRACT_SERVICE.import_ehr` /
-//! `import_ehr_extract`), the inverse of export: each received
+//! EHR-Extract import (`import_ehr` / `import_ehr_extract`), the inverse of
+//! export: each received
 //! `X_VERSIONED_*`'s `ORIGINAL_VERSION`s are replayed into the local store as
 //! `IMPORTED_VERSION`s.
 //!
-//! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`
-//! (`import_ehr` / `import_ehr_extract`); RM common
+//! Spec: RM common
 //! `master06-change_control_package.adoc` §Copying / §Distributed Versioning
 //! (`IMPORTED_VERSION`, Cases 1/2/3, `creating_system_id`, local commit-time
 //! rule) and its `org.openehr.rm.common.imported_version.adoc` class table; the
@@ -39,15 +38,14 @@
 //! Re-validation on import is nowhere required (adjudicated on #2988):
 //! master06 §The Copy Operation keeps the wrapped original "a faithful copy of
 //! its original", `commit_imported_version` is the only `VERSIONED_OBJECT`
-//! commit function with no `Pre` clause, SM `i_ehr_extract_service.adoc`
-//! declares the import operations without preconditions, and BASE
+//! commit function with no `Pre` clause, and BASE
 //! `master10-archetypes.adoc` §Validation during Data Capture makes archetype
 //! validation in an import service a "can", never a must.
 //!
 //! An imported EHR is a full local EHR: the promoted `ehr` columns are re-derived
 //! from the landed `EHR_STATUS`
 //! ([`crate::service::FerroEhrService::resync_promoted_columns`]), so the clone
-//! is found by the subject lookup (SM `I_EHR_SERVICE.get_ehrs_for_subject`) and
+//! is found by the subject lookup (`get_ehrs_for_subject`) and
 //! bound by the one-EHR-per-subject rule (RM ehr master04 §EHR Status) exactly
 //! like a created EHR, which makes importing a clone of an already-held subject a
 //! conflict. Where the extract carries no `EHR_ACCESS`, the whole-EHR clone
@@ -86,17 +84,17 @@ use openehr_rm::v1_2::common::generic::audit_details::AuditDetails;
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 
 impl FerroEhrService {
-    /// SM `import_ehr(an_ehr_id[0..1], an_extract)` — clone a whole EHR into an
+    /// `import_ehr(an_ehr_id[0..1], an_extract)` — clone a whole EHR into an
     /// empty target (master06 §Copying Case 1). The target id is the caller's
-    /// fixed id (the SM's "same patient in other EHR services" case), else the
+    /// fixed id (the same patient in another EHR system), else the
     /// source EHR id reused (master06 §Copying Case 1: the newly created EHR
     /// re-uses the source EHR identifier; RM ehr §"EHR Identifier Allocation").
     /// A completed import is audited for non-repudiation (inbound →
     /// `EventActionCode::Create`).
     ///
     /// Returns the id of the EHR the clone landed under — the caller's fixed
-    /// id, or the source id the extract carried. The SM operation itself
-    /// returns nothing, but the created EHR's identity is not otherwise
+    /// id, or the source id the extract carried, because the created EHR's
+    /// identity is not otherwise
     /// derivable by a caller that supplied none, and a creating call that
     /// cannot name what it created is unusable over a wire.
     ///
@@ -188,7 +186,7 @@ impl FerroEhrService {
         Ok(ehr_id)
     }
 
-    /// SM `import_ehr_extract(an_ehr_id, an_extract)` — land versioned objects
+    /// `import_ehr_extract(an_ehr_id, an_extract)` — land versioned objects
     /// into an existing EHR (master06 §Copying Cases 2/3). A completed import
     /// is audited for non-repudiation (inbound → `EventActionCode::Create`).
     ///
@@ -357,7 +355,7 @@ impl FerroEhrService {
     }
 
     /// Whether an EHR with `ehr_id` exists (the `has_ehr` precondition of
-    /// `import_ehr_extract`; `i_ehr_extract_service.adoc`).
+    /// `import_ehr_extract`).
     async fn import_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
         Ok(
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")

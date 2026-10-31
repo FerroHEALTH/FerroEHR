@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! IHE ATNA (Audit Trail and Node Authentication) audit trail, the platform's
-//! realization of the SM System Log component (`I_SYSTEM_LOG`).
+//! system log.
 //!
-//! The one normative openEHR statement for this component is a single line of
-//! the SM platform component table, "System Log | IHE ATNA-compliant system
-//! log" (`docs/specs/openehr/SM/docs/openehr_platform/master02-overview.adoc`);
-//! the `I_SYSTEM_LOG` interface (`UML/classes/i_system_log.adoc`) is an empty
-//! stub. Everything below realizes that mandate against external standards,
-//! cited as external standards and never as openEHR spec text.
+//! openEHR fixes no audit-record shape, so everything below follows external
+//! standards, cited as external standards and never as openEHR spec text.
 //!
 //! One audit record per audited API operation is rendered in both official ATNA
 //! formats and fanned out to the configured sinks: the local Audit Record
@@ -211,7 +207,7 @@ pub fn require_fhir_disabled(cfg: &config::AuditConfig) -> Result<(), String> {
     Ok(())
 }
 
-/// The platform realizes the SM `I_SYSTEM_LOG` component: it emits resolved
+/// The platform's system log: it emits resolved
 /// audit events through the optional ATNA [`AuditSender`] the binary wires in
 /// ([`FerroEhrService::with_audit`](crate::service::FerroEhrService::with_audit)).
 /// With no sender wired, auditing is off and every emit is
@@ -395,10 +391,9 @@ impl FerroEhrService {
 
     /// The RESTful-ATNA **ITI-81** retrieval: the FHIR `AuditEvent` documents
     /// of the matching records, rendered from the store, newest first, plus
-    /// the total match count. The read side of the SM System Log component (the only
-    /// normative openEHR statement is the "IHE ATNA-compliant system log"
-    /// line above; the retrieval semantics are IHE's — the `RESTful` ATNA
-    /// supplement's ITI-81 FHIR search on `AuditEvent`).
+    /// the total match count. The read side of the system log (the retrieval
+    /// semantics are IHE's — the `RESTful` ATNA supplement's ITI-81 FHIR search
+    /// on `AuditEvent`).
     ///
     /// # Errors
     /// [`StatusError`] `precondition_violation` when no local store is wired, or

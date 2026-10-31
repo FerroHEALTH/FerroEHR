@@ -3,20 +3,18 @@
 
 //! The EHR service (`service/ehr/`), behind the ITS-REST EHR API.
 //!
-//! Concrete `FerroEhrService` methods, our own design; the interface names
-//! below borrow from the openEHR SM text, kept as reference and never an oracle.
+//! Concrete `FerroEhrService` methods, our own design.
 //!
 //! Layout, one file per concern (arch-overview
 //! `master06-design_of_the_ehr.adoc`):
 //!
-//! - `service`      — `I_EHR_SERVICE` (`i_ehr_service.adoc`): EHR create/get,
-//!   `EHR_SUMMARY`, subject lookup, folder-hierarchy reads.
-//! - `status`       — `I_EHR_STATUS` (`i_ehr_status.adoc`): the `EHR_STATUS`
-//!   reads + the five discrete mutators + the `is_modifiable` write guard.
-//! - `directory`    — `I_EHR_DIRECTORY` (`i_ehr_directory.adoc`): the
-//!   DIRECTORY FOLDER surface.
-//! - `composition`  — `I_EHR_COMPOSITION` (`i_ehr_composition.adoc`).
-//! - `contributions` — `I_EHR_CONTRIBUTION` (`i_ehr_contribution.adoc`).
+//! - `service`      — EHR create/get, the EHR summary, subject lookup,
+//!   folder-hierarchy reads.
+//! - `status`       — the `EHR_STATUS` reads + the five discrete mutators +
+//!   the `is_modifiable` write guard.
+//! - `directory`    — the DIRECTORY FOLDER surface.
+//! - `composition`  — COMPOSITION commit and retrieval.
+//! - `contributions` — CONTRIBUTION commit and retrieval.
 //! - `access`       — the `EHR_ACCESS` top-level structure (arch-overview
 //!   master06 §`EHR_ACCESS`) + the spec-silent scheme cache.
 //! - `validation`   — the commit-validation choke point for every EHR-owned
@@ -137,7 +135,7 @@ fn ensure_if_match(
     }
 }
 
-/// Parse the optional SM `Interval<Iso8601_date_time>` bounds of a contribution
+/// Parse the optional ISO 8601 date-time bounds of a contribution
 /// `time_range` into the internal [`crate::versioning::contribution::TimeRange`]; a malformed
 /// bound is a `400`-equivalent precondition failure. Bound decoding is the
 /// shared ITS-REST datetime-parameter decoder

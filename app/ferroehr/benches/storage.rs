@@ -228,7 +228,7 @@ fn committer() -> PartyProxy {
     .expect("the bench committer decodes as a PARTY_PROXY")
 }
 
-/// The SM `UPDATE_VERSION` envelope carrying `data`, superseding `preceding`.
+/// The `UPDATE_VERSION` envelope carrying `data`, superseding `preceding`.
 fn update_version(
     data: &Value,
     change_code: &str,

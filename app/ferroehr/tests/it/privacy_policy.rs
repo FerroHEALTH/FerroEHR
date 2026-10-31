@@ -15,7 +15,7 @@
 //! The wire outcome IS spec-governed: a well-formed body refused for a
 //! semantic reason is `422` (ITS-REST
 //! `specifications/docs/overview/Requests_and_responses.md` §HTTP status
-//! codes), which the service reports as the SM `content_invalid` status.
+//! codes), which the service reports as the `content_invalid` status.
 //!
 //! Every identifier here is synthetic, constructed by running a published
 //! algorithm forward over a chosen prefix. None is issued to anyone.
@@ -123,7 +123,7 @@ fn finding_messages(error: &ServiceError) -> String {
 }
 
 /// The same assertion over the service-layer error the composition routes
-/// return before the SM boundary converts it.
+/// return before the status boundary converts it.
 ///
 /// A privacy refusal travels as [`ServiceError::ValidationFailed`], the
 /// per-path vehicle, so each finding keeps its own RM path all the way into the

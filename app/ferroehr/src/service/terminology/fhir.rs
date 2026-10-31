@@ -1,25 +1,23 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! [`FhirTerminologyProvider`], the SM `I_TERMINOLOGY_SERVICE` calls realized
-//! against the one FHIR R4B terminology server through the published
-//! `ferrobridge-term` client.
+//! [`FhirTerminologyProvider`], the terminology calls answered against the one
+//! FHIR R4B terminology server through the published `ferrobridge-term` client.
 //!
 //! The one terminology server (`[terminology.server]`) is what the routing
 //! layer (`super::routing`) asks for every terminology the in-process
 //! `openehr-term` bundle (`super::bundle`) does not carry. BASE
 //! `architecture_overview/master12-terminology.adoc` models this backend as an
-//! external "terminology query server". SM contract:
-//! `docs/specs/openehr/SM/docs/UML/classes/i_terminology_service.adoc`; the
-//! client and the server it points at are our own design. `ferrobridge-term`
-//! owns the HTTP exchange and the FHIR decoding over the generated `fhir-types`
-//! operation contracts (<https://docs.rs/ferrobridge-term/0.1.130>); this
-//! module owns the SM error mapping and the extract shape (the `fhir` cargo
-//! feature; a slim build refuses a configured server at boot).
+//! external "terminology query server"; the calls, the client and the server
+//! it points at are our own design. `ferrobridge-term` owns the HTTP exchange
+//! and the FHIR decoding over the generated `fhir-types` operation contracts
+//! (<https://docs.rs/ferrobridge-term/0.1.130>); this module owns the status
+//! mapping and the extract shape (the `fhir` cargo feature; a slim build
+//! refuses a configured server at boot).
 //!
-//! # SM call → FHIR operation mapping
+//! # Call → FHIR operation mapping
 //!
-//! | SM call | FHIR R4B operation |
+//! | call | FHIR R4B operation |
 //! |---|---|
 //! | `value_set_validate` | `ValueSet/$validate-code` |
 //! | `get_value_set` | `ValueSet/$expand` → [`TerminologyExtract`] |
@@ -30,21 +28,17 @@
 //! `has_terminology`) have no faithful FHIR operation, so the routing layer
 //! answers them from the in-process bundle and
 //! [`FhirTerminologyProvider::get_terminology_description`] is an explicit
-//! `NotImplemented`. The SM `at_date` (an `Iso8601_date` on
-//! `has_term`/`get_term`/`value_set_validate`) is sent as the FHIR `date` input
-//! of `$lookup` and `$validate-code`.
+//! `NotImplemented`. The `at_date` of `has_term`/`get_term`/`value_set_validate`
+//! is sent as the FHIR `date` input of `$lookup` and `$validate-code`.
 //!
-//! A `ValueSet/$expand` may nest members under `contains`. The flat
-//! `Terminology_extract._terms_` keeps the membership view and
-//! `Terminology_extract._relationships_` preserves the tree as
-//! `Term_relationship`s under the `CHILD_RELATION` name
-//! (`terminology_extract.adoc` §Structured value set), defined in `_relations_`
-//! by the FHIR `child` concept property URI (`FHIR_CHILD_PROPERTY`), an
-//! `external_code` relation (`terminology_relation.adoc`
-//! `Inv_valid_definition`).
+//! A `ValueSet/$expand` may nest members under `contains`. The flat `_terms_`
+//! keeps the membership view and `_relationships_` preserves the tree as
+//! `Term_relationship`s under the `CHILD_RELATION` name, defined in
+//! `_relations_` by the FHIR `child` concept property URI
+//! (`FHIR_CHILD_PROPERTY`), an `external_code` relation.
 //!
 //! NOTE: a value set, terminology or code the server does not know (HTTP `404`,
-//! or `$validate-code result=false`) is a `Pre_has_*` precondition failure
+//! or `$validate-code result=false`) is an unknown-entity refusal
 //! ([`ServiceStatus::VersionedObjectDoesNotExist`]) and a transport fault is
 //! [`StatusError::exception`]; the fail-open choice belongs to the caller
 //! ([`config::TerminologyServerConfig::fail_on_error`](super::config::TerminologyServerConfig::fail_on_error)).
@@ -65,11 +59,10 @@ use super::config::TerminologyServerConfig;
 const OAUTH_KEY: &str = "terminology.server.oauth";
 
 /// The `Term_relationship.relation_name` under which a FHIR `$expand`
-/// parent→child `contains` nesting is preserved (`terminology_extract.adoc`).
+/// parent→child `contains` nesting is preserved.
 const CHILD_RELATION: &str = "child";
 /// The FHIR R4B concept-property URI that defines the parent→child relation,
-/// carried as the `Terminology_relation.external_code`
-/// (`terminology_relation.adoc`).
+/// carried as the `Terminology_relation.external_code`.
 const FHIR_CHILD_PROPERTY: &str = "http://hl7.org/fhir/concept-properties#child";
 
 /// The `ferrobridge-term` client of the one server.
@@ -82,8 +75,8 @@ type Wire = ferrobridge_term::client::Client;
 #[derive(Debug, Clone)]
 enum Wire {}
 
-/// A FHIR R4B terminology-server client realizing the SM
-/// `I_TERMINOLOGY_SERVICE` lookup/validation calls against the one configured
+/// A FHIR R4B terminology-server client answering the terminology
+/// lookup/validation calls against the one configured
 /// server.
 #[derive(Debug, Clone)]
 pub struct FhirTerminologyProvider {
@@ -241,7 +234,7 @@ impl FhirTerminologyProvider {
         StatusError::exception(crate::service::error::INTERNAL_MESSAGE.to_owned())
     }
 
-    /// A `Pre_has_*` precondition failure (`VersionedObjectDoesNotExist`).
+    /// An unknown terminology, term or value set (`VersionedObjectDoesNotExist`).
     ///
     /// The body carries only what the client can act on, the kind and id it
     /// asked about; which server answered is deployment configuration and goes
@@ -306,7 +299,7 @@ impl FhirTerminologyProvider {
 
     /// `subsumes` → FHIR `CodeSystem/$subsumes` (`codeA` = `ref_code`,
     /// `codeB` = `candidate_child_code`). True iff the outcome is `subsumes`
-    /// — the SM's *strict* subsumption (`equivalent` is excluded).
+    /// — *strict* subsumption (`equivalent` is excluded).
     ///
     /// # Errors
     ///
@@ -348,7 +341,7 @@ impl FhirTerminologyProvider {
     /// [`TerminologyExtract`] (the `display` becomes the term text). `at_date`
     /// → the FHIR `date` parameter.
     ///
-    /// NOTE (attributes): the SM `attributes` allow-list filters
+    /// NOTE (attributes): the `attributes` allow-list filters
     /// the meta-model attributes returned. `$lookup` returns only the concept
     /// `display` (mapped to the term text), so there is nothing further to
     /// filter; `attributes` is accepted and has no effect on the returned
@@ -443,8 +436,8 @@ impl Expansion {
     /// members, the parent→child tree preserved as `relationships`.
     fn into_extract(self, terminology_id: &str) -> TerminologyExtract {
         // The `child` relation is defined by the FHIR concept-property URI
-        // (an `external_code` relation; `terminology_relation.adoc`
-        // `Inv_valid_definition`), present only when a hierarchy was emitted.
+        // (an `external_code` relation), present only when a hierarchy was
+        // emitted.
         let relations = (!self.relationships.is_empty()).then(|| {
             let mut m = BTreeMap::new();
             m.insert(
@@ -472,7 +465,7 @@ impl Expansion {
 }
 
 /// The operations on the server, each answering a value, a classified
-/// [`Absence`], or an [`StatusError`] for a fault.
+/// [`Absence`], or a [`StatusError`] for a fault.
 #[cfg(feature = "fhir")]
 mod wire {
     use std::sync::Arc;

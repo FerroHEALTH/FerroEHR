@@ -91,8 +91,8 @@ pub(in crate::service) fn parse_at_time(raw: &str) -> Result<jiff::Timestamp, St
     resolve(raw).ok_or_else(|| StatusError::precondition(format!("invalid version_at_time: {raw}")))
 }
 
-/// Parse one bound of a contribution `time_range` (the SM
-/// `Interval<Iso8601_date_time>` bounds) into an instant.
+/// Parse one bound of a contribution `time_range` (an ISO 8601 date-time)
+/// into an instant.
 ///
 /// # Errors
 /// [`StatusError`] `precondition_violation` (→ `400`) when the bound is not an

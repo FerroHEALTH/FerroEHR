@@ -3,23 +3,22 @@
 
 //! The Admin service (`service/admin/`) — the openEHR **Admin component**.
 //!
-//! Our own design behind the ITS-REST Admin API and our admin extensions; the
-//! operation names borrow from the openEHR SM text, kept as reference and never an oracle.
+//! Our own design behind the ITS-REST Admin API and our admin extensions.
 //!
 //! One file per admin concern; each file carries both the public
 //! `FerroEhrService` methods (parse ids/time bounds at the boundary) and the
 //! machinery behind them:
 //!
-//! - `delete` — `I_ADMIN_SERVICE.physical_ehr_delete` / `physical_party_delete`
+//! - `delete` — `physical_ehr_delete` / `physical_party_delete`
 //!   (+ the `admin_ehr_delete_all` extension): cascade + orphan-audit sweep.
-//! - `statistics` — `I_ADMIN_SERVICE.list_contributions` / `contribution_count`
+//! - `statistics` — `list_contributions` / `contribution_count`
 //!   / `versioned_composition_count` / `composition_version_count`.
-//! - `archive` — `I_ADMIN_ARCHIVE.archive_ehrs` / `archive_parties`.
+//! - `archive` — `archive_ehrs` / `archive_parties`.
 //! - [`marks`] — the legal marks: the restriction register, the research
 //!   objection and the retention register; our own extension.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access;
 //!   our own extension.
-//! - `dump_load` — `I_ADMIN_DUMP_LOAD.export_ehrs` / `load_ehrs`.
+//! - `dump_load` — `export_ehrs` / `load_ehrs`.
 //! - [`integrity`] — the storage-parity sweep, our own extension: no openEHR
 //!   spec governs storage mechanics.
 //! - [`types`] — the information classes of the ADMIN group
@@ -80,13 +79,10 @@ fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, StatusError
 /// Parse the optional `(lower, upper)` ISO 8601 date-time bounds of a
 /// statistics call into validated `::timestamptz` bind strings; each bound is
 /// independently optional (open bounds → `None`). An invalid ISO bound → `400`
-/// (SM `Interval<Iso8601_date_time>`; the invalid-date failure is the
-/// boundary's).
+/// (the invalid-date failure is the boundary's).
 ///
-/// NOTE (`i_admin_service.adoc` types the range as
-/// `Interval<Iso8601_date_time>` with no inclusivity stated): the interval is
-/// treated as **closed** `[lo, hi]` — the default openEHR `Interval` bound
-/// inclusivity — an SM-silent, documented realization of our own.
+/// NOTE: the interval is treated as **closed** `[lo, hi]` — the default openEHR
+/// `Interval` bound inclusivity — our own design.
 ///
 /// NOTE (BASE `org.openehr.base.foundation_types.interval.adoc` §Invariants,
 /// `Limits_consistent`: `(not upper_unbounded and not lower_unbounded) implies

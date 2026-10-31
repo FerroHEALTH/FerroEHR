@@ -1,14 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The 9 SM `I_TERMINOLOGY_SERVICE` calls on
-//! [`FerroEhrService`], answered by the in-process bundle or the one
-//! terminology server (`i_terminology_service.adoc`; see the module docs in
-//! [`super`]).
+//! The 9 terminology calls on [`FerroEhrService`], answered by the in-process
+//! bundle or the one terminology server (see the module docs in [`super`]).
 //!
 //! Enumeration is always the bundle's; lookup/validation goes to the bundle
 //! when it knows the terminology, else to the configured terminology server,
-//! else falls through to the bundle's `Pre_has_terminology` → `NotFound`.
+//! else falls through to the bundle's unknown-terminology `NotFound`.
 
 use std::collections::BTreeMap;
 
@@ -26,7 +24,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// Infallible in practice (the bundle is compile-time-embedded); the
-    /// `Result` is the SM call shape.
+    /// `Result` is the shape every terminology call shares.
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
@@ -43,7 +41,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// Infallible in practice; the `Result` is the SM call shape.
+    /// Infallible in practice; the `Result` is the shape every terminology call shares.
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
@@ -61,7 +59,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// `VersionedObjectDoesNotExist` when the bundle does not know
-    /// `terminology_id` (`Pre_has_terminology`).
+    /// `terminology_id`.
     #[expect(
         clippy::unused_self,
         reason = "every service call is a method on the service, which the protocol \
@@ -81,8 +79,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   (`Pre_has_terminology`); `at_date` is a no-op on the single pinned
+    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology; `at_date` is a no-op on the single pinned
     ///   bundle version (bundle NOTE);
     /// - FHIR path: exception on a transport fault / non-2xx / malformed
     ///   response.
@@ -131,7 +128,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   or an unknown code (`Pre_has_terminology` + `Pre_has_term`);
+    ///   or an unknown code;
     /// - FHIR path: `VersionedObjectDoesNotExist` when `$lookup` answers
     ///   `404`; exception on a transport fault / non-2xx / malformed
     ///   response.
@@ -160,8 +157,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   (`Pre_has_terminology`);
+    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology;
     /// - FHIR path: `VersionedObjectDoesNotExist` when the server answers
     ///   `404`; exception on a transport fault / a response with no
     ///   `outcome`.
@@ -188,8 +184,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   (`Pre_has_terminology`); an unknown value set answers `false` (no
+    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology; an unknown value set answers `false` (no
     ///   precondition on the membership test itself);
     /// - FHIR path: precondition on an empty `candidate_code`;
     ///   `VersionedObjectDoesNotExist` on an unknown value set; exception on
@@ -241,7 +236,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   or an unknown value set (`Pre_has_terminology` + `Pre_has_value_set`);
+    ///   or an unknown value set;
     /// - FHIR path: `VersionedObjectDoesNotExist` when `$expand` answers
     ///   `404`; exception on a transport fault / non-2xx / malformed
     ///   response.

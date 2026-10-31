@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_PARTY` CRUD (`i_party.adoc`) + the `I_DEMOGRAPHIC_SERVICE.create_party`
-//! factory (`i_demographic_service.adoc`) — the party create / read / update /
+//! The party CRUD and its create factory — the party create / read / update /
 //! delete domain logic, built on the shared [`crate::versioning`]
 //! change-control machinery with `ehr_id = None` (no EHR scope — our own
 //! design; a party has no owning EHR). The wire is the Demographic API of
@@ -78,10 +77,9 @@ impl FerroEhrService {
         version: Option<TreeId>,
         at: Option<jiff::Timestamp>,
     ) -> Result<VersionRead, ServiceError> {
-        // The granular SM status: a version-addressed read that misses is
+        // The granular status: a version-addressed read that misses is
         // `object_version_does_not_exist`, a current read is the generic
-        // `versioned_object_does_not_exist` (`i_party.adoc` declares exactly
-        // these per call).
+        // `versioned_object_does_not_exist`.
         let miss = || {
             ServiceError::new(
                 if version.is_some() || at.is_some() {
@@ -108,8 +106,8 @@ impl FerroEhrService {
         .ok_or_else(miss)
     }
 
-    /// The stored [`PartyKind`] of a versioned object, for the kind-agnostic SM
-    /// `I_PARTY` calls (which address parties by versioned-object id only). A
+    /// The stored [`PartyKind`] of a versioned object, for the kind-agnostic
+    /// party calls (which address parties by versioned-object id only). A
     /// non-party id (COMPOSITION, `PARTY_RELATIONSHIP`, …) or unknown id is `404`
     /// (`versioned_object_does_not_exist`).
     pub(super) async fn party_kind_at(&self, vo_id: VoId) -> Result<PartyKind, ServiceError> {
@@ -126,10 +124,9 @@ impl FerroEhrService {
 
     /// Confirm `vo_id` is some party (any of the five kinds) — the check for the
     /// kind-agnostic `versioned_party` reads. A non-party id (COMPOSITION, …) or
-    /// unknown id is `404`, reported with the caller-supplied granular SM
+    /// unknown id is `404`, reported with the caller-supplied granular
     /// status (`versioned_object_does_not_exist` for object-addressed reads,
-    /// `object_version_does_not_exist` for version-addressed ones —
-    /// `i_party.adoc` declares exactly those per call).
+    /// `object_version_does_not_exist` for version-addressed ones).
     pub(super) async fn ensure_any_party(
         &self,
         vo_id: VoId,
@@ -141,7 +138,7 @@ impl FerroEhrService {
         }
     }
 
-    /// `create_party` (`i_demographic_service.adoc`): create the first version
+    /// Create the first version
     /// of a new PARTY (server-side `VERSIONED_OBJECT` + `ORIGINAL_VERSION` +
     /// `CONTRIBUTION`). Returns it with its `uid` set and the create-response
     /// `ETag`/`Location` metadata.
@@ -207,7 +204,7 @@ impl FerroEhrService {
         }
     }
 
-    /// `get_party` / `get_party_at_time` (`i_party.adoc`): retrieve a party by
+    /// `get_party` / `get_party_at_time`: retrieve a party by
     /// its versioned-object id, optionally at a specific version (`version`) or
     /// instant (`at`; else the latest). A deleted current version resolves to
     /// `Value::Null` (→ `204`, mirroring COMPOSITION). A wrong-kind object (a
@@ -252,7 +249,7 @@ impl FerroEhrService {
         }))
     }
 
-    /// `update_party` (`i_party.adoc`): commit a new party version. Resolves the
+    /// Commit a new party version. Resolves the
     /// current version once (kind + existence gate) and delegates to
     /// [`Self::commit_party_update`]. The wire seam (the `api` module) resolves
     /// for `If-Match` and calls `commit_party_update` directly, threading its
@@ -279,7 +276,7 @@ impl FerroEhrService {
     /// Commit a new version of an already-resolved party. `current` is the lean
     /// current-version handle (threaded from the dispatcher's `If-Match` resolve
     /// or from [`Self::update_party_version`]); a deleted current is `404` (pre
-    /// `has_party`, `i_party.adoc §update_party`). The write response is built
+    /// `has_party`). The write response is built
     /// from the commit result (see [`Self::commit_new_party`]).
     pub(super) async fn commit_party_update(
         &self,
@@ -334,15 +331,15 @@ impl FerroEhrService {
         }
     }
 
-    /// `delete_party` (`i_party.adoc`): logically delete a party (a new
+    /// Logically delete a party (a new
     /// `523|deleted|` version — RM common master06 §Logical Deletion; post
     /// `not has_party` holds, a deleted party reads `Null`). Resolves the target
     /// once and delegates to [`Self::commit_party_delete`]; the wire seam
     /// threads its `If-Match` resolve instead. `expected` is the
     /// caller-supplied trunk version (from `If-Match` or the path
     /// `OBJECT_VERSION_ID`); when `Some`, a mismatch with the current version →
-    /// `409`; when `None`, the current version is deleted unconditionally (SM
-    /// `delete_party` has no version argument). An already-deleted target → `400`.
+    /// `409`; when `None`, the current version is deleted unconditionally. An
+    /// already-deleted target → `400`.
     pub(super) async fn delete_party_version(
         &self,
         kind: PartyKind,

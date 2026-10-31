@@ -55,8 +55,8 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
     ) -> Result<Value, ServiceError> {
-        // Version-addressed: `i_party.adoc` `get_party_at_version` declares
-        // `object_version_does_not_exist` as its only does-not-exist code.
+        // Version-addressed: `object_version_does_not_exist` is the
+        // does-not-exist code.
         self.ensure_any_party(vo_id, ServiceStatus::ObjectVersionDoesNotExist)
             .await?;
         self.demographic_version_envelope(vo_id, version, "party")

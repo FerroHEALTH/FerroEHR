@@ -1280,9 +1280,8 @@ impl Builder<'_> {
     /// `EHR_STATUS.is_queryable` 1..1 Boolean), promoted onto the `ehr` row and
     /// kept in lockstep by the status write path, so the gate is a boolean-column
     /// filter over a PK join instead of a per-query `EXISTS` that index-scanned
-    /// every current `EHR_STATUS` root. SM `I_QUERY_SERVICE`: a
-    /// full-population query runs over "all EHRs whose status has the
-    /// `is_queryable` flag set to `True`" (`i_query_service.adoc`). No openEHR
+    /// every current `EHR_STATUS` root. A full-population
+    /// query runs over every EHR whose status has `is_queryable` set. No openEHR
     /// spec governs the join mechanics — our own storage design.
     fn gate_vo_root(&mut self, root: &str) {
         let alias = format!("qg{}", self.next_ctr());

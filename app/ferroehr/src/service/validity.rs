@@ -5,8 +5,7 @@
 //!
 //! The two calls `definitions_valid` and `content_valid`, both over a
 //! `LOCATABLE`, on [`FerroEhrService`]'s existing validation choke points. Our
-//! own design; the call names borrow from the openEHR SM text, kept as reference
-//! and never an oracle.
+//! own design.
 //!
 //! Validation itself is owned by the validation register (`src/validation/`);
 //! this file is only the adapter over the shared choke points
@@ -34,9 +33,8 @@ use crate::service::status::StatusError;
 use crate::versioning::Kind;
 
 impl FerroEhrService {
-    /// `definitions_valid` (`i_validity_checker.adoc`): "Return `True` if the
-    /// definition identifiers (i.e. archetype and template identifiers) are
-    /// known in the local `definitions` service."
+    /// `definitions_valid`: true if the definition identifiers (archetype and
+    /// template identifiers) are known in the local definitions store.
     ///
     /// Every `archetype_details` (RM `ARCHETYPED`) declaration in the content
     /// contributes its `archetype_id` and, where present, its `template_id`.
@@ -85,8 +83,8 @@ impl FerroEhrService {
         Ok(true)
     }
 
-    /// `content_valid` (`i_validity_checker.adoc`): "Return `True` if the
-    /// content structure is a valid instance of the relevant RM classes."
+    /// `content_valid`: true if the content structure is a valid instance of
+    /// the relevant RM classes.
     /// Runs the same per-`Kind` structural validation every commit runs; an
     /// unrecognized root `_type` is `false`. A bare validity check has no
     /// lifecycle context → full strictness.
@@ -122,7 +120,7 @@ impl FerroEhrService {
     ) -> Result<Option<String>, StatusError> {
         match self.validate_for_commit(a_kind, a_content, false).await {
             Ok(()) => Ok(None),
-            // Rendered through the SM bridge — where the per-path violation
+            // Rendered through the status bridge — where the per-path violation
             // list joins into one message — so the text matches what the
             // committing routes serve, verbatim.
             Err(

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_STATUS` (`i_ehr_status.adoc`) — the `EHR_STATUS` reads, the five
+//! The `EHR_STATUS` operations — the `EHR_STATUS` reads, the five
 //! discrete mutators, the versioned-object views, plus two EHR-owned commit
 //! hooks: the `is_modifiable` content-write guard and the promoted-subject
 //! sync.
@@ -110,7 +110,7 @@ impl FerroEhrService {
     }
 
     /// The one `EHR_STATUS` commit core (`replace_ehr_status` and the discrete
-    /// SM mutators both land here): commit a new version from the caller's full
+    /// mutators both land here): commit a new version from the caller's full
     /// `UPDATE_VERSION` envelope, sync the promoted subject columns, and return
     /// the committed version identity.
     ///
@@ -170,9 +170,8 @@ impl FerroEhrService {
 
     /// Apply a single in-place mutation to the current `EHR_STATUS` root and
     /// commit it as a new implicit-CONTRIBUTION version — the shared body of
-    /// the discrete `I_EHR_STATUS` mutators (`i_ehr_status.adoc`
-    /// §`set_ehr_queryable` … §`update_other_details`), formally equivalent to
-    /// the whole-object replace (`master02-overview.adoc` §Interface Calls).
+    /// the discrete mutators (`set_ehr_queryable` … `update_other_details`),
+    /// each equivalent to a whole-object replace.
     /// Reuses [`Self::commit_status`] with the current version uid as the
     /// preceding version (server-driven optimistic lock).
     ///
@@ -219,8 +218,7 @@ impl FerroEhrService {
             .unwrap_or_default();
         // The stored fragment decodes ONCE into the typed EHR_STATUS, so a
         // mutation that cannot produce a legal one is either unrepresentable or
-        // refused by the closure itself (SM `i_ehr_status.adoc`
-        // §update_other_details).
+        // refused by the closure itself.
         let mut status: EhrStatus = openehr_its::json::from_canonical_value(&current.body)
             .map_err(|e| {
                 ServiceError::content_invalid(
@@ -233,7 +231,7 @@ impl FerroEhrService {
         // mutated EHR_STATUS content (the server assigns the new version id).
         status.uid = None;
         mutate(&mut status)?;
-        // The SM flag mutators commit a modification of the existing
+        // The flag mutators commit a modification of the existing
         // EHR_STATUS: carry the operation's own change type so the commit
         // audit resolves without a client envelope (the `direct()` placeholder
         // is `249|creation|`, which would contradict this update —
@@ -517,7 +515,7 @@ impl FerroEhrService {
     /// The current status root fragment is read on the caller's transaction
     /// ([`crate::storage::ehr_repo::current_status_root`]) and handed to
     /// [`Self::sync_ehr_subject`], so an imported or loaded EHR is visible to
-    /// the subject lookup (SM `I_EHR_SERVICE.get_ehrs_for_subject`) and bound by
+    /// the subject lookup (`get_ehrs_for_subject`) and bound by
     /// the one-EHR-per-subject rule (RM ehr master04 §EHR Status) like any
     /// other. An EHR with no current `EHR_STATUS` keeps its column defaults.
     ///
@@ -592,10 +590,10 @@ pub(in crate::service) fn ehr_promoted_columns(
     (subject_id, namespace, is_queryable, is_modifiable)
 }
 
-// ── The SM I_EHR_STATUS call surface ──────────────────────────────────────────
+// ── The EHR_STATUS call surface ───────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// SM `I_EHR_STATUS.has_ehr_status_version` — whether the EHR's
+    /// Whether the EHR's
     /// `EHR_STATUS` versioned object is the one named.
     ///
     /// # Errors
@@ -613,7 +611,7 @@ impl FerroEhrService {
             .is_some_and(|(vo, _)| vo == a_version_uid))
     }
 
-    /// SM `I_EHR_STATUS.get_ehr_status` — the current `EHR_STATUS` (bare, with
+    /// The current `EHR_STATUS` (bare, with
     /// its `uid`).
     ///
     /// # Errors
@@ -623,7 +621,7 @@ impl FerroEhrService {
         Ok(self.status_at(an_ehr_id, None).await?.body)
     }
 
-    /// SM `I_EHR_STATUS.get_ehr_status_at_time` — the `EHR_STATUS` current at
+    /// The `EHR_STATUS` current at
     /// `a_time` (time-travel), or the current one when `a_time` is `None`.
     ///
     /// # Errors
@@ -658,7 +656,7 @@ impl FerroEhrService {
             .body)
     }
 
-    /// SM `I_EHR_STATUS.get_versioned_ehr_status` — the `VERSIONED_EHR_STATUS`
+    /// The `VERSIONED_EHR_STATUS`
     /// container object.
     ///
     /// # Errors
@@ -668,7 +666,7 @@ impl FerroEhrService {
         Ok(self.versioned_status(an_ehr_id).await?.body)
     }
 
-    /// SM `I_EHR_STATUS.set_ehr_queryable` — commit a new `EHR_STATUS` version
+    /// Commit a new `EHR_STATUS` version
     /// with `is_queryable = true`, returning the new version uid.
     ///
     /// # Errors
@@ -684,7 +682,7 @@ impl FerroEhrService {
             .version_uid())
     }
 
-    /// SM `I_EHR_STATUS.clear_ehr_queryable` — commit a new `EHR_STATUS`
+    /// Commit a new `EHR_STATUS`
     /// version with `is_queryable = false`, returning the new version uid.
     ///
     /// # Errors
@@ -700,7 +698,7 @@ impl FerroEhrService {
             .version_uid())
     }
 
-    /// SM `I_EHR_STATUS.set_ehr_modifiable` — commit a new `EHR_STATUS` version
+    /// Commit a new `EHR_STATUS` version
     /// with `is_modifiable = true` (reactivating the EHR's contents), returning
     /// the new version uid.
     ///
@@ -717,7 +715,7 @@ impl FerroEhrService {
             .version_uid())
     }
 
-    /// SM `I_EHR_STATUS.clear_ehr_modifiable` — commit a new `EHR_STATUS`
+    /// Commit a new `EHR_STATUS`
     /// version with `is_modifiable = false` (deactivating the EHR's contents),
     /// returning the new version uid.
     ///
@@ -736,7 +734,7 @@ impl FerroEhrService {
             .version_uid())
     }
 
-    /// SM `I_EHR_STATUS.update_other_details` — commit a new `EHR_STATUS`
+    /// Commit a new `EHR_STATUS`
     /// version with the given `other_details`, returning the new version uid.
     ///
     /// # Errors
@@ -786,8 +784,7 @@ impl FerroEhrService {
             .uid)
     }
 
-    /// The `REVISION_HISTORY` of the EHR's `EHR_STATUS`. SM defines no
-    /// revision-history operation (the abstract counterpart is RM common
+    /// The `REVISION_HISTORY` of the EHR's `EHR_STATUS` (RM common
     /// `versioned_object.adoc` `revision_history()`); the wire is the
     /// ITS-REST `revision_history` route.
     ///
@@ -836,7 +833,7 @@ impl FerroEhrService {
 
 // ── ITS-REST read/write-response adapter (adapter-support extension) ──────────
 //
-// The SM `I_EHR_STATUS` calls return the bare `EHR_STATUS` (or its new version
+// The `EHR_STATUS` calls above return the bare `EHR_STATUS` (or its new version
 // uid), neither of which carries the commit instant `Requests_and_responses.md`
 // §"`ETag` and Last-Modified" wants, so these siblings return the same result
 // plus its [`ResourceMeta`] with no second read (no openEHR spec governs the
@@ -925,8 +922,7 @@ impl FerroEhrService {
         // the write so the versioned object is resolved once (no second
         // `current_vo`). No current EHR_STATUS ⇒ NotFound (404).
         // NOTE: the ITS-REST wire replaces the whole EHR_STATUS in one PUT — the
-        // aggregate of the five discrete SM mutators (formal equivalence,
-        // `master02-overview.adoc` §Interface Calls); a mismatch → 412.
+        // aggregate of the five discrete mutators; a mismatch → 412.
         let Some((vo_id, latest)) = self.ehr_status_meta_with_vo(an_ehr_id).await? else {
             return Err(ServiceError::new(
                 ServiceStatus::EhrIdDoesNotExist,

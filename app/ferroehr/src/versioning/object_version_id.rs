@@ -190,7 +190,7 @@ pub(crate) fn version_id(
 ///
 /// Converts into [`ApiError`] (`400`, path/header parameters),
 /// [`ServiceError`] (`422`, payload fields) and
-/// [`crate::service::status::StatusError`] (`400`, SM catalog arguments) at each
+/// [`crate::service::status::StatusError`] (`400`, service-call arguments) at each
 /// call site's natural severity.
 #[derive(Debug, thiserror::Error)]
 pub enum VersionIdError {
@@ -237,7 +237,7 @@ impl From<VersionIdError> for ServiceError {
 }
 
 impl From<VersionIdError> for crate::service::status::StatusError {
-    /// A malformed version id in an SM catalog argument is an argument-validity
+    /// A malformed version id in a service-call argument is an argument-validity
     /// precondition failure (→ `400` at the wire, matching the
     /// [`From<VersionIdError> for ApiError`] `BadRequest` row).
     fn from(e: VersionIdError) -> Self {
@@ -246,7 +246,7 @@ impl From<VersionIdError> for crate::service::status::StatusError {
 }
 
 /// Parse a bare `VERSION_TREE_ID` lexical value (`N` or `N.B.V`) into a
-/// [`TreeId`] — the SM catalog's version argument form.
+/// [`TreeId`] — the service calls' version argument form.
 #[expect(
     clippy::map_err_ignore,
     reason = "the mapped error already echoes the rejected token; the discarded \
@@ -305,7 +305,7 @@ fn components_of(
     Ok((*object_id.value(), creating_system_id, tree))
 }
 
-/// Decompose an already-parsed [`ObjectVersionId`] (the SM catalog's native
+/// Decompose an already-parsed [`ObjectVersionId`] (the service calls' native
 /// version-id argument) into the storage key pair (`vo_id`, [`TreeId`]).
 pub(crate) fn components(ovid: &ObjectVersionId) -> Result<(VoId, TreeId), VersionIdError> {
     let (object_id, _, tree) = components_of(ovid, ovid.value())?;

@@ -1,16 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The public DEMOGRAPHIC seam on [`FerroEhrService`] — the SM
-//! `I_DEMOGRAPHIC_SERVICE` / `I_PARTY` / `I_PARTY_RELATIONSHIP` operations
-//! (`i_demographic_service.adoc`, `i_party.adoc`, `i_party_relationship.adoc`)
-//! plus the wire-shaped party / relationship / contribution / tag calls the
-//! ITS-REST adapter (`ferroehr-rest`) invokes.
+//! The public DEMOGRAPHIC seam on [`FerroEhrService`] — the typed party and
+//! relationship operations plus the wire-shaped party / relationship /
+//! contribution / tag calls the ITS-REST adapter (`ferroehr-rest`) invokes.
 //!
-//! Thin adapters that parse the (kind + string) arguments the wire seams
-//! supply and delegate to the sibling demographic domain modules. Party /
-//! relationship ids parse through the shared BASE decoder in
-//! [`crate::versioning`] (`object_version_id.rs`).
+//! Thin adapters that parse the (kind + string) arguments the wire seams supply
+//! and delegate to the sibling demographic domain modules. Party / relationship
+//! ids parse through the shared BASE decoder in [`crate::versioning`].
 
 #![expect(
     clippy::disallowed_types,
@@ -53,8 +50,7 @@ fn no_party_data() -> StatusError {
 }
 
 /// The [`PartyKind`] a commit envelope routes to, read off the RM `PARTY`
-/// subtype it carries (`i_party.adoc`: parties are addressed by their
-/// concrete RM type).
+/// subtype it carries: parties are addressed by their concrete RM type.
 ///
 /// Total and infallible: `PARTY` is a closed subtype set in the generated RM,
 /// so every value names exactly one resource family. [`PartyKind`] is OUR
@@ -109,10 +105,10 @@ fn ensure_full_ovid_if_match(
     }
 }
 
-/// The [`Committal`] an SM `UPDATE_VERSION` envelope carries: its
-/// `UPDATE_AUDIT` attributes plus its VERSION `lifecycle_state`, so an
-/// SM-routed demographic commit honours the same two halves the wire's
-/// committal headers do (ITS-REST overview `Requests_and_responses.md`
+/// The [`Committal`] an `UPDATE_VERSION` envelope carries: its `UPDATE_AUDIT`
+/// attributes plus its VERSION `lifecycle_state`, so a typed demographic commit
+/// honours the same two halves the wire's committal headers do (ITS-REST
+/// overview `Requests_and_responses.md`
 /// §"openehr-version and openehr-audit-details"; RM common master06 §Version
 /// Lifecycle). An empty code means the caller stated none, leaving the
 /// operation default.
@@ -163,15 +159,14 @@ impl FerroEhrService {
         Ok(())
     }
 
-    // ── I_DEMOGRAPHIC_SERVICE + I_PARTY (the SM core) ───────────────────────
+    // ── typed party operations ──────────────────────────────────────────────
 
-    /// `create_party` (`i_demographic_service.adoc`): commit the first version
+    /// Commit the first version
     /// of a new PARTY.
     ///
     /// # Errors
     /// - [`StatusError`] `content_invalid` — the payload `_type` is absent or not a
-    ///   demographic party type (AGENT/GROUP/ORGANISATION/PERSON/ROLE),
-    ///   `i_party.adoc`.
+    ///   demographic party type (AGENT/GROUP/ORGANISATION/PERSON/ROLE).
     /// - [`StatusError`] `content_invalid` — the body fails RM validation for the
     ///   resolved party kind (`validate::party_check`).
     /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — the
@@ -240,7 +235,7 @@ impl FerroEhrService {
         }
     }
 
-    /// `get_party` (`i_party.adoc`): the current version's body.
+    /// The current version's body.
     ///
     /// # Errors
     /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party with
@@ -263,7 +258,7 @@ impl FerroEhrService {
         Ok(resp.body)
     }
 
-    /// `get_party_at_time` (`i_party.adoc`): the Version of a Party current at
+    /// The Version of a Party current at
     /// `a_time` (an extended-ISO-8601 datetime; the timezone is optional and
     /// its absence means the server's local one — `crate::service::datetime`).
     /// A deleted version at that instant reads `Null`.
@@ -287,7 +282,7 @@ impl FerroEhrService {
         Ok(resp.body)
     }
 
-    /// `get_party_at_version` (`i_party.adoc`): the `ORIGINAL_VERSION` named by
+    /// The `ORIGINAL_VERSION` named by
     /// a full party `OBJECT_VERSION_ID`.
     ///
     /// # Errors
@@ -307,7 +302,7 @@ impl FerroEhrService {
         Ok(self.party_version(vo_id, tree).await?)
     }
 
-    /// `update_party` (`i_party.adoc`): commit a new version of an existing
+    /// Commit a new version of an existing
     /// party; returns the new version's `OBJECT_VERSION_ID`.
     ///
     /// # Errors
@@ -343,10 +338,10 @@ impl FerroEhrService {
         Ok(version_uid(resp))
     }
 
-    /// `delete_party` (`i_party.adoc`): logically delete the party's current
+    /// Logically delete the party's current
     /// version (post `not has_party`); returns the deleted version's
-    /// `OBJECT_VERSION_ID`. The SM `delete_party` has no version argument —
-    /// the current version is deleted unconditionally.
+    /// `OBJECT_VERSION_ID`. The call takes no version argument — the current
+    /// version is deleted unconditionally.
     ///
     /// # Errors
     /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party
@@ -354,8 +349,7 @@ impl FerroEhrService {
     /// - [`StatusError`] mapped from `400` — the party is already deleted.
     /// - [`StatusError`] on a storage/database fault during the delete transaction.
     pub async fn delete_party(&self, a_versioned_party_id: VoId) -> Result<String, StatusError> {
-        // The SM `delete_party` has no version argument — delete the current
-        // version unconditionally.
+        // No version argument: delete the current version unconditionally.
         let kind = self.party_kind_at(a_versioned_party_id).await?;
         let resp = self
             .delete_party_version(kind, a_versioned_party_id, None, None)
@@ -755,9 +749,9 @@ impl FerroEhrService {
 }
 
 impl FerroEhrService {
-    // ── I_PARTY_RELATIONSHIP + create factory (the SM core) ─────────────────
+    // ── typed relationship operations ───────────────────────────────────────
 
-    /// `create_party_relationship` (`i_demographic_service.adoc`): commit the
+    /// Commit the
     /// first version of a new `PARTY_RELATIONSHIP`.
     ///
     /// # Errors
@@ -803,7 +797,7 @@ impl FerroEhrService {
         }
     }
 
-    /// `get_party_relationship` (`i_party_relationship.adoc`): the current
+    /// The current
     /// version's body.
     ///
     /// # Errors
@@ -827,7 +821,7 @@ impl FerroEhrService {
         Ok(resp.body)
     }
 
-    /// `get_party_relationship_at_time` (`i_party_relationship.adoc`): the
+    /// The
     /// Version current at `a_time`. A deleted version at that instant reads
     /// `Null`.
     ///
@@ -849,7 +843,7 @@ impl FerroEhrService {
         Ok(resp.body)
     }
 
-    /// `get_party_relationship_at_version` (`i_party_relationship.adoc`): the
+    /// The
     /// `ORIGINAL_VERSION` named by a full relationship `OBJECT_VERSION_ID`.
     ///
     /// # Errors
@@ -867,7 +861,7 @@ impl FerroEhrService {
         Ok(self.relationship_version(vo_id, tree).await?)
     }
 
-    /// `update_party_relationship` (`i_party_relationship.adoc`): commit a new
+    /// Commit a new
     /// relationship version; returns the new version's `OBJECT_VERSION_ID`.
     ///
     /// # Errors
@@ -899,10 +893,10 @@ impl FerroEhrService {
         Ok(version_uid(resp))
     }
 
-    /// `delete_party_relationship` (`i_party_relationship.adoc`): logically
+    /// Logically
     /// delete the relationship's current version; returns the deleted version's
-    /// `OBJECT_VERSION_ID`. The SM `delete_party_relationship` has no version
-    /// argument — the current version is deleted unconditionally.
+    /// `OBJECT_VERSION_ID`. The call takes no version argument — the current
+    /// version is deleted unconditionally.
     ///
     /// # Errors
     /// - [`StatusError`] `versioned_object_does_not_exist` — no relationship with
@@ -913,8 +907,8 @@ impl FerroEhrService {
         &self,
         a_versioned_party_rel_id: VoId,
     ) -> Result<String, StatusError> {
-        // The SM `delete_party_relationship` has no version argument — resolve
-        // the current version once and delete it unconditionally.
+        // No version argument: resolve the current version once and delete it
+        // unconditionally.
         let current = self
             .relationship_current(a_versioned_party_rel_id)
             .await?

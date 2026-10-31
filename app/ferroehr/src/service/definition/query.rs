@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_DEFINITION_QUERY` (`i_definition_query.adoc`; `master04` §Registered
-//! Queries, §Query Formalism) + `QUERY_DESCRIPTOR` (`query_descriptor.adoc`),
-//! and the stored-query CRUD it owns (on the `stored_query` table).
+//! Query registration and the stored-query CRUD it owns (on the `stored_query`
+//! table), with the [`QueryDescriptor`] it answers in.
 //!
-//! DEFINITION owns query *registration* (`master04` §Registered Queries); the
+//! DEFINITION owns query *registration*; the
 //! Query service only *resolves + executes* a stored query, so the stored-query
 //! store lives here, keyed by a qualified name (`reverse_domain_name ::
 //! semantic_id`) and a semantic version.
@@ -90,13 +89,13 @@ impl TerminologyExpander for StoreTimeTerminology {
     }
 }
 
-// ── SM Definitions native API (I_DEFINITION_QUERY) — the catalog contract ────
+// ── the native registered-query calls ───────────────────────────────────────
 
 impl FerroEhrService {
     /// `has_query` — true if a query with the qualified name `a_query_name` is
     /// registered (the `"misc"` namespace is assumed when none is supplied; a
-    /// three-part name's formalism segment is lifted out per `master04`
-    /// §Registered Queries). Identity is case-insensitive (BASE
+    /// three-part name's formalism segment is lifted out). Identity is
+    /// case-insensitive (BASE
     /// master05 §Composite Identifiers and Case).
     ///
     /// # Errors
@@ -112,7 +111,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// Never — the `Result` shape mirrors the SM catalog; validity is reported
+    /// Never — the `Result` shape matches the other calls; validity is reported
     /// in the `Ok` boolean.
     #[expect(
         clippy::unused_self,
@@ -147,12 +146,10 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// `store_query_set (a_query_set_name: String [0..1]): UUID` — "Register
-    /// a query set. TODO: determine details."
+    /// Register a query set: not implemented.
     ///
-    /// NOTE: an explicit spec TODO with no defined semantics
-    /// (`i_definition_query.adoc`) — `NotImplemented` (→ `501`) until the
-    /// spec defines it.
+    /// No openEHR spec defines a query set, so the call answers
+    /// `NotImplemented` (→ `501`).
     ///
     /// # Errors
     ///
@@ -207,8 +204,8 @@ impl FerroEhrService {
     }
 
     /// `delete_query` (Pre `has_query` / Post `query_deleted`) — delete every
-    /// version of the query with qualified name `a_query_name` (the SM keys
-    /// deletion by *name*). Identity is case-insensitive.
+    /// version of the query with qualified name `a_query_name` (deletion is
+    /// keyed by *name*). Identity is case-insensitive.
     ///
     /// # Errors
     ///
@@ -256,11 +253,8 @@ impl FerroEhrService {
     /// when absent. A three-part `<ns>::<formalism>::<name>` name lifts its
     /// formalism out: the store key is the two-part `<ns>::<name>`
     /// and the name-borne formalism, when present, is the effective formalism —
-    /// otherwise `a_type` is (`master04` §Query Formalism).
-    ///
-    /// NOTE (spec naming): the SM precondition names
-    /// `is_valid_query` though the function is `valid_query`; we enforce
-    /// `valid_query` and reject an invalid query as `invalid_query` (`422`).
+    /// otherwise `a_type` is. An invalid query is refused as `invalid_query`
+    /// (`422`).
     async fn register_query(
         &self,
         text: String,
@@ -381,7 +375,7 @@ impl FerroEhrService {
     ///
     /// NOTE: no openEHR spec governs this admin surface (the ITS-REST Admin API
     /// defines only EHR deletes) — our own design/extension. It complements the
-    /// SM [`Self::delete_query`] (which deletes every version by name) with a
+    /// native [`Self::delete_query`] (which deletes every version by name) with a
     /// single-version delete, addressed exactly as
     /// `DELETE /admin/query/{qualified_name}/{version}`.
     pub(crate) async fn delete_stored_query_version(
@@ -481,7 +475,7 @@ impl FerroEhrService {
         // case-insensitively (ITS-REST query Qualified_query_name §NOTE: "The
         // `query-name` value must not be `aql` (case-insensitive), as that is
         // a reserved name") — it would collide with the ad-hoc
-        // `GET /query/aql` route. Decomposed via the master04 schemes so a
+        // `GET /query/aql` route. Decomposed via the name schemes so a
         // three-part name's *formalism* segment (`ns::aql::name`) is never
         // mistaken for the query-name.
         if parse_qualified_name(qualified_name)
@@ -496,9 +490,9 @@ impl FerroEhrService {
 
         self.analyse_stored_aql(&query_text).await?;
 
-        // ONE canonical key for every surface (SM master04 §Registered Queries:
-        // "If no namespace is supplied, the namespace \"misc\" is assumed"), so
-        // the same identifier never resolves on one surface and 404s on another.
+        // ONE canonical key for every surface (a bare name takes the `misc`
+        // namespace), so the same identifier never resolves on one surface and
+        // 404s on another.
         let qualified = parse_qualified_name(qualified_name).qualified();
         let (rdn, semantic) = split_qualified(&qualified);
         let Some(v) = version else {
@@ -653,7 +647,7 @@ impl FerroEhrService {
         qualified_name: &str,
         version: Option<&str>,
     ) -> Result<Value, ServiceError> {
-        // The same canonical key as the store path (SM master04 misc default).
+        // The same canonical key as the store path (the `misc` default).
         let qualified = parse_qualified_name(qualified_name).qualified();
         let (rdn, semantic) = split_qualified(&qualified);
         let row = match version {
@@ -710,8 +704,7 @@ impl FerroEhrService {
         name_pattern: &str,
     ) -> Result<Vec<Value>, ServiceError> {
         // A namespace-less pattern also matches its `misc::`-assumed
-        // composition (SM master04 §Registered Queries: "If no namespace is
-        // supplied, the namespace \"misc\" is assumed") — the canonical key
+        // composition — the canonical key
         // every surface stores under.
         let rows = sqlx::query(
             "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
@@ -760,10 +753,10 @@ fn stored_query_json(row: &PgRow) -> Result<Value, ServiceError> {
     }))
 }
 
-/// Build a [`QueryDescriptor`] from a `stored_query` row (per
-/// `query_descriptor.adoc`). The qualified name is `rdn::semantic` (or the bare
-/// `semantic` when the domain is empty); `formalism` is the `query_type`
-/// lowercased (`QUERY_DESCRIPTOR` spells AQL `"aql"`).
+/// Build a [`QueryDescriptor`] from a `stored_query` row. The qualified name is
+/// `rdn::semantic` (or the bare `semantic` when the domain is empty);
+/// `formalism` is the `query_type` lowercased (the descriptor spells AQL
+/// `"aql"`).
 ///
 /// Every projected column is `NOT NULL` (`clinical/0006_definitions.sql`
 /// §`stored_query`), so a decode failure is a genuine server fault: surface it
@@ -793,10 +786,10 @@ fn descriptor_from_row(row: &PgRow) -> Result<QueryDescriptor, ServiceError> {
     })
 }
 
-// ── qualified names (master04 §Registered Queries) ────────────────────────────
+// ── qualified names ──────────────────────────────────────────────────────────
 
-/// A qualified query name decomposed per `master04-definition_package.adoc`
-/// §Registered Queries: `<namespace>::<query-name>` or the three-part
+/// A qualified query name decomposed as ITS-REST `Qualified_query_name.md`
+/// spells it, `<namespace>::<query-name>`, or the three-part
 /// `<namespace>::<formalism>::<query-name>`.
 struct QualifiedName {
     /// The namespace segment (`"misc"` when none was supplied — §Registered
@@ -819,8 +812,8 @@ impl QualifiedName {
     }
 }
 
-/// Decompose a (possibly unqualified) query name per `master04` §Registered
-/// Queries: apply the `"misc"` default namespace, then recognise the two-part
+/// Decompose a (possibly unqualified) query name: apply the `"misc"` default
+/// namespace, then recognise the two-part
 /// `<ns>::<name>` and three-part `<ns>::<formalism>::<name>` schemes. A
 /// three-part name's middle segment is lifted out as the formalism (never left
 /// folded into the name); a name of four or more segments keeps the
@@ -846,9 +839,8 @@ fn parse_qualified_name(raw: &str) -> QualifiedName {
     }
 }
 
-/// Apply the SM `"misc"` default namespace: a name with no `::` becomes
-/// `misc::<name>` (`master04` §Registered Queries: "If no namespace is
-/// supplied, the namespace `"misc"` is assumed").
+/// Apply the `"misc"` default namespace: a name with no `::` becomes
+/// `misc::<name>`. No openEHR wire spec names a default: our own design.
 fn qualify(name: &str) -> String {
     if name.contains("::") {
         name.to_owned()
@@ -858,7 +850,7 @@ fn qualify(name: &str) -> String {
 }
 
 /// Split an already two-part-canonical query name into `(reverse_domain_name,
-/// semantic_id)` on the first `::`, so the SM and wire paths key `stored_query`
+/// semantic_id)` on the first `::`, so the native and wire paths key `stored_query`
 /// rows identically. Callers pass the [`QualifiedName::qualified`] form, which
 /// is always two-part, so the formalism is never captured in `semantic_id`.
 fn split_qualified(qualified_name: &str) -> (&str, &str) {
@@ -867,23 +859,21 @@ fn split_qualified(qualified_name: &str) -> (&str, &str) {
         .unwrap_or(("", qualified_name))
 }
 
-// ── formalism (master04 §Query Formalism) ─────────────────────────────────────
+// ── formalism ────────────────────────────────────────────────────────────────
 
 /// True if `a_query_text` is a valid instance of the formalism `a_type`.
 ///
-/// Only AQL major-version 1 is a known formalism (`valid_query`; `master04`
-/// §Query Formalism); any other formalism → `false` (the SM sanctions
-/// "any other string value", which we reject typed since the store only holds
-/// AQL). AQL validity is a successful `openehr_query` parse.
+/// Only AQL major-version 1 is a known formalism (`valid_query`); any other
+/// formalism → `false`, since the store only holds AQL. AQL validity is a
+/// successful `openehr_query` parse.
 fn valid_query_text(text: &str, a_type: &str) -> bool {
     is_aql_v1(a_type) && openehr_query::parser::parse_str(text).is_ok()
 }
 
-/// Parse a formalism name per `master04` §Query Formalism (case-insensitive
-/// name, optional `::version`, major `"1"` when absent) and report whether it
-/// names AQL major-version 1 — the only formalism the build can validate +
-/// store (`parameters/query/query_type.yaml`; the SM sanctions "any other
-/// string value", which we reject typed). Shared with the wire seam.
+/// Parse a formalism name (case-insensitive name, optional `::version`, major
+/// `"1"` when absent) and report whether it names AQL major-version 1 — the
+/// only formalism the build can validate + store
+/// (`parameters/query/query_type.yaml`). Shared with the wire seam.
 pub(super) fn is_aql_v1(a_type: &str) -> bool {
     let (name, version) = match a_type.split_once("::") {
         Some((n, v)) => (n, Some(v)),
@@ -928,7 +918,7 @@ mod tests {
 
     #[test]
     fn qualify_applies_misc_default() {
-        // master04 §Registered Queries: no namespace ⇒ "misc".
+        // No namespace ⇒ "misc".
         assert_eq!(qualify("all_over_50"), "misc::all_over_50");
         assert_eq!(qualify("ehr::x"), "ehr::x");
         assert_eq!(qualify("ns::aql::x"), "ns::aql::x");
@@ -936,7 +926,7 @@ mod tests {
 
     #[test]
     fn three_part_name_lifts_the_formalism_out_of_the_name() {
-        // master04 §Registered Queries scheme 2: <ns>::<formalism>::<name>.
+        // The three-part scheme: <ns>::<formalism>::<name>.
         // The formalism segment must NOT be folded into the stored name
         // — it becomes the descriptor formalism and the store key is
         // the canonical two-part <ns>::<name>.
@@ -966,7 +956,7 @@ mod tests {
 
     #[test]
     fn formalism_case_and_version_equivalence() {
-        // "AQL" ≡ "aql" ≡ "AQL::1" (master04 §Query Formalism).
+        // "AQL" ≡ "aql" ≡ "AQL::1".
         assert!(is_aql_v1("AQL"));
         assert!(is_aql_v1("aql"));
         assert!(is_aql_v1("AQL::1"));

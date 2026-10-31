@@ -114,8 +114,8 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
     assert_eq!(att["change_type"]["defining_code"]["code_string"], "666");
 
     // (2) A later 666-only CONTRIBUTION attesting that same version. Its
-    // member states a lifecycle_state like every other member (SM master03
-    // §Version Update Semantics: "must be supplied in all cases").
+    // member states a lifecycle_state like every other member
+    // (`UpdateVersion.yaml` lists it under `required`).
     let attest_contribution = json!({
         "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
@@ -311,8 +311,7 @@ async fn attestation_error_cases() {
     );
 
     // Attestation of a non-existent version → precondition violation, not an
-    // existence error: SM I_EHR_CONTRIBUTION.commit_contribution declares only
-    // `ehr_id_does_not_exist` (SM `i_ehr_contribution.adoc`) — a missing
+    // existence error: a missing
     // body-referenced target is invalid committed content (ITS-REST
     // `400_CONTRIBUTION`: the modification does not match a stored object).
     let ghost = "00000000-0000-7000-8000-000000000000::ferroehr.local::1";
@@ -343,8 +342,8 @@ async fn attestation_error_cases() {
 }
 
 /// A `666|attestation|` member states its `lifecycle_state` like every other
-/// member (#3590). SM `master03-common_package.adoc` §Version Update Semantics:
-/// "The `lifecycle_state` must be supplied in all cases". A member without
+/// member (#3590): ITS-REST `UpdateVersion.yaml` lists `lifecycle_state` under
+/// `required`. A member without
 /// one is the 400; a stated code outside the openEHR `version_lifecycle_state`
 /// group is the 422 every member's out-of-group state gets; the twin stating
 /// `532|complete|` commits the attestation.
@@ -657,16 +656,14 @@ fn ehr_status(queryable: bool) -> Value {
     })
 }
 
-/// SM `I_EHR_CONTRIBUTION.list_contributions` / `contribution_count` +
-/// `I_EHR_SERVICE.get_ehr` → `EHR_SUMMARY`, against a real PG 18. Native-API
-/// calls only (no ITS-REST route); see `i_ehr_contribution.adoc` +
-/// `ehr_summary.adoc`.
+/// `list_contributions` / `contribution_count` + `get_ehr` → `EHR_SUMMARY`,
+/// against a real PG 18. Native-API calls only (no ITS-REST route).
 #[tokio::test]
 async fn contribution_listing_count_and_ehr_summary() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // Unknown EHR → NotFound (SM `ehr_id_does_not_exist`, carried granularly
+    // Unknown EHR → NotFound (`ehr_id_does_not_exist`, carried granularly
     // through the ServiceError round-trip) for every native call.
     let ghost = "00000000-0000-7000-8000-0000000000ff";
     assert!(matches!(
@@ -805,7 +802,7 @@ async fn ehr_contribution_list_page_extension() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // Unknown EHR → NotFound (404, SM `ehr_id_does_not_exist`), like the
+    // Unknown EHR → NotFound (404, `ehr_id_does_not_exist`), like the
     // sibling EHR reads.
     let ghost = "00000000-0000-7000-8000-0000000000ee";
     assert!(matches!(
@@ -894,8 +891,8 @@ async fn ehr_contribution_list_page_extension() {
     );
 }
 
-/// The SM `Terminology_code` spelling of `UPDATE_VERSION.lifecycle_state`
-/// (`UML/classes/update_version.adoc`: `{terminology_id, code_string}`), which
+/// The `Terminology_code` spelling of `UPDATE_VERSION.lifecycle_state`
+/// (`{terminology_id, code_string}`), which
 /// the raw-body CONTRIBUTION lane accepts beside the `DV_CODED_TEXT` the
 /// released ITS-REST `UpdateVersion.yaml` declares.
 fn lifecycle(code: &str) -> Value {
@@ -1096,9 +1093,9 @@ async fn contribution_honors_the_five_lifecycle_states() {
 /// RM common `master06-change_control_package.adoc` §Committal and Audits: the
 /// CONTRIBUTION audit's `system_id`/`committer`/`time_committed` "should be
 /// copied" into each version's `commit_audit`, and `time_committed` "should
-/// therefore be computed on the server". SM `UML/classes/update_version.adoc`
-/// gives every member its own mandatory audit, whose `committer` is 1..1
-/// (`update_audit.adoc`), so a stated member committer is kept. ITS-REST
+/// therefore be computed on the server". ITS-REST `UpdateVersion.yaml` gives
+/// every member its own mandatory audit, whose `committer` is required
+/// (`UpdateAudit.yaml`), so a stated member committer is kept. ITS-REST
 /// `schemas/common/UpdateAudit.yaml`: an omitted `system_id` is the server's,
 /// which is also what the CONTRIBUTION audit carries when it states none.
 #[tokio::test]
@@ -1235,9 +1232,9 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
 /// A member `commit_audit` without `committer` is refused with the 400 (#3550),
 /// never filled from the CONTRIBUTION audit: ITS-REST
 /// `schemas/common/UpdateAudit.yaml` `required: [change_type, committer]` types
-/// every `versions[i].commit_audit` (`schemas/ehr/UpdateVersion.yaml`), SM
-/// `openehr_platform/master03-common_package.adoc` §Version Update Semantics
-/// names only `time_committed` and `system_id` as server-generated, so the
+/// every `versions[i].commit_audit` (`schemas/ehr/UpdateVersion.yaml`), and
+/// `UpdateAudit.yaml` leaves only `time_committed` and `system_id` to the
+/// server, so the
 /// body is the "syntactically invalid … content" of
 /// `responses/400_CONTRIBUTION.yaml`. A `null` committer is the same absence;
 /// the twin stating one commits.
@@ -2087,10 +2084,8 @@ async fn incomplete_relaxes_the_folder_kind_too() {
     );
 }
 
-/// `UPDATE_VERSION.lifecycle_state` is REQUIRED on the CONTRIBUTION wire — SM
-/// `master03-common_package.adoc` §Version Update Semantics ("The
-/// `lifecycle_state` must be supplied in all cases") + the released
-/// `UpdateVersion` schema's `required` list. A member that omits it is refused
+/// `UPDATE_VERSION.lifecycle_state` is REQUIRED on the CONTRIBUTION wire — the
+/// released `UpdateVersion` schema's `required` list. A member that omits it is refused
 /// as the shape failure it is; the twin that states it commits.
 #[tokio::test]
 async fn contribution_member_without_lifecycle_state_is_refused() {

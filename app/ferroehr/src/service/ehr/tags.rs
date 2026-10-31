@@ -17,7 +17,7 @@
 //! headers (identity: "uniquely identified by their `key` and `target_path`
 //! pair"; container vs specific-VERSION targets are distinct). `PUT …/tags`
 //! is a full-collection replace of the ADDRESSED collection — the container's
-//! or one VERSION's, never both. Not an SM-EHR interface. The `item_tag`
+//! or one VERSION's, never both. The `item_tag`
 //! table SQL is spec-silent (storage seam — our own design).
 
 use openehr_base::prelude::{

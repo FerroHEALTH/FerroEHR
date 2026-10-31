@@ -1431,8 +1431,8 @@ fn order_by_ehr_id_uses_the_raw_uuid_column() {
     );
 }
 
-/// The population gate (SM `I_QUERY_SERVICE`: full-population queries run over
-/// `is_queryable = true` EHRs) is emitted ONCE per join-connected component —
+/// The population gate (full-population queries run over `is_queryable =
+/// true` EHRs) is emitted ONCE per join-connected component —
 /// a VO root linked to its EHR alias is covered by the alias's gate — and as a
 /// direct `ehr.is_queryable` column filter, NOT a per-query `EXISTS`
 /// probe over every current `EHR_STATUS` root.

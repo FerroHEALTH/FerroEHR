@@ -282,8 +282,7 @@ fn archive_dir() -> String {
 /// under `stable` there, and still served under `development`.
 ///
 /// Dump/load is the one path that reconstructs a version in a database that
-/// never saw the commit (SM `I_ADMIN_DUMP_LOAD.export_ehrs`/`load_ehrs`,
-/// `docs/specs/openehr/SM/docs/UML/classes/i_admin_dump_load.adoc`), so it is
+/// never saw the commit (`export_ehrs`/`load_ehrs`), so it is
 /// where an inherited `stable_compatible = true` would be a claim nothing made:
 /// the loaded rows must never read as compatible with a generation set that
 /// cannot express them.
@@ -397,8 +396,8 @@ async fn dump_and_load_keep_a_released_surface_body_readable_under_stable() {
 
 // ── AQL: whole-object projections take the same gate; leaf projections do not ─
 
-/// Scope a query to one EHR (`i_query_service.adoc` `ehr_ids: List<UUID>`; the
-/// single-EHR REST scope is the one-element case).
+/// Scope a query to one EHR (the `ehr_ids` list; the single-EHR REST scope is
+/// the one-element case).
 fn ehr_scope(ehr_id: EhrId) -> AqlQueryRequest {
     AqlQueryRequest {
         ehr_ids: vec![ehr_id.to_string()],

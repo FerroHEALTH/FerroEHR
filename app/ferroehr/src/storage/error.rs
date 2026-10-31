@@ -103,13 +103,12 @@ pub enum StorageError {
 }
 
 impl From<StorageError> for crate::service::status::StatusError {
-    /// Bridge a storage failure to the SM call-status model. Constraint/
-    /// concurrency detail is preserved via `classify_sqlx` for the raw
-    /// `sqlx` case; the typed conflicts keep their specific `409` meaning; codec
-    /// faults are genuine server faults (`exception` → `500`). No openEHR spec
-    /// governs the persistence mechanism; the
-    /// HTTP mapping the resulting status drives is the ITS-REST-governed one
-    /// (overview §HTTP status codes).
+    /// Bridge a storage failure to the call-status model. Constraint/
+    /// concurrency detail is preserved via `classify_sqlx` for the raw `sqlx`
+    /// case; the typed conflicts keep their specific `409` meaning; codec faults
+    /// are genuine server faults (`exception` → `500`). No openEHR spec governs
+    /// the persistence mechanism; the HTTP mapping the resulting status drives
+    /// is the ITS-REST-governed one (overview §HTTP status codes).
     fn from(e: StorageError) -> Self {
         use crate::service::status::{ServiceStatus, StatusError};
         match e {
@@ -150,7 +149,7 @@ impl From<StorageError> for crate::service::status::StatusError {
 }
 
 impl From<crate::db::acquire::AcquireError> for crate::service::status::StatusError {
-    /// Bridges a failure to obtain a connection to the SM call-status model:
+    /// Bridges a failure to obtain a connection to the call-status model:
     /// `service_overloaded` (→ `503` plus `Retry-After`), through
     /// `classify_acquire`, with the pool's error kept as the source.
     fn from(e: crate::db::acquire::AcquireError) -> Self {
@@ -196,13 +195,12 @@ const CANCELLED_MESSAGE: &str = "the database cancelled the request's statement;
 /// full detail goes to `tracing` at the bridge below.
 const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec error";
 
-/// Classify a raw [`sqlx::Error`] at the storage boundary into the SM call
-/// status it should surface, emitting **one** structured trace record so the
-/// SQLSTATE code + constraint name are never lost. No openEHR spec governs the
+/// Classify a raw [`sqlx::Error`] at the storage boundary into the call status
+/// it should surface, emitting **one** structured trace record so the SQLSTATE
+/// code + constraint name are never lost. No openEHR spec governs the
 /// persistence mechanism or server-overload behaviour — this is our own design;
 /// the resulting HTTP status codes are the ITS-REST-governed ones (overview
-/// §HTTP status codes: `409 Conflict`; RFC 9110 §15.6.4: `503 Service
-/// Unavailable`).
+/// §HTTP status codes: `409 Conflict`; RFC 9110 §15.6.4: `503`).
 ///
 /// No driver string ever reaches a client body: every branch returns one of the
 /// curated constants above, and the SQLSTATE, constraint, table and
@@ -373,7 +371,7 @@ fn cancelled(e: &sqlx::Error) -> Option<crate::service::status::StatusError> {
     ))
 }
 
-/// Classifies a failure to obtain a pooled connection as the SM call status it
+/// Classifies a failure to obtain a pooled connection as the call status it
 /// surfaces: always `ServiceStatus::ServiceOverloaded` (`503` plus
 /// `Retry-After`), because no statement of the request ran.
 ///

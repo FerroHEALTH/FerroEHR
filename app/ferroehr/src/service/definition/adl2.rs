@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_DEFINITION_ADL2` (`i_definition_adl2.adoc`): ADL2 artefacts (archetype /
+//! The ADL2 definitions: ADL2 artefacts (archetype /
 //! template / `operational_template`) keyed by `ARCHETYPE_HRID`, on the
 //! `adl2_artefact` store.
 //!
@@ -9,8 +9,8 @@
 //! phase 2 → specialisation phase 2 against the flat parent). The engine needs
 //! an [`ArchetypeRepository`] to resolve specialisation parents +
 //! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds one by
-//! parsing every stored ADL2 source (the registry is low-volume — SM
-//! `I_DEFINITION_ADL2` is an admin surface — so parse-on-demand is cheap; the
+//! parsing every stored ADL2 source (the registry is low-volume — an admin
+//! surface — so parse-on-demand is cheap; the
 //! `openehr-adl` phases degrade gracefully when a parent is unresolved).
 
 #![expect(
@@ -93,7 +93,7 @@ impl TerminologyResolver for AdlTerminologyResolver {
     }
 }
 
-// ── SM Definitions native API (I_DEFINITION_ADL2) — the catalog contract ─────
+// ── the native ADL2 definition calls ────────────────────────────────────────
 
 impl FerroEhrService {
     /// `has_artefact` — true if an ADL2 artefact with `ARCHETYPE_HRID` `an_id`
@@ -114,7 +114,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// Never — the `Result` shape mirrors the SM catalog; validity is reported
+    /// Never — the `Result` shape matches the other calls; validity is reported
     /// in the `Ok` boolean.
     #[expect(
         clippy::unused_self,
@@ -135,9 +135,7 @@ impl FerroEhrService {
     ///
     /// An existing artefact with the same `ARCHETYPE_HRID` is a conflict, never
     /// replaced: the released REST API answers `409` (ITS-REST definition OAS,
-    /// `POST /definition/template/adl2` → `409_template_already_exists`), and
-    /// the wire is the API oracle where the SM's `i_definition_adl2.adoc`
-    /// wording ("replace it") differs.
+    /// `POST /definition/template/adl2` → `409_template_already_exists`).
     ///
     /// # Errors
     ///
@@ -414,7 +412,7 @@ impl FerroEhrService {
     }
 
     /// Store a validated ADL2 artefact. With `replace`, any case-variant of the
-    /// same HRID is removed first (SM `upload_artefact` replace semantics); the
+    /// same HRID is removed first (the native `upload_artefact` replaces); the
     /// insert is then verbatim (BASE master05 §Composite Identifiers and Case).
     ///
     /// The artefact's declared `specialize` parent travels with it into
@@ -477,8 +475,8 @@ impl FerroEhrService {
 
     /// The wire upload path (`POST /definition/template/adl2`): validate through
     /// the engine, reject a duplicate HRID with a `409` (the REST contract
-    /// declares `409_template_already_exists.yaml`, diverging from the SM native
-    /// replace), then store. Returns the stored `ARCHETYPE_HRID`.
+    /// declares `409_template_already_exists.yaml`, unlike the native replace),
+    /// then store. Returns the stored `ARCHETYPE_HRID`.
     ///
     /// # Errors
     ///

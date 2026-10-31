@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_DIRECTORY` (`i_ehr_directory.adoc`) — the DIRECTORY (FOLDER)
-//! surface, one hierarchy per EHR through the ITS-REST/SM `/directory`
-//! binding.
+//! The DIRECTORY (FOLDER) surface, one hierarchy per EHR through the ITS-REST
+//! `/directory` binding.
 //!
 //! Spec: RM ehr `master04-ehr_package.adoc` §Folders + the EHR class
 //! invariants `Directory_in_folders` (`EHR.directory = folders.item(1)`) /
@@ -17,9 +16,8 @@
 //! additional `EHR.folders` hierarchies are committable through a CONTRIBUTION,
 //! the only committal path the release describes for them (RM ehr
 //! `master04-ehr_package.adoc` §Folders declares `EHR.folders`
-//! `List<VERSIONED_FOLDER>` with `EHR.directory = folders.item(1)`, while
-//! `SM/docs/UML/classes/i_ehr_directory.adoc` keys every operation on the one
-//! directory). No openEHR spec governs a multi-hierarchy directory WRITE surface.
+//! `List<VERSIONED_FOLDER>` with `EHR.directory = folders.item(1)`). No openEHR
+//! spec governs a multi-hierarchy directory WRITE surface.
 
 #![expect(
     clippy::disallowed_types,
@@ -479,8 +477,9 @@ impl FerroEhrService {
 }
 
 /// Navigate a FOLDER tree to a sub-folder by name path (`a/b/c`), matching
-/// each segment against child `folders[].name.value` (SM `has_path`:
-/// slash-separated Folder names). Returns the sub-folder JSON.
+/// each segment against child `folders[].name.value` (ITS-REST
+/// `parameters/query/path.yaml`: slash-separated folder names). Returns the
+/// sub-folder JSON.
 fn select_subfolder(folder: &Value, path: &str) -> Option<Value> {
     let mut current = folder;
     for segment in path.split('/').filter(|s| !s.is_empty()) {
@@ -495,10 +494,10 @@ fn select_subfolder(folder: &Value, path: &str) -> Option<Value> {
     Some(current.clone())
 }
 
-// ── The SM I_EHR_DIRECTORY call surface ───────────────────────────────────────
+// ── The DIRECTORY call surface ────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// SM `I_EHR_DIRECTORY.has_directory` — whether the EHR has a directory.
+    /// Whether the EHR has a directory.
     ///
     /// # Errors
     /// [`StatusError`] if the directory-slot resolution fails.
@@ -508,7 +507,7 @@ impl FerroEhrService {
         Ok(self.directory_vo_opt(an_ehr_id).await?.is_some())
     }
 
-    /// SM `I_EHR_DIRECTORY.has_path` — whether the slash-separated Folder-name
+    /// Whether the slash-separated Folder-name
     /// path resolves in the EHR's current directory.
     ///
     /// # Errors
@@ -522,7 +521,7 @@ impl FerroEhrService {
         }
     }
 
-    /// SM `I_EHR_DIRECTORY.create_directory` — create the EHR's directory,
+    /// Create the EHR's directory,
     /// returning the new version's resource metadata (uid + commit time for
     /// the wire's `ETag`/`Last-Modified`).
     ///
@@ -538,7 +537,7 @@ impl FerroEhrService {
         super::committed_meta(self.commit_new_directory(an_ehr_id, a_dir_struct).await?)
     }
 
-    /// SM `I_EHR_DIRECTORY.get_directory_at_time` — the directory FOLDER
+    /// The directory FOLDER
     /// current at `a_time` (or now), optionally navigated to `a_path`. The
     /// response carries the resource metadata so the wire can emit
     /// `ETag`/`Last-Modified` on reads too (ITS-REST overview §"`ETag` and
@@ -559,7 +558,7 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// SM `I_EHR_DIRECTORY.update_directory` — commit a new directory version,
+    /// Commit a new directory version,
     /// returning the new version's resource metadata (uid + commit time for
     /// the wire's `ETag`/`Last-Modified`).
     ///
@@ -596,7 +595,7 @@ impl FerroEhrService {
         )
     }
 
-    /// SM `I_EHR_DIRECTORY.delete_directory` — logically delete the EHR's
+    /// Logically delete the EHR's
     /// directory (a new `523|deleted|` version, RM common master06 §Logical
     /// Deletion). Returns the committed deleted version's metadata (uid +
     /// commit instant) so the wire 204 carries the weak `ETag`/`Last-Modified`
@@ -661,7 +660,7 @@ impl FerroEhrService {
         Ok(resp)
     }
 
-    /// SM `I_EHR_DIRECTORY.has_directory_version` — whether the named
+    /// Whether the named
     /// directory version exists for this EHR.
     ///
     /// # Errors
@@ -677,7 +676,7 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// SM `I_EHR_DIRECTORY.get_versioned_directory` — the `VERSIONED_FOLDER`
+    /// The `VERSIONED_FOLDER`
     /// container object.
     ///
     /// # Errors

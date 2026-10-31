@@ -39,8 +39,7 @@ use sqlx::{PgPool, Row};
 use crate::fixtures::{change_type, committer_proxy, composition, uid, uv};
 
 /// A wire `UPDATE_ATTESTATION` partial for an attestation committed WITH the
-/// version (`UPDATE_VERSION.attestations`; SM
-/// `UML/classes/update_version.adoc` §Attributes) — the "Signing content at
+/// version (`UPDATE_VERSION.attestations`) — the "Signing content at
 /// committal" case of RM common master06 §Attestation.
 fn update_attestation(reason: &str) -> UpdateAttestation {
     UpdateAttestation {
@@ -701,8 +700,7 @@ async fn creating_system_id_and_signature_survive_a_system_id_change() {
 /// the simple rule of serialising the entire Version object (note that the
 /// signature attribute will be Void at this point)". `signature` is the ONLY
 /// excluded attribute — so the `ORIGINAL_VERSION.attestations` a version
-/// carried at committal (`UPDATE_VERSION.attestations`, SM
-/// `UML/classes/update_version.adoc` §Attributes; master06 §Attestation,
+/// carried at committal (`UPDATE_VERSION.attestations`; master06 §Attestation,
 /// "Signing content at committal") are INSIDE the signed canonical form.
 ///
 /// Asserted both ways: the served version still recomputes its own digest with

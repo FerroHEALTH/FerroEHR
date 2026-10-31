@@ -8,8 +8,7 @@
 //! **No openEHR spec governs this — our own design/extension.** AQL is defined
 //! over the clinical domain alone (QUERY `master03-syntax.adoc` names EHR,
 //! COMPOSITION and the RM structures below them; it has no demographic source),
-//! and the SM publishes no cohort operation, so nothing released describes this
-//! call. What it exists for is the question a research or public-health caller
+//! so nothing released describes this call. What it exists for is the question a research or public-health caller
 //! actually asks — "the blood pressures of everyone in this city" — which today
 //! is answered by handing someone a list of patient identifiers.
 //!

@@ -324,7 +324,7 @@ fn lookup_found(display: &str) -> serde_json::Value {
     })
 }
 
-/// The SM `at_date` reaches `$lookup` as its FHIR `date` input
+/// The `at_date` reaches `$lookup` as its FHIR `date` input
 /// (<https://hl7.org/fhir/R4B/codesystem-operation-lookup.html>).
 #[tokio::test]
 async fn at_date_is_sent_as_the_lookup_date() {
@@ -362,7 +362,7 @@ async fn no_date_is_sent_without_at_date() {
     assert!(p.has_term(SURFACE_SYS, "B", None).await.expect("has_term"));
 }
 
-/// The SM `at_date` reaches `$validate-code` as its FHIR `date` input
+/// The `at_date` reaches `$validate-code` as its FHIR `date` input
 /// (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>).
 #[tokio::test]
 async fn at_date_is_sent_as_the_validate_code_date() {

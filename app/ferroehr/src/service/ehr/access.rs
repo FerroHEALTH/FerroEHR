@@ -139,11 +139,10 @@ impl FerroEhrService {
     /// The EHR's current `EHR_ACCESS` scheme settings, cached per EHR and
     /// returned as the cache's own [`std::sync::Arc`] (the per-request gate
     /// never clones an access list) — the `EhrAccessAdapter` native-API
-    /// extension: the protocol adapter (`ferroehr-rest`) — the out-of-band
-    /// access-decision point (SM `openehr_platform/master02-overview.adoc`)
-    /// — reads the settings through this seam. The SM defines no
-    /// `I_EHR_ACCESS` interface — no openEHR spec governs this adapter, our
-    /// own extension. `None` = default-open (no settings, or a scheme this
+    /// extension: the protocol adapter (`ferroehr-rest`), the access-decision
+    /// point, reads the settings through this seam. No openEHR spec governs
+    /// this adapter, our own extension. `None` = default-open (no settings, or
+    /// a scheme this
     /// server does not understand).
     ///
     /// # Errors

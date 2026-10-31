@@ -4,15 +4,14 @@
 //! The DEFINITION component of the platform crate, behind the ITS-REST
 //! Definition API.
 //!
-//! Our own design; the interface names borrow from the openEHR SM text, kept as
-//! reference and never an oracle.
+//! Our own design.
 //!
 //! One file per interface, each carrying its domain logic **and** its
 //! concrete `FerroEhrService` catalog methods:
 //!
-//! - `adl14` — `I_DEFINITION_ADL14` (`i_definition_adl14.adoc`): ADL 1.4
-//!   source archetypes (keyed by `ARCHETYPE_ID`) + OPTs (keyed by `UUID`).
-//! - `adl2`  — `I_DEFINITION_ADL2` (`i_definition_adl2.adoc`): ADL2 artefacts
+//! - `adl14` — ADL 1.4 source archetypes (keyed by `ARCHETYPE_ID`) + OPTs
+//!   (keyed by `UUID`).
+//! - `adl2`  — ADL2 artefacts
 //!   (keyed by `ARCHETYPE_HRID`).
 //! - `lineage` — the archetype specialisation graph over those artefacts (their
 //!   `specialize` edges), memoised for the AQL archetype predicate.
@@ -20,8 +19,8 @@
 //!   service-only capability, no wire): reads a stored OPT's `opt14` model,
 //!   decomposes it into one 1.4-shaped `v2_4` source per embedded archetype
 //!   root, and runs each through the `openehr_adl::adl14` converter.
-//! - `query` — `I_DEFINITION_QUERY` (`i_definition_query.adoc`) +
-//!   `QUERY_DESCRIPTOR` + the stored-query CRUD. DEFINITION *owns* query
+//! - `query` — query registration + `QueryDescriptor` + the stored-query
+//!   CRUD. DEFINITION *owns* query
 //!   registration (`master04` §Registered Queries); the Query service only
 //!   resolves + executes it, so the stored-query store folds in here.
 //! - `wire`  — the ITS-REST wire-shaped extension methods (rich
@@ -60,8 +59,8 @@ use crate::service::status::{ServiceStatus, StatusError};
 
 use crate::service::error::ServiceError;
 
-/// Apply an SM [`Page`] to an iterator: skip `offset`, take `limit` (`None` ⇒
-/// all — `master02-overview.adoc` §List Handling).
+/// Apply a [`Page`] to an iterator: skip `offset`, take `limit` (`None` ⇒
+/// all).
 pub(super) fn paginate<T>(items: impl Iterator<Item = T>, page: Page) -> Vec<T> {
     let offset = usize::try_from(page.offset()).unwrap_or(usize::MAX);
     let skipped = items.skip(offset);
@@ -102,9 +101,8 @@ mod tests {
     use crate::service::error::ServiceError;
     use crate::service::status::ServiceStatus;
 
-    /// An uncompilable id pattern reports the SM status
-    /// `i_definition_adl14.adoc` §`list_matching_archetypes` declares
-    /// (`.Errors`: `invalid_id_pattern`) and carries the `regex` compile
+    /// An uncompilable id pattern reports `invalid_id_pattern` and carries the
+    /// `regex` compile
     /// failure as a walkable cause
     /// ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)).
     #[test]

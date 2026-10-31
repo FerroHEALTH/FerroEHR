@@ -1279,8 +1279,8 @@ async fn admin_operations_are_fully_documented() {
     require(&op, &path, "DELETE", &["204", "404"]);
     let body = text(&op);
     assert!(
-        body.contains("other versions") && body.contains("survive"),
-        "DELETE {path} must state that the query's other versions survive; has: {body}"
+        body.contains("other versions in place"),
+        "DELETE {path} must state that the query's other versions stay in place; has: {body}"
     );
     assert!(
         body.contains("(name, version)"),

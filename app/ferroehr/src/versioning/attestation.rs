@@ -395,8 +395,8 @@ impl AttestationInput {
     pub(crate) fn decode(partial: &Value) -> Result<Self, ServiceError> {
         let committer = required_committer(Some(partial), "UPDATE_ATTESTATION")?;
         // description: the inherited AUDIT_DETAILS.description (0..1). Both
-        // released spellings are read — the ITS-REST `UDvText` object and the SM
-        // `String [0..1]` (`update_audit.adoc`) — and the object is decoded
+        // spellings are read — the ITS-REST `UDvText` object and a plain
+        // string — and the object is decoded
         // WHOLE: reducing a `DV_CODED_TEXT` to its `value` would drop the
         // `defining_code` of a committed attestation.
         let description = partial
@@ -415,8 +415,8 @@ impl AttestationInput {
     }
 
     /// The same carrier from the native `UPDATE_ATTESTATION`
-    /// (`UPDATE_VERSION.attestations`, SM `UML/classes/update_version.adoc`
-    /// §Attributes), whose attributes are already their RM types. Only the two
+    /// (`UPDATE_VERSION.attestations`), whose attributes are already their RM
+    /// types. Only the two
     /// invariants the wire-partial type cannot express are evaluated here; the
     /// mandatory `reason` / `is_pending` need no check at all, because the type
     /// makes their absence unrepresentable.
@@ -457,7 +457,7 @@ impl AttestationInput {
 /// RM common master04 §Attestation; ITS-REST `UpdateAttestation`. The server
 /// supplies the inherited `AUDIT_DETAILS` fields it owns — `system_id`,
 /// `time_committed`, and the `666|attestation|` `change_type` — exactly as
-/// `UPDATE_AUDIT` → `AUDIT_DETAILS` (SM master03 §Version Update Semantics),
+/// `UPDATE_AUDIT` → `AUDIT_DETAILS` (ITS-REST `UpdateAudit.yaml`),
 /// then adds the `ATTESTATION`-specific attributes. `committer` is the one the
 /// partial stated.
 ///
@@ -679,9 +679,8 @@ mod tests {
         assert_eq!(att.get("description"), Some(&description));
     }
 
-    /// The SM spelling of the same attribute — `UPDATE_AUDIT.description` is
-    /// `String [0..1]` (`SM/docs/UML/classes/update_audit.adoc` §Attributes) —
-    /// still completes into the plain `DV_TEXT` it denotes.
+    /// The plain-string spelling of the same attribute still completes into
+    /// the plain `DV_TEXT` it denotes.
     #[test]
     fn string_description_becomes_plain_dv_text() {
         let att = complete(&json!({
@@ -689,7 +688,7 @@ mod tests {
             "is_pending": false,
             "description": "countersigned"
         }))
-        .expect("the SM string spelling is accepted");
+        .expect("the plain string spelling is accepted");
         assert_eq!(
             att.get("description"),
             Some(&json!({ "_type": "DV_TEXT", "value": "countersigned" }))
@@ -836,7 +835,7 @@ mod tests {
     /// `schemas/common/UpdateAudit.yaml` `$ref`s `DvCodedText` for it, and the
     /// ITS-REST docs text is silent on the member's shape, so the released OAS
     /// grounds it (`.claude/rules/spec-adherence.md` §the ITS-REST
-    /// wire-oracle order). The flat SM `Terminology_code` spelling this
+    /// wire-oracle order). The flat `Terminology_code` spelling this
     /// fixture used to send is not that shape — see
     /// [`flat_terminology_code_change_type_is_refused`] for the twin that
     /// pins its refusal.
@@ -860,7 +859,7 @@ mod tests {
             .expect("the fixture is a well-typed UPDATE_ATTESTATION")
     }
 
-    /// The invalid twin of [`update_attestation`]'s `change_type`: the flat SM
+    /// The invalid twin of [`update_attestation`]'s `change_type`: the flat
     /// `Terminology_code` spelling (`{terminology_id, code_string}`) is NOT
     /// the released wire shape of `UPDATE_AUDIT.change_type`
     /// (`schemas/common/UpdateAudit.yaml` → `DvCodedText`), so the strict
@@ -942,9 +941,8 @@ mod tests {
     fn native_partial_completes_into_an_attestation() {
         // `description` is an OBJECT on the typed wire: ITS-REST
         // `schemas/common/UpdateAudit.yaml` `$ref`s `DvText` (whose
-        // `DV_CODED_TEXT` subtype substitutes for it). The bare-string SM
-        // spelling (`UML/classes/update_audit.adoc`: `String [0..1]`) is
-        // accepted only on the raw-body CONTRIBUTION lane —
+        // `DV_CODED_TEXT` subtype substitutes for it). The bare-string
+        // spelling is accepted only on the raw-body CONTRIBUTION lane —
         // [`string_description_becomes_plain_dv_text`] pins that twin.
         let update = update_attestation(&json!({
             "reason": { "_type": "DV_TEXT", "value": "witness" },

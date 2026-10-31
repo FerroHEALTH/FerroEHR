@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_COMPOSITION` (`i_ehr_composition.adoc`) — COMPOSITION
-//! commit/retrieve with implicit CONTRIBUTION creation. The commit-validation
+//! COMPOSITION commit/retrieve with implicit CONTRIBUTION creation. The
+//! commit-validation
 //! choke point and the `VERSIONED_COMPOSITION` cross-version invariant hook
 //! live in the sibling [`validation`](super::validation) module.
 //!
@@ -45,7 +45,7 @@ use super::resolve_envelope;
 use super::validation::composition_template_id;
 
 impl FerroEhrService {
-    /// `create_composition` (SM `i_ehr_composition.adoc`): commit the first
+    /// `create_composition`: commit the first
     /// version of a COMPOSITION in `ehr_id` from the caller's full
     /// `UPDATE_VERSION` envelope, returning the committed version identity
     /// ([`Committed`](crate::versioning::change::Committed) — the
@@ -404,7 +404,7 @@ impl FerroEhrService {
         Ok(ServiceResponse::new(ov, meta))
     }
 
-    /// `update_composition` (SM `i_ehr_composition.adoc`): commits a new version
+    /// `update_composition`: commits a new version
     /// of `vo_id` from the caller's full `UPDATE_VERSION` envelope, returning the
     /// committed version identity.
     ///
@@ -666,15 +666,13 @@ impl FerroEhrService {
         .await?)
     }
 
-    /// `delete_composition` (SM `i_ehr_composition.adoc`): commits a
+    /// `delete_composition`: commits a
     /// `523|deleted|` version of the addressed COMPOSITION (RM common master06
     /// §Logical Deletion), returning the now-deleted version identity
     /// (`204_COMPOSITION_deleted`).
     ///
     /// NOTE: it takes the full `OBJECT_VERSION_ID`, the mandatory
-    /// `preceding_version_uid` of `composition_delete.yaml`, which is stronger
-    /// than the SM's `UUID`; the SM is internally inconsistent, its
-    /// `has_composition` taking an `OBJECT_VERSION_ID`.
+    /// `preceding_version_uid` of `composition_delete.yaml`.
     ///
     /// # Errors
     /// [`ServiceError::NotFound`] when the COMPOSITION does not exist in this
@@ -783,7 +781,7 @@ impl FerroEhrService {
         Ok(committed)
     }
 
-    /// The EHR-existence precheck (SM `ehr_does_not_exist` → `NotFound`); also
+    /// The EHR-existence precheck (`ehr_id_does_not_exist` → `NotFound`); also
     /// the [`crate::versioning::CommitEnv`] `ensure_ehr_exists` hook.
     /// The existence read is a storage seam
     /// ([`crate::storage::version_repo::meta::ehr_exists`]; no openEHR spec governs
@@ -855,10 +853,10 @@ impl FerroEhrService {
     }
 }
 
-// ── The SM I_EHR_COMPOSITION call surface ─────────────────────────────────────
+// ── The COMPOSITION call surface ──────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// SM `I_EHR_COMPOSITION.has_composition` — whether the named version
+    /// Whether the named version
     /// exists in the EHR.
     ///
     /// # Errors
@@ -909,7 +907,7 @@ impl FerroEhrService {
         })
     }
 
-    /// SM `I_EHR_COMPOSITION.get_composition_at_time` — the COMPOSITION
+    /// The COMPOSITION
     /// current at `a_time`, or the latest when `a_time` is `None`.
     ///
     /// # Errors
@@ -927,7 +925,7 @@ impl FerroEhrService {
         Ok(Self::read_body_value(a_versioned_object_uid, resp.body)?)
     }
 
-    /// SM `I_EHR_COMPOSITION.get_composition_at_version` — the bare
+    /// The bare
     /// COMPOSITION at the named version.
     ///
     /// # Errors
@@ -945,7 +943,7 @@ impl FerroEhrService {
         Ok(Self::read_body_value(vo_id, resp.body)?)
     }
 
-    /// SM `I_EHR_COMPOSITION.get_versioned_composition` — the
+    /// The
     /// `VERSIONED_COMPOSITION` container object.
     ///
     /// # Errors
@@ -981,7 +979,7 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// SM `I_EHR_COMPOSITION.get_revision_history` — the `REVISION_HISTORY`
+    /// The `REVISION_HISTORY`
     /// of a COMPOSITION.
     ///
     /// # Errors
@@ -1066,7 +1064,7 @@ impl FerroEhrService {
 
 // ── ITS-REST read-response adapter (adapter-support extension) ────────────────
 //
-// The SM reads above return the bare COMPOSITION, which carries no commit
+// The reads above return the bare COMPOSITION, which carries no commit
 // audit, yet ITS-REST derives `Last-Modified` from
 // `VERSION.commit_audit.time_committed.value` (`Requests_and_responses.md`
 // §"`ETag` and Last-Modified"), so these siblings return the read plus its

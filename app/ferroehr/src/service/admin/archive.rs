@@ -1,12 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Archival storage movement (SM `I_ADMIN_ARCHIVE.archive_ehrs` /
-//! `archive_parties`).
-//!
-//! Spec: `docs/specs/openehr/SM/docs/UML/classes/i_admin_archive.adoc` —
-//! `archive_ehrs` "Move selected EHRs to archival storage", `archive_parties`
-//! "Move selected Parties and relationships to archival storage".
+//! Archival storage movement (`archive_ehrs` / `archive_parties`): selected
+//! EHRs, or selected parties with their relationships, move to archival
+//! storage.
 //!
 //! NOTE: no openEHR spec governs archiving or storage tiering: the tier and
 //! this movement are our own design.
@@ -36,7 +33,7 @@ use crate::service::status::{ServiceStatus, StatusError};
 use crate::storage::version_repo::tier;
 
 impl FerroEhrService {
-    /// SM `archive_ehrs`: move every versioned object of each EHR to the cold
+    /// Move every versioned object of each EHR to the cold
     /// archival tier (idempotent).
     ///
     /// # Errors
@@ -53,7 +50,7 @@ impl FerroEhrService {
         Ok(self.archive_ehr_vos(&ids).await?)
     }
 
-    /// SM `archive_parties`: move each party's versioned object to the cold
+    /// Move each party's versioned object to the cold
     /// archival tier (idempotent).
     ///
     /// NOTE: no specification governs archiving: our own design; only the
@@ -97,8 +94,7 @@ impl FerroEhrService {
     /// the primary tier, dropping its archive marker — the exact reverse of
     /// [`Self::archive_parties`].
     ///
-    /// NOTE (`i_admin_archive.adoc` declares only the two archive operations):
-    /// spec-silent like its EHR twin above; served at
+    /// Spec-silent like its EHR twin above; served at
     /// `POST /admin/archive/parties/restore`, our own extension.
     ///
     /// # Errors

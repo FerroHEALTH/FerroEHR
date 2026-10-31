@@ -104,7 +104,7 @@ pub(crate) async fn terminology_ids(
     params(("terminology_id" = String, Path, description = "The terminology id.")),
     responses(
         (status = 200, description = "The terminology descriptor.", body = serde_json::Value),
-        (status = 404, description = "Unknown terminology (failed `Pre_has_terminology`), or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        (status = 404, description = "Unknown terminology, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
     )
 )]
 pub(crate) async fn terminology_description(
@@ -133,7 +133,7 @@ pub(crate) async fn terminology_description(
     ),
     responses(
         (status = 200, description = "The term extract.", body = serde_json::Value),
-        (status = 404, description = "Unknown terminology or code (failed `Pre_has_term`), or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        (status = 404, description = "Unknown terminology or code, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
     )
 )]
 pub(crate) async fn terminology_get_term(
@@ -189,7 +189,7 @@ pub(crate) async fn terminology_subsumes(
     ),
     responses(
         (status = 200, description = "The value set extract.", body = serde_json::Value),
-        (status = 404, description = "Unknown terminology or value set (failed `Pre_has_value_set`), or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+        (status = 404, description = "Unknown terminology or value set, or the terminology extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
     )
 )]
 pub(crate) async fn terminology_value_set(
@@ -266,7 +266,7 @@ async fn run(
         }
         "terminology_description" => {
             let tid = path_get(&parts, "terminology_id")?;
-            // A failed `Pre_has_terminology` → NotFound (404).
+            // An unknown terminology → NotFound (404).
             let desc = state.backend().get_terminology_description(&tid)?;
             Ok(negotiate::respond(h, ok, &desc))
         }
@@ -292,7 +292,7 @@ async fn run(
         "terminology_value_set" => {
             let tid = path_get(&parts, "terminology_id")?;
             let value_set_id = path_get(&parts, "value_set_id")?;
-            // A failed `Pre_has_value_set` → NotFound (404).
+            // An unknown value set → NotFound (404).
             let extract = state.backend().get_value_set(&tid, &value_set_id).await?;
             Ok(negotiate::respond(h, ok, &extract))
         }

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_SERVICE` (`i_ehr_service.adoc`) + `EHR_SUMMARY` (`ehr_summary.adoc`):
-//! EHR create (4 variants), `has_ehr`(`_for_subject`), `get_ehr(s)`, and the
+//! The EHR operations and [`EhrSummary`]: EHR create (4 variants),
+//! `has_ehr`(`_for_subject`), `get_ehr(s)`, and the
 //! folder-hierarchy reads the `EHR` wire body needs.
 //!
 //! Spec: arch-overview `master06-design_of_the_ehr.adoc` §The EHR (EHR root,
@@ -336,8 +336,8 @@ impl FerroEhrService {
 
     /// Build the canonical RM `EHR` object for an existing EHR, with its
     /// `ehr_id` metadata (the `ETag`/`Location` for `POST /ehr`). ITS-REST
-    /// extension: the wire `GET /ehr/{id}` returns the RM `EHR`, not the SM
-    /// `EHR_SUMMARY`.
+    /// extension: the wire `GET /ehr/{id}` returns the RM `EHR`, not the
+    /// summary.
     ///
     /// # Errors
     /// [`ServiceError::NotFound`] when the EHR or its current `EHR_STATUS` does
@@ -381,7 +381,7 @@ impl FerroEhrService {
         Ok(ServiceResponse::new(body, meta))
     }
 
-    /// SM `EHR_SUMMARY` (`ehr_summary.adoc`) — all six mandatory attributes.
+    /// The [`EhrSummary`] of an EHR — all six attributes populated.
     /// `system_id` is the stored `EHR.system_id`; `ehr_status` is the current
     /// bare `EHR_STATUS`; `composition_count` is the number of "(versioned)
     /// Compositions" — distinct versioned objects (`vo_id`), not versions.
@@ -557,10 +557,10 @@ pub(in crate::service) fn archetyped(archetype_id: &str) -> Archetyped {
     }
 }
 
-// ── The SM I_EHR_SERVICE call surface ─────────────────────────────────────────
+// ── The EHR call surface ──────────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// SM `I_EHR_SERVICE.has_ehr` — whether the EHR exists.
+    /// Whether the EHR exists.
     ///
     /// # Errors
     /// [`StatusError`] if the existence read fails (a missing EHR is `Ok(false)`).
@@ -572,7 +572,7 @@ impl FerroEhrService {
         }
     }
 
-    /// SM `I_EHR_SERVICE.has_ehr_for_subject` — whether an EHR exists whose
+    /// Whether an EHR exists whose
     /// current `EHR_STATUS` names the subject, as the installed EHR index
     /// provider resolves it into the clinical domain
     /// ([`crate::service::ehr_index::provider`]).
@@ -590,7 +590,7 @@ impl FerroEhrService {
             .is_some())
     }
 
-    /// SM `I_EHR_SERVICE.create_ehr` — create an EHR with a server-assigned id
+    /// Create an EHR with a server-assigned id
     /// and the given (or default) `EHR_STATUS`, returning the new `ehr_id`.
     ///
     /// # Errors
@@ -604,7 +604,7 @@ impl FerroEhrService {
         Ok(Box::pin(self.create_ehr_meta(an_ehr_status, None)).await?.0)
     }
 
-    /// SM `I_EHR_SERVICE.create_ehr_with_id` — create an EHR under the
+    /// Create an EHR under the
     /// caller-supplied id (`PUT /ehr/{ehr_id}`).
     ///
     /// # Errors
@@ -620,7 +620,7 @@ impl FerroEhrService {
         Ok(an_ehr_id)
     }
 
-    /// SM `I_EHR_SERVICE.create_ehr_for_subject` — create an EHR whose
+    /// Create an EHR whose
     /// `EHR_STATUS.subject` names the given subject, as the installed EHR index
     /// provider resolves it into the clinical domain: the subject itself under
     /// the local map, the identifier the clinical domain holds for it under an
@@ -630,7 +630,7 @@ impl FerroEhrService {
     /// exactly two operations — `ehr_create` (`POST /ehr`) and
     /// `ehr_create_with_id` (`PUT /ehr/{ehr_id}`), both of which route through
     /// [`Self::create_ehr_meta`] / [`Self::create_ehr_with_id_meta`]; the
-    /// subject-scoped SM creates have no wire binding and therefore no
+    /// subject-scoped creates have no wire binding and therefore no
     /// request headers to merge.
     ///
     /// # Errors
@@ -646,7 +646,7 @@ impl FerroEhrService {
             .await
     }
 
-    /// SM `I_EHR_SERVICE.create_ehr_for_subject_with_id` — subject-scoped
+    /// Subject-scoped
     /// creation under a caller-supplied EHR id, the subject resolved as
     /// [`Self::create_ehr_for_subject`] resolves it.
     ///
@@ -695,7 +695,7 @@ impl FerroEhrService {
         Ok(an_ehr_id)
     }
 
-    /// SM `I_EHR_SERVICE.get_ehr` — the `EHR_SUMMARY` of an EHR.
+    /// The `EHR_SUMMARY` of an EHR.
     ///
     /// # Errors
     /// [`StatusError`] when the EHR does not exist (404-equivalent) or a read
@@ -704,7 +704,7 @@ impl FerroEhrService {
         Ok(self.summarize_ehr(an_ehr_id).await?)
     }
 
-    /// SM `I_EHR_SERVICE.get_ehrs_for_subject` — the `EHR_SUMMARY` list for a
+    /// The `EHR_SUMMARY` list for a
     /// subject as the installed EHR index provider resolves it (≤1 under the
     /// one-EHR-per-subject rule; see the note on `Self::ehr_by_subject`).
     ///
@@ -728,7 +728,7 @@ impl FerroEhrService {
     }
 
     /// The canonical RM `EHR` wire object (`GET /ehr/{ehr_id}` — an ITS-REST
-    /// shape, not the SM `EHR_SUMMARY`).
+    /// shape, not the summary).
     ///
     /// # Errors
     /// [`StatusError`] when the EHR or its current `EHR_STATUS` does not exist, or
@@ -797,7 +797,7 @@ impl FerroEhrService {
 
 // ── ITS-REST create-response adapter (adapter-support extension) ──────────────
 //
-// The SM creates return only the new `ehr_id`, but ITS-REST
+// The typed creates return only the new `ehr_id`, but ITS-REST
 // `Requests_and_responses.md` §"`ETag` and Last-Modified" mandates both headers,
 // the `ETag` being `EHR.ehr_id.value` and `Last-Modified` the creating
 // CONTRIBUTION's commit time, so these siblings also return a [`ResourceMeta`]
@@ -845,7 +845,7 @@ impl FerroEhrService {
         an_ehr_status: Option<EhrStatus>,
         committal: Option<&crate::service::version_update::Committal>,
     ) -> Result<ResourceMeta, StatusError> {
-        // see `create_ehr` — `Pre_no_subject` deliberately not enforced.
+        // see `create_ehr` — a subject-bearing status is accepted.
         let status = an_ehr_status.map_or_else(initial_ehr_status, |s| {
             openehr_its::json::to_canonical_value(&s)
         });

@@ -5,8 +5,7 @@
 //! the party detail's Relationships tab.
 //!
 //! NOTE: the released Demographic API defines no `party_relationship` path at
-//! all — these routes are the CDR's own extension realizing SM
-//! `I_PARTY_RELATIONSHIP` (`docs/specs/openehr/SM/docs/UML/classes/i_party_relationship.adoc`).
+//! all — these routes are the CDR's own extension.
 //!
 //! A relationship therefore exists in the CDR in TWO shapes, and the viewer
 //! shows both because the spec models both:
@@ -19,8 +18,8 @@
 //!   That list is part of the party document, so the Relationships tab reads it
 //!   from the party itself.
 //! - **As its own versioned object**, addressed by
-//!   `/demographic/party_relationship/{uid_based_id}` — the SM's shape, which
-//!   the extension routes serve with the same CRUD + versioned-read envelope as
+//!   `/demographic/party_relationship/{uid_based_id}`, which the extension
+//!   routes serve with the same CRUD + versioned-read envelope as
 //!   a party.
 //!
 //! The two are not synchronized by the CDR, and neither is a view of the other.

@@ -59,7 +59,7 @@ const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
 /// The magnitude leaf path used throughout (bp.v1-style descent to the ELEMENT).
 const MAG_PATH: &str = "data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
 
-/// The SM `UPDATE_VERSION` commit envelope for a bare-RM write, mirroring the
+/// The `UPDATE_VERSION` commit envelope for a bare-RM write, mirroring the
 /// adapter's `mk_update_version` (the RM object is the `data`, `If-Match` is the
 /// `preceding_version_uid`, and the audit carries the change type + committer).
 fn uv<T: serde::de::DeserializeOwned>(
@@ -360,7 +360,7 @@ async fn aql_acceptance_set() {
     );
 
     // fetch + the deprecated TOP modifier stays rejected (Request.md names
-    // exactly this pairing), as the SM `precondition_violation` → wire `400`.
+    // exactly this pairing), as `precondition_violation` → wire `400`.
     let aql =
         format!("SELECT TOP 2 o/{MAG_PATH} FROM EHR e CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
     let mut req = ehr_scope(&ehr_id);

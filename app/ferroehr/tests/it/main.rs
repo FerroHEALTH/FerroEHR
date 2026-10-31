@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Integration tests for `ferroehr` — the platform library: the SM service
+//! Integration tests for `ferroehr` — the platform library: the service
 //! layer (EHR / `EHR_STATUS` / COMPOSITION / DIRECTORY / CONTRIBUTION,
 //! definitions, demographics, query, validity, admin, terminology, message,
 //! subject proxy), change control + version signing, the AQL engine, the

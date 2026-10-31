@@ -248,7 +248,7 @@ async fn a_failing_source_never_falls_back_to_the_local_map() {
     assert_eq!(refused.status, ServiceStatus::Exception);
 }
 
-/// The identity source holds the cross-reference, so the `I_EHR_INDEX` writes
+/// The identity source holds the cross-reference, so the EHR-index writes
 /// and the duplicate scan of the local map are refused, and a service with no
 /// provider refuses every subject-scoped call, naming both choices.
 #[tokio::test]

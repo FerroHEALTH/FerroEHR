@@ -1,19 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_INDEX` operations (I1–I5, `i_ehr_index.adoc`) + the two
-//! design-filled reads.
+//! The EHR index write operations (I1–I5) + the two design-filled reads.
 //!
 //! The associations live in `linkage.subject_ehr` and every statement over them
 //! runs on the linkage pool through the [`crate::service::linkage`] store; only the
 //! EHR-existence probe runs on the clinical pool. No openEHR spec governs the
-//! storage — our own design; master07 governs the operation semantics and error
-//! names.
+//! storage, the operations or their error names — our own design.
 //!
 //! Every domain failure is an [`IndexError`], whose `From<IndexError> for
 //! StatusError` maps `ehr_id_does_not_exist` / `subject_id_does_not_exist` onto
 //! their dedicated `ServiceStatus` variants — never the generic
-//! `versioned_object_does_not_exist` (`i_ehr_index.adoc §Errors`).
+//! `versioned_object_does_not_exist`.
 
 use sqlx::{Connection as _, PgConnection, Postgres, Transaction};
 use uuid::Uuid;
@@ -30,7 +28,7 @@ use super::{IndexError, require_association, row_to_entry, validate_status};
 
 /// Parse an `ehr_id` UUID. An unparseable id is a `400` precondition failure;
 /// a well-formed-but-unknown id surfaces as `ehr_id_does_not_exist` at the DB
-/// check (`i_ehr_index.adoc §Errors`).
+/// check.
 #[expect(
     clippy::map_err_ignore,
     reason = "the mapped error already names the resource and echoes the \
@@ -95,13 +93,13 @@ impl FerroEhrService {
         Ok(outcome?)
     }
 
-    /// SM `add_ehr_subject` (I1): associate `subject` with `ehr_id` with an
+    /// `add_ehr_subject` (I1): associate `subject` with `ehr_id` with an
     /// optional status + location. The EHR must exist.
     ///
     /// NOTE: "Add" is realized as an idempotent upsert over the association in
     /// force — re-adding the same subject refreshes its status/location rather
     /// than erroring; the `0..1` cardinality of `add_ehr_subject` permits this.
-    /// Status defaults to a `Primary` instance (`i_ehr_index.adoc`).
+    /// Status defaults to a `Primary` instance.
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — `ehr_id` is not a well-formed UUID,
@@ -137,7 +135,7 @@ impl FerroEhrService {
         Ok(outcome?)
     }
 
-    /// SM `update_ehr_subject_status` (I2): update the status of an existing
+    /// `update_ehr_subject_status` (I2): update the status of an existing
     /// (`ehr_id`, `subject`) association.
     ///
     /// # Errors
@@ -173,7 +171,7 @@ impl FerroEhrService {
         Ok(require_association(updated, &subject)?)
     }
 
-    /// SM `update_ehr_subject_loc_desc` (I3): update (or clear, `loc = None`)
+    /// `update_ehr_subject_loc_desc` (I3): update (or clear, `loc = None`)
     /// the location descriptor of an existing association.
     ///
     /// # Errors
@@ -208,7 +206,7 @@ impl FerroEhrService {
         Ok(require_association(updated, &subject)?)
     }
 
-    /// SM `remove_ehr_subject` (I4): end the `subject`↔`ehr_id` association
+    /// `remove_ehr_subject` (I4): end the `subject`↔`ehr_id` association
     /// (the subject may remain associated with other EHRs).
     ///
     /// NOTE: the association is CLOSED, not deleted — the linkage domain
@@ -245,7 +243,7 @@ impl FerroEhrService {
         Ok(require_association(closed, &subject)?)
     }
 
-    /// SM `remove_subject` (I5): end all associations for `subject`.
+    /// `remove_subject` (I5): end all associations for `subject`.
     ///
     /// # Errors
     /// - `subject_id_does_not_exist` — the subject has no associations (the
@@ -264,7 +262,7 @@ impl FerroEhrService {
     }
 
     /// The subjects associated with an EHR, read from the installed provider
-    /// (design-filled read; the SM defines no read operations — our own
+    /// (design-filled read — our own
     /// design). Empty for an unknown EHR.
     ///
     /// # Errors
@@ -280,7 +278,7 @@ impl FerroEhrService {
     }
 
     /// The EHRs associated with a subject, read from the installed provider
-    /// (design-filled read; the SM defines no read operations — our own
+    /// (design-filled read — our own
     /// design). Empty for an unknown subject.
     ///
     /// # Errors
@@ -298,7 +296,7 @@ impl FerroEhrService {
 
     /// Confirm an EHR exists ([`IndexError::EhrDoesNotExist`] →
     /// `ehr_id_does_not_exist` otherwise). This distinguishes an unknown EHR
-    /// from an unknown association to the caller (`master07 §Errors`).
+    /// from an unknown association to the caller.
     ///
     /// The one statement of these operations that runs on the CLINICAL pool:
     /// the EHR's existence is a clinical fact, and the linkage role can see no

@@ -44,9 +44,8 @@ use crate::versioning::signature::signer::Signer;
 use crate::versioning::wire::version_envelope;
 use crate::versioning::{CommitEnv, Kind, change, read};
 
-/// An optional `(lower, upper)` inclusive commit-time window — the simple
-/// realization of the SM `Interval<Iso8601_date_time>` (either side open when
-/// its bound is `None`; the whole `Option` `None` = unbounded).
+/// An optional `(lower, upper)` inclusive commit-time window (either side open
+/// when its bound is `None`; the whole `Option` `None` = unbounded).
 pub(crate) type TimeRange = Option<(Option<jiff::Timestamp>, Option<jiff::Timestamp>)>;
 
 /// The storage branch an incoming VERSION maps to. Deliberately narrower than
@@ -411,8 +410,7 @@ fn domain_pool(cx: &impl CommitEnv, party_only: bool) -> &sqlx::PgPool {
 /// come from [`classify`]; the object kind from the payload `_type` (create) or
 /// the stored object (modify/delete).
 ///
-/// SM `i_ehr_contribution.adoc` §`commit_contribution`
-/// `Pre_has_ehr`: the target EHR must exist before committing, so a create-only
+/// The target EHR must exist before committing, so a create-only
 /// CONTRIBUTION to a missing EHR is a clean `NotFound`, not a storage FK error.
 ///
 /// # Errors
@@ -433,7 +431,7 @@ pub(crate) async fn commit_version_set(
     body: &Value,
     party_only: bool,
 ) -> Result<CommittedContribution, ServiceError> {
-    // `Pre_has_ehr` — the CONTRIBUTION's target EHR must exist.
+    // the EHR-existence check — the CONTRIBUTION's target EHR must exist.
     if let Some(ehr_id) = ehr_id {
         cx.ensure_ehr_exists(ehr_id).await?;
     }
@@ -749,8 +747,8 @@ fn parse_contribution_audit(cx: &impl CommitEnv, body: &Value) -> Result<AuditIn
 /// absent or not a canonical `PARTY_PROXY`, a member carrying
 /// `other_input_version_uids` (not a member of `UPDATE_VERSION` on this wire;
 /// merge provenance is produce-only) or a member omitting the required
-/// `lifecycle_state`, the `666|attestation|` member included (SM master03
-/// §Version Update Semantics: "must be supplied in all cases").
+/// `lifecycle_state`, the `666|attestation|` member included
+/// (`UpdateVersion.yaml` lists it under `required`).
 fn plan_version(
     version: &Value,
     index: usize,
@@ -762,9 +760,8 @@ fn plan_version(
         .and_then(|a| a.get("change_type"))
         .and_then(coded_value);
     let data = version.get("data").cloned().filter(|d| !d.is_null());
-    // NOTE: a first version legitimately carries no `preceding_version_uid`
-    // (SM `update_version.adoc` types it `0..1`), and the SM glue serializes
-    // a `None` preceding to JSON `null`, so a `null` counts as absent.
+    // NOTE: ITS-REST `UpdateVersion.yaml` does not require
+    // `preceding_version_uid`, and the typed glue serializes a `None` to `null`.
     let has_preceding = version
         .get("preceding_version_uid")
         .is_some_and(|v| !v.is_null());
@@ -806,8 +803,8 @@ fn plan_version(
     }
     if action == Action::Attest {
         // NOTE: no openEHR spec governs the meaning of lifecycle_state on a member
-        // that creates no version (SM master03 §Version Update Semantics), so a 666
-        // member's state is checked against its group here and never stored.
+        // that creates no version, so a 666 member's state is checked against its
+        // group here and never stored.
         resolve_lifecycle(lifecycle_state.clone()).map_err(|e| e.for_version_member(index))?;
     }
     if action == Action::Delete {
@@ -1307,8 +1304,8 @@ fn parse_audit(
     // so the one each audit states is stored as stated.
     let committer = required_committer(audit, owner)?;
     // Both released spellings of `description` are accepted: the ITS-REST
-    // `UDvText` object (`schemas/data_types/UDvText.yaml`) and the SM
-    // `String [0..1]` (`update_audit.adoc` §Attributes). The object spelling is
+    // `UDvText` object (`schemas/data_types/UDvText.yaml`) and a plain
+    // string. The object spelling is
     // kept whole — a DV_CODED_TEXT's `defining_code` is part of the audit.
     let description = audit
         .and_then(|a| a.get("description"))
@@ -1351,9 +1348,8 @@ fn parse_audit(
 /// close each member set with a `oneOf`, so a member outside it fails the request schema (400).
 ///
 /// `FOLDER` is EHR-scoped in both directions: no released service surface
-/// admits a demographic folder (SM `i_demographic_service.adoc` declares no
-/// folder operation, and every ITS-REST `directory_*` operation is mounted at
-/// `/ehr/{ehr_id}/directory`).
+/// admits a demographic folder (every ITS-REST `directory_*` operation is
+/// mounted at `/ehr/{ehr_id}/directory`).
 ///
 /// # Errors
 /// [`ServiceError::BadRequest`] (`400`, ITS-REST `responses/400_CONTRIBUTION.yaml`)
@@ -1381,11 +1377,10 @@ fn coded_value(dv: &Value) -> Option<String> {
     dv.get("defining_code")
         .and_then(|c| c.get("code_string"))
         .and_then(Value::as_str)
-        // TODO(#3595): adjudicate whether the SM spelling stays accepted on the
-        // CONTRIBUTION wire now that the direct routes are typed.
-        // NOTE: the two released sources spell this attribute differently —
-        // ITS-REST `UpdateAudit.yaml` `$ref`s `DvCodedText`, SM
-        // `update_audit.adoc` types it `Terminology_code`; this lane reads both.
+        // TODO(#3595): adjudicate whether the `Terminology_code` spelling stays
+        // accepted on the CONTRIBUTION wire now that the direct routes are typed.
+        // NOTE: ITS-REST `UpdateAudit.yaml` `$ref`s `DvCodedText`; this lane also
+        // reads the `{terminology_id, code_string}` spelling.
         .or_else(|| dv.get("code_string").and_then(Value::as_str))
         .or_else(|| dv.get("value").and_then(Value::as_str))
         .map(str::to_owned)
@@ -1395,8 +1390,8 @@ fn coded_value(dv: &Value) -> Option<String> {
 /// Lifecycle), if present. `UPDATE_VERSION.lifecycle_state` is a
 /// `DV_CODED_TEXT` on the released wire (ITS-REST
 /// `schemas/common/UpdateVersion.yaml`); this raw-body lane also accepts the
-/// SM `Terminology_code` spelling (`{terminology_id, code_string}`,
-/// `UML/classes/update_version.adoc`), a bare `{value}`, or a plain string.
+/// `Terminology_code` spelling (`{terminology_id, code_string}`), a bare
+/// `{value}`, or a plain string.
 /// A member whose `lifecycle_state` is absent, the `666|attestation|` member
 /// included, is refused ([`commit_version_set`]).
 fn lifecycle_of(version: &Value) -> Option<String> {
@@ -1530,7 +1525,7 @@ fn typed_decode_gate(kind: Kind, data: &Value, incomplete: bool) -> Result<(), S
 fn parse_preceding(version: &Value) -> Result<(VoId, TreeId), ServiceError> {
     let raw = version
         .get("preceding_version_uid")
-        // Treat a JSON `null` as absent (the SM glue serializes `None` to
+        // Treat a JSON `null` as absent (the typed glue serializes `None` to
         // `null`) — consistent with the create-vs-modify classification.
         .filter(|p| !p.is_null())
         .and_then(|p| {
@@ -1666,9 +1661,8 @@ pub(crate) async fn get_contribution(
     }))
 }
 
-/// SM `I_EHR_CONTRIBUTION.list_contributions` — the ids of the EHR's
-/// CONTRIBUTIONs, oldest-first, within the optional commit-time window, paged
-/// (SM `i_ehr_contribution.adoc`).
+/// The ids of the EHR's
+/// CONTRIBUTIONs, oldest-first, within the optional commit-time window, paged.
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] when the EHR does not exist; the storage read
@@ -1691,7 +1685,7 @@ pub(crate) async fn list_contributions(
     )
 }
 
-/// SM `I_EHR_CONTRIBUTION.contribution_count` — the number of CONTRIBUTIONs in
+/// The number of CONTRIBUTIONs in
 /// the EHR within the optional commit-time window.
 ///
 /// # Errors
@@ -1710,7 +1704,7 @@ pub(crate) async fn count_contributions(
     )
 }
 
-/// The EHR-existence precheck for the read paths above (SM `ehr_does_not_exist`
+/// The EHR-existence precheck for the read paths above (`ehr_id_does_not_exist`
 /// → `NotFound`).
 ///
 /// Storage exposes the read (`version_repo::meta::ehr_exists`) so versioning stays
@@ -1930,7 +1924,7 @@ mod tests {
     /// A commit audit without `committer` is refused with the 400 naming the
     /// audit, never completed with a committer the client did not state:
     /// ITS-REST `schemas/common/UpdateAudit.yaml` `required: [change_type,
-    /// committer]`, SM `UML/classes/update_audit.adoc` (`committer` 1..1). An
+    /// committer]`. An
     /// absent audit object and a `null` committer are the same absence, and the
     /// rule holds for a `666|attestation|` member's audit too.
     #[test]

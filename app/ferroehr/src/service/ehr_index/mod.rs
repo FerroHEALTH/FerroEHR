@@ -3,9 +3,7 @@
 
 //! The EHR Index service (`service/ehr_index/`), our own design.
 //!
-//! Holds N:M subject↔EHR associations with duplicate-management metadata. The
-//! operation and structure names borrow from the openEHR SM text, kept as
-//! reference and never an oracle.
+//! Holds N:M subject↔EHR associations with duplicate-management metadata.
 //!
 //! Layout: `index` = the write operations (I1–I5) + the reads, each public
 //! method parsing its `ehr_id` at the boundary;
@@ -53,14 +51,14 @@ use crate::system_log::event::EventActionCode;
 
 /// The precise EHR-index failure kind.
 ///
-/// `master07 §Errors` declares distinct `ehr_id_does_not_exist` and
-/// `subject_id_does_not_exist` statuses, which must NOT collapse to the generic
-/// `versioned_object_does_not_exist` (`i_ehr_index.adoc §Errors`).
+/// The distinct `ehr_id_does_not_exist` and `subject_id_does_not_exist`
+/// statuses must NOT collapse to the generic
+/// `versioned_object_does_not_exist`.
 /// [`From<IndexError> for StatusError`] maps each variant onto its dedicated
 /// [`ServiceStatus`]; a generic [`ServiceError`] (a DB/codec fault) rides
 /// through unchanged.
 // Nominal `pub`: `FerroEhrService::index_conflicts` (a `pub` method — the
-// design-filled detection read has no SM trait binding) carries this type in
+// design-filled detection read) carries this type in
 // its public signature.
 #[derive(Debug, thiserror::Error)]
 pub enum IndexError {
@@ -84,7 +82,7 @@ pub enum IndexError {
     /// that would write or scan the local map is not served here.
     #[error("{operation} is served by the IHE patient identity source, never by the local map")]
     HeldBySource {
-        /// The `I_EHR_INDEX` operation refused.
+        /// The EHR-index operation refused.
         operation: &'static str,
     },
     /// The identity source failed; nothing falls back to the local map.
@@ -118,8 +116,8 @@ impl From<crate::db::acquire::AcquireError> for IndexError {
 }
 
 impl From<IndexError> for StatusError {
-    /// Map the precise EHR-index errors onto their dedicated SM statuses
-    /// (`master07 §Errors`), bypassing the generic
+    /// Map the precise EHR-index errors onto their dedicated statuses,
+    /// bypassing the generic
     /// `NotFound → versioned_object_does_not_exist` collapse the shared
     /// [`From<ServiceError> for StatusError`] applies.
     fn from(e: IndexError) -> Self {
@@ -157,9 +155,8 @@ impl From<IndexError> for StatusError {
 /// storage unchecked would come back out of a read as a token no client can
 /// interpret.
 ///
-/// NOTE: `RESOURCE_STATUS.start_valid_time`/`end_valid_time` are typed
-/// `@@` (an unresolved placeholder) in the SM — a recorded spec defect
-/// (`resource_status.adoc:20,24`); implemented as ISO date-time strings.
+/// `RESOURCE_STATUS.start_valid_time`/`end_valid_time` are ISO date-time
+/// strings.
 #[expect(
     clippy::map_err_ignore,
     reason = "the mapped error already echoes the rejected token; the discarded \
@@ -308,8 +305,7 @@ fn row_to_entry(row: &sqlx::postgres::PgRow) -> Result<EhrIndexEntry, sqlx::Erro
 mod tests {
     use super::*;
 
-    /// The two declared EHR-index errors map to their dedicated SM statuses
-    /// (`master07 §Errors`), never the generic
+    /// The two EHR-index errors map to their dedicated statuses, never the generic
     /// `versioned_object_does_not_exist`.
     #[test]
     fn index_errors_map_to_dedicated_statuses() {

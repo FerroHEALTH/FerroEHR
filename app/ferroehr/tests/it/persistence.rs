@@ -1096,7 +1096,7 @@ async fn seed_version(pool: &PgPool) -> (Uuid, Uuid) {
     seed_head(pool, vo).await;
     // Every EHR has an EHR_STATUS from creation (RM ehr §"EHR Creation");
     // the AQL population gate keys off its `is_queryable` flag
-    // (`i_query_service.adoc`), so a spec-realistic fixture must seed one —
+    // flag, so a spec-realistic fixture must seed one —
     // a bare `ehr` row without a status is not a state the service can
     // produce.
     let status_vo = Uuid::now_v7();

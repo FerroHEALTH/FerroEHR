@@ -46,7 +46,7 @@ fn is_fhir_service_api(service_api: &str) -> bool {
 impl TerminologyExpander for FerroEhrService {
     /// Resolve `TERMINOLOGY('expand', service_api, params_uri)` to the value
     /// set's codes: by `service_api` (FHIR → the terminology server; `"openehr"`
-    /// → the in-process bundle), fetch the expansion via the SM `get_value_set`, and
+    /// → the in-process bundle), fetch the expansion via `get_value_set`, and
     /// return its code keys.
     ///
     /// # Errors

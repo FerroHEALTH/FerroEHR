@@ -5,8 +5,7 @@
 //!
 //! Our own design: concrete [`FerroEhrService`] methods, one folder per domain
 //! area. No openEHR specification governs how a CDR is built inside; the
-//! oracles are the wire and content specifications each method serves. Operation
-//! and status names borrow from the openEHR SM text, kept as reference and never an oracle.
+//! oracles are the wire and content specifications each method serves.
 //!
 //! Each chapter folder owns its domain logic as inherent `FerroEhrService`
 //! methods; the protocol adapter (`ferroehr-rest`) calls them directly.
@@ -21,7 +20,7 @@
 //! vocabulary: the call-status model ([`status`]), the service error and
 //! its status-mapping tables ([`error`]), the version-commit envelope
 //! ([`version_update`]), the list cursor ([`list`]), the
-//! `PLATFORM_SERVICE` enumeration ([`platform_service`]), the
+//! platform-service enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), the
 //! authenticated-committer context ([`committer`]), the crate-internal
 //! ITS-REST datetime-request-parameter decoder (`datetime`), and the
@@ -105,7 +104,7 @@ pub const DEFAULT_SYSTEM_ID: &str = "ferroehr.local";
 /// separately configurable.
 pub const SYSTEM_COMMITTER_NAME: &str = "FerroEHR";
 
-/// The DB-backed application service — the concrete platform behind the SM
+/// The DB-backed application service — the concrete platform behind the
 /// chapter methods.
 #[derive(Debug, Clone)]
 pub struct FerroEhrService {
@@ -162,8 +161,8 @@ pub struct FerroEhrService {
     /// The stamp key every server-minted identifier carries
     /// ([`crate::licence::stamp`]), derived from `licence` once at boot.
     stamp: crate::licence::stamp::StampKey,
-    /// The optional IHE ATNA audit sender realizing the SM `I_SYSTEM_LOG`
-    /// component (`crate::system_log`). `None` = auditing off; the binary
+    /// The optional IHE ATNA audit sender of the system log
+    /// (`crate::system_log`). `None` = auditing off; the binary
     /// wires the configured [`AuditSender`] via [`Self::with_audit`].
     pub(crate) audit: Option<AuditSender>,
     /// The optional local Audit Record Repository (read side — the ITI-81
@@ -172,7 +171,7 @@ pub struct FerroEhrService {
     pub(crate) audit_store: Option<crate::system_log::store::AuditStore>,
     /// The optional FHIR R4B terminology server, built when a deployment opts
     /// in ([`TerminologyServerConfig`](crate::service::terminology::config::TerminologyServerConfig)).
-    /// Consulted by the SM `I_TERMINOLOGY_SERVICE` calls the bundle does not
+    /// Consulted by the terminology calls the bundle does not
     /// answer, composition constraint-binding validation, ADL 2 VETDF, and AQL
     /// `TERMINOLOGY(…)` resolution; `None` keeps terminology on the in-process
     /// `openehr-term` bundle only (BASE
@@ -476,8 +475,8 @@ impl FerroEhrService {
         self
     }
 
-    /// Install the IHE ATNA audit sender realizing the SM `I_SYSTEM_LOG`
-    /// component; the binary boots it and wires it here.
+    /// Install the IHE ATNA audit sender of the system log; the binary boots
+    /// it and wires it here.
     #[must_use]
     pub fn with_audit(mut self, sender: AuditSender) -> Self {
         self.audit = Some(sender);
@@ -558,8 +557,8 @@ impl FerroEhrService {
 
     // ── Accessors ─────────────────────────────────────────────────────────────
 
-    /// The `WebTemplate` derived from a stored OPT — the SM `I_DEFINITION`
-    /// `WebTemplate` exposure: one resolution serves validation,
+    /// The `WebTemplate` derived from a stored OPT: one resolution serves
+    /// validation,
     /// FLAT/STRUCTURED conversion, and `wt+json` (the derived runtime artefact;
     /// the `WebTemplate` format itself is spec-silent, `crate::templates`).
     ///

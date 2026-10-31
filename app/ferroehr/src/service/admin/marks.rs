@@ -4,9 +4,7 @@
 //! The legal marks an administrator sets and lifts: restriction of processing,
 //! the research objection, and the retention register.
 //!
-//! **Our own extension.** The SM declares no admin interface for any of this
-//! (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc` is the two
-//! physical deletes and the four statistics calls), and no openEHR
+//! **Our own extension.** No openEHR
 //! specification governs restriction, objection or retention. What the RM does
 //! say is that none of these may be answered with what it already has:
 //! `EHR_STATUS.is_queryable` limits population queries and nothing else (RM ehr

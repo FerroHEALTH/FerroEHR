@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end service tests for the EHR Extract **export** path (SM
-//! `I_EHR_EXTRACT_SERVICE.export_ehrs` / `export_ehr_extracts`) against a real
-//! `PostgreSQL` 18 (shared testkit harness).
+//! End-to-end service tests for the EHR Extract **export** path (`export_ehrs`
+//! / `export_ehr_extracts`) against a real `PostgreSQL` 18 (shared testkit
+//! harness).
 //!
-//! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`;
-//! RM EHR Extract IM master05 (`X_VERSIONED_*`) + master09 (creation
+//! Spec: RM EHR Extract IM master05 (`X_VERSIONED_*`) + master09 (creation
 //! semantics). The acceptance properties:
 //!
 //! 1. **Whole-EHR export** carries every versioned object of the EHR

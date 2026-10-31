@@ -134,7 +134,7 @@ fn role(name: &str) -> Value {
     })
 }
 
-/// The SM `UPDATE_VERSION` commit envelope for a bare-RM party write, built
+/// The `UPDATE_VERSION` commit envelope for a bare-RM party write, built
 /// from the wire shape (`commit_audit`, terminology-coded lifecycle/change).
 /// The `change_type` matches the operation the envelope commits — `249` for a
 /// first version, `251` when a `preceding_version_uid` names an existing one
@@ -145,7 +145,7 @@ fn uv<T: serde::de::DeserializeOwned>(data: &Value, preceding: Option<&str>) -> 
     let change = if preceding.is_some() { "251" } else { "249" };
     // `lifecycle_state` and `commit_audit.change_type` are `DV_CODED_TEXT` on
     // the released wire (ITS-REST `schemas/common/UpdateVersion.yaml` /
-    // `UpdateAudit.yaml` both `$ref` `DvCodedText`), not the flat SM
+    // `UpdateAudit.yaml` both `$ref` `DvCodedText`), not the flat
     // `Terminology_code` spelling.
     let mut v = json!({
         "lifecycle_state": {
@@ -167,18 +167,17 @@ fn uv<T: serde::de::DeserializeOwned>(data: &Value, preceding: Option<&str>) -> 
     openehr_its::json::from_canonical_value(&v).expect("UpdateVersion")
 }
 
-/// The literal SM `I_DEMOGRAPHIC_SERVICE` + `I_PARTY` calls (typed Uuid/version
-/// arguments), not the wire seam: `create_party (UV_PARTY): UUID` →
-/// `has_party`/`get_party`/`get_party_at_version` → `update_party` →
-/// `delete_party`, checking the `Post_party_deleted: not has_party`
-/// post-condition (`i_party.adoc`).
+/// The typed party calls (Uuid/version arguments), not the wire seam:
+/// `create_party` → `has_party`/`get_party`/`get_party_at_version` →
+/// `update_party` → `delete_party`, checking that a deleted party is no
+/// longer present.
 #[tokio::test]
-async fn party_sm_calls_round_trip() {
+async fn party_typed_calls_round_trip() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
     // create_party(UV_PARTY) → the new VERSIONED_OBJECT's id.
-    // Boxed: the typed `UPDATE_VERSION<PARTY>` argument rides the SM future
+    // Boxed: the typed `UPDATE_VERSION<PARTY>` argument rides the future
     // (clippy `large_futures`).
     let vo_id = Box::pin(svc.create_party(uv(&person("Jane"), None)))
         .await
@@ -231,7 +230,7 @@ async fn party_sm_calls_round_trip() {
     assert!(!del.is_empty(), "delete returns the deleted version uid");
     assert!(
         !svc.has_party(vo_id).await.expect("has_party after delete"),
-        "Post_party_deleted: not has_party"
+        "a deleted party is no longer present"
     );
     // get_party on a deleted (no live current) party → versioned_object_does_not_exist.
     let after = svc.get_party(vo_id).await;
@@ -825,9 +824,8 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
 /// compositional parts, such as identities, contacts, Party relationships of
 /// which it is the source."
 ///
-/// The SM instead models a relationship as its OWN version container (all six
-/// `I_PARTY_RELATIONSHIP` operations key on `a_versioned_party_rel_id`), which
-/// this server realizes on its `versioned_party_relationship` surface. The two
+/// This server also keeps each relationship in its OWN version container, on
+/// its `versioned_party_relationship` surface. The two
 /// representations are DISJOINT — committing this party mints no relationship
 /// container, and no container write edits this list.
 #[tokio::test]

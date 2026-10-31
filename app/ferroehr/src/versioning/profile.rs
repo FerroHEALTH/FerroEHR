@@ -80,7 +80,7 @@ pub(crate) fn stable_compatible(profile: SpecProfile, kind: Kind, canonical: &Va
 /// Refuses to serve a stored version the active profile's generations cannot
 /// express.
 ///
-/// The refusal is the generic SM `conflict` status, `409`, taking the same
+/// The refusal is the generic `conflict` status, `409`, taking the same
 /// bridge row every other `409` takes. No openEHR spec governs runtime
 /// generation selection, so the status comes from HTTP itself: RFC 9110
 /// §15.5.10 assigns `409` to "a conflict with the current state of the target
@@ -156,7 +156,7 @@ pub(crate) fn gate(
 /// same question [`gate`] answers on the resource reads, keyed on the same
 /// per-version stamp. The refusal is the whole query: the ITS-REST `RESULT_SET`
 /// is columns and rows of values with no per-row diagnostic channel
-/// (`SM/docs/UML/classes/result_set.adoc`; `responses/200_Query.yaml`), so the
+/// (`responses/200_Query.yaml`), so the
 /// only per-row alternative would be a silent elision.
 ///
 /// Scalar and leaf cells are not gated: they serve data values over paths the

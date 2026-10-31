@@ -5,7 +5,7 @@
 //! methods on `FerroEhrService`.
 //!
 //! **No openEHR spec governs this — our own design/extension** (the
-//! event/subscription semantics are our own model, not any SM interface).
+//! event/subscription semantics are our own model).
 //! Part of the `events` extension; gate: `events.enabled` (a subscription is
 //! inert unless the publisher is spawned to bind its queue).
 //!

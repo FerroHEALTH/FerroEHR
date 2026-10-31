@@ -6,14 +6,12 @@
 //!
 //! **No openEHR spec governs the storage — our own design/extension.** The
 //! relation (`linkage.subject_ehr`, written and read through this module's
-//! `store`) holds the SM's EHR Index associations when a FerroEHR run on its
-//! own opts in to the local map (`[ehr_index] provider = "local"`), because
-//! master07 §Overview describes exactly this schema's purpose — "In a
-//! privacy-supporting environment, this enables EHRs to be persisted with only
-//! an EHR id; the EHR Index has to be used to obtain the subject identifier".
-//! The `I_EHR_INDEX` operations themselves live in
-//! [`crate::service::ehr_index`], which is the SM chapter and the provider
-//! seam; this module owns the relation.
+//! `store`) holds the EHR Index associations when a FerroEHR run on its
+//! own opts in to the local map (`[ehr_index] provider = "local"`), so EHRs
+//! persist with only an EHR id and the index yields the subject identifier.
+//! The EHR-index operations themselves live in
+//! [`crate::service::ehr_index`], the provider seam; this module owns the
+//! relation.
 //!
 //! FerroEHR does no identity work here: it matches no patient, cross-references
 //! no identifier domain and merges nothing. That work belongs to an IHE
@@ -195,7 +193,7 @@ impl FerroEhrService {
     /// ([`crate::system_log::access_context`]); outside a request scope both
     /// are absent, which the record states rather than guesses.
     ///
-    /// `pub(crate)`: the SM `I_EHR_INDEX` operations
+    /// `pub(crate)`: the EHR-index operations
     /// ([`crate::service::ehr_index`]) reach the same relation through the same
     /// pool, and a crossing recorded from one module and not the other would
     /// make the trail depend on which door was used.

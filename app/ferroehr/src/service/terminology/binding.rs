@@ -17,7 +17,7 @@
 //! `openehr_sdt::flat::validation::collect_constraint_binding_checks` walks the
 //! COMPOSITION against its `WebTemplate` and returns one
 //! [`ConstraintBindingCheck`] per bound coded value present in the instance.
-//! Each check is resolved against the one terminology server with the SM
+//! Each check is resolved against the one terminology server with the
 //! `value_set_validate` call, i.e. FHIR `ValueSet/$validate-code`.
 //!
 //! # Outcomes

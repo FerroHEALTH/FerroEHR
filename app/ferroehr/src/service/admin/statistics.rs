@@ -1,15 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Admin statistics (SM `I_ADMIN_SERVICE.list_contributions` /
-//! `contribution_count` / `versioned_composition_count` /
-//! `composition_version_count`).
+//! Admin statistics (`list_contributions` / `contribution_count` /
+//! `versioned_composition_count` / `composition_version_count`).
 //!
-//! Spec: `docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc` — each
-//! call takes a `PLATFORM_SERVICE` (`a_service`, "Name of a versioned content
-//! service") and an optional `Interval<Iso8601_date_time>` matched against the
-//! CONTRIBUTION / version audit `time_committed`. The enumeration members are
-//! `platform_service.adoc`. No openEHR spec governs the SQL that answers these —
+//! Each call takes a [`PlatformService`] (`a_service`, the versioned-content
+//! service to report on) and an optional ISO 8601 date-time interval matched
+//! against the CONTRIBUTION / version audit `time_committed`. No openEHR spec
+//! governs the calls or the SQL that answers them —
 //! our own design over the greenfield `contribution` / `version` /
 //! `commit_audit` tables (`clinical/0003_change_control.sql`).
 
@@ -45,8 +43,7 @@ const VERSION_COUNT_IN_RANGE: &str = "SELECT count(*) FROM version v \
 /// service is not a versioned-content service (`None` → statistics are trivially
 /// empty/0).
 ///
-/// NOTE (already-correct — `platform_service.adoc`): `a_service` is
-/// "Name of a versioned content service". Only `Ehr` (EHR-scoped) and
+/// `a_service` names a versioned-content service. Only `Ehr` (EHR-scoped) and
 /// `Demographic` (ehr-less) hold contributions in this CDR; the remaining
 /// members (`Admin`/`Definitions`/`Ehr_index`/`Message`/`Query`/`System_log`)
 /// are not versioned-content services and yield nothing — a defensible reading,
@@ -61,7 +58,7 @@ fn contribution_ehr_scoped(service: PlatformService) -> Option<bool> {
 }
 
 impl FerroEhrService {
-    /// SM `list_contributions`: the ids of all CONTRIBUTIONs of the named
+    /// The ids of all CONTRIBUTIONs of the named
     /// versioned-content service within the (optional) time range, ordered by
     /// commit time. A non-content service yields the empty list.
     ///
@@ -105,7 +102,7 @@ impl FerroEhrService {
         Ok(ids)
     }
 
-    /// SM `contribution_count`: the count of all CONTRIBUTIONs of the named
+    /// The count of all CONTRIBUTIONs of the named
     /// service within the (optional) time range. A non-content service → 0.
     ///
     /// # Errors
@@ -175,11 +172,11 @@ impl FerroEhrService {
         }
     }
 
-    /// SM `versioned_composition_count`: the count of distinct COMPOSITION
+    /// The count of distinct COMPOSITION
     /// versioned objects with a version committed within the (optional) range.
     ///
-    /// NOTE (already-correct — `platform_service.adoc`): COMPOSITIONs are
-    /// EHR-scoped, so only `a_service = Ehr` yields a non-zero count; every
+    /// COMPOSITIONs are EHR-scoped, so only `a_service = Ehr` yields a
+    /// non-zero count; every
     /// other member → 0 (COMPOSITIONs are not in its scope).
     ///
     /// # Errors
@@ -217,7 +214,7 @@ impl FerroEhrService {
         Ok(count)
     }
 
-    /// SM `composition_version_count`: the count of individual COMPOSITION
+    /// The count of individual COMPOSITION
     /// version rows committed within the (optional) range. Scope gate as
     /// [`Self::versioned_composition_count`].
     ///

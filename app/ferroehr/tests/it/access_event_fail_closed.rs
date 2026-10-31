@@ -126,7 +126,7 @@ async fn a_linkage_resolution_is_withheld_when_its_record_is_rejected() {
 }
 
 /// The subject-to-EHR lookup is withheld when its record is rejected, and the
-/// SM route reports the `service_overloaded` status the wire maps to `503`.
+/// status route reports the `service_overloaded` status the wire maps to `503`.
 #[tokio::test]
 async fn a_subject_lookup_is_withheld_when_its_record_is_rejected() {
     let db = testkit::db().await.expect("testkit database");

@@ -4,17 +4,16 @@
 //! The Message service.
 //!
 //! EHR Extract export and import over the RM EHR Extract model, behind the
-//! `/message` extension. Our own design; the operation names borrow from the
-//! openEHR SM text, kept as reference and never an oracle.
+//! `/message` extension. Our own design.
 //!
 //! The layout follows the export / import split, each
 //! file carrying its public `FerroEhrService` methods and the machinery behind
 //! them:
 //!
-//! - `export` — `I_EHR_EXTRACT_SERVICE.export_ehrs` / `export_ehr_extracts`:
+//! - `export` — `export_ehrs` / `export_ehr_extracts`:
 //!   the extract-building algorithm over the stored versions (RM EHR-Extract IM
 //!   `master05`/`master09`).
-//! - `import` — `I_EHR_EXTRACT_SERVICE.import_ehr` / `import_ehr_extract`:
+//! - `import` — `import_ehr` / `import_ehr_extract`:
 //!   parse a received `EXTRACT` and dispatch clone against append; the
 //!   `IMPORTED_VERSION` replay is [`crate::versioning`] (RM common master06
 //!   §Copying).

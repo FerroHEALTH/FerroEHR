@@ -50,7 +50,7 @@ const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
 const CODE_PATH: &str =
     "data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/defining_code/code_string";
 
-/// The SM `UPDATE_VERSION` commit envelope for a bare-RM write.
+/// The `UPDATE_VERSION` commit envelope for a bare-RM write.
 fn uv<T: serde::de::DeserializeOwned>(data: &Value) -> UpdateVersion<T> {
     UpdateVersion {
         preceding_version_uid: None,

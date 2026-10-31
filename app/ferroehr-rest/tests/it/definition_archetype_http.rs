@@ -183,7 +183,7 @@ async fn the_adl14_upload_refuses_invalid_source_and_a_wrong_media_type() {
 /// the bare JSON integer `0`, and a DELETE of an absent artefact is `404`
 /// (`artefact_does_not_exist`).
 #[tokio::test]
-async fn the_adl2_archetype_and_artefact_views_answer_the_sm_shapes() {
+async fn the_adl2_archetype_and_artefact_views_answer_their_shapes() {
     let (_pg, app) = common::test_router().await;
 
     for path in ["/definition/archetype/adl2", "/definition/artefact/adl2"] {

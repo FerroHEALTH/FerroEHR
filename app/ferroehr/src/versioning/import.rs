@@ -92,8 +92,8 @@ async fn container_state(
     })
 }
 
-/// One received `ORIGINAL_VERSION` to import into the local store (SM
-/// `I_EHR_EXTRACT_SERVICE.import_ehr`; master06 §Copying).
+/// One received `ORIGINAL_VERSION` to import into the local store (master06
+/// §Copying).
 #[derive(Debug)]
 pub(crate) struct ImportVersion {
     /// The `version_tree_id` of the wrapped original (trunk or branch; branch

@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! EHR-Extract export (SM `I_EHR_EXTRACT_SERVICE.export_ehrs` /
-//! `export_ehr_extracts`) over the greenfield versioned store.
+//! EHR-Extract export (`export_ehrs` / `export_ehr_extracts`) over the
+//! greenfield versioned store.
 //!
-//! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`
-//! (`export_ehrs` / `export_ehr_extracts`); the RM EHR-Extract IM in
+//! Spec: the RM EHR-Extract IM in
 //! `docs/specs/openehr/RM/docs/ehr_extract/` — `master05-openehr_extract_package.adoc`
 //! (`X_VERSIONED_OBJECT` and the five `X_VERSIONED_*` wrappers, §Demographic
 //! Referencing) and `master09-semantics.adoc` §Creation Semantics (the
@@ -126,8 +125,8 @@ fn x_versioned_type(kind: &str) -> &'static str {
 }
 
 impl FerroEhrService {
-    /// SM `export_ehrs(an_ehr_id)` — the whole-EHR, latest-only export as a
-    /// single-element `List<EXTRACT>` (`i_ehr_extract_service.adoc`). A
+    /// `export_ehrs(an_ehr_id)` — the whole-EHR, latest-only export as a
+    /// single-element `List<EXTRACT>`. A
     /// completed export is audited for non-repudiation (an outbound Extract
     /// communication → `EventActionCode::Read`).
     ///
@@ -151,9 +150,9 @@ impl FerroEhrService {
         Ok(vec![extract])
     }
 
-    /// SM `export_ehr_extracts(extract_spec)` — one `EXTRACT` per manifest
+    /// `export_ehr_extracts(extract_spec)` — one `EXTRACT` per manifest
     /// entity, honouring `EXTRACT_VERSION_SPEC` + the item-list selector
-    /// (`i_ehr_extract_service.adoc`; `master09-semantics.adoc` §Creation
+    /// (RM `ehr_extract` `master09-semantics.adoc` §Creation
     /// Semantics). One completed-export audit event is emitted per distinct
     /// exported EHR (outbound → `EventActionCode::Read`; non-repudiation).
     ///
@@ -266,7 +265,7 @@ impl FerroEhrService {
     }
 
     /// Whether an EHR with `ehr_id` exists (the `has_ehr` precondition of both
-    /// export calls; `i_ehr_extract_service.adoc`).
+    /// export calls).
     async fn extract_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
         Ok(sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1 \

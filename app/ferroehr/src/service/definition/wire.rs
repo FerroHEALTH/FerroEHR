@@ -3,12 +3,12 @@
 
 //! The ITS-REST wire-shaped DEFINITION extension methods: the rich shapes the
 //! `DEFINITION` API group returns (template summaries, the example
-//! COMPOSITION, `StoredQuery` descriptors, glob filters) that the SM
-//! `I_DEFINITION_*` interfaces do not express. Native error types only
+//! COMPOSITION, `StoredQuery` descriptors, glob filters) that the native
+//! definition calls do not carry. Native error types only
 //! (`StatusError`, or `ServiceError` where a structured per-code validation body is
 //! carried — the ADL2 upload), so this layer stays protocol-free; the route
 //! wiring is the ITS-REST layer's concern. The retrieval/store behaviour rides
-//! on the SM logic in the sibling interface files.
+//! on the native logic in the sibling files.
 
 #![expect(
     clippy::disallowed_types,
@@ -47,7 +47,7 @@ impl FerroEhrService {
 
     /// `GET /definition/template/adl1.4/{template_id}` — the OPT 1.4 canonical
     /// XML addressed by its `template_id` string (the ITS-REST wire address;
-    /// the SM keys OPTs by `UUID`). Identity is case-insensitive.
+    /// the native calls key OPTs by `UUID`). Identity is case-insensitive.
     ///
     /// # Errors
     ///
@@ -146,8 +146,8 @@ impl FerroEhrService {
     /// Returns [`ServiceError`] rather than `StatusError` so a semantic-validation
     /// failure keeps its structured per-code violations for the ITS-REST `Error`
     /// body. Duplicate handling diverges by surface: the REST contract declares
-    /// `409_template_already_exists.yaml` while the SM native `upload_artefact`
-    /// replaces (`i_definition_adl2.adoc`), so an existing HRID is a `409` here.
+    /// `409_template_already_exists.yaml` while the native `upload_artefact`
+    /// replaces, so an existing HRID is a `409` here.
     ///
     /// # Errors
     ///
@@ -314,7 +314,7 @@ impl FerroEhrService {
 /// to the latest version of each template ("if missing, then only the latest
 /// version will be returned" — the same source); `page` then applies
 /// `offset`/`fetch` (`parameters/query/filter_template_id.yaml` — "supports
-/// wildcards `*`"; `master02-overview.adoc` §List Handling).
+/// wildcards `*`").
 fn filter_templates(list: Vec<Value>, filter: &TemplateListFilter, page: Page) -> Vec<Value> {
     let tid = filter.template_id.as_deref().map(glob_to_regex);
     let concept = filter.concept.as_deref().map(glob_to_regex);
