@@ -27,6 +27,7 @@ task_local! {
     static DECLARED_PERMIT: Option<String>;
     static REQUEST_ROLES: Vec<String>;
     static ACCESS_RESTRICTION_ENFORCED: bool;
+    static ACCESS_DELAY_ENFORCED: bool;
 }
 
 /// The roles the authenticated caller holds for the current request (#3239).
@@ -134,6 +135,32 @@ where
     F: Future,
 {
     ACCESS_RESTRICTION_ENFORCED.scope(enforced, fut).await
+}
+
+/// Whether the EHDS Art. 3(3) delay of the person's own access holds for the
+/// current request: data a professional has not yet released then reads as
+/// absent.
+///
+/// The protocol adapter publishes `true` for a patient-context request (a
+/// SMART `patient/` grant or the configured patient claim) on a deployment
+/// that enables `[access_delay]`, and `false` for every other caller, so a
+/// professional reads the record as before. Outside a request scope it is
+/// `false` (`docs/law/eu/ehds/text.html` Art. 3(3)). No openEHR spec governs a
+/// delay of the person's access: our own design/extension.
+#[must_use]
+pub fn access_delay_enforced() -> bool {
+    ACCESS_DELAY_ENFORCED
+        .try_with(|enforced| *enforced)
+        .unwrap_or(false)
+}
+
+/// Run `fut` with the EHDS Art. 3(3) delay of the person's access enforced or
+/// not.
+pub async fn with_access_delay<F>(enforced: bool, fut: F) -> F::Output
+where
+    F: Future,
+{
+    ACCESS_DELAY_ENFORCED.scope(enforced, fut).await
 }
 
 #[cfg(test)]

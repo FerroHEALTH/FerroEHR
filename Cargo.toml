@@ -282,10 +282,10 @@ ferrobridge-term = { version = "=0.1.140", features = ["smart"] }
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-10-27 (0.3.1; the 0.3 line adds the data permit to the access
+# crates.io 2026-10-31 (0.3.3; the 0.3 line adds the data permit to the access
 # record).
-ihe-atna = { version = "=0.3.2", default-features = false }
-ehds-logging = { version = "=0.3.2", default-features = false }
+ihe-atna = { version = "=0.3.3", default-features = false }
+ehds-logging = { version = "=0.3.3", default-features = false }
 
 # ── Patient identity (the shared IHE ITI client library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the

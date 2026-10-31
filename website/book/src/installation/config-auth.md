@@ -272,6 +272,30 @@ Physical deletion is irreversible, so the group stays off by default. With it
 on, `/admin` also joins the group list the `OPTIONS` System-Options manifest
 advertises, so the manifest never names a group that answers `404`.
 
+## `[access_delay]`
+
+The EHDS Art. 3(3) delay of the person's own access to newly registered data,
+a Member State option: turn it on only where your Member State's rule provides
+for the delay. What it does is on [delayed access by the
+person](../security.md#delayed-access-by-the-person-ehds-art-33).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | `false` | Hold new compositions of the listed categories from patient-context requests until a professional releases them or `hours` pass. Off, the person's access is immediate (Art. 3(1)), every hold already placed stops withholding, and the admin route refuses a new hold with **400**. |
+| `categories` | list of string | `[]` | The categories held at creation, named as [`[audit.categories]`](config-audit.md) names one: a priority category of Art. 14(1) by its code (`Laboratory-Reports`, `Medical-Imaging`, …) or as `<system>|<code>`, or a national category the map declares. A name the map does not hold, and `none`, refuse the start. Empty holds nothing at creation; a professional still holds a composition by hand. |
+| `hours` | integer | `0` | The limit of a hold, 1 to 8784 (one year), required while `enabled`: the length of a hold placed at creation and the latest end a professional may give one. Art. 3(3) allows the delay "for a limited period of time" only; the period is the Member State's to set. |
+
+```toml
+[access_delay]
+enabled = true
+categories = ["Laboratory-Reports", "Medical-Imaging"]
+hours = 168
+```
+
+The environment forms are `FERROEHR__ACCESS_DELAY__ENABLED`,
+`FERROEHR__ACCESS_DELAY__CATEGORIES` (comma-separated) and
+`FERROEHR__ACCESS_DELAY__HOURS`.
+
 ## `[smart]`
 
 The SMART on openEHR scopes are enforced on **every route** whenever

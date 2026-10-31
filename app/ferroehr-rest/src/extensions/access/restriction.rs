@@ -99,17 +99,10 @@ pub(crate) async fn refuse_restricted(
             return Ok(Some(not_found(CallStatusType::EhrIdDoesNotExist, message)));
         }
     }
-    for param in OBJECT_PARAMS {
-        let Some(raw) = parts.path.get(param) else {
-            continue;
-        };
-        let head = raw.split("::").next().unwrap_or(raw);
-        let Ok(vo_id) = Uuid::parse_str(head) else {
-            continue;
-        };
+    for (raw, vo_id) in named_objects(parts) {
         let restricted = state
             .backend()
-            .is_object_access_restricted(VoId(vo_id))
+            .is_object_access_restricted(vo_id)
             .await
             .map_err(|error| Box::new(RestError::from(error).into_response()))?;
         if restricted {
@@ -119,8 +112,23 @@ pub(crate) async fn refuse_restricted(
     Ok(None)
 }
 
+/// The versioned objects the request path names, each with the raw parameter
+/// that named it; a parameter that is no UUID names none.
+pub(super) fn named_objects(parts: &RequestParts) -> Vec<(&str, VoId)> {
+    OBJECT_PARAMS
+        .iter()
+        .filter_map(|param| parts.path.get(*param))
+        .filter_map(|raw| {
+            let head = raw.split("::").next().unwrap_or(raw);
+            Uuid::parse_str(head)
+                .ok()
+                .map(|vo_id| (raw.as_str(), VoId(vo_id)))
+        })
+        .collect()
+}
+
 /// The `404` an unknown versioned object of `op`'s kind answers.
-fn object_not_found(op: &str, raw: &str) -> Response {
+pub(super) fn object_not_found(op: &str, raw: &str) -> Response {
     if op.contains("composition") {
         not_found(
             CallStatusType::CompositionDoesNotExist,

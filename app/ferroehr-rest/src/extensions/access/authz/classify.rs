@@ -255,6 +255,45 @@ pub fn access_of(op: &str) -> Option<AccessMode> {
     Some(mode)
 }
 
+/// Whether an operation is ABAC-checked, and when.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Mode {
+    /// Not ABAC-checked (item tags, definition/demographic/admin — RBAC only —,
+    /// and query, whose scope + check live in the query path).
+    Skip,
+    /// Checked before the backend call.
+    Pre,
+    /// Checked after the backend call, on a successful response.
+    Post,
+}
+
+/// The ABAC enforcement matrix the PEP drives, keyed by operation id.
+#[expect(
+    clippy::match_same_arms,
+    reason = "the arms are grouped by resource family, so naming every operation \
+              explicitly is the point — merging equal arms would hide which \
+              family an operation is gated as"
+)]
+pub(crate) fn mode_of(op: &str) -> Mode {
+    match op {
+        "ehr_create" | "ehr_create_with_id" | "ehr_get_by_id" | "ehr_get_by_subject" => Mode::Pre,
+        "composition_create" | "composition_update" | "composition_delete" => Mode::Pre,
+        "contribution_create" => Mode::Pre,
+        // The contribution-list extension is an EHR-scoped read whose `ehr_id`
+        // is a path parameter, so the subject gate runs before any backend work.
+        "contribution_list" => Mode::Pre,
+        // The treating professional's release of a held composition (EHDS Art. 3(3)) is
+        // an update of an EHR named in the path, checked before any backend work.
+        crate::api::ehr::access_delay::RELEASE => Mode::Pre,
+        "composition_get" => Mode::Post,
+        "contribution_get" => Mode::Post,
+        _ if op.starts_with("versioned_composition_") => Mode::Post,
+        _ if op.starts_with("ehr_status_") || op.starts_with("versioned_ehr_status_") => Mode::Pre,
+        _ if op.starts_with("directory_") => Mode::Pre,
+        _ => Mode::Skip,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -17,6 +17,8 @@
 //! - `archive` — `I_ADMIN_ARCHIVE.archive_ehrs` / `archive_parties`.
 //! - [`marks`] — the legal marks: the restriction register, the research
 //!   objection and the retention register; our own extension.
+//! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access;
+//!   our own extension.
 //! - `dump_load` — `I_ADMIN_DUMP_LOAD.export_ehrs` / `load_ehrs`.
 //! - [`integrity`] — the storage-parity sweep, our own extension: no openEHR
 //!   spec governs storage mechanics.
@@ -39,6 +41,7 @@ mod delete;
 mod dump_load;
 mod statistics;
 
+pub mod access_delay;
 pub mod integrity;
 pub mod marks;
 pub mod types;

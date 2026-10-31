@@ -40,12 +40,15 @@
 //! - [`tag_repo`] — the `item_tag` store (EHR-scoped and demographic).
 //! - [`marks`] — the restriction register, the research objection and the
 //!   retention register, and the marks on `ehr` / `vo_head` they drive.
+//! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access
+//!   and its mark on `vo_head`.
 //!
 //! The seam with the versioning layer is a value contract rather than shared
 //! SQL: versioning owns the semantics (classify, tree placement, lifecycle,
 //! sign, attest, import policy) and calls these functions with plain inputs,
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
+pub mod access_delay;
 pub mod blob_ref;
 pub mod codec;
 pub mod ddl_template;

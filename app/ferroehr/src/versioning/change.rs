@@ -735,17 +735,15 @@ pub(crate) async fn ensure_not_restricted_tx(
             "versioned object {vo_id}"
         )));
     }
-    ensure_not_access_restricted_tx(tx, ehr_id, vo_id).await
+    ensure_not_access_restricted_tx(tx, ehr_id, vo_id).await?;
+    crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await
 }
 
 /// Refuse, as though the target did not exist, a write a health professional
-/// makes to data under an EHDS Art. 8 access restriction.
-///
-/// The fact of a restriction is "not visible to healthcare providers"
-/// (`docs/law/eu/ehds/text.html` Art. 8), so a write to a restricted EHR or
-/// object answers what a write to an unknown one answers. It applies only
-/// while the request enforces the restriction. No openEHR spec governs
-/// restriction of access — our own design/extension.
+/// makes to data under an EHDS Art. 8 access restriction, whose fact is "not
+/// visible to healthcare providers" (`docs/law/eu/ehds/text.html` Art. 8),
+/// while the request enforces it. No openEHR spec governs restriction of
+/// access — our own design/extension.
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] (`ehr_id_does_not_exist` or
@@ -958,7 +956,9 @@ async fn apply_change(
             }
         }
     };
-    commit_resolved(tx, ctx, audit, contribution, resolved).await
+    let committed = commit_resolved(tx, ctx, audit, contribution, resolved).await?;
+    crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
+    Ok(committed)
 }
 
 /// Commit a [`ResolvedWrite`] — compute the `VERSION.signature`, then write the

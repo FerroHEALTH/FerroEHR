@@ -262,6 +262,10 @@ pub struct FerroEhrService {
     /// the binary installs the `[ehr_index]` provider or a test opts in to the
     /// local map.
     pub(in crate::service) ehr_index: ehr_index::provider::EhrIndexProvider,
+    /// The `[access_delay]` policy (EHDS Art. 3(3)); `None` in [`Self::new`],
+    /// which leaves the person's access immediate.
+    pub(in crate::service) access_delay:
+        Option<Arc<admin::access_delay::config::AccessDelayPolicy>>,
 }
 
 impl FerroEhrService {
@@ -317,6 +321,7 @@ impl FerroEhrService {
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
+            access_delay: None,
         }
     }
 
@@ -618,6 +623,7 @@ impl FerroEhrService {
             multimedia: self.multimedia.as_deref(),
             identifiers: self.identifiers.as_deref(),
             outbox_enabled: self.outbox_enabled,
+            access_delay: self.access_delay.as_deref(),
             direct_origin: self.origins.direct_origin(
                 committer::current_committer()
                     .and_then(|committer| committer.client)

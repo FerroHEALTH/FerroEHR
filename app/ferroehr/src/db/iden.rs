@@ -186,6 +186,9 @@ pub enum VoHead {
     /// `access_restricted_at` — when an EHDS Art. 8 restriction of access was
     /// recorded for this object or its whole EHR; `NULL` = unrestricted.
     AccessRestrictedAt,
+    /// `person_withheld_until` — until when an EHDS Art. 3(3) delay withholds
+    /// this object from the person; `NULL` or past = not withheld.
+    PersonWithheldUntil,
     /// `retention_hold_at` — when a retention hold was placed; `NULL` = none.
     RetentionHoldAt,
     /// `archived_at` — when the object moved to the cold tier; `NULL` while
