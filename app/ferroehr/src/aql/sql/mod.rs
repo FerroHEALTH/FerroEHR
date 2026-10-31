@@ -138,6 +138,14 @@ impl SqlCtx {
     pub fn population_gated(&self) -> bool {
         self.ehr_ids.is_empty() || self.ehr_scope_kind == EhrScopeKind::PopulationSubset
     }
+
+    /// Whether the query is aimed at EHRs its caller named
+    /// ([`EhrScopeKind::Named`] with at least one id), whose content is read
+    /// from those EHRs' objects inward.
+    #[must_use]
+    pub fn names_ehrs(&self) -> bool {
+        !self.population_gated()
+    }
 }
 
 /// What an explicit [`SqlCtx::ehr_ids`] scope stands for, which decides
