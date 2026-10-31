@@ -35,8 +35,9 @@
 # A release is published by the release workflow's own token, which starts no
 # workflow, so the tag push is the release trigger here.
 #
-# The released run draws the Veredictum badges and, on main, pushes them to
-# the veredictum-badges branch the README reads (Veredictum book, Badges).
+# Each run draws its Veredictum badges and, on main, pushes them to a branch
+# of its own the README reads: the released run to veredictum-badges, the
+# development run to veredictum-badges-development (Veredictum book, Badges).
 #
 # No openEHR specification governs how CI runs the instrument: our own design.
 name: Conformance
@@ -187,7 +188,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      # The released run pushes its badges to the veredictum-badges branch.
+      # Each run pushes its badges to its own branch: veredictum-badges and
+      # veredictum-badges-development.
       # The Action pushes only from a run on main that is not a pull request.
       contents: write
     steps:
@@ -276,6 +278,7 @@ jobs:
         uses: Vernum-Projecten/Veredictum@085adc11b0ce1b6e268ab4298af68dd2241ced53 # v0.3.2
         continue-on-error: true
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VEREDICTUM_CDR_USER: ferroehr
           VEREDICTUM_CDR_PASSWORD: ferroehr
           VEREDICTUM_CDR_ADMIN_USER: ferroehr-admin
@@ -290,6 +293,7 @@ jobs:
           admin-auth: basic
           profile: development
           out-dir: conformance-results/development
+          badge-branch: veredictum-badges-development
           image: ghcr.io/vernum-projecten/veredictum@sha256:df50feb4df9de262be64502ff999d0bbe784ba623ffbfa32313b52769a594efd
       # The views each run's outputs name, one directory per profile, so the
       # two are never mixed. recording.har is never among them.

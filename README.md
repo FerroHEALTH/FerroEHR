@@ -30,10 +30,15 @@
 [![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](https://ferroehr.eu/docs/latest/verifying-releases.html#what-slsa-level-each-artifact-reaches)
 
 **Conformance and compliance**<br>
-[![openEHR BASE](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
-[![openEHR options](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
-[![specification](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
-[![veredictum](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![openEHR BASE · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![openEHR options · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![specification · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![veredictum · released](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+<br>
+[![openEHR BASE · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![openEHR options · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![specification · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![veredictum · development](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
 <br>
 [![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion)](https://ferrohealth.eu/docs/ehds/readiness.html)
 [![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
