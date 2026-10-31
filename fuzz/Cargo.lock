@@ -1361,7 +1361,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "openehr-adl"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "indexmap",
  "openehr-am",
@@ -1377,7 +1377,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-am"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "indexmap",
  "openehr-base",
@@ -1388,7 +1388,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-base"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "serde",
  "serde_json",
@@ -1398,7 +1398,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-its"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "async-trait",
  "axum",
@@ -1427,7 +1427,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-lang"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "chumsky",
  "indexmap",
@@ -1440,7 +1440,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-query"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "chumsky",
  "logos",
@@ -1449,7 +1449,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-rm"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "openehr-base",
  "openehr-term",
@@ -1464,7 +1464,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-sdt"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "fancy-regex",
  "indexmap",
@@ -1483,7 +1483,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-term"
-version = "0.0.126"
+version = "0.0.127"
 dependencies = [
  "openehr-base",
  "roxmltree",

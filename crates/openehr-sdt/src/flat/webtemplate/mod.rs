@@ -17,6 +17,7 @@ pub mod builder;
 pub mod builder_v2_4;
 mod id;
 mod inputs;
+mod interval_v2_4;
 pub mod model;
 mod shape;
 

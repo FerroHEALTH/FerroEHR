@@ -27,6 +27,7 @@ commit the result.
 | Swiss federal law (Fedlex filestore HTML, German + non-binding English where published at the same consolidation) | `scripts/vendor/law-ch.sh` | `docs/law/ch/` |
 | FerroPULSE report v1 JSON Schemas + examples (the usage report contract) | `scripts/vendor/ferropulse-schemas.sh` | `corpus/ferropulse/` |
 | IHE PIXm 3.1.0 package excerpt (the $ihe-pix OperationDefinition, the Manager CapabilityStatement, the example ITI-83 answers) | `scripts/vendor/ihe-pixm.sh` | `corpus/ihe-pixm/` |
+| Veredictum catalogue ADL 2 content cases (the ADL 2 operational templates and the compositions committed against them) | `scripts/vendor/veredictum-adl2-content.sh` | `corpus/veredictum/adl2-content/` |
 
 ## The openEHR CKM REST API — facts, verified 2026-08-01
 
