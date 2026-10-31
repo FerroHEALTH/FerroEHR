@@ -1,0 +1,1 @@
+- The separate SMART step of the Conformance workflow, the `smart` stage of `scripts/conformance.sh` with its `CONF_SMART_OUT`, and `docs/conformance/party/ferroehr/ixit-smart.json` are gone: the one catalogue run covers the SMART documents. The party statement no longer carries the `performance` block, which the Veredictum 0.3.1 statement schema refuses.

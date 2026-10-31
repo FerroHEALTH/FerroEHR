@@ -89,10 +89,6 @@
     "xml-namespace-v2",
     "terminology-binding-unresolvable-accepted"
   ],
-  "performance": {
-    "class": "POC",
-    "environment_ref": "ixit.json#/environment"
-  },
   "attestation": {
     "signatory": "Ruben Talstra, for Cadasto B.V.",
     "role": "Owner",

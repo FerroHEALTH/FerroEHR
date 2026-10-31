@@ -117,10 +117,18 @@ bash scripts/conformance.sh
 
 The script reviews the statement, composes one FerroEHR deployment from the
 current sources on fresh volumes, runs `veredictum test` through the pinned
-release image with the Basic users of `docker/ferroehr.dev.toml`, writes
-`results.json`, `recording.har` and the JUnit, CTRF and Markdown views `export`
-renders to `docs/conformance/ferroehr/`, and tears the stack down. The
-recording holds the server's response bodies, so it is never committed.
+release image with the Basic users of `docker/ferroehr.dev.toml` and the SMART
+Platform base URL, writes `results.json`, `recording.har` and the JUnit, CTRF
+and Markdown views `export` renders to `docs/conformance/ferroehr/`, and tears
+the stack down. The recording holds the server's response bodies, so it is
+never committed.
+
+`CONF_PROFILE` picks the specification text the case citations are read
+against. `released`, the default, is the frozen openEHR release: it is the
+record and alone backs a released claim. `development` is the pinned `master`
+of each openEHR repository, the text FerroEHR builds on (RM 1.2.0, BASE 1.3.0);
+its views go to `docs/conformance/ferroehr-development/` and are never mixed
+into the record.
 
 Useful knobs: `CONF_DOCUMENTS` to narrow the run to named documents (a working
 tool, never the record), `CONF_OUT` for a different artefact root,
@@ -133,9 +141,12 @@ The script also takes one stage: `review` runs `veredictum validate
 `down` removes it with its volumes. The Conformance workflow uses these stages
 to run the same deployment in CI. It builds FerroEHR from the commit, runs
 `up`, and drives the catalogue through the Veredictum GitHub Action, pinned by
-commit SHA, on the same release image by digest. The job fails on a failed or
-errored row, puts the Markdown summary on the job summary, and keeps the
-results, JUnit and CTRF views as an artifact. It runs on pull requests that
+commit SHA, on the same release image by digest, twice: once under the
+`released` profile and once, on fresh volumes, under the `development`
+profile. Both runs include the SMART documents. The released run decides the
+job: it fails on a failed or errored row there. Each run's Markdown summary
+goes on the job summary under its own heading, and each profile's results,
+JUnit and CTRF views are kept as an artifact of their own. It runs on pull requests that
 touch the server, the party set, the conformance compose files or the
 workflow, on `main`, on a release tag and twice a week.
 

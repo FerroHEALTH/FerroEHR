@@ -17,5 +17,14 @@
     "memory_gb": 16,
     "storage_class": "nvme",
     "topology": "single-node compose (8-CPU/8GB container VM) on Apple M2: one FerroEHR deployment from docker/sut-ferroehr.yml with docker/sut-smart.yml and docker/sut-terminology.yml over it, FerroTERM 0.1.6 serving the shaped seed beside it (compose --profile terminology, fail-open), Basic login"
+  },
+  "scoped_tokens": {
+    "mint": {
+      "issuer": "https://as.cnf.test",
+      "subject": "cnf-smart-app",
+      "audience": "cnf-smart-sut",
+      "kid": "cnf-smart-test",
+      "ttl_seconds": 3600
+    }
   }
 }
