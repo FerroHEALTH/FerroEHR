@@ -499,7 +499,7 @@ impl Builder<'_> {
         let source = leaf.source.0;
         self.vo_alias.contains_key(&source)
             && !self.node_alias.contains_key(&source)
-            && super::from::is_whole_root_object(target, source)
+            && super::stream::is_whole_root_object(target, source)
     }
 
     /// Whether `target` is read as a jsonb fragment value (a data path that is
