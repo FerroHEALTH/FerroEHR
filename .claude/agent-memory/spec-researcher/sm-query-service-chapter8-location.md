@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
+
 # SM Platform ch.8 "Query Service" — navigation
 
 The SM-side companion to [[query-api-ops-location]] (ITS-REST query wire) and

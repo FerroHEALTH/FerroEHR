@@ -1,6 +1,6 @@
 ---
-name: ehr-id-scope-semantics-is-sm-grounded
-description: The query ehr_id/openehr-ehr-id scope's EFFECT is defined by SM i_query_service _ehr_ids_ (not spec-silent); EHRbase 2.34.0 discards both carriers
+name: ehr-id-scope-semantics-is-its-grounded
+description: The query ehr_id/openehr-ehr-id scope's EFFECT is defined by the ITS-REST query docs (not spec-silent); EHRbase 2.34.0 discards both carriers
 metadata:
   type: project
 ---
@@ -9,13 +9,9 @@ Adjudicated 2026-08-13 for `execute_ad_hoc_query-empty_db_bare_ehr` on the
 committed EHRbase record (issue #2362).
 
 **The scoping semantics IS released-spec-defined**, contrary to AMB-101's
-"never stated" claim:
+"never stated" claim. (The Service Model text on `_ehr_ids_` says the same, but
+it is reference text, never an authority: owner ruling 2026-10-27.)
 
-- SM `docs/UML/classes/i_query_service.adoc` §I_QUERY_SERVICE Interface,
-  `execute_ad_hoc_query` param `_ehr_ids_`: "Specific set of EHRs on which to
-  execute the query. If none supplied, a full population query will be
-  performed on all EHRs whose status has the `_is_queryable_` flag set to
-  `True`." (+ `.Errors * ehr_id_does_not_exist`).
 - ITS-REST `specifications/docs/query/Query_types.md` §Single EHR queries:
   single-EHR execution "is achieved by supplying an `ehr_id` query parameter or
   setting an `openehr-ehr-id` request header".

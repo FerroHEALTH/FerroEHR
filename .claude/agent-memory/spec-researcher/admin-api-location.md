@@ -1,6 +1,6 @@
 ---
 name: admin-api-location
-description: Where the ITS-REST 1.1.0 Admin API (exactly 2 EHR-delete ops) lives, its DEVELOPMENT status, the SM I_ADMIN_SERVICE/I_ADMIN_ARCHIVE/I_ADMIN_DUMP_LOAD grounding + defects, the RM indelibility-vs-physical-delete tension, and the EHRbase-legacy Robot suite that is NOT the vendored Admin API
+description: Where the ITS-REST 1.1.0 Admin API (exactly 2 EHR-delete ops) lives, its DEVELOPMENT status, the SM I_ADMIN_SERVICE/I_ADMIN_ARCHIVE/I_ADMIN_DUMP_LOAD reference text (not an authority) + defects, the RM indelibility-vs-physical-delete tension, and the EHRbase-legacy Robot suite that is NOT the vendored Admin API
 metadata:
   type: reference
 ---
@@ -42,7 +42,7 @@ text only in `overview/Specifications.md` (the API list),
   in the vendored OAS (invalid OAS 3.0.3 path templating) and collides with
   `/admin/ehr/{ehr_id}` for the literal token `all`.
 
-## SM grounding — `SM/docs/openehr_platform/master15-admin_service.adoc`
+## SM reference text (not an authority) — `SM/docs/openehr_platform/master15-admin_service.adoc`
 Full ch.15 map (calls, args, diagram-only features, the 11-orphan census, the
 duplicate-name pairs) now lives in [[sm-admin-service-ch15-location]] — extend
 that file, not this one. 10 operations across `I_ADMIN_SERVICE` (6),
