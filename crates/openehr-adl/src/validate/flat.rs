@@ -37,14 +37,14 @@
 //!   occurrences against its flattened cardinality (`master04.5`
 //!   §`C_ATTRIBUTE`); a specialised child may not restate the inherited
 //!   cardinality.
-//! * **VCOSU** — object node ids must be unique archetype-wide (`master04.5`
-//!   §`C_OBJECT`), judged per node IDENTITY because flattening clones a
-//!   redefined node's whole subtree.
+//! * **VCOSU** — object node ids must be unique within the archetype
+//!   (`master04.5` §`C_OBJECT`; [`super::scope`]), judged per node IDENTITY
+//!   because flattening clones a redefined node's whole subtree.
 //!
 //! [`super::run_flat_form_checks`] runs that second group only for a specialised
 //! archetype whose flat form was produced, so no check double-fires.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
@@ -52,6 +52,7 @@ use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 
 use super::catalogue::ValidationCode;
+use super::scope;
 use super::structure::occurrences_lower;
 use super::terminology::{CodeUsage, collect_usage};
 use super::{ValidationIssue, push_issue};
@@ -252,12 +253,7 @@ pub(super) fn validate_flat_form(flat: &Archetype) -> Vec<ValidationIssue> {
     let v = view(flat);
     let mut issues = Vec::new();
 
-    let defined: BTreeSet<&str> = v
-        .terminology
-        .term_definitions
-        .values()
-        .flat_map(|m| m.keys().map(String::as_str))
-        .collect();
+    let defined = scope::defined_codes(v.terminology);
 
     // VATDF: value at-codes used in the flattened definition must be defined.
     let mut usage = CodeUsage::default();
@@ -296,8 +292,7 @@ pub(super) fn validate_flat_form(flat: &Archetype) -> Vec<ValidationIssue> {
     issues
 }
 
-/// Walk the flat definition tree: VCOSU archetype-wide node-id uniqueness on
-/// every object, VACMCU/WACMCL on every container attribute.
+/// The flat-form walk: VCOSU per archetype, VACMCU/WACMCL per container attribute.
 fn walk_flat(
     cco: &CComplexObject,
     path: &str,
@@ -314,7 +309,10 @@ fn walk_flat(
             let cpath = child_path(&attr_path, object_node_id(child));
             check_node_id_unique(child, &cpath, seen, issues);
             if let CObject::CComplexObject(child_cco) = child {
-                walk_flat(child_cco, &cpath, seen, issues);
+                // VCOSU restarts below a nested archetype root ([`super::scope`]).
+                let (mut fresh, root) = (HashMap::new(), scope::archetype_root(child).is_some());
+                let ids = if root { &mut fresh } else { &mut *seen };
+                walk_flat(child_cco, &cpath, ids, issues);
             }
         }
     }

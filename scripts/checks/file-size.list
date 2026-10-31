@@ -75,7 +75,7 @@ crates/openehr-adl/src/odin.rs 908
 crates/openehr-adl/src/parse/parser.rs 1240
 crates/openehr-adl/src/parse/primitives.rs 1217
 crates/openehr-adl/src/validate/conformance.rs 872
-crates/openehr-adl/src/validate/flat.rs 943
+crates/openehr-adl/src/validate/flat.rs 941
 crates/openehr-adl/src/validate/rm.rs 991
 crates/openehr-adl/src/validate/specialisation.rs 1480
 crates/openehr-its/src/opt14_writer/assemble.rs 1007
