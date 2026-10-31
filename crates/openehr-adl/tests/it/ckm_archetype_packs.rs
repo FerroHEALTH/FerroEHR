@@ -365,7 +365,7 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
     (
         "openEHR-EHR-CLUSTER.ambient_oxygen.v1.0.0.adls",
         ValidationCode::Vcarm,
-        "constrains `property` on DV_QUANTITY (undefined in RM 1.2.0) and the RM function(s) `is_integral`, which VCARM admits but the vendored BMM does not declare (#3061)",
+        "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define; its `is_integral` constraint names a computed attribute, which VCARM admits",
     ),
     (
         "openEHR-EHR-CLUSTER.anatomical_location-precise.v1.0.0.adls",
@@ -455,12 +455,7 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
     (
         "openEHR-EHR-CLUSTER.microscopy_melanoma.v1.0.0.adls",
         ValidationCode::Vcarm,
-        "constrains `property` on DV_QUANTITY (undefined in RM 1.2.0) and the RM function(s) `is_integral`, which VCARM admits but the vendored BMM does not declare (#3061)",
-    ),
-    (
-        "openEHR-EHR-CLUSTER.microscopy_prostate_carcinoma.v1.0.0.adls",
-        ValidationCode::Vcarm,
-        "constrains the RM function(s) `is_integral`; VCARM admits computed attributes, but the vendored BMM declares no functions (#3061)",
+        "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define; its `is_integral` constraint names a computed attribute, which VCARM admits",
     ),
     (
         "openEHR-EHR-CLUSTER.move-joint.v1.0.0.adls",
@@ -610,7 +605,7 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
     (
         "openEHR-EHR-OBSERVATION.demo.v1.0.0.adls",
         ValidationCode::Vcarm,
-        "constrains `property` on DV_QUANTITY (undefined in RM 1.2.0) and the RM function(s) `is_integral`, `offset`, which VCARM admits but the vendored BMM does not declare (#3061)",
+        "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define; its `is_integral` and `offset` constraints name computed attributes, which VCARM admits",
     ),
     (
         "openEHR-EHR-OBSERVATION.distraction_hearing_test.v1.0.0.adls",
@@ -655,7 +650,7 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
     (
         "openEHR-EHR-OBSERVATION.indirect_oximetry.v1.0.0.adls",
         ValidationCode::Vcarm,
-        "constrains `property` on DV_QUANTITY (undefined in RM 1.2.0) and the RM function(s) `is_integral`, which VCARM admits but the vendored BMM does not declare (#3061)",
+        "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define; its `is_integral` constraint names a computed attribute, which VCARM admits",
     ),
     (
         "openEHR-EHR-OBSERVATION.infant_feeding.v1.0.0.adls",
@@ -760,7 +755,7 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
     (
         "openEHR-EHR-OBSERVATION.tympanogram_hf.v1.0.0.adls",
         ValidationCode::Vcarm,
-        "constrains `property` on DV_QUANTITY (undefined in RM 1.2.0) and the RM function(s) `is_integral`, which VCARM admits but the vendored BMM does not declare (#3061)",
+        "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define; its `is_integral` constraint names a computed attribute, which VCARM admits",
     ),
     (
         "openEHR-EHR-OBSERVATION.urine_output.v1.0.0.adls",
@@ -775,12 +770,12 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
     (
         "openEHR-EHR-OBSERVATION.visual_acuity.v1.0.0.adls",
         ValidationCode::Vcarm,
-        "constrains `property` on DV_QUANTITY (undefined in RM 1.2.0) and the RM function(s) `is_integral`, which VCARM admits but the vendored BMM does not declare (#3061)",
+        "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define; its `is_integral` constraint names a computed attribute, which VCARM admits",
     ),
     (
         "openEHR-EHR-OBSERVATION.visual_field_measurement.v1.0.0.adls",
         ValidationCode::Vcarm,
-        "constrains `property` on DV_QUANTITY (undefined in RM 1.2.0) and the RM function(s) `is_integral`, which VCARM admits but the vendored BMM does not declare (#3061)",
+        "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define; its `is_integral` constraint names a computed attribute, which VCARM admits",
     ),
     (
         "openEHR-EHR-OBSERVATION.waist_hip.v1.0.0.adls",

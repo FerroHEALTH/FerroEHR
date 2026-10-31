@@ -223,6 +223,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - No artefact with that HRID → `artefact_does_not_exist` (`404`).
+    /// - Committed versions or another stored artefact need it → `409`.
     /// - A database failure (`exception` → `500`).
     pub async fn delete_artefact(&self, an_id: String) -> Result<(), SmError> {
         Ok(self.adl2_delete(&an_id).await?)
@@ -824,12 +825,10 @@ impl FerroEhrService {
         Ok(paginate(all.into_iter().filter(|id| re.is_match(id)), page))
     }
 
-    /// Delete the ADL2 artefact with `ARCHETYPE_HRID` `an_id`
-    /// (case-insensitive); absent → `artefact_does_not_exist` (`404`); a
-    /// template-kind artefact still referenced by committed versions →
-    /// `Conflict` (`409`, with the reference count — the same
-    /// never-orphan-clinical-data guard the OPT 1.4 delete carries; no openEHR
-    /// spec governs the in-use refusal, our own integrity design).
+    /// Delete the ADL2 artefact `an_id` (case-insensitive); absent →
+    /// `artefact_does_not_exist` (`404`); a template committed versions use,
+    /// or an artefact another stored one depends on, → `Conflict` (`409`; no
+    /// openEHR spec governs the in-use refusal, our own integrity design).
     async fn adl2_delete(&self, an_id: &str) -> Result<(), ServiceError> {
         // Resolve the stored (case-preserved) HRID + kind, count references,
         // and delete in ONE transaction, mirroring `opt_delete`; the
@@ -867,6 +866,7 @@ impl FerroEhrService {
                 )));
             }
         }
+        self.adl2_refuse_in_use(&mut tx, &hrid).await?;
         sqlx::query("DELETE FROM adl2_artefact WHERE hrid = $1")
             .bind(&hrid)
             .execute(&mut *tx)
@@ -1030,7 +1030,7 @@ const ENGINE_STACK_BYTES: usize = 256 * 1024 * 1024;
 /// [`ServiceError::Internal`] when the thread cannot be spawned or ends without
 /// delivering a result (a panic inside `f` surfaces as that, never as an abort
 /// of the process).
-async fn on_engine_stack<T, F>(f: F) -> Result<T, ServiceError>
+pub(super) async fn on_engine_stack<T, F>(f: F) -> Result<T, ServiceError>
 where
     T: Send + 'static,
     F: FnOnce() -> T + Send + 'static,

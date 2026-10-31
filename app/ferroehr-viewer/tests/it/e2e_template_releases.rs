@@ -106,9 +106,9 @@ async fn clean(cdr: &str) {
     }
 }
 
-/// The list's link to the release `id`.
+/// The row link to the release `id`, wherever the row is.
 fn row_link(id: &str) -> String {
-    format!("main a.fui-row-link[href='/templates/{id}']")
+    format!("a.fui-row-link[href='/templates/{id}']")
 }
 
 /// The header's link to the release `id` among the releases.
@@ -130,7 +130,7 @@ async fn the_releases_group_in_the_list_and_switch_in_the_header() {
     login_basic(&h).await;
     h.goto("/templates").await;
     h.wait_css(&format!(
-        "main tbody:has({}) {}",
+        "main tbody:has(> tr:first-child {}) tr:not(:first-child) {}",
         row_link(V2),
         row_link(V1)
     ))

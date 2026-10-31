@@ -411,6 +411,8 @@ categories (Art. 105). The floor is enforced from this release on, so a log
 kept today already meets it when Art. 9 applies.
 The effective retention is on the boot line beside the audit-enabled facts and
 on `GET /management/info` under `audit`.
+A record takes about 1.2 KB on disk, so the horizon decides how far the log
+grows ([Storage sizing](operations.md#audit-retention)).
 
 ### Getting the log out
 
@@ -579,7 +581,11 @@ parameter on an element of the document (`address` and the `.identifier`,
 search tokens the store takes from the record's rendered document when it
 writes the record (`audit.audit_search_token`, `audit.audit_search_set` and
 the record's `search_tokens`), so the search finds what the served document
-says and renders only the page it serves.
+says and renders only the page it serves. An `entity.identifier` that carries
+the record's request id or the object it names (the version uid of a create)
+is read from the record's own column instead, so a request adds no row to
+`audit.audit_search_token`. Retention deletes the tokens that no remaining
+record names, and never one a kept record names.
 
 | Parameter | Matches |
 |---|---|

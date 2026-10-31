@@ -125,8 +125,13 @@ fn release(hrid: &str) -> &str {
 
 /// The listing's link to the release `hrid`.
 fn row_link(hrid: &str) -> String {
+    format!("main {}", link_of(hrid))
+}
+
+/// The row link to the release `hrid`, wherever the row is.
+fn link_of(hrid: &str) -> String {
     format!(
-        "main a.fui-row-link[href='/templates/adl2/{}/{}']",
+        "a.fui-row-link[href='/templates/adl2/{}/{}']",
         stem(hrid),
         release(hrid)
     )
@@ -200,9 +205,9 @@ async fn adl2_versioned_get_reaches_both_stored_versions() {
     ensure_adl2_template_present(&h, "versioned.v1_1_0.adls", VERSIONED_V110).await;
     h.goto(LIST_URL).await;
     h.wait_css(&format!(
-        "main tbody:has({}) {}",
-        row_link(VERSIONED_V110),
-        row_link(VERSIONED_V100)
+        "main tbody:has(> tr:first-child {}) tr:not(:first-child) {}",
+        link_of(VERSIONED_V110),
+        link_of(VERSIONED_V100)
     ))
     .await;
     wait_main_contains(&h, "Earlier release").await;

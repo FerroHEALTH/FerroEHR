@@ -16,7 +16,7 @@
 //! This module sits BELOW validation, flattening, and OPT generation: all three
 //! read through it, and it depends on none of them.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
@@ -125,12 +125,18 @@ pub(crate) struct ArchetypeView<'a> {
     pub(crate) original_language: Option<&'a TerminologyCode>,
     pub(crate) description: Option<&'a ResourceDescription>,
     pub(crate) translations:
-        Option<&'a std::collections::BTreeMap<String, openehr_base::prelude::TranslationDetails>>,
+        Option<&'a BTreeMap<String, openehr_base::prelude::TranslationDetails>>,
     pub(crate) annotations: Option<&'a ResourceAnnotations>,
     pub(crate) adl_version: Option<&'a str>,
     pub(crate) rm_release: &'a str,
     pub(crate) is_differential: bool,
+    /// The constituent terminologies by archetype id, on an operational
+    /// template only (`OPT2/master03-opt_raw.adoc`: `component_terminologies`).
+    pub(crate) components: Option<&'a BTreeMap<String, ArchetypeTerminology>>,
 }
+
+/// The `component_terminologies` of an operational template that carries none.
+static NO_COMPONENTS: BTreeMap<String, ArchetypeTerminology> = BTreeMap::new();
 
 impl ArchetypeView<'_> {
     /// True if this archetype specialises a parent.
@@ -164,6 +170,7 @@ pub(crate) fn view(archetype: &Archetype) -> ArchetypeView<'_> {
                 adl_version: d.adl_version.as_deref(),
                 rm_release: &d.rm_release,
                 is_differential: d.is_differential,
+                components: None,
             },
             AuthoredArchetype::Template(t) => ArchetypeView {
                 kind: ArtefactKind::Template,
@@ -179,6 +186,7 @@ pub(crate) fn view(archetype: &Archetype) -> ArchetypeView<'_> {
                 adl_version: t.adl_version.as_deref(),
                 rm_release: &t.rm_release,
                 is_differential: t.is_differential,
+                components: None,
             },
             AuthoredArchetype::OperationalTemplate(o) => ArchetypeView {
                 kind: ArtefactKind::OperationalTemplate,
@@ -194,6 +202,7 @@ pub(crate) fn view(archetype: &Archetype) -> ArchetypeView<'_> {
                 adl_version: o.adl_version.as_deref(),
                 rm_release: &o.rm_release,
                 is_differential: o.is_differential,
+                components: Some(o.component_terminologies.as_ref().unwrap_or(&NO_COMPONENTS)),
             },
         },
         Archetype::TemplateOverlay(t) => ArchetypeView {
@@ -210,6 +219,7 @@ pub(crate) fn view(archetype: &Archetype) -> ArchetypeView<'_> {
             adl_version: None,
             rm_release: "",
             is_differential: t.is_differential,
+            components: None,
         },
     }
 }
