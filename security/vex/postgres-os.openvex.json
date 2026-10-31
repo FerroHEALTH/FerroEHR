@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-10-26T00:00:00Z",
-  "version": 3,
+  "timestamp": "2026-10-31T00:00:00Z",
+  "version": 4,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -927,6 +927,33 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "The overflow is in gz_vacate, part of the non-blocking gzwrite support introduced in zlib 1.3.1.2 (commit 81cc0be, as the Debian security tracker entry for CVE-2026-85091 records). The image's zlib1g is 1.3.1, which predates that code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84243"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The traversal needs an attacker who sets the LANGUAGE environment variable of a process that translates messages with gettext, and a crafted .mo file that process can read (GLIBC-SA-2026-0025). PostgreSQL translates its messages and runs with lc_messages taken from the image's LANG (en_US.utf8), so the server would honour LANGUAGE. Every process in the image (the entrypoint's bash, gosu, initdb, psql, the postmaster and each backend) inherits its environment from the container, which only the operator's compose file, chart or runtime sets; the image sets no LANGUAGE. No connection, protocol message, setting or SQL function available to the ferroehr role sets a variable in a server process's environment: the variables PostgreSQL writes itself are the LC_* names, from values setlocale has accepted, and PGLOCALEDIR and PGSYSCONFDIR, from its install paths. A role that could set one (a superuser through an untrusted procedural language) already runs code as the postgres user, so it crosses no trust boundary."
     },
     {
       "vulnerability": {
