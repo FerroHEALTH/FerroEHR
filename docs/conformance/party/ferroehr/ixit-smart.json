@@ -1,0 +1,39 @@
+{
+  "instances": {
+    "sut": {
+      "base_url": "http://localhost:8080/ferroehr/rest/openehr/v1",
+      "auth": {
+        "mode": "basic",
+        "user_env": "VEREDICTUM_CDR_USER",
+        "password_env": "VEREDICTUM_CDR_PASSWORD"
+      }
+    },
+    "smart_platform": {
+      "base_url": "http://localhost:8080",
+      "auth": {
+        "mode": "none"
+      }
+    }
+  },
+  "system_id": "ferroehr.local",
+  "smart": {
+    "platform_instance": "smart_platform",
+    "mint": {
+      "issuer": "https://as.cnf.test",
+      "audience": "cnf-smart-sut",
+      "subject": "cnf-smart-app",
+      "key_file": "../smart/cnf-smart-test.key.pem",
+      "kid": "cnf-smart-test",
+      "ttl_seconds": 3600
+    }
+  },
+  "scoped_tokens": {
+    "mint": {
+      "issuer": "https://as.cnf.test",
+      "subject": "cnf-smart-app",
+      "audience": "cnf-smart-sut",
+      "kid": "cnf-smart-test",
+      "ttl_seconds": 3600
+    }
+  }
+}
