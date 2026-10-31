@@ -386,6 +386,10 @@ jobs:
       sha: ${{ github.sha }}
       target: ${{ matrix.target }}
       runner: ${{ matrix.runner }}
+      # Only a release publishes the crates (see the crates leg), so only a
+      # release stamps their version; the pre-release rule spelled inline, as
+      # .github/actions/release-kind says a `with:` on a job call must.
+      crate-version: ${{ needs.plan.outputs.is-release == 'true' && needs.plan.outputs.crate-version || '' }}
 
   # ── One CycloneDX SBOM per published crate ──────────────────────────────────
   # CRA Annex I Part II(1) (docs/law/eu/cra/text.html): the nine `openehr-*`
@@ -715,6 +719,15 @@ jobs:
         with:
           tool: cargo-auditable@0.7.5
 
+      # The openehr-* version the crates leg publishes, stamped as
+      # release-build.yml stamps it, so the image's report names it too. A
+      # pre-release publishes no crates and keeps the source tree's.
+      - name: Stamp the published openehr-* version
+        if: needs.plan.outputs.is-release == 'true'
+        env:
+          CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
+        run: bash scripts/release/publish-crates.sh stamp "$CRATE_VERSION"
+
       - name: Build (release, native)
         # The binary is produced by the ferroehr-server package (bin name
         # `ferroehr`) since the crate consolidation; `-p ferroehr` is the
@@ -728,6 +741,7 @@ jobs:
         env:
           REVISION: ${{ github.sha }}
           FERROEHR_RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+          FERROEHR_OPENEHR_CRATE_VERSION: ${{ needs.plan.outputs.is-release == 'true' && needs.plan.outputs.crate-version || '' }}
         run: cargo auditable build --release --locked -p ferroehr-server
 
       - name: Strip
