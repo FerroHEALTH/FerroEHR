@@ -569,7 +569,8 @@ if [[ "${1:-}" == "--self-test" ]]; then
   other_block eighth >"$tree/crates/demo/src/four.rs"
   [[ "$(run check)" == 1 ]] || fail "a rise passed"
   grep -q 'rose from' "$work/answer" || fail "a rise was not reported as one: $(cat "$work/answer")"
-  grep -A3 'does not carry' "$work/answer" | grep 'three.rs' | grep -q 'four.rs' ||
+  new_block="$(grep -A3 'does not carry' "$work/answer" | grep 'three.rs' || true)"
+  [[ "$new_block" == *four.rs* ]] ||
     fail "a rise did not name the new block by both places: $(cat "$work/answer")"
   [[ "$(run update)" == 1 ]] || fail "--update raised the count"
   [[ "$(committed_count "$count_file")" == "$first" ]] || fail "--update wrote a higher count"
