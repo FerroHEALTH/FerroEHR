@@ -82,9 +82,10 @@ tags (`GET /demographic/tags`, plus
 
 A demographic contribution follows the payload rules of the EHR one (see
 [Resources → CONTRIBUTION](../using-the-api/resources.md#contribution)) and is
-refused the same way. A contribution without an `audit`, an `audit` without
-`change_type` or `committer`, a `commit_audit` without its own `committer`, and
-a version without `lifecycle_state` are each a **400**. A version whose object
+refused the same way. A contribution without an `audit`, an audit without
+`change_type` or `committer`, an audit sent as an attestation, a plain-string
+`description`, and a version without a `DV_CODED_TEXT` `lifecycle_state` are
+each a **400**. A version whose object
 is not a party or a `PARTY_RELATIONSHIP`, a lifecycle state outside the openEHR
 *version lifecycle state* group, and content that fails validation are each a
 **422**. The body is canonical JSON only: an XML or simplified-format

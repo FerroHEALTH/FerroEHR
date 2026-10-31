@@ -281,32 +281,76 @@ curl -u ferroehr:ferroehr \
 ```
 
 `POST /ehr/{ehr_id}/contribution` takes a contribution whose `versions` array
-each describe a change (the RM object, its `change_type`, its `lifecycle_state`,
-and per-version `commit_audit`) plus a shared `audit`. It returns **201** with
-the contribution id in `ETag`, or **400**/**404**/**409**/**422** on invalid
-input, unknown EHR, a uid conflict, or a change set that is well-formed but
-cannot be followed.
+each describe a change (the RM object, its `lifecycle_state`, and a
+per-version `commit_audit` with its `change_type`) plus a shared `audit`. The
+body is read through the released `NewContribution` schema, and a body that
+does not match it is refused with a **400**. It returns **201** with the
+contribution id in `ETag`, or **400**/**404**/**409**/**422** on invalid input,
+unknown EHR, a uid conflict, or a change set that is well-formed but cannot be
+followed.
 
-Five things about the payload are worth calling out:
+A minimal entry that creates a composition looks like this:
 
-- **The shared `audit` must carry its own `change_type` and `committer`.** They
-  are your account of the change set as a whole and are never derived or
-  invented by the server. A contribution without an `audit`, or whose `audit`
-  omits either one, is refused with a **400**. The server fills in
-  `time_committed`, and `system_id` when you do not supply one.
-- **Every `commit_audit` names its own `committer`**, an attestation included.
-  The server never copies the shared audit's committer into a version that
-  leaves it out: that version is refused with a **400** naming its index. A
-  committer that is not a `PARTY_PROXY` object at all, such as a bare string, is
-  a **400** too; one that is a `PARTY_PROXY` but breaks its own rules, such as a
-  `PARTY_IDENTIFIED` with no name, identifiers or reference, is a **422**. A
-  version's committer is stored as you send it, even when it differs from the
-  shared audit's. A version that omits `system_id` gets the shared audit's, and
-  every audit in the contribution carries the same `time_committed`.
-- **`lifecycle_state` is required on every version** and is not defaulted.
-  Omitting it is a **400**, on an attestation entry (see below) as well, even
-  though an attestation commits no new version. A code outside the openEHR
-  *version lifecycle state* group is a **422**.
+```json
+{
+  "versions": [
+    {
+      "lifecycle_state": {
+        "value": "complete",
+        "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" }
+      },
+      "commit_audit": {
+        "_type": "UPDATE_AUDIT",
+        "change_type": {
+          "value": "creation",
+          "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" }
+        },
+        "description": { "_type": "DV_TEXT", "value": "first draft" },
+        "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }
+      },
+      "data": { "_type": "COMPOSITION", "…": "…" }
+    }
+  ],
+  "audit": {
+    "change_type": {
+      "value": "creation",
+      "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" }
+    },
+    "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }
+  }
+}
+```
+
+These things about the payload are worth calling out:
+
+- **Every audit carries its own `change_type` and `committer`**, the shared
+  `audit` and each `commit_audit` alike. They are your account of the change
+  and are never derived or invented by the server: a contribution without an
+  `audit`, or an audit that omits either one, is refused with a **400**. The
+  `change_type` is a `DV_CODED_TEXT` naming a code of the openEHR *audit change
+  type* group, such as `249` (creation), `251` (modification), `523` (deleted)
+  or `666` (attestation); a code outside the group is a **422**. The server
+  fills in `time_committed`, and `system_id` when you do not supply one.
+- **An audit is sent as `UPDATE_AUDIT`**, `AUDIT_DETAILS` or with no `_type`.
+  An `ATTESTATION` or `UPDATE_ATTESTATION` audit is a **400**: attestations go
+  in the version's `attestations` list (see below).
+- **Every `commit_audit` names its own `committer`.** The server never copies
+  the shared audit's committer into a version that leaves it out: that version
+  is refused with a **400**. A committer that is not a `PARTY_PROXY` object at
+  all, such as a bare string, is a **400** too; one that is a `PARTY_PROXY` but
+  breaks its own rules, such as a `PARTY_IDENTIFIED` with no name, identifiers
+  or reference, is a **422**. A version's committer is stored as you send it,
+  even when it differs from the shared audit's. A version that omits
+  `system_id` gets the shared audit's, and every audit in the contribution
+  carries the same `time_committed`.
+- **A `description` is a `DV_TEXT` or `DV_CODED_TEXT` object**, never a plain
+  string, which is a **400**. A coded description keeps its `defining_code`.
+- **`lifecycle_state` is required on every version** and is a
+  `DV_CODED_TEXT`, as in the example. Omitting it, or sending it as a plain
+  string or as `{"terminology_id": …, "code_string": …}`, is a **400**, on an
+  attestation entry (see below) as well, even though an attestation commits no
+  new version. A code outside the openEHR *version lifecycle state* group is a
+  **422**.
 - **A version entry carries exactly the six declared members**
   (`preceding_version_uid`, `signature`, `lifecycle_state`, `attestations`,
   `data`, `commit_audit`) plus an optional `_type` self-tag. Anything else is
@@ -318,24 +362,25 @@ Five things about the payload are worth calling out:
   load), and `item` is the shape of an imported version, which only the import
   route produces. Either one on a version entry is a **400**.
 
-A `commit_audit` may instead be an **`ATTESTATION`**: set its `_type` to
-`ATTESTATION` (or the wire form `UPDATE_ATTESTATION`) and add `reason`
-(required) plus `is_pending` (required), and optionally `proof`, `items` and
-`attested_view`. This is how content is committed already signed, or marked as
-awaiting signature (`is_pending: true`). A coded `reason` must be a member of
-the openEHR *attestation reason* group, and `items`, when present, must be
-non-empty. The attestation is stored as part of that version's commit audit and
-read back on the version envelope, in the revision history, and in exports. A
-`description` may be a plain string, a `DV_TEXT`, or a `DV_CODED_TEXT`; a coded
-description keeps its `defining_code`.
+A version's `attestations` list carries `UPDATE_ATTESTATION` objects, each with
+its own `change_type`, `committer`, `reason` (required) and `is_pending`
+(required), and optionally `proof`, `items`, `attested_view` and `system_id`.
+On an entry that commits content, this is how content is committed already
+signed, or marked as awaiting signature (`is_pending: true`); the attestations
+are part of the version the server signs, and are read back on the version
+envelope, in the revision history, and in exports. A coded `reason` must be a
+member of the openEHR *attestation reason* group, `items`, when present, must
+be non-empty, and the committer follows the same rules as an audit's. An
+attestation without `system_id` gets its version audit's.
 
 An **attestation entry** signs or reviews a version that is already stored,
-without committing a new one. Give it the change type `666` (*attestation*),
-name the attested version in `preceding_version_uid`, and leave `data` out. Its
-`commit_audit` is the `UPDATE_ATTESTATION` itself, with its own `committer`,
-`reason` and `is_pending`. The entry still needs a `lifecycle_state`, which the
-server checks against the *version lifecycle state* group (a **422** when it is
-outside it) but does not store, because no new version carries it.
+without committing a new one. Give its `commit_audit` the change type `666`
+(*attestation*), name the attested version in `preceding_version_uid`, leave
+`data` out, and put one or more `UPDATE_ATTESTATION`s in its `attestations`; an
+attestation entry without any is a **400**. The entry still needs a
+`lifecycle_state`, which the server checks against the *version lifecycle
+state* group (a **422** when it is outside it) but does not store, because no
+new version carries it.
 
 `GET /ehr/{ehr_id}/contribution/{contribution_uid}` returns **200** with the
 contribution, or **404**. Add `Prefer: resolve_refs` to get full VERSION objects
