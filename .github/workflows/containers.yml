@@ -112,6 +112,16 @@ jobs:
               - 'rust-toolchain.toml'
               - '.cargo/**'
               - 'docker/Dockerfile'
+              # What docker/Dockerfile copies into the runtime stage beside the
+              # binary; scripts/lib/image-inputs.sh --self-test holds this list
+              # to its COPY sources.
+              - 'deploy/hosted/docker-compose.yml'
+              - 'deploy/hosted/Caddyfile'
+              - 'deploy/hosted/ferroehr.sandbox.toml'
+              - 'deploy/hosted/ferroehr-viewer.sandbox.toml'
+              - 'deploy/hosted/ferropix.sandbox.toml'
+              - 'deploy/hosted/ferropix-seed.sh'
+              - 'docker/terminology/seed/**'
               - 'docker/smoke-test.sh'
               - 'docker-compose.yml'
               - '.github/workflows/containers.yml'
@@ -479,9 +489,10 @@ jobs:
   # ── openEHR conformance against the images this push shipped (#4539) ───────
   # The reusable conformance.yml on the digests app-image and postgres-image
   # pushed for this commit, so nothing is compiled for it and the run judges
-  # what users pull. An image this push did not rebuild is judged at `:main`:
-  # its inputs did not change, and this workflow's queued concurrency means the
-  # previous run has tagged it. Every push runs it, the badges included, as
+  # what users pull. An image this push did not rebuild is judged at `:main`,
+  # which moves only when a scan passes, so conformance.yml judges it only when
+  # its revision label names a commit with this tree's inputs and refuses an
+  # older one (#4547). Every push runs it, the badges included, as
   # conformance.yml did on main before. A failed or cancelled build sits it out.
   conformance:
     name: conformance
