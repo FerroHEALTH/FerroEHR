@@ -40,6 +40,7 @@ use crate::common;
 
 use common::{Harness, env, is_present, login_basic_as, wait_css_absent, wait_main_contains};
 use reqwest::StatusCode;
+use sqlx::Connection as _;
 
 /// The versioned fixture pair: one HRID family, two release versions, so the
 /// versioned get has a genuine highest match to resolve a prefix to.
@@ -101,6 +102,32 @@ async fn remove_adl2_artefacts(hrids: &[&str]) {
             "ADL2 artefact cleanup -> {status}"
         );
     }
+}
+
+/// Remove one ADL2 artefact's row from the stack's database, the state the
+/// artefact route refuses to make while a stored template needs it. Returns
+/// whether it ran.
+///
+/// Without `UI_E2E_DB_URL` the scene cannot reach the database and says so
+/// rather than failing.
+///
+/// # Panics
+/// When the database refuses the connection or the statement.
+async fn delete_adl2_row(hrid: &str) -> bool {
+    let Some(url) = env("UI_E2E_DB_URL") else {
+        println!("NOTE adl2 missing-constituent scene skipped: UI_E2E_DB_URL unset");
+        return false;
+    };
+    let mut db = sqlx::PgConnection::connect(&url)
+        .await
+        .expect("connect to the e2e stack's database");
+    sqlx::query("DELETE FROM clinical.adl2_artefact WHERE lower(hrid) = lower($1)")
+        .bind(hrid)
+        .execute(&mut db)
+        .await
+        .expect("remove the artefact's row");
+    db.close().await.expect("close the database connection");
+    true
 }
 
 /// The absolute, canonicalized path of one fixture under the repository's
@@ -344,9 +371,10 @@ async fn an_adl2_artefact_is_deleted_from_the_listing() {
 /// so on every tab, names the archetype and offers its upload, and never
 /// draws the CDR's raw refusal.
 ///
-/// The upload of such a template is refused (AOM2 VARXR), so the scene builds
-/// the state the only way it can arise: it stores the archetype and the
-/// template, then deletes the archetype.
+/// The upload of such a template is refused (AOM2 VARXR), and the CDR refuses
+/// to delete an archetype a stored template needs, so the scene stores the
+/// archetype and the template and then removes the archetype's row in SQL,
+/// standing for a store written before that guard.
 #[tokio::test]
 async fn a_template_missing_a_constituent_says_so_on_every_tab() {
     let Some(h) = Harness::start("adl2-missing-constituent").await else {
@@ -373,7 +401,11 @@ async fn a_template_missing_a_constituent_says_so_on_every_tab() {
     .await;
     h.wait_url_contains("/templates/adl2/").await;
     ensure_adl2_template_present(&h, "needs_constituent.adls", NEEDS_CONSTITUENT).await;
-    remove_adl2_artefacts(&[CONSTITUENT]).await;
+    if !delete_adl2_row(CONSTITUENT).await {
+        remove_adl2_artefacts(&[NEEDS_CONSTITUENT, CONSTITUENT]).await;
+        h.finish().await;
+        return;
+    }
 
     let page = format!("/templates/adl2/{}", stem(NEEDS_CONSTITUENT));
     for (step, tab) in [
@@ -397,7 +429,7 @@ async fn a_template_missing_a_constituent_says_so_on_every_tab() {
             .await;
     }
 
-    remove_adl2_artefacts(&[NEEDS_CONSTITUENT]).await;
+    remove_adl2_artefacts(&[NEEDS_CONSTITUENT, CONSTITUENT]).await;
     h.assert_console_clean(&["401", "422", "Failed to load resource"])
         .await;
     h.finish().await;
