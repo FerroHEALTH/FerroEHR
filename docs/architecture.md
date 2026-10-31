@@ -122,12 +122,22 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   value columns `value_type`, `value_num`, `value_text`, `value_code` and
   `value_terminology` hold instead (DV_QUANTITY, DV_COUNT, DV_ORDINAL,
   DV_CODED_TEXT, DV_IDENTIFIER, DV_BOOLEAN and the string-valued types, each in
-  its basic shape only). A key is left out only when the columns rebuild it
-  exactly; everything else stays in `data` verbatim, and `data` is NULL when
-  nothing remains (two thirds of the rows). `ext.node_name`, `ext.node_value`
-  and `ext.node_fragment`, inlined `LANGUAGE sql` functions, rebuild the
-  omitted keys, so every reader sees the canonical fragment
-  (`crate::storage::slim` is the write half). The AQL emitter reads a fragment
+  its basic shape only). Below the root (#4525), an archetype root's
+  `archetype_details` and `archetype_node_id` leave together when the details
+  are exactly its own archetype id and an `rm_version` and the id is the
+  recased `archetype` (`openEHR-` and the class part in capitals), with
+  `rm_version` in its column, and a `language` in `ISO_639-1` and an
+  `encoding` in `IANA_character-sets` leave for the `language` and `encoding`
+  columns; the root row keeps its fragment, so the root reads that go around
+  `ext.node_fragment` are unchanged. A key is left out only when the columns
+  rebuild it exactly; everything else stays in `data` verbatim, and `data` is NULL when
+  nothing remains (two thirds of the rows). `ext.node_name`, `ext.node_value`,
+  `ext.node_archetype_node_id`, `ext.node_archetype_details`,
+  `ext.node_code_phrase` and `ext.node_fragment`, inlined `LANGUAGE sql`
+  functions, rebuild the omitted keys, so every reader sees the canonical
+  fragment (`crate::storage::slim` is the write half; its Rust rebuild puts a
+  restored header key where jsonb key order placed it, so a served fragment
+  keeps its bytes). The AQL emitter reads a fragment
   through the first member its path names, and the scalar paths into a typed
   value (`value/magnitude`, `value/value`, `value/units`, the defining code)
   read the typed column directly. No index sits on the typed columns: no

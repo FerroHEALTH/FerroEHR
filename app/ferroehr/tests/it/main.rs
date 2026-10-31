@@ -23,6 +23,7 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+mod access_delay_sinks;
 mod access_event_fail_closed;
 mod access_origins;
 mod adl14_knowledge_archetypes;
@@ -58,6 +59,7 @@ mod legal_marks;
 mod licence_stamp;
 mod manufacturer;
 mod multimedia_s3;
+mod node_header;
 mod one_schema_per_statement;
 mod opt_resource_meta;
 mod outbox_prune;

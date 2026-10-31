@@ -91,11 +91,12 @@ fn first_member(jp: &str) -> Option<&str> {
 /// stored `data` with the member `jp` starts at put back where the row's
 /// columns hold it (`crate::storage::slim`).
 ///
-/// `value` comes from the typed value columns when the row has them, `name`
-/// and `archetype_node_id` from their columns when `data` lacks them, `_type`
-/// from `rm_type`, and every other member from `data` as stored. Without a
-/// fragment path the whole rebuilt fragment is read (`node_fragment`). No
-/// openEHR spec governs storage: our own design.
+/// `value` comes from the typed value columns when the row has them, `name`,
+/// `archetype_node_id`, `archetype_details`, `language` and `encoding` from
+/// their columns when `data` lacks them, `_type` from `rm_type`, and every
+/// other member from `data` as stored. Without a fragment path the whole
+/// rebuilt fragment is read (`node_fragment`). No openEHR spec governs
+/// storage: our own design.
 pub(super) fn fragment_source(alias: &str, jp: Option<&str>) -> Expr {
     let data = col(alias, Node::Data);
     let value = || {
@@ -125,6 +126,9 @@ pub(super) fn fragment_source(alias: &str, jp: Option<&str>) -> Expr {
                 col(alias, Node::ValueText),
                 col(alias, Node::ValueCode),
                 col(alias, Node::ValueTerminology),
+                col(alias, Node::RmVersion),
+                col(alias, Node::Language),
+                col(alias, Node::Encoding),
             ],
         );
     };
@@ -152,15 +156,77 @@ pub(super) fn fragment_source(alias: &str, jp: Option<&str>) -> Expr {
                 col(alias, Node::Archetype),
                 data.clone(),
                 data,
-                col(alias, Node::Archetype),
+                archetype_node_id(alias),
             ],
         ),
+        Some("archetype_details") => Expr::cust_with_exprs(
+            "CASE WHEN $1 IS NULL OR ($2 -> 'archetype_details') IS NOT NULL THEN $3 \
+             ELSE jsonb_build_object('archetype_details', node_archetype_details($4, $5)) END",
+            [
+                col(alias, Node::RmVersion),
+                data.clone(),
+                data,
+                col(alias, Node::Archetype),
+                col(alias, Node::RmVersion),
+            ],
+        ),
+        Some(member @ ("language" | "encoding")) => {
+            let (column, terminology) = if member == "language" {
+                (Node::Language, crate::storage::header::LANGUAGE_TERMINOLOGY)
+            } else {
+                (Node::Encoding, crate::storage::header::ENCODING_TERMINOLOGY)
+            };
+            Expr::cust_with_exprs(
+                "CASE WHEN $1 IS NULL OR ($2 -> $3) IS NOT NULL THEN $4 \
+                 ELSE jsonb_build_object($5, node_code_phrase($6, $7)) END",
+                [
+                    col(alias, column),
+                    data.clone(),
+                    Expr::val(member),
+                    data,
+                    Expr::val(member),
+                    Expr::val(terminology),
+                    col(alias, column),
+                ],
+            )
+        }
         Some("_type") => Expr::cust_with_exprs(
             "jsonb_build_object('_type', $1)",
             [col(alias, Node::RmType)],
         ),
         _ => data,
     }
+}
+
+/// The member and the read of the `node` columns that hold the scalar a
+/// fragment path addresses, for the paths into a key the row stores as a
+/// column when the fragment leaves it out (`crate::storage::slim`): the
+/// name's value and code, the archetype node id, the archetype header's RM
+/// version, and the language and encoding codes.
+pub(super) fn column_read(alias: &str, path: &[&str]) -> Option<(&'static str, Expr)> {
+    let column = |member, column| Some((member, col(alias, column)));
+    match path {
+        ["name", "value"] => column("name", Node::Name),
+        ["name", "defining_code", "code_string"] => column("name", Node::NameCode),
+        ["name", "defining_code", "terminology_id", "value"] => {
+            column("name", Node::NameTerminology)
+        }
+        ["archetype_node_id"] => Some(("archetype_node_id", archetype_node_id(alias))),
+        ["archetype_details", "rm_version"] => column("archetype_details", Node::RmVersion),
+        ["language", "code_string"] => column("language", Node::Language),
+        ["encoding", "code_string"] => column("encoding", Node::Encoding),
+        _ => None,
+    }
+}
+
+/// The node row `alias`'s `archetype_node_id` as its columns hold it: the
+/// lowercase `archetype`, recased when the row keeps its archetype header in
+/// `rm_version` (`ext.node_archetype_node_id`).
+pub(super) fn archetype_node_id(alias: &str) -> Expr {
+    call(
+        "node_archetype_node_id",
+        vec![col(alias, Node::Archetype), col(alias, Node::RmVersion)],
+    )
 }
 
 /// `jsonb_path_query_first(data, '<jp>'::jsonpath[, vars])` — `vars` carries
