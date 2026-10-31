@@ -121,7 +121,7 @@ async fn delete_adl2_row(hrid: &str) -> bool {
     let mut db = sqlx::PgConnection::connect(&url)
         .await
         .expect("connect to the e2e stack's database");
-    sqlx::query("DELETE FROM adl2_artefact WHERE lower(hrid) = lower($1)")
+    sqlx::query("DELETE FROM clinical.adl2_artefact WHERE lower(hrid) = lower($1)")
         .bind(hrid)
         .execute(&mut db)
         .await
