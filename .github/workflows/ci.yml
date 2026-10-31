@@ -833,6 +833,46 @@ jobs:
       - name: Error cause chains have not regressed
         run: bash scripts/checks/error-source-chain.sh
 
+  # Code is written once (.claude/rules/rust-style.md, #4454): the duplicated
+  # lines jscpd measures in app/*/src, crates/*/src and tools/*/src may fall
+  # and never rise. jscpd runs from its official image, pinned by digest in
+  # docs/VERSIONS.md, and the count and the key of every counted block are
+  # committed beside the guard. A rise fails and names the new blocks by both
+  # places; a fall fails until the count is lowered with --update.
+  duplication:
+    name: duplication
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Duplication ratchet self-test
+        run: bash scripts/checks/duplication.sh --self-test
+      - name: The duplicated lines have not risen or fallen
+        run: bash scripts/checks/duplication.sh
+
+  # A hand-written source file carries at most 800 lines, its inline tests
+  # included (#4454). A file over it on the day the guard landed stands in
+  # scripts/checks/file-size.list with its length and may shrink and never
+  # grow; a shrink fails until the entry is lowered, so the list only tightens.
+  file-size:
+    name: file-size
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: File-size ratchet self-test
+        run: bash scripts/checks/file-size.sh --self-test
+      - name: No file over the budget or past its entry
+        run: bash scripts/checks/file-size.sh
+
   # Default-value style (.claude/rules/rust-style.md §Default values): a field's
   # default lives inline in its struct's `Default` impl — the RFC 3681 shape,
   # hand-written because that syntax is nightly-only.
@@ -2814,6 +2854,8 @@ jobs:
       - sql-string-building
       - error-hygiene
       - error-source-chain
+      - duplication
+      - file-size
       - no-python
       - license-text
       - copyright-holder
