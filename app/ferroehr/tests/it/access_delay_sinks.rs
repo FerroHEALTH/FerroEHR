@@ -125,9 +125,10 @@ async fn assert_held(svc: &FerroEhrService, vo: &str) {
     );
 }
 
-/// The syslog feed (ITI-20) sends a professional's read of the held
-/// composition, which names it, while the hold is in force. The DICOM form of
-/// the hold's own record names the patient only.
+/// The syslog feed (ITI-20) sends the record of placing the hold and a
+/// professional's read of the held composition while the hold is in force;
+/// both name the composition, the hold's own record as `access-delay:<vo>`,
+/// the object its FHIR form names.
 #[tokio::test]
 async fn the_syslog_feed_carries_a_record_about_a_held_composition() {
     let db = testkit::db().await.expect("testkit database");
@@ -149,18 +150,19 @@ async fn the_syslog_feed_carries_a_record_about_a_held_composition() {
         "the read is recorded"
     );
 
-    let mark = format!("ParticipantObjectID=\"{vo}::ferroehr::1\"");
+    let mut marks = vec![
+        format!("ParticipantObjectID=\"access-delay:{vo}\""),
+        format!("ParticipantObjectID=\"{vo}::ferroehr::1\""),
+    ];
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     let mut frames = Vec::new();
-    loop {
+    while !marks.is_empty() {
         let wait = deadline.saturating_duration_since(std::time::Instant::now());
         let Some(frame) = listener.recv(wait).await else {
-            panic!("the record of the hold reaches the syslog repository: {frames:#?}");
+            panic!("the records naming {marks:?} reach the syslog repository: {frames:#?}");
         };
         let frame = String::from_utf8_lossy(&frame).into_owned();
-        if frame.contains(&mark) {
-            break;
-        }
+        marks.retain(|mark| !frame.contains(mark.as_str()));
         frames.push(frame);
     }
     assert_held(&svc, &vo).await;
