@@ -50,8 +50,8 @@ any remaining identical hand-written twin pair.
 Four stages, one directory each — every stage consumes the previous stage's
 output, never the raw files:
 
-- `src/load/` — parse the vendored inputs verbatim (`bmm`, `xsd`, `oas`); no
-  analysis, no decisions.
+- `src/load/` — parse the vendored inputs verbatim (`bmm` with the function
+  signatures in `bmm_function`, `xsd`, `oas`); no analysis, no decisions.
 - `src/analyze/` — model analysis over the loaded BMM: merged include closures,
   descendant/variant sets, the ownership graph + back-reference cycle breaking,
   the constructibility proof, the cross-schema re-emission closure, and the
@@ -62,7 +62,8 @@ output, never the raw files:
   `class_binding`, `back_reference`, `field_default`, `primitive`,
   `is_mapped_class`, `xml_bmm_only_allowed`), each carrying its spec citation.
 - `src/render/` — the only stage that produces text: `emit`, `emit_json`,
-  `emit_xml`, `emit_rest`, `emit_rm_model`, `emit_opt`, `emit_validate`, and the
+  `emit_xml`, `emit_rest`, `emit_rm_model` (its API body in
+  `emit_rm_model_api`), `emit_opt`, `emit_validate`, and the
   shared `naming` helper.
 - `src/cli.rs` + a thin `src/main.rs` — argument dispatch. EVERY emit target's
   text production is a `render_*_files()` seam consumed by both its `cmd_*`

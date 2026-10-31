@@ -10,15 +10,17 @@
 //!
 //! Two generated files under `openehr-rm/src/model/`:
 //! - `mod.rs` — the public API (`RmClass`, `RmAttribute`, `Container`, and the
-//!   `class`/`attribute`/`attributes`/`descendants`/`ancestors`/`is_a`/
+//!   `class`/`attribute`/`computed_attribute`/`attributes`/`descendants`/`ancestors`/`is_a`/
 //!   `is_primitive`/`conforms_to_ordered`/`is_structure_root` functions + a
 //!   `LazyLock` name index).
 //! - `data.rs` — the generated `static CLASSES: &[RmClass]` table.
 
 use crate::analyze::Model;
 use crate::load::bmm::{BmmClass, BmmEnumValue, BmmPackage, BmmPropKind, BmmSchema, BmmType};
+use crate::load::bmm_function::BmmFunction;
 use crate::plan::overrides::{class_binding, ref_target};
 use crate::render::emit::GenFile;
+use crate::render::emit_rm_model_api::emit_mod;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Classes the node codec splits into their own `node` row — mirrored **verbatim**
@@ -76,6 +78,8 @@ struct ClassModel {
     /// Transitive **concrete** descendants (incl. self if concrete), sorted.
     descendants: Vec<String>,
     attributes: Vec<AttrModel>,
+    /// The flattened no-parameter functions, typed by their result.
+    computed: Vec<AttrModel>,
     is_structure_root: bool,
     /// The class's own formal generic parameters (`BMM generic_parameter_defs`),
     /// in declaration order, with their `conforms_to` bound where declared.
@@ -207,6 +211,8 @@ fn build(model: &Model, packages: &BTreeMap<String, String>) -> Result<Vec<Class
         let package = packages
             .get(name)
             .ok_or_else(|| format!("class {name} is declared in no package of the generation"))?;
+        let attributes = attributes_of(model, class)?;
+        let computed = computed_attributes_of(model, class, &attributes);
         out.push(ClassModel {
             name: name.clone(),
             package: package.clone(),
@@ -214,7 +220,8 @@ fn build(model: &Model, packages: &BTreeMap<String, String>) -> Result<Vec<Class
             is_abstract: class.is_abstract,
             ancestors: ancestors_of(model, name),
             descendants: descendants_of(model, name, &concrete),
-            attributes: attributes_of(model, class)?,
+            attributes,
+            computed,
             is_structure_root: STRUCTURE_ROOTS.contains(&name.as_str()),
             generic_params: class
                 .generic_params
@@ -306,27 +313,8 @@ fn attributes_of(model: &Model, class: &BmmClass) -> Result<Vec<AttrModel>, Stri
         .flattened_props(class)
         .iter()
         .map(|rp| {
-            let (declared_type, container, type_params, cardinality) = match &rp.prop.kind {
-                BmmPropKind::Single(t) => (
-                    declared_type(model, &class.name, t),
-                    "None",
-                    type_ref_params(model, &class.name, t),
-                    None,
-                ),
-                BmmPropKind::Container {
-                    container_type,
-                    item,
-                    cardinality,
-                } => (
-                    declared_type(model, &class.name, item),
-                    container_kind(container_type),
-                    type_ref_params(model, &class.name, item),
-                    cardinality.as_ref().map(|c| CardinalityModel {
-                        lower: c.lower,
-                        upper: c.upper,
-                    }),
-                ),
-            };
+            let (declared_type, container, type_params, cardinality) =
+                value_shape(model, &class.name, &rp.prop.kind);
             let ref_target =
                 if declared_type == "OBJECT_REF" || model.inherits(&declared_type, "OBJECT_REF") {
                     ref_target(&rp.owner, &rp.prop.name)
@@ -356,6 +344,88 @@ fn attributes_of(model: &Model, class: &BmmClass) -> Result<Vec<AttrModel>, Stri
                                 && (decl == &rp.owner || model.inherits(&rp.owner, decl))
                         }),
                 ref_target,
+            })
+        })
+        .collect()
+}
+
+/// The declared type, container kind, generic type-argument tree and
+/// cardinality of a property-shaped value `kind`, in `concrete`'s scope.
+fn value_shape(
+    model: &Model,
+    concrete: &str,
+    kind: &BmmPropKind,
+) -> (
+    String,
+    &'static str,
+    Vec<TypeRefModel>,
+    Option<CardinalityModel>,
+) {
+    match kind {
+        BmmPropKind::Single(t) => (
+            declared_type(model, concrete, t),
+            "None",
+            type_ref_params(model, concrete, t),
+            None,
+        ),
+        BmmPropKind::Container {
+            container_type,
+            item,
+            cardinality,
+        } => (
+            declared_type(model, concrete, item),
+            container_kind(container_type),
+            type_ref_params(model, concrete, item),
+            cardinality.as_ref().map(|c| CardinalityModel {
+                lower: c.lower,
+                upper: c.upper,
+            }),
+        ),
+    }
+}
+
+/// The flattened (own + inherited) computed attributes of `class`,
+/// ancestor-first: every BMM function with no parameters and a result, a
+/// descendant's redefinition replacing the inherited one (AOM2 `master04.2`
+/// §Attribute Nodes). A name `stored` already carries is left out.
+fn computed_attributes_of(model: &Model, class: &BmmClass, stored: &[AttrModel]) -> Vec<AttrModel> {
+    fn gather<'a>(
+        model: &'a Model,
+        name: &str,
+        order: &mut Vec<String>,
+        map: &mut BTreeMap<String, &'a BmmFunction>,
+    ) {
+        let Some(class) = model.get(name) else {
+            return;
+        };
+        for anc in &class.ancestors {
+            gather(model, anc, order, map);
+        }
+        for f in &class.functions {
+            if map.insert(f.name.clone(), f).is_none() {
+                order.push(f.name.clone());
+            }
+        }
+    }
+    let mut order = Vec::new();
+    let mut map = BTreeMap::new();
+    gather(model, &class.name, &mut order, &mut map);
+    order
+        .into_iter()
+        .filter_map(|n| map.remove(&n))
+        .filter(|f| f.parameter_count == 0 && !stored.iter().any(|a| a.name == f.name))
+        .filter_map(|f| {
+            let (declared_type, container, type_params, _) =
+                value_shape(model, &class.name, f.result.as_ref()?);
+            Some(AttrModel {
+                name: f.name.clone(),
+                declared_type,
+                container,
+                is_mandatory: !f.is_nullable,
+                type_params,
+                cardinality: None,
+                nonempty: false,
+                ref_target: None,
             })
         })
         .collect()
@@ -433,318 +503,6 @@ fn str_slice(items: &[String]) -> String {
     b
 }
 
-/// The hand-authored-shaped, generated `model/mod.rs`: the public API over the
-/// generated `data::CLASSES` table.
-fn emit_mod() -> String {
-    // Note: the body is a literal — no per-class data — so it is a constant
-    // string. rustfmt runs over the written file afterwards.
-    r#"// @generated by openehr-codegen (emit-rm-model) — DO NOT EDIT.
-//! Static RM attribute/type model — the AQL planner's spec-pinned oracle,
-//! generated from the BASE + RM BMM meta-model (the same input as the `emit`
-//! target). No reflection, no hand-maintained tables.
-//!
-//! Covers every class of the BASE + RM BMM, the BASE foundation types
-//! (primitives, the `Ordered` and `Numeric` markers, containers) included, each
-//! with the BMM package it is declared in. For each class it records
-//! the flattened (own + inherited) attributes with their declared spec type,
-//! generic type-argument tree, container kind + cardinality, and mandatory flag;
-//! the abstract flag; the class's own formal generic parameters; the transitive
-//! ancestor set; the transitive **concrete** descendant set; and a structure-node
-//! flag. Enumeration classes (`BMM_ENUMERATION`) additionally carry their named
-//! constants + values in a separate table (see [`enumeration`]).
-//!
-//! A reference-typed attribute (`OBJECT_REF`, `PARTY_REF`, `LOCATABLE_REF`)
-//! names the class it points to where the RM text states one
-//! ([`RmAttribute::ref_target`]); the BMM types the attribute by the
-//! reference class alone.
-//!
-//! # `is_structure_root`
-//!
-//! `is_structure_root(class)` is true for exactly the RM types the node codec
-//! splits into their own `node` row (`ferroehr::storage::codec`). That set is
-//! **not** derivable from the BMM alone — it is a hand-picked list mirrored from
-//! `codec::STRUCTURE_TYPES`: the LOCATABLE *content* subtypes used inside
-//! COMPOSITION / EHR_STATUS / FOLDER trees, **plus** `EVENT_CONTEXT` and
-//! `FEEDER_AUDIT` (which AQL addresses although the RM does not make them
-//! LOCATABLE), and **without** the demographic LOCATABLE hierarchy (`PARTY`,
-//! `ROLE`, `ACTOR`, …), which is never composition content. The emitter keeps
-//! this in lockstep with `codec.rs`.
-
-use std::collections::HashMap;
-use std::sync::LazyLock;
-
-mod data;
-
-/// An RM class in the static model.
-#[derive(Debug)]
-pub struct RmClass {
-    /// The spec class name, verbatim (e.g. `"OBSERVATION"`).
-    pub name: &'static str,
-    /// The qualified BMM package the class is declared in (e.g.
-    /// `"org.openehr.rm.composition.content.entry"`).
-    pub package: &'static str,
-    /// Whether the generated `openehr-*` crates carry a type of their own for
-    /// this class. False for a primitive (a Rust scalar), a container (`Vec`,
-    /// map, set) and a foundation class that holds no data (the `Ordered` and
-    /// `Numeric` markers, the functional types, the built-in services, the
-    /// constant holders): none of them is ever a canonical-JSON object.
-    pub generated_type: bool,
-    /// Whether the class is abstract (never instantiated directly).
-    pub is_abstract: bool,
-    /// Transitive ancestor spec names, as the BMM declares them (`DV_ORDERED`
-    /// carries `Ordered`, `Integer` carries `Ordered_Numeric` and `Ordered`).
-    pub ancestors: &'static [&'static str],
-    /// Transitive **concrete** descendant spec names, including this class when
-    /// it is itself concrete.
-    pub descendants: &'static [&'static str],
-    /// The flattened (own + inherited) attributes, ancestor-first.
-    pub attributes: &'static [RmAttribute],
-    /// Whether the node codec splits this type into its own `node` row (see the
-    /// module docs).
-    pub is_structure_root: bool,
-    /// The class's own formal generic parameters, in declaration order (empty for
-    /// a non-generic class), e.g. `[T conforms_to ITEM_STRUCTURE]` on `HISTORY`.
-    pub generic_params: &'static [RmGenericParam],
-}
-
-/// One formal generic parameter of an [`RmClass`] (`BMM generic_parameter_defs`).
-#[derive(Debug)]
-pub struct RmGenericParam {
-    /// The parameter name, verbatim (e.g. `"T"`).
-    pub name: &'static str,
-    /// The `conforms_to` bound spec name, if the BMM declares one (e.g.
-    /// `Some("ITEM_STRUCTURE")`).
-    pub conforms_to: Option<&'static str>,
-}
-
-/// One attribute of an [`RmClass`].
-#[derive(Debug)]
-pub struct RmAttribute {
-    /// The attribute name, verbatim (e.g. `"content"`).
-    pub name: &'static str,
-    /// The declared value spec-type name (e.g. `"HISTORY"`, `"DV_TEXT"`,
-    /// `"CONTENT_ITEM"`; a generic parameter is resolved to its bound). This is
-    /// the root/base name; [`Self::type_params`] carries any generic arguments.
-    pub declared_type: &'static str,
-    /// The attribute's container shape.
-    pub container: Container,
-    /// Whether the attribute is mandatory (existence ≥ 1).
-    pub is_mandatory: bool,
-    /// The generic type-argument tree of the declared value type, empty when it
-    /// is not a generic instantiation. Together with [`Self::declared_type`] this
-    /// gives the full declared type: `declared_type = "DV_INTERVAL"` +
-    /// `type_params = [DV_QUANTITY]` reads `DV_INTERVAL<DV_QUANTITY>`;
-    /// `declared_type = "EVENT"` + `type_params = [ITEM_STRUCTURE]` inside a
-    /// `List` container reads `List<EVENT<ITEM_STRUCTURE>>`. Bare generic
-    /// parameters are resolved to their bound, consistent with `declared_type`.
-    pub type_params: &'static [RmTypeRef],
-    /// The BMM-declared container cardinality (`None` for a single-valued
-    /// attribute, or a container attribute the BMM leaves unconstrained).
-    pub cardinality: Option<Cardinality>,
-    /// An optional container carrying a present-implies-non-empty invariant:
-    /// emitted `Option<NonEmptyVec<T>>`, so `[]` refuses at parse.
-    pub nonempty: bool,
-    /// The class a reference-typed attribute points to (`EHR.ehr_status` →
-    /// `EHR_STATUS`), where the RM text names one; `None` for every other
-    /// attribute and for a reference whose target the text leaves open
-    /// (`VERSIONED_OBJECT.owner_id`, "e.g. the id of the containing EHR").
-    pub ref_target: Option<&'static str>,
-}
-
-/// A resolved type reference: a root spec name plus its own generic arguments.
-#[derive(Debug)]
-pub struct RmTypeRef {
-    /// The root/base spec-type name (a bare generic parameter resolved to bound).
-    pub name: &'static str,
-    /// This type's own generic arguments (empty when it is not generic).
-    pub params: &'static [RmTypeRef],
-}
-
-/// A container cardinality interval (`BMM cardinality`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Cardinality {
-    /// The lower bound (minimum number of members).
-    pub lower: u32,
-    /// The upper bound, or `None` when the container is unbounded.
-    pub upper: Option<u32>,
-}
-
-/// The container shape of an [`RmAttribute`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Container {
-    /// Single-valued (`T` / `Option<T>`).
-    None,
-    /// Ordered list (`List`/`Array`).
-    List,
-    /// Unordered set (`Set`).
-    Set,
-    /// Keyed map (`Hash`).
-    Hash,
-}
-
-/// An RM enumeration class (`BMM_ENUMERATION`): an underlying basic type plus a
-/// set of named constants.
-#[derive(Debug)]
-pub struct RmEnumeration {
-    /// The enumeration class name, verbatim (e.g. `"PROPORTION_KIND"`).
-    pub name: &'static str,
-    /// The underlying basic type: `"INTEGER"` or `"STRING"`.
-    pub underlying_type: &'static str,
-    /// The named constants, in declaration order.
-    pub literals: &'static [RmEnumLiteral],
-}
-
-/// One constant of an [`RmEnumeration`].
-#[derive(Debug)]
-pub struct RmEnumLiteral {
-    /// The constant name, verbatim (e.g. `"pk_percent"`, `"mandatory"`).
-    pub name: &'static str,
-    /// The constant value.
-    pub value: EnumValue,
-}
-
-/// The value of an [`RmEnumLiteral`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EnumValue {
-    /// An integer constant.
-    Int(i64),
-    /// A string constant.
-    Str(&'static str),
-}
-
-/// Name → class index, built once from the generated table.
-static INDEX: LazyLock<HashMap<&'static str, &'static RmClass>> =
-    LazyLock::new(|| data::CLASSES.iter().map(|c| (c.name, c)).collect());
-
-fn find(name: &str) -> Option<&'static RmClass> {
-    INDEX.get(name).copied()
-}
-
-/// The class named `name`, if present in the model.
-#[must_use]
-pub fn class(name: &str) -> Option<&'static RmClass> {
-    find(name)
-}
-
-/// Resolve attribute `attr` on `class`, through inheritance (the stored attribute
-/// list is already flattened, so an inherited attribute like `LOCATABLE.name`
-/// resolves for `OBSERVATION`).
-#[must_use]
-pub fn attribute(class: &str, attr: &str) -> Option<&'static RmAttribute> {
-    find(class)?.attributes.iter().find(|a| a.name == attr)
-}
-
-/// Every attribute of `class`, own and inherited (empty for an unknown class).
-pub fn attributes(class: &str) -> impl Iterator<Item = &'static RmAttribute> {
-    const EMPTY: &[RmAttribute] = &[];
-    find(class).map_or(EMPTY, |c| c.attributes).iter()
-}
-
-/// The declared RM type of `field` on `parent_type` when that type is
-/// concrete, else `None`.
-///
-/// This is the effective-type rule for an UNTAGGED canonical-JSON node: the
-/// ITS-JSON schema requires `_type` only on polymorphic slots, so a node under
-/// a concretely-declared attribute (`COMPOSITION.context` -> `EVENT_CONTEXT`,
-/// `EVENT_CONTEXT.participations` -> `PARTICIPATION`, ...) may legally omit it
-/// — and a validation walk that dispatches on the wire tag alone would skip
-/// every RM invariant on such a node. An abstract declared type yields `None`
-/// (there the wire MUST tag, and an untagged node is unreadable rather than
-/// silently valid).
-#[must_use]
-pub fn declared_concrete_type(parent_type: &str, field: &str) -> Option<&'static str> {
-    let attr = attribute(parent_type, field)?;
-    let class = class(attr.declared_type)?;
-    (!class.is_abstract).then_some(class.name)
-}
-
-/// The transitive concrete descendants of `class` (empty for an unknown class).
-#[must_use]
-pub fn descendants(class: &str) -> &'static [&'static str] {
-    const EMPTY: &[&str] = &[];
-    find(class).map_or(EMPTY, |c| c.descendants)
-}
-
-/// The transitive ancestors of `class` (empty for an unknown class).
-#[must_use]
-pub fn ancestors(class: &str) -> &'static [&'static str] {
-    const EMPTY: &[&str] = &[];
-    find(class).map_or(EMPTY, |c| c.ancestors)
-}
-
-/// Whether `sub` is `sup` or a (transitive) subtype of it.
-#[must_use]
-pub fn is_a(sub: &str, sup: &str) -> bool {
-    sub == sup || find(sub).is_some_and(|c| c.ancestors.contains(&sup))
-}
-
-/// The BMM package of the primitive types (BASE foundation_types
-/// master03-primitive_types.adoc §Overview).
-pub const PRIMITIVE_TYPES_PACKAGE: &str = "org.openehr.base.foundation_types.primitive_types";
-
-/// Whether `name` is a primitive type: a concrete class of the BASE
-/// `primitive_types` package (`Boolean`, `Character`, `Integer`, `Integer64`,
-/// `Octet`, `Real`, `Double`, `String`, `Uri`).
-#[must_use]
-pub fn is_primitive(name: &str) -> bool {
-    find(name).is_some_and(|c| !c.is_abstract && c.package == PRIMITIVE_TYPES_PACKAGE)
-}
-
-/// The root BMM package of the BASE foundation types.
-pub const FOUNDATION_TYPES_PACKAGE: &str = "org.openehr.base.foundation_types";
-
-/// Whether `name` is a BASE foundation type: a class of the
-/// `foundation_types` package or one of its sub-packages (primitives,
-/// structures, intervals, time and terminology types, `Any`).
-///
-/// A foundation type is a value type: BASE draws the inheritance among the
-/// primitives to "facilitate the type descriptions", substitutability for
-/// `Any` "is not assumed" (BASE foundation_types master03-primitive_types.adoc
-/// §Overview), and an enumeration such as `PROPORTION_KIND` is a descendant of
-/// `Integer` only as its underlying type. A consumer expanding a declared type
-/// to the RM content that may fill it therefore expands RM classes only.
-#[must_use]
-pub fn is_foundation_type(name: &str) -> bool {
-    find(name).is_some_and(|c| {
-        c.package
-            .strip_prefix(FOUNDATION_TYPES_PACKAGE)
-            .is_some_and(|rest| rest.is_empty() || rest.starts_with('.'))
-    })
-}
-
-/// Whether `name` is `Ordered` or conforms to it, so its values compare by the
-/// `Ordered` operators (QUERY master03 §ORDER BY: the operators "available to
-/// primitives and `Ordered` types").
-#[must_use]
-pub fn conforms_to_ordered(name: &str) -> bool {
-    is_a(name, "Ordered")
-}
-
-/// Whether the node codec splits `class` into its own `node` row (see module docs).
-#[must_use]
-pub fn is_structure_root(class: &str) -> bool {
-    find(class).is_some_and(|c| c.is_structure_root)
-}
-
-/// Every class of the static model, in emission order — the whole-model
-/// iterator for exhaustive sweeps (generators, reach instrumentation).
-pub fn classes() -> impl Iterator<Item = &'static RmClass> {
-    data::CLASSES.iter()
-}
-
-/// Name → enumeration index, built once from the generated table.
-static ENUM_INDEX: LazyLock<HashMap<&'static str, &'static RmEnumeration>> =
-    LazyLock::new(|| data::ENUMERATIONS.iter().map(|e| (e.name, e)).collect());
-
-/// The enumeration class named `name`, if it is one (e.g. `"PROPORTION_KIND"`).
-#[must_use]
-pub fn enumeration(name: &str) -> Option<&'static RmEnumeration> {
-    ENUM_INDEX.get(name).copied()
-}
-"#
-    .to_string()
-}
-
 /// The generated `model/data.rs`: the `static CLASSES` + `static ENUMERATIONS`
 /// tables.
 fn emit_data(classes: &[ClassModel], enums: &[EnumModel]) -> String {
@@ -769,23 +527,16 @@ fn emit_data(classes: &[ClassModel], enums: &[EnumModel]) -> String {
             "        descendants: &{},\n",
             str_slice(&c.descendants)
         ));
-        b.push_str("        attributes: &[\n");
-        for a in &c.attributes {
-            b.push_str(&format!(
-                "            RmAttribute {{ name: {:?}, declared_type: {:?}, container: Container::{}, is_mandatory: {}, type_params: &{}, cardinality: {}, nonempty: {}, ref_target: {} }},\n",
-                a.name,
-                a.declared_type,
-                a.container,
-                a.is_mandatory,
-                type_refs(&a.type_params),
-                cardinality(a.cardinality.as_ref()),
-                a.nonempty,
-                a.ref_target
-                    .as_ref()
-                    .map_or_else(|| "None".to_string(), |t| format!("Some({t:?})")),
-            ));
+        for (field, rows) in [
+            ("attributes", &c.attributes),
+            ("computed_attributes", &c.computed),
+        ] {
+            b.push_str(&format!("        {field}: &[\n"));
+            for a in rows {
+                b.push_str(&attribute_lit(a));
+            }
+            b.push_str("        ],\n");
         }
-        b.push_str("        ],\n");
         b.push_str(&format!(
             "        is_structure_root: {},\n",
             c.is_structure_root
@@ -814,6 +565,23 @@ fn emit_data(classes: &[ClassModel], enums: &[EnumModel]) -> String {
     }
     b.push_str("];\n");
     b
+}
+
+/// Render one `RmAttribute { … },` row of an attribute table.
+fn attribute_lit(a: &AttrModel) -> String {
+    format!(
+        "            RmAttribute {{ name: {:?}, declared_type: {:?}, container: Container::{}, is_mandatory: {}, type_params: &{}, cardinality: {}, nonempty: {}, ref_target: {} }},\n",
+        a.name,
+        a.declared_type,
+        a.container,
+        a.is_mandatory,
+        type_refs(&a.type_params),
+        cardinality(a.cardinality.as_ref()),
+        a.nonempty,
+        a.ref_target
+            .as_ref()
+            .map_or_else(|| "None".to_string(), |t| format!("Some({t:?})")),
+    )
 }
 
 /// Render a `&[RmTypeRef { … }]`-body array literal (`[]` when empty), recursing

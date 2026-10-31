@@ -107,13 +107,12 @@ crates/openehr-term/src/bundle.rs 999
 tools/loadtest/src/main.rs 824
 tools/openehr-codegen/src/analyze/mod.rs 812
 tools/openehr-codegen/src/cli.rs 1435
-tools/openehr-codegen/src/load/bmm.rs 883
+tools/openehr-codegen/src/load/bmm.rs 874
 tools/openehr-codegen/src/plan/overrides.rs 3397
 tools/openehr-codegen/src/render/emit.rs 2317
 tools/openehr-codegen/src/render/emit_json.rs 1068
 tools/openehr-codegen/src/render/emit_opt.rs 1085
 tools/openehr-codegen/src/render/emit_rest.rs 2700
-tools/openehr-codegen/src/render/emit_rm_model.rs 879
 tools/openehr-codegen/src/render/emit_xml.rs 1035
-tools/openehr-codegen/src/testsupport.rs 2465
+tools/openehr-codegen/src/testsupport.rs 2464
 tools/testkit/src/lib.rs 1215

@@ -411,6 +411,8 @@ categories (Art. 105). The floor is enforced from this release on, so a log
 kept today already meets it when Art. 9 applies.
 The effective retention is on the boot line beside the audit-enabled facts and
 on `GET /management/info` under `audit`.
+A record takes about 1.2 KB on disk, so the horizon decides how far the log
+grows ([Storage sizing](operations.md#audit-retention)).
 
 ### Getting the log out
 
