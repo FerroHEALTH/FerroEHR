@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/distroless-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-10-14T00:00:00Z",
-  "version": 2,
+  "timestamp": "2026-10-31T00:00:00Z",
+  "version": 3,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -860,6 +860,55 @@
           "wcstombs",
           "wctob",
           "wctomb"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84243"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer. That program is the only ELF executable in each image (no shell, no ldd, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports no dlopen. Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol; the one name it resolves at run time through dlsym is __pthread_get_minstack (Rust std). The import table is therefore the complete list of glibc entry points it reaches. The traversal is in guess_category_value (intl/dcigettext.c), which appends the LANGUAGE environment variable to the message catalog path (GLIBC-SA-2026-0025). Neither binary imports a gettext function; both reach glibc's message lookup only through the translated strings of __xpg_strerror_r, perror and gai_strerror. guess_category_value returns the current LC_MESSAGES locale name before it reads LANGUAGE when that name is C or C.<encoding>. A process starts in the C locale (ISO C 7.11.1.1) and leaves it only through setlocale, newlocale or uselocale, which neither binary imports, so the locale stays C, LANGUAGE is never read and no message catalog is opened, whatever the container environment holds.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen",
+          "newlocale",
+          "setlocale",
+          "uselocale"
         ]
       }
     },
