@@ -17,7 +17,7 @@
 //! headers (identity: "uniquely identified by their `key` and `target_path`
 //! pair"; container vs specific-VERSION targets are distinct). `PUT …/tags`
 //! is a full-collection replace of the ADDRESSED collection — the container's
-//! or one VERSION's, never both. Not an SM-EHR interface. The `item_tag`
+//! or one VERSION's, never both. The `item_tag`
 //! table SQL is spec-silent (storage seam — our own design).
 
 use openehr_base::prelude::{
@@ -31,7 +31,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::versioning::object_version_id::{VersionIdError, parse_uid_based_id};
 
 impl FerroEhrService {
@@ -185,8 +185,8 @@ impl FerroEhrService {
         target_type: &str,
     ) -> Result<(), ServiceError> {
         let not_found = || {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!(
                     "tag target {target_vo_id} does not exist in EHR {ehr_id} \
                      (tag targets can only be within the same EHR)"
@@ -213,8 +213,8 @@ impl FerroEhrService {
             )
             .await?
             {
-                return Err(ServiceError::sm(
-                    CallStatusType::ObjectVersionDoesNotExist,
+                return Err(ServiceError::new(
+                    ServiceStatus::ObjectVersionDoesNotExist,
                     format!("tag target version {}", version.value()),
                 ));
             }
@@ -256,8 +256,8 @@ impl FerroEhrService {
         )
         .await?
         {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("item tag {key:?}"),
             ));
         }
@@ -375,14 +375,14 @@ impl FerroEhrService {
     /// `GET /ehr/{ehr_id}/tags` — all tags in an EHR, optionally filtered.
     ///
     /// # Errors
-    /// [`SmError`] if the tag listing fails.
+    /// [`StatusError`] if the tag listing fails.
     pub async fn ehr_tags_get(
         &self,
         an_ehr_id: EhrId,
         key: Option<String>,
         value: Option<String>,
         target_path: Option<String>,
-    ) -> Result<Vec<ItemTag>, SmError> {
+    ) -> Result<Vec<ItemTag>, StatusError> {
         Ok(self
             .ehr_tags(
                 an_ehr_id,
@@ -396,14 +396,14 @@ impl FerroEhrService {
     /// `GET …/{uid_based_id}/tags` — the tags on one target object.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `uid_based_id` (400-equivalent) or a
+    /// [`StatusError`] for a malformed `uid_based_id` (400-equivalent) or a
     /// failing tag listing.
     pub async fn target_tags_get(
         &self,
         an_ehr_id: EhrId,
         uid_based_id: String,
         target_type: &str,
-    ) -> Result<Vec<ItemTag>, SmError> {
+    ) -> Result<Vec<ItemTag>, StatusError> {
         let (vo_id, version) = parse_tag_target(&uid_based_id)?;
         // The released 404 trigger — "when the `uid_based_id` does not
         // exist" — plus the EHR scope and the route-kind discipline
@@ -420,7 +420,7 @@ impl FerroEhrService {
     /// tags, returning the collection after the write.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `uid_based_id`, a missing EHR or target
+    /// [`StatusError`] for a malformed `uid_based_id`, a missing EHR or target
     /// (404-equivalent), an invalid tag (422-equivalent), or a storage
     /// failure.
     pub async fn target_tags_replace(
@@ -429,7 +429,7 @@ impl FerroEhrService {
         uid_based_id: String,
         target_type: &str,
         tags: Vec<UpdateItemTag>,
-    ) -> Result<Vec<ItemTag>, SmError> {
+    ) -> Result<Vec<ItemTag>, StatusError> {
         let (vo_id, version) = parse_tag_target(&uid_based_id)?;
         Ok(self
             .replace_tags(an_ehr_id, vo_id, version.as_ref(), target_type, &tags)
@@ -439,7 +439,7 @@ impl FerroEhrService {
     /// `DELETE …/{uid_based_id}/tags/{key}` — delete one tag by key.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `uid_based_id`, a missing tag
+    /// [`StatusError`] for a malformed `uid_based_id`, a missing tag
     /// (404-equivalent), or a storage failure.
     pub async fn target_tag_delete(
         &self,
@@ -447,7 +447,7 @@ impl FerroEhrService {
         uid_based_id: String,
         target_type: &str,
         key: String,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let (vo_id, version) = parse_tag_target(&uid_based_id)?;
         self.delete_tag(an_ehr_id, vo_id, version.as_ref(), target_type, &key)
             .await?;
@@ -469,11 +469,11 @@ impl FerroEhrService {
 /// ([`tag_target_tail`]).
 ///
 /// # Errors
-/// [`SmError`] (precondition, → `400`) when the value is neither a UUID nor a
+/// [`StatusError`] (precondition, → `400`) when the value is neither a UUID nor a
 /// well-formed `OBJECT_VERSION_ID`.
 pub(in crate::service) fn parse_tag_target(
     uid_based_id: &str,
-) -> Result<(VoId, Option<ObjectVersionId>), SmError> {
+) -> Result<(VoId, Option<ObjectVersionId>), StatusError> {
     let decoded = parse_uid_based_id(uid_based_id)?;
     Ok((decoded.vo_id, decoded.version))
 }

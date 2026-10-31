@@ -211,9 +211,8 @@ fn coded_description_round_trips() {
     assert_eq!(att.get("description"), Some(&description));
 }
 
-/// Ruling 1 of #3595: the SM spelling of the attribute
-/// (`SM/docs/UML/classes/update_audit.adoc`, `String [0..1]`) is not the
-/// wire shape, which is a `DV_TEXT` or `DV_CODED_TEXT` object
+/// Ruling 1 of #3595: a plain string is not the wire shape of `description`,
+/// which is a `DV_TEXT` or `DV_CODED_TEXT` object
 /// (`schemas/common/UpdateAudit.yaml` → `data_types/UDvText.yaml`), so a
 /// plain-string `description` is the 400.
 #[test]
@@ -338,8 +337,8 @@ fn null_items_is_absent_not_invalid() {
 /// `schemas/common/UpdateAudit.yaml` `$ref`s `DvCodedText` for it, and the
 /// ITS-REST docs text is silent on the member's shape, so the released OAS
 /// grounds it (`.claude/rules/spec-adherence.md` §the ITS-REST
-/// wire-oracle order). The flat SM `Terminology_code` spelling this
-/// fixture used to send is not that shape — see
+/// wire-oracle order). The `CODE_PHRASE` shape `{terminology_id, code_string}`
+/// this fixture used to send is not that shape — see
 /// [`flat_terminology_code_change_type_is_refused`] for the twin that
 /// pins its refusal.
 fn update_attestation(body: &Value) -> openehr_its::rest::generated::common::UpdateAttestation {
@@ -362,8 +361,8 @@ fn update_attestation(body: &Value) -> openehr_its::rest::generated::common::Upd
         .expect("the fixture is a well-typed UPDATE_ATTESTATION")
 }
 
-/// The invalid twin of [`update_attestation`]'s `change_type`: the flat SM
-/// `Terminology_code` spelling (`{terminology_id, code_string}`) is NOT
+/// The invalid twin of [`update_attestation`]'s `change_type`: the `CODE_PHRASE`
+/// shape `{terminology_id, code_string}` is NOT
 /// the released wire shape of `UPDATE_AUDIT.change_type`
 /// (`schemas/common/UpdateAudit.yaml` → `DvCodedText`), so the strict
 /// canonical reader refuses it — the PARSE class, answered `400` on the
@@ -444,8 +443,7 @@ fn native_partial_enforces_items_valid() {
 fn native_partial_completes_into_an_attestation() {
     // `description` is an OBJECT on the typed wire: ITS-REST
     // `schemas/common/UpdateAudit.yaml` `$ref`s `DvText` (whose
-    // `DV_CODED_TEXT` subtype substitutes for it). The bare-string SM
-    // spelling (`UML/classes/update_audit.adoc`: `String [0..1]`) is
+    // `DV_CODED_TEXT` subtype substitutes for it). A plain string is
     // refused — [`string_description_is_refused`] pins that twin.
     let update = update_attestation(&json!({
         "reason": { "_type": "DV_TEXT", "value": "witness" },

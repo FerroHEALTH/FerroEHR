@@ -12,17 +12,17 @@ committer + lifecycle_state, but Veredictum v0.1.6 builds members in
 `attestation_member`): it fills committer on every audit (so removing the
 committer fallback is catalogue-safe) but builds 666 members WITHOUT
 `lifecycle_state` and its authoring guard REFUSES one. So requiring
-lifecycle_state on 666 (SM master03 §Version Update Semantics L25 "must be
-supplied in all cases") flips 4 passing positive attestation cases red and lets
+lifecycle_state on 666 (`UpdateVersion.yaml` lists it under `required`) flips 4 passing positive attestation cases red and lets
 4 negatives (validation_failed has `alt_status: [400]` on commit_contribution)
 pass for the wrong reason. Read the remote at the pinned tag via a scratchpad
 shallow clone (never the local cache).
 
 **Why:** the catalogue argues the 666 member shape from RM master06
-§Contributions (inference: no version → no lifecycle) and never cites SM
-master03 L25; explicit SM sentence + OAS UpdateVersion.required beat the
-inference, but the same "UpdateVersion lists it under required" argument would
-also demand `data`, which the CDR 422s on a 666 member — cite SM L25 alone.
+§Contributions (inference: no version → no lifecycle); the OAS
+UpdateVersion.required list is the released ground (the docs text is silent),
+though the same list would also demand `data`, which the CDR 422s on a 666
+member. The Service Model sentence once cited for this is reference text,
+never an authority (owner ruling 2026-10-27).
 
 **How to apply:** for any CONTRIBUTION envelope rule change, (1) diff the
 runner's member builder, (2) list catalogue cases + `docs/conformance/ferroehr/results.json`

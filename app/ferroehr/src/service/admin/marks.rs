@@ -4,9 +4,7 @@
 //! The legal marks an administrator sets and lifts: restriction of processing,
 //! the research objection, and the retention register.
 //!
-//! **Our own extension.** The SM declares no admin interface for any of this
-//! (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc` is the two
-//! physical deletes and the four statistics calls), and no openEHR
+//! **Our own extension.** No openEHR
 //! specification governs restriction, objection or retention. What the RM does
 //! say is that none of these may be answered with what it already has:
 //! `EHR_STATUS.is_queryable` limits population queries and nothing else (RM ehr
@@ -27,7 +25,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::storage::marks;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
@@ -67,13 +65,13 @@ impl FerroEhrService {
         vo_id: Option<&str>,
         ground: &str,
         note: Option<&str>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         let vo_id = vo_id
             .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
             .transpose()?;
         if !RESTRICTION_GROUNDS.contains(&ground) {
-            return Err(SmError::precondition(format!(
+            return Err(StatusError::precondition(format!(
                 "restriction ground {ground:?} is not one of {}",
                 RESTRICTION_GROUNDS.join(", ")
             )));
@@ -97,7 +95,11 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// The [`Self::restrict_processing`] rejections, minus the ground check.
-    pub async fn lift_restriction(&self, ehr_id: &str, vo_id: Option<&str>) -> Result<(), SmError> {
+    pub async fn lift_restriction(
+        &self,
+        ehr_id: &str,
+        vo_id: Option<&str>,
+    ) -> Result<(), StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         let vo_id = vo_id
             .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
@@ -127,7 +129,7 @@ impl FerroEhrService {
     pub async fn restriction_register(
         &self,
         ehr_id: &str,
-    ) -> Result<Vec<marks::RestrictionRow>, SmError> {
+    ) -> Result<Vec<marks::RestrictionRow>, StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, "restriction")?;
@@ -152,10 +154,10 @@ impl FerroEhrService {
         ehr_id: &str,
         objected: bool,
         ground: Option<&str>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         if !objected && ground.is_some() {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "a withdrawal of the objection carries no override ground: there is nothing \
                  left to override",
             ));
@@ -208,11 +210,11 @@ impl FerroEhrService {
     pub async fn put_retention_policy(
         &self,
         period: marks::RetentionPeriod<'_>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         if let Some(origin) = period.origin
             && !self.origins().is_registered(origin)
         {
-            return Err(SmError::precondition(format!(
+            return Err(StatusError::precondition(format!(
                 "{origin:?} is not a registered origin: a retention period is keyed only on an \
                  origin [[origins.registered]] declares, by its id"
             )));
@@ -229,7 +231,7 @@ impl FerroEhrService {
                     return Ok(reference.to_owned());
                 }
                 map.category_token(reference).ok_or_else(|| {
-                    SmError::precondition(format!(
+                    StatusError::precondition(format!(
                         "{reference:?} is not an audit category: a priority category of EHDS \
                          Art. 14(1) by its code (Patient-Summaries, Electronic-Prescriptions, \
                          Electronic-Dispensations, Medical-Imaging, Laboratory-Reports, \
@@ -250,7 +252,7 @@ impl FerroEhrService {
         )
         .await
         .map_err(|e| {
-            SmError::precondition(format!("the retention register refused the period: {e}"))
+            StatusError::precondition(format!("the retention register refused the period: {e}"))
         })?;
         tx.commit().await.map_err(ServiceError::Database)?;
         Ok(())
@@ -268,7 +270,7 @@ impl FerroEhrService {
     pub async fn mirror_category_map(
         &self,
         map: &crate::system_log::categories::Classifier,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         Ok(marks::replace_category_map(&self.pool, map.rows())
             .await
             .map_err(ServiceError::Storage)?)
@@ -278,7 +280,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `exception` — a database fault.
-    pub async fn retention_policies(&self) -> Result<Vec<marks::RetentionPolicyRow>, SmError> {
+    pub async fn retention_policies(&self) -> Result<Vec<marks::RetentionPolicyRow>, StatusError> {
         Ok(marks::retention_policies(&self.pool)
             .await
             .map_err(ServiceError::Storage)?)
@@ -298,7 +300,7 @@ impl FerroEhrService {
         jurisdiction: &str,
         anchored_at: Option<&str>,
         hold: Option<(&str, &str)>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         let mut conn = acquire(&self.pool).await?;
@@ -306,7 +308,7 @@ impl FerroEhrService {
         marks::put_retention_anchor(&mut tx, ehr_id, jurisdiction, anchored_at, hold)
             .await
             .map_err(|e| {
-                SmError::precondition(format!("the retention register refused the anchor: {e}"))
+                StatusError::precondition(format!("the retention register refused the anchor: {e}"))
             })?;
         tx.commit().await.map_err(ServiceError::Database)?;
         Ok(())
@@ -323,7 +325,7 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — a malformed id.
     /// - `versioned_object_does_not_exist` (`404`) — the object is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn set_retention_hold(&self, vo_id: &str, held: bool) -> Result<(), SmError> {
+    pub async fn set_retention_hold(&self, vo_id: &str, held: bool) -> Result<(), StatusError> {
         let vo_id = VoId(super::parse_uuid(vo_id, "versioned object")?);
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -331,8 +333,8 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         if !found {
-            return Err(SmError::new(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(StatusError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("no versioned object {vo_id}"),
             ));
         }
@@ -351,9 +353,12 @@ impl FerroEhrService {
     /// # Errors
     /// - `precondition_violation` (`400`) — a non-positive limit.
     /// - `exception` — a database fault.
-    pub async fn retention_due(&self, limit: i64) -> Result<Vec<marks::RetentionDueRow>, SmError> {
+    pub async fn retention_due(
+        &self,
+        limit: i64,
+    ) -> Result<Vec<marks::RetentionDueRow>, StatusError> {
         if limit <= 0 {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "the retention-due limit must be a positive number of rows",
             ));
         }
@@ -383,7 +388,7 @@ impl FerroEhrService {
         ehr_id: &str,
         vo_id: Option<&str>,
         note: Option<&str>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         let vo_id = vo_id
             .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
@@ -408,7 +413,7 @@ impl FerroEhrService {
         &self,
         ehr_id: &str,
         vo_id: Option<&str>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         let vo_id = vo_id
             .map(|raw| super::parse_uuid(raw, "versioned object").map(VoId))
@@ -434,7 +439,7 @@ impl FerroEhrService {
     pub async fn access_restriction_register(
         &self,
         ehr_id: &str,
-    ) -> Result<Vec<marks::AccessRestrictionRow>, SmError> {
+    ) -> Result<Vec<marks::AccessRestrictionRow>, StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, "access-restriction")?;
@@ -448,7 +453,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `exception` — a database fault.
-    pub async fn is_ehr_access_restricted(&self, ehr_id: EhrId) -> Result<bool, SmError> {
+    pub async fn is_ehr_access_restricted(&self, ehr_id: EhrId) -> Result<bool, StatusError> {
         Ok(marks::is_ehr_access_restricted(&self.pool, ehr_id)
             .await
             .map_err(ServiceError::Storage)?)
@@ -459,7 +464,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `exception` — a database fault.
-    pub async fn is_object_access_restricted(&self, vo_id: VoId) -> Result<bool, SmError> {
+    pub async fn is_object_access_restricted(&self, vo_id: VoId) -> Result<bool, StatusError> {
         let mut conn = acquire(&self.pool).await?;
         Ok(marks::is_access_restricted(&mut conn, vo_id)
             .await
@@ -477,16 +482,16 @@ impl FerroEhrService {
         vo_id: Option<VoId>,
     ) -> Result<(), ServiceError> {
         if !crate::storage::version_repo::meta::ehr_exists(&self.pool, ehr_id).await? {
-            return Err(ServiceError::sm(
-                CallStatusType::EhrIdDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::EhrIdDoesNotExist,
                 format!("no EHR with id {ehr_id}"),
             ));
         }
         if let Some(vo_id) = vo_id {
             let owner = crate::storage::version_repo::meta::vo_owner(&self.pool, vo_id).await?;
             if owner.flatten() != Some(ehr_id) {
-                return Err(ServiceError::sm(
-                    CallStatusType::VersionedObjectDoesNotExist,
+                return Err(ServiceError::new(
+                    ServiceStatus::VersionedObjectDoesNotExist,
                     format!("no versioned object {vo_id} in EHR {ehr_id}"),
                 ));
             }

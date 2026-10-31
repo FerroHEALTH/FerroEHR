@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_DEFINITION_ADL14` (`i_definition_adl14.adoc`; `master04` §Archetypes and
-//! Templates): ADL 1.4 source archetypes keyed by `ARCHETYPE_ID` (on
+//! The ADL 1.4 definitions: ADL 1.4 source archetypes keyed by `ARCHETYPE_ID` (on
 //! `archetype_store`) and OPTs keyed by `UUID` (on `template_store`).
 //!
 //! ADL 1.4 archetype validity is the `openehr-adl` engine judged as 1.4: an
@@ -41,11 +40,11 @@ use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 use super::{compile_pattern, page_bounds, paginate};
 
-// ── SM Definitions native API (I_DEFINITION_ADL14) — the catalog contract ────
+// ── the native ADL 1.4 definition calls ─────────────────────────────────────
 
 impl FerroEhrService {
     /// `has_archetype` — true if an ADL 1.4 archetype with id `an_id` is
@@ -55,7 +54,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn has_archetype(&self, an_id: String) -> Result<bool, SmError> {
+    pub async fn has_archetype(&self, an_id: String) -> Result<bool, StatusError> {
         Ok(self.archetype_exists(&an_id).await?)
     }
 
@@ -66,7 +65,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// Never — the `Result` shape mirrors the SM catalog; validity is reported
+    /// Never — the `Result` shape matches the other calls; validity is reported
     /// in the `Ok` boolean.
     #[expect(
         clippy::unused_self,
@@ -75,18 +74,16 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn valid_archetype(&self, adl: &str) -> Result<bool, SmError> {
+    pub fn valid_archetype(&self, adl: &str) -> Result<bool, StatusError> {
         Ok(matches!(
             validate_adl14_source(adl, &ProductionRmModel),
             Ok(issues) if issues.iter().all(|i| i.severity != Severity::Error)
         ))
     }
 
-    /// `upload_archetype` (`Post_has_archetype`) — validate a 1.4 archetype
+    /// `upload_archetype` — validate a 1.4 archetype
     /// through the `openehr-adl` engine (judged as 1.4) and store it, replacing
-    /// any existing one with the same id ("If an archetype with the same id
-    /// already exists, replace it. The archetype must be valid to succeed." —
-    /// `i_definition_adl14.adoc`).
+    /// any existing one with the same id; only a valid archetype is stored.
     ///
     /// Identity is case-insensitive but storage case-preserving (BASE master05
     /// §Composite Identifiers and Case): the write removes any case-variant of
@@ -106,11 +103,11 @@ impl FerroEhrService {
     ///   catalogue (V-codes) → `invalid_archetype` (`422`), the offending
     ///   rule-code mnemonics carried as the validation detail.
     /// - A database failure (`exception` → `500`).
-    pub async fn upload_archetype(&self, adl: String) -> Result<String, SmError> {
+    pub async fn upload_archetype(&self, adl: String) -> Result<String, StatusError> {
         // NOTE: no specification names this status token: our own design for a
         // semantically invalid archetype.
         archetype_validate(&adl)
-            .map_err(|e| invalid_artefact_status(e, CallStatusType::InvalidArchetype))?;
+            .map_err(|e| invalid_artefact_status(e, ServiceStatus::InvalidArchetype))?;
         Ok(self.archetype_upload(&adl).await?)
     }
 
@@ -134,7 +131,7 @@ impl FerroEhrService {
     ///   the conversion result carries a node with no ADL2 syntax →
     ///   `content_invalid` (`422`).
     /// - A database failure (`exception` → `500`).
-    pub async fn adl14_convert_to_adl2(&self, an_id: String) -> Result<String, SmError> {
+    pub async fn adl14_convert_to_adl2(&self, an_id: String) -> Result<String, StatusError> {
         let source = self.archetype_get(&an_id).await?;
         let mut log = ConversionLog::new();
         let converted =
@@ -144,7 +141,7 @@ impl FerroEhrService {
                 )
             })?;
         openehr_adl::print::print(&converted).map_err(|e| {
-            SmError::from(ServiceError::content_invalid(
+            StatusError::from(ServiceError::content_invalid(
                 Violation::new(format!("1.4 → 2 conversion produced unprintable ADL2: {e}"))
                     .with_source(e),
             ))
@@ -177,7 +174,7 @@ impl FerroEhrService {
     pub async fn adl14_convert_opt_to_adl2(
         &self,
         an_opt_id: String,
-    ) -> Result<Vec<String>, SmError> {
+    ) -> Result<Vec<String>, StatusError> {
         // `opt_get` names `template_does_not_exist` at construction and
         // `ServiceError` round-trips the granular status losslessly — no
         // boundary re-raise needed.
@@ -202,17 +199,17 @@ impl FerroEhrService {
     ///
     /// - No archetype with that id → `artefact_does_not_exist` (`404`).
     /// - A database failure (`exception` → `500`).
-    pub async fn get_archetype(&self, an_id: String) -> Result<String, SmError> {
+    pub async fn get_archetype(&self, an_id: String) -> Result<String, StatusError> {
         Ok(self.archetype_get(&an_id).await?)
     }
 
     /// `list_archetypes` — the ids of all stored ADL 1.4 archetypes, cursored
-    /// by `page` (`master02-overview.adoc` §List Handling).
+    /// by `page`.
     ///
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_archetypes_adl14(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_archetypes_adl14(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.archetype_list(page).await?)
     }
 
@@ -227,18 +224,18 @@ impl FerroEhrService {
         &self,
         id_pattern: String,
         page: Page,
-    ) -> Result<Vec<String>, SmError> {
+    ) -> Result<Vec<String>, StatusError> {
         Ok(self.archetype_list_matching(&id_pattern, page).await?)
     }
 
-    /// `delete_archetype` (`Pre_artefact_exists` / `Post_archetype_removed`) —
+    /// `delete_archetype` —
     /// delete an archetype by id (case-insensitive).
     ///
     /// # Errors
     ///
     /// - No archetype with that id → `artefact_does_not_exist` (`404`).
     /// - A database failure (`exception` → `500`).
-    pub async fn delete_archetype(&self, an_id: String) -> Result<(), SmError> {
+    pub async fn delete_archetype(&self, an_id: String) -> Result<(), StatusError> {
         Ok(self.archetype_delete(&an_id).await?)
     }
 
@@ -247,7 +244,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn archetypes_count_adl14(&self) -> Result<i64, SmError> {
+    pub async fn archetypes_count_adl14(&self) -> Result<i64, StatusError> {
         Ok(self.archetype_count().await?)
     }
 
@@ -258,7 +255,7 @@ impl FerroEhrService {
     /// - `an_opt_id` is not a parseable `UUID` → `precondition_violation`
     ///   (`400`).
     /// - A database failure (`exception` → `500`).
-    pub async fn has_opt(&self, an_opt_id: String) -> Result<bool, SmError> {
+    pub async fn has_opt(&self, an_opt_id: String) -> Result<bool, StatusError> {
         Ok(self.opt_exists(&an_opt_id).await?)
     }
 
@@ -267,7 +264,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// Never — the `Result` shape mirrors the SM catalog; validity is reported
+    /// Never — the `Result` shape matches the other calls; validity is reported
     /// in the `Ok` boolean.
     #[expect(
         clippy::unused_self,
@@ -276,7 +273,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn valid_opt(&self, opt_xml: &str) -> Result<bool, SmError> {
+    pub fn valid_opt(&self, opt_xml: &str) -> Result<bool, StatusError> {
         Ok(valid_opt_xml(opt_xml))
     }
 
@@ -294,12 +291,12 @@ impl FerroEhrService {
     /// - A template with the same `template_id` already stored → conflict
     ///   (`409`).
     /// - A database failure (`exception` → `500`).
-    pub async fn upload_opt(&self, opt_xml: String) -> Result<(), SmError> {
+    pub async fn upload_opt(&self, opt_xml: String) -> Result<(), StatusError> {
         // NOTE: no specification names this status token: our own design for a
         // semantically invalid operational template.
         self.store_template(&opt_xml)
             .await
-            .map_err(|e| invalid_artefact_status(e, CallStatusType::InvalidTemplate))?;
+            .map_err(|e| invalid_artefact_status(e, ServiceStatus::InvalidTemplate))?;
         Ok(())
     }
 
@@ -312,7 +309,7 @@ impl FerroEhrService {
     ///   (`400`).
     /// - No OPT with that id → `template_does_not_exist` (`404`).
     /// - A database failure (`exception` → `500`).
-    pub async fn get_opt(&self, an_opt_id: String) -> Result<String, SmError> {
+    pub async fn get_opt(&self, an_opt_id: String) -> Result<String, StatusError> {
         Ok(self.opt_get(&an_opt_id).await?)
     }
 
@@ -322,16 +319,15 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_opts_adl14(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_opts_adl14(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.opt_list(page).await?)
     }
 
     /// `list_matching_opts` — OPTs whose `template_id` matches `id_pattern`
     /// (a regex), cursored by `page`.
     ///
-    /// NOTE (spec defect): the SM types this `List<ARCHETYPE_ID>`
-    /// though OPTs are UUID-keyed; we return the OPTs' `template_id` strings
-    /// (the meaningful identifier a pattern is useful against).
+    /// It returns the OPTs' `template_id` strings, the identifier a pattern is
+    /// useful against.
     ///
     /// # Errors
     ///
@@ -341,11 +337,11 @@ impl FerroEhrService {
         &self,
         id_pattern: String,
         page: Page,
-    ) -> Result<Vec<String>, SmError> {
+    ) -> Result<Vec<String>, StatusError> {
         Ok(self.opt_list_matching(&id_pattern, page).await?)
     }
 
-    /// `delete_opt` (`Pre_has_opt` / `Post_opt_removed`) — delete an OPT by
+    /// `delete_opt` — delete an OPT by
     /// `an_opt_id` (a `UUID`), evicting its derived-runtime (`WebTemplate`)
     /// cache entry.
     ///
@@ -362,7 +358,7 @@ impl FerroEhrService {
     /// - A committed version still references the template →
     ///   `ServiceError::Conflict` (`409`), naming the reference count.
     /// - A database failure (`exception` → `500`).
-    pub async fn delete_opt(&self, an_opt_id: String) -> Result<(), SmError> {
+    pub async fn delete_opt(&self, an_opt_id: String) -> Result<(), StatusError> {
         Ok(self.opt_delete(&an_opt_id).await?)
     }
 
@@ -371,7 +367,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn opts_count_adl14(&self) -> Result<i64, SmError> {
+    pub async fn opts_count_adl14(&self) -> Result<i64, StatusError> {
         Ok(self.opt_count().await?)
     }
 }
@@ -395,8 +391,8 @@ impl FerroEhrService {
     /// Returns the stored `ARCHETYPE_ID`.
     async fn archetype_upload(&self, adl: &str) -> Result<String, ServiceError> {
         let id = extract_archetype_id(adl).ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::InvalidArchetype,
+            ServiceError::new(
+                ServiceStatus::InvalidArchetype,
                 "ADL 1.4 source is not a valid archetype (missing `archetype` \
                  header or a well-formed ARCHETYPE_ID)",
             )
@@ -426,8 +422,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("archetype {an_id}"),
             )
         })
@@ -470,8 +466,8 @@ impl FerroEhrService {
                 .await?
                 .rows_affected();
         if deleted == 0 {
-            return Err(ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("archetype {an_id}"),
             ));
         }
@@ -509,17 +505,16 @@ impl FerroEhrService {
             .fetch_optional(&mut *acquire(&self.pool).await?)
             .await?
             .ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::TemplateDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::TemplateDoesNotExist,
                     format!("OPT {an_opt_id}"),
                 )
             })
     }
 
     /// The OPT 1.4 canonical XML addressed by its `template_id` string (the
-    /// ITS-REST wire address, unlike the SM's UUID-keyed [`opt_get`](Self::opt_get)).
-    /// Spec-silent: `template_id` addressing is our own wire helper, the SM
-    /// keys OPTs by `UUID`. Absent → `template_does_not_exist` (`404`).
+    /// ITS-REST wire address, unlike the UUID-keyed [`opt_get`](Self::opt_get)).
+    /// Absent → `template_does_not_exist` (`404`).
     pub(super) async fn opt_get_by_template_id(
         &self,
         template_id: &str,
@@ -533,8 +528,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::TemplateDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::TemplateDoesNotExist,
                 format!("OPT template_id {template_id}"),
             )
         })
@@ -591,8 +586,8 @@ impl FerroEhrService {
                 .fetch_optional(&mut *tx)
                 .await?;
         let Some(template_id) = template_id else {
-            return Err(ServiceError::sm(
-                CallStatusType::TemplateDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::TemplateDoesNotExist,
                 format!("OPT {an_opt_id}"),
             ));
         };
@@ -651,9 +646,9 @@ impl FerroEhrService {
 /// Validate an ADL 1.4 source through the `openehr-adl` engine, judged **as
 /// 1.4** (`openehr_adl::validate::validate_adl14_source`). An unparseable
 /// source (S-codes) or a catalogue failure (V-codes) is a
-/// [`ServiceError::ValidationFailed`] carrying the rule-code mnemonics — the SM
+/// [`ServiceError::ValidationFailed`] carrying the rule-code mnemonics —
 /// `upload_archetype` maps it to `invalid_archetype` / `content_invalid`
-/// (`422`, `i_definition_adl14.adoc`; ADL1.4 `master08` §Validity Rules).
+/// (`422`; ADL1.4 `master08` §Validity Rules).
 ///
 /// The reference model is the generated openEHR RM 1.2.0
 /// ([`ProductionRmModel`]), so the one ADL 1.4 validity rule that is stated
@@ -675,29 +670,26 @@ fn archetype_validate(adl: &str) -> Result<(), ServiceError> {
     }
 }
 
+/// Promote the generic `content_invalid` of a [`ServiceError`] crossing an
+/// upload seam to the operation's artefact status.
+///
+/// An OPT upload reports `invalid_template` and an archetype upload
+/// `invalid_archetype` for a semantically invalid artefact; every other status passes through
+/// unchanged, so a duplicate-artefact conflict or a storage fault keeps its
+/// own token.
+fn invalid_artefact_status(e: ServiceError, status: ServiceStatus) -> StatusError {
+    let mut err = StatusError::from(e);
+    if err.status == ServiceStatus::ContentInvalid {
+        err.status = status;
+    }
+    err
+}
+
 /// Maps an ADL 1.4 archetype parse failure to a
 /// [`ServiceError::ValidationFailed`] carrying the S-code mnemonics.
 ///
-/// The archetype-provisioning operations are SM-only
-/// (`i_definition_adl14.adoc` `upload_archetype` `invalid_archetype`; ITS-REST
-/// 1.1.0 surfaces no archetype route), so no released wire status attaches and
-/// the SM error is the whole contract.
-/// Promote the generic `content_invalid` of a [`ServiceError`] crossing an
-/// upload seam to the operation's declared artefact status.
-///
-/// `i_definition_adl14.adoc` declares `invalid_template` (§`upload_opt`
-/// `.Errors`) and `invalid_archetype` (§`upload_archetype` `.Errors`) for a
-/// semantically invalid artefact; every other status passes through
-/// unchanged, so a duplicate-artefact conflict or a storage fault keeps its
-/// own token.
-fn invalid_artefact_status(e: ServiceError, status: CallStatusType) -> SmError {
-    let mut sm = SmError::from(e);
-    if sm.status == CallStatusType::ContentInvalid {
-        sm.status = status;
-    }
-    sm
-}
-
+/// ITS-REST 1.1.0 surfaces no archetype route, so no released wire status
+/// attaches: the `invalid_archetype` status is our own.
 fn archetype_syntax_failure(errs: Vec<SyntaxError>) -> ServiceError {
     ServiceError::ValidationFailed(
         errs.into_iter()

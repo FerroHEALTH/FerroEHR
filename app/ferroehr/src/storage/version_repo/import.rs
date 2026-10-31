@@ -139,7 +139,7 @@ pub async fn insert_imported_vo_version(
 /// One `version` row to re-persist **verbatim** during an archive load.
 ///
 /// The stored columns (`committed_at` as an ISO string, `template_id`,
-/// `creating_system_id`) are preserved exactly as dumped (SM `I_ADMIN_DUMP_LOAD`
+/// `creating_system_id`) are preserved exactly as dumped (the dump/load
 /// round-trip; no openEHR spec governs the archive). Unlike
 /// [`ImportedVersionRow`] it keeps `template_id`, and unlike a local commit row
 /// the `committed_at` is explicit.

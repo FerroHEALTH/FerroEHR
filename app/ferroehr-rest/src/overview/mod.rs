@@ -111,7 +111,7 @@
 //!   is answered `405` for the reason [`crate::router::router`] gives, and a
 //!   known-but-not-allowed one SHOULD be `405`) + the optional error body
 //!   ("if `Prefer: return=representation`")
-//!   + the single SM → HTTP mapping table (`CALL_STATUS_TYPE` meets the
+//!   + the single status → HTTP mapping table (`ServiceStatus` meets the
 //!     wire here and only here).
 //! - [`version_id`] — resource identification (`Resources.md` §Resource
 //!   identification: `versioned_object_uid` `HIER_OBJECT_ID` vs `version_uid`

@@ -1119,3 +1119,181 @@ async fn the_server_reads_a_page_model_once() {
         );
     }
 }
+
+/// The ADL 1.4 listing of the two releases of `test_versioned`, and their
+/// operational templates, as the CDR answers them.
+fn versioned_stubs() -> Vec<Value> {
+    let base = "/ferroehr/rest/openehr/v1/definition/template/adl1.4";
+    let opt = |name: &str| {
+        std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../corpus/fixtures/opt/valid")
+                .join(name),
+        )
+        .expect("the versioned fixture should be readable")
+    };
+    let row = |id: &str, created: &str| {
+        serde_json::json!({
+            "template_id": id,
+            "concept": "Test versioned",
+            "archetype_id": "openEHR-EHR-COMPOSITION.test_versioned.v1",
+            "created_timestamp": created,
+        })
+    };
+    let listed = serde_json::json!([
+        row("test_versioned.en.v1", "2026-09-01T09:00:00Z"),
+        row("test_versioned.en.v2", "2026-10-01T09:00:00Z"),
+    ])
+    .to_string();
+    vec![
+        stub(&format!("{base}?version=*"), "application/json", &listed),
+        stub(
+            &format!("{base}/test_versioned.en.v1"),
+            "application/xml",
+            &opt("versioned.v1.opt"),
+        ),
+        stub(
+            &format!("{base}/test_versioned.en.v2"),
+            "application/xml",
+            &opt("versioned.v2.opt"),
+        ),
+    ]
+}
+
+/// A stubbed count of the compositions committed against `template_id`.
+fn count_stub(template_id: &str, count: i64) -> Value {
+    let q = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = $template_id";
+    serde_json::json!({
+        "method": "POST",
+        "path": "/ferroehr/rest/openehr/v1/query/aql",
+        "body": serde_json::json!({ "q": q, "query_parameters": { "template_id": template_id } }).to_string(),
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "response": serde_json::json!({
+            "meta": { "_type": "RESULTSET" },
+            "q": q,
+            "columns": [{ "name": "#0" }],
+            "rows": [[count]],
+        }).to_string(),
+    })
+}
+
+/// The list draws one row per template lineage, its newest release first with
+/// the count of releases and the earlier release under it (#4506).
+#[tokio::test]
+async fn the_template_list_groups_the_releases_of_one_lineage() {
+    let viewer = Viewer::start_with(versioned_stubs()).await;
+    let cookie = viewer.sign_in().await;
+    let page = viewer.page(&cookie, "/templates").await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    let main = page.main();
+    assert_eq!(1, main.matches("<tbody").count(), "{main}");
+    let newest = main
+        .find(r#"href="/templates/test_versioned.en.v2""#)
+        .expect("the newest release is listed");
+    let earlier = main
+        .find(r#"href="/templates/test_versioned.en.v1""#)
+        .expect("the earlier release is listed");
+    assert!(newest < earlier, "the newest release leads: {main}");
+    assert!(main.contains("2 releases"), "{main}");
+    assert!(main.contains("Earlier release"), "{main}");
+}
+
+/// A template's page names its release beside its title, every release a
+/// link with the newest marked and no select-and-Open form; the Overview
+/// counts the compositions committed against each release (#4506).
+#[tokio::test]
+async fn a_template_names_its_release_in_its_header_and_counts_each_release() {
+    let mut stubs = versioned_stubs();
+    stubs.extend([
+        count_stub("test_versioned.en.v1", 3),
+        count_stub("test_versioned.en.v2", 1),
+    ]);
+    let viewer = Viewer::start_with(stubs).await;
+    let cookie = viewer.sign_in().await;
+    let page = viewer
+        .page(&cookie, "/templates/test_versioned.en.v1")
+        .await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    let main = page.main();
+    let header = main
+        .get(..main.find("</header>").expect("a page header"))
+        .unwrap_or_default();
+    assert!(
+        header.contains(r#"aria-controls="template-releases""#),
+        "{header}"
+    );
+    assert!(
+        header.contains(r#"role="option" href="/templates/test_versioned.en.v2""#),
+        "{header}"
+    );
+    assert!(header.contains("Newest"), "{header}");
+    assert!(!main.contains(r#"name="release""#), "{main}");
+    assert!(main.contains("Compositions"), "{main}");
+    let counts: Vec<&str> = ["v2", "v1"]
+        .iter()
+        .map(|release| {
+            let at = main
+                .rfind(&format!(r#"href="/templates/test_versioned.en.{release}""#))
+                .expect("the release is in the Overview's table");
+            let row = main.get(at..).unwrap_or_default();
+            row.get(..row.find("</tr>").unwrap_or(row.len()))
+                .unwrap_or_default()
+        })
+        .collect();
+    assert!(
+        counts
+            .first()
+            .is_some_and(|row| row.contains("<span>1</span>")),
+        "{counts:?}"
+    );
+    assert!(
+        counts
+            .get(1)
+            .is_some_and(|row| row.contains("<span>3</span>")),
+        "{counts:?}"
+    );
+    assert!(
+        counts
+            .get(1)
+            .is_some_and(|row| row.contains("On this page")),
+        "{counts:?}"
+    );
+    assert!(main.contains(r#"data-tab="compare""#), "{main}");
+}
+
+/// Compare reads the two releases' paths and names what the later one added,
+/// as a `GET` form of the two releases that works with no script (#4506).
+#[tokio::test]
+async fn compare_names_the_paths_one_release_adds_to_another() {
+    let viewer = Viewer::start_with(versioned_stubs()).await;
+    let cookie = viewer.sign_in().await;
+    let page = viewer
+        .page(&cookie, "/templates/test_versioned.en.v2?tab=compare")
+        .await;
+    assert_eq!(page.status, http::StatusCode::OK, "{}", page.body);
+    let main = page.main();
+    assert!(main.contains(r#"<form method="get""#), "{main}");
+    assert!(
+        main.contains(r#"name="from""#) && main.contains(r#"name="to""#),
+        "{main}"
+    );
+    assert!(
+        main.contains("The paths from test_versioned.en.v1 to test_versioned.en.v2"),
+        "{main}"
+    );
+    assert!(main.contains("fui-change-added"), "{main}");
+    assert!(main.contains("at0033"), "{main}");
+
+    let same = viewer
+        .page(
+            &cookie,
+            "/templates/test_versioned.en.v2?tab=compare&from=test_versioned.en.v2",
+        )
+        .await;
+    assert!(
+        same.main().contains("Both sides name the same release"),
+        "{}",
+        same.main()
+    );
+}

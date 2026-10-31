@@ -8,8 +8,7 @@
 //! **No openEHR spec governs this — our own design/extension.** AQL is defined
 //! over the clinical domain alone (QUERY `master03-syntax.adoc` names EHR,
 //! COMPOSITION and the RM structures below them; it has no demographic source),
-//! and the SM publishes no cohort operation, so nothing released describes this
-//! call. What it exists for is the question a research or public-health caller
+//! so nothing released describes this call. What it exists for is the question a research or public-health caller
 //! actually asks — "the blood pressures of everyone in this city" — which today
 //! is answered by handing someone a list of patient identifiers.
 //!
@@ -85,7 +84,7 @@ use crate::service::ehr_index::IndexError;
 use crate::service::ehr_index::provider::EhrIndexProvider;
 use crate::service::ehr_index::types::SubjectRef;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -197,7 +196,7 @@ pub enum CohortError {
     ScopeNotAllowed,
     /// The inner AQL execution failed.
     #[error("the cohort query failed")]
-    Query(#[source] SmError),
+    Query(#[source] StatusError),
     /// A demographic or linkage read failed.
     #[error("the cohort store is unavailable")]
     Database(#[source] sqlx::Error),
@@ -208,7 +207,7 @@ pub enum CohortError {
     /// The execution ran but its access record could not be taken, and the
     /// deployment fails closed, so the result is withheld.
     #[error("the access record could not be taken and the deployment fails closed")]
-    Unrecorded(#[source] SmError),
+    Unrecorded(#[source] StatusError),
 }
 
 impl From<super::store::StoreError> for CohortError {
@@ -220,11 +219,11 @@ impl From<super::store::StoreError> for CohortError {
     }
 }
 
-impl From<CohortError> for SmError {
+impl From<CohortError> for StatusError {
     fn from(error: CohortError) -> Self {
         match error {
             CohortError::Query(inner) | CohortError::Unrecorded(inner) => inner,
-            CohortError::Subject(inner) => SmError::from(inner),
+            CohortError::Subject(inner) => StatusError::from(inner),
             CohortError::NotConfigured
             | CohortError::UnknownPredicate(_)
             | CohortError::InvalidValue { .. }
@@ -232,17 +231,17 @@ impl From<CohortError> for SmError {
             | CohortError::IdentityNotHeld
             | CohortError::ScopeNotAllowed => {
                 let message = error.to_string();
-                Self::new(CallStatusType::PreconditionViolation, message).with_source(error)
+                Self::new(ServiceStatus::PreconditionViolation, message).with_source(error)
             }
             CohortError::CohortTooLarge { .. } => {
                 let message = error.to_string();
-                Self::new(CallStatusType::ContentInvalid, message).with_source(error)
+                Self::new(ServiceStatus::ContentInvalid, message).with_source(error)
             }
             CohortError::Database(_) | CohortError::IndexAnswer(_) => {
                 crate::service::error::internal_fault_caused("execute a cohort query", &error)
                     .with_source(error)
             }
-            CohortError::Acquire(e) => SmError::from(e),
+            CohortError::Acquire(e) => StatusError::from(e),
         }
     }
 }
@@ -619,47 +618,47 @@ mod tests {
         for (error, expected) in [
             (
                 CohortError::NotConfigured,
-                CallStatusType::PreconditionViolation,
+                ServiceStatus::PreconditionViolation,
             ),
             (
                 CohortError::NoPredicates,
-                CallStatusType::PreconditionViolation,
+                ServiceStatus::PreconditionViolation,
             ),
             (
                 CohortError::ScopeNotAllowed,
-                CallStatusType::PreconditionViolation,
+                ServiceStatus::PreconditionViolation,
             ),
             (
                 CohortError::IdentityNotHeld,
-                CallStatusType::PreconditionViolation,
+                ServiceStatus::PreconditionViolation,
             ),
             (
                 CohortError::UnknownPredicate("nope".to_owned()),
-                CallStatusType::PreconditionViolation,
+                ServiceStatus::PreconditionViolation,
             ),
             (
                 CohortError::InvalidValue {
                     name: "age_band".to_owned(),
                     reason: "bad".to_owned(),
                 },
-                CallStatusType::PreconditionViolation,
+                ServiceStatus::PreconditionViolation,
             ),
             (
                 CohortError::CohortTooLarge {
                     size: 200_000,
                     max: 100_000,
                 },
-                CallStatusType::ContentInvalid,
+                ServiceStatus::ContentInvalid,
             ),
             (
-                CohortError::Unrecorded(SmError::new(
-                    CallStatusType::ServiceOverloaded,
+                CohortError::Unrecorded(StatusError::new(
+                    ServiceStatus::ServiceOverloaded,
                     "audit trail unavailable (fail-closed)",
                 )),
-                CallStatusType::ServiceOverloaded,
+                ServiceStatus::ServiceOverloaded,
             ),
         ] {
-            assert_eq!(SmError::from(error).status, expected);
+            assert_eq!(StatusError::from(error).status, expected);
         }
     }
 }

@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
+
 # SM Platform ch.12 "Terminology Service" — navigation
 
 Sibling of [[sm-admin-service-ch15-location]] and

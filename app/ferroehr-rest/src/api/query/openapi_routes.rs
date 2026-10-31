@@ -247,11 +247,10 @@ pub(crate) fn cohort_routes() -> OpenApiRouter<AppState> {
                                         endpoint)\", \
                                         `schemas/query/ResultSetMetadata.yaml`) \
                                         is not emitted — the whole `meta` set \
-                                        is optional. `id` is ADDITIVE: the SM \
-                                        RESULT_SET declares `id [1..1]`, \
-                                        \"unique identifier of this result \
-                                        set\" (SM `result_set.adoc`), which the \
-                                        released ITS-REST schema omits, so it \
+                                        is optional. `id` is ADDITIVE: our own \
+                                        unique identifier of this result set, \
+                                        which the released ITS-REST schema \
+                                        omits, so it \
                                         is emitted alongside without breaking \
                                         the released shape. NO `Location` (it \
                                         \"MUST NOT be used to indicate an \
@@ -339,11 +338,8 @@ pub(crate) fn cohort_routes() -> OpenApiRouter<AppState> {
         (status = 404, description = "A well-formed `ehr_id` scope names no \
                                       existing EHR. This branch is OUR OWN \
                                       assignment: the released ad-hoc \
-                                      operations declare no `404` at all, and \
-                                      the SM `ehr_id_does_not_exist` error \
-                                      (`i_query_service.adoc`) has no released \
-                                      wire realization — this server raises it, \
-                                      mapping to `404 Not Found`, so a client \
+                                      operations declare no `404` at all; this \
+                                      server answers `404 Not Found`, so a client \
                                       is told its scope is wrong instead of \
                                       reading an empty result as \"no matching \
                                       data\". A malformed (non-UUID) `ehr_id` \
@@ -553,9 +549,9 @@ pub(crate) async fn query_execute_adhoc_query(
                                         defined \"only for GET endpoint\" \
                                         (`schemas/query/ResultSetMetadata.yaml`) \
                                         and is therefore absent here by \
-                                        definition. `id` is ADDITIVE (SM \
-                                        `result_set.adoc` `id [1..1]`, omitted \
-                                        by the released schema). NO `Location` \
+                                        definition. `id` is ADDITIVE (our own unique \
+                                        identifier of the result set, which \
+                                        the released schema omits). NO `Location` \
                                         (creation/redirect only — \
                                         §Location) and NO `Preference-Applied`: \
                                         `Prefer` negotiation is scoped to \
@@ -635,9 +631,7 @@ pub(crate) async fn query_execute_adhoc_query(
         (status = 404, description = "A well-formed `ehr_id` scope names no \
                                       existing EHR. OUR OWN assignment: the \
                                       released ad-hoc operations declare no \
-                                      `404`, and the SM `ehr_id_does_not_exist` \
-                                      error (`i_query_service.adoc`) has no \
-                                      released wire realization. A malformed \
+                                      `404`. A malformed \
                                       `ehr_id` is a `400`; an EXISTING EHR with \
                                       no matching data is `200` with \
                                       `rows: []`.",
@@ -851,9 +845,9 @@ pub(crate) async fn query_execute_adhoc_query_body(
                                         GET endpoint)\", \
                                         `schemas/query/ResultSetMetadata.yaml`) \
                                         is not emitted — the whole `meta` set \
-                                        is optional. `id` is ADDITIVE (SM \
-                                        `result_set.adoc` `id [1..1]`, omitted \
-                                        by the released schema). NO `Location` \
+                                        is optional. `id` is ADDITIVE (our own unique \
+                                        identifier of the result set, which \
+                                        the released schema omits). NO `Location` \
                                         (creation/redirect only — §Location) \
                                         and NO `Preference-Applied` (`Prefer` \
                                         negotiation is scoped to create/update/ \
@@ -934,10 +928,8 @@ pub(crate) async fn query_execute_adhoc_query_body(
                                       can never resolve. This server ALSO \
                                       answers `404` when a well-formed `ehr_id` \
                                       scope names no existing EHR — OUR OWN \
-                                      assignment (the SM \
-                                      `ehr_id_does_not_exist` error has no \
-                                      released wire realization on the query \
-                                      operations); a malformed `ehr_id` is a \
+                                      assignment (no released query operation \
+                                      declares a `404`); a malformed `ehr_id` is a \
                                       `400`, and an existing EHR with no \
                                       matching data is `200` with `rows: []`.",
          body = serde_json::Value),
@@ -1151,9 +1143,9 @@ pub(crate) async fn query_execute_stored_query(
                                         \"only for GET endpoint\" \
                                         (`schemas/query/ResultSetMetadata.yaml`) \
                                         and is therefore absent here by \
-                                        definition. `id` is ADDITIVE (SM \
-                                        `result_set.adoc` `id [1..1]`, omitted \
-                                        by the released schema). NO `Location` \
+                                        definition. `id` is ADDITIVE (our own unique \
+                                        identifier of the result set, which \
+                                        the released schema omits). NO `Location` \
                                         (creation/redirect only — §Location) \
                                         and NO `Preference-Applied`: `Prefer` \
                                         negotiation is scoped to \
@@ -1238,10 +1230,8 @@ pub(crate) async fn query_execute_stored_query(
                                       name cannot be stored). This server ALSO \
                                       answers `404` when a well-formed `ehr_id` \
                                       scope names no existing EHR — OUR OWN \
-                                      assignment (the SM \
-                                      `ehr_id_does_not_exist` error has no \
-                                      released wire realization on the query \
-                                      operations); a malformed `ehr_id` is a \
+                                      assignment (no released query operation \
+                                      declares a `404`); a malformed `ehr_id` is a \
                                       `400`, and an existing EHR with no \
                                       matching data is `200` with `rows: []`.",
          body = serde_json::Value),
@@ -1462,9 +1452,9 @@ pub(crate) async fn query_execute_stored_query_body(
                                         endpoint)\", \
                                         `schemas/query/ResultSetMetadata.yaml`) \
                                         is not emitted — the whole `meta` set \
-                                        is optional. `id` is ADDITIVE (SM \
-                                        `result_set.adoc` `id [1..1]`, omitted \
-                                        by the released schema). NO `Location` \
+                                        is optional. `id` is ADDITIVE (our own unique \
+                                        identifier of the result set, which \
+                                        the released schema omits). NO `Location` \
                                         (creation/redirect only — §Location) \
                                         and NO `Preference-Applied` (`Prefer` \
                                         negotiation is scoped to create/update/ \
@@ -1546,10 +1536,9 @@ pub(crate) async fn query_execute_stored_query_body(
                                       reserved `aql` (such a name cannot be \
                                       stored). This server ALSO answers `404` \
                                       when a well-formed `ehr_id` scope names \
-                                      no existing EHR — OUR OWN assignment (the \
-                                      SM `ehr_id_does_not_exist` error has no \
-                                      released wire realization on the query \
-                                      operations); a malformed `ehr_id` is a \
+                                      no existing EHR — OUR OWN assignment (no \
+                                      released query operation declares a \
+                                      `404`); a malformed `ehr_id` is a \
                                       `400`, and an existing EHR with no \
                                       matching data is `200` with `rows: []`.",
          body = serde_json::Value),
@@ -1777,9 +1766,9 @@ pub(crate) async fn query_execute_stored_query_version(
                                         \"only for GET endpoint\" \
                                         (`schemas/query/ResultSetMetadata.yaml`) \
                                         and is therefore absent here by \
-                                        definition. `id` is ADDITIVE (SM \
-                                        `result_set.adoc` `id [1..1]`, omitted \
-                                        by the released schema). NO `Location` \
+                                        definition. `id` is ADDITIVE (our own unique \
+                                        identifier of the result set, which \
+                                        the released schema omits). NO `Location` \
                                         (creation/redirect only — §Location) \
                                         and NO `Preference-Applied`: `Prefer` \
                                         negotiation is scoped to \
@@ -1868,10 +1857,8 @@ pub(crate) async fn query_execute_stored_query_version(
                                       a name cannot be stored). This server \
                                       ALSO answers `404` when a well-formed \
                                       `ehr_id` scope names no existing EHR — \
-                                      OUR OWN assignment (the SM \
-                                      `ehr_id_does_not_exist` error has no \
-                                      released wire realization on the query \
-                                      operations); a malformed `ehr_id` is a \
+                                      OUR OWN assignment (no released query \
+                                      operation declares a `404`); a malformed `ehr_id` is a \
                                       `400`, and an existing EHR with no \
                                       matching data is `200` with `rows: []`.",
          body = serde_json::Value),

@@ -28,7 +28,7 @@ use serde_json::Value;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::identifier::store::StoreError;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -49,27 +49,27 @@ impl FerroEhrService {
     /// **No openEHR spec governs this — our own design/extension.**
     ///
     /// # Errors
-    /// [`SmError::precondition`] when the deployment configures no
+    /// [`StatusError::precondition`] when the deployment configures no
     /// identifier protection, and `exception` when the resolution query fails.
     pub async fn resolve_party_by_identifier(
         &self,
         scheme: &str,
         value: &str,
-    ) -> Result<Option<VoId>, SmError> {
+    ) -> Result<Option<VoId>, StatusError> {
         let Some(engine) = self.identifier_protection() else {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "this deployment configures no national-identifier protection, so there is \
                  no protected identifier to resolve",
             ));
         };
         let resolved = engine.resolve(scheme, value).await.map_err(|error| {
             if let StoreError::Acquire(acquire) = error {
-                return SmError::from(acquire);
+                return StatusError::from(acquire);
             }
             // The client is told the scheme and nothing else; the cause rides
             // as a source so an operator can walk the chain without a database
             // error text reaching a caller.
-            SmError::exception(format!("resolving a `{scheme}` identifier failed"))
+            StatusError::exception(format!("resolving a `{scheme}` identifier failed"))
                 .with_source(error)
         })?;
         self.emit_identifier_resolution(scheme, resolved.is_some())?;
@@ -92,32 +92,32 @@ impl FerroEhrService {
     /// **No openEHR spec governs this — our own design/extension.**
     ///
     /// # Errors
-    /// [`SmError::precondition`] when the deployment configures no identifier
+    /// [`StatusError::precondition`] when the deployment configures no identifier
     /// protection or `version_uid` is no `OBJECT_VERSION_ID`, the
-    /// `object_version_does_not_exist` [`SmError`] when no party holds that
+    /// `object_version_does_not_exist` [`StatusError`] when no party holds that
     /// version, `exception` when a sealed value cannot be read or does not
     /// authenticate, and `service_overloaded` when the access record is
     /// refused under `fail_mode = "closed"`, which withholds the values.
     pub async fn read_party_identifiers(
         &self,
         version_uid: &str,
-    ) -> Result<(Value, Vec<String>), SmError> {
+    ) -> Result<(Value, Vec<String>), StatusError> {
         let Some(engine) = self.identifier_protection() else {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "this deployment configures no national-identifier protection, so a party \
                  carries no protected identifier to expand",
             ));
         };
         let (party, _) = parse_version_uid(version_uid).map_err(|error| {
-            SmError::precondition(format!("`{version_uid}` is not an OBJECT_VERSION_ID"))
+            StatusError::precondition(format!("`{version_uid}` is not an OBJECT_VERSION_ID"))
                 .with_source(error)
         })?;
         let mut version = self.get_party_at_version(version_uid.to_owned()).await?;
         let schemes = engine.expand(&mut version).await.map_err(|error| {
             if let StoreError::Acquire(acquire) = error {
-                return SmError::from(acquire);
+                return StatusError::from(acquire);
             }
-            SmError::exception(format!(
+            StatusError::exception(format!(
                 "expanding the protected identifiers of party version `{version_uid}` failed"
             ))
             .with_source(error)
@@ -130,9 +130,13 @@ impl FerroEhrService {
     /// scheme expanded, or one naming no scheme when the version held none.
     ///
     /// # Errors
-    /// The `service_overloaded` [`SmError`] when the sender rejected a record
+    /// The `service_overloaded` [`StatusError`] when the sender rejected a record
     /// under `fail_mode = "closed"`; the values are then withheld.
-    fn emit_identifier_expansion(&self, party: VoId, schemes: &[String]) -> Result<(), SmError> {
+    fn emit_identifier_expansion(
+        &self,
+        party: VoId,
+        schemes: &[String],
+    ) -> Result<(), StatusError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -176,9 +180,9 @@ impl FerroEhrService {
     /// sealing exists to keep out of readable storage.
     ///
     /// # Errors
-    /// The `service_overloaded` [`SmError`] when the sender rejected the record
+    /// The `service_overloaded` [`StatusError`] when the sender rejected the record
     /// under `fail_mode = "closed"`; the resolution is then withheld.
-    fn emit_identifier_resolution(&self, scheme: &str, matched: bool) -> Result<(), SmError> {
+    fn emit_identifier_resolution(&self, scheme: &str, matched: bool) -> Result<(), StatusError> {
         if !self.audit_enabled() {
             return Ok(());
         }

@@ -30,7 +30,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::attestation::{AttestationInput, AttestationParts, PendingAttest};
 use crate::versioning::audit::{
     AuditInput, change_type, change_type_code, decode_description, party_proxy,
@@ -45,9 +45,8 @@ use crate::versioning::signature::signer::Signer;
 use crate::versioning::wire::version_envelope;
 use crate::versioning::{CommitEnv, Kind, change, read};
 
-/// An optional `(lower, upper)` inclusive commit-time window — the simple
-/// realization of the SM `Interval<Iso8601_date_time>` (either side open when
-/// its bound is `None`; the whole `Option` `None` = unbounded).
+/// An optional `(lower, upper)` inclusive commit-time window (either side open
+/// when its bound is `None`; the whole `Option` `None` = unbounded).
 pub(crate) type TimeRange = Option<(Option<jiff::Timestamp>, Option<jiff::Timestamp>)>;
 
 /// The storage branch an incoming VERSION maps to. Deliberately narrower than
@@ -413,8 +412,8 @@ fn domain_pool(cx: &impl CommitEnv, party_only: bool) -> &sqlx::PgPool {
 /// invalid content" ITS-REST overview `Requests_and_responses.md` answers
 /// `400`, the `responses/400_CONTRIBUTION.yaml` the operation declares (it
 /// declares no `422`). That covers an absent `audit` or `change_type`, a
-/// `lifecycle_state` that is not a `DV_CODED_TEXT` (the SM `Terminology_code`
-/// spelling and plain strings), a `description` that is not a `DV_TEXT` object
+/// `lifecycle_state` that is not a `DV_CODED_TEXT` (the `CODE_PHRASE` shape
+/// `{terminology_id, code_string}` and plain strings), a `description` that is not a `DV_TEXT` object
 /// (`schemas/data_types/UDvText.yaml`), and a commit audit `_type` outside the
 /// generated tag set.
 ///
@@ -476,8 +475,7 @@ fn plain_audit<'a>(
 /// object kind from the payload `_type` (create) or the stored object
 /// (modify/delete).
 ///
-/// SM `i_ehr_contribution.adoc` §`commit_contribution`
-/// `Pre_has_ehr`: the target EHR must exist before committing, so a create-only
+/// The target EHR must exist before committing, so a create-only
 /// CONTRIBUTION to a missing EHR is a clean `NotFound`, not a storage FK error.
 ///
 /// # Errors
@@ -498,7 +496,7 @@ pub(crate) async fn commit_version_set(
     audit: &UpdateAudit,
     party_only: bool,
 ) -> Result<CommittedContribution, ServiceError> {
-    // `Pre_has_ehr` — the CONTRIBUTION's target EHR must exist.
+    // the EHR-existence check — the CONTRIBUTION's target EHR must exist.
     if let Some(ehr_id) = ehr_id {
         cx.ensure_ehr_exists(ehr_id).await?;
     }
@@ -819,8 +817,8 @@ fn plan_version(
     let lifecycle_state = lifecycle_state.defining_code.code_string;
     if action == Action::Attest {
         // NOTE: no openEHR spec governs the meaning of lifecycle_state on a member
-        // that creates no version (SM master03 §Version Update Semantics), so a 666
-        // member's state is checked against its group here and never stored.
+        // that creates no version, so a 666 member's state is checked against its
+        // group here and never stored.
         resolve_lifecycle(Some(lifecycle_state.clone()))
             .map_err(|e| e.for_version_member(index))?;
     }
@@ -1272,9 +1270,8 @@ async fn reject_duplicate_singleton(
 /// close each member set with a `oneOf`, so a member outside it fails the request schema (400).
 ///
 /// `FOLDER` is EHR-scoped in both directions: no released service surface
-/// admits a demographic folder (SM `i_demographic_service.adoc` declares no
-/// folder operation, and every ITS-REST `directory_*` operation is mounted at
-/// `/ehr/{ehr_id}/directory`).
+/// admits a demographic folder (every ITS-REST `directory_*` operation is
+/// mounted at `/ehr/{ehr_id}/directory`).
 ///
 /// # Errors
 /// [`ServiceError::BadRequest`] (`400`, ITS-REST `responses/400_CONTRIBUTION.yaml`)
@@ -1441,8 +1438,8 @@ pub(crate) async fn get_contribution(
     )
     .await?
     .ok_or_else(|| {
-        ServiceError::sm(
-            CallStatusType::ContributionDoesNotExist,
+        ServiceError::new(
+            ServiceStatus::ContributionDoesNotExist,
             format!("CONTRIBUTION {contribution_id}"),
         )
     })?;
@@ -1476,8 +1473,8 @@ pub(crate) async fn get_contribution(
         let tree = TreeId::from_columns(t, b, v);
         if resolve_refs {
             let loaded = resolved.remove(&(vo_id, tree)).ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::ObjectVersionDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::ObjectVersionDoesNotExist,
                     format!("VERSION {vo_id}::{tree}"),
                 )
             })?;
@@ -1528,9 +1525,8 @@ pub(crate) async fn get_contribution(
     }))
 }
 
-/// SM `I_EHR_CONTRIBUTION.list_contributions` — the ids of the EHR's
-/// CONTRIBUTIONs, oldest-first, within the optional commit-time window, paged
-/// (SM `i_ehr_contribution.adoc`).
+/// The ids of the EHR's
+/// CONTRIBUTIONs, oldest-first, within the optional commit-time window, paged.
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] when the EHR does not exist; the storage read
@@ -1553,7 +1549,7 @@ pub(crate) async fn list_contributions(
     )
 }
 
-/// SM `I_EHR_CONTRIBUTION.contribution_count` — the number of CONTRIBUTIONs in
+/// The number of CONTRIBUTIONs in
 /// the EHR within the optional commit-time window.
 ///
 /// # Errors
@@ -1572,7 +1568,7 @@ pub(crate) async fn count_contributions(
     )
 }
 
-/// The EHR-existence precheck for the read paths above (SM `ehr_does_not_exist`
+/// The EHR-existence precheck for the read paths above (`ehr_id_does_not_exist`
 /// → `NotFound`).
 ///
 /// Storage exposes the read (`version_repo::meta::ehr_exists`) so versioning stays
@@ -1581,8 +1577,8 @@ async fn ensure_ehr_exists(pool: &sqlx::PgPool, ehr_id: EhrId) -> Result<(), Ser
     if crate::storage::version_repo::meta::ehr_exists(pool, ehr_id).await? {
         Ok(())
     } else {
-        Err(ServiceError::sm(
-            CallStatusType::EhrIdDoesNotExist,
+        Err(ServiceError::new(
+            ServiceStatus::EhrIdDoesNotExist,
             format!("EHR {ehr_id}"),
         ))
     }

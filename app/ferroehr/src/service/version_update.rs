@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The version-commit envelope (`master03-common_package.adoc` §Version Update
-//! Semantics; `update_version.adoc`, `update_audit.adoc`).
+//! The version-commit envelope (ITS-REST `UpdateVersion.yaml`,
+//! `UpdateAudit.yaml`).
 //!
 //! A call that creates or updates a versioned top-level object implicitly
 //! creates a `CONTRIBUTION`, one or more `ORIGINAL_VERSION`s and, on creation,
@@ -24,9 +24,9 @@
 //!   `UPDATE_ATTESTATION`, the `AUDIT_DETAILS`/`ATTESTATION` pair of RM common
 //!   `master06-change_control_package.adoc` §Committal and Audits, so
 //!   [`audit_base`] reads the inherited attributes of whichever form arrived.
-//! - `description` is a `DV_TEXT` object on the wire (`UpdateAudit.yaml`) where
-//!   SM `UPDATE_AUDIT.description` is `String [0..1]`, so a body-borne commit
-//!   audit can carry a coded description. The `openehr-audit-details` header
+//! - `description` is a `DV_TEXT` object on the wire (`UpdateAudit.yaml`), so a
+//!   body-borne commit audit can carry a coded description. The
+//!   `openehr-audit-details` header
 //!   cannot: its grammar carries the attribute pre-flattened as the
 //!   `description.value` subkey (ITS-REST overview `Requests_and_responses.md`),
 //!   so the header merge always produces a plain `DV_TEXT`.
@@ -35,8 +35,8 @@
 //!   group code lives at `defining_code.code_string`.
 //! - `UPDATE_ATTESTATION` is a wire partial the server completes into a full RM
 //!   `ATTESTATION` (adding `time_committed` and `system_id`), and `signature` is
-//!   wire-only: `UpdateVersion.yaml` carries it, the SM class does not, and it
-//!   is fed to the version signer.
+//!   wire-only: `UpdateVersion.yaml` carries it, and it is fed to the version
+//!   signer.
 
 use openehr_base::prelude::TerminologyId;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};

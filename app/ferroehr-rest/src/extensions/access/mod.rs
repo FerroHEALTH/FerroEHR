@@ -7,8 +7,7 @@
 //! may do), unified under one module.
 //!
 //! Spec grounding (`docs/specs/openehr/ITS-REST/.../Requests_and_responses.md`
-//! §"Authentication and authorization"; SM `master02-overview.adoc` §General
-//! Assumptions; CNF `profiles/master03-profiles.adoc`):
+//! §"Authentication and authorization"; CNF `profiles/master03-profiles.adoc`):
 //!
 //! - **Authentication is a `SHOULD`, not a `MUST`.** If a framework is present,
 //!   the service MUST use `WWW-Authenticate` and return `401`/`403` as
@@ -18,8 +17,7 @@
 //!   specification requires of this surface.
 //! - **Fine-grained RBAC/ABAC is NOT spec-mandated.** No CNF profile
 //!   (CORE/STANDARD/OPTIONS) carries any authentication/authorization/roles
-//!   requirement, and the SM treats authorization as an out-of-band
-//!   precondition. The RBAC and ABAC layers here are therefore **our own
+//!   requirement. The RBAC and ABAC layers here are therefore **our own
 //!   design**, in the vocabulary of NIST SP 800-162 (ABAC) and ANSI/INCITS
 //!   359 Core RBAC, kept structurally separate from the spec-grounded
 //!   authentication core so the boundary between the two is legible.
@@ -33,8 +31,7 @@
 //!   `org.openehr.rm.ehr.ehr_access.adoc`). Always-on and foundational; runs
 //!   first in the pre-dispatch chain.
 //! - [`authz`] — our **own enterprise extensions** (no openEHR spec governs
-//!   them; the SM places authorisation out of band, SM
-//!   `openehr_platform/master02-overview.adoc` §General Assumptions): the coarse
+//!   them): the coarse
 //!   RBAC gate (runs in the authn middleware) + the fine-grained ABAC engine
 //!   (Cedar / remote PDP, enforced by the PEP [`pep`]).
 //! - [`pep`] — the policy-enforcement point: the ABAC gate **and** the

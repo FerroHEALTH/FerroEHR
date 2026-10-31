@@ -2,7 +2,7 @@
   /ehr/{ehr_id}/contribution` and `POST /demographic/contribution` now read the
   body through the released `NewContribution` schema, and refuse every shape it
   does not define. Each refused shape answers **400**:
-  - a `lifecycle_state` in the SM spelling `{"terminology_id": …,
+  - a `lifecycle_state` in the CODE_PHRASE shape `{"terminology_id": …,
     "code_string": …}`, as a plain string, or as a bare `{"value": …}`. Send
     a `DV_CODED_TEXT`: `{"value": "complete", "defining_code":
     {"terminology_id": {"value": "openehr"}, "code_string": "532"}}`;

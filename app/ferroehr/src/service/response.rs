@@ -4,8 +4,8 @@
 //! Protocol-adapter response envelope — the typed resource metadata from
 //! which the ITS-REST adapter derives `ETag`/`Location`/`Last-Modified`.
 //!
-//! No openEHR spec governs this — our own design: the SM returns plain
-//! values; ITS-REST 1.1.0 mandates the headers (`headers/ETag_*.yaml`,
+//! No openEHR spec governs this — our own design: the service calls
+//! return plain values; ITS-REST 1.1.0 mandates the headers (`headers/ETag_*.yaml`,
 //! `headers/Location_*.yaml`; `Last-Modified` per the ITS-REST overview,
 //! `VERSION.commit_audit.time_committed.value`). This envelope is the seam
 //! that carries what the headers need.
@@ -54,8 +54,8 @@ pub struct ResourceMeta {
     /// (`headers/openehr-item-tag.yaml`,
     /// `headers/openehr-version-item-tag.yaml`).
     ///
-    /// No openEHR spec governs this envelope field — our own design: the SM
-    /// returns plain values, and this seam carries what the mandated headers
+    /// No openEHR spec governs this envelope field — our own design: the
+    /// service calls return plain values, and this seam carries what the mandated headers
     /// need. The tags are the RM `common.item_tag.ITEM_TAG` type itself.
     pub item_tags: Option<Vec<ItemTag>>,
     /// The served/committed VERSION's own `ITEM_TAG` collection, when it is

@@ -24,7 +24,7 @@
 //! This module is the in-process side of that law: [`canonical_key`] is the
 //! comparison form the derived-runtime cache key uses, so case variants of one
 //! stored template resolve to a single entry while the persisted `template_id`
-//! stays case-preserved. Storage lookups and the SM `I_DEFINITION_ADL14`
+//! stays case-preserved. Storage lookups and the ADL 1.4
 //! provisioning surface enforce the same rule in SQL with
 //! `lower(<column>) = lower($1)`.
 

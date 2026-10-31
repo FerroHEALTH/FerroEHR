@@ -1,13 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The in-process openEHR-bundle provider for `I_TERMINOLOGY_SERVICE`, backed
+//! The in-process openEHR-bundle provider for the terminology calls, backed
 //! by the compile-time-embedded `openehr-term` bundle (TERM 3.1.0).
 //!
-//! Spec: `docs/specs/openehr/SM/docs/UML/classes/i_terminology_service.adoc`
-//! (the 9 calls plus `Pre_has_terminology`/`Pre_has_term`/`Pre_has_value_set`)
-//! and the extract model (`terminology_extract.adoc`, `term_code.adoc`,
-//! `defined_term.adoc`). `BASE/docs/architecture_overview/
+//! `BASE/docs/architecture_overview/
 //! master12-terminology.adoc` grounds the "openehr" id and the group/value-set
 //! split. The extract types live in [`super::types`]; this module is the
 //! DB-free mapping onto [`openehr_term::bundle::openehr`], the enumerable local
@@ -33,7 +30,7 @@
 //!   code set by `openehr_id`; an external terminology's code set is its own
 //!   single value set. `value_set_validate` is set membership.
 //! - `subsumes`. The openEHR vocabulary is flat, so this answers identity only,
-//!   and being strict (`i_terminology_service.adoc`) even the identity case is
+//!   and being strict even the identity case is
 //!   `false`. Hierarchical subsumption is the FHIR provider's `$subsumes`.
 //! - `at_date`. The bundle is a single pinned version, so the temporal
 //!   parameter never changes the answer here; it is honoured by the FHIR
@@ -49,7 +46,7 @@
 use openehr_term::bundle::openehr;
 use openehr_term::v3_1::terminology::code_set::CodeSet;
 
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::service::terminology::types::{
     DefinedTerm, TermCode, TermEntry, TerminologyDescription, TerminologyExtract,
 };
@@ -60,12 +57,12 @@ const OPENEHR_TERM_URI: &str = "https://github.com/openEHR/terminology";
 /// The canonical rubric language for `get_term`/`get_value_set` display text.
 const CANONICAL_LANG: &str = "en";
 
-/// A `Pre_has_terminology` failure → `NotFound` (the abstract SM error has no
-/// ITS-REST wire binding — the terminology surface is native-API-only;
+/// An unknown terminology → `NotFound` (no ITS-REST wire binding — the
+/// terminology surface is native-API-only;
 /// `NotFound` is the natural HTTP reading of an unknown terminology).
-fn unknown_terminology(id: &str) -> SmError {
-    SmError::new(
-        CallStatusType::VersionedObjectDoesNotExist,
+fn unknown_terminology(id: &str) -> StatusError {
+    StatusError::new(
+        ServiceStatus::VersionedObjectDoesNotExist,
         format!("terminology `{id}`"),
     )
 }
@@ -163,7 +160,7 @@ fn bundle_version() -> Option<String> {
     openehr().terminology().version.clone()
 }
 
-// ─── the 9 SM calls, as DB-free functions the routing layer delegates to ─────
+// ─── the 9 calls, as DB-free functions the routing layer delegates to ────────
 
 /// `get_terminology_ids` — `"openehr"` plus every external code set's id.
 pub(super) fn terminology_ids() -> Vec<String> {
@@ -181,16 +178,16 @@ pub(super) fn has_terminology(terminology_id: &str) -> bool {
     terminology_id == OPENEHR || external_terminology(terminology_id).is_some()
 }
 
-/// `get_terminology_description`. `Pre_has_terminology`.
+/// `get_terminology_description`; an unknown terminology → `NotFound`.
 pub(super) fn terminology_description(
     terminology_id: &str,
-) -> Result<TerminologyDescription, SmError> {
+) -> Result<TerminologyDescription, StatusError> {
     if terminology_id == OPENEHR {
         return Ok(TerminologyDescription {
             publisher: "openEHR Foundation".to_owned(),
             available_versions: bundle_version().map(|v| vec![v]),
             // No meta-model attributes are exposed for the openEHR bundle
-            // (`terminology_description.adoc` `attributes` 0..1).
+            // (`attributes` is optional).
             attributes: None,
             uri: OPENEHR_TERM_URI.to_owned(),
         });
@@ -209,8 +206,8 @@ pub(super) fn terminology_description(
     }
 }
 
-/// `has_term`. `Pre_has_terminology` → `NotFound` on an unknown terminology.
-pub(super) fn has_term(terminology_id: &str, code: &str) -> Result<bool, SmError> {
+/// `has_term`; an unknown terminology → `NotFound`.
+pub(super) fn has_term(terminology_id: &str, code: &str) -> Result<bool, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
@@ -229,14 +226,17 @@ pub(super) fn has_term(terminology_id: &str, code: &str) -> Result<bool, SmError
     }
 }
 
-/// `get_term`. `Pre_has_terminology` + `Pre_has_term` (both → `NotFound`).
-pub(super) fn get_term(terminology_id: &str, code: &str) -> Result<TerminologyExtract, SmError> {
+/// `get_term`; an unknown terminology or term → `NotFound`.
+pub(super) fn get_term(
+    terminology_id: &str,
+    code: &str,
+) -> Result<TerminologyExtract, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
     if !has_term(terminology_id, code)? {
-        return Err(SmError::new(
-            CallStatusType::VersionedObjectDoesNotExist,
+        return Err(StatusError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("term `{code}` in terminology `{terminology_id}`"),
         ));
     }
@@ -259,18 +259,18 @@ pub(super) fn get_term(terminology_id: &str, code: &str) -> Result<TerminologyEx
     Ok(extract_from_members(terminology_id, vec![member]))
 }
 
-/// `subsumes` — SM master12 `i_terminology_service.adoc`: "True if
-/// `candidate_child_code` is in the **strict** subsumption of `ref_code`".
+/// `subsumes` — true if `candidate_child_code` is in the **strict**
+/// subsumption of `ref_code`.
 /// Strict subsumption excludes the code itself, and the openEHR bundle's
 /// vocabularies are flat (no is-a hierarchy), so no code strictly subsumes
-/// any other here — always False. `Pre_has_terminology`. (Hierarchical
+/// any other here — always False; an unknown terminology → `NotFound`. (Hierarchical
 /// subsumption is served by the external FHIR provider's
 /// `CodeSystem/$subsumes`.)
 pub(super) fn subsumes(
     terminology_id: &str,
     _ref_code: &str,
     _candidate_child_code: &str,
-) -> Result<bool, SmError> {
+) -> Result<bool, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
@@ -282,12 +282,12 @@ pub(super) fn has_value_set(terminology_id: &str, value_set_code: &str) -> bool 
     resolve_value_set(terminology_id, value_set_code).is_some()
 }
 
-/// `value_set_validate` — set membership. `Pre_has_terminology`.
+/// `value_set_validate` — set membership; an unknown terminology → `NotFound`.
 pub(super) fn value_set_validate(
     terminology_id: &str,
     value_set_id: &str,
     candidate_code: &str,
-) -> Result<bool, SmError> {
+) -> Result<bool, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
@@ -295,19 +295,19 @@ pub(super) fn value_set_validate(
         .is_some_and(|members| members.iter().any(|(code, _)| code == candidate_code)))
 }
 
-/// `get_value_set`. `Pre_has_terminology` + `Pre_has_value_set` (both →
+/// `get_value_set`; an unknown terminology or value set (both →
 /// `NotFound`).
 pub(super) fn get_value_set(
     terminology_id: &str,
     value_set_code: &str,
-) -> Result<TerminologyExtract, SmError> {
+) -> Result<TerminologyExtract, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
     match resolve_value_set(terminology_id, value_set_code) {
         Some(members) => Ok(extract_from_members(terminology_id, members)),
-        None => Err(SmError::new(
-            CallStatusType::VersionedObjectDoesNotExist,
+        None => Err(StatusError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("value set `{value_set_code}` in terminology `{terminology_id}`"),
         )),
     }
@@ -344,8 +344,8 @@ mod tests {
 
         assert!(matches!(
             terminology_description("bogus"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
@@ -374,16 +374,16 @@ mod tests {
     fn get_term_unknown_code_is_not_found() {
         assert!(matches!(
             get_term("openehr", "not-a-code"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
-        // Unknown terminology → NotFound (Pre_has_terminology) on has_term too.
+        // Unknown terminology → NotFound on has_term too.
         assert!(matches!(
             has_term("bogus", "249"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
@@ -401,14 +401,14 @@ mod tests {
 
     #[test]
     fn subsumes_is_strict_so_flat_vocabularies_never_subsume() {
-        // SM master12: strict subsumption excludes identity; the bundle is
+        // Strict subsumption excludes identity; the bundle is
         // flat, so subsumes is uniformly false (incl. the identity case).
         assert!(!subsumes("openehr", "249", "249").unwrap());
         assert!(!subsumes("openehr", "249", "250").unwrap());
         assert!(matches!(
             subsumes("bogus", "a", "a"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
@@ -430,8 +430,8 @@ mod tests {
         assert!(!has_value_set("openehr", "no_such_group"));
         assert!(matches!(
             get_value_set("openehr", "no_such_group"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));

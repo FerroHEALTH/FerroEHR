@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end service tests for the EHR Extract **export** path (SM
-//! `I_EHR_EXTRACT_SERVICE.export_ehrs` / `export_ehr_extracts`) against a real
-//! `PostgreSQL` 18 (shared testkit harness).
+//! End-to-end service tests for the EHR Extract **export** path (`export_ehrs`
+//! / `export_ehr_extracts`) against a real `PostgreSQL` 18 (shared testkit
+//! harness).
 //!
-//! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`;
-//! RM EHR Extract IM master05 (`X_VERSIONED_*`) + master09 (creation
+//! Spec: RM EHR Extract IM master05 (`X_VERSIONED_*`) + master09 (creation
 //! semantics). The acceptance properties:
 //!
 //! 1. **Whole-EHR export** carries every versioned object of the EHR
@@ -273,7 +272,7 @@ async fn export_ehrs_unknown_ehr_is_ehr_id_does_not_exist() {
         .expect_err("unknown EHR must fail");
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::EhrIdDoesNotExist
+        ferroehr::service::status::ServiceStatus::EhrIdDoesNotExist
     );
 }
 
@@ -481,7 +480,7 @@ async fn criteria_in_a_foreign_formalism_are_refused() {
         .expect_err("a non-AQL criteria formalism must be refused");
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::PreconditionViolation
+        ferroehr::service::status::ServiceStatus::PreconditionViolation
     );
     assert!(
         err.message.contains("formalism"),
@@ -508,7 +507,7 @@ async fn criteria_that_do_not_parse_as_aql_are_refused() {
         .expect_err("an unparseable AQL criterion must be refused");
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::PreconditionViolation
+        ferroehr::service::status::ServiceStatus::PreconditionViolation
     );
     assert!(
         err.message.contains("criteria[0]"),

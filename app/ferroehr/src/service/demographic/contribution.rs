@@ -3,7 +3,7 @@
 
 //! Demographic (ehr-less) CONTRIBUTION — commit + retrieval, per the
 //! Demographic API of ITS-REST Release-1.1.0 (DEVELOPMENT lifecycle within
-//! the released spec; the SM demographic service is abstract). A demographic
+//! the released spec). A demographic
 //! CONTRIBUTION wraps a change-set of party / relationship versions with
 //! `ehr_id = None`, committed through the shared CONTRIBUTION engine
 //! ([`crate::versioning::contribution::commit_version_set`]) with `party_only = true`
@@ -32,7 +32,7 @@ use uuid::Uuid;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::contribution::{commit_version_set, decode_new_contribution};
@@ -75,8 +75,8 @@ impl FerroEhrService {
         )
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ContributionDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ContributionDoesNotExist,
                 format!("demographic CONTRIBUTION {contribution_id}"),
             )
         })?;

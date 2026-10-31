@@ -591,7 +591,7 @@ measurements of our own design.
 FerroEHR 5.6.0-rc5 from the quickstart (`docker-compose.yml` with
 `FERROEHR_EHR_INDEX=local` and the usage report off), PostgreSQL 18.6 with
 `shared_buffers=1GB`, `max_wal_size=4GB`, `wal_compression=lz4` and default
-autovacuum, in a Podman VM with 8 CPUs and 16 GiB. A client with 8 workers ran
+autovacuum, in a Podman VM with 8 CPUs and 16 gibibytes of memory. A client with 8 workers ran
 each workload over ITS-REST in five phases, and the size of every relation
 (`pg_relation_size`, the TOAST relation's `pg_total_relation_size` and
 `pg_indexes_size`) and the WAL position (`pg_current_wal_lsn()`) were read

@@ -3,7 +3,7 @@
 - **Read first:** the openEHR Service Model (SM) is not an authority (owner ruling 2026-10-27, `.claude/memory/sm-not-an-authority.md`). Entries below that call SM an oracle or ground a verdict on it predate the ruling: re-ground such a verdict on BASE, RM, AM, TERM, QUERY or the ITS docs text, or record it as our own design.
 
 - [CDR extension surfaces — recurring checks](cdr-extension-surfaces.md) — what to verify on "our own extension" REST surfaces (flag discipline, error mapping, ABAC mode, call chains re-derived from code)
-- [Error status mapping chain](error-status-mapping-chain.md) — ServiceError→SmError→HTTP table location + FK-violation classification path
+- [Error status mapping chain](error-status-mapping-chain.md) — ServiceError→StatusError→HTTP table location + FK-violation classification path
 - [CNF schedule → catalogue conversion review](cnf-schedule-conversion-review.md) — case-model completeness pitfalls: master08 multi-version-per-commit (unrepresentable), master09 directory temporal/tree, master06 1.a/1.b, verified_by ids, SF MIME reject-list; OAS status sets that check out
 - [ADL2 temporal mixed pattern+interval](adl2-temporal-mixed-pattern.md) — the `pattern/interval` form is DURATION-ONLY; emitting it for C_DATE/C_TIME/C_DATE_TIME is non-reparseable; watch the OPT-1.4→ADL2 converter carrying both pattern+range
 - [CNF Profiles book shape](cnf-profiles-book-shape.md) — Profiles/master03 is NOT a pure capability×tier matrix (CORE=all/OPTIONS=any rule + External Data Format attr + Security&Privacy); no Enterprise family; Guide line 70 excludes performance only

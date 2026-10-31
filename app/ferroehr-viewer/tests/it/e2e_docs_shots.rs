@@ -384,6 +384,10 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
             format!("/templates/adl2/{ADL2_STEM}"),
             "templates/template-adl2",
         ),
+        light(
+            format!("/templates/adl2/{ADL2_STEM}?tab=compare"),
+            "templates/template-compare",
+        ),
         both("/terminology", "terminology/terminology"),
         review("/terminology/openehr", "terminology/openehr"),
         light(

@@ -5,8 +5,7 @@
 //!
 //! The terminology calls on
 //! [`FerroEhrService`](crate::service::FerroEhrService), plus the AQL
-//! terminology seam. Our own design over TERM; the call and extract names
-//! borrow from the openEHR SM text, kept as reference and never an oracle. BASE
+//! terminology seam. Our own design over TERM. BASE
 //! `docs/architecture_overview/master12-terminology.adoc` keeps the openEHR
 //! support terminology inside the platform (§Terminology to Support the
 //! Reference Model) and places the resolver of an archetype constraint binding
@@ -40,7 +39,7 @@
 //! validation (`has_term`, `get_term`, `subsumes`, `value_set_validate`,
 //! `has_value_set`, `get_value_set`) go to the bundle when it knows the
 //! terminology, else to the configured terminology server, else fall through
-//! to the bundle's `Pre_has_terminology` and `NotFound`. With no server
+//! to the bundle's unknown-terminology `NotFound`. With no server
 //! configured, the default, this is byte-identical to a bundle-only service.
 
 mod binding;

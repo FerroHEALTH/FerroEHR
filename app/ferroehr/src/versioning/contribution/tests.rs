@@ -69,15 +69,15 @@ fn audits(decoded: &NewContribution<Value>) -> (&UpdateAuditData, &UpdateAuditDa
 
 /// Ruling 1 of #3595: `lifecycle_state` is a `DV_CODED_TEXT`
 /// (`schemas/ehr/UpdateVersion.yaml` `$ref: ../data_types/DvCodedText.yaml`,
-/// `DvCodedText.yaml` `required: [defining_code]`). The SM `Terminology_code`
-/// spelling `{terminology_id, code_string}`, a plain string and a bare
+/// `DvCodedText.yaml` `required: [defining_code]`). The `CODE_PHRASE`
+/// shape `{terminology_id, code_string}`, a plain string and a bare
 /// `{value}` are none, so each is the 400 of syntactically invalid content.
 #[test]
 fn lifecycle_state_is_a_dv_coded_text() {
     for (lifecycle, why) in [
         (
             json!({ "terminology_id": { "value": "openehr" }, "code_string": "532" }),
-            "the SM Terminology_code spelling",
+            "the `CODE_PHRASE` shape",
         ),
         (json!("532"), "a plain code string"),
         (json!("complete"), "a plain rubric string"),
@@ -257,8 +257,8 @@ fn an_attestation_or_unknown_class_as_commit_audit_is_refused() {
 
 /// A commit audit without `committer` is refused with the 400, never
 /// completed with a committer the client did not state: ITS-REST
-/// `schemas/common/UpdateAudit.yaml` `required: [change_type, committer]`,
-/// SM `UML/classes/update_audit.adoc` (`committer` 1..1). A `null`
+/// `schemas/common/UpdateAudit.yaml` `required: [change_type, committer]`.
+/// A `null`
 /// committer is the same absence, and a committer that does not decode as
 /// a canonical `PARTY_PROXY` (`UPartyProxy.yaml`) is refused the same way;
 /// one that decodes but breaks its own invariants is the 422 of

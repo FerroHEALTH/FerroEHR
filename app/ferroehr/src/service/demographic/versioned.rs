@@ -24,7 +24,7 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::response::ServiceResponse;
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::object_version_id::TreeId;
 
 impl FerroEhrService {
@@ -33,7 +33,7 @@ impl FerroEhrService {
     /// (for a locally-created party, v1); the `owner_id` NOTE lives in
     /// `support::versioned_wrapper`.
     pub(super) async fn versioned_party(&self, vo_id: VoId) -> Result<Value, ServiceError> {
-        self.ensure_any_party(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_party(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.versioned_wrapper(vo_id, "VERSIONED_PARTY", "versioned party")
             .await
@@ -43,7 +43,7 @@ impl FerroEhrService {
     /// `OBJECT_VERSION_ID` and the change's `AUDIT_DETAILS` (RM common master04
     /// §Revision History). A non-party id is `404`.
     pub(super) async fn party_revision_history(&self, vo_id: VoId) -> Result<Value, ServiceError> {
-        self.ensure_any_party(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_party(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.demographic_revision_history(vo_id).await
     }
@@ -55,9 +55,9 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
     ) -> Result<Value, ServiceError> {
-        // Version-addressed: `i_party.adoc` `get_party_at_version` declares
-        // `object_version_does_not_exist` as its only does-not-exist code.
-        self.ensure_any_party(vo_id, CallStatusType::ObjectVersionDoesNotExist)
+        // Version-addressed: `object_version_does_not_exist` is the
+        // does-not-exist code.
+        self.ensure_any_party(vo_id, ServiceStatus::ObjectVersionDoesNotExist)
             .await?;
         self.demographic_version_envelope(vo_id, version, "party")
             .await
@@ -70,7 +70,7 @@ impl FerroEhrService {
         vo_id: VoId,
         at: Option<jiff::Timestamp>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.ensure_any_party(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_party(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.demographic_version_envelope_at(vo_id, at, "party")
             .await

@@ -8,7 +8,7 @@
 //! the bulk delete declares only bodyless successes (`202`/`204`), and an absent
 //! `ehr_id` list means "delete ALL EHRs" (`parameters/query/ehr_id_Admin.yaml`).
 //!
-//! Spec grounding: SM `I_ADMIN_SERVICE.physical_ehr_delete` and the CNF Robot
+//! Spec grounding: ITS-REST `operations/admin_ehr_delete.yaml` and the CNF Robot
 //! prior art (`CNF/tests/platform/robot/I_ADMIN_SERVICE/001-EHR.robot`:
 //! `DELETE /admin/ehr/{ehr_id}` → `204`).
 //!
@@ -206,8 +206,8 @@ async fn enabled_delete_all_missing_list_deletes_all() {
 
 // ── the two admin-extension deletes (issue #2130) ────────────────────────────
 // DELETE /admin/template/{template_id} and
-// DELETE /admin/query/{qualified_query_name}/{version} realize NO SM
-// operation (vocab/wire_surface.yaml, family admin-extension-routes), so no
+// DELETE /admin/query/{qualified_query_name}/{version} are our own routes
+// (vocab/wire_surface.yaml, family admin-extension-routes), so no
 // catalogue case can bind them; this battery is where their functional
 // branches are pinned. NOTE: no openEHR spec governs these routes — our own
 // design/extension; the outcome shapes mirror the released admin deletes.

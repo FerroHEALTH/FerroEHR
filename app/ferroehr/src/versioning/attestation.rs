@@ -40,7 +40,7 @@ use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::Kind;
 use crate::versioning::audit::{
     change_type, change_type_rubric, dv_date_time, openehr_coded_text, validate_committer,
@@ -100,8 +100,8 @@ pub(crate) async fn attest(
     )
     .await?;
     let Some(target) = target.filter(|t| t.ehr_id == ehr_id) else {
-        return Err(ServiceError::sm(
-            CallStatusType::ObjectVersionDoesNotExist,
+        return Err(ServiceError::new(
+            ServiceStatus::ObjectVersionDoesNotExist,
             format!("{} version {vo_id}::{expected}", kind.as_str()),
         ));
     };
@@ -438,9 +438,9 @@ impl AttestationInput {
 /// supplies the inherited `AUDIT_DETAILS` fields it owns — `time_committed`,
 /// the `666|attestation|` `change_type`, and `system_id` when the partial
 /// states none (`default_system_id`, the audit of the version it attests) —
-/// exactly as `UPDATE_AUDIT` → `AUDIT_DETAILS` (SM master03 §Version Update
-/// Semantics), then adds the `ATTESTATION`-specific attributes. `committer` is
-/// the one the partial stated.
+/// exactly as `UPDATE_AUDIT` → `AUDIT_DETAILS` (ITS-REST `UpdateAudit.yaml`),
+/// then adds the `ATTESTATION`-specific attributes. `committer` is the one the
+/// partial stated.
 ///
 /// Infallible: every client-supplied attribute was decoded into its RM type
 /// when the [`AttestationInput`] was built, so completion has nothing left to

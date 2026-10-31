@@ -31,7 +31,7 @@ use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 
 use crate::admin_fixture::archive_dir;
@@ -120,7 +120,7 @@ async fn an_extract_carrying_an_identifier_is_refused_on_import() {
         .import_ehr(None, extract)
         .await
         .expect_err("the identifier in the FOLDER name refuses the import");
-    assert_eq!(refused.status, CallStatusType::ContentInvalid, "{refused}");
+    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused}");
     assert!(
         refused.message.contains("FOLDER") && refused.message.contains("name"),
         "the refusal names the RM path: {refused}"
