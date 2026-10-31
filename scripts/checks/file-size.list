@@ -34,7 +34,7 @@ app/ferroehr-viewer/src/pages/templates.rs 1346
 app/ferroehr-viewer/src/pages/terminology.rs 812
 app/ferroehr/src/aql/ir.rs 822
 app/ferroehr/src/aql/sql/from.rs 1557
-app/ferroehr/src/aql/sql/value.rs 1143
+app/ferroehr/src/aql/sql/value.rs 1129
 app/ferroehr/src/config/auth.rs 993
 app/ferroehr/src/config/authz.rs 848
 app/ferroehr/src/config/deployment.rs 1237

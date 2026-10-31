@@ -268,6 +268,14 @@ pub enum Node {
     ValueCode,
     /// `value_terminology` — the terminology id of that code.
     ValueTerminology,
+    /// `rm_version` — the `archetype_details/rm_version` of a row whose
+    /// archetype header the fragment leaves out
+    /// ([`crate::storage::header::Header`]); `NULL` when `data` holds it.
+    RmVersion,
+    /// `language` — the code of a `language` the fragment leaves out.
+    Language,
+    /// `encoding` — the code of an `encoding` the fragment leaves out.
+    Encoding,
 }
 
 #[cfg(test)]
@@ -305,6 +313,7 @@ mod tests {
     const ALTERS: &[&str] = &[
         include_str!("../../migrations/clinical/0015_access_restriction.sql"),
         include_str!("../../migrations/clinical/0019_node_values.sql"),
+        include_str!("../../migrations/clinical/0028_node_header.sql"),
     ];
 
     /// Whether a later migration adds `col` to `table`.
@@ -383,6 +392,9 @@ mod tests {
             Node::ValueText.to_string(),
             Node::ValueCode.to_string(),
             Node::ValueTerminology.to_string(),
+            Node::RmVersion.to_string(),
+            Node::Language.to_string(),
+            Node::Encoding.to_string(),
         ]
     }
 

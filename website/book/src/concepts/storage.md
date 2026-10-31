@@ -170,6 +170,9 @@ erDiagram
         text value_text
         text value_code
         text value_terminology
+        text rm_version "archetype header, below the root"
+        text language "ISO_639-1 code, below the root"
+        text encoding "IANA_character-sets code, below the root"
     }
 ```
 
@@ -254,10 +257,14 @@ not hold. `_type` is the `rm_type` column, a lowercase `archetype_node_id` is
 `archetype`, a plain or simply coded `name` is `name` with its code columns,
 and an ELEMENT value in one of the common basic shapes (a quantity, a count,
 an ordinal, a coded or plain text, a date, time or duration, an identifier, a
-boolean, a URI) sits in typed value columns. Everything else stays in
-`node.data` verbatim, and `data` is empty on two rows in three. The database
-functions `ext.node_fragment`, `ext.node_name` and `ext.node_value` put the
-omitted keys back, so every reader, AQL included, sees exactly the fragment
+boolean, a URI) sits in typed value columns. Below the root, an entry's
+`language` and `encoding` codes and an archetype root's RM version sit in the
+`language`, `encoding` and `rm_version` columns, and its `archetype_details`
+and mixed-case `archetype_node_id` are rebuilt from the `archetype` column.
+Everything else stays in `node.data` verbatim, and `data` is empty on two rows
+in three. The database functions `ext.node_fragment`, `ext.node_name`,
+`ext.node_value`, `ext.node_archetype_node_id`, `ext.node_archetype_details`
+and `ext.node_code_phrase` put the omitted keys back, so every reader, AQL included, sees exactly the fragment
 the API would serve. A filter or projection on a quantity's magnitude or a
 code reads the typed column directly.
 

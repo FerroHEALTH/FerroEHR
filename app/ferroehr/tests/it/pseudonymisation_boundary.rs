@@ -828,7 +828,8 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
     let nodes: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM party.node WHERE vo_id = $1 \
          AND ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
-             value_type, value_num, value_text, value_code, value_terminology)::text LIKE $2",
+             value_type, value_num, value_text, value_code, value_terminology, rm_version, \
+             language, encoding)::text LIKE $2",
     )
     .bind(vo_id)
     .bind(format!("%{SYNTHETIC_BSN}%"))

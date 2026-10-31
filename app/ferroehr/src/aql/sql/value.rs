@@ -752,22 +752,6 @@ fn typed_reads(path: &[&str]) -> Vec<(&'static [&'static str], TypedColumn)> {
     }
 }
 
-/// The member and the `node` column that holds the scalar a fragment path
-/// addresses, for the paths into a key the row stores as a column when the
-/// fragment leaves it out (`crate::storage::slim`): the name's value and
-/// code, and the archetype node id.
-fn column_read(path: &[&str]) -> Option<(&'static str, Node)> {
-    match path {
-        ["name", "value"] => Some(("name", Node::Name)),
-        ["name", "defining_code", "code_string"] => Some(("name", Node::NameCode)),
-        ["name", "defining_code", "terminology_id", "value"] => {
-            Some(("name", Node::NameTerminology))
-        }
-        ["archetype_node_id"] => Some(("archetype_node_id", Node::Archetype)),
-        _ => None,
-    }
-}
-
 /// Reads `leaf`'s fragment path `jp` off the node row `alias` as the jsonb
 /// the stored fragment would have answered.
 ///
@@ -792,7 +776,9 @@ fn fragment_read(
     }
     let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
     let plain = leaf.fragment.iter().all(|step| step.predicate.is_none());
-    if let (Some(path), true, Some((member, column))) = (jp, plain, column_read(&names)) {
+    if let (Some(path), true, Some((member, column))) =
+        (jp, plain, super::expr::column_read(alias, &names))
+    {
         // The stored fragment answers when it still carries the member; the
         // row's column answers when the member was left out for it.
         return Expr::cust_with_exprs(
@@ -800,7 +786,7 @@ fn fragment_read(
             [
                 col(alias, Node::Data),
                 Expr::val(member),
-                col(alias, column),
+                column,
                 extract_base(col(alias, Node::Data), Some(path), vars),
             ],
         );

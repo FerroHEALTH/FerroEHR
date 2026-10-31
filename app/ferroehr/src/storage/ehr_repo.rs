@@ -124,7 +124,7 @@ pub async fn current_status_root(
     Ok(sqlx::query_scalar(
         "SELECT ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
          n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
-         n.value_terminology) FROM version v \
+         n.value_terminology, n.rm_version, n.language, n.encoding) FROM version v \
          JOIN node n ON n.vo_id = v.vo_id AND n.sys_version = v.sys_version AND n.num = 0 \
          JOIN vo_head h ON h.vo_id = v.vo_id AND h.trunk_head_sys_version = v.sys_version \
          WHERE v.ehr_id = $1 AND v.kind = 'EHR_STATUS'",
@@ -187,7 +187,8 @@ pub async fn ehrs_by_subject_ids(
          WHERE e.subject_id = ANY($1) \
            AND ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, n.name_code, \
                n.name_terminology, n.value_type, n.value_num, n.value_text, n.value_code, \
-               n.value_terminology) #>> '{subject,external_ref,type}' = ANY($2) \
+               n.value_terminology, n.rm_version, n.language, n.encoding) \
+               #>> '{subject,external_ref,type}' = ANY($2) \
          ORDER BY e.subject_id, e.id",
     )
     .bind(subject_ids)
