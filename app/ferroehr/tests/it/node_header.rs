@@ -94,7 +94,8 @@ async fn served(pool: &PgPool, svc: &FerroEhrService) -> Served {
         let result = svc
             .execute_ad_hoc_query(query.to_owned(), AqlQueryRequest::default())
             .await
-            .unwrap_or_else(|e| panic!("{query}: {e:?}"))
+            .map_err(|e| format!("{query}: {e:?}"))
+            .expect("the AQL statement runs")
             .result_set;
         let mut rows: Vec<String> = result
             .get("rows")

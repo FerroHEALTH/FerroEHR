@@ -6,9 +6,9 @@
 //!
 //! Every archetype root repeats its `archetype_node_id` inside
 //! `archetype_details`, with the same `rm_version` throughout a version, and
-//! every entry repeats the same `language` and `encoding`. [`slim_header`]
+//! every entry repeats the same `language` and `encoding`. `slim_header`
 //! moves them to the row's `rm_version`, `language` and `encoding` columns
-//! when the columns rebuild them byte for byte, and [`restore`] puts them back
+//! when the columns rebuild them byte for byte, and `restore` puts them back
 //! where they stood; `ext.node_archetype_node_id`,
 //! `ext.node_archetype_details` and `ext.node_code_phrase` are the SQL twins.
 //!
@@ -123,10 +123,11 @@ fn code_phrase(phrase: &Value, terminology: &str) -> Option<String> {
     string(fields, "code_string")
 }
 
-/// The archetype id a lowercase `openehr-…` archetype HRID was written as:
-/// `openEHR-`, its `rm_publisher-rm_package-rm_class` part in capitals, and
-/// the concept and version as they are (BASE `base_types` §Archetype
-/// Identifiers). `None` for any other id.
+/// Returns the archetype id a lowercase `openehr-…` archetype HRID was written as.
+///
+/// That is `openEHR-`, its `rm_publisher-rm_package-rm_class` part in
+/// capitals, and the concept and version as they are (BASE `base_types`
+/// §Archetype Identifiers); `None` for any other id.
 ///
 /// The SQL twin is `ext.node_archetype_node_id`; both act on ASCII alone, so
 /// neither depends on a locale.
