@@ -25,7 +25,7 @@ use ferrohealth_secret::secret_url::SecretUrl;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TerminologyConfig {
-    /// Mount the terminology extension API (SM `I_TERMINOLOGY_SERVICE`). Off
+    /// Mount the terminology extension API. Off
     /// by default — the routes answer `404` unless enabled.
     pub api_enabled: bool,
     /// The FHIR terminology server (`[terminology.server]`).

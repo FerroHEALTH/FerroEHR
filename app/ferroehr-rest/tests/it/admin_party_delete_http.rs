@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end tests for the physical party delete extension route
-//! (`DELETE /admin/party/{party_id}`), which realizes SM
-//! `I_ADMIN_SERVICE.physical_party_delete` ("Physical delete of specified
-//! Party, along with related Party relationships", error
-//! `party_id_does_not_exist`; `docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`).
+//! (`DELETE /admin/party/{party_id}`), which physically deletes a party along
+//! with its relationships and answers `party_id_does_not_exist` for an unknown
+//! one.
 //!
 //! No ITS-REST operation governs the route — our own extension. The tests drive
 //! it through the assembled router with the RBAC gate on and the local audit
@@ -227,7 +226,7 @@ async fn an_admin_deletes_the_party_and_the_access_record_names_it() {
     );
 }
 
-/// An unknown party is `404` (SM `party_id_does_not_exist`), a malformed id
+/// An unknown party is `404` (`party_id_does_not_exist`), a malformed id
 /// `400`.
 #[tokio::test]
 async fn an_unknown_party_is_404_and_a_malformed_id_400() {

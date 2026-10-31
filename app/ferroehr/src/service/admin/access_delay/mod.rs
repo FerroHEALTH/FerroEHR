@@ -29,7 +29,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::access_delay::config::AccessDelayPolicy;
 use crate::service::error::ServiceError;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::storage::access_delay;
 use crate::system_log::event::EventActionCode;
 
@@ -70,11 +70,11 @@ impl FerroEhrService {
         vo_id: &str,
         until: Option<&str>,
         note: Option<&str>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         // NOTE: EHDS Art. 3(3) is a Member State option; with `[access_delay]` off,
         // Art. 3(1) immediate access holds and no hold may be placed.
         let Some(policy) = self.access_delay.as_deref() else {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "access_delay is not enabled on this server: EHDS Art. 3(3) delays the \
                  person's access only where a Member State rule provides for it",
             ));
@@ -84,7 +84,7 @@ impl FerroEhrService {
         let until = until
             .map(|raw| {
                 raw.parse::<jiff::Timestamp>().map_err(|e| {
-                    SmError::precondition(format!(
+                    StatusError::precondition(format!(
                         "`until` {raw:?} is not an RFC 3339 instant: {e}"
                     ))
                 })
@@ -97,7 +97,7 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         if held.is_none() {
-            return Err(SmError::precondition(format!(
+            return Err(StatusError::precondition(format!(
                 "nothing was held: {vo_id} is not a COMPOSITION, or `until` is not after now \
                  and within access_delay.hours ({}) of now (EHDS Art. 3(3): a limited period)",
                 policy.hours()
@@ -115,7 +115,11 @@ impl FerroEhrService {
     /// # Errors
     /// The [`Self::delay_person_access`] rejections for the ids, and the same
     /// database and access-record faults.
-    pub async fn release_person_access(&self, ehr_id: &str, vo_id: &str) -> Result<(), SmError> {
+    pub async fn release_person_access(
+        &self,
+        ehr_id: &str,
+        vo_id: &str,
+    ) -> Result<(), StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         let vo_id = VoId(super::parse_uuid(vo_id, "versioned object")?);
         self.check_mark_target(ehr_id, Some(vo_id)).await?;
@@ -138,7 +142,7 @@ impl FerroEhrService {
     pub async fn access_delay_register(
         &self,
         ehr_id: &str,
-    ) -> Result<Vec<access_delay::AccessDelayRow>, SmError> {
+    ) -> Result<Vec<access_delay::AccessDelayRow>, StatusError> {
         let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, REGISTER)?;
@@ -152,7 +156,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `exception` — a database fault.
-    pub async fn is_object_withheld(&self, vo_id: VoId) -> Result<bool, SmError> {
+    pub async fn is_object_withheld(&self, vo_id: VoId) -> Result<bool, StatusError> {
         let mut conn = acquire(&self.pool).await?;
         Ok(access_delay::is_withheld(&mut conn, vo_id)
             .await
@@ -169,7 +173,7 @@ impl FerroEhrService {
     /// `exception` — a database fault; `service_overloaded` when an access
     /// record is refused under `[audit] fail_mode = "closed"`, and then no
     /// expiry is marked recorded.
-    pub async fn record_access_delay_expiries(&self) -> Result<usize, SmError> {
+    pub async fn record_access_delay_expiries(&self) -> Result<usize, StatusError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let expired = access_delay::take_expired(&mut tx)
@@ -199,7 +203,7 @@ impl FerroEhrService {
     pub async fn person_audit_event_search(
         &self,
         filter: &crate::system_log::store::AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), SmError> {
+    ) -> Result<(i64, Vec<serde_json::Value>), StatusError> {
         let Some(audit_store) = &self.audit_store else {
             return self.audit_event_search(filter).await;
         };
@@ -223,7 +227,7 @@ impl FerroEhrService {
         &self,
         ehrs: &[String],
         now: jiff::Timestamp,
-    ) -> Result<Option<ehds_logging::withheld::Holds>, SmError> {
+    ) -> Result<Option<ehds_logging::withheld::Holds>, StatusError> {
         // NOTE: an audit record names its EHR as text, and one that is no UUID names no EHR
         // of this store, so it is absent from the register, never an error.
         let ids: Vec<uuid::Uuid> = ehrs

@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_CONTRIBUTION` (`i_ehr_contribution.adoc`) — the explicit
-//! CONTRIBUTION-level surface: has/get/commit/list/count, plus the ITS-REST
+//! The explicit CONTRIBUTION-level surface: has/get/commit/list/count, plus the ITS-REST
 //! raw-wire commit seam (`create_ehr_contribution`).
 //!
 //! Spec: RM common `master06-change_control_package.adoc` §Contributions /
@@ -10,7 +9,7 @@
 //! multi-version commit, retrieval assembly) is versioning law and lives in
 //! [`crate::versioning`] (`commit_version_set` / `get_contribution` /
 //! `list_contributions` / `count_contributions`); this file keeps only the
-//! `I_EHR_CONTRIBUTION` surface and the wire glue. The `Pre_has_ehr` guard
+//! CONTRIBUTION surface and the wire glue. The EHR-existence guard
 //! is enforced inside `commit_version_set` via the
 //! [`crate::versioning::CommitEnv`] `ensure_ehr_exists` hook.
 
@@ -23,7 +22,7 @@
 use crate::ids::EhrId;
 use crate::service::list::Page;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
 use openehr_its::rest::generated::ehr::Versionable;
 use serde_json::{Value, json};
@@ -47,15 +46,15 @@ impl FerroEhrService {
     /// `change_control` semantics stay.
     ///
     /// # Errors
-    /// [`SmError`] if the CONTRIBUTION fails classification, content
+    /// [`StatusError`] if the CONTRIBUTION fails classification, content
     /// validation, the optimistic lock, or its storage commit.
     pub async fn create_ehr_contribution(
         &self,
         ehr_id: EhrId,
         body: Value,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         // TODO(#3595): decode the body through the generated `NewContribution`;
-        // the raw read still accepts the SM `Terminology_code` and plain-string
+        // the raw read still accepts the `Terminology_code` and plain-string
         // spellings, an omitted member `change_type` and an `ATTESTATION` member
         // `_type`, all of which the generated envelope refuses.
         let committed = commit_version_set(self, Some(ehr_id), &body, false).await?;
@@ -93,20 +92,20 @@ impl FerroEhrService {
     }
 }
 
-// ── The SM I_EHR_CONTRIBUTION call surface ────────────────────────────────────
+// ── The CONTRIBUTION call surface ─────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// SM `I_EHR_CONTRIBUTION.has_contribution` — whether the CONTRIBUTION
+    /// Whether the CONTRIBUTION
     /// exists in the EHR.
     ///
     /// # Errors
-    /// [`SmError`] if the retrieval fails (a missing CONTRIBUTION is
+    /// [`StatusError`] if the retrieval fails (a missing CONTRIBUTION is
     /// `Ok(false)`).
     pub async fn has_contribution(
         &self,
         an_ehr_id: EhrId,
         a_contrib_id: Uuid,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         match self.ehr_contribution(an_ehr_id, a_contrib_id, false).await {
             Ok(_) => Ok(true),
             Err(ServiceError::NotFound(_)) => Ok(false),
@@ -114,17 +113,17 @@ impl FerroEhrService {
         }
     }
 
-    /// SM `I_EHR_CONTRIBUTION.get_contribution` — the stored `CONTRIBUTION`
+    /// The stored `CONTRIBUTION`
     /// (its `versions` as `OBJECT_REF`s).
     ///
     /// # Errors
-    /// [`SmError`] when the CONTRIBUTION does not exist in this EHR
+    /// [`StatusError`] when the CONTRIBUTION does not exist in this EHR
     /// (404-equivalent) or a read fails.
     pub async fn get_contribution(
         &self,
         an_ehr_id: EhrId,
         a_contrib_id: Uuid,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         Ok(self
             .ehr_contribution(an_ehr_id, a_contrib_id, false)
             .await?)
@@ -135,21 +134,21 @@ impl FerroEhrService {
     /// version received from another system (ITS-REST `Prefer: resolve_refs`).
     ///
     /// # Errors
-    /// [`SmError`] when the CONTRIBUTION does not exist in this EHR
+    /// [`StatusError`] when the CONTRIBUTION does not exist in this EHR
     /// (404-equivalent) or a read fails.
     pub async fn get_contribution_resolved(
         &self,
         an_ehr_id: EhrId,
         a_contrib_id: Uuid,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         Ok(self.ehr_contribution(an_ehr_id, a_contrib_id, true).await?)
     }
 
-    /// SM `I_EHR_CONTRIBUTION.commit_contribution` — commit a typed change
+    /// Commit a typed change
     /// set atomically, returning the new CONTRIBUTION uid.
     ///
     /// # Errors
-    /// [`SmError`] when the typed shapes fail to serialize, or the commit
+    /// [`StatusError`] when the typed shapes fail to serialize, or the commit
     /// fails classification, content validation, the optimistic lock, or its
     /// storage write.
     pub async fn commit_contribution(
@@ -157,14 +156,14 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         versions: Vec<UpdateVersion<Versionable>>,
         an_audit: UpdateAudit,
-    ) -> Result<String, SmError> {
+    ) -> Result<String, StatusError> {
         // Reassemble the wire CONTRIBUTION body `commit_version_set` parses:
         // `{ versions: [ { commit_audit, data, preceding_version_uid,
         // lifecycle_state, attestations, signature } … ], audit }`. The typed
         // shapes serialize to exactly those field names.
         //
         // NOTE: no openEHR spec governs this internal seam — our own design:
-        // the typed → wire-JSON bridge routes this SM-only caller through the
+        // the typed → wire-JSON bridge routes this typed caller through the
         // one change-set engine (`commit_version_set`) rather than forking it.
         let versions_json = openehr_its::json::to_canonical_value(&versions);
         let audit_json = openehr_its::json::to_canonical_value(&an_audit);
@@ -173,22 +172,22 @@ impl FerroEhrService {
         Ok(committed.id.to_string())
     }
 
-    /// SM `I_EHR_CONTRIBUTION.list_contributions` — the EHR's CONTRIBUTION
+    /// The EHR's CONTRIBUTION
     /// uids, optionally bounded by `time_range`, paged.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `time_range` bound (400-equivalent), a
-    /// missing EHR (`Pre_has_ehr`, enforced inside the versioning read), or a
+    /// [`StatusError`] for a malformed `time_range` bound (400-equivalent), a
+    /// missing EHR (the EHR-existence check, enforced inside the versioning read), or a
     /// read failure.
     pub async fn list_contributions(
         &self,
         an_ehr_id: EhrId,
         time_range: crate::service::ehr::handle::TimeRange,
         page: Page,
-    ) -> Result<Vec<String>, SmError> {
+    ) -> Result<Vec<String>, StatusError> {
         let time_range = parse_time_range(time_range)?;
-        // `Pre_has_ehr` (`i_ehr_contribution.adoc` §list_contributions —
-        // `ehr_does_not_exist`) is enforced inside the versioning read.
+        // The EHR-existence check (`ehr_id_does_not_exist`) is enforced inside
+        // the versioning read.
         let ids = list_contributions(&self.pool, an_ehr_id, time_range, page).await?;
         Ok(ids.iter().map(Uuid::to_string).collect())
     }
@@ -211,14 +210,14 @@ impl FerroEhrService {
     /// already clamped by the protocol adapter.
     ///
     /// # Errors
-    /// [`SmError`] — `Pre_has_ehr` fails (unknown EHR → 404), or a read fails.
+    /// [`StatusError`] — the EHR-existence check fails (unknown EHR → 404), or a read fails.
     pub async fn ehr_contribution_list_page(
         &self,
         an_ehr_id: EhrId,
         offset: i64,
         fetch: i64,
-    ) -> Result<Value, SmError> {
-        // Existence (`Pre_has_ehr` → 404) + the unwindowed total in one call.
+    ) -> Result<Value, StatusError> {
+        // Existence (the EHR-existence check → 404) + the unwindowed total in one call.
         let total = count_contributions(&self.pool, an_ehr_id, None).await?;
         let rows = crate::storage::version_repo::contribution::list_contribution_summaries(
             &self.pool, an_ehr_id, offset, fetch,
@@ -241,17 +240,17 @@ impl FerroEhrService {
         Ok(json!({ "rows": rows, "total": total }))
     }
 
-    /// SM `I_EHR_CONTRIBUTION.contribution_count` — the number of
+    /// The number of
     /// CONTRIBUTIONs in the EHR, optionally bounded by `time_range`.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `time_range` bound (400-equivalent) or a
+    /// [`StatusError`] for a malformed `time_range` bound (400-equivalent) or a
     /// read failure.
     pub async fn contribution_count(
         &self,
         an_ehr_id: EhrId,
         time_range: crate::service::ehr::handle::TimeRange,
-    ) -> Result<i64, SmError> {
+    ) -> Result<i64, StatusError> {
         let time_range = parse_time_range(time_range)?;
         Ok(count_contributions(&self.pool, an_ehr_id, time_range).await?)
     }
@@ -261,7 +260,7 @@ impl FerroEhrService {
     /// `return=minimal` commits and returns just the metadata.
     ///
     /// # Errors
-    /// [`SmError`] if the CONTRIBUTION fails classification, content
+    /// [`StatusError`] if the CONTRIBUTION fails classification, content
     /// validation, the optimistic lock, or its storage commit.
     ///
     /// Both branches carry `Last-Modified` beside the `ETag` and `Location` uid,
@@ -274,7 +273,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         a_contribution: Value,
         representation: bool,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         if representation {
             // `return=representation`: assemble the stored CONTRIBUTION body
             // (audit + version OBJECT_REFs) for the response.

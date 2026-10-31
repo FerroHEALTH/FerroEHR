@@ -36,9 +36,7 @@
 //!    served document's own `uid.value` for `If-Match` and for the delete path.
 //! 3. **`PARTY_RELATIONSHIP` has no released wire.** The vendored Demographic
 //!    API defines no `party_relationship` path at all; those routes are the
-//!    CDR's own extension realizing SM `I_PARTY_RELATIONSHIP`
-//!    (`docs/specs/openehr/SM/docs/UML/classes/i_party_relationship.adoc`), and
-//!    a CDR that does not serve them answers `404` — which this section reports
+//!    CDR's own extension, and a CDR that does not serve them answers `404` — which this section reports
 //!    inline rather than hiding.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.

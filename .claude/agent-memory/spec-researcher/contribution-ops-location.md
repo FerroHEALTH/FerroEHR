@@ -1,6 +1,6 @@
 ---
 name: contribution-ops-location
-description: Where the ITS-REST CONTRIBUTION create/get requirements live (NewContribution/UPDATE_VERSION/UPDATE_AUDIT wire shape), the RM/SM/TERM grounding, and the confirmed released-text gaps + the AMB-57 staleness finding
+description: Where the ITS-REST CONTRIBUTION create/get requirements live (NewContribution/UPDATE_VERSION/UPDATE_AUDIT wire shape), the RM/TERM grounding and the SM reference text, and the confirmed released-text gaps + the AMB-57 staleness finding
 metadata:
   type: reference
 ---
@@ -56,7 +56,7 @@ several rules exist.
   `Prefer: return=representation, resolve_refs` prose (Requests_and_responses
   §Prefer resolving Object references).
 
-## RM / SM / TERM grounding
+## RM / TERM grounding (SM lines are reference text, not an authority)
 - `RM/docs/common/master06-change_control_package.adoc` §Contributions (the 5
   logical change kinds + codes; the CONTRIBUTION.audit **aggregate** rule "not
   expected to be used as a computable value"), §Committal and Audits (the

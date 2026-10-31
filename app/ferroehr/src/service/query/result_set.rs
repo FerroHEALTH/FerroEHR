@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `RESULT_SET` assembly (`result_set.adoc`; ITS-REST 1.1.0
+//! `RESULT_SET` assembly (ITS-REST 1.1.0
 //! `schemas/query/ResultSet`) and AQL parameter substitution
 //! (QUERY `master03-syntax.adoc` §Parameters).
 
@@ -137,8 +137,7 @@ pub(super) fn result_set_json(
         .iter()
         .map(|c| {
             // NOTE: `RESULT_SET_COLUMN.archetype_id [0..1]` is optional and
-            // omitted — the SM flags it "check on whether needed"
-            // (`result_set_column.adoc`) and the OAS declares only name + path.
+            // omitted — the OAS declares only name + path.
             ResultSetColumn {
                 name: c.name.clone(),
                 path: c.path.clone(),

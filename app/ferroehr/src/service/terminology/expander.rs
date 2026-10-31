@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use crate::aql::error::{AqlError, AqlFeatureError, ExecError};
 use crate::aql::terminology::TerminologyExpander;
 use crate::service::FerroEhrService;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::versioning::audit::OPENEHR;
 
 use super::bundle;
@@ -46,7 +46,7 @@ fn is_fhir_service_api(service_api: &str) -> bool {
 impl TerminologyExpander for FerroEhrService {
     /// Resolve `TERMINOLOGY('expand', service_api, params_uri)` to the value
     /// set's codes: by `service_api` (FHIR → the terminology server; `"openehr"`
-    /// → the in-process bundle), fetch the expansion via the SM `get_value_set`, and
+    /// → the in-process bundle), fetch the expansion via `get_value_set`, and
     /// return its code keys.
     ///
     /// # Errors
@@ -235,12 +235,12 @@ fn params_uri_args(params_uri: &str) -> BTreeMap<String, String> {
         .collect()
 }
 
-/// Map a terminology-service [`SmError`] raised during expansion onto the AQL
+/// Map a terminology-service [`StatusError`] raised during expansion onto the AQL
 /// error taxonomy: a "does not exist" status is a bad query (400 — the value
 /// set is unknown); anything else is an upstream server fault (500).
-fn map_expand_error(e: SmError, service_api: &str, params_uri: &str) -> AqlError {
+fn map_expand_error(e: StatusError, service_api: &str, params_uri: &str) -> AqlError {
     match e.status {
-        CallStatusType::VersionedObjectDoesNotExist => {
+        ServiceStatus::VersionedObjectDoesNotExist => {
             AqlFeatureError::TerminologyValueSetNotFound {
                 service_api: service_api.to_owned(),
                 value_set: params_uri.to_owned(),

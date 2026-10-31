@@ -16,8 +16,8 @@
 //! ```
 //!
 //! This module is the semantic-analysis pre-pass that realises the merge: it
-//! resolves each `expand` call through a [`TerminologyExpander`] (the SM
-//! `I_TERMINOLOGY_SERVICE` seam, the in-process `openehr-term` bundle by default
+//! resolves each `expand` call through a [`TerminologyExpander`] (the
+//! terminology seam, the in-process `openehr-term` bundle by default
 //! and a remote FHIR TS when configured) and rewrites the AST value list in
 //! place to explicit string codes before planning and SQL generation, so the
 //! planner (`super::lower`) sees an ordinary `matches { … }` value list.
@@ -54,8 +54,7 @@ const EXPAND: &str = "expand";
 /// params_uri)` pair into the explicit list of codes of the referenced value
 /// set.
 ///
-/// Implemented by the application service over the SM `I_TERMINOLOGY_SERVICE`
-/// providers.
+/// Implemented by the application service over the terminology providers.
 #[async_trait]
 pub trait TerminologyExpander: Send + Sync {
     /// Expand the value set identified by `params_uri` via the terminology

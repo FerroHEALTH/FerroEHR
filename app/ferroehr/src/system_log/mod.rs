@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! IHE ATNA (Audit Trail and Node Authentication) audit trail, the platform's
-//! realization of the SM System Log component (`I_SYSTEM_LOG`).
+//! system log.
 //!
-//! The one normative openEHR statement for this component is a single line of
-//! the SM platform component table, "System Log | IHE ATNA-compliant system
-//! log" (`docs/specs/openehr/SM/docs/openehr_platform/master02-overview.adoc`);
-//! the `I_SYSTEM_LOG` interface (`UML/classes/i_system_log.adoc`) is an empty
-//! stub. Everything below realizes that mandate against external standards,
-//! cited as external standards and never as openEHR spec text.
+//! openEHR fixes no audit-record shape, so everything below follows external
+//! standards, cited as external standards and never as openEHR spec text.
 //!
 //! One audit record per audited API operation is rendered in both official ATNA
 //! formats and fanned out to the configured sinks: the local Audit Record
@@ -102,7 +98,7 @@ use event::{AuditEvent, EmitOutcome};
 // `ferroehr::system_log::{AuditConfig, AuditHandle, AuditSender, SubjectResolver}`).
 
 use crate::service::FerroEhrService;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 /// Errors raised while rendering or shipping an audit record.
 ///
@@ -211,7 +207,7 @@ pub fn require_fhir_disabled(cfg: &config::AuditConfig) -> Result<(), String> {
     Ok(())
 }
 
-/// The platform realizes the SM `I_SYSTEM_LOG` component: it emits resolved
+/// The platform's system log: it emits resolved
 /// audit events through the optional ATNA [`AuditSender`] the binary wires in
 /// ([`FerroEhrService::with_audit`](crate::service::FerroEhrService::with_audit)).
 /// With no sender wired, auditing is off and every emit is
@@ -238,9 +234,9 @@ impl FerroEhrService {
     /// `Enqueued`, and `Dropped` under `fail_mode = "open"`, complete.
     ///
     /// # Errors
-    /// [`SmError`] with the `service_overloaded` status (the wire's `503`)
+    /// [`StatusError`] with the `service_overloaded` status (the wire's `503`)
     /// when the sender rejected the record.
-    pub fn record_access(&self, mut event: AuditEvent) -> Result<(), SmError> {
+    pub fn record_access(&self, mut event: AuditEvent) -> Result<(), StatusError> {
         // A service-layer record is built where the request's principal is
         // gone; the roles the authentication layer published for the scope
         // are stamped here so every emitter carries them (#3239).
@@ -256,8 +252,8 @@ impl FerroEhrService {
         }
         match self.emit(event) {
             EmitOutcome::Enqueued | EmitOutcome::Dropped => Ok(()),
-            EmitOutcome::Rejected => Err(SmError::new(
-                CallStatusType::ServiceOverloaded,
+            EmitOutcome::Rejected => Err(StatusError::new(
+                ServiceStatus::ServiceOverloaded,
                 "audit trail unavailable (fail-closed)",
             )),
         }
@@ -348,11 +344,11 @@ impl FerroEhrService {
     /// carry it.
     ///
     /// # Errors
-    /// [`SmError`] when the read fails.
+    /// [`StatusError`] when the read fails.
     pub async fn audit_content_of_objects(
         &self,
         vo_ids: &[crate::ids::VoId],
-    ) -> Result<Vec<categories::ContentIds>, SmError> {
+    ) -> Result<Vec<categories::ContentIds>, StatusError> {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
@@ -369,11 +365,11 @@ impl FerroEhrService {
     /// Empty without a reading when auditing is off.
     ///
     /// # Errors
-    /// [`SmError`] when the read fails.
+    /// [`StatusError`] when the read fails.
     pub async fn audit_content_of_contribution(
         &self,
         contribution_id: uuid::Uuid,
-    ) -> Result<Vec<categories::ContentIds>, SmError> {
+    ) -> Result<Vec<categories::ContentIds>, StatusError> {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
@@ -395,21 +391,20 @@ impl FerroEhrService {
 
     /// The RESTful-ATNA **ITI-81** retrieval: the FHIR `AuditEvent` documents
     /// of the matching records, rendered from the store, newest first, plus
-    /// the total match count. The read side of the SM System Log component (the only
-    /// normative openEHR statement is the "IHE ATNA-compliant system log"
-    /// line above; the retrieval semantics are IHE's — the `RESTful` ATNA
-    /// supplement's ITI-81 FHIR search on `AuditEvent`).
+    /// the total match count. The read side of the system log (the retrieval
+    /// semantics are IHE's — the `RESTful` ATNA supplement's ITI-81 FHIR search
+    /// on `AuditEvent`).
     ///
     /// # Errors
-    /// [`SmError`] `precondition_violation` when no local store is wired, or
+    /// [`StatusError`] `precondition_violation` when no local store is wired, or
     /// `exception` when the store query fails.
     #[cfg(feature = "fhir")]
     pub async fn audit_event_search(
         &self,
         filter: &store::AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), SmError> {
+    ) -> Result<(i64, Vec<serde_json::Value>), StatusError> {
         let Some(audit_store) = &self.audit_store else {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "the local audit record repository is not enabled ([audit.store])",
             ));
         };

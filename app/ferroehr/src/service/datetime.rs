@@ -38,7 +38,7 @@
 //! the spec's MUST is the extended format, while jiff's `Timestamp` grammar is
 //! Temporal's and tolerates the basic date form.
 
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 
 /// Whether the value starts with an extended-format ISO 8601 DATE —
 /// `YYYY-MM-DD…` (hyphen-separated, the `-`s at byte offsets 4 and 7).
@@ -85,20 +85,23 @@ fn resolve(raw: &str) -> Option<jiff::Timestamp> {
 /// read addresses.
 ///
 /// # Errors
-/// [`SmError`] `precondition_violation` (an argument-validity failure → `400`)
+/// [`StatusError`] `precondition_violation` (an argument-validity failure → `400`)
 /// when the value is not an extended-ISO-8601 datetime.
-pub(in crate::service) fn parse_at_time(raw: &str) -> Result<jiff::Timestamp, SmError> {
-    resolve(raw).ok_or_else(|| SmError::precondition(format!("invalid version_at_time: {raw}")))
+pub(in crate::service) fn parse_at_time(raw: &str) -> Result<jiff::Timestamp, StatusError> {
+    resolve(raw).ok_or_else(|| StatusError::precondition(format!("invalid version_at_time: {raw}")))
 }
 
-/// Parse one bound of a contribution `time_range` (the SM
-/// `Interval<Iso8601_date_time>` bounds) into an instant.
+/// Parse one bound of a contribution `time_range` (an ISO 8601 date-time)
+/// into an instant.
 ///
 /// # Errors
-/// [`SmError`] `precondition_violation` (→ `400`) when the bound is not an
+/// [`StatusError`] `precondition_violation` (→ `400`) when the bound is not an
 /// extended-ISO-8601 datetime.
-pub(in crate::service) fn parse_time_range_bound(raw: &str) -> Result<jiff::Timestamp, SmError> {
-    resolve(raw).ok_or_else(|| SmError::precondition(format!("invalid time_range bound: {raw}")))
+pub(in crate::service) fn parse_time_range_bound(
+    raw: &str,
+) -> Result<jiff::Timestamp, StatusError> {
+    resolve(raw)
+        .ok_or_else(|| StatusError::precondition(format!("invalid time_range bound: {raw}")))
 }
 
 #[cfg(test)]

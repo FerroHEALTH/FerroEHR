@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Surface A1: OPT 1.4 artefact validity (`I_DEFINITION_ADL14` upload).
+//! Surface A1: OPT 1.4 artefact validity (the ADL 1.4 OPT upload).
 //!
 //! openEHR formalizes the validity rules a CDR applies to an uploaded artefact
 //! in the AOM2 validation catalogue

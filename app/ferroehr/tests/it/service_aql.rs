@@ -47,7 +47,7 @@ use uuid::Uuid;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::config::QueryConfig;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
@@ -59,7 +59,7 @@ const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
 /// The magnitude leaf path used throughout (bp.v1-style descent to the ELEMENT).
 const MAG_PATH: &str = "data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
 
-/// The SM `UPDATE_VERSION` commit envelope for a bare-RM write, mirroring the
+/// The `UPDATE_VERSION` commit envelope for a bare-RM write, mirroring the
 /// adapter's `mk_update_version` (the RM object is the `data`, `If-Match` is the
 /// `preceding_version_uid`, and the audit carries the change type + committer).
 fn uv<T: serde::de::DeserializeOwned>(
@@ -360,7 +360,7 @@ async fn aql_acceptance_set() {
     );
 
     // fetch + the deprecated TOP modifier stays rejected (Request.md names
-    // exactly this pairing), as the SM `precondition_violation` → wire `400`.
+    // exactly this pairing), as `precondition_violation` → wire `400`.
     let aql =
         format!("SELECT TOP 2 o/{MAG_PATH} FROM EHR e CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
     let mut req = ehr_scope(&ehr_id);
@@ -372,8 +372,8 @@ async fn aql_acceptance_set() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -1135,8 +1135,8 @@ async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::EhrIdDoesNotExist,
+            StatusError {
+                status: ServiceStatus::EhrIdDoesNotExist,
                 ..
             }
         ),
@@ -1154,8 +1154,8 @@ async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -2453,7 +2453,7 @@ async fn an_uncoercible_temporal_binding_is_the_callers_400() {
         .expect_err("an uncoercible binding is refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "the caller's defect classifies 400, got {err:?}"
     );
     assert!(
@@ -2871,8 +2871,8 @@ async fn an_explicit_page_above_the_result_ceiling_is_refused() {
             assert!(
                 matches!(
                     &err,
-                    SmError {
-                        status: CallStatusType::PreconditionViolation,
+                    StatusError {
+                        status: ServiceStatus::PreconditionViolation,
                         message,
                         ..
                     } if message.contains("exceeds the largest page") && message.contains("2 rows")

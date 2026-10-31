@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The shared SM commit-fixture family the topic modules import.
+//! The shared commit-fixture family the topic modules import.
 //!
 //! Every suite that drives a write through the service layer needs the same
 //! pieces: a `PARTY_IDENTIFIED` committer, an `openehr` change-type
-//! `DV_CODED_TEXT`, a minimal valid RM COMPOSITION, and the SM
-//! `UPDATE_VERSION` envelope carrying them (SM
-//! `UML/classes/update_version.adoc`). They live here once, so the per-suite
+//! `DV_CODED_TEXT`, a minimal valid RM COMPOSITION, and the
+//! `UPDATE_VERSION` envelope carrying them. They live here once, so the per-suite
 //! copies cannot drift apart.
 //!
 //! A suite whose fixture identity is load-bearing (an assertion reads the
@@ -106,7 +105,7 @@ pub(crate) fn composition(name: &str) -> Value {
     composition_by(name, TESTER)
 }
 
-/// Returns the SM `UPDATE_VERSION` commit envelope for a bare-RM write.
+/// Returns the `UPDATE_VERSION` commit envelope for a bare-RM write.
 ///
 /// `change_code` is the `openehr` `audit_change_type` code the version's audit
 /// records (`249` creation, `251` modification, `523` deleted); `preceding`

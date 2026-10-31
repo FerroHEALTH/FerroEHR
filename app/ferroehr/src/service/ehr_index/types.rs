@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHR Index information structures (`resource_status.adoc`,
-//! `resource_instance_type.adoc`, `location_desc.adoc`).
+//! The EHR Index information structures: resource status, resource instance
+//! type and location descriptor.
 
-/// A subject identifier reference (`i_ehr_index.adoc` `a_subject_id:
-/// OBJECT_REF`).
+/// A subject identifier reference, an `OBJECT_REF`.
 ///
 /// The realization of the `OBJECT_REF` the EHR Index keys its associations
 /// by: `id` = `OBJECT_ID.value`, `namespace`, `type`.
@@ -24,8 +23,7 @@ pub struct SubjectRef {
 
 impl SubjectRef {
     /// The `OBJECT_REF.type` a subject reference carries when none was
-    /// recorded: the common MPI case the SM's own wording assumes ("patient or
-    /// other subject or care identifiers", `master07 §Overview`).
+    /// recorded: the common MPI case, a patient (our own default).
     pub const DEFAULT_TYPE: &str = "PERSON";
 
     /// A subject reference of the default `PERSON` type.
@@ -41,8 +39,7 @@ impl SubjectRef {
 
 /// `RESOURCE_INSTANCE_TYPE` — the kind of a subject↔EHR association.
 ///
-/// "Enumeration of resource instance types" (`resource_instance_type.adoc`),
-/// surfacing the N:M duplicate-management states master07 §Overview describes.
+/// The N:M duplicate-management states of a subject↔EHR association.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum ResourceInstanceType {
     /// "Primary instance of the resource."
@@ -76,12 +73,10 @@ impl ResourceInstanceType {
     }
 }
 
-/// `RESOURCE_STATUS` — "Object describing the status of a reference to a
-/// resource" (`resource_status.adoc`).
+/// `RESOURCE_STATUS` — the status of a reference to a resource.
 ///
-/// NOTE: `start_valid_time`/`end_valid_time` are typed `@@` (an
-/// unresolved placeholder) in the SM — a recorded spec defect; implemented as
-/// ISO date-time strings (stored `timestamptz`).
+/// `start_valid_time`/`end_valid_time` are ISO date-time strings (stored
+/// `timestamptz`).
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct ResourceStatus {
     /// `instance_type [1]` — "Type of resource instance."
@@ -96,8 +91,7 @@ pub struct ResourceStatus {
     pub notes: Option<String>,
 }
 
-/// `LOCATION_DESC` — "A descriptor containing location information for the
-/// EHR with which this descriptor is associated" (`location_desc.adoc`).
+/// `LOCATION_DESC` — location information for the EHR it is associated with.
 ///
 /// NOTE: no specification governs this: our own design; `{system_id, uri?,
 /// description?}` makes the optional location descriptor carry usable data.
@@ -115,7 +109,7 @@ pub struct LocationDesc {
 /// optional location descriptor.
 ///
 /// Returned by the design-filled read calls (`ehr_subjects` / `subject_ehrs`
-/// — the SM defines no reads; NOTE on those methods).
+/// — our own design).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EhrIndexEntry {
     /// The associated EHR id.

@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! EHR-Extract import (SM `I_EHR_EXTRACT_SERVICE.import_ehr` /
-//! `import_ehr_extract`), the inverse of export: each received
+//! EHR-Extract import (`import_ehr` / `import_ehr_extract`), the inverse of
+//! export: each received
 //! `X_VERSIONED_*`'s `ORIGINAL_VERSION`s are replayed into the local store as
 //! `IMPORTED_VERSION`s.
 //!
-//! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`
-//! (`import_ehr` / `import_ehr_extract`); RM common
+//! Spec: RM common
 //! `master06-change_control_package.adoc` §Copying / §Distributed Versioning
 //! (`IMPORTED_VERSION`, Cases 1/2/3, `creating_system_id`, local commit-time
 //! rule) and its `org.openehr.rm.common.imported_version.adoc` class table; the
@@ -39,15 +38,14 @@
 //! Re-validation on import is nowhere required (adjudicated on #2988):
 //! master06 §The Copy Operation keeps the wrapped original "a faithful copy of
 //! its original", `commit_imported_version` is the only `VERSIONED_OBJECT`
-//! commit function with no `Pre` clause, SM `i_ehr_extract_service.adoc`
-//! declares the import operations without preconditions, and BASE
+//! commit function with no `Pre` clause, and BASE
 //! `master10-archetypes.adoc` §Validation during Data Capture makes archetype
 //! validation in an import service a "can", never a must.
 //!
 //! An imported EHR is a full local EHR: the promoted `ehr` columns are re-derived
 //! from the landed `EHR_STATUS`
 //! ([`crate::service::FerroEhrService::resync_promoted_columns`]), so the clone
-//! is found by the subject lookup (SM `I_EHR_SERVICE.get_ehrs_for_subject`) and
+//! is found by the subject lookup (`get_ehrs_for_subject`) and
 //! bound by the one-EHR-per-subject rule (RM ehr master04 §EHR Status) exactly
 //! like a created EHR, which makes importing a clone of an already-held subject a
 //! conflict. Where the extract carries no `EHR_ACCESS`, the whole-EHR clone
@@ -70,7 +68,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::EventActionCode;
 use crate::versioning::Kind;
@@ -86,17 +84,17 @@ use openehr_rm::v1_2::common::generic::audit_details::AuditDetails;
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 
 impl FerroEhrService {
-    /// SM `import_ehr(an_ehr_id[0..1], an_extract)` — clone a whole EHR into an
+    /// `import_ehr(an_ehr_id[0..1], an_extract)` — clone a whole EHR into an
     /// empty target (master06 §Copying Case 1). The target id is the caller's
-    /// fixed id (the SM's "same patient in other EHR services" case), else the
+    /// fixed id (the same patient in another EHR system), else the
     /// source EHR id reused (master06 §Copying Case 1: the newly created EHR
     /// re-uses the source EHR identifier; RM ehr §"EHR Identifier Allocation").
     /// A completed import is audited for non-repudiation (inbound →
     /// `EventActionCode::Create`).
     ///
     /// Returns the id of the EHR the clone landed under — the caller's fixed
-    /// id, or the source id the extract carried. The SM operation itself
-    /// returns nothing, but the created EHR's identity is not otherwise
+    /// id, or the source id the extract carried, because the created EHR's
+    /// identity is not otherwise
     /// derivable by a caller that supplied none, and a creating call that
     /// cannot name what it created is unusable over a wire.
     ///
@@ -115,12 +113,12 @@ impl FerroEhrService {
         &self,
         an_ehr_id: Option<EhrId>,
         an_extract: Extract,
-    ) -> Result<EhrId, SmError> {
+    ) -> Result<EhrId, StatusError> {
         let (containers, parties) = parse_import_containers(&an_extract)?;
         // A whole-EHR clone must carry an EHR_STATUS (EHR.ehr_status 1..1, RM
         // ehr §"EHR Creation") — the target could not otherwise be a valid EHR.
         if !containers.iter().any(|c| c.kind == Kind::EhrStatus) {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "import_ehr requires the extract to carry an EHR_STATUS versioned object",
             ));
         }
@@ -152,8 +150,8 @@ impl FerroEhrService {
                 .await
                 .map_err(ServiceError::from)?;
         if inserted.rows_affected() == 0 {
-            return Err(SmError::new(
-                CallStatusType::EhrCreateFailDuplicateId,
+            return Err(StatusError::new(
+                ServiceStatus::EhrCreateFailDuplicateId,
                 format!("EHR {ehr_id} already exists; import_ehr requires an empty target"),
             ));
         }
@@ -188,7 +186,7 @@ impl FerroEhrService {
         Ok(ehr_id)
     }
 
-    /// SM `import_ehr_extract(an_ehr_id, an_extract)` — land versioned objects
+    /// `import_ehr_extract(an_ehr_id, an_extract)` — land versioned objects
     /// into an existing EHR (master06 §Copying Cases 2/3). A completed import
     /// is audited for non-repudiation (inbound → `EventActionCode::Create`).
     ///
@@ -212,9 +210,9 @@ impl FerroEhrService {
         &self,
         an_ehr_id: EhrId,
         an_extract: Extract,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         if !self.import_ehr_exists(an_ehr_id).await? {
-            return Err(SmError::ehr_not_found(format!(
+            return Err(StatusError::ehr_not_found(format!(
                 "no EHR with id {an_ehr_id}"
             )));
         }
@@ -229,7 +227,7 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::from)?;
         if locked.is_none() {
-            return Err(SmError::ehr_not_found(format!(
+            return Err(StatusError::ehr_not_found(format!(
                 "no EHR with id {an_ehr_id}"
             )));
         }
@@ -357,7 +355,7 @@ impl FerroEhrService {
     }
 
     /// Whether an EHR with `ehr_id` exists (the `has_ehr` precondition of
-    /// `import_ehr_extract`; `i_ehr_extract_service.adoc`).
+    /// `import_ehr_extract`).
     async fn import_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
         Ok(
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
@@ -386,14 +384,14 @@ fn kind_from_x_versioned(xtype: &str) -> Option<Kind> {
 /// The source EHR id an `import_ehr` clone reuses when no fixed id is given —
 /// `EXTRACT_SPEC.manifest.entities[0].ehr_id` (a whole-EHR export always names
 /// it). master06 §Copying Case 1.
-fn source_ehr_id(extract: &Extract) -> Result<EhrId, SmError> {
+fn source_ehr_id(extract: &Extract) -> Result<EhrId, StatusError> {
     let raw = extract
         .specification
         .as_ref()
         .and_then(|s| s.manifest.entities.first())
         .and_then(|e| e.ehr_id.as_deref())
         .ok_or_else(|| {
-            SmError::precondition(
+            StatusError::precondition(
                 "import_ehr without a fixed ehr_id requires the extract's EXTRACT_SPEC to \
                  name the source EHR id (specification.manifest.entities[0].ehr_id)",
             )
@@ -405,7 +403,7 @@ fn source_ehr_id(extract: &Extract) -> Result<EhrId, SmError> {
                   is not part of the wire contract"
     )]
     raw.parse()
-        .map_err(|_| SmError::precondition(format!("source ehr_id {raw:?} is not a UUID")))
+        .map_err(|_| StatusError::precondition(format!("source ehr_id {raw:?} is not a UUID")))
 }
 
 /// An EHR holds at most one of each singleton versioned object (`EHR_STATUS`,
@@ -413,10 +411,12 @@ fn source_ehr_id(extract: &Extract) -> Result<EhrId, SmError> {
 /// carrying two distinct containers of one such kind cannot be imported. FOLDER
 /// hierarchies are unbounded (`EHR.folders`, RM ehr master04 §Folders), so an
 /// extract may carry several.
-fn reject_duplicate_singleton_containers(containers: &[ImportContainer]) -> Result<(), SmError> {
+fn reject_duplicate_singleton_containers(
+    containers: &[ImportContainer],
+) -> Result<(), StatusError> {
     for singleton in [Kind::EhrStatus, Kind::EhrAccess] {
         if containers.iter().filter(|c| c.kind == singleton).count() > 1 {
-            return Err(SmError::precondition(format!(
+            return Err(StatusError::precondition(format!(
                 "extract carries more than one {} versioned object; an EHR holds at most one",
                 singleton.as_str()
             )));
@@ -434,7 +434,7 @@ fn reject_duplicate_singleton_containers(containers: &[ImportContainer]) -> Resu
 /// (master06 §Distributed Versioning).
 fn parse_import_containers(
     extract: &Extract,
-) -> Result<(Vec<ImportContainer>, Vec<ImportContainer>), SmError> {
+) -> Result<(Vec<ImportContainer>, Vec<ImportContainer>), StatusError> {
     let value = openehr_its::json::to_canonical_value(extract);
     let empty: Vec<Value> = Vec::new();
     let mut by_container: BTreeMap<VoId, ImportContainer> = BTreeMap::new();
@@ -465,7 +465,7 @@ fn parse_import_containers(
                 continue;
             }
             let kind = kind_from_x_versioned(xtype).ok_or_else(|| {
-                SmError::precondition(format!(
+                StatusError::precondition(format!(
                     "cannot import {xtype:?} through the EHR surface (only COMPOSITION / \
                      EHR_STATUS / EHR_ACCESS / FOLDER / demographics-chapter PARTYs)"
                 ))
@@ -488,15 +488,15 @@ fn parse_import_containers(
 /// unmasked one must.
 ///
 /// # Errors
-/// [`SmError::precondition`] for generic (ISO 13606 / CDA) content — NOTE:
+/// [`StatusError::precondition`] for generic (ISO 13606 / CDA) content — NOTE:
 /// `master06-generic_extract_package.adoc` `GENERIC_CONTENT_ITEM` is outside
 /// this CDR's import scope — or for either half of an `Item_validity`
 /// violation.
-fn content_item_payload(item: &Value) -> Result<Option<&Value>, SmError> {
+fn content_item_payload(item: &Value) -> Result<Option<&Value>, StatusError> {
     match item.get("_type").and_then(Value::as_str) {
         Some("OPENEHR_CONTENT_ITEM") => {}
         Some("GENERIC_CONTENT_ITEM") => {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "generic (ISO 13606 / CDA) content import is not supported",
             ));
         }
@@ -510,11 +510,11 @@ fn content_item_payload(item: &Value) -> Result<Option<&Value>, SmError> {
     match (item.get("item"), is_masked) {
         // Masked-out content — nothing to import.
         (None, true) => Ok(None),
-        (None, false) => Err(SmError::precondition(
+        (None, false) => Err(StatusError::precondition(
             "EXTRACT_CONTENT_ITEM carries no item and is not masked \
              (Item_validity: is_masked xor item present)",
         )),
-        (Some(_), true) => Err(SmError::precondition(
+        (Some(_), true) => Err(StatusError::precondition(
             "EXTRACT_CONTENT_ITEM is masked but carries an item \
              (Item_validity: is_masked xor item present)",
         )),
@@ -526,12 +526,12 @@ fn content_item_payload(item: &Value) -> Result<Option<&Value>, SmError> {
 /// demographic containers, keyed by cloned `vo_id`.
 ///
 /// # Errors
-/// [`SmError::precondition`] when a version's data is not a PARTY subtype, and
+/// [`StatusError::precondition`] when a version's data is not a PARTY subtype, and
 /// the [`parse_imported_version`] rejections.
 fn collect_party_versions(
     xver: &Value,
     parties: &mut BTreeMap<VoId, ImportContainer>,
-) -> Result<(), SmError> {
+) -> Result<(), StatusError> {
     let empty: Vec<Value> = Vec::new();
     for ov in xver
         .get("versions")
@@ -543,7 +543,7 @@ fn collect_party_versions(
             .and_then(Value::as_str)
             .unwrap_or_default();
         let Some(kind) = Kind::from_type(party_type).filter(|k| k.is_demographic()) else {
-            return Err(SmError::precondition(format!(
+            return Err(StatusError::precondition(format!(
                 "X_VERSIONED_PARTY version data must be a PARTY subtype, \
                  got {party_type:?}"
             )));
@@ -562,13 +562,13 @@ fn collect_party_versions(
 /// (master06 §Distributed Versioning).
 ///
 /// # Errors
-/// [`SmError::precondition`] when one `vo_id` arrives under two kinds, and the
+/// [`StatusError::precondition`] when one `vo_id` arrives under two kinds, and the
 /// [`parse_imported_version`] rejections.
 fn collect_content_versions(
     xver: &Value,
     kind: Kind,
     by_container: &mut BTreeMap<VoId, ImportContainer>,
-) -> Result<(), SmError> {
+) -> Result<(), StatusError> {
     let empty: Vec<Value> = Vec::new();
     for ov in xver
         .get("versions")
@@ -579,7 +579,7 @@ fn collect_content_versions(
         if let Some(existing) = by_container.get(&vo_id)
             && existing.kind != kind
         {
-            return Err(SmError::precondition(format!(
+            return Err(StatusError::precondition(format!(
                 "versioned object {vo_id} appears as both {} and {}",
                 existing.kind.as_str(),
                 kind.as_str()
@@ -624,12 +624,12 @@ fn push_version(
 /// codec — the `ATTESTATION` subtype dispatches on `_type` — after which the
 /// stored fragment is that typed value's canonical encoding, byte-identical to
 /// a well-formed input.
-fn parse_wrapped_commit_audit(ov: &Value) -> Result<Value, SmError> {
-    let audit = ov
-        .get("commit_audit")
-        .ok_or_else(|| SmError::precondition("imported ORIGINAL_VERSION has no commit_audit"))?;
+fn parse_wrapped_commit_audit(ov: &Value) -> Result<Value, StatusError> {
+    let audit = ov.get("commit_audit").ok_or_else(|| {
+        StatusError::precondition("imported ORIGINAL_VERSION has no commit_audit")
+    })?;
     let typed = openehr_its::json::from_canonical_value::<AuditDetails>(audit).map_err(|e| {
-        SmError::precondition(format!(
+        StatusError::precondition(format!(
             "imported commit_audit is not a canonical AUDIT_DETAILS or its ATTESTATION \
              subtype (RM common master06 §Committal and Audits): {e}"
         ))
@@ -640,7 +640,7 @@ fn parse_wrapped_commit_audit(ov: &Value) -> Result<Value, SmError> {
         AuditDetails::Attestation(a) => (&a.system_id, &a.change_type, &a.time_committed),
     };
     if system_id.is_empty() {
-        return Err(SmError::precondition(
+        return Err(StatusError::precondition(
             "imported commit_audit.system_id is required and non-empty",
         ));
     }
@@ -648,7 +648,7 @@ fn parse_wrapped_commit_audit(ov: &Value) -> Result<Value, SmError> {
     // `audit change type` group (audit_details.adoc §Invariants).
     let change_token = &change_type.defining_code.code_string;
     if change_type_code(change_token).is_none() {
-        return Err(SmError::precondition(format!(
+        return Err(StatusError::precondition(format!(
             "imported commit_audit.change_type {change_token:?} is not an audit_change_type code"
         )));
     }
@@ -659,7 +659,7 @@ fn parse_wrapped_commit_audit(ov: &Value) -> Result<Value, SmError> {
                   not part of the wire contract"
     )]
     let _: jiff::Timestamp = time_committed.value.parse().map_err(|_| {
-        SmError::precondition(format!(
+        StatusError::precondition(format!(
             "imported commit_audit.time_committed {:?} is not an ISO 8601 instant",
             time_committed.value
         ))
@@ -674,7 +674,7 @@ fn parse_wrapped_commit_audit(ov: &Value) -> Result<Value, SmError> {
 /// signature and attestations verbatim (master06 §Copying: "the
 /// `ORIGINAL_VERSION` instance is never modified"; `ehr_extract` master05
 /// `X_VERSIONED_OBJECT.versions: List<ORIGINAL_VERSION>`).
-fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), SmError> {
+fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), StatusError> {
     // `X_VERSIONED_OBJECT.versions` is `List<ORIGINAL_VERSION<T>>`
     // (`x_versioned_object.adoc` §Attributes) and master06 §Copying makes the
     // ORIGINAL_VERSION the unit of copying, each receiving system creating its
@@ -682,7 +682,7 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), SmError> 
     match ov.get("_type").and_then(Value::as_str) {
         None | Some("ORIGINAL_VERSION") => {}
         Some(other) => {
-            return Err(SmError::precondition(format!(
+            return Err(StatusError::precondition(format!(
                 "X_VERSIONED_OBJECT.versions members must be ORIGINAL_VERSION \
                  (RM ehr_extract master05), got _type {other:?}"
             )));
@@ -691,7 +691,7 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), SmError> 
     let uid = ov
         .pointer("/uid/value")
         .and_then(Value::as_str)
-        .ok_or_else(|| SmError::precondition("imported ORIGINAL_VERSION has no uid.value"))?;
+        .ok_or_else(|| StatusError::precondition("imported ORIGINAL_VERSION has no uid.value"))?;
     let (vo_id, creating_system_id, tree) = parse_object_version_id(uid)?;
     // The imported `ORIGINAL_VERSION.uid.object_id` names a versioned object.
     let vo_id = VoId(vo_id);
@@ -721,12 +721,12 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), SmError> 
     // while the local import CONTRIBUTION is recorded on the IMPORTED_VERSION
     // wrapper the change-control engine builds around it.
     let contribution = ov.get("contribution").cloned().ok_or_else(|| {
-        SmError::precondition(
+        StatusError::precondition(
             "imported ORIGINAL_VERSION has no contribution (VERSION.contribution 1..1)",
         )
     })?;
     if openehr_its::json::from_canonical_value::<ObjectRef>(&contribution).is_err() {
-        return Err(SmError::precondition(
+        return Err(StatusError::precondition(
             "imported ORIGINAL_VERSION.contribution is not a canonical OBJECT_REF \
              (RM common version.adoc §Attributes)",
         ));
@@ -741,7 +741,7 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), SmError> 
         .or_else(|| ov.pointer("/lifecycle_state/value").and_then(Value::as_str))
         .unwrap_or(lifecycle::state::COMPLETE);
     let lifecycle_state = lifecycle_state_code(lifecycle_token).ok_or_else(|| {
-        SmError::precondition(format!(
+        StatusError::precondition(format!(
             "imported lifecycle_state {lifecycle_token:?} is not a version_lifecycle_state code"
         ))
     })?;
@@ -755,12 +755,12 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), SmError> 
         .unwrap_or(Value::Null);
     let deleted = lifecycle_state == lifecycle::state::DELETED;
     if deleted && !data.is_null() {
-        return Err(SmError::precondition(
+        return Err(StatusError::precondition(
             "imported 523|deleted| version must not carry data (data is Void)",
         ));
     }
     if !deleted && data.is_null() {
-        return Err(SmError::precondition(
+        return Err(StatusError::precondition(
             "imported non-deleted ORIGINAL_VERSION requires data",
         ));
     }

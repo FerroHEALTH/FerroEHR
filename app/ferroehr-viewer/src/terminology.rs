@@ -7,9 +7,7 @@
 //! definition, a strict subsumption test, a value set's members, and a
 //! value-set membership test — behind the viewer's own session guard.
 //!
-//! NOTE: no openEHR spec governs this wire shape — the CDR's own extension
-//! realizing SM `I_TERMINOLOGY_SERVICE`
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master12-terminology_service.adoc`).
+//! NOTE: no openEHR spec governs this wire shape — the CDR's own extension.
 //!
 //! **Absence is a state, not an error.** The whole group is config-gated on the
 //! CDR side (`[terminology].api_enabled`, off by default) and answers `404` as
@@ -37,10 +35,9 @@ use crate::locale::{tr_served, tr_with};
 
 /// One terminology's descriptor, flattened for the descriptor card.
 ///
-/// The attributes are `Terminology_description`'s own
-/// (`docs/specs/openehr/SM/docs/UML/classes/terminology_description.adoc`):
-/// `publisher` (1..1), `available_versions` (0..1), `attributes` (0..1) and
-/// `uri` (1..1). An absent optional reads as empty rather than failing the
+/// The attributes are the CDR descriptor's own: `publisher` (1..1),
+/// `available_versions` (0..1), `attributes` (0..1) and `uri` (1..1). An
+/// absent optional reads as empty rather than failing the
 /// card, and `name` is carried only because a CDR may publish one — it is
 /// rendered when present and never invented.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -63,7 +60,7 @@ pub struct TerminologyDescriptor {
 /// One term of a `Terminology_extract`, flattened for the terms table.
 ///
 /// A `_terms_` entry is either a bare `Term_code` or a fully defined
-/// `Defined_term` (`terminology_extract.adoc`); the bare form leaves
+/// `Defined_term`; the bare form leaves
 /// [`Self::text`] and [`Self::language`] empty.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TermRow {
@@ -94,7 +91,7 @@ impl TermRow {
     }
 }
 
-/// One `Term_relationship` of an extract (`term_relationship.adoc`).
+/// One `Term_relationship` of an extract.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TermRelationshipRow {
     /// `origin_code` — the left-hand concept.
@@ -105,7 +102,7 @@ pub struct TermRelationshipRow {
     pub target_codes: Vec<String>,
 }
 
-/// A `Terminology_extract` flattened for rendering (`terminology_extract.adoc`).
+/// A `Terminology_extract` flattened for rendering.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct TerminologyExtractView {
     /// `terminology_id` — the namespace the terms belong to.
@@ -496,7 +493,7 @@ mod tests {
     #[test]
     fn an_extract_flattens_defined_and_bare_terms_code_sorted() {
         // A `Defined_term` (code + text + language) beside a bare `Term_code`
-        // (`terminology_extract.adoc` — `_terms_` admits both subtypes).
+        // (`_terms_` admits both).
         let body = serde_json::json!({
             "terminology_id": "openehr",
             "terminology_version": "3.1.0",

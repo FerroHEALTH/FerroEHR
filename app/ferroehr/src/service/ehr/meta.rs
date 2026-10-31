@@ -307,19 +307,19 @@ pub(in crate::service) fn committer() -> PartyProxy {
 // ── ITS-REST version-metadata adapter (adapter-support extension) ─────────────
 //
 // The protocol adapter's `412`/`ETag` pre-reads. No openEHR spec governs this
-// adapter seam — our own extension over the SM-governed version identities.
+// adapter seam — our own extension over the RM version identities.
 
 impl FerroEhrService {
     /// The current COMPOSITION version metadata (the latest `version_uid` a
     /// `409`/`412` must echo), or `None` if unknown or outside this EHR.
     ///
     /// # Errors
-    /// [`SmError`](crate::service::status::SmError) if the metadata read fails.
+    /// [`StatusError`](crate::service::status::StatusError) if the metadata read fails.
     pub async fn composition_latest_meta(
         &self,
         an_ehr_id: EhrId,
         a_versioned_object_uid: VoId,
-    ) -> Result<Option<ResourceMeta>, crate::service::status::SmError> {
+    ) -> Result<Option<ResourceMeta>, crate::service::status::StatusError> {
         Ok(self
             .composition_current_meta(an_ehr_id, a_versioned_object_uid)
             .await?)
@@ -329,11 +329,11 @@ impl FerroEhrService {
     /// EHR has no current `EHR_STATUS`.
     ///
     /// # Errors
-    /// [`SmError`](crate::service::status::SmError) if the metadata read fails.
+    /// [`StatusError`](crate::service::status::StatusError) if the metadata read fails.
     pub async fn ehr_status_latest_meta(
         &self,
         an_ehr_id: EhrId,
-    ) -> Result<Option<ResourceMeta>, crate::service::status::SmError> {
+    ) -> Result<Option<ResourceMeta>, crate::service::status::StatusError> {
         Ok(self.ehr_status_meta(an_ehr_id).await?)
     }
 
@@ -341,11 +341,11 @@ impl FerroEhrService {
     /// the EHR indexes no directory hierarchy.
     ///
     /// # Errors
-    /// [`SmError`](crate::service::status::SmError) if the metadata read fails.
+    /// [`StatusError`](crate::service::status::StatusError) if the metadata read fails.
     pub async fn directory_latest_meta(
         &self,
         an_ehr_id: EhrId,
-    ) -> Result<Option<ResourceMeta>, crate::service::status::SmError> {
+    ) -> Result<Option<ResourceMeta>, crate::service::status::StatusError> {
         Ok(self.directory_meta(an_ehr_id).await?)
     }
 }

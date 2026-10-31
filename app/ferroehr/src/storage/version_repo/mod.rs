@@ -33,8 +33,8 @@
 //!   history, existence/kind/count lookups) that skip node reassembly.
 //! - [`contribution`] — CONTRIBUTION reads (audit, affected versions,
 //!   listing/counting).
-//! - [`tier`] — the cold archival storage tier: the physical move behind SM
-//!   `I_ADMIN_ARCHIVE`, its reverse, and the primary-miss read fallback the
+//! - [`tier`] — the cold archival storage tier: the physical archive move, its
+//!   reverse, and the primary-miss read fallback the
 //!   reads above use.
 
 #![expect(

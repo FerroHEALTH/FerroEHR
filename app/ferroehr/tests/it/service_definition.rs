@@ -1,12 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! SM-2 end-to-end tests for the Definitions native API against a real
-//! `PostgreSQL` 18 (shared testkit harness): ADL 1.4 source archetypes
-//! (`I_DEFINITION_ADL14`), OPTs (delegated to `template_store`), and registered
-//! queries (`I_DEFINITION_QUERY`). Driven through the SM service traits exactly
-//! as a protocol adapter would call them; the SM pre/post-conditions are the
-//! assertions.
+//! End-to-end tests for the Definitions native API against a real
+//! `PostgreSQL` 18 (shared testkit harness): ADL 1.4 source archetypes, OPTs
+//! (delegated to `template_store`), and registered queries. Driven through the
+//! service methods exactly as a protocol adapter would call them.
 //!
 //! Requires Docker. Each test owns its container (`Drop` removes it).
 
@@ -23,7 +21,7 @@
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::types::TemplateListFilter;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::list::Page;
 
@@ -47,7 +45,7 @@ const REVISION_HISTORY_ARCHETYPE_ID: &str = "openEHR-EHR-OBSERVATION.revision_hi
 const OPT_REL: &str = "knowledge/IDCR Allergies List.v0.opt";
 const OPT_TEMPLATE_ID: &str = "IDCR Allergies List.v0";
 
-// ── ADL 1.4 archetypes (I_DEFINITION_ADL14) ──────────────────────────────────
+// ── ADL 1.4 archetypes ───────────────────────────────────────────────────────
 
 #[tokio::test]
 async fn archetype_upload_get_list_match_replace_delete() {
@@ -63,7 +61,7 @@ async fn archetype_upload_get_list_match_replace_delete() {
     assert!(svc.valid_archetype(&adl).unwrap());
     assert!(!svc.valid_archetype("not an archetype").unwrap());
 
-    // upload → Post_has_archetype.
+    // upload → the archetype is present.
     svc.upload_archetype(adl.clone()).await.expect("upload");
     assert!(svc.has_archetype(ARCHETYPE_ID.to_owned()).await.unwrap());
     assert_eq!(svc.archetypes_count_adl14().await.unwrap(), 1);
@@ -105,7 +103,7 @@ async fn archetype_upload_get_list_match_replace_delete() {
         "replacement overwrote the source"
     );
 
-    // delete → Post_archetype_removed.
+    // delete → the archetype is gone.
     svc.delete_archetype(ARCHETYPE_ID.to_owned())
         .await
         .expect("delete");
@@ -153,8 +151,7 @@ async fn archetype_errors() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // Invalid ADL → 422 reporting invalid_archetype (i_definition_adl14.adoc
-    // §upload_archetype .Errors).
+    // Invalid ADL → 422 reporting invalid_archetype.
     let bad = svc
         .upload_archetype("this is not an archetype".to_owned())
         .await
@@ -162,8 +159,8 @@ async fn archetype_errors() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::InvalidArchetype,
+            StatusError {
+                status: ServiceStatus::InvalidArchetype,
                 ..
             }
         ),
@@ -178,8 +175,8 @@ async fn archetype_errors() {
     assert!(
         matches!(
             missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -192,18 +189,16 @@ async fn archetype_errors() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
         "got {del_missing:?}"
     );
 
-    // Uncompilable regex → 400 invalid_id_pattern (unbalanced group) — the
-    // status `i_definition_adl14.adoc` §`list_matching_archetypes` declares
-    // (.Errors: `invalid_id_pattern`), not the generic
-    // `precondition_violation`.
+    // Uncompilable regex → 400 invalid_id_pattern (unbalanced group), not the
+    // generic `precondition_violation`.
     let bad_re = svc
         .list_matching_archetypes("(".to_owned(), Page::all())
         .await
@@ -211,8 +206,8 @@ async fn archetype_errors() {
     assert!(
         matches!(
             bad_re,
-            SmError {
-                status: CallStatusType::InvalidIdPattern,
+            StatusError {
+                status: ServiceStatus::InvalidIdPattern,
                 ..
             }
         ),
@@ -245,8 +240,8 @@ async fn archetype_semantic_validity_runs_the_14_engine() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::InvalidArchetype,
+            StatusError {
+                status: ServiceStatus::InvalidArchetype,
                 ..
             }
         ),
@@ -300,8 +295,8 @@ async fn adl14_convert_to_adl2_migration_round_trip() {
     assert!(
         matches!(
             missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -309,7 +304,7 @@ async fn adl14_convert_to_adl2_migration_round_trip() {
     );
 }
 
-// ── ADL 1.4 OPTs (I_DEFINITION_ADL14; on template_store, UUID-keyed) ──────────
+// ── ADL 1.4 OPTs (on template_store, UUID-keyed) ─────────────────────────────
 
 #[tokio::test]
 async fn opt_upload_has_get_list_match_delete() {
@@ -322,7 +317,7 @@ async fn opt_upload_has_get_list_match_delete() {
     assert!(!svc.valid_opt("<not-a-template/>").unwrap());
     assert_eq!(svc.opts_count_adl14().await.unwrap(), 0);
 
-    // upload_opt (Pre_valid).
+    // upload_opt (valid OPT).
     svc.upload_opt(xml.clone()).await.expect("upload opt");
     assert_eq!(svc.opts_count_adl14().await.unwrap(), 1);
 
@@ -354,26 +349,24 @@ async fn opt_upload_has_get_list_match_delete() {
     assert!(
         matches!(
             conflict,
-            SmError {
-                status: CallStatusType::Conflict,
+            StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             }
         ),
         "got {conflict:?}"
     );
 
-    // delete_opt (Pre_has_opt / Post_opt_removed).
+    // delete_opt (present, then removed).
     svc.delete_opt(uuid.clone()).await.expect("delete opt");
     assert!(!svc.has_opt(uuid.clone()).await.unwrap());
     assert_eq!(svc.opts_count_adl14().await.unwrap(), 0);
 }
 
-/// The SM `delete_opt` path refuses (409) while a committed version still
+/// The `delete_opt` path refuses (409) while a committed version still
 /// references the template — the same integrity guard as the admin wire
-/// delete, so a physical delete never orphans clinical data. The SM operation
-/// itself (`i_definition_adl14.adoc` §`delete_opt`) defines only
-/// `Pre_has_opt`/`invalid_template` and is silent here — the refusal is our
-/// own integrity design. Pointing an existing `version` at the template
+/// delete, so a physical delete never orphans clinical data. The refusal is
+/// our own integrity design. Pointing an existing `version` at the template
 /// exercises the FK-reference guard directly (lighter than a full validated
 /// commit, which the guard does not need).
 #[tokio::test]
@@ -404,8 +397,8 @@ async fn opt_delete_refuses_while_referenced() {
     // Referenced → refused with the friendly 409 naming the count.
     let res = svc.delete_opt(uuid.clone()).await;
     match res {
-        Err(SmError {
-            status: CallStatusType::Conflict,
+        Err(StatusError {
+            status: ServiceStatus::Conflict,
             ref message,
             ..
         }) => {
@@ -421,7 +414,7 @@ async fn opt_delete_refuses_while_referenced() {
         "a refused delete leaves the template in place"
     );
 
-    // Dereference → the delete succeeds (Post_opt_removed).
+    // Dereference → the delete succeeds (OPT removed).
     sqlx::query("UPDATE version SET template_id = NULL WHERE ehr_id = $1")
         .bind(ehr)
         .execute(&pool)
@@ -433,8 +426,8 @@ async fn opt_delete_refuses_while_referenced() {
 
 /// The ITS-REST `definition_template_adl1.4_list` filter + pagination params
 /// (`operations/definition_template_adl1.4_list.yaml`;
-/// `parameters/query/filter_template_id.yaml` — "supports wildcards `*`";
-/// `master02-overview.adoc` §List Handling). Two OPTs are uploaded through the
+/// `parameters/query/filter_template_id.yaml` — "supports wildcards `*`").
+/// Two OPTs are uploaded through the
 /// wire-shaped `DefinitionAdapter`; the list must honour the `template_id` glob
 /// and the `offset`/`fetch` window rather than returning the full set.
 #[tokio::test]
@@ -614,8 +607,8 @@ async fn query_store_rejects_non_aql_formalism() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -655,7 +648,7 @@ async fn query_store_name_grammar_and_reserved_name() {
             .await
             .unwrap_or_else(|e| panic!("`{name}` must be retrievable: {e:?}"));
         // The descriptor carries the ONE canonical identity — the
-        // `misc::`-assumed qualified name (SM master04 §Registered Queries);
+        // `misc::`-assumed qualified name (our own naming design);
         // the bare-name LIST still finds it (the pattern's misc composition).
         let canonical = format!("misc::{name}");
         assert!(
@@ -676,8 +669,8 @@ async fn query_store_name_grammar_and_reserved_name() {
         assert!(
             matches!(
                 err,
-                SmError {
-                    status: CallStatusType::PreconditionViolation,
+                StatusError {
+                    status: ServiceStatus::PreconditionViolation,
                     ..
                 }
             ),
@@ -685,8 +678,8 @@ async fn query_store_name_grammar_and_reserved_name() {
         );
     }
 
-    // A three-part name's MIDDLE `aql` is the formalism segment (SM master04
-    // §Registered Queries scheme 2), not the query-name — never reserved.
+    // A three-part name's MIDDLE `aql` is the formalism segment, not the
+    // query-name — never reserved.
     svc.query_store(
         "task_planning::aql::chemotherapy_plans".to_owned(),
         None,
@@ -702,8 +695,7 @@ async fn opt_errors() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // Invalid OPT → 422 reporting invalid_template (i_definition_adl14.adoc
-    // §upload_opt .Errors).
+    // Invalid OPT → 422 reporting invalid_template.
     let bad = svc
         .upload_opt("<not-a-template/>".to_owned())
         .await
@@ -711,8 +703,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::InvalidTemplate,
+            StatusError {
+                status: ServiceStatus::InvalidTemplate,
                 ..
             }
         ),
@@ -727,8 +719,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             bad_uuid,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -741,8 +733,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             get_missing,
-            SmError {
-                status: CallStatusType::TemplateDoesNotExist,
+            StatusError {
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),
@@ -752,8 +744,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::TemplateDoesNotExist,
+            StatusError {
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),
@@ -761,7 +753,7 @@ async fn opt_errors() {
     );
 }
 
-// ── ADL2 artefacts (I_DEFINITION_ADL2; on adl2_artefact, HRID-keyed) ──────────
+// ── ADL2 artefacts (on adl2_artefact, HRID-keyed) ────────────────────────────
 
 const ADL2_OPT_HRID: &str = "openEHR-EHR-COMPOSITION.t_clinical_info.v1.0.0";
 const ADL2_ARCH_HRID: &str = "openEHR-EHR-OBSERVATION.bp.v1.0.0";
@@ -784,7 +776,7 @@ async fn adl2_upload_get_list_by_kind_match_replace_delete() {
     assert!(svc.valid_artefact(&adl2_opt).unwrap());
     assert!(!svc.valid_artefact("this is not adl2").unwrap());
 
-    // upload_artefact (OPT) → Post_has_artefact (keyed by ARCHETYPE_HRID).
+    // upload_artefact (OPT) → the artefact is present (keyed by ARCHETYPE_HRID).
     assert!(!svc.has_artefact(ADL2_OPT_HRID.to_owned()).await.unwrap());
     svc.upload_artefact(adl2_opt.clone())
         .await
@@ -878,8 +870,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -894,8 +886,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             bad_hrid,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -910,8 +902,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -924,16 +916,15 @@ async fn adl2_errors() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
         "got {del_missing:?}"
     );
 
-    // Uncompilable regex → 400 invalid_id_pattern (`i_definition_adl2.adoc`
-    // §`list_matching_artefacts` .Errors: `invalid_id_pattern`).
+    // Uncompilable regex → 400 invalid_id_pattern.
     let bad_re = svc
         .list_matching_artefacts("(".to_owned(), Page::all())
         .await
@@ -941,8 +932,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             bad_re,
-            SmError {
-                status: CallStatusType::InvalidIdPattern,
+            StatusError {
+                status: ServiceStatus::InvalidIdPattern,
                 ..
             }
         ),
@@ -950,12 +941,12 @@ async fn adl2_errors() {
     );
 }
 
-// ── registered queries (I_DEFINITION_QUERY) ──────────────────────────────────
+// ── registered queries ───────────────────────────────────────────────────────
 
 #[tokio::test]
 #[expect(
     clippy::too_many_lines,
-    reason = "one full I_DEFINITION_QUERY lifecycle exercised end to end on a \
+    reason = "one full registered-query lifecycle exercised end to end on a \
               single container"
 )]
 async fn query_valid_store_list_match_delete() {
@@ -1013,9 +1004,9 @@ async fn query_valid_store_list_match_delete() {
     assert!(svc.has_query("bare_name".to_owned()).await.unwrap());
     assert!(svc.has_query("misc::bare_name".to_owned()).await.unwrap());
 
-    // ── ONE canonical key across every surface (SM master04 §Registered
-    // Queries: bare name → the "misc" namespace) ─────────────────────────────
-    // The WIRE store of a bare name must land on the SAME row the SM calls,
+    // ── ONE canonical key across every surface (bare name → the "misc"
+    // namespace) ─────────────────────────────────────────────────────────────
+    // The WIRE store of a bare name must land on the SAME row the native calls,
     // the by-name wire GET, the list, and the admin delete address — the
     // former asymmetry keyed the wire store under ('', name) and made the
     // query undeletable/unfindable under the name it was created with.
@@ -1029,7 +1020,7 @@ async fn query_valid_store_list_match_delete() {
     .expect("wire store of a bare name");
     assert!(
         svc.has_query("wire_bare".to_owned()).await.unwrap(),
-        "SM has_query sees the wire-stored bare name"
+        "the native has_query sees the wire-stored bare name"
     );
     assert!(
         svc.has_query("misc::wire_bare".to_owned()).await.unwrap(),
@@ -1077,7 +1068,7 @@ async fn query_valid_store_list_match_delete() {
         Vec::<ferroehr::service::definition::types::QueryDescriptor>::new()
     );
 
-    // delete_query removes by name → Post_query_deleted.
+    // delete_query removes by name → the query is gone.
     svc.delete_query("ehr::over_50".to_owned())
         .await
         .expect("delete");
@@ -1091,8 +1082,8 @@ async fn query_valid_store_list_match_delete() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -1107,16 +1098,15 @@ async fn query_valid_store_list_match_delete() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::InvalidQuery,
+            StatusError {
+                status: ServiceStatus::InvalidQuery,
                 ..
             }
         ),
         "got {bad:?}"
     );
 
-    // Bad id-pattern regex → 400 invalid_id_pattern
-    // (`i_definition_query.adoc` §`list_matching_queries`).
+    // Bad id-pattern regex → 400 invalid_id_pattern.
     let bad_re = svc
         .list_matching_queries("(".to_owned(), None, Page::all())
         .await
@@ -1124,8 +1114,8 @@ async fn query_valid_store_list_match_delete() {
     assert!(
         matches!(
             bad_re,
-            SmError {
-                status: CallStatusType::InvalidIdPattern,
+            StatusError {
+                status: ServiceStatus::InvalidIdPattern,
                 ..
             }
         ),
@@ -1142,8 +1132,8 @@ async fn query_store_set_not_implemented() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::NotImplemented,
+            StatusError {
+                status: ServiceStatus::NotImplemented,
                 ..
             }
         ),
@@ -1154,8 +1144,7 @@ async fn query_store_set_not_implemented() {
 /// The REST adapter surface for ADL2 template upload: a duplicate HRID is a
 /// conflict (`409_template_already_exists`, `definition-codegen.openapi.yaml`
 /// `/definition/template/adl2` POST) and invalid source is a 400 — while the
-/// SM-native `upload_artefact` keeps replace semantics (SM master04
-/// `i_definition_adl2.adoc`: "replace it").
+/// native `upload_artefact` keeps replace semantics.
 #[tokio::test]
 async fn adl2_template_upload_wire_conflicts_on_duplicate() {
     let db = testkit::db().await.expect("testkit database");
@@ -1177,7 +1166,7 @@ async fn adl2_template_upload_wire_conflicts_on_duplicate() {
         "got {dup:?}"
     );
 
-    // The SM-native upload still replaces.
+    // The native upload still replaces.
     svc.upload_artefact(tmpl).await.expect("native replace");
 
     // A source that fails the ADL2 grammar (missing mandatory sections →
@@ -1454,11 +1443,10 @@ async fn adl2_template_with_filler_projects_the_filled_web_template() {
     );
 }
 
-// ── I_VALIDITY_CHECKER: definitions_valid over archetype ids (#2987) ──────────
+// ── definitions_valid over archetype ids (#2987) ─────────────────────────────
 
 /// `definitions_valid` resolves every declared definition identifier —
-/// "archetype and template identifiers" (SM `i_validity_checker.adoc`
-/// §`definitions_valid`) — against the stored repositories: archetype ids
+/// archetype and template identifiers — against the stored repositories: archetype ids
 /// against BOTH the ADL 1.4 store and the ADL 2 store, template ids through
 /// the commit-path template lookup, collected from `archetype_details` at any
 /// depth.

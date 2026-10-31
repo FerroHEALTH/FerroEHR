@@ -1,6 +1,6 @@
 ---
 name: demographic-api-location
-description: Where the ITS-REST 1.1.0 Demographic API (party CRUD x5 subtypes, versioned_party family, demographic contribution) requirements live — the DEVELOPMENT lifecycle statement, the exact-mirror-of-composition structure, RM demographic package + SM I_DEMOGRAPHIC_SERVICE/I_PARTY grounding, and the total CNF/Robot vacuum
+description: Where the ITS-REST 1.1.0 Demographic API (party CRUD x5 subtypes, versioned_party family, demographic contribution) requirements live — the DEVELOPMENT lifecycle statement, the exact-mirror-of-composition structure, RM demographic package + SM I_DEMOGRAPHIC_SERVICE/I_PARTY reference text, and the total CNF/Robot vacuum
 metadata:
   type: reference
 ---
@@ -83,7 +83,7 @@ transfers verbatim; only the deltas below are demographic-specific.
 - BASE `org.openehr.base.base_types.party_ref.adoc` `Type_validity` enumerates
   PERSON|ORGANISATION|GROUP|AGENT|ROLE|PARTY|ACTOR.
 
-## SM grounding
+## SM reference text (not an authority)
 `SM/docs/openehr_platform/master06-demographic_service.adoc` includes
 `UML/classes/{i_demographic_service,i_party,i_party_relationship,uv_party,
 uv_party_relationship}.adoc`. `create_party`/`update_party`/

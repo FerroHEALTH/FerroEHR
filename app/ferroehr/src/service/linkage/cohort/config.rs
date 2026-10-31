@@ -6,7 +6,7 @@
 //!
 //! **No openEHR spec governs this — our own design/extension.** openEHR defines
 //! no cross-domain cohort query: AQL runs over the clinical domain and knows
-//! nothing of the demographic one, and the SM has no linkage component at all.
+//! nothing of the demographic one.
 //! What this section states is which demographic leaves a deployment is willing
 //! to have a cohort selected on, named by the archetype and at-code that carry
 //! them — because that is a deployment fact about the archetypes in use, never

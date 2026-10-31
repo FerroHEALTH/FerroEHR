@@ -453,10 +453,9 @@ pub(crate) fn party_proxy(committer: &Value) -> Result<PartyProxy, ServiceError>
 /// commit audit must state.
 ///
 /// ITS-REST `specifications/schemas/common/UpdateAudit.yaml` lists `committer`
-/// under `required` (inherited by `UpdateAttestation.yaml` through `allOf`), SM
-/// `UML/classes/update_audit.adoc` types it 1..1, and SM
-/// `openehr_platform/master03-common_package.adoc` §Version Update Semantics
-/// names only `time_committed` and `system_id` as server-generated. A missing
+/// under `required` (inherited by `UpdateAttestation.yaml` through `allOf`),
+/// and the schema leaves only `time_committed` and `system_id` to the server.
+/// A missing
 /// one (absent or `null`), or one that does not decode as the canonical
 /// `PARTY_PROXY` its `UPartyProxy.yaml` schema describes (a string, an empty
 /// object), is therefore a body that does not match its schema, the

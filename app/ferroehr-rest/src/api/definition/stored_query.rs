@@ -10,8 +10,8 @@
 //! `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
 //!
 //! Queries route through the wire-shaped `DefinitionAdapter`
-//! (`query_list`/`query_version_get`/`query_store`) — the SM
-//! `DefinitionQueryService` exchanges `QUERY_DESCRIPTOR`s, while the wire
+//! (`query_list`/`query_version_get`/`query_store`) — the native query store
+//! exchanges `QUERY_DESCRIPTOR`s, while the wire
 //! returns/accepts the ITS-REST `StoredQuery` shapes. A store success is
 //! `200 OK` (not `204`) with a `Location` for the stored resource
 //! (`responses/200_StoredQuery_stored.yaml` + `headers/Location_Query.yaml`).

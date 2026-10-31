@@ -10,8 +10,8 @@
 //! (`docs/law/eu/ehds/text.html`, recital 10). A deployment that enables
 //! `[access_delay]` holds new compositions of the configured categories at
 //! creation; these routes let a health professional hold a composition,
-//! release it early, and read the register. No openEHR ITS-REST operation and
-//! no SM interface governs any of it.
+//! release it early, and read the register. No openEHR ITS-REST operation
+//! governs any of it.
 //!
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
 //! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate

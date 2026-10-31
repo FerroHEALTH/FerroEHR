@@ -32,7 +32,7 @@ use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 const IDENTIFIER_CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2";
 
@@ -172,7 +172,7 @@ async fn run(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> Vec<
         .clone()
 }
 
-async fn refuse(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> SmError {
+async fn refuse(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> StatusError {
     svc.execute_ad_hoc_query(aql.to_owned(), request)
         .await
         .expect_err("the query must be refused")
@@ -400,7 +400,7 @@ async fn unserved_demographic_constructs_are_refused() {
         ),
     ] {
         let err = refuse(&svc, aql, AqlQueryRequest::default()).await;
-        assert_eq!(err.status, CallStatusType::PreconditionViolation, "{aql}");
+        assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{aql}");
         assert!(
             err.message.contains(names),
             "the refusal of {aql} names {names}: {}",
@@ -419,7 +419,7 @@ async fn unserved_demographic_constructs_are_refused() {
         },
     )
     .await;
-    assert_eq!(err.status, CallStatusType::PreconditionViolation);
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
     assert!(err.message.contains("ehr_id"), "{}", err.message);
 
     // A clinical query does not read the party domain.
@@ -537,7 +537,7 @@ async fn a_party_joins_to_the_content_of_its_ehr() {
         ),
     ] {
         let err = refuse(&svc, aql, AqlQueryRequest::default()).await;
-        assert_eq!(err.status, CallStatusType::PreconditionViolation, "{aql}");
+        assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{aql}");
         assert!(err.message.contains(names), "{aql}: {}", err.message);
     }
 }

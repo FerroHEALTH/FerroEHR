@@ -276,10 +276,8 @@ fn accepted_template_id(body: &str) -> String {
 ///
 /// The ADL2 store's templates are removed through the ARTEFACT resource, not
 /// through the Admin API's `admin/template/{template_id}` (which addresses the
-/// ADL 1.4 store alone): the route is the CDR's own extension realizing SM
-/// `I_DEFINITION_ADL2.delete_artefact`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_definition_adl2.adoc`), whose
-/// `artefact_does_not_exist` error is the `404` — which is also the answer for
+/// ADL 1.4 store alone): the route is the CDR's own extension, whose unknown
+/// artefact is the `404` — which is also the answer for
 /// a malformed HRID, since the store key is opaque. A template-kind artefact
 /// that committed versions still reference is refused `409` with the
 /// referencing count in the diagnostic, and that text surfaces verbatim

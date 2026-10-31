@@ -3,11 +3,10 @@
 
 //! The ADMIN **legal marks** wire — **our own extension**.
 //!
-//! No openEHR ITS-REST operation and no SM interface governs any route here.
+//! No openEHR ITS-REST operation governs any route here.
 //! The released Admin API is two EHR deletes
-//! (`docs/specs/openehr/ITS-REST/specifications/admin.openapi.yaml`), and the
-//! SM's admin interfaces are the statistics, archive and dump/load calls; none
-//! of them mentions restriction of processing, an objection to research, or a
+//! (`docs/specs/openehr/ITS-REST/specifications/admin.openapi.yaml`), and it
+//! never mentions restriction of processing, an objection to research, or a
 //! retention period. The RM is equally silent, and deliberately so: the one
 //! flag that looks like a fit, `EHR_STATUS.is_queryable`, limits population
 //! queries and nothing else (RM ehr `master04-ehr_package.adoc` §EHR Status),

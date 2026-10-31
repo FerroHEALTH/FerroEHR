@@ -170,7 +170,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
         },
         authn::middleware,
     ));
-    // Always installed: the layer early-returns when the SM `SystemLog` reports
+    // Always installed: the layer early-returns when the `SystemLog` reports
     // auditing off, so the no-audit case costs one check per request.
     let api = api.layer(from_fn_with_state(
         state.clone(),

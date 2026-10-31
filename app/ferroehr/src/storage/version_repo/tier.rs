@@ -3,10 +3,8 @@
 
 //! The cold archival storage tier: the move and its reverse.
 //!
-//! No openEHR spec governs storage tiering — our own design/extension. The SM
-//! operation it realizes is `I_ADMIN_ARCHIVE`
-//! (`docs/specs/openehr/SM/docs/UML/classes/i_admin_archive.adoc`: "Move
-//! selected EHRs to archival storage").
+//! No openEHR spec governs storage tiering — our own design/extension. It
+//! moves selected EHRs and parties to archival storage and back.
 //!
 //! The tier is a PARTITION, not a second set of relations: `version`, `node`
 //! and `vo_attestation` are each `PARTITION BY LIST (tier)` with a `hot` and a
