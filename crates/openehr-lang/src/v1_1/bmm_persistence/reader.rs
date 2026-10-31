@@ -205,8 +205,8 @@ pub(super) fn read_schema_tree(root: &OdinValue) -> Result<PBmmSchema, PBmmReadE
         archetype_visualise_descendants_of,
         bmm_version,
         includes,
-        primitive_types: present(primitive_types),
-        class_definitions: present(class_definitions),
+        primitive_types: (!primitive_types.is_empty()).then_some(primitive_types),
+        class_definitions: (!class_definitions.is_empty()).then_some(class_definitions),
     })
 }
 
@@ -577,6 +577,26 @@ fn keyed_entries<'a>(
     }
 }
 
+/// The keyed attribute `name` read entry by entry: `read` takes each entry's
+/// path, key and value. `None` when the attribute is absent.
+fn keyed_map<V>(
+    block: &mut Block<'_>,
+    name: &'static str,
+    mut read: impl FnMut(&str, &str, &OdinValue) -> Result<V, PBmmReadError>,
+) -> Result<Option<BTreeMap<String, V>>, PBmmReadError> {
+    let path = block.member_path(name);
+    let Some(value) = block.take(name) else {
+        return Ok(None);
+    };
+    let mut out = BTreeMap::new();
+    for (key, entry) in keyed_entries(&path, value)? {
+        let key = key_text(key);
+        let read_entry = read(&join_path(&path, &key), &key, entry)?;
+        out.insert(key, read_entry);
+    }
+    Ok(Some(out))
+}
+
 /// An ODIN range as an `Interval<Integer>`.
 ///
 /// A `None` endpoint is unbounded on that side (the representation
@@ -752,17 +772,18 @@ fn read_class_list(
     name: &'static str,
     schema_id: &str,
     uid: &mut i32,
-) -> Result<Vec<PBmmClass>, PBmmReadError> {
+) -> Result<BTreeMap<String, PBmmClass>, PBmmReadError> {
     let path = block.member_path(name);
     let Some(value) = block.take(name) else {
-        return Ok(Vec::new());
+        return Ok(BTreeMap::new());
     };
-    let mut out = Vec::new();
+    let mut out = BTreeMap::new();
     for (key, entry) in keyed_entries(&path, value)? {
         let key = key_text(key);
         let entry_path = join_path(&path, &key);
         *uid = uid.saturating_add(1);
-        out.push(read_class(&entry_path, &key, entry, schema_id, *uid)?);
+        let class = read_class(&entry_path, &key, entry, schema_id, *uid)?;
+        out.insert(key, class);
     }
     Ok(out)
 }
@@ -789,14 +810,14 @@ struct ClassParts {
     is_abstract: Option<bool>,
     /// `P_BMM_CLASS.is_override`.
     is_override: Option<bool>,
-    /// `P_BMM_CLASS.generic_parameter_defs`.
-    generic_parameter_defs: Option<BTreeMap<String, PBmmGenericParameter>>,
+    /// `P_BMM_CLASS.generic_parameter_defs`, in declaration order.
+    generic_parameter_defs: Option<IndexMap<String, PBmmGenericParameter>>,
     /// `P_BMM_CLASS.source_schema_id`, stamped by the reader.
     source_schema_id: String,
     /// `P_BMM_CLASS.uid`, stamped by the reader.
     uid: i32,
-    /// `P_BMM_CLASS.ancestor_defs` (optional container).
-    ancestor_defs: Option<Vec<PBmmGenericType>>,
+    /// `P_BMM_CLASS.ancestor_defs`, keyed by type signature.
+    ancestor_defs: Option<BTreeMap<String, PBmmBaseType>>,
 }
 
 /// The enumeration-only attributes of `P_BMM_ENUMERATION`.
@@ -899,7 +920,7 @@ fn read_class_parts(
         is_abstract: block.optional_bool("is_abstract")?,
         is_override: block.optional_bool("is_override")?,
         generic_parameter_defs: read_generic_parameter_defs(block)?,
-        ancestor_defs: present(read_ancestor_defs(block)?),
+        ancestor_defs: read_ancestor_defs(block)?,
         source_schema_id: schema_id.to_owned(),
         uid,
         name,
@@ -1013,15 +1034,18 @@ fn enumeration_string(parts: ClassParts, items: EnumerationParts) -> PBmmEnumera
 ///
 /// `master04-syntax.adoc` §Generic Classes: "the usual ODIN keyed hash
 /// structure is used with each member being keyed by a generic parameter name".
+/// The document order is kept: it is "the order of the owning class's formal
+/// generic parameter declarations" every actual parameter list follows
+/// (`…p_bmm_generic_type.adoc` §Attributes).
 fn read_generic_parameter_defs(
     block: &mut Block<'_>,
-) -> Result<Option<BTreeMap<String, PBmmGenericParameter>>, PBmmReadError> {
+) -> Result<Option<IndexMap<String, PBmmGenericParameter>>, PBmmReadError> {
     let path = block.member_path("generic_parameter_defs");
     let Some(value) = block.take("generic_parameter_defs") else {
         return Ok(None);
     };
     let empty = IndexMap::new();
-    let mut out = BTreeMap::new();
+    let mut out = IndexMap::new();
     for (key, entry) in keyed_entries(&path, value)? {
         let key = key_text(key);
         let entry_path = join_path(&path, &key);
@@ -1045,23 +1069,18 @@ fn read_generic_parameter_defs(
 
 /// Reads a class's `ancestor_defs`.
 ///
-/// `P_BMM_CLASS.ancestor_defs` is `List<P_BMM_GENERIC_TYPE>` (class doc
-/// §Attributes) and `master04-syntax.adoc` §Inheritance uses it only "In the
-/// case of generic inheritance", where "the ancestors are generic types"; the
-/// keys are the rendered generic type signatures
-/// (`["GENERIC_PARENT<T,SUPPLIER_B>"]`), not names, so they are not matched
-/// against a `name` attribute.
-fn read_ancestor_defs(block: &mut Block<'_>) -> Result<Vec<PBmmGenericType>, PBmmReadError> {
-    let path = block.member_path("ancestor_defs");
-    let Some(value) = block.take("ancestor_defs") else {
-        return Ok(Vec::new());
-    };
-    let mut out = Vec::new();
-    for (key, entry) in keyed_entries(&path, value)? {
-        let entry_path = join_path(&path, &key_text(key));
-        out.push(read_generic_type(&entry_path, entry)?);
-    }
-    Ok(out)
+/// `P_BMM_CLASS.ancestor_defs` is `Hash<String, P_BMM_BASE_TYPE>`, "keyed by
+/// type signature, e.g. `GENERIC_PARENT<T,SUPPLIER_B>`", listing a non-generic
+/// ancestor of the same class "as a `P_BMM_SIMPLE_TYPE`" (class doc
+/// §Attributes; `master04-syntax.adoc` §Inheritance). The keys are signatures,
+/// not names, so they are not matched against a `name` attribute.
+fn read_ancestor_defs(
+    block: &mut Block<'_>,
+) -> Result<Option<BTreeMap<String, PBmmBaseType>>, PBmmReadError> {
+    let defs = keyed_map(block, "ancestor_defs", |path, _, entry| {
+        read_base_type(path, entry)
+    })?;
+    Ok(defs.filter(|defs| !defs.is_empty()))
 }
 
 /// Reads a class's `constants`.
@@ -1072,32 +1091,21 @@ fn read_ancestor_defs(block: &mut Block<'_>) -> Result<Vec<PBmmGenericType>, PBm
 fn read_constants(
     block: &mut Block<'_>,
 ) -> Result<Option<BTreeMap<String, PBmmConstant>>, PBmmReadError> {
-    let path = block.member_path("constants");
-    let Some(value) = block.take("constants") else {
-        return Ok(None);
-    };
     let empty = IndexMap::new();
-    let mut out = BTreeMap::new();
-    for (key, entry) in keyed_entries(&path, value)? {
-        let key = key_text(key);
-        let entry_path = join_path(&path, &key);
-        let mut entry_block = Block::open(&entry_path, entry, &empty)?;
-        let name = read_name(&mut entry_block, &key)?;
+    keyed_map(block, "constants", |entry_path, key, entry| {
+        let mut entry_block = Block::open(entry_path, entry, &empty)?;
+        let name = read_name(&mut entry_block, key)?;
         let documentation = entry_block.optional_string("documentation")?;
         let r#type = entry_block.required_string("type")?;
         let value = entry_block.literal_text("value")?;
         entry_block.finish(&[])?;
-        out.insert(
-            key,
-            PBmmConstant {
-                documentation,
-                name,
-                r#type,
-                value,
-            },
-        );
-    }
-    Ok(Some(out))
+        Ok(PBmmConstant {
+            documentation,
+            name,
+            r#type,
+            value,
+        })
+    })
 }
 
 /// Reads a class's `functions`.
@@ -1110,17 +1118,10 @@ fn read_constants(
 fn read_functions(
     block: &mut Block<'_>,
 ) -> Result<Option<BTreeMap<String, PBmmFunction>>, PBmmReadError> {
-    let path = block.member_path("functions");
-    let Some(value) = block.take("functions") else {
-        return Ok(None);
-    };
     let empty = IndexMap::new();
-    let mut out = BTreeMap::new();
-    for (key, entry) in keyed_entries(&path, value)? {
-        let key = key_text(key);
-        let entry_path = join_path(&path, &key);
-        let mut entry_block = Block::open(&entry_path, entry, &empty)?;
-        let name = read_name(&mut entry_block, &key)?;
+    keyed_map(block, "functions", |entry_path, key, entry| {
+        let mut entry_block = Block::open(entry_path, entry, &empty)?;
+        let name = read_name(&mut entry_block, key)?;
         let documentation = entry_block.optional_string("documentation")?;
         let aliases = read_aliases(&mut entry_block)?;
         let is_abstract = entry_block.optional_bool("is_abstract")?;
@@ -1134,22 +1135,18 @@ fn read_functions(
         };
         let is_nullable = entry_block.optional_bool("is_nullable")?;
         entry_block.finish(&[])?;
-        out.insert(
-            key,
-            PBmmFunction {
-                documentation,
-                name,
-                aliases,
-                is_abstract,
-                parameters,
-                pre_conditions,
-                post_conditions,
-                result,
-                is_nullable,
-            },
-        );
-    }
-    Ok(Some(out))
+        Ok(PBmmFunction {
+            documentation,
+            name,
+            aliases,
+            is_abstract,
+            parameters,
+            pre_conditions,
+            post_conditions,
+            result,
+            is_nullable,
+        })
+    })
 }
 
 /// Reads a function's `aliases`.
@@ -1192,17 +1189,7 @@ fn read_aliases(block: &mut Block<'_>) -> Result<Option<BTreeMap<String, String>
 fn read_parameters(
     block: &mut Block<'_>,
 ) -> Result<Option<BTreeMap<String, PBmmFunctionParameter>>, PBmmReadError> {
-    let path = block.member_path("parameters");
-    let Some(value) = block.take("parameters") else {
-        return Ok(None);
-    };
-    let mut out = BTreeMap::new();
-    for (key, entry) in keyed_entries(&path, value)? {
-        let key = key_text(key);
-        let entry_path = join_path(&path, &key);
-        out.insert(key.clone(), read_parameter(&entry_path, &key, entry)?);
-    }
-    Ok(Some(out))
+    keyed_map(block, "parameters", read_parameter)
 }
 
 /// Reads one function parameter.
@@ -1308,17 +1295,7 @@ fn read_required_container_type(block: &mut Block<'_>) -> Result<PBmmContainerTy
 fn read_properties(
     block: &mut Block<'_>,
 ) -> Result<Option<BTreeMap<String, PBmmProperty>>, PBmmReadError> {
-    let path = block.member_path("properties");
-    let Some(value) = block.take("properties") else {
-        return Ok(None);
-    };
-    let mut out = BTreeMap::new();
-    for (key, entry) in keyed_entries(&path, value)? {
-        let key = key_text(key);
-        let entry_path = join_path(&path, &key);
-        out.insert(key.clone(), read_property(&entry_path, &key, entry)?);
-    }
-    Ok(Some(out))
+    keyed_map(block, "properties", read_property)
 }
 
 /// The attributes every `P_BMM_PROPERTY` leaf carries.
@@ -1652,9 +1629,9 @@ fn read_open_type(path: &str, value: &OdinValue) -> Result<PBmmOpenType, PBmmRea
 /// `master04-syntax.adoc` §Generic Classes: "`DV_INTERVAL` is the `_root_type_`";
 /// "within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of
 /// string types; use `_generic_parameter_defs_` for a list of complex type
-/// references" — the latter "a logical list in general, since there can always
-/// be more than one generic parameter", written as an ODIN keyed hash whose
-/// document order is the declaration order the class doc requires.
+/// references", keyed "by formal generic parameter name" and kept in document
+/// order, which "must match the order of the owning class's formal generic
+/// parameter declarations" (`…p_bmm_generic_type.adoc` §Attributes).
 fn read_generic_type(path: &str, value: &OdinValue) -> Result<PBmmGenericType, PBmmReadError> {
     let body = expect_marker(path, value, "P_BMM_GENERIC_TYPE", &["P_BMM_GENERIC_TYPE"])?;
     let empty = IndexMap::new();
@@ -1664,8 +1641,10 @@ fn read_generic_type(path: &str, value: &OdinValue) -> Result<PBmmGenericType, P
     let defs_path = block.member_path("generic_parameter_defs");
     if let Some(defs) = block.take("generic_parameter_defs") {
         for (key, entry) in keyed_entries(&defs_path, defs)? {
-            let entry_path = join_path(&defs_path, &key_text(key));
-            generic_parameter_defs.push(read_type(&entry_path, entry)?);
+            let key = key_text(key);
+            let entry_path = join_path(&defs_path, &key);
+            let def = read_type(&entry_path, entry)?;
+            generic_parameter_defs.insert(key, def);
         }
     }
     let value_constraint = block.optional_string("value_constraint")?;
@@ -1674,7 +1653,8 @@ fn read_generic_type(path: &str, value: &OdinValue) -> Result<PBmmGenericType, P
         bmm_type: None,
         value_constraint,
         root_type,
-        generic_parameter_defs,
+        generic_parameter_defs: (!generic_parameter_defs.is_empty())
+            .then_some(generic_parameter_defs),
         generic_parameters: present(generic_parameters),
     })
 }
@@ -1688,29 +1668,31 @@ fn read_generic_type(path: &str, value: &OdinValue) -> Result<PBmmGenericType, P
 /// NOTE: the vendored openEHR AM schemas also write an INTEGER-KEYED list
 /// mixing plain names with type-marked blocks — no openEHR spec governs that
 /// positional form — and it is read entirely into `generic_parameter_defs`
-/// (bare names promoted to `P_BMM_SIMPLE_TYPE`), the only shape preserving
-/// the declaration ORDER the class doc requires.
+/// under its integer keys (bare names promoted to `P_BMM_SIMPLE_TYPE`), which
+/// [`PBmmGenericType::bind_parameters`] reads as formal positions.
 fn read_generic_parameters(
     block: &mut Block<'_>,
-) -> Result<(Vec<String>, Vec<PBmmType>), PBmmReadError> {
+) -> Result<(Vec<String>, IndexMap<String, PBmmType>), PBmmReadError> {
     let path = block.member_path("generic_parameters");
     let Some(value) = block.take("generic_parameters") else {
-        return Ok((Vec::new(), Vec::new()));
+        return Ok((Vec::new(), IndexMap::new()));
     };
     if !matches!(value, OdinValue::KeyedList(_)) {
-        return Ok((string_list_of(&path, value)?, Vec::new()));
+        return Ok((string_list_of(&path, value)?, IndexMap::new()));
     }
-    let mut defs = Vec::new();
+    let mut defs = IndexMap::new();
     for (key, entry) in keyed_entries(&path, value)? {
-        let entry_path = join_path(&path, &key_text(key));
-        match entry {
-            OdinValue::String(name) => defs.push(PBmmType::PBmmSimpleType(PBmmSimpleType {
+        let key = key_text(key);
+        let entry_path = join_path(&path, &key);
+        let def = match entry {
+            OdinValue::String(name) => PBmmType::PBmmSimpleType(PBmmSimpleType {
                 bmm_type: None,
                 value_constraint: None,
                 r#type: name.clone(),
-            })),
-            structured => defs.push(read_type(&entry_path, structured)?),
-        }
+            }),
+            structured => read_type(&entry_path, structured)?,
+        };
+        defs.insert(key, def);
     }
     Ok((Vec::new(), defs))
 }
@@ -1815,12 +1797,14 @@ mod tests {
         clippy::panic_in_result_fn,
         reason = "the Book ch11 test shape: `?` propagates the read/resolve/model plumbing while the assertions ARE the test — an assertion panic is how these tests fail"
     )]
+    use std::collections::BTreeMap;
+
     use super::read_schema;
     use crate::v1_1::bmm_persistence::error::PBmmReadError;
+    use crate::v1_1::bmm_persistence::p_bmm_base_type::PBmmBaseType;
     use crate::v1_1::bmm_persistence::p_bmm_class::PBmmClass;
     use crate::v1_1::bmm_persistence::p_bmm_container_property::PBmmContainerProperty;
     use crate::v1_1::bmm_persistence::p_bmm_container_type::PBmmContainerType;
-    use crate::v1_1::bmm_persistence::p_bmm_generic_type::PBmmGenericType;
     use crate::v1_1::bmm_persistence::p_bmm_indexed_container_type::PBmmIndexedContainerType;
     use crate::v1_1::bmm_persistence::p_bmm_property::PBmmProperty;
     use crate::v1_1::bmm_persistence::p_bmm_schema::PBmmSchema;
@@ -1846,7 +1830,7 @@ mod tests {
         schema
             .class_definitions
             .iter()
-            .flatten()
+            .flat_map(BTreeMap::values)
             .find(|class| class.name() == name)
             .expect("the fixture defines the class")
     }
@@ -2284,13 +2268,7 @@ mod tests {
                 .as_deref(),
             Some("BMM_CLASS")
         );
-        assert_eq!(
-            function
-                .parameters
-                .as_ref()
-                .map(std::collections::BTreeMap::len),
-            Some(1)
-        );
+        assert_eq!(function.parameters.as_ref().map(BTreeMap::len), Some(1));
 
         let constants = class(&schema, "OPENEHR_DEFINITIONS")
             .constants()
@@ -2382,46 +2360,17 @@ mod tests {
         )?;
         let child = class(&schema, "GENERIC_CHILD_OPEN_T");
         assert!(child.is_generic());
-        let defs = child.ancestor_defs();
+        let defs = child
+            .ancestor_defs()
+            .expect("the class declares ancestor_defs");
         assert_eq!(defs.len(), 1);
         let signature = defs
-            .first()
-            .map(PBmmGenericType::as_type_string)
+            .values()
+            .next()
+            .map(PBmmBaseType::as_type_string)
             .expect("the ancestor_defs entry reads");
         assert_eq!(signature, "GENERIC_PARENT<T,SUPPLIER_B>");
         Ok(())
-    }
-
-    #[test]
-    fn an_ancestor_def_that_is_not_a_generic_type_is_refused() {
-        // `P_BMM_CLASS.ancestor_defs` is List<P_BMM_GENERIC_TYPE> (class doc
-        // §Attributes) and §Inheritance uses it only for generic ancestors, so a
-        // (P_BMM_SIMPLE_TYPE) entry — the shape of the vendored fixture
-        // `tests/vendor/bmm/…/persistence/validation/ancestor_def_doesnt_exist.bmm`
-        // — states no `root_type` and cannot be materialised.
-        let error = read(
-            r#"
-            class_definitions = <
-                ["ParentType1"] = <
-                    name = <"ParentType1">
-                    ancestor_defs = <
-                        ["UNKNOWN"] = (P_BMM_SIMPLE_TYPE) <
-                            type = <"UNKNOWN">
-                        >
-                    >
-                >
-            >
-        "#,
-        )
-        .expect_err("ancestor_defs admits only P_BMM_GENERIC_TYPE");
-        assert_eq!(
-            error,
-            PBmmReadError::UnexpectedTypeMarker {
-                path: "class_definitions/ParentType1/ancestor_defs/UNKNOWN".to_owned(),
-                marker: "P_BMM_SIMPLE_TYPE".to_owned(),
-                expected: "P_BMM_GENERIC_TYPE",
-            }
-        );
     }
 
     #[test]
@@ -2515,12 +2464,12 @@ mod tests {
             >
         "#,
         )?;
-        assert_eq!(schema.primitive_types.as_ref().map_or(0, Vec::len), 2);
+        assert_eq!(schema.primitive_types.as_ref().map_or(0, BTreeMap::len), 2);
         assert!(
             schema
                 .primitive_types
                 .iter()
-                .flatten()
+                .flat_map(BTreeMap::values)
                 .all(PBmmClass::is_abstract)
         );
         // uid numbering runs over primitive_types first, then class_definitions.
@@ -2528,7 +2477,7 @@ mod tests {
             schema
                 .primitive_types
                 .iter()
-                .flatten()
+                .flat_map(BTreeMap::values)
                 .map(PBmmClass::uid)
                 .collect::<Vec<Option<i32>>>(),
             [Some(1), Some(2)]

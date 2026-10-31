@@ -26,12 +26,14 @@
 
 use std::collections::BTreeMap;
 
+use indexmap::IndexMap;
+
+use crate::v1_1::bmm_persistence::p_bmm_base_type::PBmmBaseType;
 use crate::v1_1::bmm_persistence::p_bmm_class::PBmmClass;
 use crate::v1_1::bmm_persistence::p_bmm_constant::PBmmConstant;
 use crate::v1_1::bmm_persistence::p_bmm_enumeration::PBmmEnumeration;
 use crate::v1_1::bmm_persistence::p_bmm_function::PBmmFunction;
 use crate::v1_1::bmm_persistence::p_bmm_generic_parameter::PBmmGenericParameter;
-use crate::v1_1::bmm_persistence::p_bmm_generic_type::PBmmGenericType;
 use crate::v1_1::bmm_persistence::p_bmm_property::PBmmProperty;
 
 /// Reads an attribute EVERY leaf of the slot declares — the three
@@ -93,16 +95,46 @@ impl PBmmClass {
         )
     }
 
-    /// `P_BMM_CLASS.ancestor_defs`: "List of structured inheritance ancestors,
-    /// used only in the case of generic inheritance" (class doc §Attributes) —
-    /// empty for an interface.
+    /// `P_BMM_CLASS.ancestor_defs`: "Structured inheritance ancestors, keyed
+    /// by type signature … Used instead of `_ancestors_` when the class has a
+    /// generic ancestor; any non-generic ancestor of the same class is then
+    /// also listed here, as a `P_BMM_SIMPLE_TYPE`" (class doc §Attributes) —
+    /// `None` for an interface.
     #[must_use]
-    pub fn ancestor_defs(&self) -> &[PBmmGenericType] {
-        class_leaf!(
-            self,
-            |leaf| leaf.ancestor_defs.as_deref().unwrap_or_default(),
-            &[]
-        )
+    pub fn ancestor_defs(&self) -> Option<&BTreeMap<String, PBmmBaseType>> {
+        class_leaf!(self, |leaf| leaf.ancestor_defs.as_ref(), None)
+    }
+
+    /// Every inheritance parent a persisted class names, from `ancestors` and from
+    /// each `ancestor_defs` entry, once each in that order.
+    ///
+    /// `ancestor_defs` holds every ancestor of a class with a generic one, "any
+    /// non-generic ancestor of the same class is then also listed here, as a
+    /// `P_BMM_SIMPLE_TYPE`" (`…p_bmm_class.adoc` §Attributes), so an entry of
+    /// each `P_BMM_BASE_TYPE` form names a parent.
+    ///
+    /// NOTE: the v2 `BMM_CLASS.ancestors` is a map of CLASSES
+    /// (`org.openehr.lang.bmm.bmm_class.adoc` §Attributes), so a generic
+    /// ancestor's parameter binding has nowhere to land here — only the root
+    /// class is carried, the binding staying readable in `P_BMM_CLASS.
+    /// ancestor_defs`; the v3 generation types `ancestors` as TYPES
+    /// (`…bmm3.bmm_class.adoc`) and [`crate::v1_1::bmm_persistence::create_bmm3_model`] carries the binding into
+    /// it — a boundary of this transform's target generation, not the pipeline.
+    #[must_use]
+    pub fn ancestor_names(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        let defs = self.ancestor_defs().into_iter().flat_map(BTreeMap::values);
+        for name in self
+            .ancestors()
+            .iter()
+            .map(String::as_str)
+            .chain(defs.map(PBmmBaseType::base_name))
+        {
+            if !out.iter().any(|seen| seen == name) {
+                out.push(name.to_owned());
+            }
+        }
+        out
     }
 
     /// `P_BMM_CLASS.properties`: "List of attributes defined in this class",
@@ -138,10 +170,11 @@ impl PBmmClass {
         class_leaf!(self, |leaf| leaf.invariants.as_ref(), None)
     }
 
-    /// `P_BMM_CLASS.generic_parameter_defs`: "List of generic parameter
-    /// definitions" (class doc §Attributes) — `None` for an interface.
+    /// `P_BMM_CLASS.generic_parameter_defs`: "Generic parameter definitions,
+    /// keyed by parameter name" (class doc §Attributes), in declaration order —
+    /// `None` for an interface.
     #[must_use]
-    pub fn generic_parameter_defs(&self) -> Option<&BTreeMap<String, PBmmGenericParameter>> {
+    pub fn generic_parameter_defs(&self) -> Option<&IndexMap<String, PBmmGenericParameter>> {
         class_leaf!(self, |leaf| leaf.generic_parameter_defs.as_ref(), None)
     }
 
@@ -225,6 +258,8 @@ impl PBmmClass {
 mod tests {
     use std::collections::BTreeMap;
 
+    use indexmap::IndexMap;
+
     use crate::v1_1::bmm_persistence::p_bmm_class::PBmmClass;
     use crate::v1_1::bmm_persistence::p_bmm_class::PBmmClassData;
     use crate::v1_1::bmm_persistence::p_bmm_generic_parameter::PBmmGenericParameter;
@@ -234,7 +269,7 @@ mod tests {
     /// parameter declarations.
     fn class(
         name: &str,
-        generic_parameter_defs: Option<BTreeMap<String, PBmmGenericParameter>>,
+        generic_parameter_defs: Option<IndexMap<String, PBmmGenericParameter>>,
     ) -> PBmmClass {
         PBmmClass::PBmmClass(PBmmClassData {
             documentation: None,
@@ -250,12 +285,12 @@ mod tests {
             source_schema_id: "openehr_test_1.0.0".to_owned(),
             bmm_class: None,
             uid: 1,
-            ancestor_defs: openehr_base::containers::present(Vec::new()),
+            ancestor_defs: None,
         })
     }
 
     /// The formal parameter `T` conforming to `Ordered`.
-    fn ordered_t() -> BTreeMap<String, PBmmGenericParameter> {
+    fn ordered_t() -> IndexMap<String, PBmmGenericParameter> {
         [(
             "T".to_owned(),
             PBmmGenericParameter {
@@ -279,10 +314,7 @@ mod tests {
         assert_eq!(class.source_schema_id(), Some("openehr_test_1.0.0"));
         assert_eq!(class.uid(), Some(1));
         assert_eq!(class.ancestors(), Vec::<String>::new());
-        assert_eq!(
-            class.ancestor_defs(),
-            Vec::<crate::v1_1::bmm_persistence::p_bmm_generic_type::PBmmGenericType>::new()
-        );
+        assert!(class.ancestor_defs().is_none());
         assert!(class.properties().is_none());
         assert!(class.functions().is_none());
         assert!(class.constants().is_none());
@@ -292,7 +324,7 @@ mod tests {
 
     #[test]
     fn is_generic_needs_at_least_one_formal_parameter() {
-        assert!(!class("Interval", Some(BTreeMap::new())).is_generic());
+        assert!(!class("Interval", Some(IndexMap::new())).is_generic());
         assert!(class("Interval", Some(ordered_t())).is_generic());
     }
 
@@ -318,10 +350,7 @@ mod tests {
         assert!(interface.functions().is_some());
         // An interface declares only functions and carries no state.
         assert_eq!(interface.ancestors(), Vec::<String>::new());
-        assert_eq!(
-            interface.ancestor_defs(),
-            Vec::<crate::v1_1::bmm_persistence::p_bmm_generic_type::PBmmGenericType>::new()
-        );
+        assert!(interface.ancestor_defs().is_none());
         assert!(interface.properties().is_none());
         assert!(interface.constants().is_none());
         assert!(interface.invariants().is_none());

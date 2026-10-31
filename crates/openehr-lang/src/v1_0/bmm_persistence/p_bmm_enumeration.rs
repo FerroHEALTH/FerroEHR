@@ -37,7 +37,7 @@ pub struct PBmmEnumerationData {
     /// True if this class definition overrides one found in an included schema.
     pub is_override: Option<bool>,
     /// List of generic parameter definitions. Persisted attribute.
-    pub generic_parameter_defs: Option<std::collections::BTreeMap<String, PBmmGenericParameter>>,
+    pub generic_parameter_defs: Option<indexmap::IndexMap<String, PBmmGenericParameter>>,
     /// Reference to original source schema defining this class.
     ///
     /// Set during `BMM_SCHEMA` materialise. Useful for GUI tools to enable user to edit the schema file containing a given class (i.e. taking into account that a class may be in any of the schemas in a schema inclusion hierarchy).

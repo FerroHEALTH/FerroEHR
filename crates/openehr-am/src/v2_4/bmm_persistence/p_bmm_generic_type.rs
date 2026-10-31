@@ -19,10 +19,12 @@ pub struct PBmmGenericType {
     // inherited: P_BMM_BASE_TYPE
     /// The `value_constraint` attribute of openEHR `P_BMM_BASE_TYPE` (the vendored BMM carries no documentation for it).
     pub value_constraint: Option<String>,
-    /// Root type of this generic type, e.g. `Interval` in `Interval<Integer>`.
+    /// Root type of this generic type, e.g. `Interval` in `Interval<Integer>`. Persisted attribute.
     pub root_type: String,
-    /// Generic parameters of the root_type in this type specifier if non-simple types. The order must match the order of the owning class's formal generic parameter declarations. Persistent attribute.
-    pub generic_parameter_defs: Vec<PBmmType>,
+    /// Generic parameters of the `_root_type_` in this type specifier, if non-simple types, keyed by formal generic parameter name, e.g. `T`.
+    ///
+    /// The order must match the order of the owning class's formal generic parameter declarations. Persisted attribute.
+    pub generic_parameter_defs: Option<indexmap::IndexMap<String, PBmmType>>,
     /// Generic parameters of the `_root_type_` in this type specifier, if simple types. The order must match the order of the owning class's formal generic parameter declarations. Persistent attribute.
     pub generic_parameters: Option<Vec<String>>,
 }

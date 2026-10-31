@@ -136,10 +136,11 @@ impl BmmClass {
     }
 
     /// `BMM_GENERIC_CLASS.generic_parameters`: the formal generic parameter
-    /// definitions, keyed by parameter name — `Some` only for a generic class
+    /// definitions, keyed by parameter name in declaration order — `Some` only
+    /// for a generic class
     /// (`org.openehr.lang.bmm.bmm_generic_class.adoc` §Attributes).
     #[must_use]
-    pub fn generic_parameters(&self) -> Option<&BTreeMap<String, BmmGenericParameter>> {
+    pub fn generic_parameters(&self) -> Option<&indexmap::IndexMap<String, BmmGenericParameter>> {
         match self {
             Self::BmmGenericClass(c) => Some(&c.generic_parameters),
             Self::BmmEnumeration(_) | Self::BmmClass(_) => None,
@@ -209,7 +210,7 @@ impl BmmClass {
         for parameter in self
             .generic_parameters()
             .into_iter()
-            .flat_map(BTreeMap::values)
+            .flat_map(indexmap::IndexMap::values)
         {
             if let Some(constraint) = parameter.flattened_conforms_to_type() {
                 acc.insert(constraint.to_owned());
@@ -392,8 +393,6 @@ impl BmmClass {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-
     use crate::v1_1::bmm::core::bmm_class::BmmClass;
     use crate::v1_1::bmm::core::bmm_class::BmmClassData;
     use crate::v1_1::bmm::core::bmm_generic_class::BmmGenericClass;
@@ -654,7 +653,7 @@ mod tests {
         assert_eq!(parameters.keys().collect::<Vec<_>>(), ["T"]);
         assert_eq!(
             simple_class("ELEMENT", &[], &[]).generic_parameters(),
-            None::<&BTreeMap<String, BmmGenericParameter>>
+            None::<&indexmap::IndexMap<String, BmmGenericParameter>>
         );
     }
 }

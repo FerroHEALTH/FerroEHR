@@ -18,6 +18,7 @@
     reason = "integration-test fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
 )]
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use openehr_lang::v1_1::bmm_persistence::create_bmm3_model::create_bmm3_model_reporting;
@@ -139,8 +140,9 @@ const PINNED_SCHEMAS: &[&str] = &[
 /// [`UNPARSABLE`]. A change of input moves it too: the component-repo BASE
 /// 1.3.0 file replaces the typographic quotes of three invariants with ASCII
 /// ones and adds three invariants, all of which parse; SPECBASE-35 adds
-/// `ARCHETYPE_ID.Value_valid` (`value.is_valid`), which parses.
-const PARSING_ASSERTIONS: usize = 326;
+/// `ARCHETYPE_ID.Value_valid` (`value.is_valid`), which parses; SPECLANG-16
+/// adds `P_BMM_GENERIC_TYPE.Generic_parameters_valid`, which parses.
+const PARSING_ASSERTIONS: usize = 327;
 
 /// Every DISTINCT assertion string in the pinned schemas that the EL grammar
 /// refuses, adjudicated.
@@ -265,7 +267,7 @@ fn read_pinned(file: &str) -> PBmmSchema {
 /// post-conditions.
 fn assertion_strings(schema: &PBmmSchema) -> Vec<String> {
     let mut out = Vec::new();
-    for class in schema.class_definitions.iter().flatten() {
+    for class in schema.class_definitions.iter().flat_map(BTreeMap::values) {
         out.extend(
             class
                 .invariants()

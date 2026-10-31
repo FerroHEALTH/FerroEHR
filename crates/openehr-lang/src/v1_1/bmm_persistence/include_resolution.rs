@@ -131,7 +131,8 @@ enum ClassList {
     Definitions,
 }
 
-/// Appends every class of `incoming` the includer does not already define.
+/// Adds every class of `incoming` the includer does not already define, under
+/// its key.
 ///
 /// A class name is looked up across BOTH of the includer's lists, because
 /// `master04-syntax.adoc` §Classes for Primitive Types says primitive types
@@ -149,20 +150,21 @@ enum ClassList {
 /// ordinary class. The only thing an interface cannot do is RECORD the
 /// override flag — it declares no `is_override` attribute, so
 /// [`PBmmClass::set_is_override`] is a no-op for it (documented there).
-fn absorb_classes(includer: &mut PBmmSchema, incoming: Vec<PBmmClass>, list: ClassList) {
-    for class in incoming {
-        let name = class.name().to_owned();
-        if let Some(existing) = find_class_mut(includer, &name) {
+fn absorb_classes(
+    includer: &mut PBmmSchema,
+    incoming: BTreeMap<String, PBmmClass>,
+    list: ClassList,
+) {
+    for (key, class) in incoming {
+        if let Some(existing) = find_class_mut(includer, class.name()) {
             existing.set_is_override(true);
             continue;
         }
-        match list {
-            ClassList::Primitive => includer.primitive_types.get_or_insert_default().push(class),
-            ClassList::Definitions => includer
-                .class_definitions
-                .get_or_insert_default()
-                .push(class),
-        }
+        let target = match list {
+            ClassList::Primitive => &mut includer.primitive_types,
+            ClassList::Definitions => &mut includer.class_definitions,
+        };
+        target.get_or_insert_default().insert(key, class);
     }
 }
 
@@ -171,8 +173,13 @@ fn find_class_mut<'a>(schema: &'a mut PBmmSchema, name: &str) -> Option<&'a mut 
     schema
         .primitive_types
         .iter_mut()
-        .flatten()
-        .chain(schema.class_definitions.iter_mut().flatten())
+        .flat_map(BTreeMap::values_mut)
+        .chain(
+            schema
+                .class_definitions
+                .iter_mut()
+                .flat_map(BTreeMap::values_mut),
+        )
         .find(|class| class.name() == name)
 }
 
@@ -288,7 +295,7 @@ mod tests {
         let mut names: Vec<&str> = merged
             .class_definitions
             .iter()
-            .flatten()
+            .flat_map(BTreeMap::values)
             .map(PBmmClass::name)
             .collect();
         names.sort_unstable();
@@ -313,11 +320,14 @@ mod tests {
             &[("Any", "from the including schema")],
         ));
         let merged = resolve_includes(root, &loaded(vec![included]))?;
-        assert_eq!(merged.class_definitions.as_ref().map_or(0, Vec::len), 1);
+        assert_eq!(
+            merged.class_definitions.as_ref().map_or(0, BTreeMap::len),
+            1
+        );
         let class = merged
             .class_definitions
             .iter()
-            .flatten()
+            .flat_map(BTreeMap::values)
             .next()
             .expect("the surviving definition");
         assert_eq!(class.documentation(), Some("from the including schema"));
@@ -337,7 +347,7 @@ mod tests {
         let sources: BTreeMap<&str, Option<&str>> = merged
             .class_definitions
             .iter()
-            .flatten()
+            .flat_map(BTreeMap::values)
             .map(|class| (class.name(), class.source_schema_id()))
             .collect();
         assert_eq!(
@@ -405,7 +415,7 @@ mod tests {
         let mut names: Vec<&str> = merged
             .class_definitions
             .iter()
-            .flatten()
+            .flat_map(BTreeMap::values)
             .map(PBmmClass::name)
             .collect();
         names.sort_unstable();
@@ -413,7 +423,7 @@ mod tests {
         let surviving = merged
             .class_definitions
             .iter()
-            .flatten()
+            .flat_map(BTreeMap::values)
             .find(|class| class.name() == "TERMINOLOGY_ACCESS")
             .expect("the surviving definition");
         assert_eq!(surviving.documentation(), Some("from the including schema"));

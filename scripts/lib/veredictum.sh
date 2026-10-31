@@ -38,10 +38,10 @@
 # comment and its `image:`) together: the digest is the one `docker buildx
 # imagetools inspect` reports for the tag's index, and
 # scripts/checks/veredictum-action.sh fails while the three disagree (#4449).
-VEREDICTUM_VERSION="0.3.0"
+VEREDICTUM_VERSION="0.3.1"
 VEREDICTUM_REPO="https://github.com/Vernum-Projecten/Veredictum"
 # shellcheck disable=SC2034 # read by the scripts that source this file
-VEREDICTUM_IMAGE="ghcr.io/vernum-projecten/veredictum@sha256:64ab6ee89db9efa093630d65e6f878b1b62c66193129fd3128d49291e28b4d8c"
+VEREDICTUM_IMAGE="ghcr.io/vernum-projecten/veredictum@sha256:1f901f8de57abc7e5f5a5130eaaf49e530aba49ca82bb8cb7351233b65f0ca19"
 
 # The release the committed record under docs/conformance/ferroehr/ was
 # produced with. Its renderers (scripts/render/perf-assets.sh and
@@ -88,7 +88,7 @@ veredictum_bin() {
   if [[ "$reported" != "veredictum $version" ]] && [[ "$reported" != "veredictum $version "* ]]; then
     echo "==> Installing veredictum $version (cargo install, cached in $root)" >&2
     # Both sources build the same tagged release; the tag serves a release the
-    # registry does not carry (0.3.0 is not on crates.io).
+    # registry does not carry.
     cargo install veredictum --version "$version" --locked --root "$root" >&2 ||
       cargo install veredictum --git "$VEREDICTUM_REPO" --tag "v$version" \
         --locked --root "$root" >&2

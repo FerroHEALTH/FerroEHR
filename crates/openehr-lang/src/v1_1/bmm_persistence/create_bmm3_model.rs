@@ -63,6 +63,8 @@ use crate::v1_1::bmm_persistence::create_model::multiplicity_of;
 use crate::v1_1::bmm_persistence::create_model::property_context;
 use crate::v1_1::bmm_persistence::create_model::qualify;
 use crate::v1_1::bmm_persistence::error::PBmmReadError;
+use crate::v1_1::bmm_persistence::generic_binding::ActualParameter;
+use crate::v1_1::bmm_persistence::generic_binding::parameter_bindings;
 use crate::v1_1::bmm_persistence::p_bmm_base_type::PBmmBaseType;
 use crate::v1_1::bmm_persistence::p_bmm_class::PBmmClass;
 use crate::v1_1::bmm_persistence::p_bmm_constant::PBmmConstant;
@@ -567,7 +569,18 @@ fn build_ancestors(
     let mut out: BTreeMap<String, BmmModelType> = BTreeMap::new();
     // The structured generic ancestors first: each carries the substitution the
     // plain name list cannot express.
-    for def in persisted.ancestor_defs() {
+    // A simple (or open) `ancestor_defs` entry names its parent like an
+    // `ancestors` entry does (`…p_bmm_class.adoc` §Attributes).
+    let mut named: Vec<&str> = Vec::new();
+    for def in persisted
+        .ancestor_defs()
+        .into_iter()
+        .flat_map(BTreeMap::values)
+    {
+        let PBmmBaseType::PBmmGenericType(def) = def else {
+            named.push(def.base_name());
+            continue;
+        };
         let context = format!("class `{}` ancestor `{}`", persisted.name(), def.root_type);
         let entry = builder.entry(&context, &def.root_type)?;
         out.insert(
@@ -577,11 +590,12 @@ fn build_ancestors(
             )?),
         );
     }
-    for parent in persisted.ancestors() {
+    named.extend(persisted.ancestors().iter().map(String::as_str));
+    for parent in named {
         let entry = builder.classes.get(&parent.to_uppercase()).ok_or_else(|| {
             PBmmReadError::UnknownAncestor {
                 class: persisted.name().to_owned(),
-                ancestor: parent.clone(),
+                ancestor: parent.to_owned(),
             }
         })?;
         // Keyed by the ancestor's OWN name, so a name read back out of the map
@@ -684,52 +698,6 @@ fn synthesise_generic_properties(
             .extend(synthesised);
     }
     Ok(())
-}
-
-/// Pairs a generic ancestor's FORMAL parameter names with the types the
-/// descendant bound them to.
-///
-/// `BMM_GENERIC_TYPE.generic_parameters` is "the actual generic parameter
-/// types" as an ordered list while `BMM_GENERIC_CLASS.generic_parameters` is
-/// the formal declarations keyed by name
-/// (`org.openehr.lang.bmm3.bmm_generic_type.adoc` +
-/// `…bmm3.bmm_generic_class.adoc` §Attributes), so the two zip positionally.
-/// A binding that merely restates the formal parameter unchanged is dropped:
-/// substituting a parameter for itself synthesises nothing.
-fn parameter_bindings(generic: &BmmGenericType) -> BTreeMap<String, BmmUnitaryType> {
-    generic
-        .base_class
-        .generic_parameters
-        .iter()
-        .zip(generic.generic_parameters.iter())
-        .filter(|((name, formal), actual)| !is_unsubstituted(name, formal, actual))
-        .map(|((name, _), actual)| (name.clone(), actual.clone()))
-        .collect()
-}
-
-/// Whether `actual` restates the formal parameter unchanged — the same
-/// parameter name under the same conformance constraint.
-///
-/// A same-named parameter under a NARROWER constraint is a substitution, which
-/// is what makes `DV_INTERVAL<T:DV_ORDERED>` inheriting `Interval<T:Ordered>`
-/// synthesise (`master13-model_semantics.adoc` §Generic Inheritance: "the
-/// formal parameters of the inheriting class may further constrain any of the
-/// ancestor type's formal parameters"). The constraint is read through
-/// `BMM_PARAMETER_TYPE.flattened_conforms_to_type`
-/// (`org.openehr.lang.bmm3.bmm_parameter_type.adoc` §Functions), so an
-/// inherited precursor counts.
-fn is_unsubstituted(name: &str, formal: &BmmParameterType, actual: &BmmUnitaryType) -> bool {
-    let BmmUnitaryType::BmmParameterType(actual) = actual else {
-        return false;
-    };
-    actual.name.eq_ignore_ascii_case(name) && conformance_name(actual) == conformance_name(formal)
-}
-
-/// A formal parameter's flattened conformance-type name, if it declares one.
-fn conformance_name(parameter: &BmmParameterType) -> Option<String> {
-    parameter
-        .flattened_conforms_to_type()
-        .map(BmmEffectiveType::type_name)
 }
 
 /// One ancestor property re-typed under `bindings`, or `None` when its type
@@ -850,7 +818,7 @@ fn build_generic_parameters(
     builder: &Builder<'_>,
     persisted: &PBmmClass,
     visiting: &mut BTreeSet<String>,
-) -> Result<BTreeMap<String, BmmParameterType>, PBmmReadError> {
+) -> Result<indexmap::IndexMap<String, BmmParameterType>, PBmmReadError> {
     // Built at BOTH depths (no `Depth` parameter): a `BMM_GENERIC_CLASS`
     // without its formal parameters is not a valid instance of the model (the
     // parameters are what make it generic,
@@ -858,7 +826,7 @@ fn build_generic_parameters(
     // `class_as_type` must generate the fully open type of a stub. The
     // parameter NAMES recurse nowhere; the constraint chain is what
     // [`build_parameter_type`] cycle-cuts.
-    let mut out = BTreeMap::new();
+    let mut out = indexmap::IndexMap::new();
     for (key, parameter) in persisted.generic_parameter_defs().into_iter().flatten() {
         out.insert(
             key.clone(),
@@ -1265,11 +1233,10 @@ fn open_parameter_type(
     )
 }
 
-/// Builds a `BMM_GENERIC_TYPE`, carrying its actual parameters — "the string
-/// types … then the complex type references"
-/// (`LANG/docs/bmm_persistence/master04-syntax.adoc` §Generic Classes), each of
-/// which is a `BMM_UNITARY_TYPE` (`org.openehr.lang.bmm3.bmm_generic_type.adoc`
-/// §Attributes).
+/// Builds a `BMM_GENERIC_TYPE`, carrying its actual parameters bound to the
+/// root class's formal parameters by name, in declaration order
+/// ([`PBmmGenericType::bind_parameters`]), each a `BMM_UNITARY_TYPE`
+/// (`org.openehr.lang.bmm3.bmm_generic_type.adoc` §Attributes).
 fn build_generic_type(
     builder: &Builder<'_>,
     context: &str,
@@ -1285,16 +1252,21 @@ fn build_generic_type(
             type_name: generic.root_type.clone(),
         });
     };
+    let formals: Vec<&str> = base_class
+        .generic_parameters
+        .keys()
+        .map(String::as_str)
+        .collect();
     let mut generic_parameters: Vec<BmmUnitaryType> = Vec::new();
-    for name in generic.generic_parameters.iter().flatten() {
-        generic_parameters.push(build_named_unitary_type(
-            builder, context, name, owner, visiting,
-        )?);
-    }
-    for parameter in &generic.generic_parameter_defs {
-        generic_parameters.push(build_unitary_type(
-            builder, context, parameter, owner, visiting,
-        )?);
+    for actual in generic.bind_parameters(context, &formals)? {
+        generic_parameters.push(match actual {
+            ActualParameter::Named(name) => {
+                build_named_unitary_type(builder, context, name, owner, visiting)?
+            }
+            ActualParameter::Structured(parameter) => {
+                build_unitary_type(builder, context, parameter, owner, visiting)?
+            }
+        });
     }
     Ok(BmmGenericType {
         value_constraint: value_set_spec(generic.value_constraint.as_deref()),

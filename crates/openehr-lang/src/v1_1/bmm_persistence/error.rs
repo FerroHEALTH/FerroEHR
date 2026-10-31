@@ -348,4 +348,30 @@ pub enum PBmmReadError {
         /// The non-generic root type's name.
         type_name: String,
     },
+
+    /// A `generic_parameter_defs` key names no formal generic parameter of the
+    /// root class: the attribute is "keyed by formal generic parameter name"
+    /// (`org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc`
+    /// §Attributes).
+    #[error("{context}: `{key}` is not a formal generic parameter of `{root_type}`")]
+    UnknownGenericParameterKey {
+        /// The model element being materialised.
+        context: String,
+        /// The generic type's root class.
+        root_type: String,
+        /// The key as written.
+        key: String,
+    },
+
+    /// Two `generic_parameter_defs` keys bind the same formal generic
+    /// parameter of the root class.
+    #[error("{context}: formal generic parameter `{parameter}` of `{root_type}` is bound twice")]
+    GenericParameterBoundTwice {
+        /// The model element being materialised.
+        context: String,
+        /// The generic type's root class.
+        root_type: String,
+        /// The formal parameter's name.
+        parameter: String,
+    },
 }

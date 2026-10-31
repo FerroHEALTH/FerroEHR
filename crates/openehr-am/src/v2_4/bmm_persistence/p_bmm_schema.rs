@@ -51,8 +51,8 @@ pub struct PBmmSchema {
     pub bmm_version: String,
     /// Other schemas included by this schema, keyed by schema id. Persisted attribute.
     pub includes: Option<std::collections::BTreeMap<String, BmmIncludeSpec>>,
-    /// Primitive type definitions. Persisted attribute.
-    pub primitive_types: Option<Vec<PBmmClass>>,
-    /// Class definitions. Persisted attribute.
-    pub class_definitions: Option<Vec<PBmmClass>>,
+    /// Primitive type definitions, keyed by class name. Persisted attribute.
+    pub primitive_types: Option<std::collections::BTreeMap<String, PBmmClass>>,
+    /// Class definitions, keyed by class name. Persisted attribute.
+    pub class_definitions: Option<std::collections::BTreeMap<String, PBmmClass>>,
 }
