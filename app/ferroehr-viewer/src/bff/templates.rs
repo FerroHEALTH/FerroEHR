@@ -305,6 +305,47 @@ pub async fn delete_adl2_artefact(
     Ok(())
 }
 
+/// The compositions committed against one template, counted by the template
+/// id their `archetype_details` carry (RM `LOCATABLE.archetype_details`,
+/// `ARCHETYPED.template_id`). Validated by the `release_count_aql_parses` test.
+const COMPOSITIONS_OF_TEMPLATE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = $template_id";
+
+/// How many compositions the CDR holds against each of `template_ids`, in
+/// their order: `Ok(None)` when the CDR answered a result set of another
+/// shape, `Err` with the CDR's refusal of that one count.
+///
+/// One `POST query/aql` per template, the id a query parameter and never
+/// part of the query text, bounded by
+/// [`FANOUT_CONCURRENCY`](crate::cdr::FANOUT_CONCURRENCY).
+///
+/// # Errors
+/// [`ViewerError::Unauthenticated`] without a viewer session; each count
+/// carries its own CDR error.
+pub async fn count_compositions(
+    // The templates to count the compositions of.
+    template_ids: Vec<String>,
+) -> Result<Vec<Result<Option<i64>, ViewerError>>, ViewerError> {
+    use futures::stream::StreamExt;
+
+    let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
+    let (state, session) = (&state, &session);
+    Ok(
+        futures::stream::iter(template_ids.into_iter().map(|template_id| async move {
+            crate::bff::dashboard::run_count_aql(
+                state,
+                session,
+                COMPOSITIONS_OF_TEMPLATE_AQL,
+                serde_json::json!({ "template_id": template_id }),
+            )
+            .await
+        }))
+        .buffered(crate::cdr::FANOUT_CONCURRENCY)
+        .collect()
+        .await,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -342,6 +383,12 @@ mod tests {
         assert_eq!(row.concept, "");
         assert_eq!(row.archetype_id, "");
         assert_eq!(row.created, "");
+    }
+
+    #[test]
+    fn release_count_aql_parses() {
+        openehr_query::parser::parse_str(super::COMPOSITIONS_OF_TEMPLATE_AQL)
+            .expect("the release count AQL must parse");
     }
 
     #[test]

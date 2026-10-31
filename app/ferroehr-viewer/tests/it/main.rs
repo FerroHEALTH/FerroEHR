@@ -45,4 +45,5 @@ mod e2e_session_expiry;
 mod e2e_stored_query_runner;
 mod e2e_system;
 mod e2e_tags;
+mod e2e_template_releases;
 mod e2e_terminology;

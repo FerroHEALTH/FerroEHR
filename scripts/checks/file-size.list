@@ -31,7 +31,7 @@ app/ferroehr-viewer/src/pages/queries.rs 1099
 app/ferroehr-viewer/src/pages/query.rs 1883
 app/ferroehr-viewer/src/pages/server.rs 1109
 app/ferroehr-viewer/src/pages/subscriptions.rs 817
-app/ferroehr-viewer/src/pages/templates.rs 1567
+app/ferroehr-viewer/src/pages/templates.rs 1455
 app/ferroehr-viewer/src/pages/terminology.rs 812
 app/ferroehr/src/aql/ir.rs 822
 app/ferroehr/src/aql/sql/from.rs 1557
