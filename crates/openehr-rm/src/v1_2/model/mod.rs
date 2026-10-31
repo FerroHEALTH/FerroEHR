@@ -16,6 +16,10 @@
 //! flag. Enumeration classes (`BMM_ENUMERATION`) additionally carry their named
 //! constants + values in a separate table (see [`enumeration`]).
 //!
+//! Each class also records its computed attributes: the flattened BMM functions
+//! with no parameters, typed by their result (AOM2 `master04.2` §Attribute
+//! Nodes), kept apart from the stored attributes (see [`computed_attribute`]).
+//!
 //! A reference-typed attribute (`OBJECT_REF`, `PARTY_REF`, `LOCATABLE_REF`)
 //! names the class it points to where the RM text states one
 //! ([`RmAttribute::ref_target`]); the BMM types the attribute by the
@@ -62,6 +66,13 @@ pub struct RmClass {
     pub descendants: &'static [&'static str],
     /// The flattened (own + inherited) attributes, ancestor-first.
     pub attributes: &'static [RmAttribute],
+    /// The flattened (own + inherited) computed attributes, ancestor-first: the
+    /// BMM functions with no parameters (`DV_PROPORTION.is_integral`,
+    /// `EVENT.offset`), each typed by its result and mandatory unless the
+    /// result `is_nullable`. A name that is also a stored attribute of the
+    /// class stays in [`Self::attributes`] only. These rows carry no
+    /// cardinality, `nonempty` or `ref_target`.
+    pub computed_attributes: &'static [RmAttribute],
     /// Whether the node codec splits this type into its own `node` row (see the
     /// module docs).
     pub is_structure_root: bool,
@@ -195,6 +206,19 @@ pub fn class(name: &str) -> Option<&'static RmClass> {
 #[must_use]
 pub fn attribute(class: &str, attr: &str) -> Option<&'static RmAttribute> {
     find(class)?.attributes.iter().find(|a| a.name == attr)
+}
+
+/// Resolve the computed attribute `attr` on `class`, through inheritance.
+///
+/// A computed attribute is a BMM function with no parameters, which AOM2 admits
+/// as an attribute a constraint may name (`master04.2` §Attribute Nodes;
+/// `master04.5` VCARM).
+#[must_use]
+pub fn computed_attribute(class: &str, attr: &str) -> Option<&'static RmAttribute> {
+    find(class)?
+        .computed_attributes
+        .iter()
+        .find(|a| a.name == attr)
 }
 
 /// Every attribute of `class`, own and inherited (empty for an unknown class).
