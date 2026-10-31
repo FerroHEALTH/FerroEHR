@@ -255,7 +255,7 @@ terminology
     >
 ";
 
-/// A specialisation of [`PARENT`] whose `protocol` includes an ITEM_TREE
+/// A specialisation of [`PARENT`] whose `protocol` includes an `ITEM_TREE`
 /// archetype holding an ELEMENT with the node id `item`.
 fn child(item: &str) -> String {
     format!(
@@ -304,7 +304,7 @@ terminology
 }
 
 /// The flat-form VCOSU walk of a specialised archetype restarts at an
-/// archetype root too: the included ITEM_TREE's `id2` is not the parent's.
+/// archetype root too: the included `ITEM_TREE`'s `id2` is not the parent's.
 #[test]
 fn the_flat_form_walk_restarts_at_an_archetype_root() {
     let mut repo = ArchetypeRepository::new();
