@@ -35,6 +35,8 @@
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+use super::bmm_function::{BmmFunction, parse_functions};
+
 /// A loaded BMM schema (one vendored `*.bmm.json` file).
 #[derive(Debug, Clone)]
 pub(crate) struct BmmSchema {
@@ -85,11 +87,9 @@ pub(crate) struct BmmClass {
     /// openEHR terminology-group / code-set identifier strings), in declaration
     /// order. Verbatim — the render stage decodes the literal `value`.
     pub constants: Vec<BmmConstant>,
-    /// Declared function names (`BMM_CLASS.functions`), in file order. The BMM
-    /// carries functions by NAME + result type only (no body), so the loader
-    /// keeps just the names: they are what a hand-written behaviour sibling must
-    /// realize, per generation.
-    pub functions: Vec<String>,
+    /// Declared functions (`BMM_CLASS.functions`) in file order, by signature
+    /// ([`BmmFunction`]).
+    pub functions: Vec<BmmFunction>,
     /// Class invariants (`BMM_CLASS.invariants`): a map from invariant name to
     /// its assertion-expression text (the Eiffel/UML assertion dialect), verbatim.
     /// The `analyze` stage parses + classifies these; the loader keeps them raw.
@@ -411,7 +411,7 @@ fn parse_class(node: &Value) -> BmmClass {
     let enumeration = parse_enumeration(node);
     let constants = parse_constants(node);
     let invariants = parse_invariants(node);
-    let functions = parse_function_names(node);
+    let functions = parse_functions(node);
 
     BmmClass {
         name,
@@ -425,15 +425,6 @@ fn parse_class(node: &Value) -> BmmClass {
         functions,
         invariants,
     }
-}
-
-/// Parse the class node's `functions` object into its declaration-ordered name
-/// list (`serde_json`'s `preserve_order` keeps file order). Absent → empty.
-fn parse_function_names(node: &Value) -> Vec<String> {
-    node.get("functions")
-        .and_then(Value::as_object)
-        .map(|m| m.keys().cloned().collect())
-        .unwrap_or_default()
 }
 
 /// Parse the class's `constants` object (name → `{type, value, documentation}`)
@@ -597,7 +588,7 @@ fn parse_cardinality(v: &Value) -> BmmCardinality {
 
 /// The element type inside a container's `type_def`: either a simple `type`
 /// (`List<LINK>`) or a nested generic `type_def` (`List<REFERENCE_RANGE<...>>`).
-fn parse_container_item(td: &Value) -> BmmType {
+pub(super) fn parse_container_item(td: &Value) -> BmmType {
     if let Some(inner) = td.get("type_def") {
         parse_type_def(inner)
     } else if let Some(t) = td.get("type").and_then(Value::as_str) {
@@ -612,7 +603,7 @@ fn parse_container_item(td: &Value) -> BmmType {
 /// entries may be bare type names *or* nested `type_def`s) or as
 /// `generic_parameter_defs` (an ordered map of named params, used for
 /// `Hash<K,V>`; `serde_json`'s `preserve_order` keeps K before V).
-fn parse_type_def(td: &Value) -> BmmType {
+pub(super) fn parse_type_def(td: &Value) -> BmmType {
     if let Some(root) = td.get("root_type").and_then(Value::as_str) {
         let params: Vec<BmmType> =
             if let Some(arr) = td.get("generic_parameters").and_then(Value::as_array) {

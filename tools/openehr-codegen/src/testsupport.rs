@@ -1930,9 +1930,8 @@ fn class_function_status(
     let stem = name.to_lowercase();
     let sibling = bodies.get(&format!("{stem}_impl"))?;
     let own = bodies.get(&stem).map(String::as_str).unwrap_or_default();
-    let declared: BTreeSet<String> = class.functions.iter().cloned().collect();
-    let found = class
-        .functions
+    let declared: BTreeSet<String> = class.functions.iter().map(|f| f.name.clone()).collect();
+    let found = declared
         .iter()
         .filter(|f| {
             let item = format!("fn {f}(");
@@ -2054,7 +2053,7 @@ fn push_unrealized_functions(
     {
         return;
     }
-    for function in &class.functions {
+    for function in class.functions.iter().map(|f| &f.name) {
         if !function_is_realized(name, function, bodies_of(name, bodies), bodies) {
             out.push(format!("{generation}/{name}.{function}"));
         }
