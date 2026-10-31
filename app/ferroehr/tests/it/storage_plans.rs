@@ -1433,6 +1433,128 @@ async fn a_chain_of_path_bindings_is_estimated_at_the_rows_it_reads() {
     }
 }
 
+// ── a projection over named EHRs whatever the archetype statistics (#4487) ──
+
+/// `EXPLAIN` `prepared` inside a rolled-back transaction after `statistics`
+/// re-collected the planner statistics of `node_hot` in that transaction.
+async fn explain_after(
+    pool: &PgPool,
+    statistics: &str,
+    prepared: ferroehr::aql::sql::PreparedQuery,
+) -> Value {
+    let mut tx = explain_tx(pool).await;
+    sqlx::raw_sql(sqlx::AssertSqlSafe(statistics))
+        .execute(&mut *tx)
+        .await
+        .expect("re-collect the statistics for this transaction");
+    let plan: Value = sqlx::query_scalar_with(
+        sqlx::AssertSqlSafe(format!("{EXPLAIN}{}", prepared.sql)),
+        prepared.values,
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the AQL statement");
+    tx.rollback().await.expect("roll the explain back");
+    plan
+}
+
+/// A projection over the EHRs its caller named reads those EHRs' objects
+/// first and each object's own nodes after them, whatever the archetype
+/// statistics say (#4487).
+///
+/// When an archetype's rows fall out of the most-common-value list of
+/// `st_node_hot_archetype`, as the storage bench's commit group made them do
+/// in some rounds by diluting the sample, the planner estimates them at one
+/// row. A contained node that was a plain FROM item then led the join through
+/// `idx_node_hot_arch_subsume` over the whole population and ran every path
+/// binding of the projection for each of those rows before the EHR filter:
+/// the bench's wide projection over one EHR read about 10 000 pages per call
+/// in those rounds and 1 200 in the others. The statement now fences the
+/// contained node inside its parent, so the plan is the same with the list
+/// cut to one entry and with it whole.
+#[tokio::test]
+async fn a_projection_over_named_ehrs_holds_its_plan_whatever_the_archetype_statistics() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let mut ehrs = Vec::new();
+    for index in 0..8_u8 {
+        let ehr = svc.create_ehr(None).await.expect("create an EHR");
+        for reading in 0..5_u8 {
+            let body = wide_observation_composition(
+                &format!("readings {index}.{reading}"),
+                f64::from(reading) * 10.0,
+            );
+            svc.create_composition(ehr, uv(&body, "249", None))
+                .await
+                .expect("commit an observation");
+        }
+        ehrs.push(ehr);
+    }
+    analyze_as_autovacuum(&pool).await;
+    ferroehr::db::parent_statistics::refresh_pool(&pool)
+        .await
+        .expect("refresh the partitioned parents' statistics");
+
+    let wide = format!(
+        "SELECT c/uid/value, {} FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}]",
+        WIDE_ITEMS.map(wide_leaf).join(", ")
+    );
+    let one_ehr = ehrs.first().copied().expect("a seeded EHR");
+    let mut shapes = Vec::new();
+    for (state, statistics) in [
+        (
+            "the whole most-common-value list",
+            "ANALYZE clinical.node_hot",
+        ),
+        (
+            "the list cut to one entry",
+            "ALTER STATISTICS clinical.st_node_hot_archetype SET STATISTICS 1; \
+             ANALYZE clinical.node_hot",
+        ),
+    ] {
+        let plan = explain_after(&pool, statistics, aql_sql(&wide, vec![one_ehr])).await;
+        let returned = plan
+            .pointer("/0/Plan/Actual Rows")
+            .and_then(Value::as_f64)
+            .expect("the root plan node reports its rows");
+        assert!(
+            (returned - 5.0).abs() < f64::EPSILON,
+            "{state}: the projection returns the named EHR's five observations: {returned}"
+        );
+        let scans = scans(&plan);
+        assert!(
+            on(&scans, "node_hot")
+                .iter()
+                .all(|scan| scan.index.as_deref() != Some("idx_node_hot_arch_subsume")),
+            "#4487, {state}: a projection over a named EHR never enters through the \
+             population's archetype index:\n{}",
+            render(&scans)
+        );
+        let mut indexes: Vec<String> = scans
+            .iter()
+            .map(|scan| {
+                format!(
+                    "{} via {}",
+                    scan.relation,
+                    scan.index.as_deref().unwrap_or("-")
+                )
+            })
+            .collect();
+        indexes.sort_unstable();
+        indexes.dedup();
+        shapes.push((state, indexes, render(&scans)));
+    }
+    let (_, whole, whole_plan) = shapes.first().expect("the whole list was explained");
+    let (_, cut, cut_plan) = shapes.get(1).expect("the cut list was explained");
+    assert_eq!(
+        whole, cut,
+        "#4487: the projection reads the same relations through the same indexes \
+         whatever the archetype statistics:\nwhole list:\n{whole_plan}\ncut list:\n{cut_plan}"
+    );
+}
+
 // ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────
 
 /// The `person_identifier` CLUSTER archetype the lookup walks.

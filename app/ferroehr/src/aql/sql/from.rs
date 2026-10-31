@@ -1252,21 +1252,34 @@ impl Builder<'_> {
         vo: Option<&VoGroup>,
     ) -> Result<VoGroup, AqlError> {
         let node = format!("n{sid}");
-        self.q.from_as(Node::Table, Alias::new(node.as_str()));
-        self.q.and_where(hot(&node, Node::Tier));
-        self.node_alias.insert(sid, node.clone());
-        for cond in self.rm_conds(&node, r)? {
-            self.q.and_where(cond);
-        }
-
         // The edge kind is classified from the RM relationship of BOTH
         // operands' types: the child alone does not determine the join shape.
         let edge = match vo {
             Some(parent) => Some(classify_edge(&parent.types, &r.rm_type)?),
             None => None,
         };
+        let structural = match (edge, vo) {
+            (Some(EdgeKind::Structural), Some(parent)) => Some(parent),
+            _ => None,
+        };
+        match structural {
+            Some(parent) if self.ctx.names_ehrs() => {
+                self.q.from_function(
+                    contained_rows(&node, &parent.node),
+                    Alias::new(node.as_str()),
+                );
+            }
+            _ => {
+                self.q.from_as(Node::Table, Alias::new(node.as_str()));
+            }
+        }
+        self.q.and_where(hot(&node, Node::Tier));
+        self.node_alias.insert(sid, node.clone());
+        for cond in self.rm_conds(&node, r)? {
+            self.q.and_where(cond);
+        }
 
-        if let (Some(EdgeKind::Structural), Some(parent)) = (edge, vo) {
+        if let Some(parent) = structural {
             self.q.and_where(strict_descendant(&node, &parent.node));
             Ok(VoGroup {
                 node,
@@ -1900,6 +1913,30 @@ pub(super) fn is_root_only(types: &crate::aql::ir::TypeSet) -> bool {
 /// columns. `inner` is the node alias `on` is written over.
 pub(super) fn left_binding_rows(alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
     binding_rows(BoundTable::Node, alias, inner, on)
+}
+
+/// The `LATERAL` FROM item of the content node `alias` contained in the node
+/// `parent` on a query scoped to EHRs its caller named: the strict
+/// descendants of `parent`, behind the `OFFSET 0` fence.
+///
+/// The fence holds the join order whatever the statistics: the planner reads
+/// the named EHRs' objects first and each object's own nodes after them
+/// (PostgreSQL 18 §7.2.1.5 LATERAL Subqueries). As a plain FROM item the
+/// contained node could lead the join instead, through the archetype index
+/// over the whole population, whenever the archetype's rows fell out of the
+/// most-common-value list of the archetype statistics and were estimated at
+/// one row; the storage bench's wide projection over one EHR then read ten
+/// times its pages in the rounds that sampled so (#4487). No openEHR spec
+/// governs the join mechanics: our own design.
+fn contained_rows(alias: &str, parent: &str) -> sea_query::FunctionCall {
+    let inner = format!("{alias}_s");
+    let mut rows = Query::select();
+    rows.column((Alias::new(inner.as_str()), Asterisk))
+        .from_as(Node::Table, Alias::new(inner.as_str()))
+        .and_where(hot(&inner, Node::Tier))
+        .and_where(strict_descendant(&inner, parent))
+        .offset(0);
+    sea_query::Func::cust(Alias::new("LATERAL")).arg(Expr::from(rows))
 }
 
 /// The `LATERAL` FROM item of a left binding over `table`, in the shape
