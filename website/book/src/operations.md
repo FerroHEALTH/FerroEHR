@@ -632,11 +632,13 @@ all its node rows), so it costs the same as a create. A new EHR takes about
 
 With `[audit.store]` on (the default) every audited request writes one record,
 reads included. A record of a composition read takes about 1.0 KB in
-`audit.audit_event` (heap and indexes, no TOAST) and about 0.2 KB in
-`audit.audit_search_token`, 1.2 KB in all (1.4 KB for a read of the larger
-composition). A record of a composition create takes about 1.6 KB. For a
-read-heavy workload the access log can outgrow the clinical data: 40 000
-composition reads added 47 MiB, as much as about 2 300 new vital signs versions.
+`audit.audit_event` (heap and indexes, no TOAST), and a record of a
+composition create about 1.05 KB. The request id and the version uid are
+searched through the record's own columns, so a record adds no row to
+`audit.audit_search_token` beyond the first record about a patient or a
+resource kind. For a read-heavy workload the access log can outgrow the
+clinical data: 40 000 composition reads add about 38 MiB, as much as about
+1 800 new vital signs versions.
 
 ### A sizing estimate
 
@@ -645,13 +647,13 @@ Add up, for the period you size for:
 - the composition versions you expect, times the bytes per version of your
   own templates (21.6 KB for one like vital signs, 0.4 to 0.5 KB per RM node
   as a first estimate);
-- the audited requests, times 1.2 to 1.6 KB, for as long as the
+- the audited requests, times about 1.0 KB, for as long as the
   [audit retention](audit.md#retention-and-who-chooses-it) keeps them;
 - `pg_wal`, up to `max_wal_size` (below);
 - your backups and WAL archive, which this database does not hold.
 
 One million vital-signs-sized versions take about 22 GB, and ten million
-audited requests about 12 GB.
+audited requests about 10 GB.
 
 ### Audit retention
 
@@ -663,9 +665,8 @@ makes the reaper delete each record on or after its end date, hourly, and the
 rate. The space of a deleted row is not returned to the operating system:
 `VACUUM` marks it free and later records reuse it (PostgreSQL 18 docs,
 [Routine Vacuuming, Recovering Disk Space][pg-vacuum]).
-The reaper does not delete rows from `audit.audit_search_token`, which keeps
-growing by about 0.2 KB per request whatever the horizon. The horizon is a
-legal choice with floors per jurisdiction, set out on the audit page.
+The reaper also deletes the search tokens no remaining record names. The
+horizon is a legal choice with floors per jurisdiction, set out on the audit page.
 
 ### `pg_wal`
 

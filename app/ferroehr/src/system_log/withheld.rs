@@ -23,10 +23,9 @@ use crate::system_log::event::AuditEvent;
 use crate::system_log::fhir::{access_record, to_fhir};
 use crate::system_log::message::AuditContext;
 use crate::system_log::render::classified;
+use crate::system_log::search::condition::search_condition;
 use crate::system_log::search::resolve_criteria;
-use crate::system_log::store::{
-    AuditSearchFilter, AuditStore, newest_first, search_condition, stored_record,
-};
+use crate::system_log::store::{AuditSearchFilter, AuditStore, newest_first, stored_record};
 
 impl AuditStore {
     /// The EHR ids the records `filter` selects name, each once.

@@ -62,7 +62,7 @@ app/ferroehr/src/storage/version_repo/read.rs 1009
 app/ferroehr/src/system_log/categories.rs 989
 app/ferroehr/src/system_log/fhir.rs 1374
 app/ferroehr/src/system_log/sender.rs 1181
-app/ferroehr/src/system_log/store.rs 2159
+app/ferroehr/src/system_log/store.rs 2075
 app/ferroehr/src/versioning/attestation.rs 992
 app/ferroehr/src/versioning/audit.rs 889
 app/ferroehr/src/versioning/change.rs 1574
