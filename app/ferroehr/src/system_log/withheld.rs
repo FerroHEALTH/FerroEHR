@@ -9,8 +9,11 @@
 //! communicate and explain" it (`docs/law/eu/ehds/text.html`). A record about
 //! a held composition would tell the person it exists, so the person's read
 //! leaves it out through `ehds_logging::withheld` until the hold is released
-//! or expires, and then serves it unchanged with its original time. No
-//! openEHR spec governs it: our own design/extension.
+//! or expires, and then serves it unchanged with its original time. The
+//! syslog and FHIR feeds deliver to an Audit Record Repository (IHE ITI TF-1
+//! §9.1.1.3) and the change events to the deployment's broker, none of which
+//! is the access service Art. 9(2) names, so they carry such records
+//! unfiltered. No openEHR spec governs it: our own design/extension.
 
 use ehds_logging::withheld::{Holds, Reader};
 use jiff::Timestamp;
