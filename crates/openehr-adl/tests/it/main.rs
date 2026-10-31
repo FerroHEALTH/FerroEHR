@@ -40,6 +40,7 @@ mod default_value_intervals;
 mod flattener_spec;
 mod legacy14_corpus;
 mod nesting_bounds;
+mod opt_archetype_scope;
 mod opt_spec;
 mod rules_parse;
 mod template_constituents;

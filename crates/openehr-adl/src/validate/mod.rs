@@ -62,6 +62,7 @@ mod flat;
 mod identification;
 mod resource_meta;
 pub mod rm;
+mod scope;
 pub mod slots;
 mod source_level;
 mod specialisation;
@@ -452,6 +453,11 @@ fn run_filler_checks(
     issues: &mut Vec<ValidationIssue>,
 ) {
     if issues.iter().any(|i| i.severity == Severity::Error) {
+        return;
+    }
+    // NOTE: OPT2 `master03-opt_raw` gathers each constituent, flattened, into the
+    // operational template, so it carries no external reference left to resolve.
+    if view(archetype).kind == crate::source::ArtefactKind::OperationalTemplate {
         return;
     }
     if let Some(repo) = repo {

@@ -839,13 +839,15 @@ async fn upload_with_unheld_constituents_is_422_naming_each_with_varxr() {
     );
 }
 
-/// A stored template whose constituent archetype is deleted afterwards cannot
-/// compile (OPT2 `master03-opt_raw.adoc` §Archetype References): its
-/// operational form and its example answer a `422` whose `VARXR` violations
-/// carry exactly the missing archetype ids, while its source stays readable.
+/// A stored template whose constituent archetype is gone cannot compile (OPT2
+/// `master03-opt_raw.adoc` §Archetype References): its operational form and
+/// its example answer a `422` whose `VARXR` violations carry exactly the
+/// missing archetype ids, while its source stays readable. The API refuses
+/// that delete since #4522, so the row is removed in SQL, standing for a store
+/// written before the guard.
 #[tokio::test]
 async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read() {
-    let (_pg, app) = app().await;
+    let (pg, app) = app().await;
     let constituent = "openEHR-EHR-OBSERVATION.held_then_gone.v1.0.0";
     let hrid = "openEHR-EHR-COMPOSITION.t_held_then_gone.v1.0.0";
     let (status, _h, body) = send(&app, upload_source(adl2_source("archetype", constituent))).await;
@@ -869,7 +871,12 @@ async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read
         .body(Body::empty())
         .unwrap();
     let (status, _h, body) = send(&app, delete).await;
-    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    sqlx::query("DELETE FROM adl2_artefact WHERE lower(hrid) = lower($1)")
+        .bind(constituent)
+        .execute(&pg.pool())
+        .await
+        .expect("remove the constituent as a store written before the guard");
 
     for path in [
         format!("{BASE}/definition/template/adl2/{hrid}"),

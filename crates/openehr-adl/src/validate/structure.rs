@@ -85,7 +85,7 @@ impl StructureScan<'_> {
                 path,
             );
         }
-        // VCOSU: object node ids must be unique archetype-wide (master04.5
+        // VCOSU: object node ids must be unique within the archetype (master04.5
         // §`C_OBJECT`); synthetic primitive ids are exempt. A specialised
         // archetype defers it to [`super::flat`], and the 1.4 dialect gets the
         // sibling-scoped check instead (AOM1.4 master04 §Node_id and Paths).
@@ -101,6 +101,11 @@ impl StructureScan<'_> {
                 self.seen_node_ids.insert(nid.to_owned(), path.to_owned());
             }
         }
+        // VCOSU holds within one archetype: below a nested archetype root the
+        // ids are the included archetype's own (see [`super::scope`]).
+        let outer_ids = super::scope::archetype_root(obj)
+            .filter(|_| !path.is_empty())
+            .map(|_| std::mem::take(&mut self.seen_node_ids));
 
         match obj {
             CObject::CComplexObject(cco) => self.walk_complex(path, cco),
@@ -128,6 +133,9 @@ impl StructureScan<'_> {
             // flat-form (phase-3) check, so it runs in [`super::flat`]
             // (`master08` §Phase 3; `master04.5` VUNP), not in the phase-1 walk.
             CObject::CComplexObjectProxy(_) => {}
+        }
+        if let Some(outer_ids) = outer_ids {
+            self.seen_node_ids = outer_ids;
         }
     }
 
