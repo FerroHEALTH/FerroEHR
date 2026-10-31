@@ -52,6 +52,12 @@ const VERSIONED_V110: &str = "openEHR-EHR-COMPOSITION.cnf_adl2_versioned.v1.1.0"
 /// never race a sibling scene's reads.
 const DELETABLE: &str = "openEHR-EHR-COMPOSITION.cnf_minimal_h.v1.0.0";
 
+/// The template the missing-constituent scene stores, built on [`CONSTITUENT`].
+const NEEDS_CONSTITUENT: &str = "openEHR-EHR-COMPOSITION.cnf_needs_constituent.v1.0.0";
+
+/// The archetype that scene deletes from under [`NEEDS_CONSTITUENT`].
+const CONSTITUENT: &str = "openEHR-EHR-OBSERVATION.cnf_constituent.v1.0.0";
+
 /// The ADL2 listing, as URL state.
 const LIST_URL: &str = "/templates?family=adl2";
 
@@ -331,5 +337,68 @@ async fn an_adl2_artefact_is_deleted_from_the_listing() {
 
     remove_adl2_artefacts(&[DELETABLE]).await;
     h.assert_console_clean(&["Failed to load resource"]).await;
+    h.finish().await;
+}
+
+/// A template the CDR holds without one of its constituent archetypes says
+/// so on every tab, names the archetype and offers its upload, and never
+/// draws the CDR's raw refusal.
+///
+/// The upload of such a template is refused (AOM2 VARXR), so the scene builds
+/// the state the only way it can arise: it stores the archetype and the
+/// template, then deletes the archetype.
+#[tokio::test]
+async fn a_template_missing_a_constituent_says_so_on_every_tab() {
+    let Some(h) = Harness::start("adl2-missing-constituent").await else {
+        return;
+    };
+    let (user, pass) = admin_credentials();
+    login_basic_as(&h, &user, &pass).await;
+    remove_adl2_artefacts(&[NEEDS_CONSTITUENT, CONSTITUENT]).await;
+
+    common::upload_template(&h, "adl2", &fixture_adl2_path("needs_constituent.adls")).await;
+    h.wait_url_contains("/templates/upload").await;
+    wait_main_contains(&h, "fails validation").await;
+    h.goto(LIST_URL).await;
+    assert!(
+        !is_present(&h, &row_link(NEEDS_CONSTITUENT)).await,
+        "a template whose constituent the CDR does not hold is refused"
+    );
+
+    common::upload_template(
+        &h,
+        "adl2",
+        &fixture_adl2_path("../archetype/cnf_constituent.adls"),
+    )
+    .await;
+    h.wait_url_contains("/templates/adl2/").await;
+    ensure_adl2_template_present(&h, "needs_constituent.adls", NEEDS_CONSTITUENT).await;
+    remove_adl2_artefacts(&[CONSTITUENT]).await;
+
+    let page = format!("/templates/adl2/{}", stem(NEEDS_CONSTITUENT));
+    for (step, tab) in [
+        (1, "overview"),
+        (2, "paths"),
+        (3, "source"),
+        (4, "json"),
+        (5, "example"),
+    ] {
+        h.goto(&format!("{page}?tab={tab}")).await;
+        wait_main_contains(&h, "This template cannot be used yet").await;
+        wait_main_contains(&h, CONSTITUENT).await;
+        h.wait_css("main a[href='/templates/upload?family=adl2']")
+            .await;
+        let text = common::main_text(&h).await;
+        assert!(
+            !text.contains("422") && !text.contains("VARXR"),
+            "the {tab} tab draws no raw refusal: {text}"
+        );
+        h.shot(step, &format!("adl2-missing-constituent-{tab}"))
+            .await;
+    }
+
+    remove_adl2_artefacts(&[NEEDS_CONSTITUENT]).await;
+    h.assert_console_clean(&["401", "422", "Failed to load resource"])
+        .await;
     h.finish().await;
 }

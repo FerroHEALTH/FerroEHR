@@ -18,6 +18,8 @@
 
 use std::collections::BTreeSet;
 
+mod adl2;
+
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
@@ -40,11 +42,7 @@ use ferrohealth_ui::view::template::list::{
 };
 use ferrohealth_ui::view::tree::{Tree, TreeKind, TreeNode, TreeWords, tree_view};
 
-use crate::adl2::family_versions;
 use crate::adl2::{TemplateFamily, split_hrid};
-use crate::bff::template_adl2::{
-    fetch_adl2_catalog, fetch_adl2_example, fetch_adl2_json, fetch_adl2_source,
-};
 use crate::bff::template_detail::TemplateDetail;
 use crate::bff::template_detail::{fetch_example, fetch_template_detail};
 use crate::bff::templates::TemplateRow;
@@ -63,12 +61,13 @@ use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, card_panel, dock_editor, document_section, findings_of, info_note, panel,
+    EditorDock, card_panel, count, dock_editor, document_section, findings_of, info_note, panel,
     plain_section, refused, section, when,
 };
 use crate::pages::template_releases::{CompareAsk, Releases, lineage_table, load_releases};
 use crate::routes::Drawn;
 use crate::template_releases::{Lineage, lineages};
+use adl2::{Adl2Body, Adl2Template, adl2_tabs, load_adl2_template};
 
 /// The id of Delete template's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-template";
@@ -1131,143 +1130,6 @@ pub async fn page() -> Drawn {
     Drawn::page(title, page)
 }
 
-/// What the tab of an ADL 2 template read.
-#[derive(Debug, Clone)]
-pub enum Adl2Body {
-    /// Its identity, from the list.
-    Overview,
-    /// Its path catalog.
-    Paths(Result<Option<CatalogNode>, ViewerError>),
-    /// Its source.
-    Source(Result<Option<String>, ViewerError>),
-    /// Its operational JSON, pretty-printed.
-    Json(Result<Option<String>, ViewerError>),
-    /// The example the CDR built, pretty-printed.
-    Example(Result<Option<String>, ViewerError>),
-}
-
-/// What one ADL 2 template's page read.
-#[derive(Debug, Clone)]
-pub struct Adl2Template {
-    /// The CDR's refusal of the delete posted.
-    acted: Option<ViewerError>,
-    /// The HRID without its release.
-    stem: String,
-    /// The latest release.
-    latest: Option<String>,
-    /// The release read.
-    release: Option<String>,
-    /// The HRID read.
-    hrid: String,
-    /// Its releases, with what the tab draws of them.
-    releases: Releases,
-    /// The tab shown.
-    tab: TemplateTab,
-    /// What the tab read.
-    body: Adl2Body,
-    /// The template's download address.
-    download: String,
-}
-
-/// The tabs an ADL 2 template offers: Overview alone for an older release,
-/// and Compare when it has `several` releases.
-fn adl2_tabs(older: bool, several: bool) -> Vec<TemplateTab> {
-    let mut tabs = vec![TemplateTab::Overview];
-    if !older {
-        tabs.extend([
-            TemplateTab::Paths,
-            TemplateTab::Source,
-            TemplateTab::Json,
-            TemplateTab::Example,
-        ]);
-    }
-    if several {
-        tabs.push(TemplateTab::Compare);
-    }
-    tabs
-}
-
-/// Answers a delete posted to the ADL 2 template `asked_id` and reads the
-/// release `asked_release` names, the latest for none, with its releases and
-/// what its tab `tab` draws.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
-pub async fn load_adl2_template(
-    // The template id the address names.
-    asked_id: String,
-    // The release the address names.
-    asked_release: Option<String>,
-    // The tab the address names.
-    tab: TemplateTab,
-    // The example options the address names.
-    ask: ExampleAsk,
-) -> Result<Adl2Template, ViewerError> {
-    crate::session::require_session()?;
-    let acted = delete_posted("/templates?family=adl2").await;
-    let (stem, named) = split_hrid(&asked_id);
-    let stem = stem.to_owned();
-    let listed = list_adl2_templates().await;
-    let ids: Vec<String> = listed
-        .as_ref()
-        .map(|rows| rows.iter().map(|row| row.template_id.clone()).collect())
-        .unwrap_or_default();
-    let versions = family_versions(&ids, &stem);
-    let (latest, several) = (versions.last().cloned(), versions.len() > 1);
-    let release = asked_release
-        .clone()
-        .or_else(|| named.map(str::to_owned))
-        .or_else(|| latest.clone());
-    let hrid = release
-        .as_ref()
-        .map_or_else(|| stem.clone(), |release| format!("{stem}.v{release}"));
-    let older = release.is_some() && release != latest;
-    let tab = if adl2_tabs(older, several).contains(&tab) {
-        tab
-    } else {
-        TemplateTab::Overview
-    };
-    let releases = load_releases(
-        TemplateFamily::Adl2,
-        listed,
-        &hrid,
-        tab,
-        CompareAsk::asked(),
-    )
-    .await?;
-    let version = release.clone();
-    let body = match tab {
-        TemplateTab::Paths => Adl2Body::Paths(fetch_adl2_catalog(hrid.clone(), version).await),
-        TemplateTab::Source => Adl2Body::Source(fetch_adl2_source(hrid.clone(), version).await),
-        TemplateTab::Json => {
-            Adl2Body::Json(fetch_adl2_json(hrid.clone(), version).await.map(|json| {
-                json.map(|json| crate::bff::pretty_body(&json, ReprFormat::CanonicalJson))
-            }))
-        }
-        TemplateTab::Example => {
-            let format = ask.format(crate::example_options::CANONICAL_EXAMPLE_FORMATS);
-            Adl2Body::Example(
-                fetch_adl2_example(hrid.clone(), format, ask.detail, ask.kind)
-                    .await
-                    .map(|text| text.map(|text| crate::bff::pretty_body(&text, format))),
-            )
-        }
-        TemplateTab::Overview | TemplateTab::Compare => Adl2Body::Overview,
-    };
-    let download = crate::download::template_href(TemplateFamily::Adl2, &hrid);
-    Ok(Adl2Template {
-        acted,
-        stem,
-        latest,
-        release,
-        hrid,
-        releases,
-        tab,
-        body,
-        download,
-    })
-}
-
 /// One ADL 2 template, at the release the address names or the latest.
 /// One ADL 2 template, at its latest release or the one asked for.
 #[expect(
@@ -1306,6 +1168,7 @@ pub async fn adl2_page() -> Drawn {
         releases,
         tab,
         body,
+        missing,
         download,
     } = template;
     let acted = delete_refused(acted.as_ref());
@@ -1389,6 +1252,9 @@ pub async fn adl2_page() -> Drawn {
             );
             example_panel(form, format, example)
         }
+        Adl2Body::Incomplete => panel(plain_section(info_note(t(tr(
+            DefinitionsMsg::TemplateIncompleteTab,
+        ))))),
         Adl2Body::Overview => {
             let mut facts = vec![(tr(DefinitionsMsg::TemplateConcept), t(&title))];
             if let Some(release) = &release {
@@ -1444,12 +1310,37 @@ pub async fn adl2_page() -> Drawn {
             true,
         ),
         h(format!(
-            r#"<div class="fui-stack">{}{}{}{binder}</div>"#,
+            r#"<div class="fui-stack">{}{}{}{}{binder}</div>"#,
             opt(older_note),
             opt(acted),
-            opt(inline_confirm(TemplateFamily::Adl2, &hrid, &base))
+            opt(inline_confirm(TemplateFamily::Adl2, &hrid, &base)),
+            opt(incomplete_note(&missing))
         )),
         delete_dialog(TemplateFamily::Adl2, &hrid, DELETE_DIALOG, &base),
     ]);
     Drawn::page(title, page)
+}
+
+/// The notice over every tab of an ADL 2 template the CDR cannot compile:
+/// the archetypes it lacks, by id, and the way to upload them.
+fn incomplete_note(missing: &[String]) -> Option<Html> {
+    if missing.is_empty() {
+        return None;
+    }
+    let ids: Html = missing
+        .iter()
+        .map(|id| h(format!("<li><code>{}</code></li>", t(id))))
+        .collect();
+    Some(crate::pages::common::warn_note(h(format!(
+        r#"<p>{}</p><ul>{ids}</ul><p><a href="{}">{}</a></p>"#,
+        t(tr_with(
+            DefinitionsMsg::TemplateIncomplete,
+            &[("count", count(missing.len()))],
+        )),
+        t(format!(
+            "/templates/upload?family={}",
+            TemplateFamily::Adl2.as_query()
+        )),
+        t(tr(DefinitionsMsg::TemplateIncompleteUpload))
+    ))))
 }

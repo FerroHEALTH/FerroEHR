@@ -19,7 +19,6 @@ app/ferroehr-rest/src/extensions/openapi.rs 1045
 app/ferroehr-rest/src/overview/negotiate.rs 2503
 app/ferroehr-server/src/lib.rs 1423
 app/ferroehr-viewer/src/builder/lift.rs 1270
-app/ferroehr-viewer/src/cdr.rs 891
 app/ferroehr-viewer/src/locale/records.rs 922
 app/ferroehr-viewer/src/management.rs 1015
 app/ferroehr-viewer/src/pages/common.rs 874
@@ -31,7 +30,7 @@ app/ferroehr-viewer/src/pages/queries.rs 1099
 app/ferroehr-viewer/src/pages/query.rs 1883
 app/ferroehr-viewer/src/pages/server.rs 1109
 app/ferroehr-viewer/src/pages/subscriptions.rs 817
-app/ferroehr-viewer/src/pages/templates.rs 1455
+app/ferroehr-viewer/src/pages/templates.rs 1346
 app/ferroehr-viewer/src/pages/terminology.rs 812
 app/ferroehr/src/aql/ir.rs 822
 app/ferroehr/src/aql/sql/from.rs 1557
@@ -43,7 +42,7 @@ app/ferroehr/src/config/mod.rs 3064
 app/ferroehr/src/db/mod.rs 2178
 app/ferroehr/src/privacy/detect.rs 901
 app/ferroehr/src/service/admin/dump_load.rs 2453
-app/ferroehr/src/service/definition/adl2.rs 1098
+app/ferroehr/src/service/definition/adl2.rs 1074
 app/ferroehr/src/service/definition/opt14_convert.rs 2727
 app/ferroehr/src/service/definition/query.rs 1003
 app/ferroehr/src/service/demographic/api.rs 1226

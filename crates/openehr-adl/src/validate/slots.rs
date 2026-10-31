@@ -357,11 +357,28 @@ fn assertion_regex(a: &Assertion) -> Option<String> {
 /// only — VTPL (a filler that does not support the template's
 /// `original_language`).
 ///
+/// A template's own `template_overlay` sections are local constituents
+/// (`ADL2/master10-templates.adoc` §Overview), so they resolve as
+/// fillers and their own fillers are checked too, against the same
+/// repository and the template's language.
+///
 /// The artefact is flattened first so inherited fillers are seen; a flatten
 /// failure yields no filler issues (the flattener's own errors surface through
 /// the specialisation validator).
 #[must_use]
 pub fn validate_fillers(archetype: &Archetype, repo: &ArchetypeRepository) -> Vec<ValidationIssue> {
+    let overlays = crate::opt::root_overlays(archetype);
+    let seeded;
+    let repo = if overlays.is_empty() {
+        repo
+    } else {
+        let mut work = repo.clone();
+        for overlay in &overlays {
+            work.insert(Archetype::TemplateOverlay(Box::new(overlay.clone())));
+        }
+        seeded = work;
+        &seeded
+    };
     let mut issues = Vec::new();
     let Ok(flat) = flat_form(archetype, repo) else {
         return issues;
@@ -372,18 +389,35 @@ pub fn validate_fillers(archetype: &Archetype, repo: &ArchetypeRepository) -> Ve
         ArtefactKind::Template | ArtefactKind::TemplateOverlay
     );
     let root_language = template_language(&v);
+    check_fillers_of(&v, repo, is_template, root_language.as_deref(), &mut issues);
+    for overlay in overlays {
+        let overlay = Archetype::TemplateOverlay(Box::new(overlay));
+        if let Ok(flat_overlay) = flat_form(&overlay, repo) {
+            check_fillers_of(
+                &view(&flat_overlay),
+                repo,
+                is_template,
+                root_language.as_deref(),
+                &mut issues,
+            );
+        }
+    }
+    issues
+}
+
+/// Check every filler root of one flat artefact.
+fn check_fillers_of(
+    v: &ArchetypeView<'_>,
+    repo: &ArchetypeRepository,
+    is_template: bool,
+    root_language: Option<&str>,
+    issues: &mut Vec<ValidationIssue>,
+) {
     let mut roots = Vec::new();
     collect_roots(v.definition, &mut roots);
     for root in roots {
-        check_filler(
-            root,
-            repo,
-            is_template,
-            root_language.as_deref(),
-            &mut issues,
-        );
+        check_filler(root, repo, is_template, root_language, issues);
     }
-    issues
 }
 
 /// The template's declared original language code (`master07.13`
@@ -461,7 +495,7 @@ fn filler_supports_language(v: &ArchetypeView<'_>, lang: &str) -> bool {
 
 /// Collect every `C_ARCHETYPE_ROOT` in the definition tree (the fillers /
 /// external references).
-fn collect_roots<'a>(def: &'a CComplexObject, out: &mut Vec<&'a CArchetypeRoot>) {
+pub(crate) fn collect_roots<'a>(def: &'a CComplexObject, out: &mut Vec<&'a CArchetypeRoot>) {
     match def {
         CComplexObject::CComplexObject(d) => {
             for attr in d.attributes.iter().flatten() {

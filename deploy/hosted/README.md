@@ -233,23 +233,24 @@ One run loads, in about 590 requests:
 | Stored AQL queries | 5, under the `eu.ferroehr.sandbox` namespace |
 
 The ADL 2 archetype step offers the whole 322-file corpus, parents before
-children, and pins both outcomes in the manifest: 232 artefacts stored, 90
-refused with a `422`. 88 refusals are AOM2 validity findings on the 2013
+children, and pins both outcomes in the manifest: 231 artefacts stored, 91
+refused with a `422`. 89 refusals are AOM2 validity findings on the 2013
 conversions: constraints on an attribute the RM does not declare
 (`DV_QUANTITY.property`), languages, slots and node ids that do not conform
 to the flat parent, and eight children of refused parents that therefore have
-no flat parent to validate against. Every refused file is adjudicated by name
-in the corpus gate (`crates/openehr-adl/tests/it/ckm_archetype_packs.rs`), and
+no flat parent to validate against, and the one template whose filler
+(`apgar`) is refused, which no stored archetype can fill (VARXR). Every
+refused file is adjudicated by name in the corpus gate (`crates/openehr-adl/tests/it/ckm_archetype_packs.rs`), and
 a change in either count fails the run instead of passing quietly.
 
 The other two refusals need the LOINC index FerroTERM serves on the box:
 `braden_scale` binds the mistyped LOINC answer code `LA9605-4` (VETDF), and
 `braden_scale-child` then has no stored parent (VASID). A terminology server
 that serves no LOINC cannot verify the binding, so the CDR warns and stores
-both (AOM2 VETDF: "subject to tool accessibility"), and the library loads 234
-/ 88. The seed asks the CDR for a LOINC code before the library step and
+both (AOM2 VETDF: "subject to tool accessibility"), and the library loads 233
+/ 89. The seed asks the CDR for a LOINC code before the library step and
 stops with that diagnosis when the posture serves none (#4278). A local run
-without LOINC sets `SANDBOX_TERMINOLOGY=without-loinc` and expects 234 / 88.
+without LOINC sets `SANDBOX_TERMINOLOGY=without-loinc` and expects 233 / 89.
 
 Two of the eight EHRs end the run with
 a second `EHR_STATUS` version: one not queryable, one not modifiable, so both
