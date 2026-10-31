@@ -280,10 +280,8 @@ pub fn template_path(template_id: &str, version: Option<&str>) -> String {
 /// The artefact resource addresses the whole AOM2 store — archetype, template
 /// or OPT — by the same HRID the template routes use, and it is the only route
 /// that DELETES one. NOTE: the released ITS-REST Definition API declares no
-/// artefact route at all, so this is the CDR's own extension realizing SM
-/// `I_DEFINITION_ADL2.delete_artefact`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_definition_adl2.adoc`), whose
-/// `artefact_does_not_exist` error is the `404`.
+/// artefact route at all, so this is the CDR's own extension, whose unknown
+/// artefact is the `404`.
 ///
 /// The id is percent-encoded with the `urlencoding` crate — an HRID is
 /// CDR-supplied text.

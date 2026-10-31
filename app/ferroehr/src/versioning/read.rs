@@ -128,7 +128,7 @@ pub(crate) struct VersionRead {
     pub(crate) canonical: Value,
     /// The `ATTESTATION`s that were on this version AT the act of committal, in
     /// commit order (RM common master06 §Attestation, "Signing content at
-    /// committal"; SM `UML/classes/update_version.adoc` §Attributes
+    /// committal";
     /// `UPDATE_VERSION.attestations`). They are part of the version's signed
     /// canonical form — master06 §Digital Signature signs "the entire Version
     /// object", excluding only `signature` — so they are built into the value

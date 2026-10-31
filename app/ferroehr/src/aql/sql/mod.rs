@@ -79,9 +79,8 @@ use expr::{col, literal_value};
 pub struct SqlCtx {
     /// The openEHR system id stamped into synthesized `OBJECT_VERSION_ID`s.
     pub system_id: String,
-    /// The set of EHRs the query is scoped to (`I_QUERY_SERVICE.execute_*`
-    /// `ehr_ids: List<UUID> [0..1]`,
-    /// `docs/specs/openehr/SM/docs/UML/classes/i_query_service.adoc`). The
+    /// The set of EHRs the query is scoped to (the `ehr_ids`
+    /// list). The
     /// ITS-REST single `ehr_id` parameter is the one-element case. Empty = no
     /// explicit scope (the population gate over `is_queryable` EHRs applies).
     pub ehr_ids: Vec<EhrId>,

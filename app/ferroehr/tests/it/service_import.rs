@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end service tests for the EHR Extract **import** path (SM
-//! `I_EHR_EXTRACT_SERVICE.import_ehr` / `import_ehr_extract`) against a real
-//! `PostgreSQL` 18 (shared testkit harness).
+//! End-to-end service tests for the EHR Extract **import** path (`import_ehr` /
+//! `import_ehr_extract`) against a real `PostgreSQL` 18 (shared testkit
+//! harness).
 //!
-//! Spec: SM `docs/specs/openehr/SM/docs/UML/classes/i_ehr_extract_service.adoc`;
-//! RM EHR Extract IM master05 (`X_VERSIONED_*`) + RM common
+//! Spec: RM EHR Extract IM master05 (`X_VERSIONED_*`) + RM common
 //! `docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
 //! §Copying (`IMPORTED_VERSION` semantics, Cases 1/2/3) + §Committal and
 //! Audits. The acceptance properties:
@@ -14,8 +13,8 @@
 //! 1. **Whole-EHR clone** (`import_ehr`) replays a whole-EHR export into an
 //!    empty target, reusing the source EHR id when none is given (master06
 //!    §Copying Case 1: "the newly created EHR should re-use the EHR identifier
-//!    from the source system"), or a caller-provided fixed id (the SM's
-//!    "same patient in other EHR services" case). Each imported version keeps
+//!    from the source system"), or a caller-provided fixed id (the same
+//!    patient in another EHR system). Each imported version keeps
 //!    the wrapped `ORIGINAL_VERSION`'s identity (`OBJECT_VERSION_ID`) and data
 //!    verbatim — so reading the clone's `EHR_STATUS` returns byte-identical
 //!    canonical JSON to the source's.
@@ -31,8 +30,7 @@
 //!    object … created and committed in a Contribution"), so an extract that
 //!    carries no `EHR_ACCESS` is completed with the local default; and the
 //!    imported `EHR_STATUS.subject` is promoted, so the clone is found by the
-//!    subject lookup (SM `I_EHR_SERVICE.get_ehrs_for_subject`,
-//!    `operations/ehr_get_by_subject.yaml`) and bound by the
+//!    subject lookup (`operations/ehr_get_by_subject.yaml`) and bound by the
 //!    one-EHR-per-subject rule (RM ehr master04 §EHR Status) like any other EHR.
 
 #![expect(
@@ -55,7 +53,7 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 
 use crate::fixtures::{composition, uv};
 use crate::typed_body::typed;
@@ -340,9 +338,8 @@ async fn import_ehr_without_ehr_access_bootstraps_the_mandatory_default() {
 #[tokio::test]
 async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     // An imported EHR is a full local EHR: its EHR_STATUS.subject is promoted,
-    // so the clone is found by the subject lookup (SM
-    // `I_EHR_SERVICE.get_ehrs_for_subject`;
-    // `operations/ehr_get_by_subject.yaml`) and holds the subject against a
+    // so the clone is found by the subject lookup
+    // (`operations/ehr_get_by_subject.yaml`) and holds the subject against a
     // later create (one EHR per subject — RM ehr master04 §EHR Status).
     let source_db = testkit::db().await.expect("testkit database");
     let source = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
@@ -393,8 +390,8 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     assert!(
         matches!(
             dup,
-            Err(ferroehr::service::status::SmError {
-                status: CallStatusType::EhrForSubjectAlreadyExists,
+            Err(ferroehr::service::status::StatusError {
+                status: ServiceStatus::EhrForSubjectAlreadyExists,
                 ..
             })
         ),
@@ -437,7 +434,7 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
         .import_ehr(None, extract)
         .await
         .expect_err("importing a subject the target already holds must be rejected");
-    assert_eq!(err.status, CallStatusType::EhrForSubjectAlreadyExists);
+    assert_eq!(err.status, ServiceStatus::EhrForSubjectAlreadyExists);
     assert!(
         err.message.contains("patient-import-2") && err.message.contains(&owner.to_string()),
         "the error must name the subject and the EHR that holds it, got: {}",
@@ -474,8 +471,8 @@ async fn import_ehr_into_fixed_fresh_id() {
         .await
         .expect("source status");
 
-    // A caller-provided fixed id (the SM's "same patient in other EHR services"
-    // case): the clone lands under `fixed`, not the source id.
+    // A caller-provided fixed id (the same patient in another EHR system): the
+    // clone lands under `fixed`, not the source id.
     let fixed = ferroehr::ids::EhrId(uuid::Uuid::now_v7());
     let extract = export_one(&source, ehr).await;
     target
@@ -490,7 +487,7 @@ async fn import_ehr_into_fixed_fresh_id() {
             .await
             .expect_err("source id absent in target")
             .status,
-        CallStatusType::EhrIdDoesNotExist
+        ServiceStatus::EhrIdDoesNotExist
     );
     let mut target_status = target
         .get_ehr_status_at_time(fixed, None)
@@ -518,7 +515,7 @@ async fn import_ehr_duplicate_target_is_rejected() {
         .import_ehr(Some(ehr), extract)
         .await
         .expect_err("duplicate target EHR id must be rejected");
-    assert_eq!(err.status, CallStatusType::EhrCreateFailDuplicateId);
+    assert_eq!(err.status, ServiceStatus::EhrCreateFailDuplicateId);
 }
 
 #[tokio::test]
@@ -613,7 +610,7 @@ async fn import_ehr_extract_adds_a_versioned_object_and_rejects_re_import() {
         .import_ehr_extract(tgt_ehr, folder_extract)
         .await
         .expect_err("re-import of the same version must be rejected");
-    assert_eq!(err.status, CallStatusType::Conflict);
+    assert_eq!(err.status, ServiceStatus::Conflict);
 }
 
 /// The `IMPORTED_VERSION` semantics of RM common master06 §Committal and Audits:
@@ -1228,11 +1225,11 @@ async fn attesting_an_imported_version_is_refused() {
         .create_ehr_contribution(ehr, attest_contribution)
         .await
         .expect_err("attesting an IMPORTED_VERSION must be refused");
-    // The SM seam carries status + message (the documented lossy seam,
+    // The status seam carries status + message (the documented lossy seam,
     // #1729); the status class and both violation facts must survive.
     assert_eq!(
         err.status,
-        CallStatusType::ContentInvalid,
+        ServiceStatus::ContentInvalid,
         "the refusal is the semantic 422 class, got {err:?}"
     );
     assert!(
@@ -1297,7 +1294,7 @@ async fn import_refuses_a_branch_version_without_its_fork_point_trunk() {
         .import_ehr(None, mutated)
         .await
         .expect_err("a branch version without its fork-point trunk must be refused");
-    assert_eq!(err.status, CallStatusType::PreconditionViolation);
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
     assert!(
         err.message.contains("fork-point trunk"),
         "the refusal names the missing trunk, got: {}",
@@ -1334,7 +1331,7 @@ async fn import_refuses_a_branch_version_without_its_branch_predecessor() {
         .import_ehr_extract(ehr_id, retree_status_version(&exported[0], "2", "2.1.2"))
         .await
         .expect_err("a branch version without its same-branch predecessor must be refused");
-    assert_eq!(err.status, CallStatusType::PreconditionViolation);
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
     assert!(
         err.message.contains("same-branch"),
         "the refusal names the missing predecessor, got: {}",
@@ -1453,7 +1450,7 @@ async fn import_advances_an_open_branch_lineage_and_rejects_a_stale_branch_versi
         .import_ehr_extract(ehr_id, retree_status_version(&exported[0], "2", "2.1.1"))
         .await
         .expect_err("a stale branch version must be refused");
-    assert_eq!(err.status, CallStatusType::Conflict);
+    assert_eq!(err.status, ServiceStatus::Conflict);
     assert!(
         err.message.contains("already has branch version"),
         "the refusal names the stored tip, got: {}",

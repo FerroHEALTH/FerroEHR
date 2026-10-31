@@ -1,15 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the two ADMIN **extension** groups — the SM
-//! activity report (`/admin/report/*`, `I_ADMIN_SERVICE` statistics) and the SM
-//! archive pair (`/admin/archive/*`, `I_ADMIN_ARCHIVE`) — driven through the
+//! End-to-end HTTP tests for the two ADMIN **extension** groups — the
+//! activity report (`/admin/report/*`) and the archive pair
+//! (`/admin/archive/*`) — driven through the
 //! assembled router over a real `FerroEhrService` on a real `PostgreSQL`.
 //!
 //! **No openEHR spec governs these routes** (the released Admin API is exactly
-//! `admin_ehr_delete` + `admin_ehr_delete_all`); the operation SEMANTICS come
-//! from `docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc` and
-//! `i_admin_archive.adoc`, and the wire shape is our own design/extension. What
+//! `admin_ehr_delete` + `admin_ehr_delete_all`); the operations and their wire
+//! shape are our own design/extension. What
 //! is asserted here is exactly what the CNF extension bindings drive:
 //! `admin-activity-report` and `admin-archive` in
 //! Veredictum's `artifacts/vocab/wire_surface.yaml`.
@@ -72,9 +71,9 @@ async fn create_ehr(app: &Router) -> String {
         .to_owned()
 }
 
-// ── the activity report (SM I_ADMIN_SERVICE statistics) ──────────────────────
+// ── the activity report ──────────────────────────────────────────────────────
 
-/// The four reporting routes answer `200` with the SM return shape: a list of
+/// The four reporting routes answer `200` with their return shape: a list of
 /// CONTRIBUTION ids, and three bare `Integer` counts. An EHR created through
 /// the released wire commits one CONTRIBUTION, so the counts are observable
 /// rather than trivially zero.
@@ -95,7 +94,7 @@ async fn the_activity_report_counts_what_the_released_wire_committed() {
 
     let (status, body) = send(&app, get("/admin/report/contribution/count?a_service=Ehr")).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body, "1", "the count is the bare SM Integer");
+    assert_eq!(body, "1", "the count is a bare JSON integer");
 
     // COMPOSITIONs are EHR-scoped and none was committed, so both COMPOSITION
     // counters are zero — and a service that is not a versioned-content
@@ -111,7 +110,7 @@ async fn the_activity_report_counts_what_the_released_wire_committed() {
     }
 }
 
-/// The SM `Interval<Iso8601_date_time>` filter reaches the query: a range that
+/// The `time_interval` filter reaches the query: a range that
 /// cannot contain the commit answers zero, an open-ended one containing it
 /// answers one.
 #[tokio::test]
@@ -136,8 +135,8 @@ async fn the_report_time_interval_filters_the_commit_window() {
     assert_eq!(body, "1", "an open upper bound contains the commit");
 }
 
-/// The two parameter refusals: `a_service` outside the SM `PLATFORM_SERVICE`
-/// enumeration, and a `time_interval` that is not `<lower>/<upper>`.
+/// The two parameter refusals: an `a_service` that names no platform service,
+/// and a `time_interval` that is not `<lower>/<upper>`.
 #[tokio::test]
 async fn the_report_refuses_an_unknown_service_and_a_malformed_interval() {
     let (_pg, app) = app(true).await;
@@ -157,8 +156,8 @@ async fn the_report_refuses_an_unknown_service_and_a_malformed_interval() {
 /// `Interval` at all — BASE
 /// `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.foundation_types.interval.adoc`
 /// §Invariants, `Limits_consistent`: `(not upper_unbounded and not
-/// lower_unbounded) implies lower <= upper`. The SM parameter IS an
-/// `Interval<Iso8601_date_time>` (`i_admin_service.adoc`), so the value
+/// lower_unbounded) implies lower <= upper`. The parameter IS an interval of
+/// ISO 8601 date-times, so the value
 /// violates its own type and the call is refused rather than answered with the
 /// empty result an inverted range would select. All four reporting routes share
 /// the one boundary parser, so all four refuse.
@@ -189,7 +188,7 @@ async fn the_report_refuses_an_interval_whose_lower_bound_is_after_its_upper() {
     assert_eq!(status, StatusCode::OK, "equal bounds: {body}");
 }
 
-// ── the archive pair (SM I_ADMIN_ARCHIVE) ────────────────────────────────────
+// ── the archive pair ─────────────────────────────────────────────────────────
 
 /// `archive_ehrs` marks the named EHRs archived and answers `204`; archival is
 /// read-neutral, so the EHR stays retrievable through the released wire.
@@ -213,8 +212,8 @@ async fn archiving_an_ehr_is_read_neutral_and_idempotent() {
     );
 }
 
-/// The all-or-nothing refusals of both halves: an unknown id is `404` (SM
-/// `ehr_id_does_not_exist` / `party_id_does_not_exist`) and a malformed one is
+/// The all-or-nothing refusals of both halves: an unknown id is `404`
+/// (`ehr_id_does_not_exist` / `party_id_does_not_exist`) and a malformed one is
 /// `400`, with nothing archived either way. A body that is not
 /// `{ "<field>": [ … ] }` is `400` too.
 #[tokio::test]
@@ -250,7 +249,7 @@ async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
             "{path} wrong shape: {body}"
         );
 
-        // An EMPTY list archives nothing and succeeds — the SM parameter is a
+        // An EMPTY list archives nothing and succeeds — the parameter is a
         // list, and an empty one names no target to fail on.
         let (status, body) = send(&app, post_json(path, &format!(r#"{{"{field}":[]}}"#))).await;
         assert_eq!(status, StatusCode::NO_CONTENT, "{path} empty list: {body}");
@@ -318,8 +317,8 @@ fn party_body(rm_type: &str, archetype: &str, name: &str) -> serde_json::Value {
 
 /// `archive_parties` selects PARTY version containers, so a
 /// `PARTY_RELATIONSHIP`'s container id is refused exactly like an id that names
-/// nothing: SM `i_admin_archive.adoc` §`archive_parties` takes `party_ids` and
-/// declares `party_id_does_not_exist` as its only error, and RM demographic
+/// nothing: `archive_parties` takes `party_ids` and answers
+/// `party_id_does_not_exist` for an id that names no party, and RM demographic
 /// `master02-demographic_package.adoc` puts every PARTY in "its own Version
 /// container" (§Versioning Semantics) while relationships are stored "as part
 /// of the data of the PARTY designated as the source" (§Party Relationships) —
@@ -410,7 +409,7 @@ async fn archiving_a_party_relationship_id_is_refused_like_an_unknown_party() {
     );
 }
 
-// ── the restore pair (our own design — the SM declares no un-archive) ────────
+// ── the restore pair (our own design) ────────────────────────────────────────
 
 /// Execute an ad-hoc AQL query and return how many rows it selected.
 async fn aql_rows(app: &Router, aql: &str) -> usize {
@@ -600,9 +599,9 @@ async fn the_restore_routes_refuse_unknown_malformed_and_shapeless_requests() {
     }
 }
 
-// ── the dump/load pair (SM I_ADMIN_DUMP_LOAD) ────────────────────────────────
+// ── the dump/load pair ───────────────────────────────────────────────────────
 
-/// A unique archive location for one test (the SM `file_sys_loc` parameter is
+/// A unique archive location for one test (the `file_sys_loc` parameter is
 /// a location on the SERVER's file system, which in-process is this one).
 fn archive_dir() -> String {
     std::env::temp_dir()
@@ -611,8 +610,8 @@ fn archive_dir() -> String {
         .into_owned()
 }
 
-/// `export_ehrs` writes the archive and answers `200` with the SM
-/// `List<DUMP_LOAD_FAIL_REPORT>` — EMPTY when every EHR was dumped. Requesting
+/// `export_ehrs` writes the archive and answers `200` with the list of fail
+/// reports — EMPTY when every EHR was dumped. Requesting
 /// the `zip` `COMPRESSION_FORMAT` member packs the same archive into one
 /// container, and `load_ehrs` — which takes only `file_sys_loc` — reads either
 /// container back.
@@ -635,9 +634,9 @@ async fn dump_and_load_round_trip_in_both_containers() {
         assert_eq!(status, StatusCode::OK, "dump {compression:?}: {body}");
         assert_eq!(body, "[]", "a clean dump reports no failures");
 
-        // Loading the archive back into the SAME repository is the SM's own
-        // documented duplicate case ("import EHRs with duplicate EHR ids will
-        // fail"): the call succeeds and reports the entity, never a fatal.
+        // Loading the archive back into the SAME repository is the duplicate
+        // case, where an EHR whose id already exists fails: the call succeeds
+        // and reports the entity, never a fatal.
         let (status, body) = send(
             &app,
             post_json("/admin/load", &format!(r#"{{"file_sys_loc":{dir:?}}}"#)),
@@ -655,11 +654,10 @@ async fn dump_and_load_round_trip_in_both_containers() {
     }
 }
 
-/// The request-shape refusals, each SM `precondition_violation` → `400`:
+/// The request-shape refusals, each `precondition_violation` → `400`:
 /// an absent/blank `file_sys_loc`, a value naming no enumeration member, a
-/// non-integer `segment_split_size`, and `encoding` — whose `ENCODING_FORMAT`
-/// enumeration (`encoding_format.adoc`) declares NO members, so no value is
-/// representable.
+/// non-integer `segment_split_size`, and `encoding` — no encoding is defined,
+/// so no value is representable.
 #[tokio::test]
 async fn dump_refuses_every_unrepresentable_request_shape() {
     let (_pg, app) = app(true).await;
@@ -701,10 +699,9 @@ async fn dump_refuses_every_unrepresentable_request_shape() {
     let _cleanup = std::fs::remove_dir_all(&dir);
 }
 
-/// EVERY declared enumeration member is served: both `EXPORT_FORMAT` members
-/// (`export_format.adoc`: `openehr_canonical_xml`, `openehr_canonical_json`)
-/// crossed with every `COMPRESSION_FORMAT` shape (`compression_format.adoc`:
-/// absent, `zip`, `7z`). No member is refused, downgraded, or answered
+/// EVERY declared enumeration member is served: both export formats
+/// (`openehr_canonical_xml`, `openehr_canonical_json`) crossed with every
+/// compression shape (absent, `zip`, `7z`). No member is refused, downgraded, or answered
 /// `501` — the two enumerations are realized in full, and the format axis is
 /// independent of the container axis.
 #[tokio::test]
@@ -728,7 +725,7 @@ async fn dump_serves_every_declared_enumeration_member() {
             assert_eq!(body, "[]", "a clean dump reports no failures");
 
             // The format-less `load_ehrs` reads it back whatever the export
-            // asked for: every archived EHR is the SM's documented duplicate.
+            // asked for: every archived EHR is a duplicate.
             let (status, body) = send(
                 &app,
                 post_json("/admin/load", &format!(r#"{{"file_sys_loc":{dir:?}}}"#)),

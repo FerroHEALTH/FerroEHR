@@ -1,19 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The 9 SM `I_TERMINOLOGY_SERVICE` calls on
-//! [`FerroEhrService`], answered by the in-process bundle or the one
-//! terminology server (`i_terminology_service.adoc`; see the module docs in
-//! [`super`]).
+//! The 9 terminology calls on [`FerroEhrService`], answered by the in-process
+//! bundle or the one terminology server (see the module docs in [`super`]).
 //!
 //! Enumeration is always the bundle's; lookup/validation goes to the bundle
 //! when it knows the terminology, else to the configured terminology server,
-//! else falls through to the bundle's `Pre_has_terminology` → `NotFound`.
+//! else falls through to the bundle's unknown-terminology `NotFound`.
 
 use std::collections::BTreeMap;
 
 use crate::service::FerroEhrService;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::service::terminology::types::{TerminologyDescription, TerminologyExtract};
 
 use super::bundle;
@@ -26,7 +24,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// Infallible in practice (the bundle is compile-time-embedded); the
-    /// `Result` is the SM call shape.
+    /// `Result` is the shape every terminology call shares.
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
@@ -34,7 +32,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn get_terminology_ids(&self) -> Result<Vec<String>, SmError> {
+    pub fn get_terminology_ids(&self) -> Result<Vec<String>, StatusError> {
         Ok(bundle::terminology_ids())
     }
 
@@ -43,7 +41,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// Infallible in practice; the `Result` is the SM call shape.
+    /// Infallible in practice; the `Result` is the shape every terminology call shares.
     #[expect(
         clippy::unused_self,
         clippy::unnecessary_wraps,
@@ -51,7 +49,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn has_terminology(&self, terminology_id: &str) -> Result<bool, SmError> {
+    pub fn has_terminology(&self, terminology_id: &str) -> Result<bool, StatusError> {
         Ok(bundle::has_terminology(terminology_id))
     }
 
@@ -61,7 +59,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// `VersionedObjectDoesNotExist` when the bundle does not know
-    /// `terminology_id` (`Pre_has_terminology`).
+    /// `terminology_id`.
     #[expect(
         clippy::unused_self,
         reason = "every service call is a method on the service, which the protocol \
@@ -71,7 +69,7 @@ impl FerroEhrService {
     pub fn get_terminology_description(
         &self,
         terminology_id: &str,
-    ) -> Result<TerminologyDescription, SmError> {
+    ) -> Result<TerminologyDescription, StatusError> {
         bundle::terminology_description(terminology_id)
     }
 
@@ -81,8 +79,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   (`Pre_has_terminology`); `at_date` is a no-op on the single pinned
+    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology; `at_date` is a no-op on the single pinned
     ///   bundle version (bundle NOTE);
     /// - FHIR path: exception on a transport fault / non-2xx / malformed
     ///   response.
@@ -91,7 +88,7 @@ impl FerroEhrService {
         terminology_id: &str,
         code: &str,
         at_date: Option<String>,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         if bundle::has_terminology(terminology_id) {
             bundle::has_term(terminology_id, code)
         } else if let Some(server) = self.terminology_server() {
@@ -115,7 +112,7 @@ impl FerroEhrService {
         &self,
         system: &str,
         code: &str,
-    ) -> Result<super::fhir::TermExistence, SmError> {
+    ) -> Result<super::fhir::TermExistence, StatusError> {
         match self.terminology_server() {
             Some(server) => server.term_existence(system, code).await,
             None => Ok(super::fhir::TermExistence::Unverifiable(
@@ -131,7 +128,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   or an unknown code (`Pre_has_terminology` + `Pre_has_term`);
+    ///   or an unknown code;
     /// - FHIR path: `VersionedObjectDoesNotExist` when `$lookup` answers
     ///   `404`; exception on a transport fault / non-2xx / malformed
     ///   response.
@@ -141,7 +138,7 @@ impl FerroEhrService {
         code: &str,
         attributes: Option<BTreeMap<String, String>>,
         at_date: Option<String>,
-    ) -> Result<TerminologyExtract, SmError> {
+    ) -> Result<TerminologyExtract, StatusError> {
         if bundle::has_terminology(terminology_id) {
             bundle::get_term(terminology_id, code)
         } else if let Some(server) = self.terminology_server() {
@@ -160,8 +157,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   (`Pre_has_terminology`);
+    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology;
     /// - FHIR path: `VersionedObjectDoesNotExist` when the server answers
     ///   `404`; exception on a transport fault / a response with no
     ///   `outcome`.
@@ -170,7 +166,7 @@ impl FerroEhrService {
         terminology_id: &str,
         ref_code: &str,
         candidate_child_code: &str,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         if bundle::has_terminology(terminology_id) {
             bundle::subsumes(terminology_id, ref_code, candidate_child_code)
         } else if let Some(server) = self.terminology_server() {
@@ -188,8 +184,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   (`Pre_has_terminology`); an unknown value set answers `false` (no
+    /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology; an unknown value set answers `false` (no
     ///   precondition on the membership test itself);
     /// - FHIR path: precondition on an empty `candidate_code`;
     ///   `VersionedObjectDoesNotExist` on an unknown value set; exception on
@@ -200,7 +195,7 @@ impl FerroEhrService {
         value_set_id: &str,
         candidate_code: &str,
         at_date: Option<String>,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         if bundle::has_terminology(terminology_id) {
             bundle::value_set_validate(terminology_id, value_set_id, candidate_code)
         } else if let Some(server) = self.terminology_server() {
@@ -224,7 +219,7 @@ impl FerroEhrService {
         &self,
         terminology_id: &str,
         value_set_code: &str,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         if bundle::has_terminology(terminology_id) {
             Ok(bundle::has_value_set(terminology_id, value_set_code))
         } else if let Some(server) = self.terminology_server() {
@@ -241,7 +236,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - bundle path: `VersionedObjectDoesNotExist` on an unknown terminology
-    ///   or an unknown value set (`Pre_has_terminology` + `Pre_has_value_set`);
+    ///   or an unknown value set;
     /// - FHIR path: `VersionedObjectDoesNotExist` when `$expand` answers
     ///   `404`; exception on a transport fault / non-2xx / malformed
     ///   response.
@@ -249,7 +244,7 @@ impl FerroEhrService {
         &self,
         terminology_id: &str,
         value_set_code: &str,
-    ) -> Result<TerminologyExtract, SmError> {
+    ) -> Result<TerminologyExtract, StatusError> {
         if bundle::has_terminology(terminology_id) {
             bundle::get_value_set(terminology_id, value_set_code)
         } else if let Some(server) = self.terminology_server() {

@@ -3,9 +3,7 @@
 
 //! The EHR Index service (`service/ehr_index/`), our own design.
 //!
-//! Holds N:M subject↔EHR associations with duplicate-management metadata. The
-//! operation and structure names borrow from the openEHR SM text, kept as
-//! reference and never an oracle.
+//! Holds N:M subject↔EHR associations with duplicate-management metadata.
 //!
 //! Layout: `index` = the write operations (I1–I5) + the reads, each public
 //! method parsing its `ehr_id` at the boundary;
@@ -48,19 +46,19 @@ use crate::service::FerroEhrService;
 use crate::service::ehr_index::types::{EhrIndexEntry, LocationDesc, ResourceStatus, SubjectRef};
 use crate::service::error::ServiceError;
 use crate::service::linkage::LinkageError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::system_log::event::EventActionCode;
 
 /// The precise EHR-index failure kind.
 ///
-/// `master07 §Errors` declares distinct `ehr_id_does_not_exist` and
-/// `subject_id_does_not_exist` statuses, which must NOT collapse to the generic
-/// `versioned_object_does_not_exist` (`i_ehr_index.adoc §Errors`).
-/// [`From<IndexError> for SmError`] maps each variant onto its dedicated
-/// [`CallStatusType`]; a generic [`ServiceError`] (a DB/codec fault) rides
+/// The distinct `ehr_id_does_not_exist` and `subject_id_does_not_exist`
+/// statuses must NOT collapse to the generic
+/// `versioned_object_does_not_exist`.
+/// [`From<IndexError> for StatusError`] maps each variant onto its dedicated
+/// [`ServiceStatus`]; a generic [`ServiceError`] (a DB/codec fault) rides
 /// through unchanged.
 // Nominal `pub`: `FerroEhrService::index_conflicts` (a `pub` method — the
-// design-filled detection read has no SM trait binding) carries this type in
+// design-filled detection read) carries this type in
 // its public signature.
 #[derive(Debug, thiserror::Error)]
 pub enum IndexError {
@@ -84,7 +82,7 @@ pub enum IndexError {
     /// that would write or scan the local map is not served here.
     #[error("{operation} is served by the IHE patient identity source, never by the local map")]
     HeldBySource {
-        /// The `I_EHR_INDEX` operation refused.
+        /// The EHR-index operation refused.
         operation: &'static str,
     },
     /// The identity source failed; nothing falls back to the local map.
@@ -117,19 +115,19 @@ impl From<crate::db::acquire::AcquireError> for IndexError {
     }
 }
 
-impl From<IndexError> for SmError {
-    /// Map the precise EHR-index errors onto their dedicated SM statuses
-    /// (`master07 §Errors`), bypassing the generic
+impl From<IndexError> for StatusError {
+    /// Map the precise EHR-index errors onto their dedicated statuses,
+    /// bypassing the generic
     /// `NotFound → versioned_object_does_not_exist` collapse the shared
-    /// [`From<ServiceError> for SmError`] applies.
+    /// [`From<ServiceError> for StatusError`] applies.
     fn from(e: IndexError) -> Self {
         match e {
-            IndexError::EhrDoesNotExist(id) => SmError::new(
-                CallStatusType::EhrIdDoesNotExist,
+            IndexError::EhrDoesNotExist(id) => StatusError::new(
+                ServiceStatus::EhrIdDoesNotExist,
                 format!("EHR {id} does not exist"),
             ),
-            IndexError::SubjectDoesNotExist(subject) => SmError::new(
-                CallStatusType::SubjectIdDoesNotExist,
+            IndexError::SubjectDoesNotExist(subject) => StatusError::new(
+                ServiceStatus::SubjectIdDoesNotExist,
                 format!(
                     "subject {}@{} is not associated",
                     subject.id, subject.namespace
@@ -137,13 +135,13 @@ impl From<IndexError> for SmError {
             ),
             IndexError::Service(e) => e.into(),
             refused @ (IndexError::Unconfigured | IndexError::NotPseudonymous) => {
-                SmError::exception(refused.to_string())
+                StatusError::exception(refused.to_string())
             }
             refused @ IndexError::HeldBySource { .. } => {
-                SmError::new(CallStatusType::NotImplemented, refused.to_string())
+                StatusError::new(ServiceStatus::NotImplemented, refused.to_string())
             }
             IndexError::IdentitySource(source) => {
-                SmError::exception("the IHE patient identity source failed").with_source(source)
+                StatusError::exception("the IHE patient identity source failed").with_source(source)
             }
         }
     }
@@ -157,9 +155,8 @@ impl From<IndexError> for SmError {
 /// storage unchecked would come back out of a read as a token no client can
 /// interpret.
 ///
-/// NOTE: `RESOURCE_STATUS.start_valid_time`/`end_valid_time` are typed
-/// `@@` (an unresolved placeholder) in the SM — a recorded spec defect
-/// (`resource_status.adoc:20,24`); implemented as ISO date-time strings.
+/// `RESOURCE_STATUS.start_valid_time`/`end_valid_time` are ISO date-time
+/// strings.
 #[expect(
     clippy::map_err_ignore,
     reason = "the mapped error already echoes the rejected token; the discarded \
@@ -191,7 +188,7 @@ impl FerroEhrService {
     /// would hold the very data the separation keeps out of readable storage.
     ///
     /// # Errors
-    /// [`SmError`] when the sender rejected the record under
+    /// [`StatusError`] when the sender rejected the record under
     /// `fail_mode = "closed"`; the caller withholds its result.
     fn record_index_access(
         &self,
@@ -200,7 +197,7 @@ impl FerroEhrService {
         subject: &SubjectRef,
         count: u64,
         succeeded: bool,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         self.emit_linkage_access(
             action,
             format!("ehr-subject:{ehr_id}@{}", subject.namespace),
@@ -215,7 +212,7 @@ impl FerroEhrService {
     /// EHR.
     ///
     /// # Errors
-    /// [`SmError`] when the sender rejected the record under
+    /// [`StatusError`] when the sender rejected the record under
     /// `fail_mode = "closed"`.
     fn record_subject_access(
         &self,
@@ -223,7 +220,7 @@ impl FerroEhrService {
         subject: &SubjectRef,
         count: u64,
         succeeded: bool,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         self.emit_linkage_access(
             action,
             format!("subject:{}", subject.namespace),
@@ -237,7 +234,7 @@ impl FerroEhrService {
     /// Record one EHR-scoped EHR Index read.
     ///
     /// # Errors
-    /// [`SmError`] when the sender rejected the record under
+    /// [`StatusError`] when the sender rejected the record under
     /// `fail_mode = "closed"`.
     fn record_ehr_access(
         &self,
@@ -245,7 +242,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         count: u64,
         succeeded: bool,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         self.emit_linkage_access(
             action,
             format!("ehr-subject:{ehr_id}"),
@@ -262,8 +259,8 @@ impl FerroEhrService {
 /// A completed operation whose crossing could not be recorded is withheld under
 /// `fail_mode = "closed"`, and the caller is told nothing about the audit
 /// pipeline beyond that the server failed.
-fn index_access_refused(error: LinkageError) -> SmError {
-    SmError::exception("the linkage access record could not be taken").with_source(error)
+fn index_access_refused(error: LinkageError) -> StatusError {
+    StatusError::exception("the linkage access record could not be taken").with_source(error)
 }
 
 /// Map a zero-rows-affected write to [`IndexError::SubjectDoesNotExist`]
@@ -308,27 +305,26 @@ fn row_to_entry(row: &sqlx::postgres::PgRow) -> Result<EhrIndexEntry, sqlx::Erro
 mod tests {
     use super::*;
 
-    /// The two declared EHR-index errors map to their dedicated SM statuses
-    /// (`master07 §Errors`), never the generic
+    /// The two EHR-index errors map to their dedicated statuses, never the generic
     /// `versioned_object_does_not_exist`.
     #[test]
     fn index_errors_map_to_dedicated_statuses() {
         let ehr = EhrId::minted(&crate::licence::stamp::StampKey::fail_safe());
-        let ehr_sm: SmError = IndexError::EhrDoesNotExist(ehr).into();
-        assert_eq!(ehr_sm.status, CallStatusType::EhrIdDoesNotExist);
+        let ehr_err: StatusError = IndexError::EhrDoesNotExist(ehr).into();
+        assert_eq!(ehr_err.status, ServiceStatus::EhrIdDoesNotExist);
 
         let subject = SubjectRef::person("p1", "demographic");
-        let subj_sm: SmError = IndexError::SubjectDoesNotExist(subject).into();
-        assert_eq!(subj_sm.status, CallStatusType::SubjectIdDoesNotExist);
+        let subj_err: StatusError = IndexError::SubjectDoesNotExist(subject).into();
+        assert_eq!(subj_err.status, ServiceStatus::SubjectIdDoesNotExist);
 
         // A generic service miss still routes through the shared table (404),
         // carrying the status it was constructed with.
-        let svc: SmError = IndexError::Service(ServiceError::sm(
-            CallStatusType::VersionedObjectDoesNotExist,
+        let svc: StatusError = IndexError::Service(ServiceError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             "x",
         ))
         .into();
-        assert_eq!(svc.status, CallStatusType::VersionedObjectDoesNotExist);
+        assert_eq!(svc.status, ServiceStatus::VersionedObjectDoesNotExist);
     }
 
     /// A status whose validity bounds are absent or ISO-8601 is accepted; one

@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_EXTRACT_SERVICE` over the MESSAGE extension wire — **our own
+//! EHR-Extract export and import over the MESSAGE extension wire — **our own
 //! extension** (see [`super`] for the whole group's spec-silence flag).
 //!
-//! The four SM operations (`i_ehr_extract_service.adoc`) and the routes that
-//! realize them:
+//! The four operations and their routes:
 //!
-//! | SM operation | route |
+//! | operation | route |
 //! |---|---|
 //! | `export_ehrs(an_ehr_id)` | `GET /message/export/{ehr_id}` |
 //! | `export_ehr_extracts(extract_spec)` | `POST /message/export` |
@@ -24,8 +23,8 @@
 //! own design/extension): the shared authentication + RBAC layer answers before
 //! any handler runs, so every route carries `401` and every route the coarse
 //! gate classifies as a WRITE carries `403` for the configured read-only role.
-//! `POST /message/export` is not one: SM `I_EHR_EXTRACT_SERVICE.export_ehr_extracts`
-//! commits nothing, so it is pinned as a read
+//! `POST /message/export` is not one: `export_ehr_extracts` commits nothing,
+//! so it is pinned as a read
 //! (`ferroehr-rest::extensions::access::authz::EXTENSION_READ_ROUTES`), like the
 //! released ad-hoc AQL `POST`; the import routes stay writes.
 
@@ -69,20 +68,20 @@ pub(crate) fn extract_routes() -> OpenApiRouter<AppState> {
 /// Export one whole EHR as EXTRACTs (`GET /message/export/{ehr_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_EHR_EXTRACT_SERVICE.export_ehrs`.
+/// docs).
 #[utoipa::path(
     get, path = "/message/export/{ehr_id}", tag = "message",
     params(("ehr_id" = String, Path, description = "The EHR to export.")),
     responses(
-        (status = 200, description = "The SM `List<EXTRACT>` — one canonical \
+        (status = 200, description = "A list of `EXTRACT`s — one canonical \
                                       `EXTRACT` carrying every versioned object \
                                       of the EHR, latest versions only \
                                       (`extract_version_spec.adoc`: \"By \
                                       default, only latest versions are \
                                       included\").",
          body = Vec<serde_json::Value>),
-        (status = 400, description = "`ehr_id` is not a well-formed UUID — SM \
-                                      `precondition_violation`. Refused before \
+        (status = 400, description = "`ehr_id` is not a well-formed UUID. \
+                                      Refused before \
                                       any lookup: a malformed identifier is \
                                       never resolved against the store.",
          body = serde_json::Value),
@@ -90,7 +89,7 @@ pub(crate) fn extract_routes() -> OpenApiRouter<AppState> {
                                       principal). Refused before the path \
                                       parameter is even parsed.",
          body = serde_json::Value),
-        (status = 404, description = "SM `ehr_id_does_not_exist`.",
+        (status = 404, description = "No EHR with this id.",
          body = serde_json::Value),
         (status = 406, description = "No representation satisfies `Accept` \
                                       (the extract list is JSON only).",
@@ -108,8 +107,7 @@ pub(crate) async fn message_export_ehrs(
 /// Export EXTRACTs by `EXTRACT_SPEC` (`POST /message/export`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM
-/// `I_EHR_EXTRACT_SERVICE.export_ehr_extracts`. A read modelled as `POST`
+/// docs). A read modelled as `POST`
 /// because its selector is a whole `EXTRACT_SPEC` structure, exactly as the
 /// released ad-hoc AQL read is (`query_execute_post`).
 #[utoipa::path(
@@ -145,7 +143,7 @@ pub(crate) async fn message_export_ehrs(
                      }
                  })),
     responses(
-        (status = 200, description = "The SM `List<EXTRACT>` — one canonical \
+        (status = 200, description = "A list of `EXTRACT`s — one canonical \
                                       `EXTRACT` per manifest entity, in \
                                       manifest order (`EXTRACT_MANIFEST.\
                                       entities` is `1..*`, so the list is \
@@ -163,16 +161,13 @@ pub(crate) async fn message_export_ehrs(
                                       the catch-all `other`), or a \
                                       selection this service does not support \
                                       (`criteria`, an unsupported \
-                                      `commit_time_interval`) — SM \
-                                      `precondition_violation`.",
+                                      `commit_time_interval`).",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated.", body = serde_json::Value),
         (status = 404, description = "An entity's `ehr_id`/`subject_id` \
-                                      resolves to no EHR (SM \
-                                      `ehr_id_does_not_exist`), or an \
+                                      resolves to no EHR, or an \
                                       `item_list` entry names no version \
-                                      container in that EHR (SM \
-                                      `versioned_object_does_not_exist`).",
+                                      container in that EHR.",
          body = serde_json::Value),
         (status = 415, description = "The request `Content-Type` is neither \
                                       `application/json` nor `application/xml`.",
@@ -190,16 +185,15 @@ pub(crate) async fn message_export_ehr_extracts(
 /// Import a whole EHR from an EXTRACT (`POST /message/import{?ehr_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_EHR_EXTRACT_SERVICE.import_ehr`, whose
-/// `an_ehr_id` is `[0..1]` — hence a query parameter rather than a path
+/// docs). The target EHR id is optional — hence a query parameter rather than a path
 /// segment: the resource being created is the EHR, and the caller MAY fix its
 /// identifier (RM common `master06` §Copying Case 1).
 #[utoipa::path(
     post, path = "/message/import", tag = "message",
     params(("ehr_id" = Option<String>, Query,
             description = "Optional: create the clone under THIS identifier \
-                           (the SM's \"same patient in other EHR services\" \
-                           case). Absent ⇒ the source EHR id the extract \
+                           (the same patient in another EHR system). \
+                           Absent ⇒ the source EHR id the extract \
                            carries is re-used (RM common `master06` §Copying \
                            Case 1).")),
     request_body(content = serde_json::Value,
@@ -219,8 +213,7 @@ pub(crate) async fn message_export_ehr_extracts(
                                       it carries no `EHR_STATUS` versioned \
                                       object, it names no source EHR id while \
                                       `ehr_id` is absent, or a content item / \
-                                      `ORIGINAL_VERSION` is malformed — SM \
-                                      `precondition_violation`.",
+                                      `ORIGINAL_VERSION` is malformed.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated.", body = serde_json::Value),
         (status = 403, description = "The authenticated principal carries the \
@@ -228,10 +221,8 @@ pub(crate) async fn message_export_ehr_extracts(
                                       writes, so it is refused before the body \
                                       is read.",
          body = serde_json::Value),
-        (status = 409, description = "SM `ehr_create_fail_duplicate_id` — an \
-                                      EHR with the target id already exists \
-                                      (\"import EHRs with duplicate EHR ids \
-                                      will fail\") — or the imported \
+        (status = 409, description = "An EHR with the target id already \
+                                      exists, or the imported \
                                       `EHR_STATUS` names a subject another EHR \
                                       already holds (one EHR per subject, RM \
                                       ehr `master04` §EHR Status).",
@@ -253,14 +244,12 @@ pub(crate) async fn message_import_ehr(
 /// (`POST /message/import/{ehr_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM
-/// `I_EHR_EXTRACT_SERVICE.import_ehr_extract` (RM common `master06` §Copying
-/// Cases 2/3).
+/// docs). RM common `master06` §Copying Cases 2/3 describe the copy.
 #[utoipa::path(
     post, path = "/message/import/{ehr_id}", tag = "message",
     params(("ehr_id" = String, Path,
-            description = "The EHR the extract's content lands in (mandatory: \
-                           SM `an_ehr_id: UUID [1]`).")),
+            description = "The EHR the extract's content lands in \
+                           (mandatory).")),
     request_body(content = serde_json::Value,
                  description = "A canonical `EXTRACT` whose content items \
                                 become new versions of the addressed EHR's \
@@ -268,14 +257,13 @@ pub(crate) async fn message_import_ehr(
                  example = json!({ "_type": "EXTRACT" })),
     responses(
         (status = 204, description = "The extract's versions landed. No body: \
-                                      the SM operation returns nothing, and \
+                                      the operation returns nothing, and \
                                       the affected resources are read through \
                                       their own released endpoints."),
         (status = 400, description = "The body is not a well-formed `EXTRACT`, \
                                       `ehr_id` is not a well-formed UUID, or a \
                                       content item / `ORIGINAL_VERSION` is \
-                                      malformed — SM \
-                                      `precondition_violation`.",
+                                      malformed.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated.", body = serde_json::Value),
         (status = 403, description = "The authenticated principal carries the \
@@ -283,7 +271,7 @@ pub(crate) async fn message_import_ehr(
                                       writes, so it is refused before the body \
                                       is read.",
          body = serde_json::Value),
-        (status = 404, description = "SM `ehr_id_does_not_exist`.",
+        (status = 404, description = "No EHR with this id.",
          body = serde_json::Value),
         (status = 409, description = "The EHR already holds an \
                                       `EHR_STATUS`/`EHR_ACCESS` under a \
@@ -365,7 +353,7 @@ fn read_extract(parts: &RequestParts) -> Result<Extract, RestError> {
     Ok(negotiate::rm_value::<Extract>(&parts.headers, &parts.body)?)
 }
 
-/// The OPTIONAL `ehr_id` query parameter of `import_ehr` (SM `[0..1]`).
+/// The OPTIONAL `ehr_id` query parameter of `import_ehr`.
 fn query_ehr_id(parts: &RequestParts) -> Result<Option<EhrId>, RestError> {
     let Some(raw) = params::query_param(parts.query.as_deref(), "ehr_id") else {
         return Ok(None);

@@ -33,7 +33,7 @@ use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::audit::{AuditInput, OPENEHR};
 use crate::versioning::integrity;
 use crate::versioning::lifecycle::lifecycle_rubric;
@@ -67,14 +67,14 @@ pub(crate) async fn revision_history(
 ) -> Result<(Value, jiff::Timestamp), ServiceError> {
     let rows = crate::storage::version_repo::meta::all_version_meta(pool, vo_id).await?;
     let first = rows.first().ok_or_else(|| {
-        ServiceError::sm(
-            CallStatusType::VersionedObjectDoesNotExist,
+        ServiceError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("versioned object {vo_id}"),
         )
     })?;
     if first.ehr_id != Some(ehr_id) {
-        return Err(ServiceError::sm(
-            CallStatusType::VersionedObjectDoesNotExist,
+        return Err(ServiceError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("versioned object {vo_id} in EHR {ehr_id}"),
         ));
     }
@@ -116,8 +116,8 @@ pub(crate) async fn revision_history(
     // §Attributes): a versioned object always has at least one version, so an
     // empty history is not a representable resource.
     let items = openehr_base::containers::NonEmptyVec::new(items).map_err(|empty| {
-        ServiceError::sm(
-            CallStatusType::VersionedObjectDoesNotExist,
+        ServiceError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("versioned object {vo_id}: {empty}"),
         )
     })?;

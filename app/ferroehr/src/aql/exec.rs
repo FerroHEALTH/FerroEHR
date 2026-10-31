@@ -30,9 +30,7 @@ use crate::storage::node_repo::SubtreeAnchor;
 
 /// One `RESULT_SET` column's metadata (`schemas/query/ResultSetColumn`).
 ///
-/// `RESULT_SET_COLUMN.archetype_id [0..1]` is deliberately absent: the SM
-/// `result_set_column.adoc` marks it "check on whether needed or **inside the
-/// path**", and the ITS-REST 1.1.0 `ResultSetColumn` examples carry the
+/// `RESULT_SET_COLUMN.archetype_id [0..1]` is deliberately absent: the ITS-REST 1.1.0 `ResultSetColumn` examples carry the
 /// archetype/node codes inline in `path` (never a separate `archetype_id`), so a
 /// distinct field has no pinned semantics or golden to validate against.
 #[derive(Debug, Clone)]

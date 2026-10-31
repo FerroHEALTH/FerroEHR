@@ -5,8 +5,7 @@
 //!
 //! The two calls `definitions_valid` and `content_valid`, both over a
 //! `LOCATABLE`, on [`FerroEhrService`]'s existing validation choke points. Our
-//! own design; the call names borrow from the openEHR SM text, kept as reference
-//! and never an oracle.
+//! own design.
 //!
 //! Validation itself is owned by the validation register (`src/validation/`);
 //! this file is only the adapter over the shared choke points
@@ -30,13 +29,12 @@ use serde_json::Value;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::versioning::Kind;
 
 impl FerroEhrService {
-    /// `definitions_valid` (`i_validity_checker.adoc`): "Return `True` if the
-    /// definition identifiers (i.e. archetype and template identifiers) are
-    /// known in the local `definitions` service."
+    /// `definitions_valid`: true if the definition identifiers (archetype and
+    /// template identifiers) are known in the local definitions store.
     ///
     /// Every `archetype_details` (RM `ARCHETYPED`) declaration in the content
     /// contributes its `archetype_id` and, where present, its `template_id`.
@@ -56,8 +54,8 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// An unknown identifier answers `Ok(false)`, never an error; a database
-    /// or template-store fault propagates as its [`SmError`] mapping.
-    pub async fn definitions_valid(&self, a_content: &Value) -> Result<bool, SmError> {
+    /// or template-store fault propagates as its [`StatusError`] mapping.
+    pub async fn definitions_valid(&self, a_content: &Value) -> Result<bool, StatusError> {
         let mut archetype_ids = std::collections::BTreeSet::new();
         let mut template_ids = std::collections::BTreeSet::new();
         collect_definition_ids(a_content, &mut archetype_ids, &mut template_ids);
@@ -85,8 +83,8 @@ impl FerroEhrService {
         Ok(true)
     }
 
-    /// `content_valid` (`i_validity_checker.adoc`): "Return `True` if the
-    /// content structure is a valid instance of the relevant RM classes."
+    /// `content_valid`: true if the content structure is a valid instance of
+    /// the relevant RM classes.
     /// Runs the same per-`Kind` structural validation every commit runs; an
     /// unrecognized root `_type` is `false`. A bare validity check has no
     /// lifecycle context → full strictness.
@@ -96,8 +94,8 @@ impl FerroEhrService {
     /// A validation verdict is never an error (`ValidationFailed` /
     /// `Unprocessable` answer `Ok(false)`); any other service failure from
     /// the validation path (e.g. a template-store/database fault) propagates
-    /// as its [`SmError`] mapping.
-    pub async fn content_valid(&self, a_content: &Value) -> Result<bool, SmError> {
+    /// as its [`StatusError`] mapping.
+    pub async fn content_valid(&self, a_content: &Value) -> Result<bool, StatusError> {
         let rm_type = a_content.get("_type").and_then(Value::as_str).unwrap_or("");
         let Some(kind) = Kind::from_type(rm_type) else {
             return Ok(false);
@@ -114,21 +112,21 @@ impl FerroEhrService {
     /// # Errors
     /// A validation verdict is never an error; any other service failure from
     /// the validation path (e.g. a template-store/database fault) propagates
-    /// as its [`SmError`] mapping.
+    /// as its [`StatusError`] mapping.
     pub(crate) async fn commit_rejection(
         &self,
         a_kind: Kind,
         a_content: &Value,
-    ) -> Result<Option<String>, SmError> {
+    ) -> Result<Option<String>, StatusError> {
         match self.validate_for_commit(a_kind, a_content, false).await {
             Ok(()) => Ok(None),
-            // Rendered through the SM bridge — where the per-path violation
+            // Rendered through the status bridge — where the per-path violation
             // list joins into one message — so the text matches what the
             // committing routes serve, verbatim.
             Err(
                 rejection
                 @ (ServiceError::ValidationFailed(_) | ServiceError::Unprocessable { .. }),
-            ) => Ok(Some(SmError::from(rejection).message)),
+            ) => Ok(Some(StatusError::from(rejection).message)),
             Err(other) => Err(other.into()),
         }
     }

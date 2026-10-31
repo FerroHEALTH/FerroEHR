@@ -45,7 +45,7 @@ use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::node_repo::read_version_rows_all;
 use crate::storage::row::ReadRow;
@@ -314,7 +314,7 @@ impl FerroEhrService {
     pub async fn verify_storage_parity(
         &self,
         scope: StorageParityScope,
-    ) -> Result<StorageParityReport, SmError> {
+    ) -> Result<StorageParityReport, StatusError> {
         Ok(self.collect_storage_parity(scope).await?)
     }
 

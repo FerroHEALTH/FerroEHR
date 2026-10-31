@@ -16,7 +16,7 @@ use sqlx::PgConnection;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::error::ServiceError;
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::change::Committed;
 use crate::versioning::{Kind, SigningCtx};
 
@@ -78,8 +78,8 @@ pub(crate) async fn ensure_not_withheld_tx(
     if crate::system_log::access_context::access_delay_enforced()
         && crate::storage::access_delay::is_withheld(tx, vo_id).await?
     {
-        return Err(ServiceError::sm(
-            CallStatusType::VersionedObjectDoesNotExist,
+        return Err(ServiceError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("versioned object {vo_id}"),
         ));
     }

@@ -3,9 +3,7 @@
 
 //! Wire-facing EHR-service types.
 //!
-//! The SM `EHR_SUMMARY` return shape and the contribution-list time-range
-//! argument (SM `I_EHR_SERVICE` / `I_EHR_CONTRIBUTION`,
-//! `docs/specs/openehr/SM/docs/openehr_platform/master05-ehr_service.adoc`).
+//! The EHR summary return shape and the contribution-list time-range argument.
 
 #![expect(
     clippy::disallowed_types,
@@ -15,8 +13,8 @@
 
 use serde_json::Value;
 
-/// SM `EHR_SUMMARY` (`ehr_summary.adoc`) — the `I_EHR_SERVICE.get_ehr` /
-/// `get_ehrs_for_subject` return shape, all six mandatory attributes.
+/// The summary of one EHR — the `get_ehr` / `get_ehrs_for_subject` return
+/// shape, all six attributes populated.
 #[derive(Debug, Clone)]
 pub struct EhrSummary {
     /// `ehr_id: UUID` — "EHR identifier of this EHR."
@@ -36,7 +34,6 @@ pub struct EhrSummary {
 
 /// The optional inclusive `(lower, upper)` ISO-8601 bounds of a time interval.
 ///
-/// Models an SM `Interval<Iso8601_date_time>`
-/// (`I_EHR_CONTRIBUTION.list_contributions` / `contribution_count`); either
-/// side open (`None`) means unbounded.
+/// The filter of `list_contributions` / `contribution_count`; either side open
+/// (`None`) means unbounded.
 pub type TimeRange = Option<(Option<String>, Option<String>)>;

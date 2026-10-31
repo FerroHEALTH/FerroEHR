@@ -83,7 +83,7 @@ pub(crate) mod read;
 pub mod signature;
 pub(crate) mod wire;
 
-// Re-exports: the versioning API the service layer and SM adapters consume.
+// Re-exports: the versioning API the service layer and its adapters consume.
 
 /// The kind of versioned object (discriminates `version.kind`).
 ///
@@ -234,8 +234,7 @@ pub(crate) struct SigningCtx<'a> {
 /// invalidation (EHR register), committer default (EHR register).
 /// `crate::service::FerroEhrService` implements it; versioning owns only the
 /// change-set decision logic. `default_committer` is the EHR worker's
-/// `committer()`; `ensure_ehr_exists` closes the `Pre_has_ehr` check (SM
-/// `i_ehr_contribution.adoc` §`commit_contribution` `Pre_has_ehr`). The
+/// `committer()`; `ensure_ehr_exists` closes the EHR-existence check. The
 /// `is_modifiable` content-write guard is NOT a hook: it runs inside the
 /// commit transaction ([`change::ensure_content_writable_tx`]).
 ///

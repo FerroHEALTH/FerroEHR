@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A minimal spec-valid ADL2 source builder shared by the suites that need a
-//! stored ADL2/OPT2 family (the `I_DEFINITION_ADL2` catalog tests and the AQL
+//! stored ADL2/OPT2 family (the ADL2 catalog tests and the AQL
 //! archetype-lineage test).
 //!
 //! Helper module, not a test module (`.claude/rules/testing.md` §Where tests

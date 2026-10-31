@@ -23,7 +23,7 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::versioning::signature::config::{Mode, SigningConfig, VerifyOnRead};
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr::versioning::signature::verify::Verdict;
@@ -39,8 +39,7 @@ use sqlx::{PgPool, Row};
 use crate::fixtures::{change_type, committer_proxy, composition, uid, uv};
 
 /// A wire `UPDATE_ATTESTATION` partial for an attestation committed WITH the
-/// version (`UPDATE_VERSION.attestations`; SM
-/// `UML/classes/update_version.adoc` §Attributes) — the "Signing content at
+/// version (`UPDATE_VERSION.attestations`) — the "Signing content at
 /// committal" case of RM common master06 §Attestation.
 fn update_attestation(reason: &str) -> UpdateAttestation {
     UpdateAttestation {
@@ -328,13 +327,13 @@ async fn strict_verify_on_read_rejects_a_tampered_row() {
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await;
     // NOTE: a signing/integrity failure surfaces at the service boundary
-    // as `SmError { status: Exception }` (the adapter maps it to the same wire 5xx
+    // as `StatusError { status: Exception }` (the adapter maps it to the same wire 5xx
     // the old `ApiError::Internal` produced).
     assert!(
         matches!(
             tampered,
-            Err(SmError {
-                status: CallStatusType::Exception,
+            Err(StatusError {
+                status: ServiceStatus::Exception,
                 ..
             })
         ),
@@ -377,8 +376,8 @@ async fn default_verify_on_read_is_strict_and_rejects_a_tampered_row() {
     assert!(
         matches!(
             tampered,
-            Err(SmError {
-                status: CallStatusType::Exception,
+            Err(StatusError {
+                status: ServiceStatus::Exception,
                 ..
             })
         ),
@@ -701,8 +700,7 @@ async fn creating_system_id_and_signature_survive_a_system_id_change() {
 /// the simple rule of serialising the entire Version object (note that the
 /// signature attribute will be Void at this point)". `signature` is the ONLY
 /// excluded attribute — so the `ORIGINAL_VERSION.attestations` a version
-/// carried at committal (`UPDATE_VERSION.attestations`, SM
-/// `UML/classes/update_version.adoc` §Attributes; master06 §Attestation,
+/// carried at committal (`UPDATE_VERSION.attestations`; master06 §Attestation,
 /// "Signing content at committal") are INSIDE the signed canonical form.
 ///
 /// Asserted both ways: the served version still recomputes its own digest with
@@ -759,8 +757,8 @@ async fn at_committal_attestation_is_signed_and_a_tamper_is_caught() {
     assert!(
         matches!(
             tampered,
-            Err(SmError {
-                status: CallStatusType::Exception,
+            Err(StatusError {
+                status: ServiceStatus::Exception,
                 ..
             })
         ),

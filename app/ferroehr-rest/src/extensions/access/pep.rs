@@ -6,9 +6,7 @@
 //! Composes the ABAC gate with the SMART resource-scope + launch-context gate,
 //! driven from the generic dispatch mount (`crate::api`).
 //!
-//! ABAC and RBAC are our own enterprise design — no openEHR spec governs them
-//! (the SM places authorisation out of band, SM
-//! `openehr_platform/master02-overview.adoc` §General Assumptions). SMART is
+//! ABAC and RBAC are our own enterprise design — no openEHR spec governs them. SMART is
 //! spec-grounded: the scope grammar and launch-context binding come from
 //! `ITS-REST/docs/smart_app_launch/master08-scopes.adoc` §Resource Scopes and
 //! `master07-*.adoc` §Context Selection, and the 401/403 discipline from
@@ -54,7 +52,7 @@ use crate::state::AppState;
 use crate::{negotiate, params};
 use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::aql::subject::{EhrSubject, TouchedSubjects};
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::openehr::smart_scopes::ResourceFamily;
@@ -780,10 +778,10 @@ fn engine_error(
     error: &(dyn std::error::Error + 'static),
 ) -> Response {
     let overloaded = std::iter::successors(Some(error), |e| e.source())
-        .filter_map(<dyn std::error::Error>::downcast_ref::<SmError>)
-        .find(|sm| sm.status == CallStatusType::ServiceOverloaded);
+        .filter_map(<dyn std::error::Error>::downcast_ref::<StatusError>)
+        .find(|err| err.status == ServiceStatus::ServiceOverloaded);
     let mut resp = match overloaded {
-        Some(sm) => RestError::from(sm.clone()).into_response(),
+        Some(err) => RestError::from(err.clone()).into_response(),
         None => RestError::from(crate::overview::error::internal_fault_caused(step, error))
             .into_response(),
     };
@@ -1073,7 +1071,7 @@ mod tests {
             Box::pin(async move {
                 ferroehr::aql::subject::ehr_subject(&pool, ferroehr::ids::EhrId(uuid::Uuid::nil()))
                     .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", SmError::from(e)))
+                    .map_err(|e| ResolveError::new("ehr subject lookup", StatusError::from(e)))
             })
         });
         let principal = principal_with_patient("P1");
@@ -1097,7 +1095,7 @@ mod tests {
             Box::pin(async move {
                 Err(ResolveError::new(
                     "ehr subject lookup",
-                    SmError::exception("lookup failed".to_owned()),
+                    StatusError::exception("lookup failed".to_owned()),
                 ))
             })
         });

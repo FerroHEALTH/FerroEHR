@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_EHR_DIRECTORY` (`i_ehr_directory.adoc`) — the DIRECTORY (FOLDER)
-//! surface, one hierarchy per EHR through the ITS-REST/SM `/directory`
-//! binding.
+//! The DIRECTORY (FOLDER) surface, one hierarchy per EHR through the ITS-REST
+//! `/directory` binding.
 //!
 //! Spec: RM ehr `master04-ehr_package.adoc` §Folders + the EHR class
 //! invariants `Directory_in_folders` (`EHR.directory = folders.item(1)`) /
@@ -17,9 +16,8 @@
 //! additional `EHR.folders` hierarchies are committable through a CONTRIBUTION,
 //! the only committal path the release describes for them (RM ehr
 //! `master04-ehr_package.adoc` §Folders declares `EHR.folders`
-//! `List<VERSIONED_FOLDER>` with `EHR.directory = folders.item(1)`, while
-//! `SM/docs/UML/classes/i_ehr_directory.adoc` keys every operation on the one
-//! directory). No openEHR spec governs a multi-hierarchy directory WRITE surface.
+//! `List<VERSIONED_FOLDER>` with `EHR.directory = folders.item(1)`). No openEHR
+//! spec governs a multi-hierarchy directory WRITE surface.
 
 #![expect(
     clippy::disallowed_types,
@@ -31,7 +29,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::response::ResourceMeta;
 use crate::service::response::ServiceResponse;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::Folder;
@@ -158,8 +156,8 @@ impl FerroEhrService {
         }
         .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("directory for EHR {ehr_id}"),
             )
         })?;
@@ -180,8 +178,8 @@ impl FerroEhrService {
             Some(path) => select_subfolder(&folder, path)
                 .map(|sub| ServiceResponse::new(sub, meta))
                 .ok_or_else(|| {
-                    ServiceError::sm(
-                        CallStatusType::VersionedObjectDoesNotExist,
+                    ServiceError::new(
+                        ServiceStatus::VersionedObjectDoesNotExist,
                         format!("folder path {path:?}"),
                     )
                 }),
@@ -209,8 +207,8 @@ impl FerroEhrService {
             .await?
             .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
             .ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::VersionDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::VersionDoesNotExist,
                     format!("directory {vo_id} v{version}"),
                 )
             })?;
@@ -220,8 +218,8 @@ impl FerroEhrService {
         let mut response = self.version_response(ehr_id, vo_id, read)?;
         if let Some(path) = path.map(str::trim).filter(|p| !p.is_empty() && *p != "/") {
             response.body = select_subfolder(&response.body, path).ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::VersionedObjectDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::VersionedObjectDoesNotExist,
                     format!("folder path {path:?}"),
                 )
             })?;
@@ -243,8 +241,8 @@ impl FerroEhrService {
         let (body, last_modified) = versioned_object(&self.pool, vo_id, ehr_id, "VERSIONED_FOLDER")
             .await?
             .ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::VersionedObjectDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::VersionedObjectDoesNotExist,
                     format!("versioned object {vo_id}"),
                 )
             })?;
@@ -470,8 +468,8 @@ impl FerroEhrService {
     /// The EHR's directory versioned-object id, or `NotFound`.
     async fn directory_vo(&self, ehr_id: EhrId) -> Result<VoId, ServiceError> {
         self.directory_vo_opt(ehr_id).await?.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("directory for EHR {ehr_id}"),
             )
         })
@@ -479,8 +477,9 @@ impl FerroEhrService {
 }
 
 /// Navigate a FOLDER tree to a sub-folder by name path (`a/b/c`), matching
-/// each segment against child `folders[].name.value` (SM `has_path`:
-/// slash-separated Folder names). Returns the sub-folder JSON.
+/// each segment against child `folders[].name.value` (ITS-REST
+/// `parameters/query/path.yaml`: slash-separated folder names). Returns the
+/// sub-folder JSON.
 fn select_subfolder(folder: &Value, path: &str) -> Option<Value> {
     let mut current = folder;
     for segment in path.split('/').filter(|s| !s.is_empty()) {
@@ -495,26 +494,26 @@ fn select_subfolder(folder: &Value, path: &str) -> Option<Value> {
     Some(current.clone())
 }
 
-// ── The SM I_EHR_DIRECTORY call surface ───────────────────────────────────────
+// ── The DIRECTORY call surface ────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// SM `I_EHR_DIRECTORY.has_directory` — whether the EHR has a directory.
+    /// Whether the EHR has a directory.
     ///
     /// # Errors
-    /// [`SmError`] if the directory-slot resolution fails.
-    pub async fn has_directory(&self, an_ehr_id: EhrId) -> Result<bool, SmError> {
+    /// [`StatusError`] if the directory-slot resolution fails.
+    pub async fn has_directory(&self, an_ehr_id: EhrId) -> Result<bool, StatusError> {
         // EHR.directory (= folders[1]) — resolve the directory slot rather than
         // assuming a single FOLDER (RM ehr master04 §Folders).
         Ok(self.directory_vo_opt(an_ehr_id).await?.is_some())
     }
 
-    /// SM `I_EHR_DIRECTORY.has_path` — whether the slash-separated Folder-name
+    /// Whether the slash-separated Folder-name
     /// path resolves in the EHR's current directory.
     ///
     /// # Errors
-    /// [`SmError`] if a directory read fails (a missing directory or path is
+    /// [`StatusError`] if a directory read fails (a missing directory or path is
     /// `Ok(false)`).
-    pub async fn has_path(&self, an_ehr_id: EhrId, a_path: String) -> Result<bool, SmError> {
+    pub async fn has_path(&self, an_ehr_id: EhrId, a_path: String) -> Result<bool, StatusError> {
         match self.directory_at_time(an_ehr_id, None, Some(&a_path)).await {
             Ok(resp) => Ok(!resp.body.is_null()),
             Err(ServiceError::NotFound(_)) => Ok(false),
@@ -522,49 +521,49 @@ impl FerroEhrService {
         }
     }
 
-    /// SM `I_EHR_DIRECTORY.create_directory` — create the EHR's directory,
+    /// Create the EHR's directory,
     /// returning the new version's resource metadata (uid + commit time for
     /// the wire's `ETag`/`Last-Modified`).
     ///
     /// # Errors
-    /// [`SmError`] when the EHR does not exist (404-equivalent), the FOLDER
+    /// [`StatusError`] when the EHR does not exist (404-equivalent), the FOLDER
     /// tree is invalid (422-equivalent), the EHR is not modifiable or already
     /// has a directory (409-equivalent), or the commit fails.
     pub async fn create_directory(
         &self,
         an_ehr_id: EhrId,
         a_dir_struct: UpdateVersion<Folder>,
-    ) -> Result<ResourceMeta, SmError> {
+    ) -> Result<ResourceMeta, StatusError> {
         super::committed_meta(self.commit_new_directory(an_ehr_id, a_dir_struct).await?)
     }
 
-    /// SM `I_EHR_DIRECTORY.get_directory_at_time` — the directory FOLDER
+    /// The directory FOLDER
     /// current at `a_time` (or now), optionally navigated to `a_path`. The
     /// response carries the resource metadata so the wire can emit
     /// `ETag`/`Last-Modified` on reads too (ITS-REST overview §"`ETag` and
     /// Last-Modified": both SHOULD accompany versioned resources).
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `a_time` (400-equivalent), a missing
+    /// [`StatusError`] for a malformed `a_time` (400-equivalent), a missing
     /// directory/version/path (404-equivalent), or a read failure.
     pub async fn get_directory_at_time(
         &self,
         an_ehr_id: EhrId,
         a_time: Option<String>,
         a_path: Option<String>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let at = a_time.as_deref().map(parse_at_time).transpose()?;
         Ok(self
             .directory_at_time(an_ehr_id, at, a_path.as_deref())
             .await?)
     }
 
-    /// SM `I_EHR_DIRECTORY.update_directory` — commit a new directory version,
+    /// Commit a new directory version,
     /// returning the new version's resource metadata (uid + commit time for
     /// the wire's `ETag`/`Last-Modified`).
     ///
     /// # Errors
-    /// [`SmError`] when the EHR has no directory (404-equivalent), the
+    /// [`StatusError`] when the EHR has no directory (404-equivalent), the
     /// `preceding_version_uid` mismatches the current latest (412-equivalent),
     /// the FOLDER tree is invalid (422-equivalent), the EHR is not modifiable
     /// (409-equivalent), or the commit fails.
@@ -572,14 +571,14 @@ impl FerroEhrService {
         &self,
         an_ehr_id: EhrId,
         a_dir_struct: UpdateVersion<Folder>,
-    ) -> Result<ResourceMeta, SmError> {
+    ) -> Result<ResourceMeta, StatusError> {
         // The slot vo_id, its current version metadata and the EHR's
         // is_modifiable flag resolve ONCE here and are threaded into the write,
         // so neither the slot JOIN nor the writability probe runs twice.
         let Some((vo_id, is_modifiable, latest)) = self.directory_meta_with_vo(an_ehr_id).await?
         else {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("directory for EHR {an_ehr_id}"),
             )
             .into());
@@ -596,7 +595,7 @@ impl FerroEhrService {
         )
     }
 
-    /// SM `I_EHR_DIRECTORY.delete_directory` — logically delete the EHR's
+    /// Logically delete the EHR's
     /// directory (a new `523|deleted|` version, RM common master06 §Logical
     /// Deletion). Returns the committed deleted version's metadata (uid +
     /// commit instant) so the wire 204 carries the weak `ETag`/`Last-Modified`
@@ -604,7 +603,7 @@ impl FerroEhrService {
     /// resources.
     ///
     /// # Errors
-    /// [`SmError`] when the EHR has no directory (404-equivalent), the
+    /// [`StatusError`] when the EHR has no directory (404-equivalent), the
     /// `preceding_version_uid` mismatches the current latest (412-equivalent),
     /// the EHR is not modifiable (409-equivalent), or the commit fails.
     pub async fn delete_directory(
@@ -612,11 +611,11 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         preceding_version_uid: Option<ObjectVersionId>,
         update_audit: Option<&openehr_its::rest::generated::common::UpdateAudit>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let Some((vo_id, is_modifiable, latest)) = self.directory_meta_with_vo(an_ehr_id).await?
         else {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("directory for EHR {an_ehr_id}"),
             )
             .into());
@@ -638,14 +637,14 @@ impl FerroEhrService {
     /// slash-separated FOLDER names; an unresolved path is 404-equivalent).
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
+    /// [`StatusError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
     /// or unresolved path (404-equivalent), or a read failure.
     pub async fn get_directory_at_version(
         &self,
         an_ehr_id: EhrId,
         a_version_uid: ObjectVersionId,
         a_path: Option<&str>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let (vo_id, version) = components(&a_version_uid)?;
         let resp = self
             .directory_version(an_ehr_id, vo_id, version, a_path)
@@ -661,29 +660,29 @@ impl FerroEhrService {
         Ok(resp)
     }
 
-    /// SM `I_EHR_DIRECTORY.has_directory_version` — whether the named
+    /// Whether the named
     /// directory version exists for this EHR.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `OBJECT_VERSION_ID` or a failing read.
+    /// [`StatusError`] for a malformed `OBJECT_VERSION_ID` or a failing read.
     pub async fn has_directory_version(
         &self,
         an_ehr_id: EhrId,
         a_version_uid: ObjectVersionId,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         let (vo_id, version) = components(&a_version_uid)?;
         Ok(self
             .directory_version_exists(an_ehr_id, vo_id, version)
             .await?)
     }
 
-    /// SM `I_EHR_DIRECTORY.get_versioned_directory` — the `VERSIONED_FOLDER`
+    /// The `VERSIONED_FOLDER`
     /// container object.
     ///
     /// # Errors
-    /// [`SmError`] when the EHR has no directory (404-equivalent) or a read
+    /// [`StatusError`] when the EHR has no directory (404-equivalent) or a read
     /// fails.
-    pub async fn get_versioned_directory(&self, an_ehr_id: EhrId) -> Result<Value, SmError> {
+    pub async fn get_versioned_directory(&self, an_ehr_id: EhrId) -> Result<Value, StatusError> {
         Ok(self.versioned_directory(an_ehr_id).await?.body)
     }
 
@@ -694,12 +693,12 @@ impl FerroEhrService {
     /// SHOULD accompany a `VERSIONED_OBJECT` response).
     ///
     /// # Errors
-    /// [`SmError`] when the EHR has no directory (404-equivalent) or a read
+    /// [`StatusError`] when the EHR has no directory (404-equivalent) or a read
     /// fails.
     pub async fn versioned_directory_response(
         &self,
         an_ehr_id: EhrId,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         Ok(self.versioned_directory(an_ehr_id).await?)
     }
 }

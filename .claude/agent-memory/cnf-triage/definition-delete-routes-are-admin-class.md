@@ -16,9 +16,8 @@ Clinical.
 blast radius and got Admin only from its `/admin/` path prefix.
 
 **How to apply.** The classification STANDS — nothing released governs it (see
-[[authz-class-is-explicit-sm-deferral]]); the SM master04 §Archetypes and
-Templates sentence cited for it groups *upload, updating and removal* in one
-clause and therefore does not by itself justify moving removal alone, and the
+[[authz-class-is-own-design]]); the Service Model is reference text and
+justifies nothing, and the
 CNF `master04` §Implementation recommendations privilege sentence is
 inadmissible (stalled component, explicitly non-normative, scoped to physically
 deleting OPTs where a logical-delete tier exists — this definition store has

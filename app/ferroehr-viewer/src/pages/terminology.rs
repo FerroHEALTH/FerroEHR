@@ -7,9 +7,8 @@
 //! terminology's descriptor (FerroUI `design/consoles/ferroehr/`, pages 17.1
 //! to 17.7).
 //!
-//! The operations are the openEHR Terminology Service's
-//! (`docs/specs/openehr/SM/docs/UML/classes/terminology_service.adoc`) as the
-//! CDR serves them under `terminology` ([`crate::terminology`]); a CDR with
+//! The operations are the terminology calls the CDR serves under
+//! `terminology` ([`crate::terminology`]); a CDR with
 //! the terminology API off answers `404`, and the page says so once. Every
 //! form is a `GET`, so an answer keeps its address, and each tab reads its
 //! answers on the server into one model that both halves draw. No openEHR spec governs

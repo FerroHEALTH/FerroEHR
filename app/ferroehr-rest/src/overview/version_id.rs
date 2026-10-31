@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Wire-string decoding for the EHR-core routes: path/header identifiers into
-//! the SM catalog's native argument types (`uuid::Uuid`,
+//! the service's native argument types (`uuid::Uuid`,
 //! [`openehr_base::prelude::ObjectVersionId`]).
 //!
-//! The SM native API is protocol-free: the catalog takes RM/BASE
+//! The native service API is protocol-free: it takes RM/BASE
 //! identifier types, not raw wire strings. Turning a path parameter such as
 //! `{ehr_id}` or `{version_uid}` into those types is the protocol adapter's
 //! decode job — it lives here, at the ITS-REST edge, and every malformed value

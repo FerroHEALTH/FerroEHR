@@ -33,7 +33,7 @@ use uuid::Uuid;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::Kind;
 use crate::versioning::object_version_id::{TreeId, components};
 use crate::versioning::read::{read_current, read_version};
@@ -55,8 +55,8 @@ impl FerroEhrService {
     pub async fn resolve_ehr_uri(&self, uri: &EhrUri) -> Result<Value, ServiceError> {
         let mut items = self.resolve_ehr_uri_items(uri).await?;
         match items.len() {
-            0 => Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            0 => Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("ehr: URI {uri} resolved to no item"),
             )),
             1 => Ok(items.remove(0)),
@@ -82,8 +82,8 @@ impl FerroEhrService {
         if let Some(system) = &uri.system_id
             && !system.eq_ignore_ascii_case(&self.effective_system_id())
         {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!(
                     "ehr: URI names foreign system {system:?}; only the local system \
                      ({}) is resolvable",
@@ -138,8 +138,8 @@ impl FerroEhrService {
             let vo_id = match attribute.as_str() {
                 "directory" | "folders" => {
                     self.directory_vo_opt(ehr_id).await?.ok_or_else(|| {
-                        ServiceError::sm(
-                            CallStatusType::VersionedObjectDoesNotExist,
+                        ServiceError::new(
+                            ServiceStatus::VersionedObjectDoesNotExist,
                             format!("{attribute} for EHR {ehr_id}"),
                         )
                     })?
@@ -153,8 +153,8 @@ impl FerroEhrService {
                     self.current_vo(ehr_id, kind)
                         .await?
                         .ok_or_else(|| {
-                            ServiceError::sm(
-                                CallStatusType::VersionedObjectDoesNotExist,
+                            ServiceError::new(
+                                ServiceStatus::VersionedObjectDoesNotExist,
                                 format!("{attribute} for EHR {ehr_id}"),
                             )
                         })?
@@ -175,15 +175,15 @@ impl FerroEhrService {
         }
         .filter(|r| r.ehr_id == Some(ehr_id))
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("versioned object {vo_id} in EHR {ehr_id}"),
             )
         })?;
 
         if read.deleted() {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("versioned object {vo_id} is deleted"),
             ));
         }

@@ -29,7 +29,7 @@ use uuid::Uuid;
 use crate::ids::{EhrId, VoId};
 use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::row::NodeRow;
 use crate::versioning::attestation::{self, PendingAttest};
@@ -360,8 +360,8 @@ async fn next_version(
                 "expected version {tree}, which does not exist (current is {})",
                 current.tree
             ))),
-            _ => Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            _ => Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("{} {vo_id} in EHR {ehr_id:?}", kind.as_str()),
             )),
         };
@@ -369,8 +369,8 @@ async fn next_version(
     // For an EHR-scoped object the stored owner must match; for a demographic
     // party both stored and expected owner are `None`, which compares equal.
     if tip.ehr_id != ehr_id || tip.kind != kind {
-        return Err(ServiceError::sm(
-            CallStatusType::VersionedObjectDoesNotExist,
+        return Err(ServiceError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("{} {vo_id} in EHR {ehr_id:?}", kind.as_str()),
         ));
     }
@@ -675,8 +675,8 @@ async fn retire_protected_identifiers(
 pub(crate) fn protection_refusal(error: StoreError) -> ServiceError {
     match error {
         StoreError::ValueTaken { ref scheme } => ServiceError::Conflict(
-            SmError::new(
-                CallStatusType::Conflict,
+            StatusError::new(
+                ServiceStatus::Conflict,
                 format!("a `{scheme}` identifier of this party is already held by another party"),
             )
             .with_source(error),
@@ -764,8 +764,8 @@ async fn ensure_not_access_restricted_tx(
                 .fetch_optional(&mut *tx)
                 .await?;
         if restricted == Some(true) {
-            return Err(ServiceError::sm(
-                CallStatusType::EhrIdDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::EhrIdDoesNotExist,
                 format!("EHR {ehr_id}"),
             ));
         }
@@ -773,8 +773,8 @@ async fn ensure_not_access_restricted_tx(
     if let Some(vo_id) = vo_id
         && crate::storage::marks::is_access_restricted(&mut *tx, vo_id).await?
     {
-        return Err(ServiceError::sm(
-            CallStatusType::VersionedObjectDoesNotExist,
+        return Err(ServiceError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("versioned object {vo_id}"),
         ));
     }
