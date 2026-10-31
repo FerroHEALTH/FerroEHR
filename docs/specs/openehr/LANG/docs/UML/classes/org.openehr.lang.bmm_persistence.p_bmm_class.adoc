@@ -29,11 +29,11 @@ a|Constants defined in this class, keyed by name. Persistent attribute.
 
 h|*0..1*
 |*properties*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],<<_p_bmm_property_class,P_BMM_PROPERTY>>>`
-a|List of attributes defined in this class. Persistent attribute.
+a|Properties defined in this class, keyed by name. Persisted attribute.
 
 h|*0..1*
 |*functions*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],<<_p_bmm_function_class,P_BMM_FUNCTION>>>`
-a|List of functions (routines) defined in this class, keyed by name. Persistent attribute.
+a|Functions (routines) defined in this class, keyed by name. Persisted attribute.
 
 h|*0..1*
 |*invariants*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]>`
@@ -49,7 +49,7 @@ a|True if this class definition overrides one found in an included schema.
 
 h|*0..1*
 |*generic_parameter_defs*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],<<_p_bmm_generic_parameter_class,P_BMM_GENERIC_PARAMETER>>>`
-a|List of generic parameter definitions. Persisted attribute.
+a|Generic parameter definitions, keyed by parameter name. Persisted attribute.
 
 h|*1..1*
 |*source_schema_id*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
@@ -64,8 +64,8 @@ h|*1..1*
 a|Unique id generated for later comparison during merging, in order to detect if two classes are the same. Assigned in post-load processing.
 
 h|*0..1*
-|*ancestor_defs*: `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<<<_p_bmm_generic_type_class,P_BMM_GENERIC_TYPE>>>`
-a|List of structured inheritance ancestors, used only in the case of generic inheritance. Persisted attribute.
+|*ancestor_defs*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],<<_p_bmm_base_type_class,P_BMM_BASE_TYPE>>>`
+a|Structured inheritance ancestors, keyed by type signature, e.g. `GENERIC_PARENT<T,SUPPLIER_B>`. Used instead of `_ancestors_` when the class has a generic ancestor; any non-generic ancestor of the same class is then also listed here, as a `P_BMM_SIMPLE_TYPE`. Persisted attribute.
 
 h|*Functions*
 ^h|*Signature*

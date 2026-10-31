@@ -24,12 +24,12 @@ h|*0..1*
 a|Other schemas included by this schema, keyed by schema id. Persisted attribute.
 
 h|*0..1*
-|*primitive_types*: `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<<<_p_bmm_class_class,P_BMM_CLASS>>>`
-a|Primitive type definitions. Persisted attribute.
+|*primitive_types*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],<<_p_bmm_class_class,P_BMM_CLASS>>>`
+a|Primitive type definitions, keyed by class name. Persisted attribute.
 
 h|*0..1*
-|*class_definitions*: `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<<<_p_bmm_class_class,P_BMM_CLASS>>>`
-a|Class definitions. Persisted attribute.
+|*class_definitions*: `link:/releases/BASE/{base_release}/foundation_types.html#_hash_class[Hash^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^],<<_p_bmm_class_class,P_BMM_CLASS>>>`
+a|Class definitions, keyed by class name. Persisted attribute.
 
 h|*Functions*
 ^h|*Signature*

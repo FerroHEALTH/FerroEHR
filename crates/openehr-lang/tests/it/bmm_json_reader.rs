@@ -394,6 +394,38 @@ fn the_json_form_reads_to_the_odin_value() -> Result<(), PBmmReadError> {
 }
 
 #[test]
+fn a_missing_upper_unbounded_reads_from_the_presence_of_upper() -> Result<(), PBmmReadError> {
+    // master04-syntax.adoc §Serialisation Formats (Intervals): "A reader treats a
+    // missing `_upper_unbounded_` as `true` when `_upper_` is also missing, and as
+    // `false` when `_upper_` is present."
+    let open = edited(
+        r#"{"lower": 1, "upper_unbounded": true}"#,
+        r#"{"lower": 1}"#,
+    );
+    assert_same_reading(
+        "upper missing",
+        &read_schema_json(&open)?,
+        &read_schema(ODIN_SCHEMA)?,
+    );
+
+    let bounded = edited(
+        r#"{"lower": 1, "upper_unbounded": true}"#,
+        r#"{"lower": 1, "upper": 4}"#,
+    );
+    let odin = ODIN_SCHEMA.replacen("<|>=1|>", "<|1..4|>", 1);
+    assert_ne!(
+        odin, ODIN_SCHEMA,
+        "the ODIN fixture no longer carries |>=1|"
+    );
+    assert_same_reading(
+        "upper present",
+        &read_schema_json(&bounded)?,
+        &read_schema(&odin)?,
+    );
+    Ok(())
+}
+
+#[test]
 fn the_json_reader_stamps_uid_and_source_schema_id_in_document_order() -> Result<(), PBmmReadError>
 {
     let schema = read_schema_json(JSON_SCHEMA)?;

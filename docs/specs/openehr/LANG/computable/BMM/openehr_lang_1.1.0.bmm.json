@@ -3,7 +3,7 @@
     "rm_publisher": "openehr",
     "schema_name": "lang",
     "rm_release": "1.1.0",
-    "schema_revision": "1.1.0.2",
+    "schema_revision": "1.1.0.3",
     "schema_lifecycle_state": "stable",
     "schema_description": "lang",
     "schema_author": "Thomas Beale <thomas.beale@openehr.org>, code-generator",
@@ -606,7 +606,7 @@
                 "properties": {
                     "_type": "P_BMM_GENERIC_PROPERTY",
                     "name": "properties",
-                    "documentation": "List of attributes defined in this class. Persistent attribute.",
+                    "documentation": "Properties defined in this class, keyed by name. Persisted attribute.",
                     "type_def": {
                         "root_type": "Hash",
                         "generic_parameters": [
@@ -618,7 +618,7 @@
                 "functions": {
                     "_type": "P_BMM_GENERIC_PROPERTY",
                     "name": "functions",
-                    "documentation": "List of functions (routines) defined in this class, keyed by name. Persistent attribute.",
+                    "documentation": "Functions (routines) defined in this class, keyed by name. Persisted attribute.",
                     "type_def": {
                         "root_type": "Hash",
                         "generic_parameters": [
@@ -654,7 +654,7 @@
                 "generic_parameter_defs": {
                     "_type": "P_BMM_GENERIC_PROPERTY",
                     "name": "generic_parameter_defs",
-                    "documentation": "List of generic parameter definitions. Persisted attribute.",
+                    "documentation": "Generic parameter definitions, keyed by parameter name. Persisted attribute.",
                     "type_def": {
                         "root_type": "Hash",
                         "generic_parameters": [
@@ -684,16 +684,15 @@
                     "type": "Integer"
                 },
                 "ancestor_defs": {
-                    "_type": "P_BMM_CONTAINER_PROPERTY",
+                    "_type": "P_BMM_GENERIC_PROPERTY",
                     "name": "ancestor_defs",
-                    "documentation": "List of structured inheritance ancestors, used only in the case of generic inheritance. Persisted attribute.",
+                    "documentation": "Structured inheritance ancestors, keyed by type signature, e.g. `GENERIC_PARENT<T,SUPPLIER_B>`. Used instead of `_ancestors_` when the class has a generic ancestor; any non-generic ancestor of the same class is then also listed here, as a `P_BMM_SIMPLE_TYPE`. Persisted attribute.",
                     "type_def": {
-                        "container_type": "List",
-                        "type": "P_BMM_GENERIC_TYPE"
-                    },
-                    "cardinality": {
-                        "lower": 0,
-                        "upper_unbounded": true
+                        "root_type": "Hash",
+                        "generic_parameters": [
+                            "String",
+                            "P_BMM_BASE_TYPE"
+                        ]
                     }
                 }
             },
@@ -842,29 +841,27 @@
                     }
                 },
                 "primitive_types": {
-                    "_type": "P_BMM_CONTAINER_PROPERTY",
+                    "_type": "P_BMM_GENERIC_PROPERTY",
                     "name": "primitive_types",
-                    "documentation": "Primitive type definitions. Persisted attribute.",
+                    "documentation": "Primitive type definitions, keyed by class name. Persisted attribute.",
                     "type_def": {
-                        "container_type": "List",
-                        "type": "P_BMM_CLASS"
-                    },
-                    "cardinality": {
-                        "lower": 0,
-                        "upper_unbounded": true
+                        "root_type": "Hash",
+                        "generic_parameters": [
+                            "String",
+                            "P_BMM_CLASS"
+                        ]
                     }
                 },
                 "class_definitions": {
-                    "_type": "P_BMM_CONTAINER_PROPERTY",
+                    "_type": "P_BMM_GENERIC_PROPERTY",
                     "name": "class_definitions",
-                    "documentation": "Class definitions. Persisted attribute.",
+                    "documentation": "Class definitions, keyed by class name. Persisted attribute.",
                     "type_def": {
-                        "container_type": "List",
-                        "type": "P_BMM_CLASS"
-                    },
-                    "cardinality": {
-                        "lower": 0,
-                        "upper_unbounded": true
+                        "root_type": "Hash",
+                        "generic_parameters": [
+                            "String",
+                            "P_BMM_CLASS"
+                        ]
                     }
                 }
             },
@@ -1211,22 +1208,20 @@
                 "root_type": {
                     "_type": "P_BMM_SINGLE_PROPERTY",
                     "name": "root_type",
-                    "documentation": "Root type of this generic type, e.g. `Interval` in `Interval<Integer>`.",
+                    "documentation": "Root type of this generic type, e.g. `Interval` in `Interval<Integer>`. Persisted attribute.",
                     "is_mandatory": true,
                     "type": "String"
                 },
                 "generic_parameter_defs": {
-                    "_type": "P_BMM_CONTAINER_PROPERTY",
+                    "_type": "P_BMM_GENERIC_PROPERTY",
                     "name": "generic_parameter_defs",
-                    "documentation": "Generic parameters of the root_type in this type specifier if non-simple types. The order must match the order of the owning class's formal generic parameter declarations. Persistent attribute.",
-                    "is_mandatory": true,
+                    "documentation": "Generic parameters of the `_root_type_` in this type specifier, if non-simple types, keyed by formal generic parameter name, e.g. `T`. The order must match the order of the owning class's formal generic parameter declarations. Persisted attribute.",
                     "type_def": {
-                        "container_type": "List",
-                        "type": "P_BMM_TYPE"
-                    },
-                    "cardinality": {
-                        "lower": 1,
-                        "upper_unbounded": true
+                        "root_type": "Hash",
+                        "generic_parameters": [
+                            "String",
+                            "P_BMM_TYPE"
+                        ]
                     }
                 },
                 "generic_parameters": {
@@ -1260,6 +1255,9 @@
                     },
                     "is_nullable": true
                 }
+            },
+            "invariants": {
+                "Generic_parameters_valid": "generic_parameters /= Void or generic_parameter_defs /= Void"
             }
         },
         "P_BMM_PACKAGE": {

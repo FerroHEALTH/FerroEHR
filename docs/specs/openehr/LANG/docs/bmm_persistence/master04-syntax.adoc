@@ -14,9 +14,10 @@ A BMM schema is a serialisation of the `P_BMM_*` object graph, and may be writte
 
 Whatever the format, the same serialisation rules apply:
 
-* *File heading.* A schema file begins with the header (meta) items corresponding to the persisted attributes of `P_BMM_SCHEMA` (`_bmm_version_`, `_rm_publisher_`, `_schema_name_`, `_rm_release_`, `_schema_revision_`, `_schema_lifecycle_state_`, `_schema_description_`, `_schema_author_`), followed by `_includes_`, `_packages_`, and `_class_definitions_`.
+* *File heading.* A schema file begins with the header (meta) items corresponding to the persisted attributes of `P_BMM_SCHEMA` (`_bmm_version_`, `_rm_publisher_`, `_schema_name_`, `_rm_release_`, `_schema_revision_`, `_schema_lifecycle_state_`, `_schema_description_`, `_schema_author_`, and the optional `_schema_contributors_`), followed by `_includes_`, `_packages_`, `_primitive_types_`, and `_class_definitions_`.
 * *Type discriminator.* Wherever a value may be one of several `P_BMM_*` subtypes (for example a property, a function parameter, or a result type), the concrete subtype is always stated explicitly via a `_type` discriminator. Where the type is unambiguous from context (such as a class definition or a package), no discriminator is needed. Each format renders the discriminator in its own idiom: ODIN uses a type marker `(P_BMM_SINGLE_PROPERTY)`, JSON a `"_type": "P_BMM_SINGLE_PROPERTY"` member, and YAML a tag `!P_BMM_SINGLE_PROPERTY`.
-* *Keyed collections.* Maps such as `_class_definitions_`, `_properties_`, `_functions_`, function `_parameters_`, and `_packages_` are keyed by name.
+* *Keyed collections.* Maps such as `_primitive_types_`, `_class_definitions_`, `_properties_`, `_functions_`, function `_parameters_`, and `_packages_` are keyed by name. `_ancestor_defs_` is keyed by type signature (e.g. `GENERIC_PARENT<T,SUPPLIER_B>`), and the `_generic_parameter_defs_` of a generic type by formal generic parameter name (e.g. `T`).
+* *Intervals.* The intervals in a schema are the `_cardinality_` values of `P_BMM_CONTAINER_PROPERTY` and `P_BMM_CONTAINER_FUNCTION_PARAMETER`. ODIN writes an interval as an interval literal, such as `|>=1|` or `|1..4|`. JSON and YAML have no interval literal, so they write it as an object with `_lower_` and either `_upper_`, for a bounded interval, or `_upper_unbounded_` set to `true`, never both. Both bounds are included, and `_lower_` is always written, as a non-negative integer; `_lower_unbounded_`, `_lower_included_` and `_upper_included_` are not written. A reader treats a missing `_upper_unbounded_` as `true` when `_upper_` is also missing, and as `false` when `_upper_` is present.
 
 The following shows the same class fragment, an abstract class `OBJECT_ID` with a single mandatory `String` property `_value_`, in each of the three formats.
 
@@ -62,6 +63,23 @@ OBJECT_ID:
       is_mandatory: true
       type: String
 --------
+
+The following shows an open and a bounded cardinality in each of the three formats.
+
+[cols="1,2,2", options="header"]
+|===
+|ODIN|JSON|YAML
+
+|`\|>=1\|`
+|`{"lower": 1, "upper_unbounded": true}`
+|`lower: 1` +
+`upper_unbounded: true`
+
+|`\|1..4\|`
+|`{"lower": 1, "upper": 4}`
+|`lower: 1` +
+`upper: 4`
+|===
 
 == Header Items
 
@@ -208,7 +226,7 @@ The following shows the class `ELEMENT` with two properties `_null_flavour_` and
 
 ==== Container Properties
 
-The following is a `P_BMM_CONTAINER_PROPERTY` definition for the model property `items: List<ITEM>` in the `ELEMENT` class. The type is expressed in the `_type_def_` part which indicates the type of the container, which must be defined elsewhere in the schema, typically in the primitive types. The optional `_cardinality_` meta-property indicates cardinality of the container, and is expressed as a ODIN range. The default is `|0..*|`.
+The following is a `P_BMM_CONTAINER_PROPERTY` definition for the model property `items: List<ITEM>` in the `ELEMENT` class. The type is expressed in the `_type_def_` part which indicates the type of the container, which must be defined elsewhere in the schema, typically in the primitive types. The optional `_cardinality_` meta-property indicates cardinality of the container, and is expressed as a ODIN range. The default is `|>=0|`, i.e. `0..*`.
     
 [source, odin]
 --------
@@ -585,7 +603,7 @@ Within a container type, the structure is slightly different, owing to another l
 
 == Inheritance
 
-In the case of inheritance from simple classes, the `ancestors` list of Strings may be used to simply name the types (which are the same as class names), as seen in the above examples. In the case of generic inheritance, the ancestors are generic types, which may be open, partially closed or fully closed. The following example shows a class model containing generic inheritance in UML (using the closest approximation available in UML), followed by the equivalent P_BMM schema. In the latter, a structured `ancestor_defs` section is used instead of the `ancestors` String list, in the same way as for the `P_BMM_GENERIC_PROPERTY` examples above.
+In the case of inheritance from simple classes, the `ancestors` list of Strings may be used to simply name the types (which are the same as class names), as seen in the above examples. In the case of generic inheritance, the ancestors are generic types, which may be open, partially closed or fully closed. The following example shows a class model containing generic inheritance in UML (using the closest approximation available in UML), followed by the equivalent P_BMM schema. In the latter, a structured `ancestor_defs` section is used instead of the `ancestors` String list, in the same way as for the `P_BMM_GENERIC_PROPERTY` examples above. Since `ancestor_defs` replaces `ancestors`, a class that also inherits from a non-generic class lists that ancestor in `ancestor_defs` too, as a `P_BMM_SIMPLE_TYPE`.
 
 [.text-center]
 .Generic inheritance example model
