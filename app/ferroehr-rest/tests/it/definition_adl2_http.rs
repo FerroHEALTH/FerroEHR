@@ -343,6 +343,41 @@ async fn version_get_resolves_and_serves_both_representations() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
+#[tokio::test]
+async fn version_get_refuses_a_malformed_version_before_any_lookup() {
+    let (_pg, app) = app().await;
+    assert_eq!(send(&app, upload_req(None)).await.0, StatusCode::CREATED);
+    let family = "openEHR-EHR-COMPOSITION.t_clinical_info";
+    let get = |version: &str| {
+        Request::builder()
+            .method("GET")
+            .uri(format!(
+                "{BASE}/definition/template/adl2/{family}/{version}"
+            ))
+            .header(header::ACCEPT, "application/json")
+            .body(Body::empty())
+            .unwrap()
+    };
+    // "A SEMVER version number … an exact version (e.g. `1.7.1`), or a pattern
+    // as partial prefix, in a form of `{major}` or `{major}.{minor}`"
+    // (parameters/path/version.yaml); anything else is a syntactically invalid
+    // parameter (responses/400.yaml), whatever the store holds.
+    for bad in ["v1.x", "1.x", "v1", "01", "1.00", "1.0.0.0", "1..0"] {
+        let (status, _, body) = send(&app, get(bad)).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "`{bad}`: {body}");
+    }
+    // Well-formed versions: the exact one and its prefixes are served, and one
+    // the store does not hold is the operation's 404.
+    for held in ["1.0.0", "1.0", "1"] {
+        let (status, _, body) = send(&app, get(held)).await;
+        assert_eq!(status, StatusCode::OK, "`{held}`: {body}");
+    }
+    for missing in ["2", "1.1", "1.0.1", "1.0.0-rc.1"] {
+        let (status, _, body) = send(&app, get(missing)).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "`{missing}`: {body}");
+    }
+}
+
 /// Build the example request for `HRID` with an optional `Accept` and query.
 fn example_req(accept: Option<&str>, query: &str) -> Request<Body> {
     let mut b = Request::builder().method("GET").uri(format!(
