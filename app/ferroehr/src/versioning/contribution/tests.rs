@@ -3,6 +3,7 @@
 
 //! Unit tests of the parent module.
 
+use openehr_its::rest::generated::common::UpdateAuditData;
 use openehr_its::rest::generated::ehr::NewContribution;
 
 use super::*;
@@ -409,6 +410,16 @@ fn a_stored_attestation_commit_audit_round_trips() {
     );
 }
 
+/// A one-member body whose member carries `attestation` in its `attestations`.
+fn with_attestation(attestation: &Value) -> Value {
+    let mut wire = body(complete(), update_audit(), update_audit());
+    wire.pointer_mut("/versions/0")
+        .and_then(Value::as_object_mut)
+        .expect("one member")
+        .insert("attestations".to_owned(), json!([attestation]));
+    wire
+}
+
 /// An `UPDATE_ATTESTATION` in `versions[].attestations[]` missing its
 /// required `reason` or `is_pending` (`schemas/common/UpdateAttestation.yaml`
 /// `required: [reason, is_pending]`) is the 400 of a schema failure.
@@ -428,13 +439,40 @@ fn an_attestation_missing_its_required_members_is_refused() {
             "reason": { "_type": "DV_TEXT", "value": "witnessed" } }),
         ),
     ] {
-        let mut wire = body(complete(), update_audit(), update_audit());
-        wire.pointer_mut("/versions/0")
-            .and_then(Value::as_object_mut)
-            .expect("one member")
-            .insert("attestations".to_owned(), json!([attestation]));
-        assert!(refused(&wire).contains(missing), "{missing}");
+        assert!(
+            refused(&with_attestation(&attestation)).contains(missing),
+            "{missing}"
+        );
     }
+}
+
+/// `schemas/common/UpdateAttestation.yaml` types `reason` and the inherited
+/// `description` as `data_types/UDvText.yaml`, whose members both require
+/// `_type`, so an untagged one in `versions[].attestations[]` is the 400 and a
+/// tagged one decodes.
+#[test]
+fn an_untagged_attestation_text_is_refused() {
+    let attestation = |reason: Value, description: Value| {
+        json!({ "_type": "UPDATE_ATTESTATION",
+            "change_type": coded("666", "attestation"), "committer": committer(),
+            "reason": reason, "description": description, "is_pending": false })
+    };
+    let tagged = json!({ "_type": "DV_TEXT", "value": "witnessed" });
+    let untagged = json!({ "value": "witnessed" });
+    for (member, refused_wire) in [
+        (
+            "reason",
+            with_attestation(&attestation(untagged.clone(), tagged.clone())),
+        ),
+        (
+            "description",
+            with_attestation(&attestation(tagged.clone(), untagged)),
+        ),
+    ] {
+        let message = refused(&refused_wire);
+        assert!(message.contains("_type"), "{member}: {message}");
+    }
+    decode(&with_attestation(&attestation(tagged.clone(), tagged))).expect("tagged texts decode");
 }
 
 fn classify_err(token: &str, has_preceding: bool, has_data: bool) -> Violation {

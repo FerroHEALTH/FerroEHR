@@ -37,3 +37,5 @@ pub mod routes;
 pub mod runtime;
 #[cfg(feature = "rest-server")]
 pub mod server;
+#[cfg(feature = "rest")]
+pub mod tagged;

@@ -14,29 +14,14 @@
 //! OPT2 (`AM/docs/OPT2/master03-opt_raw.adoc` §Archetype References) resolves
 //! every one of them.
 
-use openehr_adl::artefact::ArchetypeRepository;
-use openehr_adl::assemble::parse_artefact;
 use openehr_adl::opt::create_opt;
-use openehr_adl::parse::Dialect;
-use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use sqlx::PgConnection;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 
 use super::adl2_engine::on_engine_stack;
-
-/// One stored ADL2 artefact as the store row holds it.
-struct Stored {
-    /// The case-preserved `ARCHETYPE_HRID`.
-    hrid: String,
-    /// The parsed artefact, absent when the stored source no longer parses.
-    artefact: Option<Archetype>,
-    /// True for a stored `operational_template`, which inlines every
-    /// constituent and so needs none of them stored (OPT2 `master02-overview.adoc`:
-    /// a top-level standalone artefact).
-    is_opt: bool,
-}
+use super::adl2_resolution::{Candidate, repository_for};
 
 impl FerroEhrService {
     /// Refuse the delete of the stored ADL2 artefact `hrid` while another
@@ -78,35 +63,36 @@ impl FerroEhrService {
 ///
 /// `rows` is every stored `(hrid, kind, adl)`. An artefact that does not
 /// compile even with `target` stored is not counted: the delete takes nothing
-/// from it.
+/// from it. Each artefact compiles against the releases its own references
+/// resolve to ([`repository_for`]), so with another release of `target`'s
+/// major version stored, the delete leaves its users resolving to that one.
 fn dependents_of(target: &str, rows: Vec<(String, String, String)>) -> Vec<String> {
-    let stored: Vec<Stored> = rows
-        .into_iter()
-        .map(|(hrid, kind, adl)| Stored {
-            hrid,
-            // NOTE: a stored source that no longer parses is skipped, as the
-            // engine repository skips it; it was engine-valid at its upload.
-            artefact: parse_artefact(&adl, Dialect::Adl2).ok(),
-            is_opt: kind == "operational_template",
-        })
-        .collect();
-    let is_target = |s: &Stored| s.hrid.eq_ignore_ascii_case(target);
-    let mut with = ArchetypeRepository::new();
-    let mut without = ArchetypeRepository::new();
-    for s in &stored {
-        if let Some(artefact) = &s.artefact {
-            with.insert(artefact.clone());
-            if !is_target(s) {
-                without.insert(artefact.clone());
-            }
+    let is_target = |hrid: &str| hrid.eq_ignore_ascii_case(target);
+    let mut users = Vec::new();
+    let mut with = Vec::new();
+    let mut without = Vec::new();
+    for (hrid, kind, adl) in rows {
+        let Some(stored) = Candidate::parse(&hrid, &adl) else {
+            continue;
+        };
+        // A stored `operational_template` inlines every constituent and so
+        // needs none of them stored (OPT2 `master02-overview.adoc`: a
+        // top-level standalone artefact).
+        if kind != "operational_template" && !is_target(&hrid) {
+            users.push((hrid.clone(), stored.artefact().clone()));
         }
+        if !is_target(&hrid) {
+            without.push(stored.clone());
+        }
+        with.push(stored);
     }
-    stored
-        .iter()
-        .filter(|s| !s.is_opt && !is_target(s))
-        .filter_map(|s| s.artefact.as_ref().map(|a| (s, a)))
-        .filter(|(_, a)| create_opt(a, &without).is_err() && create_opt(a, &with).is_ok())
-        .map(|(s, _)| s.hrid.clone())
+    users
+        .into_iter()
+        .filter(|(_, a)| {
+            create_opt(a, &repository_for(a, &without)).is_err()
+                && create_opt(a, &repository_for(a, &with)).is_ok()
+        })
+        .map(|(hrid, _)| hrid)
         .collect()
 }
 

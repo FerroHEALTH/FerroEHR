@@ -8,9 +8,9 @@
 //! Validation is the real `openehr-adl` engine (parse → AOM2 phase 1 → RM
 //! phase 2 → specialisation phase 2 against the flat parent). The engine needs
 //! an [`ArchetypeRepository`] to resolve specialisation parents +
-//! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds one by
-//! parsing every stored ADL2 source (the registry is low-volume — an admin
-//! surface — so parse-on-demand is cheap; the
+//! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds one per
+//! artefact from the stored ADL2 sources (the registry is low-volume — an
+//! admin surface — so parse-on-demand is cheap; the
 //! `openehr-adl` phases degrade gracefully when a parent is unresolved).
 
 #![expect(
@@ -50,6 +50,8 @@ use crate::service::status::{ServiceStatus, StatusError};
 
 use super::adl2_dependents::adl2_write_lock;
 use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
+use super::adl2_resolution::{parse_stored, repository_for};
+use super::version_selector::{check_version_selector, cmp_version, version_prefix_matches};
 use super::{compile_pattern, page_bounds, paginate};
 
 /// The `WebTemplate`-cache key namespace for ADL2/OPT2 templates. The trailing
@@ -246,12 +248,10 @@ impl FerroEhrService {
         .await?)
     }
 
-    /// Build an in-memory [`ArchetypeRepository`] from every stored ADL2 source,
-    /// so the `openehr-adl` engine can resolve specialisation parents +
-    /// `use_archetype` fillers when validating an upload or projecting an OPT.
-    ///
-    /// A stored source that no longer parses is skipped rather than failing the
-    /// whole build; every source was engine-validated at its own upload.
+    /// Build the [`ArchetypeRepository`] `root` resolves against, so the
+    /// `openehr-adl` engine can resolve specialisation parents +
+    /// `use_archetype` fillers when validating an upload or projecting an OPT:
+    /// each reference takes the stored release [`repository_for`] picks.
     ///
     /// NOTE: the repository is re-parsed on every call, this path being reached
     /// only for an ADL2 upload or an OPT projection, so a memoized copy would
@@ -260,20 +260,14 @@ impl FerroEhrService {
     async fn adl2_repository(
         &self,
         conn: &mut PgConnection,
+        root: &Archetype,
     ) -> Result<ArchetypeRepository, ServiceError> {
-        let sources: Vec<String> = sqlx::query_scalar("SELECT adl FROM adl2_artefact")
-            .fetch_all(conn)
-            .await?;
-        on_engine_stack(move || {
-            let mut repo = ArchetypeRepository::new();
-            for src in &sources {
-                if let Ok(archetype) = parse_artefact(src, Dialect::Adl2) {
-                    repo.insert(archetype);
-                }
-            }
-            repo
-        })
-        .await
+        let rows: Vec<(String, String)> =
+            sqlx::query_as("SELECT hrid, adl FROM adl2_artefact ORDER BY hrid")
+                .fetch_all(conn)
+                .await?;
+        let root = root.clone();
+        on_engine_stack(move || repository_for(&root, &parse_stored(&rows))).await
     }
 
     /// Validate one uploaded ADL2 source with the `openehr-adl` engine and store
@@ -311,7 +305,7 @@ impl FerroEhrService {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         adl2_write_lock(&mut tx).await?;
-        let repo = self.adl2_repository(&mut tx).await?;
+        let repo = self.adl2_repository(&mut tx, &archetype).await?;
         let owned = source.to_owned();
         let issues = on_engine_stack(move || match resolver {
             Some(resolver) => validate_source(&owned, Some(&repo), &ProductionRmModel, &resolver),
@@ -435,12 +429,15 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// No stored artefact matches → `NotFound` (`404`).
+    /// - A `version` that is no SEMVER version or prefix → `BadRequest`
+    ///   (`400`), before any lookup.
+    /// - No stored artefact matches → `NotFound` (`404`).
     pub(super) async fn adl2_resolve(
         &self,
         template_id: &str,
         version: Option<&str>,
     ) -> Result<String, ServiceError> {
+        version.map(check_version_selector).transpose()?;
         // Fast path: an exact HRID (no explicit version filter).
         if version.is_none()
             && let Some(hrid) = sqlx::query_scalar::<_, String>(
@@ -686,7 +683,7 @@ impl FerroEhrService {
             return Ok(opt.as_ref().clone());
         }
         let repo = self
-            .adl2_repository(&mut *acquire(&self.pool).await?)
+            .adl2_repository(&mut *acquire(&self.pool).await?, &archetype)
             .await?;
         on_engine_stack(move || {
             create_opt(&archetype, &repo).map_err(|e| match e {
@@ -935,23 +932,6 @@ fn store_kind(kind: &str) -> &str {
     }
 }
 
-/// Whether `full` (a `major.minor.patch` release) matches the SEMVER `prefix`
-/// (`1`, `1.2`, or `1.2.3` — `version.yaml`: "an exact version … or a pattern
-/// as partial prefix"). Each supplied prefix component must equal the
-/// corresponding `full` component.
-fn version_prefix_matches(full: &str, prefix: &str) -> bool {
-    let mut want = prefix.split('.').filter(|p| !p.is_empty() && *p != "*");
-    let mut have = full.split('.');
-    want.all(|w| have.next() == Some(w))
-}
-
-/// Compare two numeric release versions (`major.minor.patch`) component-wise so
-/// the highest matching version can be selected (`Ordering::Equal` on ties).
-fn cmp_version(a: &str, b: &str) -> std::cmp::Ordering {
-    let parse = |v: &str| -> Vec<u64> { v.split('.').map(|p| p.parse().unwrap_or(0)).collect() };
-    parse(a).cmp(&parse(b))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -981,23 +961,5 @@ mod tests {
         let hrid = "openEHR-EHR-OBSERVATION.lab_result.v2.0.0-rc.1";
         assert_eq!(raw_id_concept(hrid), "lab_result");
         assert_eq!(raw_id_version(hrid), "2.0.0");
-    }
-
-    #[test]
-    fn version_prefix_matches_semver_prefix() {
-        assert!(version_prefix_matches("1.2.3", "1"));
-        assert!(version_prefix_matches("1.2.3", "1.2"));
-        assert!(version_prefix_matches("1.2.3", "1.2.3"));
-        assert!(version_prefix_matches("1.2.3", "*"));
-        assert!(!version_prefix_matches("1.2.3", "2"));
-        assert!(!version_prefix_matches("1.2.3", "1.3"));
-    }
-
-    #[test]
-    fn cmp_version_orders_numerically() {
-        use std::cmp::Ordering;
-        assert_eq!(cmp_version("1.2.10", "1.2.9"), Ordering::Greater);
-        assert_eq!(cmp_version("2.0.0", "1.9.9"), Ordering::Greater);
-        assert_eq!(cmp_version("1.0.0", "1.0.0"), Ordering::Equal);
     }
 }

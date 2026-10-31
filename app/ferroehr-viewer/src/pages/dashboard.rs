@@ -8,8 +8,9 @@
 //! The counts come from fixed AQL and the template and stored-query lists
 //! ([`crate::bff::dashboard`]), read on the server into one [`Dashboard`]
 //! model that both halves draw; a namespace whose stored query did not run
-//! shows no total rather than a short one. A CDR that does not answer turns
-//! the page into its refusal. No openEHR spec governs the viewer: our own
+//! shows no total rather than a short one, and a count the CDR answered in
+//! another shape draws as unavailable with its reason, never as 0. A CDR that
+//! does not answer turns the page into its refusal. No openEHR spec governs the viewer: our own
 //! design.
 
 use ferrohealth_ui::html::Html;
@@ -20,11 +21,11 @@ use ferrohealth_ui::table::view::{
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
-use ferrohealth_ui::view::surface::{Header, Stat, page_heading, stat_card};
+use ferrohealth_ui::view::surface::{Header, Stat, page_heading, stat_card, stat_card_marked};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
 
 use crate::activity::ActivityPoint;
-use crate::bff::dashboard::NamespaceTile;
+use crate::bff::dashboard::{Count, CountShape, NamespaceTile};
 use crate::error::ViewerError;
 use crate::locale::overview::OverviewMsg;
 use crate::locale::{Msg, current, tr, tr_with};
@@ -45,9 +46,9 @@ pub struct NamespaceLink {
 #[derive(Debug, Clone)]
 pub struct Dashboard {
     /// The EHRs the CDR holds.
-    ehrs: i64,
+    ehrs: Count,
     /// The compositions the CDR holds.
-    compositions: i64,
+    compositions: Count,
     /// The operational templates the CDR holds.
     templates: u32,
     /// The stored queries, or `None` when the CDR refused the list.
@@ -104,43 +105,62 @@ fn namespace_href(tile: &NamespaceTile) -> String {
 }
 
 /// A count grouped in the page's language.
-fn grouped(count: i64) -> String {
-    ferrohealth_ui::i18n::number::grouped(&current(), u64::try_from(count).unwrap_or_default())
+fn grouped(count: u64) -> String {
+    ferrohealth_ui::i18n::number::grouped(&current(), count)
+}
+
+/// The mark of a count the CDR answered in another shape: unavailable, with
+/// the reason in plain words.
+pub(crate) fn unavailable(shape: CountShape) -> Html {
+    ferrohealth_ui::view::state::state(
+        ferrohealth_ui::view::flow::FlowState::Degraded.into(),
+        tr(Msg::CountUnavailable),
+        Some(shape.reason()),
+    )
+}
+
+/// The stat card of `count`: its number, or the dash marked unavailable with
+/// the reason the CDR's answer held no count.
+fn count_card(glyph: Glyph, count: Count, label: String, href: &str) -> Html {
+    let card = |value| Stat {
+        glyph,
+        value,
+        label: label.into(),
+        href: Some(href.to_owned()),
+    };
+    match count {
+        Ok(count) => stat_card(card(grouped(count))),
+        Err(shape) => stat_card_marked(card(tr(OverviewMsg::UnknownCount)), unavailable(shape)),
+    }
 }
 
 /// The four stat cards.
-fn stats(ehrs: i64, compositions: i64, templates: u32, stored: Option<u32>) -> Html {
+fn stats(ehrs: Count, compositions: Count, templates: u32, stored: Option<u32>) -> Html {
     let cards = [
-        Stat {
-            glyph: Glyph::DATABASE,
-            value: grouped(ehrs),
-            label: tr(OverviewMsg::StatEhrs).into(),
-            href: Some("/ehrs".to_owned()),
-        },
-        Stat {
-            glyph: Glyph::FILE_TEXT,
-            value: grouped(compositions),
-            label: tr(OverviewMsg::StatCompositions).into(),
-            href: Some("/query".to_owned()),
-        },
-        Stat {
+        count_card(Glyph::DATABASE, ehrs, tr(OverviewMsg::StatEhrs), "/ehrs"),
+        count_card(
+            Glyph::FILE_TEXT,
+            compositions,
+            tr(OverviewMsg::StatCompositions),
+            "/query",
+        ),
+        stat_card(Stat {
             glyph: Glyph::FILE_CODE,
-            value: grouped(i64::from(templates)),
+            value: grouped(u64::from(templates)),
             label: tr(OverviewMsg::StatTemplates).into(),
             href: Some("/templates".to_owned()),
-        },
-        Stat {
+        }),
+        stat_card(Stat {
             glyph: crate::shell::STORED_QUERIES_GLYPH,
             value: stored.map_or_else(
                 || tr(OverviewMsg::UnknownCount),
-                |stored| grouped(i64::from(stored)),
+                |stored| grouped(u64::from(stored)),
             ),
             label: tr(OverviewMsg::StatStoredQueries).into(),
             href: Some("/queries".to_owned()),
-        },
+        }),
     ]
     .into_iter()
-    .map(stat_card)
     .collect::<Html>();
     h(format!(
         r#"<div class="fui-grid fui-grid-stats">{cards}</div>"#
@@ -294,7 +314,6 @@ fn heading(subtitle: String, actions: ActionGroup) -> Html {
 }
 
 /// The dashboard.
-/// The dashboard.
 pub async fn page() -> Drawn {
     let dashboard = match load_dashboard().await {
         Ok(dashboard) => dashboard,
@@ -321,7 +340,7 @@ pub async fn page() -> Drawn {
         trend,
         tiles,
     } = dashboard;
-    let actions = if ehrs == 0 && compositions == 0 && templates == 0 {
+    let actions = if ehrs == Ok(0) && compositions == Ok(0) && templates == 0 {
         ActionGroup::primary(Action::new(
             Some(Glyph::UPLOAD),
             tr(OverviewMsg::UploadATemplate),
@@ -339,4 +358,44 @@ pub async fn page() -> Drawn {
         namespaces_card(tiles)
     )));
     Drawn::page(tr(Msg::NavDashboard), body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stats;
+    use crate::bff::dashboard::CountShape;
+    use crate::locale::{Msg, tr};
+
+    #[test]
+    fn a_real_zero_draws_zero() {
+        let html = stats(Ok(0), Ok(0), 0, Some(0)).as_str().to_owned();
+        assert!(
+            html.contains(r#"<div class="fui-stat-value">0</div>"#),
+            "{html}"
+        );
+        assert!(!html.contains(&tr(Msg::CountUnavailable)), "{html}");
+    }
+
+    #[test]
+    fn a_malformed_count_draws_unavailable_with_its_reason_never_zero() {
+        let html = stats(
+            Err(CountShape::NoRow),
+            Err(CountShape::NotACount),
+            3,
+            Some(4),
+        )
+        .as_str()
+        .to_owned();
+        assert!(
+            !html.contains(r#"<div class="fui-stat-value">0</div>"#),
+            "{html}"
+        );
+        assert_eq!(
+            html.matches(&tr(Msg::CountUnavailable)).count(),
+            2,
+            "{html}"
+        );
+        assert!(html.contains(&CountShape::NoRow.reason()), "{html}");
+        assert!(html.contains(&CountShape::NotACount.reason()), "{html}");
+    }
 }

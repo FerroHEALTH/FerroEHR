@@ -12,7 +12,8 @@
 #   push to main               containers.yml calls it with the server and
 #                              postgres images it pushed for that commit, by
 #                              digest (`:main` for an image the push did not
-#                              rebuild).
+#                              rebuild, judged only when its revision label
+#                              names a commit with this tree's inputs, #4547).
 #   release tag                release.yml calls it with the digests of its own
 #                              cold-built images.
 #   schedule, dispatch         ghcr.io/ferrohealth/ferroehr:main, the scanned
@@ -195,6 +196,56 @@ jobs:
           if [ -n "$SERVER_REF" ]; then pull "$SERVER_REF" ferroehr:conformance; fi
           if [ -n "$POSTGRES_REF" ]; then pull "$POSTGRES_REF" ferroehr-postgres:conformance; fi
           printf '\n' >> "$GITHUB_STEP_SUMMARY"
+      # A tag can name an image older than this tree: `:main` moves only when
+      # scan-and-tag.yml passes its scan (#4547). An image is judged only when
+      # its org.opencontainers.image.revision label names a commit whose inputs
+      # equal this tree's (scripts/lib/image-inputs.sh), and the summary names
+      # the commit. A dispatch that names an image judges it at any revision
+      # and says so.
+      - name: Refuse an image built from other inputs than this tree's
+        if: steps.images.outputs.server == 'image' || steps.images.outputs.postgres == 'image'
+        env:
+          SERVER_REF: ${{ steps.images.outputs.server-ref }}
+          POSTGRES_REF: ${{ steps.images.outputs.postgres-ref }}
+          SERVER_NAMED: ${{ github.event_name == 'workflow_dispatch' && inputs.server-image != '' }}
+          POSTGRES_NAMED: ${{ github.event_name == 'workflow_dispatch' && inputs.postgres-image != '' }}
+          TREE: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=0
+          # judge <kind> <reference> <local tag> <named by a dispatch>
+          judge() {
+            local revision changed status=0 line
+            revision=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$3")
+            changed=$(bash scripts/lib/image-inputs.sh same "$1" "$revision" "$TREE") || status=$?
+            case "$status" in
+              0)
+                if [ "$revision" = "$TREE" ]; then
+                  line="built from $revision, the tree under test"
+                else
+                  line="built from $revision, whose $1 inputs equal those of the tree under test ($TREE)"
+                fi
+                ;;
+              1)
+                printf '%s\n' "$changed"
+                line="built from $revision, whose $1 inputs differ from the tree under test ($TREE) in $(grep -c . <<<"$changed") file(s)"
+                ;;
+              *) line="its revision label '$revision' names no commit this run can compare with $TREE" ;;
+            esac
+            if [ "$status" -ne 0 ] && [ "$4" != true ]; then
+              echo "::error::$2 is $line; this run judges no image built from other inputs than the tree's"
+              printf -- '- %s: refused, %s\n' "$2" "$line" >> "$GITHUB_STEP_SUMMARY"
+              bad=1
+            else
+              printf -- '- %s: %s\n' "$2" "$line" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+          printf '## The revisions under test\n\n' >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$SERVER_REF" ]; then judge server "$SERVER_REF" ferroehr:conformance "$SERVER_NAMED"; fi
+          if [ -n "$POSTGRES_REF" ]; then judge postgres "$POSTGRES_REF" ferroehr-postgres:conformance "$POSTGRES_NAMED"; fi
+          printf '\n' >> "$GITHUB_STEP_SUMMARY"
+          exit "$bad"
       # The binary the caller's run compiled, packaged COPY-only.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: steps.images.outputs.server == 'artifact'

@@ -147,6 +147,7 @@ mod tests {
             languages: vec!["en".to_owned()],
             tree: root,
             other_details: indexmap::IndexMap::new(),
+            archetype_refs: None,
         };
 
         let catalog = from_web_template(&wt);

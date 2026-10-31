@@ -17,6 +17,7 @@ pub(crate) mod composition;
 pub(crate) mod construction;
 pub(crate) mod ordered_hashes;
 pub(crate) mod overrides;
+pub(crate) mod rest_tagged;
 
 use crate::analyze::Model;
 use crate::load::bmm::{BmmClass, BmmEnumeration, BmmPropKind, BmmSchema, BmmType};

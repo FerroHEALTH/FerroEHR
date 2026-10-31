@@ -244,7 +244,7 @@ label dependencies 0366d6 "Pull requests that update a dependency file"
 
 echo "== pull-request escape hatches (read by CI) =="
 label no-changelog        bfdadc "Skip the changelog-guard CI job (change is not user-visible)"
-label no-crate-bump       fbca04 "crate-version-guard escape: diff provably does not alter packaged crate bytes"
+label no-crate-bump       fbca04 "crate-version-guard escape: this PR sets the openehr-* lockstep version by hand"
 label no-chart-bump       bfd4f2 "chart-version-guard: packaged chart diff that cannot change consumer output"
 label no-ui-visual-change bfdadc "Skip the ui-screenshot-guard: viewer source change with no visual effect"
 

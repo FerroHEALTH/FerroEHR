@@ -10,17 +10,18 @@
 # file-size.list beside this guard with the length it had when it was
 # listed, and it may shrink and never grow. The tree run refuses:
 #   - a file over the budget that the list does not carry;
-#   - a listed file longer than its entry;
-#   - a listed file shorter than its entry, within the budget or no longer
-#     tracked, until --update lowers or removes the entry, so the list only
-#     tightens.
-# --update lowers and removes entries. It never raises one and never adds a
-# file: a file over the budget is split, and a rise that has to stay is a
-# hand edit of the list in a change that says why.
+#   - a listed file longer than its entry.
+# A listed file shorter than its entry, within the budget or no longer
+# tracked passes with a one-line note, so a pull request that shortens a file
+# touches no list and conflicts with no other one; the scheduled
+# ratchet-tighten workflow runs --update on main and opens the one pull
+# request that lowers the entries (#4554). --update lowers and removes
+# entries. It never raises one and never adds a file: a file over the budget
+# is split, and a rise that has to stay is a hand edit of the list in a
+# change that says why.
 #
 # The per-edit mode (--files, run by .claude/hooks/rust_fmt_clippy.sh)
-# refuses the first two and passes a shrink: a split shortens its file edit
-# by edit, and a list lowered halfway would refuse the edit that follows.
+# refuses the same two and passes a shrink.
 # The tree run reads tracked files, so an untracked draft never fails it.
 # Lines count as `wc -l` counts them. A file that opens with `// @generated`
 # is the emitter's output (.claude/rules/codegen.md) and is skipped.
@@ -213,17 +214,16 @@ ratchet() {
         ;;
       SHRANK)
         files=$((files + 1))
-        echo "file-size: $path: $n lines, and $list records $entry; run $0 --update and commit the lower entry" >&2
-        status=1
+        listed=$((listed + 1))
+        over=$((over + n - BUDGET))
+        echo "file-size: note: $path: $n lines, and $list records $entry; the scheduled ratchet-tighten workflow lowers the entry"
         ;;
       UNDER)
         files=$((files + 1))
-        echo "file-size: $path: $n lines, within the budget of $BUDGET, and $list still lists it; run $0 --update and commit the list without it" >&2
-        status=1
+        echo "file-size: note: $path: $n lines, within the budget of $BUDGET, and $list still lists it; the scheduled ratchet-tighten workflow removes the entry"
         ;;
       GONE)
-        echo "file-size: $path: $list lists it with $entry lines and the tree no longer tracks it; run $0 --update and commit the list without it" >&2
-        status=1
+        echo "file-size: note: $path: $list lists it with $entry lines and the tree no longer tracks it; the scheduled ratchet-tighten workflow removes the entry"
         ;;
     esac
   done <<<"$table"
@@ -331,19 +331,20 @@ crates/demo/src/deep.rs 820"
   [[ "$(run update)" == 1 ]] || fail "--update passed a listed file that grew"
   [[ "$(entry app/demo/src/big.rs)" == 900 ]] || fail "--update raised an entry to $(entry app/demo/src/big.rs)"
 
-  # A listed file that shrank fails until --update lowers its entry.
+  # A listed file that shrank passes with a note, and --update lowers its entry.
   lines "$tree/app/demo/src/big.rs" 870
-  [[ "$(run check)" == 1 ]] || fail "a listed file that shrank passed with its old entry"
-  grep -q 'app/demo/src/big.rs: 870 lines, and .* records 900; run .* --update' "$work/answer" ||
-    fail "a shrink did not ask for --update: $(cat "$work/answer")"
+  [[ "$(run check)" == 0 ]] || fail "a listed file that shrank was refused: $(cat "$work/answer")"
+  grep -q 'note: app/demo/src/big.rs: 870 lines, and .* records 900' "$work/answer" ||
+    fail "a shrink was not noted: $(cat "$work/answer")"
+  [[ "$(entry app/demo/src/big.rs)" == 900 ]] || fail "a check lowered the entry"
   [[ "$(run update)" == 0 ]] || fail "--update refused a shrink: $(cat "$work/answer")"
   [[ "$(entry app/demo/src/big.rs)" == 870 ]] || fail "--update did not lower the entry"
 
-  # A listed file within the budget, and a listed file gone, fail until
-  # --update removes them.
+  # A listed file within the budget, and a listed file gone, pass with a
+  # note, and --update removes them.
   lines "$tree/app/demo/src/big.rs" "$BUDGET"
   git -C "$tree" rm -qf -- app/demo/src/views/wide.rs
-  [[ "$(run check)" == 1 ]] || fail "a listed file within the budget and a gone one passed"
+  [[ "$(run check)" == 0 ]] || fail "a listed file within the budget and a gone one were refused: $(cat "$work/answer")"
   grep -q 'app/demo/src/big.rs: 800 lines, within the budget' "$work/answer" ||
     fail "a listed file within the budget was not named: $(cat "$work/answer")"
   grep -q 'app/demo/src/views/wide.rs: .* no longer tracks it' "$work/answer" ||
