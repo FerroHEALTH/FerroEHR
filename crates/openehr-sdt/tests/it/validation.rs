@@ -563,6 +563,7 @@ fn wt_of(tree: WebTemplateNode) -> WebTemplate {
         languages: vec!["en".to_owned()],
         tree,
         other_details: IndexMap::new(),
+        archetype_refs: None,
     }
 }
 

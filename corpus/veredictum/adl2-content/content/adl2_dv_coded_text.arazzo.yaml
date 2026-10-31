@@ -1,0 +1,290 @@
+# Content validation against an ADL 2 operational template at a COMPOSITION
+# commit, as Arazzo 1.1.0 workflows over the released ITS-REST `-validation`
+# OAS. The template is uploaded through the ADL 2 definition operation by
+# the setup the workflow names, and each workflow commits one composition
+# written here whose node identifiers are the template's id-codes. Every
+# quote is copied verbatim from the named vendored file.
+arazzo: 1.1.0
+info:
+  title: Content validation, DV CODED TEXT, ADL 2
+  version: 0.1.0
+  x-veredictum-section: data-types
+  description: >-
+    Commits DV_CODED_TEXT content against an ADL 2 operational template
+    that constrains its defining_code to a value set the template itself
+    defines. Content the template admits is created (201); a schema-valid
+    body the template does not validate is answered 422, and a body the
+    published ITS-JSON schema refuses is answered 400.
+sourceDescriptions:
+  - name: ehr
+    url: ../../../specs/rest-oas/ehr-validation.openapi.yaml
+    type: openapi
+  - name: templates
+    url: ../_setup/content_templates_adl2.arazzo.yaml
+    type: arazzo
+workflows:
+  - workflowId: adl2-dv_coded_text-validate_value_set-accepted
+    summary: "DV_CODED_TEXT against an ADL 2 template with defining_code matches {[ac1]}, a local value set of at10 and at11: content the template admits is created"
+    description: >-
+      Commits a DV_CODED_TEXT coded local::at10 against the ADL 2 operational
+      template whose ELEMENT.value is a DV_CODED_TEXT with defining_code
+      matches {[ac1]}, a local value set of at10 and at11. The template and
+      the RM admit it, so the commit is answered 201 Created.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_coded_text_value_set]
+    x-veredictum-cite:
+      source: specs/openehr/AM/docs/ADL2/master04.2-cadl_basics.adoc
+      section: "The matches Operator"
+      quote: "When it occurs between an identifier and a block delimited by braces, the meaning is: the set of values allowed for the entity referred to by the name (either an object, or parts of an object - attributes) is specified between the braces."
+      report: 353
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_coded_text_value_set"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_CODED_TEXT", "value": "First value", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "local"}, "code_string": "at10"}}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_COMPOSITION.yaml
+              section: "description"
+              quote: "`201 Created` is returned when the COMPOSITION is successfully created."
+              report: 945
+
+  - workflowId: adl2-dv_coded_text-validate_value_set-c_terminology_code
+    x-veredictum-control: adl2-dv_coded_text-validate_value_set-accepted
+    summary: "DV_CODED_TEXT against an ADL 2 template with defining_code matches {[ac1]}, a local value set of at10 and at11: a code outside the value set is refused with 422"
+    description: >-
+      Commits a DV_CODED_TEXT coded local::at12 against the ADL 2 operational
+      template whose ELEMENT.value is a DV_CODED_TEXT with defining_code
+      matches {[ac1]}, a local value set of at10 and at11. The body passes the
+      published ITS-JSON schema and carries a code outside the value set, so
+      the commit is refused with 422 Unprocessable Entity.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_coded_text_value_set]
+    x-veredictum-cite:
+      source: specs/openehr/AM/docs/ADL2/master04.5-cadl_primitive_types.adoc
+      section: "Formal Terminology Constraint"
+      quote: "This is the most common form of terminology constraint - defining possible codes for a codable value in the model."
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_coded_text_value_set"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_CODED_TEXT", "value": "Third value", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "local"}, "code_string": "at12"}}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 422
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/422.yaml
+              section: "description"
+              quote: "`422 Unprocessable Entity` is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors, such as the underlying template is not known or is not validating the supplied resource."
+
+  - workflowId: adl2-dv_coded_text-validate_value_set-code_string_terminology_id_missing
+    x-veredictum-control: adl2-dv_coded_text-validate_value_set-accepted
+    summary: "DV_CODED_TEXT against an ADL 2 template with defining_code matches {[ac1]}, a local value set of at10 and at11: a body with no defining_code is refused with 400"
+    description: >-
+      Commits a DV_CODED_TEXT with no defining_code against the ADL 2
+      operational template whose ELEMENT.value is a DV_CODED_TEXT with
+      defining_code matches {[ac1]}, a local value set of at10 and at11. The
+      body lacks a member the RM makes mandatory (no defining_code), which the
+      published ITS-JSON schema (openehr_rm_1.1.0_all.json) refuses, so it is
+      syntactically invalid content and the commit is refused with 400 Bad
+      Request.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_coded_text_value_set]
+    x-veredictum-cite:
+      source: specs/openehr/RM/docs/UML/classes/dv_coded_text.adoc
+      section: "DV_CODED_TEXT Class"
+      quote: "h|*1..1* |*defining_code*: `<<_code_phrase_class,CODE_PHRASE>>`"
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_coded_text_value_set"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_CODED_TEXT", "value": "First value"}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 400
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/400.yaml
+              section: "description"
+              quote: "`400 Bad Request` is returned when the request could not be parsed or is invalid (e.g. malformed request URL syntax, missing required header or parameter, or syntactically invalid header, parameter or content)."
+
+  - workflowId: adl2-dv_coded_text-validate_value_set-terminology_id_missing
+    x-veredictum-control: adl2-dv_coded_text-validate_value_set-accepted
+    summary: "DV_CODED_TEXT against an ADL 2 template with defining_code matches {[ac1]}, a local value set of at10 and at11: a body with no terminology_id is refused with 400"
+    description: >-
+      Commits a DV_CODED_TEXT whose defining_code has no terminology_id
+      against the ADL 2 operational template whose ELEMENT.value is a
+      DV_CODED_TEXT with defining_code matches {[ac1]}, a local value set of
+      at10 and at11. The body lacks a member the RM makes mandatory (no
+      terminology_id), which the published ITS-JSON schema
+      (openehr_rm_1.1.0_all.json) refuses, so it is syntactically invalid
+      content and the commit is refused with 400 Bad Request.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_coded_text_value_set]
+    x-veredictum-cite:
+      source: specs/openehr/RM/docs/UML/classes/code_phrase.adoc
+      section: "CODE_PHRASE Class"
+      quote: "h|*1..1* |*terminology_id*: `link:/releases/BASE/{base_release}/base_types.html#_terminology_id_class[TERMINOLOGY_ID^]`"
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_coded_text_value_set"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_CODED_TEXT", "value": "First value", "defining_code": {"_type": "CODE_PHRASE", "code_string": "at10"}}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 400
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/400.yaml
+              section: "description"
+              quote: "`400 Bad Request` is returned when the request could not be parsed or is invalid (e.g. malformed request URL syntax, missing required header or parameter, or syntactically invalid header, parameter or content)."
+
+  - workflowId: adl2-dv_coded_text-validate_value_set-code_string_missing
+    x-veredictum-control: adl2-dv_coded_text-validate_value_set-accepted
+    summary: "DV_CODED_TEXT against an ADL 2 template with defining_code matches {[ac1]}, a local value set of at10 and at11: a body with no code_string is refused with 400"
+    description: >-
+      Commits a DV_CODED_TEXT whose defining_code has no code_string against
+      the ADL 2 operational template whose ELEMENT.value is a DV_CODED_TEXT
+      with defining_code matches {[ac1]}, a local value set of at10 and at11.
+      The body lacks a member the RM makes mandatory (no code_string), which
+      the published ITS-JSON schema (openehr_rm_1.1.0_all.json) refuses, so it
+      is syntactically invalid content and the commit is refused with 400 Bad
+      Request.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_coded_text_value_set]
+    x-veredictum-cite:
+      source: specs/openehr/RM/docs/UML/classes/code_phrase.adoc
+      section: "CODE_PHRASE Class"
+      quote: "h|*1..1* |*code_string*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`"
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_coded_text_value_set"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_CODED_TEXT", "value": "First value", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "local"}}}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 400
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/400.yaml
+              section: "description"
+              quote: "`400 Bad Request` is returned when the request could not be parsed or is invalid (e.g. malformed request URL syntax, missing required header or parameter, or syntactically invalid header, parameter or content)."

@@ -364,6 +364,7 @@ fn web_template(root: WebTemplateNode) -> WebTemplate {
         languages: vec!["en".to_owned()],
         tree: root,
         other_details: IndexMap::new(),
+        archetype_refs: None,
     }
 }
 

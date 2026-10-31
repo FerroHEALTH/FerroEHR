@@ -26,6 +26,7 @@
 mod access_event_fail_closed;
 mod access_origins;
 mod adl14_knowledge_archetypes;
+mod adl2_content_commit;
 mod adl2_fixture;
 mod adl2_vetdf;
 mod adl2_vetdf_ferroterm;

@@ -33,6 +33,8 @@
               (#1694)"
 )]
 
+use std::collections::BTreeMap;
+
 use indexmap::IndexMap;
 use serde::{Serialize, Serializer};
 
@@ -65,6 +67,15 @@ pub struct WebTemplate {
     /// Additive template metadata — no openEHR spec governs this member; our own design/extension (wire member `otherDetails`).
     #[serde(rename = "otherDetails", skip_serializing_if = "IndexMap::is_empty")]
     pub other_details: IndexMap<String, String>,
+    /// For an OPT2, every archetype reference it inlined mapped to the interface
+    /// id its root's `nodeId` carries, so an instance recording the complete
+    /// identifier (BASE `artefact_identification` `master07-referencing.adoc`
+    /// §Reconstitutability) matches its node; an OPT2 inlines every slot
+    /// filler (AM OPT2 `master03-opt_raw.adoc` §Flattening), so an unmatched
+    /// archetype root is a node the template does not define. `None` for an
+    /// OPT 1.4. Validation-only; `#[serde(skip)]`.
+    #[serde(skip)]
+    pub archetype_refs: Option<BTreeMap<String, String>>,
 }
 
 /// Serialize the **root** node so it satisfies the normative ITS-REST

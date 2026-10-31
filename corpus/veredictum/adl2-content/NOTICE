@@ -1,0 +1,13 @@
+Veredictum
+Copyright 2026 Vernum Projecten B.V. and the Veredictum contributors
+https://github.com/Vernum-Projecten/Veredictum
+
+The independent openEHR conformance instrument: the Arazzo catalogue and its
+evaluator, the measured-performance and stress instruments, and the
+comparative benchmark. Licensed under the Apache License, Version 2.0; this
+NOTICE file travels with every copy and derivative work per its section 4(d).
+
+The vendored material keeps its upstream terms: the openEHR specifications and
+machine-readable bundles under specs/ (Apache-2.0), and the CKM clinical models
+the performance payloads under perf/payloads carry (CC-BY-SA 3.0/4.0), as
+declared per tree in their PROVENANCE.md files and in REUSE.toml.

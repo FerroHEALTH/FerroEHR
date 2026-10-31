@@ -1,0 +1,181 @@
+# Content validation against an ADL 2 operational template at a COMPOSITION
+# commit, as Arazzo 1.1.0 workflows over the released ITS-REST `-validation`
+# OAS. The template is uploaded through the ADL 2 definition operation by
+# the setup the workflow names, and each workflow commits one composition
+# written here whose node identifiers are the template's id-codes. Every
+# quote is copied verbatim from the named vendored file.
+arazzo: 1.1.0
+info:
+  title: Content validation, DV INTERVAL of DV QUANTITY, ADL 2
+  version: 0.1.0
+  x-veredictum-section: interval-data-types
+  description: >-
+    Commits DV_INTERVAL<DV_QUANTITY> content against ADL 2 operational templates that
+    constrain it. Content the template admits is created (201); a
+    schema-valid body the template does not validate is answered 422.
+sourceDescriptions:
+  - name: ehr
+    url: ../../../specs/rest-oas/ehr-validation.openapi.yaml
+    type: openapi
+  - name: templates
+    url: ../_setup/content_templates_adl2.arazzo.yaml
+    type: arazzo
+workflows:
+  - workflowId: adl2-dv_interval_quantity-validate_open-accepted
+    summary: "DV_INTERVAL<DV_QUANTITY> against an ADL 2 template with any DV_INTERVAL<DV_QUANTITY>: content the template admits is created"
+    description: >-
+      Commits a DV_INTERVAL<DV_QUANTITY> from 0 Cel to 100 Cel against the ADL
+      2 operational template whose ELEMENT.value is a DV_INTERVAL<DV_QUANTITY>
+      with any DV_INTERVAL<DV_QUANTITY>. The template and the RM admit it, so
+      the commit is answered 201 Created.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_interval_quantity_open]
+    x-veredictum-cite:
+      source: specs/openehr/AM/docs/ADL2/master04.3-cadl_complex_types.adoc
+      section: "\"Any\" Constraints"
+      quote: "The meaning of this constraint is that in the data at runtime, the `_value_` property of `ELEMENT` must be of type `DV_QUANTITY` , but can have any value internally."
+      report: 353
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_interval_quantity_open"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_open.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_open.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_open.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_INTERVAL", "lower": {"_type": "DV_QUANTITY", "magnitude": 0.0, "units": "Cel"}, "upper": {"_type": "DV_QUANTITY", "magnitude": 100.0, "units": "Cel"}, "lower_unbounded": false, "upper_unbounded": false, "lower_included": true, "upper_included": true}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_COMPOSITION.yaml
+              section: "description"
+              quote: "`201 Created` is returned when the COMPOSITION is successfully created."
+              report: 945
+
+  - workflowId: adl2-dv_interval_quantity-validate_upper_lower-accepted
+    summary: "DV_INTERVAL<DV_QUANTITY> against an ADL 2 template with limits [units, magnitude] matching [{\"Cel\"}, {|0.0..100.0|}]: content the template admits is created"
+    description: >-
+      Commits a DV_INTERVAL<DV_QUANTITY> from 0 Cel to 100 Cel against the ADL
+      2 operational template whose ELEMENT.value is a DV_INTERVAL<DV_QUANTITY>
+      with limits [units, magnitude] matching [{"Cel"},
+      {|0.0..100.0|}]. The template and the RM admit it, so the commit is
+      answered 201 Created.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_interval_quantity_celsius]
+    x-veredictum-cite:
+      source: specs/openehr/AM/docs/ADL2/master04.2-cadl_basics.adoc
+      section: "The matches Operator"
+      quote: "When it occurs between an identifier and a block delimited by braces, the meaning is: the set of values allowed for the entity referred to by the name (either an object, or parts of an object - attributes) is specified between the braces."
+      report: 353
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_interval_quantity_celsius"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_celsius.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_celsius.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_celsius.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_INTERVAL", "lower": {"_type": "DV_QUANTITY", "magnitude": 0.0, "units": "Cel"}, "upper": {"_type": "DV_QUANTITY", "magnitude": 100.0, "units": "Cel"}, "lower_unbounded": false, "upper_unbounded": false, "lower_included": true, "upper_included": true}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_COMPOSITION.yaml
+              section: "description"
+              quote: "`201 Created` is returned when the COMPOSITION is successfully created."
+              report: 945
+
+  - workflowId: adl2-dv_interval_quantity-validate_upper_lower-c_dv_quantity_tuple
+    x-veredictum-control: adl2-dv_interval_quantity-validate_upper_lower-accepted
+    summary: "DV_INTERVAL<DV_QUANTITY> against an ADL 2 template with limits [units, magnitude] matching [{\"Cel\"}, {|0.0..100.0|}]: a lower limit outside the magnitude interval is refused with 422"
+    description: >-
+      Commits a DV_INTERVAL<DV_QUANTITY> from -10 Cel to 100 Cel against the
+      ADL 2 operational template whose ELEMENT.value is a
+      DV_INTERVAL<DV_QUANTITY> with limits [units, magnitude]
+      matching [{"Cel"}, {|0.0..100.0|}]. The body passes the published
+      ITS-JSON schema and carries a lower limit outside the magnitude
+      interval, so the commit is refused with 422 Unprocessable Entity.
+    dependsOn: [$sourceDescriptions.templates.upload_template-adl2_dv_interval_quantity_celsius]
+    x-veredictum-cite:
+      source: specs/openehr/AM/docs/ADL2/master04.4-cadl_second_order.adoc
+      section: "Tuple Constraints"
+      quote: "The above defines constraints on `_units_` and `_magnitude_` together, as tuples such as `[{\"deg F\"}, {|32.0..212.0|}]` ."
+      report: 946
+    steps:
+      - stepId: create-ehr
+        description: Create the EHR the composition is committed to.
+        operationId: $sourceDescriptions.ehr.ehr_create
+        parameters:
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+        successCriteria:
+          - condition: $statusCode == 201
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "`201 Created` is returned when the EHR has been successfully created,"
+          - condition: $response.body#/ehr_id/value != null
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/201_EHR.yaml
+              section: description
+              quote: "with the full resource in the body when `Prefer` header is `return=representation`"
+        outputs:
+          ehr_id: $response.body#/ehr_id/value
+      - stepId: commit
+        description: Commit the composition.
+        operationId: $sourceDescriptions.ehr.composition_create
+        parameters:
+          - { name: ehr_id, in: path, value: $steps.create-ehr.outputs.ehr_id }
+          - { name: Prefer, in: header, value: return=representation }
+          - { name: Accept, in: header, value: application/json }
+          - { name: Content-Type, in: header, value: application/json }
+        requestBody:
+          contentType: application/json
+          payload: {"_type": "COMPOSITION", "name": {"_type": "DV_TEXT", "value": "CNF ADL 2 dv_interval_quantity_celsius"}, "archetype_node_id": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_celsius.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_celsius.v1.0.0"}, "template_id": {"_type": "TEMPLATE_ID", "value": "openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_celsius.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "territory": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_3166-1"}, "code_string": "NL"}, "category": {"_type": "DV_CODED_TEXT", "value": "event", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "433"}}, "composer": {"_type": "PARTY_SELF"}, "context": {"_type": "EVENT_CONTEXT", "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "setting": {"_type": "DV_CODED_TEXT", "value": "other care", "defining_code": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}, "code_string": "238"}}}, "content": [{"_type": "OBSERVATION", "name": {"_type": "DV_TEXT", "value": "Minimal observation"}, "archetype_node_id": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0", "archetype_details": {"_type": "ARCHETYPED", "archetype_id": {"_type": "ARCHETYPE_ID", "value": "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0"}, "rm_version": "1.0.2"}, "language": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "ISO_639-1"}, "code_string": "en"}, "encoding": {"_type": "CODE_PHRASE", "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "IANA_character-sets"}, "code_string": "UTF-8"}, "subject": {"_type": "PARTY_SELF"}, "data": {"_type": "HISTORY", "name": {"_type": "DV_TEXT", "value": "History"}, "archetype_node_id": "id2", "origin": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "events": [{"_type": "POINT_EVENT", "name": {"_type": "DV_TEXT", "value": "Any event"}, "archetype_node_id": "id3", "time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T10:00:00Z"}, "data": {"_type": "ITEM_TREE", "name": {"_type": "DV_TEXT", "value": "Tree"}, "archetype_node_id": "id4", "items": [{"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "Value"}, "archetype_node_id": "id5", "value": {"_type": "DV_INTERVAL", "lower": {"_type": "DV_QUANTITY", "magnitude": -10.0, "units": "Cel"}, "upper": {"_type": "DV_QUANTITY", "magnitude": 100.0, "units": "Cel"}, "lower_unbounded": false, "upper_unbounded": false, "lower_included": true, "upper_included": true}}]}}]}}]}
+        successCriteria:
+          - condition: $statusCode == 422
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/422.yaml
+              section: "description"
+              quote: "`422 Unprocessable Entity` is returned when the content type and syntax is correct, could be converted to a resource, but there are semantic validation errors, such as the underlying template is not known or is not validating the supplied resource."
