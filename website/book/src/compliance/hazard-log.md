@@ -312,15 +312,29 @@ agent, action and date, and a configured subject audit role reads one
 subject's records and nothing else. EHDS Art. 9(2) has the information
 provided "through electronic health data access services", which the Member
 States establish (Art. 4(1)); FerroEHR serves the log to such a service and
-has no patient-facing interface of its own.
+has no patient-facing interface of its own. Where a deployment turns on the
+EHDS Art. 3(3) delay (`[access_delay]`), the subject-scoped read leaves out
+the records about a held composition until a professional releases it or the
+hold expires, and then serves them with their original times
+(`ehds-logging` 0.3.3); the syslog and FHIR feeds and the event stream are
+controller feeds and carry those records unfiltered.
 
 **Shown by:** `app/ferroehr-rest/tests/it/audit_iti81.rs`:
 `searchset_bundle_with_filters_and_paging`,
 `the_subject_audit_role_reads_one_subjects_log_and_nothing_else`,
-`rbac_gates_the_audit_surface_to_admins`.
+`rbac_gates_the_audit_surface_to_admins`;
+`app/ferroehr-rest/tests/it/access_delay_trail.rs`:
+`a_record_about_a_held_composition_appears_in_the_persons_trail_at_release`,
+`a_record_about_a_held_composition_appears_in_the_persons_trail_at_expiry`;
+`app/ferroehr/tests/it/access_delay_sinks.rs`:
+`the_syslog_feed_carries_a_record_about_a_held_composition`,
+`the_fhir_feed_carries_a_record_about_a_held_composition`,
+`the_event_stream_carries_the_commit_of_a_held_composition`.
 
 **Remains:** the subject audit role is unset by default, so the log is
-admin-only until the deployment configures it.
+admin-only until the deployment configures it. A deployment that passes a
+controller feed to the person shows them the records about a held composition
+before its release.
 
 ## H7: the access log is altered
 
@@ -453,3 +467,4 @@ EHDS-side risk assessment of the component.
 | 11 | 2026-10-28 | Reviewed for release candidate 5.6.0-rc1 (changes since 5.5.0: the store keeps each record's facts in columns and renders its `AuditEvent` on read under the render policy the record names, the chain digest covers every column in one version, and audit migration 0017 refuses a store holding records of an earlier release, so no record keeps an older digest and H7 drops that remainder (#4300); the `recorded_at` indexes ascend (#4302); every ITI-81 parameter answers through search tokens the chain covers (#4313); the ITI-81 retrieval moves to `/ferroehr/rest/fhir/r4/AuditEvent` (#4330); a deployment that declares no category map records the published CKM priority-category templates and archetypes through the shipped map, so H3 names its test and its remainder no longer says FerroEHR ships none (#4298); H7 names the render-policy and search-token tests and the digest test #4300 renamed); every named test exists; no hazard added |
 | 12 | 2026-10-29 | Reviewed for release candidate 5.6.0-rc2 (changes since the 5.6.0-rc1 review: a body without `FEEDER_AUDIT` committed directly by a client the `[origins]` register names records that client's origin, so H4 names it and its test, and the retention register keys a period on the origin of the data (#4299); H3's remainder said the binary ships no category map, which #4298 changed; the FHIR rendering of an access record `ehds-logging` does not classify carries the BALP `entity:data` slice its profile requires (#4353); the component's intended performance is stated and measured (#4293), and its ATNA transactions are exercised against independent implementations (#4296)); every named test exists; no hazard added |
 | 13 | 2026-10-29 | Reviewed for release candidate 5.6.0-rc3 (changes since the 5.6.0-rc2 review: FerroEHR takes `ehds-logging` and `ihe-atna` 0.3.2, and the FHIR `AuditEvent` names the object it touched by its openEHR object id as `entity.what.identifier` where it wrote a `what.reference` no FHIR server resolves, so H2 states it and names its test (#4366); the audit store writes a drained batch, its search tokens and its token sets in one transaction on one connection, and the GIN index on `search_tokens` collects new entries in a 512 kB fast-update list (GIN `fastupdate`) that audit migration 0019 sets, which changes no control H5 or H7 states (#4375, #4424); the ITI-81 route answers an authentication refusal as an `OperationOutcome`, the fail-closed `503` is RFC 9457 problem details, and `fail_closed_503_carries_openehr_error_body_and_retry_after` asserts the problem body (#4342)); every named test exists; no hazard added |
+| 14 | 2026-11-01 | Reviewed for release candidate 5.6.0-rc6 (changes since the 5.6.0-rc3 review; the logging component did not change in 5.6.0-rc4 or 5.6.0-rc5: FerroEHR takes `ehds-logging` and `ihe-atna` 0.3.3, and with the EHDS Art. 3(3) delay turned on the subject-scoped ITI-81 read leaves out the records about a held composition until it is released or expires, while the syslog and FHIR feeds and the event stream carry them as controller feeds, so H6 states the hold and its remainder and names its tests (#4509, #4563); placing, releasing and expiry of a hold are access records (#4509); ITI-81 `entity.identifier` finds a request id or a created version uid from the record's own columns through a hash index (audit migration 0020), and retention deletes the search tokens no remaining record names while the database still refuses to delete one a kept record names, which changes no control H7 states (#4534); the Service Model vocabulary leaves the component's identifiers with no test renamed (#4530)); every named test exists; no hazard added |
