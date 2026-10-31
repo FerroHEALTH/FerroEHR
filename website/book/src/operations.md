@@ -591,7 +591,7 @@ measurements of our own design.
 FerroEHR 5.6.0-rc5 from the quickstart (`docker-compose.yml` with
 `FERROEHR_EHR_INDEX=local` and the usage report off), PostgreSQL 18.6 with
 `shared_buffers=1GB`, `max_wal_size=4GB`, `wal_compression=lz4` and default
-autovacuum, in a Podman VM with 8 CPUs and 16 GiB. A client with 8 workers ran
+autovacuum, in a Podman VM with 8 CPUs and 16 gibibytes of memory. A client with 8 workers ran
 each workload over ITS-REST in five phases, and the size of every relation
 (`pg_relation_size`, the TOAST relation's `pg_total_relation_size` and
 `pg_indexes_size`) and the WAL position (`pg_current_wal_lsn()`) were read
@@ -611,18 +611,26 @@ on fresh volumes and once appending to the same database. The two runs grew
 the database by 608.0 MiB and 607.8 MiB, so the growth is linear in the work
 and does not depend on how much the database already holds.
 
+The node rows, the clinical totals and the WAL below were measured again after
+a node row below the root started to keep its archetype header, language and
+encoding in columns: the same driver, PostgreSQL image and settings, against a
+server built from the source, with 500 EHRs and 5 000 vital signs
+compositions and 100 EHRs and 500 International Patient Summaries. That change
+took a vital signs version from 21.6 KB to 17.1 KB and an International
+Patient Summary from 159 KB to 131 KB.
+
 ### Bytes per composition version
 
 | Per committed version | Vital signs (10.8 KB of JSON) | International Patient Summary (87 KB of JSON) |
 |---|---|---|
-| Node rows | 43 rows of 343 B heap and 85 B of index, 18.4 KB | 395 rows of 267 B heap and 96 B of index, 143 KB |
+| Node rows | 43 rows of 238 B heap and 85 B of index, 13.9 KB | 395 rows of 209 B heap and 93 B of index, 119 KB |
 | `version` row, with the body compressed (lz4) | 2.5 KB, in the row | 10.9 KB, in TOAST |
 | `commit_audit`, `contribution` and `vo_head` | 0.7 KB | 0.7 KB |
-| **Clinical storage per create or update** | **21.6 KB (2.0 × the JSON)** | **155 to 166 KB (1.8 to 1.9 × the JSON)** |
+| **Clinical storage per create or update** | **16.0 to 17.1 KB (1.5 to 1.6 × the JSON)** | **131 to 141 KB (1.5 to 1.6 × the JSON)** |
 | A delete (a version with no body and no nodes) | 0.9 KB | 1.1 KB |
-| WAL written per create | 40 KB | 388 KB |
+| WAL written per create | 34 KB | 272 KB |
 
-The node rows hold about 85 % of the clinical bytes, so the size of a version
+The node rows hold about 80 % of the clinical bytes, so the size of a version
 follows the number of RM nodes in the composition more closely than the
 length of its JSON. An update writes a complete version again (its body and
 all its node rows), so it costs the same as a create. A new EHR takes about
@@ -645,14 +653,14 @@ clinical data: 40 000 composition reads add about 38 MiB, as much as about
 Add up, for the period you size for:
 
 - the composition versions you expect, times the bytes per version of your
-  own templates (21.6 KB for one like vital signs, 0.4 to 0.5 KB per RM node
+  own templates (17 KB for one like vital signs, 0.3 to 0.4 KB per RM node
   as a first estimate);
 - the audited requests, times about 1.0 KB, for as long as the
   [audit retention](audit.md#retention-and-who-chooses-it) keeps them;
 - `pg_wal`, up to `max_wal_size` (below);
 - your backups and WAL archive, which this database does not hold.
 
-One million vital-signs-sized versions take about 22 GB, and ten million
+One million vital-signs-sized versions take about 17 GB, and ten million
 audited requests about 10 GB.
 
 ### Audit retention
@@ -677,7 +685,7 @@ data unless you move it. `max_wal_size` is a soft limit: a failing
 behind holds more (PostgreSQL 18 docs,
 [WAL Configuration](https://www.postgresql.org/docs/18/wal-configuration.html)).
 Budget it as a fixed amount beside the database, not as growth. A commit
-writes about twice its stored size to the WAL (40 KB for a 21.6 KB vital signs
+writes about twice its stored size to the WAL (34 KB for a 17.1 KB vital signs
 version), which is what a WAL archive for point-in-time recovery receives.
 
 ### Vacuum and fillfactor

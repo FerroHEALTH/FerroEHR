@@ -47,6 +47,7 @@ pub mod served_vocabulary;
 pub mod session_client;
 pub mod subscriptions;
 pub mod system_api;
+pub mod template_releases;
 pub mod terminology;
 pub mod uid;
 

@@ -3,7 +3,7 @@
 
 //! Demographic (ehr-less) CONTRIBUTION — commit + retrieval, per the
 //! Demographic API of ITS-REST Release-1.1.0 (DEVELOPMENT lifecycle within
-//! the released spec; the SM demographic service is abstract). A demographic
+//! the released spec). A demographic
 //! CONTRIBUTION wraps a change-set of party / relationship versions with
 //! `ehr_id = None`, committed through the shared CONTRIBUTION engine
 //! ([`crate::versioning::contribution::commit_version_set`]) with `party_only = true`
@@ -25,16 +25,17 @@
 )]
 
 use openehr_base::prelude::{HierObjectId, ObjectId, ObjectRef, ObjectRefData};
+use openehr_its::rest::generated::demographic::NewContribution;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;
-use crate::versioning::contribution::commit_version_set;
+use crate::versioning::contribution::{commit_version_set, decode_new_contribution};
 use crate::versioning::object_version_id::{TreeId, version_id};
 
 impl FerroEhrService {
@@ -46,7 +47,14 @@ impl FerroEhrService {
         &self,
         body: Value,
     ) -> Result<ServiceResponse, ServiceError> {
-        let committed = commit_version_set(self, None, &body, true).await?;
+        let NewContribution {
+            uid,
+            versions,
+            audit,
+            additional_properties: _,
+        } = decode_new_contribution::<NewContribution<Value>>(&body)?;
+        let committed =
+            commit_version_set(self, None, uid.as_ref(), versions, &audit, true).await?;
         let body = self.demographic_contribution(committed.id).await?;
         let meta = ResourceMeta::new(String::new(), committed.id.to_string())
             .with_last_modified(committed.time_committed);
@@ -67,8 +75,8 @@ impl FerroEhrService {
         )
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ContributionDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ContributionDoesNotExist,
                 format!("demographic CONTRIBUTION {contribution_id}"),
             )
         })?;

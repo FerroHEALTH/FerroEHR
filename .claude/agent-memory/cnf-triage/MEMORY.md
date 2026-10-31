@@ -34,18 +34,18 @@
 - [AMB-167 documented-family root-name gap](amb167-documented-family-root-name-gap.md) — the handling carve-out contradicts the classification; DOCUMENTED XML root+namespace is a MUST with no case
 - [Extract export is latest-only by default](extract-export-latest-only-default.md) — a version-stack assertion can't ride a default export; use total_version_count or POST /message/export with include_all_versions
 - [Fixed-identity import fixtures are single-use](fixed-identity-fixtures-are-single-use.md) — two cases sharing one `requires.import` fixture ⇒ spec-correct 409 + 404; the runner's 409 tolerance hides it
-- [Commit member uid is service-generated](commit-member-uid-is-service-generated.md) — SM master03 + UpdateVersion.yaml + AMB-89: a pre-built ORIGINAL_VERSION fixture must not spell `uid`
+- [Commit member uid is service-generated](commit-member-uid-is-service-generated.md) — UpdateVersion.yaml + AMB-89: a pre-built ORIGINAL_VERSION fixture must not spell `uid`
 - [Parse-vs-semantic 400/422 split](parse-vs-semantic-400-422-split.md) — `responses/422.yaml` "could be converted to a resource" + the OAS `required:` lists; missing-mandatory = 400, template/invariant = 422, FLAT validation = 422
 - [ETag matcher placeholder refusal](etag-matcher-placeholder-refusal.md) — RUNNER bin: #1865 reddens 338 spec-correct cases; `validate` has no placeholder-resolvability gate
 - [Optional-list invariant emitter gap](optional-list-invariant-emitter-gap.md) — APP bin: `ROLE.capabilities`/`PARTY.relationships` still `Option<Vec>`, empty list accepted 201; the raw-body checks were deleted
 - [CONTRIBUTION seam skips the strict reader](contribution-seam-skips-strict-reader.md) — APP bin: both contribution lanes 422 a payload the direct routes 400; AMB-193+AMB-194 already fix the line
 - [OAS `required:` ≠ non-empty array](oas-required-does-not-forbid-empty-arrays.md) — `Clstr.yaml required: [items]` is satisfied by `[]`; only the BMM cardinality grounds an empty-list refusal
-- [Authz class is EXPLICIT SM deferral](authz-class-is-explicit-sm-deferral.md) — a role 403 is never the app bin; SM master02 §Functional Style also grounds driving semantics cases as an authorized principal
+- [Authz class is our own design](authz-class-is-own-design.md) — ITS-REST mandates no scheme, so a role 403 is never the app bin; semantics cases drive an authorized principal
 - [Definition-delete routes are Admin (#2071)](definition-delete-routes-are-admin-class.md) — the class move stands; 5 red rows = catalogue bin (`on: admin`), plus the readonly/uncased-branch fallout
 - [TERMINOLOGY_ID has no declared invariant](terminology-id-value-has-no-invariant.md) — BASE declares no Invariants row; master05's production is refuted by its own examples AND released QUERY `snomed_ct(3.1)`
 - [Baseline commit = where the run was RECORDED](baseline-commit-is-where-the-run-was-recorded.md) — diff the whole range since the previous results.json, never trust a handed-down "prime suspect"
-- [ehr_id scope is SM-grounded](ehr-id-scope-semantics-is-sm-grounded.md) — SM `_ehr_ids_` defines the effect (AMB-101 overstates the silence); EHRbase 2.34.0 discards both carriers
+- [ehr_id scope is ITS-grounded](ehr-id-scope-semantics-is-its-grounded.md) — the ITS-REST query docs define the effect (AMB-101 overstates the silence); EHRbase 2.34.0 discards both carriers
 - [`equivalent` refused on text-document grounds](equivalent-refused-on-text-document-grounds.md) — RUNNER bin: 0.1.4 keys the refusal on the served media type, not the ground; OPT-XML/ADL2-text compares are judgeable
 - [IXIT `administrative` posture](ixit-administrative-posture.md) — AMB-228: 6 role-boundary rows guard out until OUR ixit declares the split; fixed in this repo, not Veredictum
-- [PARTY_RELATED name != subject identification](party-related-name-is-not-subject-identification.md) — APP overreach class; SM `content_valid` == RM validity is the oracle for "may we refuse this"; `self` is openehr::0
+- [PARTY_RELATED name != subject identification](party-related-name-is-not-subject-identification.md) — APP overreach class; RM validity is the oracle for "may we refuse this"; `self` is openehr::0
 

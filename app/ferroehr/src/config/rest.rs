@@ -155,7 +155,7 @@ impl RestConfig {
     }
 }
 
-/// Configuration of the ADMIN API group (`[admin]`; SM `I_ADMIN_SERVICE`).
+/// Configuration of the ADMIN API group (`[admin]`).
 ///
 /// NOTE: gating the admin surface behind an opt-in flag — when inactive every
 /// admin route answers `405 Method Not Allowed` with an empty `Allow`

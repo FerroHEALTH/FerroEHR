@@ -48,6 +48,12 @@ template-download = Download
 template-copy-id = Copy id
 template-views = Views of this template
 template-refused = The template could not be read.
+template-incomplete = { $count ->
+    [one] This template cannot be used yet: it is built on an archetype this CDR does not hold.
+   *[other] This template cannot be used yet: it is built on { $count } archetypes this CDR does not hold.
+}
+template-incomplete-upload = Upload the missing archetypes
+template-incomplete-tab = This view needs the missing archetypes. Upload them, then open it again.
 template-adl-14-line = ADL 1.4
 template-adl-14-subtitle = { $concept } · ADL 1.4
 template-adl-2-subtitle = { $hrid } · ADL 2
@@ -84,6 +90,23 @@ template-release-count = { $count ->
    *[other] { $count } releases
 }
 template-reading-release = You are reading release { $release }.
+template-newest = Newest
+template-shown-here = On this page
+template-earlier-release = Earlier release
+template-compositions = Compositions
+template-counts-refused = The releases could not be read.
+template-count-refused = Not counted
+template-compare = Compare
+template-compare-from = From
+template-compare-to = To
+template-compare-summary = { $added ->
+    [one] 1 path added
+   *[other] { $added } paths added
+}, { $removed } removed, { $changed } changed
+template-compare-caption = The paths from { $from } to { $to }
+template-compare-same = Both sides name the same release: choose two to compare.
+template-compare-none = The template has one release, so there is nothing to compare.
+template-compare-refused = The releases could not be compared.
 template-read-latest = Read { $release }, the latest
 template-upload-title = { $mode ->
     [new] Upload a template

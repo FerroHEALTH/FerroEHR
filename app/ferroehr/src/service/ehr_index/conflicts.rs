@@ -3,11 +3,10 @@
 
 //! Design-filled advisory duplicate-detection read.
 //!
-//! `master07 §Overview` names two error states the index metadata exists "to
-//! detect and rectify": multiple EHRs recorded for one subject, and multiple
-//! subjects recorded for one EHR. The SM defines no detection *operation* —
-//! this read is our own design (advisory, never a hard reject: the N:M states
-//! are legal-but-flagged per `resource_instance_type.adoc` `Duplicate`).
+//! The index metadata exists to detect and rectify two error states: multiple
+//! EHRs recorded for one subject, and multiple
+//! subjects recorded for one EHR. This read is our own design (advisory, never
+//! a hard reject: the N:M states are legal-but-flagged as `Duplicate`).
 //!
 //! Both scans run on the linkage pool, over the associations in force.
 
@@ -18,11 +17,10 @@ use crate::service::linkage::store;
 
 use super::IndexError;
 
-/// One detected index error state (master07 §Overview) — advisory only.
+/// One detected index error state — advisory only.
 ///
-/// `pub`: the SM `I_EHR_INDEX` defines no detection operation (this read fills
-/// that silence — our own design), so it has no SM trait binding and no
-/// ITS-REST wire binding. It is exposed on the public [`FerroEhrService`]
+/// `pub`: this read is our own design with no ITS-REST wire binding. It is
+/// exposed on the public [`FerroEhrService`]
 /// surface as a native-API-only diagnostic; a route or admin-CLI binding would
 /// be a spec-silent extension of our own, not a conformance requirement.
 #[derive(Debug, Clone)]
@@ -47,7 +45,7 @@ pub enum IndexConflict {
 }
 
 impl FerroEhrService {
-    /// Scan the index for the two master07 error states, returning every
+    /// Scan the index for the two error states, returning every
     /// conflicting association group (empty = clean). Advisory: detection only,
     /// no mutation — rectification is the operator's `update_ehr_subject_status`
     /// / `remove_ehr_subject` call (I2/I4).

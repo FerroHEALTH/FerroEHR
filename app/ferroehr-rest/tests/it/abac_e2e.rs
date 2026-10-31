@@ -38,7 +38,7 @@ use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::rest::RestConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::SmError;
+use ferroehr::service::status::StatusError;
 use ferroehr::storage::version_repo::meta::VersionContent;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
@@ -1188,7 +1188,7 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
                     .map_err(|e| ResolveError::new("ehr id", e))?;
                 ferroehr::aql::subject::ehr_subject(&pool, id)
                     .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", SmError::from(e)))
+                    .map_err(|e| ResolveError::new("ehr subject lookup", StatusError::from(e)))
             })
         }),
         ..resolvers()

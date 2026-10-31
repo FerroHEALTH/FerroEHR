@@ -101,8 +101,7 @@ pub const METRIC_DROPPED: &str = "atna_audit_dropped_total";
 pub const METRIC_REJECTED: &str = "atna_audit_rejected_total";
 /// Records dropped in the drain because a rendering failed.
 ///
-/// SM master02 §Component table names the System Log as an "IHE
-/// ATNA-compliant system log"; silent audit loss would undermine that, so
+/// The system log follows IHE ATNA; silent audit loss would undermine that, so
 /// every serialize-drop is metered.
 pub const METRIC_SERIALIZE_FAILED: &str = "atna_audit_serialize_failed_total";
 /// Records successfully written to a sink (label `sink`:

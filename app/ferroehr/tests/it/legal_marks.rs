@@ -35,7 +35,7 @@ use sqlx::PgPool;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use ferroehr::storage::marks::RetentionPeriod;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender;
@@ -162,7 +162,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
         .get_ehr_status_at_time(ehr_id, None)
         .await
         .expect_err("a restricted status is refused");
-    assert_eq!(refusal.status, CallStatusType::ProcessingRestricted);
+    assert_eq!(refusal.status, ServiceStatus::ProcessingRestricted);
     assert!(
         refusal.message.contains("restricted") && refusal.message.contains("Art. 18"),
         "the refusal names the restriction: {}",
@@ -174,7 +174,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
         .ehr_status_revision_history(ehr_id)
         .await
         .expect_err("a restricted object's revision history is refused");
-    assert_eq!(history.status, CallStatusType::ProcessingRestricted);
+    assert_eq!(history.status, ServiceStatus::ProcessingRestricted);
 
     // A write to it is refused: Art. 18(2) leaves only storage. The body is
     // the one read back before the mark, so the refusal is the restriction's
@@ -183,7 +183,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
         .replace_ehr_status(ehr_id, uv(&update_body, "251", Some(&status_ovid)))
         .await
         .expect_err("a write to a restricted object is refused");
-    assert_eq!(write.status, CallStatusType::ProcessingRestricted);
+    assert_eq!(write.status, ServiceStatus::ProcessingRestricted);
 
     // The stored rows are untouched: a restriction limits processing, it does
     // not remove anything.
@@ -254,7 +254,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .extract_ehrs(ehr_id)
         .await
         .expect_err("an Extract of a restricted EHR is refused");
-    assert_eq!(extract.status, CallStatusType::ProcessingRestricted);
+    assert_eq!(extract.status, ServiceStatus::ProcessingRestricted);
     assert_eq!(
         drainable_rows(&pool, ehr_id).await,
         0,
@@ -312,13 +312,13 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
         .restrict_processing(&ehr_id.to_string(), None, "because-we-felt-like-it", None)
         .await
         .expect_err("a ground outside the closed list is refused");
-    assert_eq!(bad_ground.status, CallStatusType::PreconditionViolation);
+    assert_eq!(bad_ground.status, ServiceStatus::PreconditionViolation);
 
     let unknown_ehr = svc
         .restrict_processing(&uuid::Uuid::now_v7().to_string(), None, "national", None)
         .await
         .expect_err("an unknown EHR is refused");
-    assert_eq!(unknown_ehr.status, CallStatusType::EhrIdDoesNotExist);
+    assert_eq!(unknown_ehr.status, ServiceStatus::EhrIdDoesNotExist);
 
     let foreign = svc
         .restrict_processing(
@@ -329,7 +329,7 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
         )
         .await
         .expect_err("an object in another EHR is refused");
-    assert_eq!(foreign.status, CallStatusType::VersionedObjectDoesNotExist);
+    assert_eq!(foreign.status, ServiceStatus::VersionedObjectDoesNotExist);
 
     assert!(
         svc.restriction_register(&ehr_id.to_string())
@@ -370,7 +370,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         .extract_ehrs(ehr_id)
         .await
         .expect_err("an Extract of an objected EHR is refused");
-    assert_eq!(extract.status, CallStatusType::ProcessingRestricted);
+    assert_eq!(extract.status, ServiceStatus::ProcessingRestricted);
     assert!(
         extract.message.contains("Art. 21(6)"),
         "the refusal names the objection rather than a restriction: {}",
@@ -402,7 +402,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         .set_research_objection(&ehr_id.to_string(), false, Some("still important"))
         .await
         .expect_err("a withdrawal with a ground is refused");
-    assert_eq!(bad.status, CallStatusType::PreconditionViolation);
+    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
     svc.set_research_objection(&ehr_id.to_string(), false, None)
         .await
         .expect("withdraw");
@@ -447,7 +447,7 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
         })
         .await
         .expect_err("an unknown content category is refused");
-    assert_eq!(bad.status, CallStatusType::PreconditionViolation);
+    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
 
     // Anchored in the past, the EHR falls due.
     svc.put_retention_anchor(
@@ -585,7 +585,7 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         .put_retention_policy(de_composition(Some("laboratory"), "1 year"))
         .await
         .expect_err("an unknown category is refused");
-    assert_eq!(bad.status, CallStatusType::PreconditionViolation);
+    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
     let policies = svc.retention_policies().await.expect("register");
     assert_eq!(
         policies.len(),
@@ -701,7 +701,7 @@ async fn an_origin_keyed_period_lists_the_objects_of_its_origin() {
         .put_retention_policy(period(Some("pacs.example"), "1 year"))
         .await
         .expect_err("an unregistered origin is refused");
-    assert_eq!(bad.status, CallStatusType::PreconditionViolation);
+    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
     svc.put_retention_policy(period(Some("lab.example"), "10 years"))
         .await
         .expect("declare the origin period");

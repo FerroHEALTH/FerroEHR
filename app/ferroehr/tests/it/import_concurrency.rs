@@ -26,7 +26,7 @@ use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
 use ferroehr::db::domain::DomainPools;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 
 use crate::fixtures::uv;
 
@@ -130,7 +130,7 @@ async fn concurrent_imports_into_one_container_are_serialised() {
         (Ok(()), Ok(())) => panic!("both imports landed the same version"),
         (Err(a), Err(b)) => panic!("neither import landed: {a} / {b}"),
     };
-    assert_eq!(refused.status, CallStatusType::Conflict, "{refused}");
+    assert_eq!(refused.status, ServiceStatus::Conflict, "{refused}");
     assert!(
         refused.message.contains("cannot re-import trunk version"),
         "the loser sees the winner's version, not a unique-index collision: {refused}"

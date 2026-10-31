@@ -28,9 +28,9 @@ Confirmed 2026-07-26 by first-hand spec reading; re-verify before citing (code m
 - **Unqualified stored-query name keying is split**: the wire store path keys
   `('' , name)` (`split_qualified` directly) while `query_exists`/`query_delete`/
   `delete_stored_query_version` key `('misc', name)`
-  (`parse_qualified_name(..).qualified()`, SM master04 §Registered Queries "If no
-  namespace is supplied, the namespace `misc` is assumed"). Symptom: a query PUT
-  under a bare name is undeletable via admin/SM and an SM-registered bare name is
+  (`parse_qualified_name(..).qualified()`, our own `misc` default for a bare
+  name). Symptom: a query PUT
+  under a bare name is undeletable via admin/native calls and a natively registered bare name is
   invisible to the wire GET/list.
 - **`creating_system_id` is dropped everywhere** an `OBJECT_VERSION_ID` addresses
   a resource (`version_components`, `components`, `parse_uid_based_id`), and

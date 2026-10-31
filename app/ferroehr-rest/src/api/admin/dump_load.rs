@@ -5,41 +5,28 @@
 //!
 //! No openEHR ITS-REST operation governs either route here. The released Admin
 //! API is exactly two EHR deletes (`specifications/admin.openapi.yaml` →
-//! `operations/admin_ehr_delete.yaml` + `operations/admin_ehr_delete_all.yaml`),
-//! while the SM declares a dump/load interface the release never surfaced —
-//! `docs/specs/openehr/SM/docs/UML/classes/i_admin_dump_load.adoc`:
-//! `export_ehrs` ("Export all EHRs to a file-system location in a specified
-//! format") and `load_ehrs` ("Populate EHR repository from export archive on
-//! file system. Repository need not be empty, but import EHRs with duplicate
-//! EHR ids will fail"), both declaring the single error `file_not_writable`.
-//! No released ITS-REST operation covers either call.
+//! `operations/admin_ehr_delete.yaml` + `operations/admin_ehr_delete_all.yaml`).
+//! `POST /admin/dump` exports every EHR to a location on the server's file
+//! system; `POST /admin/load` populates the repository from such an archive,
+//! where an EHR whose id already exists fails for that EHR alone.
 //!
-//! These routes are the honest realization of that service basis, and are
-//! **excluded from ITS-REST wire conformance**: they gate the `EhrDumpLoad`
-//! CAPABILITY verdict only.
+//! These routes are **excluded from ITS-REST wire conformance**: they gate the
+//! `EhrDumpLoad` CAPABILITY verdict only.
 //!
 //! ## What the bodies carry
 //!
-//! `export_ehrs`'s signature passes `logical_fmt` / `comp_fmt` / `enc_format`
-//! loose, while `export_spec.adoc` bundles the same three attributes
-//! (`logical_format`, `compression_format`, `encoding`) with the mandatory
-//! `segment_split_size: Integer [1..1]` (kb). `EXPORT_SPEC` is the SM's own
-//! richer form for exactly this operation, so the request body is the
-//! `EXPORT_SPEC` attribute set plus the separate `file_sys_loc` parameter, and
-//! the enumeration values are the vendored literals verbatim
-//! (`export_format.adoc`: `openehr_canonical_xml` / `openehr_canonical_json`;
-//! `compression_format.adoc`: `zip` / `7z`).
+//! The dump body is the export spec (`logical_format`, `compression_format`,
+//! the mandatory `segment_split_size` in kb) plus the `file_sys_loc`
+//! location; the format values are `openehr_canonical_xml` /
+//! `openehr_canonical_json` and `zip` / `7z`.
 //!
-//! `encoding` is REFUSED with a `400`, and that is a derivation rather than a
-//! gap: `encoding_format.adoc` declares `ENCODING_FORMAT` as an enumeration
-//! with **no members at all**, so no text a client could send names one — SM
-//! `precondition_violation`.
+//! `encoding` is REFUSED with a `400`: no encoding is defined, so no text a
+//! client could send names one.
 //!
-//! Both operations return `List<DUMP_LOAD_FAIL_REPORT>`
-//! (`dump_load_fail_report.adoc`: `entity_type`, `entity_id`, `dump_status`,
-//! `error [0..1]`), so both answer `200` with a JSON array — empty when every
-//! entity succeeded. The array is the resource; there is no envelope, because
-//! no spec defines one.
+//! Both operations return a list of fail reports (`entity_type`, `entity_id`,
+//! `dump_status`, `error [0..1]`), so both answer `200` with a JSON array —
+//! empty when every entity succeeded. The array is the resource; there is no
+//! envelope, because no spec defines one.
 //!
 //! Gating: mounted under `/admin/`, so they inherit the group's RBAC Admin
 //! class (`401`/`403`, our own authorization design — the released admin
@@ -84,11 +71,11 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
 /// Export every EHR to a file-system archive (`POST /admin/dump`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_ADMIN_DUMP_LOAD.export_ehrs`.
+/// docs).
 #[utoipa::path(
     post, path = "/admin/dump", tag = "admin-dump-load",
     request_body(content = serde_json::Value,
-                 description = "The SM `export_ehrs` parameters as one object: \
+                 description = "The export parameters as one object: \
                                 `file_sys_loc` (required, the archive location \
                                 on the SERVER's file system) plus the \
                                 `EXPORT_SPEC` attributes `logical_format` \
@@ -113,7 +100,7 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
                  })),
     responses(
         (status = 200, description = "The archive was written. The body is the \
-                                      `List<DUMP_LOAD_FAIL_REPORT>` the SM \
+                                      list of fail reports the \
                                       operation returns — EMPTY when every EHR \
                                       was dumped successfully.",
          body = Vec<serde_json::Value>, example = json!([])),
@@ -122,8 +109,7 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
                                       vendored enumeration, `encoding` is \
                                       present (`ENCODING_FORMAT` is an empty \
                                       enumeration), or `segment_split_size` is \
-                                      not a positive integer — SM \
-                                      `precondition_violation`.",
+                                      not a positive integer.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                       principal). Our own authorization design \
@@ -143,7 +129,7 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
         (status = 415, description = "The request `Content-Type` is not \
                                       `application/json`.",
          body = serde_json::Value),
-        (status = 500, description = "SM `file_not_writable` — the location, a \
+        (status = 500, description = "The location, a \
                                       segment entry, a version-payload entry or \
                                       the manifest could not be created or \
                                       written.",
@@ -161,14 +147,13 @@ pub(crate) async fn admin_dump(
 /// Populate the repository from a file-system archive (`POST /admin/load`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_ADMIN_DUMP_LOAD.load_ehrs`.
+/// docs).
 #[utoipa::path(
     post, path = "/admin/load", tag = "admin-dump-load",
     request_body(content = serde_json::Value,
                  description = "`{ \"file_sys_loc\": … }` — the archive \
                                 location on the SERVER's file system. \
-                                `load_ehrs` takes this ONE parameter \
-                                (`i_admin_dump_load.adoc`), so the container \
+                                The load takes this ONE parameter, so the container \
                                 (loose files, `archive.zip` or `archive.7z`) \
                                 is detected from what the location holds and \
                                 the payload form comes from the archive's own \
@@ -176,7 +161,7 @@ pub(crate) async fn admin_dump(
                  example = json!({ "file_sys_loc": "/tmp/openehr-export" })),
     responses(
         (status = 200, description = "The archive was read. The body is the \
-                                      `List<DUMP_LOAD_FAIL_REPORT>` the SM \
+                                      list of fail reports the \
                                       operation returns: one entry per entity \
                                       that did NOT load — notably \"import EHRs \
                                       with duplicate EHR ids will fail\", which \
@@ -192,8 +177,7 @@ pub(crate) async fn admin_dump(
                             "error": "an EHR with this id already exists" }])),
         (status = 400, description = "`file_sys_loc` is absent or blank, or the \
                                       archive carries externalized multimedia \
-                                      this server has no store for — SM \
-                                      `precondition_violation`.",
+                                      this server has no store for.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated. Our own authorization \
                                       design.",
@@ -209,7 +193,7 @@ pub(crate) async fn admin_dump(
         (status = 415, description = "The request `Content-Type` is not \
                                       `application/json`.",
          body = serde_json::Value),
-        (status = 500, description = "SM `file_not_writable` — the location \
+        (status = 500, description = "The location \
                                       holds no archive container, an entry \
                                       could not be read, the manifest / a \
                                       segment is CORRUPT (mangled or truncated, \
@@ -217,9 +201,8 @@ pub(crate) async fn admin_dump(
                                       archive format), or the manifest names no \
                                       `EXPORT_FORMAT` member. All are the same \
                                       fact — `file_sys_loc` does not hold a \
-                                      readable archive — and carry the one \
-                                      error `i_admin_dump_load.adoc` declares. \
-                                      A corrupt per-version payload entry is \
+                                      readable archive — and answer the same \
+                                      `500`. A corrupt per-version payload entry is \
                                       NOT here: it belongs to exactly one EHR, \
                                       so it is a per-entity `200` report.",
          body = serde_json::Value)
@@ -281,9 +264,9 @@ async fn run(
     }
 }
 
-/// Read the mandatory `file_sys_loc` (`String [1]` on both SM operations). An
-/// absent or blank location names no location at all — SM
-/// `precondition_violation`, refused before any storage or filesystem work.
+/// Read the mandatory `file_sys_loc` that both operations take. An absent or
+/// blank location names no location at all, a `400` refused before any
+/// storage or filesystem work.
 fn file_sys_loc(body: &Value) -> Result<String, RestError> {
     let raw = body
         .get("file_sys_loc")
@@ -302,10 +285,9 @@ fn file_sys_loc(body: &Value) -> Result<String, RestError> {
 
 /// The `EXPORT_SPEC` default `segment_split_size` in kb.
 ///
-/// Build the SM `EXPORT_SPEC` from the request body.
+/// Build the [`ExportSpec`] from the request body.
 fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
-    // `ENCODING_FORMAT` (encoding_format.adoc) is an enumeration with NO
-    // members, so no value a client can send names one.
+    // No encoding is defined, so no value a client can send names one.
     if body.get("encoding").is_some() {
         return Err(RestError::from(ApiError::BadRequest(
             "`encoding` names an ENCODING_FORMAT member, and the vendored SM enumeration \
@@ -317,9 +299,8 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
     let compression_format =
         enum_member::<CompressionFormat>(body, "compression_format", "COMPRESSION_FORMAT")?;
     let segment_split_size = match body.get("segment_split_size") {
-        // NOTE: `export_spec.adoc` makes `segment_split_size` mandatory but names
-        // no default, and no openEHR spec governs this wire — our own extension:
-        // an omitted size takes 1024 kb so "just dump it" needs no tuning knob.
+        // NOTE: no openEHR spec governs this wire, our own extension: an omitted
+        // size takes 1024 kb so "just dump it" needs no tuning knob.
         None | Some(Value::Null) => 1024,
         Some(value) => value.as_i64().ok_or_else(|| {
             RestError::from(ApiError::BadRequest(format!(
@@ -344,7 +325,7 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
     })
 }
 
-/// Read one optional SM enumeration member from `field`. A present value that
+/// Read one optional enumeration member from `field`. A present value that
 /// names no member is a `400` (`precondition_violation`) — never silently
 /// dropped, which would export in a format the caller did not ask for.
 fn enum_member<T: std::str::FromStr<Err = ()>>(
@@ -369,8 +350,7 @@ fn enum_member<T: std::str::FromStr<Err = ()>>(
     }
 }
 
-/// Render the SM `List<DUMP_LOAD_FAIL_REPORT>` return value
-/// (`dump_load_fail_report.adoc`: `entity_type` 1..1, `entity_id` 1..1,
+/// Render the fail reports (`entity_type` 1..1, `entity_id` 1..1,
 /// `dump_status` 1..1, `error` 0..1) as the response array. `error` is omitted
 /// when the report carries none, matching its `[0..1]` multiplicity.
 fn fail_reports(reports: &[DumpLoadFailReport]) -> Vec<Value> {

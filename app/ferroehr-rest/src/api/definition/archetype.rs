@@ -5,10 +5,8 @@
 //!
 //! No openEHR ITS-REST operation governs any route in this module: the released
 //! Definition API provisions operational templates only, declaring no archetype
-//! resource, generic artefact resource, count, or DELETE. The SM does declare
-//! those operations (`SM/docs/UML/classes/i_definition_adl14.adoc` and
-//! `i_definition_adl2.adoc`), so these routes realize a service basis with no
-//! wire basis, for ADL 1.4 and ADL 2 alike.
+//! resource, generic artefact resource, count, or DELETE, for ADL 1.4 and
+//! ADL 2 alike.
 //!
 //! Every route here is therefore excluded from ITS-REST wire conformance and
 //! gates the `Adl14ArchetypeProvisioning` / `Adl2ArchetypeProvisioning`
@@ -75,29 +73,25 @@ pub(crate) fn archetype_routes() -> OpenApiRouter<AppState> {
 /// truthful declaration for an opaque UTF-8 text artefact.
 const ADL_TEXT: &str = "text/plain; charset=utf-8";
 
-// ── ADL 1.4 archetypes (SM I_DEFINITION_ADL14) ───────────────────────────────
+// ── ADL 1.4 archetypes ───────────────────────────────────────────────────────
 
 /// List the stored ADL 1.4 source archetypes
 /// (`GET /definition/archetype/adl1.4`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL14.list_archetypes`
-/// (`i_definition_adl14.adoc`), cursored by the SM list convention
-/// (`master02-overview.adoc` §List Handling: `item_offset` / `items_to_fetch`),
-/// spelled `offset` / `fetch` here to match the released template list's own
+/// docs). The cursor is `offset` / `fetch`, the released template list's own
 /// parameter names.
 #[utoipa::path(
     get, path = "/definition/archetype/adl1.4", tag = "definition-archetype",
     params(
         ("offset" = Option<u64>, Query,
-         description = "0-based offset into the id list (SM `item_offset`; \
-                        absent = from the first item). Extension route — the \
-                        cursor convention is SM `master02-overview.adoc` \
-                        §List Handling, not a released wire parameter.",
+         description = "0-based offset into the id list (absent = from the \
+                        first item). Extension route — not a released wire \
+                        parameter.",
          example = 0),
         ("fetch" = Option<u64>, Query,
-         description = "Number of ids to return from `offset` (SM \
-                        `items_to_fetch`; absent or `0` = all).",
+         description = "Number of ids to return from `offset` \
+                        (absent or `0` = all).",
          example = 20)
     ),
     responses(
@@ -130,12 +124,10 @@ pub(crate) async fn definition_archetype_adl14_list(
 /// Store an ADL 1.4 source archetype (`POST /definition/archetype/adl1.4`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL14.upload_archetype`, whose
-/// declared semantics are replace-or-create ("If an archetype with the same id
-/// already exists, replace it. The archetype must be valid to succeed." —
-/// `i_definition_adl14.adoc`), and whose `Pre_valid_archetype` is enforced by
-/// the `openehr-adl` engine judging the source **as 1.4** (ADL 1.4 `master08`
-/// §Validity Rules + the AOM 1.4 class invariants).
+/// docs). An upload replaces an archetype with the same id or creates it, and
+/// only a valid archetype is stored: the `openehr-adl` engine judges the source
+/// **as 1.4** (ADL 1.4 `master08` §Validity Rules + the AOM 1.4 class
+/// invariants).
 #[utoipa::path(
     post, path = "/definition/archetype/adl1.4", tag = "definition-archetype",
     params(
@@ -154,7 +146,7 @@ pub(crate) async fn definition_archetype_adl14_list(
         (status = 201, description = "Stored. The body is the stored \
                                       `ARCHETYPE_ID`. A re-upload of an \
                                       existing id REPLACES it and answers `201` \
-                                      too — the SM operation is \
+                                      too — the operation is \
                                       replace-or-create, so there is no \
                                       conflict branch to report.",
          body = String,
@@ -180,8 +172,7 @@ pub(crate) async fn definition_archetype_adl14_list(
          body = serde_json::Value),
         (status = 422, description = "The source does not parse as ADL 1.4, or \
                                       fails the ADL 1.4 / AOM 1.4 phase-1 \
-                                      validity catalogue — SM \
-                                      `Pre_valid_archetype`; the offending \
+                                      validity catalogue; the offending \
                                       rule-code mnemonics are carried as the \
                                       error detail.",
          body = serde_json::Value)
@@ -199,10 +190,8 @@ pub(crate) async fn definition_archetype_adl14_upload(
 /// (`GET /definition/archetype/adl1.4/{archetype_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL14.get_archetype`; the
-/// `200`-vs-`404` of this read is also the wire realization of the interface's
-/// boolean `has_archetype` (the same existence-as-presence realization the
-/// released party read gives `I_PARTY.has_party`).
+/// docs). The `200`-vs-`404` of this read also answers whether the archetype
+/// exists.
 #[utoipa::path(
     get, path = "/definition/archetype/adl1.4/{archetype_id}", tag = "definition-archetype",
     params(
@@ -220,8 +209,7 @@ pub(crate) async fn definition_archetype_adl14_upload(
          content_type = "text/plain"),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                       principal).", body = serde_json::Value),
-        (status = 404, description = "No archetype with that id — SM \
-                                      `artefact_does_not_exist`. This is also \
+        (status = 404, description = "No archetype with that id. This is also \
                                       the answer for a syntactically malformed \
                                       `ARCHETYPE_ID`: the store key is an \
                                       opaque, case-insensitively matched \
@@ -243,8 +231,7 @@ pub(crate) async fn definition_archetype_adl14_get(
 /// (`DELETE /definition/archetype/adl1.4/{archetype_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL14.delete_archetype`
-/// (`Pre_artefact_exists` / `Post_archetype_removed`). This is a definition-store
+/// docs). This is a definition-store
 /// removal, not a clinical delete: no VERSION is produced, so the success is a
 /// bodyless `204`.
 #[utoipa::path(
@@ -267,9 +254,7 @@ pub(crate) async fn definition_archetype_adl14_get(
                                       writes the definition store, so it is \
                                       refused before the store is touched.",
          body = serde_json::Value),
-        (status = 404, description = "No archetype with that id — SM \
-                                      `Pre_artefact_exists` /\
-                                      `artefact_does_not_exist`.",
+        (status = 404, description = "No archetype with that id.",
          body = serde_json::Value)
     )
 )]
@@ -281,12 +266,12 @@ pub(crate) async fn definition_archetype_adl14_delete(
     guarded_dispatch(state, "definition_archetype_adl14_delete", parts, dispatch).await
 }
 
-// ── ADL 2 archetypes + artefacts (SM I_DEFINITION_ADL2) ──────────────────────
+// ── ADL 2 archetypes + artefacts ─────────────────────────────────────────────
 
 /// List the stored ADL 2 archetypes (`GET /definition/archetype/adl2`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL2.list_archetypes` — the
+/// docs). It lists the
 /// artefacts whose concrete AOM2 type is `AUTHORED_ARCHETYPE` (AM AOM2
 /// §Archetypes), as opposed to the templates and OPTs the released
 /// `/definition/template/adl2` list already serves.
@@ -294,11 +279,11 @@ pub(crate) async fn definition_archetype_adl14_delete(
     get, path = "/definition/archetype/adl2", tag = "definition-archetype",
     params(
         ("offset" = Option<u64>, Query,
-         description = "0-based offset into the id list (SM `item_offset`).",
+         description = "0-based offset into the id list.",
          example = 0),
         ("fetch" = Option<u64>, Query,
-         description = "Number of ids to return from `offset` (SM \
-                        `items_to_fetch`; absent or `0` = all).",
+         description = "Number of ids to return from `offset` \
+                        (absent or `0` = all).",
          example = 20)
     ),
     responses(
@@ -326,8 +311,7 @@ pub(crate) async fn definition_archetype_adl2_list(
 /// Count the stored ADL 2 archetypes (`GET /definition/archetype/adl2/count`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL2.archetypes_count`. The
-/// operation returns an `Integer`, so the response body is a bare JSON number —
+/// docs). The response body is a bare JSON number —
 /// the count IS the resource, and wrapping it in an object would invent a
 /// schema no spec defines.
 #[utoipa::path(
@@ -355,18 +339,18 @@ pub(crate) async fn definition_archetype_adl2_count(
 /// List every stored ADL 2 artefact (`GET /definition/artefact/adl2`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL2.list_artefacts` — the whole
+/// docs). It lists the whole
 /// AOM2 artefact union (archetypes + templates + OPTs), which no released route
 /// exposes: `/definition/template/adl2` lists templates only.
 #[utoipa::path(
     get, path = "/definition/artefact/adl2", tag = "definition-archetype",
     params(
         ("offset" = Option<u64>, Query,
-         description = "0-based offset into the id list (SM `item_offset`).",
+         description = "0-based offset into the id list.",
          example = 0),
         ("fetch" = Option<u64>, Query,
-         description = "Number of ids to return from `offset` (SM \
-                        `items_to_fetch`; absent or `0` = all).",
+         description = "Number of ids to return from `offset` \
+                        (absent or `0` = all).",
          example = 20)
     ),
     responses(
@@ -394,7 +378,7 @@ pub(crate) async fn definition_artefact_adl2_list(
 /// Count every stored ADL 2 artefact (`GET /definition/artefact/adl2/count`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL2.artefacts_count`; the body
+/// docs). The body
 /// is a bare JSON number, as for the archetype count.
 #[utoipa::path(
     get, path = "/definition/artefact/adl2/count", tag = "definition-archetype",
@@ -421,8 +405,7 @@ pub(crate) async fn definition_artefact_adl2_count(
 /// (`DELETE /definition/artefact/adl2/{artefact_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_DEFINITION_ADL2.delete_artefact`
-/// (`Pre_artefact_exists`, error `artefact_does_not_exist`) over the whole AOM2
+/// docs). It deletes over the whole AOM2
 /// artefact union — archetype, template or OPT. The released ADL 2 group has no
 /// DELETE at all.
 #[utoipa::path(
@@ -444,8 +427,7 @@ pub(crate) async fn definition_artefact_adl2_count(
                                       writes the definition store, so it is \
                                       refused before the store is touched.",
          body = serde_json::Value),
-        (status = 404, description = "No artefact with that id — SM \
-                                      `artefact_does_not_exist`. This is also \
+        (status = 404, description = "No artefact with that id. This is also \
                                       the answer for a syntactically malformed \
                                       HRID: the store key is opaque and \
                                       case-insensitively matched, so an \
@@ -561,7 +543,7 @@ fn adl_text_response(adl: String) -> Response {
     resp
 }
 
-/// Read the SM list cursor (`master02-overview.adoc` §List Handling) from the
+/// Read the list cursor from the
 /// `offset` / `fetch` query parameters; a non-numeric value is a `400`.
 fn page(query: Option<&str>) -> Result<Page, RestError> {
     Ok(Page {

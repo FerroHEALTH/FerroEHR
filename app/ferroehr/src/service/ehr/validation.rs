@@ -29,7 +29,7 @@
               fragment the seam produced once; stored-content serving"
 )]
 
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use openehr_base::validate::InvariantViolation;
 use serde_json::Value;
 use sqlx::PgConnection;
@@ -148,8 +148,8 @@ impl FerroEhrService {
         if exists {
             // NOTE: no specification names this refusal's status token: our own
             // design for a COMPOSITION-exists conflict.
-            return Err(ServiceError::sm(
-                CallStatusType::CompositionAlreadyExists,
+            return Err(ServiceError::new(
+                ServiceStatus::CompositionAlreadyExists,
                 format!(
                     "EHR {ehr_id} already has a persistent COMPOSITION for template \
                      {template_id}; only one create is allowed (subsequent commits \

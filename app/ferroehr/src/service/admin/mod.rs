@@ -3,23 +3,22 @@
 
 //! The Admin service (`service/admin/`) — the openEHR **Admin component**.
 //!
-//! Our own design behind the ITS-REST Admin API and our admin extensions; the
-//! operation names borrow from the openEHR SM text, kept as reference and never an oracle.
+//! Our own design behind the ITS-REST Admin API and our admin extensions.
 //!
 //! One file per admin concern; each file carries both the public
 //! `FerroEhrService` methods (parse ids/time bounds at the boundary) and the
 //! machinery behind them:
 //!
-//! - `delete` — `I_ADMIN_SERVICE.physical_ehr_delete` / `physical_party_delete`
+//! - `delete` — `physical_ehr_delete` / `physical_party_delete`
 //!   (+ the `admin_ehr_delete_all` extension): cascade + orphan-audit sweep.
-//! - `statistics` — `I_ADMIN_SERVICE.list_contributions` / `contribution_count`
+//! - `statistics` — `list_contributions` / `contribution_count`
 //!   / `versioned_composition_count` / `composition_version_count`.
-//! - `archive` — `I_ADMIN_ARCHIVE.archive_ehrs` / `archive_parties`.
+//! - `archive` — `archive_ehrs` / `archive_parties`.
 //! - [`marks`] — the legal marks: the restriction register, the research
 //!   objection and the retention register; our own extension.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access;
 //!   our own extension.
-//! - `dump_load` — `I_ADMIN_DUMP_LOAD.export_ehrs` / `load_ehrs`.
+//! - `dump_load` — `export_ehrs` / `load_ehrs`.
 //! - [`integrity`] — the storage-parity sweep, our own extension: no openEHR
 //!   spec governs storage mechanics.
 //! - [`types`] — the information classes of the ADMIN group
@@ -48,7 +47,7 @@ pub mod types;
 
 use uuid::Uuid;
 
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 
 /// Whether a `version.kind` string names a demographic PARTY root (the five
 /// concrete `ACTOR`/`PARTY` leaves — RM demographic) — as opposed to a
@@ -66,26 +65,24 @@ pub(super) fn is_party_kind(kind: &str) -> bool {
               rejected token; the discarded `uuid::Error` adds only its own \
               wording, which is not part of the wire contract"
 )]
-fn parse_uuid(raw: &str, label: &str) -> Result<Uuid, SmError> {
-    Uuid::parse_str(raw).map_err(|_| SmError::precondition(format!("invalid {label} id: {raw}")))
+fn parse_uuid(raw: &str, label: &str) -> Result<Uuid, StatusError> {
+    Uuid::parse_str(raw)
+        .map_err(|_| StatusError::precondition(format!("invalid {label} id: {raw}")))
 }
 
 /// Parse a whole id list, rejecting the entire request on the first malformed
 /// id (a bulk call is validated before any work runs).
-fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, SmError> {
+fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, StatusError> {
     raw.iter().map(|s| parse_uuid(s, label)).collect()
 }
 
 /// Parse the optional `(lower, upper)` ISO 8601 date-time bounds of a
 /// statistics call into validated `::timestamptz` bind strings; each bound is
 /// independently optional (open bounds → `None`). An invalid ISO bound → `400`
-/// (SM `Interval<Iso8601_date_time>`; the invalid-date failure is the
-/// boundary's).
+/// (the invalid-date failure is the boundary's).
 ///
-/// NOTE (`i_admin_service.adoc` types the range as
-/// `Interval<Iso8601_date_time>` with no inclusivity stated): the interval is
-/// treated as **closed** `[lo, hi]` — the default openEHR `Interval` bound
-/// inclusivity — an SM-silent, documented realization of our own.
+/// NOTE: the interval is treated as **closed** `[lo, hi]` — the default openEHR
+/// `Interval` bound inclusivity — our own design.
 ///
 /// NOTE (BASE `org.openehr.base.foundation_types.interval.adoc` §Invariants,
 /// `Limits_consistent`: `(not upper_unbounded and not lower_unbounded) implies
@@ -93,7 +90,9 @@ fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, SmError> {
 /// is not an `Interval` at all, so the parameter value violates its own type
 /// and the call is refused (`precondition_violation`) rather than silently
 /// answered with the empty result an inverted range would select.
-fn parse_range(range: types::StatTimeRange) -> Result<(Option<String>, Option<String>), SmError> {
+fn parse_range(
+    range: types::StatTimeRange,
+) -> Result<(Option<String>, Option<String>), StatusError> {
     let Some((lo, hi)) = range else {
         return Ok((None, None));
     };
@@ -102,7 +101,7 @@ fn parse_range(range: types::StatTimeRange) -> Result<(Option<String>, Option<St
     if let (Some(lower), Some(upper)) = (lower, upper)
         && lower > upper
     {
-        return Err(SmError::precondition(format!(
+        return Err(StatusError::precondition(format!(
             "time_interval lower bound {lower} is after its upper bound {upper} — an \
              Interval requires lower <= upper (BASE Interval invariant Limits_consistent)"
         )));
@@ -121,12 +120,12 @@ fn parse_range(range: types::StatTimeRange) -> Result<(Option<String>, Option<St
               parse error adds only its own wording, which is not part of the \
               wire contract"
 )]
-fn parse_bound(bound: Option<String>) -> Result<Option<jiff::Timestamp>, SmError> {
+fn parse_bound(bound: Option<String>) -> Result<Option<jiff::Timestamp>, StatusError> {
     match bound {
         None => Ok(None),
         Some(raw) => raw
             .parse::<jiff::Timestamp>()
             .map(Some)
-            .map_err(|_| SmError::precondition(format!("invalid ISO 8601 date-time: {raw}"))),
+            .map_err(|_| StatusError::precondition(format!("invalid ISO 8601 date-time: {raw}"))),
     }
 }

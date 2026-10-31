@@ -3,10 +3,7 @@
 
 //! Query execution requests and outcomes.
 //!
-//! The realization of `ADHOC_QUERY_EXECUTE_SPEC` /
-//! `STORED_QUERY_EXECUTE_SPEC` (`adhoc_query_execute_spec.adoc`,
-//! `stored_query_execute_spec.adoc`) plus the execute-call parameters
-//! (`i_query_service.adoc`).
+//! The ad-hoc and stored execute requests plus the execute-call parameters.
 
 #![expect(
     clippy::disallowed_types,
@@ -23,20 +20,14 @@ use crate::aql::subject::EhrSubject;
 /// A normalized AQL query request: the paging window, the EHR scope, and the
 /// `$parameter` bindings.
 ///
-/// Realizes the SM execute-spec classes plus the execute-call parameters:
-/// `query_parameters` (the spec types them `Hash<String, String>`; carried as
-/// JSON [`Value`]s — the ITS-REST wire binds typed parameters, a documented
-/// widening), `row_offset` / `rows_to_fetch`, and `ehr_ids`.
+/// It carries `query_parameters` (JSON [`Value`]s — the ITS-REST wire binds
+/// typed parameters), `row_offset` / `rows_to_fetch`, and `ehr_ids`.
 ///
-/// `formalism` (`ADHOC_QUERY_EXECUTE_SPEC.formalism`, default `"aql"`) is
-/// fixed to AQL — another formalism is rejected typed, which the SM sanctions
-/// ("matching one of: aql; any other string value").
+/// The formalism is fixed to AQL — another formalism is rejected typed.
 #[derive(Debug, Clone, Default)]
 pub struct AqlQueryRequest {
-    /// `ehr_ids: List<UUID> [0..1]` — "Specific set of EHRs on which to
-    /// execute the query. If none supplied, a full population query will be
-    /// performed on all EHRs whose status has the `is_queryable` flag set to
-    /// `True`" (`i_query_service.adoc`). Empty = unscoped. The ITS-REST
+    /// The specific EHRs to run the query on. Empty = unscoped: the query runs
+    /// over every EHR whose status has `is_queryable` set. The ITS-REST
     /// single `ehr_id` parameter is the one-element case. Error
     /// `ehr_id_does_not_exist` when a listed EHR does not exist.
     pub ehr_ids: Vec<String>,
@@ -84,7 +75,7 @@ impl AqlQueryRequest {
 
 /// The outcome of an AQL execution.
 ///
-/// Carries the assembled `RESULT_SET` (`result_set.adoc`; rendered as ITS-REST
+/// Carries the assembled `RESULT_SET` (rendered as ITS-REST
 /// canonical JSON) plus — when the caller asked for them
 /// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids, template
 /// ids and EHR subjects the query touched, for the ABAC post-check.

@@ -5,13 +5,12 @@
 //! (`FerroEhrService::index_conflicts`) against a real `PostgreSQL` 18 (shared
 //! testkit harness).
 //!
-//! `master07 §Overview` names the two error states the index metadata exists
-//! "to detect and rectify": multiple EHRs recorded for one subject, and
-//! multiple subjects recorded for one EHR. The SM declares no detection
-//! OPERATION, so the read itself is our own design — what these tests pin is
+//! The index metadata exists to detect and rectify two error states: multiple
+//! EHRs recorded for one subject, and multiple subjects recorded for one EHR.
+//! The detection read is our own design — what these tests pin is
 //! that it reports exactly those two states, carries every association of each,
 //! is purely advisory (it mutates nothing and never refuses), and clears the
-//! moment the operator rectifies through the SM write operations (I4/I5).
+//! moment the operator rectifies through the index write operations (I4/I5).
 
 #![expect(
     clippy::expect_used,
@@ -240,11 +239,11 @@ async fn both_error_states_are_reported_together_and_the_scan_mutates_nothing() 
     );
 }
 
-/// Rectification through the SM write operations clears the report: the scan is
+/// Rectification through the index write operations clears the report: the scan is
 /// a live read over the index, never a stored flag. `remove_ehr_subject` (I4)
 /// drops one association and `remove_subject` (I5) drops them all.
 #[tokio::test]
-async fn rectifying_through_the_sm_writes_clears_the_report() {
+async fn rectifying_through_the_index_writes_clears_the_report() {
     let (_db, _pool, svc) = repository().await;
 
     let shared = SubjectRef::person("PID-SHARED", "mpi");

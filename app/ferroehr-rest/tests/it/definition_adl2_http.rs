@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the ADL2 template wire (SM-2, `I_DEFINITION_ADL2`):
+//! End-to-end HTTP tests for the ADL2 template wire:
 //! `POST /definition/template/adl2` (text/plain source upload, `Location` +
 //! `Prefer` body, `422`-with-rule-codes on an invalid source),
 //! `GET /definition/template/adl2/{template_id}` (text/plain source /
@@ -660,8 +660,8 @@ async fn upload_empty_source_is_400() {
 
 /// A specialised upload whose `specialise` clause names a parent the repository
 /// does not hold is refused as `422` carrying VASID: without the flat parent
-/// the archetype cannot validate (AOM2 master03 VASID, master08 §Phase 2; SM
-/// `upload_artefact` "The artefact must validate"), and storing it unchecked
+/// the archetype cannot validate (AOM2 master03 VASID, master08 §Phase 2), and
+/// storing it unchecked
 /// would let a child uploaded before its parent skip conformance for good.
 #[tokio::test]
 async fn upload_with_absent_parent_is_422_with_vasid() {
@@ -736,4 +736,174 @@ async fn upload_nested_past_the_engine_bound_is_a_400_naming_the_bound() {
         )),
         "the bound is named: {message}"
     );
+}
+
+/// An ADL2 `template` whose `content` holds one `use_archetype` per id in
+/// `fillers`, each an OBSERVATION.
+fn template_using(hrid: &str, fillers: &[&str]) -> String {
+    let mut content = String::new();
+    let mut terms = String::new();
+    for (k, filler) in fillers.iter().enumerate() {
+        let id = k + 2;
+        write!(
+            content,
+            "\n            use_archetype OBSERVATION[id{id}, {filler}]"
+        )
+        .expect("a String write");
+        write!(
+            terms,
+            "\n            [\"id{id}\"] = <text = <\"Filler {id}\"> description = <\"Filler {id}.\">>"
+        )
+        .expect("a String write");
+    }
+    format!(
+        "template (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n\n\
+         language\n    original_language = <[ISO_639-1::en]>\n\n\
+         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
+         definition\n    COMPOSITION[id1] matches {{\n        \
+         content cardinality matches {{0..*; unordered}} matches {{{content}\n        }}\n    }}\n\n\
+         terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
+         [\"id1\"] = <text = <\"Root\"> description = <\"Root.\">>{terms}\n        >\n    >\n"
+    )
+}
+
+/// POST `source` to the ADL2 upload with `Prefer: return=representation`.
+fn upload_source(source: String) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/definition/template/adl2"))
+        .header(header::CONTENT_TYPE, "text/plain")
+        .header("prefer", "return=representation")
+        .body(Body::from(source))
+        .unwrap()
+}
+
+/// The `detail` of every `errors` entry whose `path` is `VARXR`, sorted.
+fn varxr_details(body: &str) -> Vec<String> {
+    let v: Value = serde_json::from_str(body).expect("a problem document");
+    let mut ids: Vec<String> = v
+        .get("errors")
+        .and_then(Value::as_array)
+        .expect("the problem carries its violations in errors")
+        .iter()
+        .filter(|e| e.get("path").and_then(Value::as_str) == Some("VARXR"))
+        .map(|e| {
+            e.get("detail")
+                .and_then(Value::as_str)
+                .expect("a detail")
+                .to_owned()
+        })
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// AOM2 VARXR (`AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
+/// §Validity Rules: `C_ARCHETYPE_ROOT`): "the archetype reference must refer
+/// to an artefact that can be found in the current repository". An upload
+/// whose fillers the CDR does not hold is refused with a `422` that names
+/// each of them, and nothing is stored.
+#[tokio::test]
+async fn upload_with_unheld_constituents_is_422_naming_each_with_varxr() {
+    let (_pg, app) = app().await;
+    let hrid = "openEHR-EHR-COMPOSITION.t_unheld.v1.0.0";
+    let missing = [
+        "openEHR-EHR-OBSERVATION.unheld_a.v1",
+        "openEHR-EHR-OBSERVATION.unheld_b.v1",
+    ];
+    let (status, _h, body) = send(&app, upload_source(template_using(hrid, &missing))).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    let errors: Vec<Value> = serde_json::from_str::<Value>(&body).unwrap()["errors"]
+        .as_array()
+        .expect("errors")
+        .clone();
+    for id in missing {
+        assert!(
+            errors.iter().any(|e| e["path"].as_str() == Some("VARXR")
+                && e["detail"].as_str().is_some_and(|d| d.contains(id))),
+            "the 422 names {id} under VARXR: {body}"
+        );
+    }
+    let req = Request::builder()
+        .method("GET")
+        .uri(format!("{BASE}/definition/template/adl2/{hrid}"))
+        .header(header::ACCEPT, "text/plain")
+        .body(Body::empty())
+        .unwrap();
+    let (status, _h, _b) = send(&app, req).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "a refused template is not stored"
+    );
+}
+
+/// A stored template whose constituent archetype is gone cannot compile (OPT2
+/// `master03-opt_raw.adoc` §Archetype References): its operational form and
+/// its example answer a `422` whose `VARXR` violations carry exactly the
+/// missing archetype ids, while its source stays readable. The API refuses
+/// that delete since #4522, so the row is removed in SQL, standing for a store
+/// written before the guard.
+#[tokio::test]
+async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read() {
+    let (pg, app) = app().await;
+    let constituent = "openEHR-EHR-OBSERVATION.held_then_gone.v1.0.0";
+    let hrid = "openEHR-EHR-COMPOSITION.t_held_then_gone.v1.0.0";
+    let (status, _h, body) = send(&app, upload_source(adl2_source("archetype", constituent))).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, _h, body) = send(
+        &app,
+        upload_source(template_using(
+            hrid,
+            &["openEHR-EHR-OBSERVATION.held_then_gone.v1"],
+        )),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let delete = Request::builder()
+        .method("DELETE")
+        .uri(format!(
+            "{}/definition/artefact/adl2/{constituent}",
+            common::EXT
+        ))
+        .body(Body::empty())
+        .unwrap();
+    let (status, _h, body) = send(&app, delete).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    sqlx::query("DELETE FROM adl2_artefact WHERE lower(hrid) = lower($1)")
+        .bind(constituent)
+        .execute(&pg.pool())
+        .await
+        .expect("remove the constituent as a store written before the guard");
+
+    for path in [
+        format!("{BASE}/definition/template/adl2/{hrid}"),
+        format!("{BASE}/definition/template/adl2/{hrid}/example"),
+    ] {
+        let req = Request::builder()
+            .method("GET")
+            .uri(&path)
+            .header(header::ACCEPT, "application/json")
+            .header("prefer", "return=representation")
+            .body(Body::empty())
+            .unwrap();
+        let (status, _h, body) = send(&app, req).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{path}: {body}");
+        assert_eq!(
+            varxr_details(&body),
+            vec!["openEHR-EHR-OBSERVATION.held_then_gone.v1".to_owned()],
+            "{path}: {body}"
+        );
+    }
+
+    let req = Request::builder()
+        .method("GET")
+        .uri(format!("{BASE}/definition/template/adl2/{hrid}"))
+        .header(header::ACCEPT, "text/plain")
+        .body(Body::empty())
+        .unwrap();
+    let (status, _h, _b) = send(&app, req).await;
+    assert_eq!(status, StatusCode::OK, "the source stays readable");
 }

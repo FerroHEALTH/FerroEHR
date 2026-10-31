@@ -239,7 +239,7 @@ pub fn family_versions(template_ids: &[String], stem: &str) -> Vec<String> {
 
 /// The numeric ordering key of a release version, saturating at three
 /// components and treating a non-integer component as `0`.
-fn version_key(version: &str) -> (u32, u32, u32) {
+pub(crate) fn version_key(version: &str) -> (u32, u32, u32) {
     let mut parts = version
         .split('.')
         .map(|part| part.parse::<u32>().unwrap_or(0));
@@ -280,10 +280,8 @@ pub fn template_path(template_id: &str, version: Option<&str>) -> String {
 /// The artefact resource addresses the whole AOM2 store — archetype, template
 /// or OPT — by the same HRID the template routes use, and it is the only route
 /// that DELETES one. NOTE: the released ITS-REST Definition API declares no
-/// artefact route at all, so this is the CDR's own extension realizing SM
-/// `I_DEFINITION_ADL2.delete_artefact`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_definition_adl2.adoc`), whose
-/// `artefact_does_not_exist` error is the `404`.
+/// artefact route at all, so this is the CDR's own extension, whose unknown
+/// artefact is the `404`.
 ///
 /// The id is percent-encoded with the `urlencoding` crate — an HRID is
 /// CDR-supplied text.

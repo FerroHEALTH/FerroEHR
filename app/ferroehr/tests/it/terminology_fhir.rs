@@ -21,7 +21,7 @@
 
 use std::time::Duration;
 
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
@@ -104,7 +104,7 @@ async fn validate_code_unknown_valueset_is_not_found() {
         .value_set_validate(SURFACE_SYS, "http://x/ValueSet/nope", "B", None)
         .await
         .expect_err("404 → not found");
-    assert_eq!(err.status, CallStatusType::VersionedObjectDoesNotExist);
+    assert_eq!(err.status, ServiceStatus::VersionedObjectDoesNotExist);
     // The 4xx body names what the CLIENT asked about, never WHICH configured
     // provider answered (#1819 — the operator-detail adjudication's 4xx arm).
     assert!(
@@ -231,7 +231,7 @@ async fn server_5xx_is_an_exception() {
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("5xx → exception");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
     // The OPERATOR detail stays off the wire: a 500 body names neither the
     // configured provider, nor its URL, nor the upstream status — a tenant's
     // clients cannot read the deployment's terminology configuration out of a
@@ -259,7 +259,7 @@ async fn malformed_body_is_an_exception() {
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("malformed → exception");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 #[tokio::test]
@@ -278,7 +278,7 @@ async fn missing_result_field_is_an_exception() {
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("no result → exception");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 #[tokio::test]
@@ -302,7 +302,7 @@ async fn timeout_is_an_exception() {
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("timeout → exception");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 // ─── the request side ────────────────────────────────────────────────────────
@@ -324,7 +324,7 @@ fn lookup_found(display: &str) -> serde_json::Value {
     })
 }
 
-/// The SM `at_date` reaches `$lookup` as its FHIR `date` input
+/// The `at_date` reaches `$lookup` as its FHIR `date` input
 /// (<https://hl7.org/fhir/R4B/codesystem-operation-lookup.html>).
 #[tokio::test]
 async fn at_date_is_sent_as_the_lookup_date() {
@@ -362,7 +362,7 @@ async fn no_date_is_sent_without_at_date() {
     assert!(p.has_term(SURFACE_SYS, "B", None).await.expect("has_term"));
 }
 
-/// The SM `at_date` reaches `$validate-code` as its FHIR `date` input
+/// The `at_date` reaches `$validate-code` as its FHIR `date` input
 /// (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>).
 #[tokio::test]
 async fn at_date_is_sent_as_the_validate_code_date() {
@@ -425,7 +425,7 @@ async fn a_server_failure_is_not_retried() {
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("5xx → exception");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 // ─── reading the answer ──────────────────────────────────────────────────────
@@ -473,7 +473,7 @@ async fn a_tx_code_under_another_system_does_not_classify() {
         .has_term(SURFACE_SYS, "B", None)
         .await
         .expect_err("an unclassified 400 is a fault");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 /// A `tx-issue-type` `invalid-code` refusal is an unknown term, whatever the
@@ -498,7 +498,7 @@ async fn an_invalid_code_refusal_is_an_unknown_term() {
         .get_term(SURFACE_SYS, "nope", None, None)
         .await
         .expect_err("an unknown term");
-    assert_eq!(err.status, CallStatusType::VersionedObjectDoesNotExist);
+    assert_eq!(err.status, ServiceStatus::VersionedObjectDoesNotExist);
 }
 
 /// A `410 Gone` value set is unknown.
@@ -573,7 +573,7 @@ async fn a_validate_code_answered_with_another_resource_is_a_fault() {
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("a ValueSet is not a $validate-code answer");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 /// An `$expand` answered with a `Parameters` resource is a fault, never an
@@ -593,7 +593,7 @@ async fn an_expand_answered_with_another_resource_is_a_fault() {
         .get_value_set(SURFACE_SYS, SURFACE_VS)
         .await
         .expect_err("a Parameters is not an expansion");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 /// A `parameter` entry without its mandatory `name` (FHIR R4B `Parameters`,
@@ -614,7 +614,7 @@ async fn a_parameter_without_a_name_is_a_fault() {
         .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
         .await
         .expect_err("a nameless parameter is malformed");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 /// A `ValueSet` the R4B model refuses (`ValueSet.status` 1..1,
@@ -636,7 +636,7 @@ async fn a_value_set_the_r4b_model_refuses_is_a_fault() {
             .get_value_set(SURFACE_SYS, SURFACE_VS)
             .await
             .expect_err("a ValueSet the R4B model refuses");
-        assert_eq!(err.status, CallStatusType::Exception, "{body}");
+        assert_eq!(err.status, ServiceStatus::Exception, "{body}");
     }
 }
 
@@ -659,7 +659,7 @@ async fn an_expand_answer_without_an_expansion_is_a_fault() {
         .get_value_set(SURFACE_SYS, SURFACE_VS)
         .await
         .expect_err("a ValueSet without an expansion");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 /// FHIR R4B `OperationDefinition-CodeSystem-lookup` declares `display` 1..1,
@@ -681,7 +681,7 @@ async fn a_lookup_answer_without_a_display_is_a_fault() {
         .get_term(SURFACE_SYS, "B", None, None)
         .await
         .expect_err("a lookup without its display");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }
 
 /// The `$subsumes` `outcome` is bound `required` to `ConceptSubsumptionOutcome`
@@ -703,5 +703,5 @@ async fn a_subsumes_outcome_outside_its_value_set_is_a_fault() {
         .subsumes("sys", "a", "b")
         .await
         .expect_err("an outcome outside the value set");
-    assert_eq!(err.status, CallStatusType::Exception);
+    assert_eq!(err.status, ServiceStatus::Exception);
 }

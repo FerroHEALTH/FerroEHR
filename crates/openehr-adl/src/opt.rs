@@ -209,6 +209,66 @@ pub fn create_opt(
     })
 }
 
+/// Every archetype the operational template of `root` needs and `repo` does
+/// not hold, sorted and without repeats.
+///
+/// OPT2 `master03` §Archetype References resolves every reference in the
+/// source template and in every archetype it references, and AOM2 VARXR
+/// (`master04.5` §Validity Rules: `C_ARCHETYPE_ROOT`) requires each to be
+/// found in the repository. The walk follows every reference and
+/// specialisation parent that does resolve, from the root and its own
+/// overlays, so one answer names every missing constituent where
+/// [`create_opt`] stops at the first. Each entry is the reference as the
+/// parsed artefact carries it.
+#[must_use]
+pub fn unresolved_constituents(root: &Archetype, repo: &ArchetypeRepository) -> Vec<String> {
+    let mut work = repo.clone();
+    for overlay in root_overlays(root) {
+        work.insert(Archetype::TemplateOverlay(Box::new(overlay)));
+    }
+    let mut missing = std::collections::BTreeSet::new();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut queue = vec![root];
+    seen.insert(hrid_to_string(view(root).archetype_id));
+    while let Some(artefact) = queue.pop() {
+        let mut lineage = artefact;
+        while let Some(parent_id) = view(lineage).parent_archetype_id {
+            match work.get(parent_id) {
+                Some(parent) if seen.insert(hrid_to_string(view(parent).archetype_id)) => {
+                    lineage = parent;
+                }
+                Some(_) => break,
+                None => {
+                    missing.insert(parent_id.to_owned());
+                    break;
+                }
+            }
+        }
+        let flat = flat_form(artefact, &work).ok();
+        let definition = flat
+            .as_ref()
+            .map_or_else(|| view(artefact).definition, |f| view(f).definition);
+        let mut roots = Vec::new();
+        crate::validate::slots::collect_roots(definition, &mut roots);
+        for reference in roots {
+            if reference.archetype_ref.is_empty() {
+                continue;
+            }
+            match work.get(&reference.archetype_ref) {
+                Some(constituent) => {
+                    if seen.insert(hrid_to_string(view(constituent).archetype_id)) {
+                        queue.push(constituent);
+                    }
+                }
+                None => {
+                    missing.insert(reference.archetype_ref.clone());
+                }
+            }
+        }
+    }
+    missing.into_iter().collect()
+}
+
 // ── the OPT flattening transform (master03 §Flattening) ────────────────────
 
 /// The state one OPT transform carries down the tree: the constituent
@@ -624,7 +684,7 @@ fn filter_bindings(term: &mut ArchetypeTerminology, filter: &BindingFilter) {
 // ── root-field extraction ──────────────────────────────────────────────────
 
 /// The overlays a root template carries (empty for any other artefact kind).
-fn root_overlays(
+pub(crate) fn root_overlays(
     root: &Archetype,
 ) -> Vec<openehr_am::v2_4::aom2::archetype::template_overlay::TemplateOverlay> {
     match root {

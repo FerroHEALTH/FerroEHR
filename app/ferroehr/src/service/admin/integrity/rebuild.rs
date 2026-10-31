@@ -50,7 +50,7 @@ use crate::service::admin::integrity::{
     StorageDomain, StorageParityDefect, StorageParityEvent, StorageParityScope,
 };
 use crate::service::error::ServiceError;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::storage::codec::decompose;
 use crate::storage::node_repo::{delete_version_nodes, read_version_canonical_tx, write_nodes};
 use crate::storage::version_repo::tier;
@@ -188,7 +188,7 @@ impl FerroEhrService {
     pub async fn rebuild_version_nodes(
         &self,
         scope: StorageParityScope,
-    ) -> Result<NodeRebuildReport, SmError> {
+    ) -> Result<NodeRebuildReport, StatusError> {
         Ok(self.collect_node_rebuild(scope).await?)
     }
 

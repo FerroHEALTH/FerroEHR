@@ -15,7 +15,7 @@
 //! The wire outcome IS spec-governed: a well-formed body refused for a
 //! semantic reason is `422` (ITS-REST
 //! `specifications/docs/overview/Requests_and_responses.md` §HTTP status
-//! codes), which the service reports as the SM `content_invalid` status.
+//! codes), which the service reports as the `content_invalid` status.
 //!
 //! Every identifier here is synthetic, constructed by running a published
 //! algorithm forward over a chosen prefix. None is issued to anyone.
@@ -38,7 +38,7 @@ use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use crate::fixtures::{composition, uv};
 
@@ -97,10 +97,10 @@ fn typed_status(value: &Value) -> openehr_rm::prelude::EhrStatus {
     openehr_its::json::from_canonical_value(value).expect("the fixture EHR_STATUS decodes")
 }
 
-fn assert_refused(error: &SmError, expected_path: &str) {
+fn assert_refused(error: &StatusError, expected_path: &str) {
     assert_eq!(
         error.status,
-        CallStatusType::ContentInvalid,
+        ServiceStatus::ContentInvalid,
         "a privacy refusal is the 422-class content_invalid status, got {error:?}"
     );
     assert!(
@@ -123,7 +123,7 @@ fn finding_messages(error: &ServiceError) -> String {
 }
 
 /// The same assertion over the service-layer error the composition routes
-/// return before the SM boundary converts it.
+/// return before the status boundary converts it.
 ///
 /// A privacy refusal travels as [`ServiceError::ValidationFailed`], the
 /// per-path vehicle, so each finding keeps its own RM path all the way into the

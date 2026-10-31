@@ -5,15 +5,15 @@
 //! `ferroehr::service::EventSubscriptionAdapter` seam.
 //!
 //! **No openEHR spec governs this — our own enterprise feature (eventing).**
-//! Event/subscription semantics have no SM or ITS-REST governance, so this
+//! ITS-REST does not govern event/subscription semantics, so this
 //! surface is ours: exposed under the server's extension namespace and excluded
 //! from the ITS-REST drift check. It is mounted under `/admin/` (a subscription
 //! store is an administrative resource), so the coarse RBAC gate fail-safe
 //! classes it as `Admin` (requires the admin role when RBAC is on), matching
 //! the physical-delete ADMIN group.
 //!
-//! NOTE (no SM call, no ABAC/audit): the CRUD dispatches to the
-//! `EventSubscriptionAdapter` extension, not an SM interface. Like the
+//! NOTE (no ABAC/audit): the CRUD dispatches to the
+//! `EventSubscriptionAdapter` extension. Like the
 //! terminology extension it carries no ABAC resource kind (the generic PEP
 //! `Skip`s it) and no ATNA audit-table entry (subscriptions are configuration,
 //! not PHI access) — the fallbacks apply automatically.
@@ -58,8 +58,8 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 /// Config-gated: `404` when `events_admin_api` is off (the route stays mounted
 /// but the backend is never consulted).
 ///
-/// OUR OWN EXTENSION — no openEHR spec governs this: neither the SM nor
-/// ITS-REST defines eventing or a subscription resource, so the whole group
+/// OUR OWN EXTENSION — no openEHR spec governs this: ITS-REST
+/// defines neither eventing nor a subscription resource, so the whole group
 /// (paths, payloads, status codes) is our own design.
 #[utoipa::path(
     get, path = "/admin/event_subscription", tag = "event-subscription",
@@ -81,8 +81,8 @@ pub(crate) async fn event_subscription_list(
 /// Body: `{name, kind?, change_type?, template_id?, enabled?}`
 /// (`enabled` defaults to `true`).
 ///
-/// OUR OWN EXTENSION — no openEHR spec governs this: neither the SM nor
-/// ITS-REST defines eventing or a subscription resource, so the whole group
+/// OUR OWN EXTENSION — no openEHR spec governs this: ITS-REST
+/// defines neither eventing nor a subscription resource, so the whole group
 /// (paths, payloads, status codes) is our own design.
 #[utoipa::path(
     post, path = "/admin/event_subscription", tag = "event-subscription",
@@ -106,8 +106,8 @@ pub(crate) async fn event_subscription_create(
 /// Read one subscription by id
 /// (`GET /admin/event_subscription/{subscription_id}`).
 ///
-/// OUR OWN EXTENSION — no openEHR spec governs this: neither the SM nor
-/// ITS-REST defines eventing or a subscription resource, so the whole group
+/// OUR OWN EXTENSION — no openEHR spec governs this: ITS-REST
+/// defines neither eventing nor a subscription resource, so the whole group
 /// (paths, payloads, status codes) is our own design.
 #[utoipa::path(
     get, path = "/admin/event_subscription/{subscription_id}", tag = "event-subscription",
@@ -132,8 +132,8 @@ pub(crate) async fn event_subscription_get(
 /// The `name` is immutable (it is the queue key); only the predicates and the
 /// `enabled` flag are replaced.
 ///
-/// OUR OWN EXTENSION — no openEHR spec governs this: neither the SM nor
-/// ITS-REST defines eventing or a subscription resource, so the whole group
+/// OUR OWN EXTENSION — no openEHR spec governs this: ITS-REST
+/// defines neither eventing nor a subscription resource, so the whole group
 /// (paths, payloads, status codes) is our own design.
 #[utoipa::path(
     put, path = "/admin/event_subscription/{subscription_id}", tag = "event-subscription",
@@ -157,8 +157,8 @@ pub(crate) async fn event_subscription_update(
 /// Delete one subscription
 /// (`DELETE /admin/event_subscription/{subscription_id}`).
 ///
-/// OUR OWN EXTENSION — no openEHR spec governs this: neither the SM nor
-/// ITS-REST defines eventing or a subscription resource, so the whole group
+/// OUR OWN EXTENSION — no openEHR spec governs this: ITS-REST
+/// defines neither eventing nor a subscription resource, so the whole group
 /// (paths, payloads, status codes) is our own design.
 #[utoipa::path(
     delete, path = "/admin/event_subscription/{subscription_id}", tag = "event-subscription",

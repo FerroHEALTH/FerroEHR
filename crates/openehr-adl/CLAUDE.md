@@ -43,7 +43,7 @@ else; each helper has exactly ONE home.
 
 | module | role |
 |---|---|
-| `validate/mod` | orchestration ONLY: `ValidationIssue`, the five public entry points, `push_issue`, and the three drivers (`run_integrity_checks` / `run_parent_conformance` / `run_flat_form_checks`) whose call order IS the `master08` schedule |
+| `validate/mod` | orchestration ONLY: `ValidationIssue`, the five public entry points, `push_issue`, and the four drivers (`run_integrity_checks` / `run_parent_conformance` / `run_flat_form_checks` / `run_filler_checks`) whose call order IS the `master08` schedule |
 | `validate/catalogue` | the `Severity` + `ValidationCode` vocabulary (91 codes) |
 | `validate/identification` | id / root / versions / languages + the STCNT/VOLT gate |
 | `validate/structure` | the basic-integrity definition walk (`StructureScan`) |
@@ -57,7 +57,7 @@ else; each helper has exactly ONE home.
 | `validate/conformance` | the `master04.5` conformance functions |
 | `validate/flat` | the flat-form walk (`FlatScan`: `validate_flat_form_structure` + the 1.4 VDFPT twin) + the deferred flat-form halves (`validate_flat_form`) |
 | `flatten` | specialisation flattening (`flatten`, `flat_form`) |
-| `opt` | OPT2 generation — raw via `create_opt`, profiled via `profile_opt` |
+| `opt` | OPT2 generation — raw via `create_opt`, profiled via `profile_opt`; `unresolved_constituents` names every archetype an OPT lacks |
 | `print/mod` | the printer state, the artefact-kind projection, the top-level section driver, `print` + `assertion_text` |
 | `print/header` | identification / `language` / `description` / `annotations` / `rm_overlay` / `component_terminologies` |
 | `print/terminology` | the `terminology` section body (shared with `component_terminologies`) |
@@ -104,7 +104,7 @@ else; each helper has exactly ONE home.
   lex.
   The two full-pipeline entries run the SAME schedule: `validate` and
   `validate_source` both drive basic integrity → RM conformance → parent
-  conformance → flat form, and neither may omit a pass (there is no
+  conformance → flat form → fillers (VARXR, VTPL), and neither may omit a pass (there is no
   partial-validation profile in AOM2).
 - **`validate/` is grouped by TOPIC, never by phase number, and NOTHING is
   named after a phase number.** A new rule goes in the topic module that owns

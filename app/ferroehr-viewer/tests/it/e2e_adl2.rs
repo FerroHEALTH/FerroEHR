@@ -22,9 +22,9 @@
 //! `text/plain` source upload with the openEHR-ADL engine's diagnostics
 //! surfaced as the CDR sent them, the listing, the stored source and
 //! `OperationalTemplateV2` JSON representations, the path tree the viewer
-//! builds from that JSON, the CDR-generated example composition, the release
-//! picker over the versioned get, and the per-row delete over the artefact
-//! resource.
+//! builds from that JSON, the CDR-generated example composition, the
+//! releases grouped in the listing and named in the header over the
+//! versioned get, and the per-row delete over the artefact resource.
 //!
 //! Fixtures are the repository's own authored ADL2 corpus
 //! (`corpus/fixtures/adl2/opt`), read repo-relative
@@ -51,6 +51,12 @@ const VERSIONED_V110: &str = "openEHR-EHR-COMPOSITION.cnf_adl2_versioned.v1.1.0"
 /// The artefact the delete scene owns — its own fixture, so removing it can
 /// never race a sibling scene's reads.
 const DELETABLE: &str = "openEHR-EHR-COMPOSITION.cnf_minimal_h.v1.0.0";
+
+/// The template the missing-constituent scene stores, built on [`CONSTITUENT`].
+const NEEDS_CONSTITUENT: &str = "openEHR-EHR-COMPOSITION.cnf_needs_constituent.v1.0.0";
+
+/// The archetype that scene deletes from under [`NEEDS_CONSTITUENT`].
+const CONSTITUENT: &str = "openEHR-EHR-OBSERVATION.cnf_constituent.v1.0.0";
 
 /// The ADL2 listing, as URL state.
 const LIST_URL: &str = "/templates?family=adl2";
@@ -125,8 +131,13 @@ fn release(hrid: &str) -> &str {
 
 /// The listing's link to the release `hrid`.
 fn row_link(hrid: &str) -> String {
+    format!("main {}", link_of(hrid))
+}
+
+/// The row link to the release `hrid`, wherever the row is.
+fn link_of(hrid: &str) -> String {
     format!(
-        "main a.fui-row-link[href='/templates/adl2/{}/{}']",
+        "a.fui-row-link[href='/templates/adl2/{}/{}']",
         stem(hrid),
         release(hrid)
     )
@@ -186,8 +197,9 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     h.finish().await;
 }
 
-/// Both releases of one HRID family are listed, the latest's page picks
-/// either release, and an older release names the latest to go back to.
+/// Both releases of one HRID family are listed as one group, the newest
+/// first; the latest's header names its release and opens either release,
+/// and an older release names the latest to go back to.
 #[tokio::test]
 async fn adl2_versioned_get_reaches_both_stored_versions() {
     let Some(h) = Harness::start("adl2-versions").await else {
@@ -198,21 +210,33 @@ async fn adl2_versioned_get_reaches_both_stored_versions() {
     ensure_adl2_template_present(&h, "versioned.v1_0_0.adls", VERSIONED_V100).await;
     ensure_adl2_template_present(&h, "versioned.v1_1_0.adls", VERSIONED_V110).await;
     h.goto(LIST_URL).await;
-    h.wait_css(&row_link(VERSIONED_V100)).await;
-    h.wait_css(&row_link(VERSIONED_V110)).await;
+    h.wait_css(&format!(
+        "main tbody:has(> tr:first-child {}) tr:not(:first-child) {}",
+        link_of(VERSIONED_V110),
+        link_of(VERSIONED_V100)
+    ))
+    .await;
+    wait_main_contains(&h, "Earlier release").await;
     h.shot(1, "adl2-both-versions-listed").await;
 
     let page = format!("/templates/adl2/{}", stem(VERSIONED_V100));
     h.goto(&page).await;
     wait_main_contains(&h, VERSIONED_V110).await;
-    h.wait_css("#ver").await.select_by_value("1.0.0").await;
-    common::submit(&h, "form.fui-title-select button[type=submit]").await;
+    h.wait_scripts().await;
+    h.wait_css("header summary[aria-controls='template-releases']")
+        .await
+        .click()
+        .await;
+    h.wait_css(&format!("#template-releases a[href='{page}/1.0.0']"))
+        .await
+        .click()
+        .await;
     h.wait_url_contains("1.0.0").await;
     wait_main_contains(&h, "You are reading release 1.0.0").await;
     wait_main_contains(&h, VERSIONED_V100).await;
     h.shot(2, "adl2-release-1-0-0").await;
 
-    h.wait_css(&format!("main a[href='{page}']"))
+    h.wait_css(&format!("main .fui-stack a[href='{page}']"))
         .await
         .click()
         .await;
@@ -313,5 +337,68 @@ async fn an_adl2_artefact_is_deleted_from_the_listing() {
 
     remove_adl2_artefacts(&[DELETABLE]).await;
     h.assert_console_clean(&["Failed to load resource"]).await;
+    h.finish().await;
+}
+
+/// A template the CDR holds without one of its constituent archetypes says
+/// so on every tab, names the archetype and offers its upload, and never
+/// draws the CDR's raw refusal.
+///
+/// The upload of such a template is refused (AOM2 VARXR), so the scene builds
+/// the state the only way it can arise: it stores the archetype and the
+/// template, then deletes the archetype.
+#[tokio::test]
+async fn a_template_missing_a_constituent_says_so_on_every_tab() {
+    let Some(h) = Harness::start("adl2-missing-constituent").await else {
+        return;
+    };
+    let (user, pass) = admin_credentials();
+    login_basic_as(&h, &user, &pass).await;
+    remove_adl2_artefacts(&[NEEDS_CONSTITUENT, CONSTITUENT]).await;
+
+    common::upload_template(&h, "adl2", &fixture_adl2_path("needs_constituent.adls")).await;
+    h.wait_url_contains("/templates/upload").await;
+    wait_main_contains(&h, "fails validation").await;
+    h.goto(LIST_URL).await;
+    assert!(
+        !is_present(&h, &row_link(NEEDS_CONSTITUENT)).await,
+        "a template whose constituent the CDR does not hold is refused"
+    );
+
+    common::upload_template(
+        &h,
+        "adl2",
+        &fixture_adl2_path("../archetype/cnf_constituent.adls"),
+    )
+    .await;
+    h.wait_url_contains("/templates/adl2/").await;
+    ensure_adl2_template_present(&h, "needs_constituent.adls", NEEDS_CONSTITUENT).await;
+    remove_adl2_artefacts(&[CONSTITUENT]).await;
+
+    let page = format!("/templates/adl2/{}", stem(NEEDS_CONSTITUENT));
+    for (step, tab) in [
+        (1, "overview"),
+        (2, "paths"),
+        (3, "source"),
+        (4, "json"),
+        (5, "example"),
+    ] {
+        h.goto(&format!("{page}?tab={tab}")).await;
+        wait_main_contains(&h, "This template cannot be used yet").await;
+        wait_main_contains(&h, CONSTITUENT).await;
+        h.wait_css("main a[href='/templates/upload?family=adl2']")
+            .await;
+        let text = common::main_text(&h).await;
+        assert!(
+            !text.contains("422") && !text.contains("VARXR"),
+            "the {tab} tab draws no raw refusal: {text}"
+        );
+        h.shot(step, &format!("adl2-missing-constituent-{tab}"))
+            .await;
+    }
+
+    remove_adl2_artefacts(&[NEEDS_CONSTITUENT]).await;
+    h.assert_console_clean(&["401", "422", "Failed to load resource"])
+        .await;
     h.finish().await;
 }

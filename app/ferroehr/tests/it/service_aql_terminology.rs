@@ -37,7 +37,7 @@ use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 
@@ -50,7 +50,7 @@ const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
 const CODE_PATH: &str =
     "data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/defining_code/code_string";
 
-/// The SM `UPDATE_VERSION` commit envelope for a bare-RM write.
+/// The `UPDATE_VERSION` commit envelope for a bare-RM write.
 fn uv<T: serde::de::DeserializeOwned>(data: &Value) -> UpdateVersion<T> {
     UpdateVersion {
         preceding_version_uid: None,
@@ -216,7 +216,7 @@ async fn terminology_expand_unknown_service_is_bad_request() {
         .execute_ad_hoc_query(aql, AqlQueryRequest::default())
         .await
         .expect_err("unknown service_api must be rejected");
-    assert_eq!(err.status, CallStatusType::PreconditionViolation, "{err:?}");
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
 }
 
 #[tokio::test]
@@ -236,7 +236,7 @@ async fn terminology_expand_unknown_value_set_is_bad_request() {
         .execute_ad_hoc_query(aql, AqlQueryRequest::default())
         .await
         .expect_err("unknown value set must be rejected");
-    assert_eq!(err.status, CallStatusType::PreconditionViolation, "{err:?}");
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
 }
 
 // ── the FHIR provider (wiremock, no network) ─────────────────────────────────

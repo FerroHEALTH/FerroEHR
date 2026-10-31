@@ -17,7 +17,7 @@
 //! `openehr_sdt::flat::validation::collect_constraint_binding_checks` walks the
 //! COMPOSITION against its `WebTemplate` and returns one
 //! [`ConstraintBindingCheck`] per bound coded value present in the instance.
-//! Each check is resolved against the one terminology server with the SM
+//! Each check is resolved against the one terminology server with the
 //! `value_set_validate` call, i.e. FHIR `ValueSet/$validate-code`.
 //!
 //! # Outcomes
@@ -49,7 +49,7 @@ use openehr_sdt::rm_instance::{ValidationKind, ValidationMessage};
 use serde_json::Value;
 
 use crate::service::FerroEhrService;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::service::terminology::fhir::FhirTerminologyProvider;
 
 impl FerroEhrService {
@@ -121,7 +121,7 @@ impl FerroEhrService {
 async fn resolve_binding(
     server: &FhirTerminologyProvider,
     check: &ConstraintBindingCheck,
-) -> Result<bool, SmError> {
+) -> Result<bool, StatusError> {
     server
         .value_set_validate(
             &check.instance_terminology,

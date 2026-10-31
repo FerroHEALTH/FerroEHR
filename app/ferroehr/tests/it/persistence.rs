@@ -85,9 +85,9 @@ async fn migrations_apply_cleanly_and_idempotently() {
     };
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
-    assert_eq!(applied("ext").await, 6);
-    assert_eq!(applied("clinical").await, 27);
-    assert_eq!(applied("party").await, 19);
+    assert_eq!(applied("ext").await, 7);
+    assert_eq!(applied("clinical").await, 28);
+    assert_eq!(applied("party").await, 20);
     assert_eq!(applied("linkage").await, 5);
     assert_eq!(applied("audit").await, 20);
 
@@ -1096,7 +1096,7 @@ async fn seed_version(pool: &PgPool) -> (Uuid, Uuid) {
     seed_head(pool, vo).await;
     // Every EHR has an EHR_STATUS from creation (RM ehr §"EHR Creation");
     // the AQL population gate keys off its `is_queryable` flag
-    // (`i_query_service.adoc`), so a spec-realistic fixture must seed one —
+    // flag, so a spec-realistic fixture must seed one —
     // a bare `ehr` row without a status is not a state the service can
     // produce.
     let status_vo = Uuid::now_v7();

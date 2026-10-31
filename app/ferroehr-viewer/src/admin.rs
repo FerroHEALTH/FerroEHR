@@ -28,9 +28,8 @@
 //!
 //! NOTE: no openEHR spec governs the viewer, and none governs the template or
 //! stored-query deletes it drives either — our own design. The EHR delete is the
-//! spec-grounded one: SM `I_ADMIN_SERVICE.physical_ehr_delete`
-//! (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`
-//! §`physical_ehr_delete`), whose `ehr_id_does_not_exist` error is the `404`.
+//! spec-grounded one: ITS-REST `operations/admin_ehr_delete.yaml`, whose unknown
+//! EHR is the `404`.
 //!
 //! Every read guards with
 //! [`require_session`](crate::session::require_session) first and keeps the
@@ -237,9 +236,8 @@ pub async fn admin_delete_stored_query(
 
 /// Physically delete an EHR and everything under it.
 ///
-/// `DELETE admin/ehr/{ehr_id}`, SM `I_ADMIN_SERVICE.physical_ehr_delete`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`): the
-/// precondition is `has_ehr`, and `ehr_id_does_not_exist` is the CDR's `404`.
+/// `DELETE admin/ehr/{ehr_id}` (ITS-REST `operations/admin_ehr_delete.yaml`):
+/// an unknown EHR is the CDR's `404`.
 ///
 /// This is NOT the openEHR logical delete — the versions, contributions and
 /// audit trail are gone.

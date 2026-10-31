@@ -27,5 +27,6 @@ pub mod query;
 pub mod results;
 pub mod server;
 pub mod subscriptions;
+pub mod template_releases;
 pub mod templates;
 pub mod terminology;

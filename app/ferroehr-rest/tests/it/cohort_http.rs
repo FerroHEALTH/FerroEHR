@@ -124,7 +124,7 @@ fn composition(name: &str) -> Value {
     })
 }
 
-/// The SM `UPDATE_VERSION` commit envelope for a bare-RM create.
+/// The `UPDATE_VERSION` commit envelope for a bare-RM create.
 fn uv<T: serde::de::DeserializeOwned>(
     data: &Value,
 ) -> openehr_its::rest::generated::common::UpdateVersion<T> {

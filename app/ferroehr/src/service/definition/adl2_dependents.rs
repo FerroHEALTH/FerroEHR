@@ -24,7 +24,7 @@ use sqlx::PgConnection;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 
-use super::adl2::on_engine_stack;
+use super::adl2_engine::on_engine_stack;
 
 /// One stored ADL2 artefact as the store row holds it.
 struct Stored {
