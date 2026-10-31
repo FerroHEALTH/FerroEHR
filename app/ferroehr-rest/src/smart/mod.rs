@@ -42,21 +42,20 @@ pub(crate) fn holds_only_system_scopes(scopes: &[SmartScope]) -> bool {
 }
 
 /// Whether `principal` is the record's person, or their representative, acting
-/// through a patient-context credential: a bearer token whose every SMART
-/// resource scope is a `patient/` one.
+/// through a patient-context credential: a bearer token with a `patient/`
+/// scope and no `user/` or `system/` one (`Caller::is_the_person` of
+/// `ferrohealth-smart`).
 ///
 /// A `patient/` scope is "for applications acting in the context of a specific
 /// patient/EHR", a `user/` one for those "acting on behalf of a logged-in user
 /// (e.g., a practitioner)" (ITS-REST `docs/smart_app_launch/master08-scopes.adoc`
-/// §Resource Scopes). A patient-only grant is therefore read as the access
-/// service of EHDS Art. 4, through which Art. 5 lets a person insert
-/// information; a token with a `user/` or `system/` scope acts for a
-/// professional or a system.
-// NOTE: the ABAC patient claim is no such marker, as a professional's token in a
-// patient's context carries it too; our own design, no openEHR spec governs it.
+/// §Resource Scopes). The ABAC patient claim alone does not count, as a
+/// professional's token in a patient's context carries it too.
+// NOTE: EHDS Art. 5, the owner's ruling of 2026-10-31: authorship errs toward the
+// professional, the strict answer of the family crate.
 pub(crate) fn acts_as_person(principal: &crate::extensions::access::authn::Principal) -> bool {
-    principal.method == crate::extensions::access::authn::AuthMethod::Bearer
-        && principal.access.caller().is_some_and(|caller| {
-            ferrohealth_smart::openehr::patient_grant(&caller.openehr_scopes())
-        })
+    principal
+        .access
+        .caller()
+        .is_some_and(ferrohealth_smart::resource::Caller::is_the_person)
 }
