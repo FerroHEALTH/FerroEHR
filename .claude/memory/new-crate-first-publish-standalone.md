@@ -16,15 +16,16 @@ before the PR merged). The way that worked: a LOCAL, uncommitted edit of the
 new crate's manifest that drops `path =` on every sibling dependency (normal
 AND dev) and points `version` at the published sibling version, then
 `cargo publish -p <crate> --allow-dirty`, then `git checkout` the manifest.
-The published version then depends on the OLD siblings, so the tree steps
-the lockstep ONE more (0.0.68 → 0.0.69) in the same PR, leaving the bootstrap
-version as a gap for the eight and the prose saying so.
+The published version then depends on the OLD siblings, so the set needs a
+fresh number past the bootstrap version. Since #4555 the publish step takes
+it: `publish-crates.sh plan` sees the newest version held by a crate other
+than `openehr-base` and plans the next one, leaving the bootstrap version as
+a gap for the eight.
 
 **Why:** the release lane treats an existing version as done, so a coherent
 set needs a fresh number once one crate was published out of band.
 
 **How to apply:** if the owner asks to publish only a new crate, do the
-dirty-manifest publish, revert, bump all nine again, refresh both
-`Cargo.lock` files, and fix every version mention (CHANGELOG, READMEs, the
-book's crates + licensing pages). Never commit the dirty manifest. Related:
+dirty-manifest publish and revert it; never bump the nine in the PR (the
+publish step does, #4555) and never commit the dirty manifest. Related:
 [[merge-on-local-gates]], [[many-issues-per-pr]].

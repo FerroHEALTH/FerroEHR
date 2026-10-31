@@ -143,8 +143,8 @@ labels** (CI escape hatches, on PRs not issues): `no-changelog`
 (changelog-guard; genuinely invisible changes only), `no-ui-visual-change`
 (ui-screenshot-guard; viewer source change with zero visual effect — see
 `.claude/rules/console-ui.md` §5), `no-crate-bump` (crate-version-guard; a
-`crates/*` diff that provably does not alter packaged bytes — see
-`.claude/rules/crates-publishing.md`). These guards read labels from the PR event
+PR that sets the `openehr-*` lockstep version by hand, which the publish step
+otherwise owns — see `.claude/rules/crates-publishing.md`). These guards read labels from the PR event
 payload; `ci.yml` listens for the `labeled`/`unlabeled` types (#2777), so
 applying a label raises a fresh run with the current label set by itself — a
 RE-RUN of the failed job still re-uses its stale payload, so let the new run
