@@ -37,19 +37,21 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
    enforces its SMART on openEHR requirement with no switch; the discovery
    document is on, built from `issuer-metadata.json`, because a key-set file
    carries no metadata of its own.
-2. `docs/conformance/party/ferroehr/ixit.json` declares the posture: the
-   `smart` block names this key file, the issuer, the audience and the `kid`;
-   the `sut`/`admin`/`readonly` principals carry `bearer_mint` auth with
-   per-instance roles + standing scope grants, and the `smart_app` instance
-   mints exactly the step-declared `scopes` for the boundary cases.
-3. `scripts/conformance.sh` composes the posture on every FerroEHR run —
-   it IS the standard conformance posture (owner ruling 2026-07-28), so the
-   one committed record covers the whole claimed surface in one invocation.
+2. `docs/conformance/party/ferroehr/ixit-smart.json` declares the issuer the
+   instrument mints with: `smart` names the Platform instance and this key
+   file, and `scoped_tokens.mint` the issuer, audience, subject and `kid` of
+   the RS256 token Veredictum signs for each scope set a `smart_scopes` row
+   presents. It names no token: each one is minted in memory for the run.
+3. `scripts/conformance.sh` composes the overlay on every FerroEHR run. Its
+   `smart` stage (run by `run` after the catalogue, and by the conformance
+   workflow after the Veredictum Action, which forwards neither the Platform
+   base URL nor scoped tokens) drives the `smart_discovery` and
+   `smart_scopes` documents in the pinned image with
+   `--platform-url`, that IXIT and `VEREDICTUM_SCOPED_TOKEN_KEY_FILE` pointing
+   at this key, and writes its views beside the catalogue's (#4450).
 
-Cases that declare `scopes:` on a flow step — and every case anchored on the
-`I_ITS_REST_SMART` pseudo-interface — are **not-applicable** when a party's
-ixit declares no `smart` block (ISO/IEC 9646 test selection): a SUT that
-does not claim the capability is never driven against a guess (ehrbase).
+The catalogue run skips both documents as `not-declared`: it gets no Platform
+base URL and no scoped tokens.
 
 Spec: `docs/specs/openehr/ITS-REST/docs/smart_app_launch/` —
 `master04-service_discovery.adoc` (the discovery document),
