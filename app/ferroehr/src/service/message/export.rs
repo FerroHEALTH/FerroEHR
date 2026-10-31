@@ -456,14 +456,12 @@ impl FerroEhrService {
 
     /// Every version container of an EHR, restricted objects omitted.
     ///
-    /// An Extract is a disclosure of the record to another system, which
-    /// GDPR Art. 18(2) does not admit for a restricted object
-    /// (`docs/law/eu/gdpr/text.html`): storage is the only processing left. The
-    /// object is therefore absent from the Extract rather than failing the
-    /// whole export, the same treatment the AQL result set gives it. An object
-    /// under an EHDS Art. 8 access restriction is absent too while the request
-    /// enforces it (`docs/law/eu/ehds/text.html` Art. 8). No openEHR spec
-    /// governs restriction of processing or of access — our own
+    /// An Extract is a disclosure GDPR Art. 18(2) does not admit for a
+    /// restricted object (`docs/law/eu/gdpr/text.html`), so the object is
+    /// absent rather than failing the export, as in the AQL result set. An
+    /// object under an EHDS Art. 8 restriction, or withheld from the person
+    /// under Art. 3(3), is absent while the request enforces it
+    /// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
     /// design/extension.
     async fn ehr_versioned_objects(
         &self,
@@ -474,10 +472,11 @@ impl FerroEhrService {
              JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
              WHERE version.ehr_id = $1 AND h.restricted_at IS NULL \
              AND (NOT $2 OR h.access_restricted_at IS NULL) \
-             ORDER BY version.vo_id",
+             AND (NOT $3 OR (h.person_withheld_until > now()) IS NOT TRUE) ORDER BY version.vo_id",
         )
         .bind(ehr_id)
         .bind(crate::system_log::access_context::access_restriction_enforced())
+        .bind(crate::system_log::access_context::access_delay_enforced())
         .fetch_all(&mut *acquire(&self.pool).await?)
         .await?;
         let mut out = Vec::with_capacity(rows.len());
@@ -487,8 +486,7 @@ impl FerroEhrService {
         Ok(out)
     }
 
-    /// The kind of a version container, if it belongs to `ehr_id` (resolves an
-    /// `EXTRACT_ENTITY_MANIFEST.item_list` reference).
+    /// The kind of a version container of `ehr_id` (an `EXTRACT_ENTITY_MANIFEST.item_list` entry).
     async fn ehr_vo_kind(
         &self,
         ehr_id: EhrId,
@@ -498,11 +496,13 @@ impl FerroEhrService {
             "SELECT version.kind FROM version \
              JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
              WHERE version.vo_id = $1 AND version.ehr_id = $2 AND h.restricted_at IS NULL \
-             AND (NOT $3 OR h.access_restricted_at IS NULL)",
+             AND (NOT $3 OR h.access_restricted_at IS NULL) \
+             AND (NOT $4 OR (h.person_withheld_until > now()) IS NOT TRUE)",
         )
         .bind(vo_id)
         .bind(ehr_id)
         .bind(crate::system_log::access_context::access_restriction_enforced())
+        .bind(crate::system_log::access_context::access_delay_enforced())
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?)
     }

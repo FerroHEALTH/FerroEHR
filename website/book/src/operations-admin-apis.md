@@ -229,6 +229,10 @@ anything.
 | `POST {ext}/admin/access-restriction` | `{"ehr_id": "…", "vo_id": "…"?, "note": "…"?}` | **204**: the EHDS Art. 8 restriction of access by health professionals is recorded and in force |
 | `GET {ext}/admin/access-restriction` | `?ehr_id=…` | **200**: the access-restriction register, newest request first, lifts included |
 | `POST {ext}/admin/access-restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force access restriction at that grain is lifted |
+| `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within `access_delay.hours` of now) or for `access_delay.hours`; **400** while `[access_delay]` is off |
+| `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
+| `POST {ext}/admin/access-delay/release` | `{"ehr_id": "…", "vo_id": "…"}` | **204**: every hold of the composition still in force is released, and the person reads it |
+| `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release` | none | **204**: the treating professional's release from the clinical surface, with the checks of a write to that EHR; **403** to a request that may be the person's |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in
@@ -265,6 +269,10 @@ An access restriction is not a restriction of processing: it limits what a
 health professional reaches and nothing else, and it is invisible to them. What
 it changes is on [restriction of access by health
 professionals](security.md#restriction-of-access-by-health-professionals-ehds-art-8).
+
+An access delay is the opposite direction: it withholds a composition from
+the person, never from a professional. What it changes is on [delayed access
+by the person](security.md#delayed-access-by-the-person-ehds-art-33).
 
 ## Reading a party's protected identifiers
 

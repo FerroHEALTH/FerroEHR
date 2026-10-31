@@ -110,19 +110,17 @@ pub struct StoredVersion {
     /// system ids; `None` for a row nothing stamped, which
     /// the read path (`versioning::origins::of_stored`) assesses from the body.
     pub origins: Option<Value>,
-    /// The restriction-of-processing mark of the versioned object this version
-    /// belongs to (`vo_head.restricted_at`), `None` when it is unrestricted.
-    /// GDPR Art. 18(2) leaves storage as the only processing a restriction
-    /// admits (`docs/law/eu/gdpr/text.html`), so the one seam a stored body
-    /// leaves storage through refuses a marked object. No openEHR spec governs
-    /// restriction of processing — our own design/extension.
+    /// The restriction-of-processing mark (`vo_head.restricted_at`), `None`
+    /// when unrestricted: GDPR Art. 18(2) leaves storage as the only
+    /// processing (`docs/law/eu/gdpr/text.html`), so the seam a stored body
+    /// leaves storage through refuses a marked object. Our own design.
     pub restricted_at: Option<jiff::Timestamp>,
-    /// The EHDS Art. 8 access-restriction mark of the versioned object
-    /// (`vo_head.access_restricted_at`), `None` when it is unrestricted. While
-    /// the request enforces the restriction
-    /// ([`crate::system_log::access_context::access_restriction_enforced`]),
-    /// every read here answers as though the object did not exist.
+    /// The EHDS Art. 8 access-restriction mark (`vo_head.access_restricted_at`),
+    /// `None` when unrestricted; every read here answers it as absent while
+    /// the request enforces the restriction.
     pub access_restricted_at: Option<jiff::Timestamp>,
+    /// Whether an EHDS Art. 3(3) delay withholds the object from the person.
+    pub person_withheld: bool,
     /// The materialized canonical body (`version.body` — written from the
     /// same value the node rows decompose from), or [`Value::Null`] for a
     /// logically deleted version (master06 §Logical Deletion). [`Value::Null`]
@@ -175,7 +173,7 @@ macro_rules! version_select {
             "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
-            "v.body, h.restricted_at, h.access_restricted_at, ",
+            "v.body, h.restricted_at, h.access_restricted_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
             "(SELECT COALESCE(n.data->>'archetype_node_id', n.archetype) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
@@ -207,7 +205,7 @@ macro_rules! version_select_raw {
             "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, ",
-            "v.origins, v.body, h.restricted_at, h.access_restricted_at, ",
+            "v.origins, v.body, h.restricted_at, h.access_restricted_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
             "(SELECT COALESCE(n.data->>'archetype_node_id', n.archetype) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
@@ -229,13 +227,14 @@ macro_rules! version_select_raw {
 }
 
 /// Whether `stored` may be served to the current request: an object under an
-/// EHDS Art. 8 access restriction is absent while the request enforces it
-/// (`docs/law/eu/ehds/text.html` Art. 8: the restriction is "not visible to
-/// healthcare providers"). No openEHR spec governs restriction of access — our
-/// own design/extension.
+/// EHDS Art. 8 access restriction is absent while the request enforces it, and
+/// one an Art. 3(3) delay withholds is absent to a patient-context request
+/// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
+/// design/extension.
 fn visible(stored: &StoredVersion) -> bool {
-    stored.access_restricted_at.is_none()
-        || !crate::system_log::access_context::access_restriction_enforced()
+    use crate::system_log::access_context::{access_delay_enforced, access_restriction_enforced};
+    (stored.access_restricted_at.is_none() || !access_restriction_enforced())
+        && (!stored.person_withheld || !access_delay_enforced())
 }
 
 // ── the rendered statements ──────────────────────────────────────────────────
@@ -367,6 +366,7 @@ fn stored_version_fields(
         access_restricted_at: row
             .try_get::<Option<jiff_sqlx::Timestamp>, _>("access_restricted_at")?
             .map(jiff_sqlx::Timestamp::to_jiff),
+        person_withheld: row.try_get("person_withheld")?,
         canonical,
         canonical_text,
         attestations_at_committal,

@@ -120,6 +120,8 @@ pub struct FerroEhrConfig {
     pub ehr_index: crate::service::ehr_index::config::EhrIndexConfig,
     /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
     pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
+    /// `[access_delay]` — the EHDS Art. 3(3) delay of the person's own access.
+    pub access_delay: crate::service::admin::access_delay::config::AccessDelayConfig,
 }
 
 impl Default for FerroEhrConfig {
@@ -162,6 +164,7 @@ impl Default for FerroEhrConfig {
             cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
             ehr_index: crate::service::ehr_index::config::EhrIndexConfig::default(),
             usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
+            access_delay: crate::service::admin::access_delay::config::AccessDelayConfig::default(),
         }
     }
 }
@@ -188,13 +191,10 @@ impl FerroEhrConfig {
         self.validate_audit(&mut errors);
         self.validate_outbound_clients(&mut errors);
         errors.extend(self.origins.errors().into_iter().map(ConfigError::semantic));
-        errors.extend(
-            self.audit
-                .categories
-                .errors()
-                .into_iter()
-                .map(ConfigError::semantic),
-        );
+        let categories = &self.audit.categories;
+        errors.extend(categories.errors().into_iter().map(ConfigError::semantic));
+        let delay = self.access_delay.errors(categories);
+        errors.extend(delay.into_iter().map(ConfigError::semantic));
         self.validate_cohort(&mut errors);
         self.validate_ehr_index(&mut errors);
         self.validate_deployment(&mut errors);

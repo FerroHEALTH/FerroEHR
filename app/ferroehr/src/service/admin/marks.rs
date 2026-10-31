@@ -471,7 +471,7 @@ impl FerroEhrService {
     /// All-or-nothing like every other admin route: an unknown id is refused
     /// before anything is written, so a typo cannot leave a register row
     /// pointing at nothing.
-    async fn check_mark_target(
+    pub(super) async fn check_mark_target(
         &self,
         ehr_id: EhrId,
         vo_id: Option<VoId>,
@@ -499,7 +499,7 @@ impl FerroEhrService {
     /// The record names the EHR, the object when the act was object-scoped, and
     /// which register moved — never a subject identifier, which the clinical
     /// domain does not hold in readable form anyway.
-    fn emit_mark_access(
+    pub(super) fn emit_mark_access(
         &self,
         action: EventActionCode,
         ehr_id: EhrId,

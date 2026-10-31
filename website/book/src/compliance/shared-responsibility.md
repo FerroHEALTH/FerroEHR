@@ -45,3 +45,14 @@ provides, points at FerroEHR's own pages:
 None of these pages tells you whether your deployment satisfies an
 obligation. That depends on your legal basis, your organisation, your
 infrastructure and your operating practice, none of which a supplier can see.
+
+## The delay of the person's access (EHDS Art. 3(3))
+
+Art. 3(3) lets a Member State delay a person's access to their newly
+registered data until a health professional has explained it. The software
+part is FerroEHR's: the hold, the release by a professional, the limit that
+ends every hold, and the access record of each. The rule is yours to carry:
+whether your Member State provides for the delay at all, which categories of
+data it covers, how long a hold may last, and which professional releases a
+result and when. FerroEHR ships the delay off; see [delayed access by the
+person](../security.md#delayed-access-by-the-person-ehds-art-33).

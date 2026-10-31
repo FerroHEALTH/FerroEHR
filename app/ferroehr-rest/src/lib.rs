@@ -96,7 +96,7 @@ pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config).await?;
+    let authenticator = build_authenticator(&config, None).await?;
     let state = AppState::with_backend(config, backend);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -117,7 +117,7 @@ pub async fn build_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config).await?;
+    let authenticator = build_authenticator(&config, authz.as_deref()).await?;
     let state = AppState::with_parts(config, backend, authz, observability);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -134,8 +134,16 @@ pub async fn build_full(
 ///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
-async fn build_authenticator(config: &AppConfig) -> Result<Arc<Authenticator>, ServeError> {
-    let authenticator = Authenticator::new(config).await.map_err(ServeError::Auth)?;
+async fn build_authenticator(
+    config: &AppConfig,
+    authz: Option<&AuthzHandle>,
+) -> Result<Arc<Authenticator>, ServeError> {
+    let claim = authz
+        .and_then(AuthzHandle::abac)
+        .and_then(|abac| abac.patient_claim.as_deref());
+    let authenticator = Authenticator::new(config, claim)
+        .await
+        .map_err(ServeError::Auth)?;
     if config.smart.enabled
         && config.auth.enabled
         && authenticator
@@ -215,7 +223,7 @@ pub async fn serve_on<F>(
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    let authenticator = build_authenticator(&config).await?;
+    let authenticator = build_authenticator(&config, authz.as_deref()).await?;
     let section = config.server.clone();
     let state = AppState::with_parts(config, backend, authz, observability);
     let lifecycle = state.observability().lifecycle.clone();
@@ -346,7 +354,9 @@ mod tests {
             },
             ..AppConfig::default()
         };
-        let authenticator = build_authenticator(&config).await.expect("authenticator");
+        let authenticator = build_authenticator(&config, None)
+            .await
+            .expect("authenticator");
         let mut claims = test_support::claims("alice", "user/composition-*.r");
         claims["app_roles"] = serde_json::json!(["CLINICIAN"]);
         let mut headers = http::HeaderMap::new();

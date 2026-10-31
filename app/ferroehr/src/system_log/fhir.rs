@@ -186,7 +186,7 @@ const fn outcome_description(outcome: EventOutcome) -> &'static str {
 }
 
 /// The EHDS access record of `event`, when it is a classified access.
-fn access_record(
+pub(crate) fn access_record(
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,

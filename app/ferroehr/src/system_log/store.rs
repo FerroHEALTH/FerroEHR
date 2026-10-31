@@ -223,7 +223,7 @@ type LearnedSets = ();
 /// The PG-backed Audit Record Repository (the `store` sink).
 #[derive(Debug, Clone)]
 pub struct AuditStore {
-    pool: PgPool,
+    pub(super) pool: PgPool,
     /// Whether the FHIR Feed delivers from this store, so each record written
     /// is owed to it.
     fhir_feed: bool,
@@ -633,7 +633,7 @@ impl AuditStore {
     /// [`AuditError::UnreadableJson`] when it does not read, and the
     /// [`RenderPolicy::compile`] errors when it does not compile.
     #[cfg(feature = "fhir")]
-    async fn policy(
+    pub(super) async fn policy(
         &self,
         chain_seq: i64,
         digest: &[u8],
@@ -923,16 +923,11 @@ impl AuditStore {
         &self,
         filter: &AuditSearchFilter,
     ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
-        let mut resolved = Vec::with_capacity(filter.criteria.len());
-        for criterion in &filter.criteria {
-            let ids = crate::system_log::search::criterion_ids(&self.pool, criterion).await?;
-            if ids.as_ref().is_some_and(Vec::is_empty) {
-                // NOTE: `RESTful` ATNA §3.81.4.1.2.2 combines parameters with AND, so a parameter
-                // no stored token matches leaves no record.
-                return Ok((0, Vec::new()));
-            }
-            resolved.push(ids);
-        }
+        let Some(resolved) =
+            crate::system_log::search::resolve_criteria(&self.pool, filter).await?
+        else {
+            return Ok((0, Vec::new()));
+        };
         let (count_sql, count_values, sql, values) = build_search_statements(filter, &resolved);
         // NOTE: an unnamed statement is planned with the token ids it binds (PostgreSQL 18,
         // "PREPARE", plan_cache_mode), so a rare token reaches its index rather than a generic plan.
@@ -960,7 +955,10 @@ impl AuditStore {
 /// `Expr::val` and therefore binds as a parameter rather than entering the SQL
 /// text. That split is the property `sql_injection`-style tests pin.
 #[cfg(feature = "fhir")]
-fn search_condition(filter: &AuditSearchFilter, resolved: &[Option<Vec<i32>>]) -> sea_query::Cond {
+pub(super) fn search_condition(
+    filter: &AuditSearchFilter,
+    resolved: &[Option<Vec<i32>>],
+) -> sea_query::Cond {
     use sea_query::{Alias, Expr, ExprTrait};
 
     let mut cond = sea_query::Cond::all();
@@ -1084,7 +1082,7 @@ fn build_search_statements(
 
 /// The record columns of the records `condition` selects, newest first.
 #[cfg(feature = "fhir")]
-fn newest_first(condition: sea_query::Cond) -> sea_query::SelectStatement {
+pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectStatement {
     use sea_query::{Alias, Order, Query};
 
     Query::select()
@@ -1662,7 +1660,7 @@ fn roles_json(event: &AuditEvent) -> Option<serde_json::Value> {
 /// [`AuditError::Unreadable`] when it holds a value this build does not write,
 /// and [`AuditError::UnreadableJson`] when a JSON column does not read.
 #[cfg(feature = "fhir")]
-fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), AuditError> {
+pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), AuditError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
     let unreadable = |reason: &'static str| AuditError::Unreadable { chain_seq, reason };
     let action = match row.try_get::<&str, _>("action")? {

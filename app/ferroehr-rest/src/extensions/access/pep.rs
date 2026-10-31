@@ -35,7 +35,7 @@
 
 use axum::response::{IntoResponse, Response};
 
-use crate::extensions::access::authz::classify::{access_of, kind_of};
+use crate::extensions::access::authz::classify::{Mode, access_of, kind_of, mode_of};
 use crate::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
 use ferrohealth_authz::request::Attr;
 use openehr_its::rest::runtime::ApiError;
@@ -58,42 +58,6 @@ use ferroehr::service::status::{CallStatusType, SmError};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::openehr::smart_scopes::ResourceFamily;
-
-/// Whether an operation is ABAC-checked, and when.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Mode {
-    /// Not ABAC-checked (item tags, definition/demographic/admin — RBAC only —,
-    /// and query, whose scope + check live in the query path).
-    Skip,
-    /// Checked before the backend call.
-    Pre,
-    /// Checked after the backend call, on a successful response.
-    Post,
-}
-
-/// The enforcement matrix, keyed by operation id.
-#[expect(
-    clippy::match_same_arms,
-    reason = "the arms are grouped by resource family, so naming every operation \
-              explicitly is the point — merging equal arms would hide which \
-              family an operation is gated as"
-)]
-fn mode_of(op: &str) -> Mode {
-    match op {
-        "ehr_create" | "ehr_create_with_id" | "ehr_get_by_id" | "ehr_get_by_subject" => Mode::Pre,
-        "composition_create" | "composition_update" | "composition_delete" => Mode::Pre,
-        "contribution_create" => Mode::Pre,
-        // The contribution-list extension is an EHR-scoped read whose `ehr_id`
-        // is a path parameter, so the subject gate runs before any backend work.
-        "contribution_list" => Mode::Pre,
-        "composition_get" => Mode::Post,
-        "contribution_get" => Mode::Post,
-        _ if op.starts_with("versioned_composition_") => Mode::Post,
-        _ if op.starts_with("ehr_status_") || op.starts_with("versioned_ehr_status_") => Mode::Pre,
-        _ if op.starts_with("directory_") => Mode::Pre,
-        _ => Mode::Skip,
-    }
-}
 
 /// Prepares a query execution: the patient subject scope to thread into the
 /// SQL, and whether the executor collects the touched EHR/template sets for the

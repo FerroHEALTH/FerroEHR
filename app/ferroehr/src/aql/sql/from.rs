@@ -154,16 +154,14 @@ fn bind_head(
     q: &mut SelectStatement,
     version_alias: &str,
     latest: bool,
-    access_restricted: bool,
+    gates: super::gates::Gates,
 ) -> String {
     let h = format!("{version_alias}_head");
     q.from_as(VoHead::Table, Alias::new(h.as_str()));
     q.and_where(col(&h, VoHead::VoId).eq(col(version_alias, VersionRow::VoId)));
     q.and_where(col(&h, VoHead::RestrictedAt).is_null());
-    // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), an object under an
-    // access restriction contributes no row while the request enforces it.
-    if access_restricted {
-        q.and_where(col(&h, VoHead::AccessRestrictedAt).is_null());
+    for predicate in gates.on_head(&h) {
+        q.and_where(predicate);
     }
     if latest {
         q.and_where(
@@ -1010,10 +1008,10 @@ impl Builder<'_> {
                         );
                         match scope {
                             VersionScope::Latest => {
-                                bind_head(sub, &voa, true, self.access_restricted);
+                                bind_head(sub, &voa, true, self.gates);
                             }
                             VersionScope::All => {
-                                bind_head(sub, &voa, false, self.access_restricted);
+                                bind_head(sub, &voa, false, self.gates);
                             }
                             VersionScope::Predicate(_) => {
                                 return Err(SqlError::Unsupported(
@@ -1041,10 +1039,10 @@ impl Builder<'_> {
                         );
                         match scope {
                             VersionScope::Latest => {
-                                bind_head(sub, &voa, true, self.access_restricted);
+                                bind_head(sub, &voa, true, self.gates);
                             }
                             VersionScope::All => {
-                                bind_head(sub, &voa, false, self.access_restricted);
+                                bind_head(sub, &voa, false, self.gates);
                             }
                             VersionScope::Predicate(_) => {
                                 return Err(SqlError::Unsupported(
@@ -1072,10 +1070,10 @@ impl Builder<'_> {
                 sub.and_where(col(&voa, VersionRow::EhrId).eq(col(e, Ehr::Id)));
                 match scope {
                     VersionScope::Latest => {
-                        bind_head(sub, &voa, true, self.access_restricted);
+                        bind_head(sub, &voa, true, self.gates);
                     }
                     VersionScope::All => {
-                        bind_head(sub, &voa, false, self.access_restricted);
+                        bind_head(sub, &voa, false, self.gates);
                     }
                     VersionScope::Predicate(_) => {
                         return Err(SqlError::Unsupported(
@@ -1104,7 +1102,7 @@ impl Builder<'_> {
             self.q.and_where(col(&alias, Ehr::RestrictedAt).is_null());
             // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), a whole-EHR access
             // restriction withholds the EHR itself while the request enforces it.
-            if self.access_restricted {
+            if self.gates.access_restricted {
                 self.q
                     .and_where(col(&alias, Ehr::AccessRestrictedAt).is_null());
             }
@@ -1389,8 +1387,8 @@ impl Builder<'_> {
         let mut cond = col(&h, VoHead::VoId)
             .eq(col(voa, VersionRow::VoId))
             .and(col(&h, VoHead::RestrictedAt).is_null());
-        if self.access_restricted {
-            cond = cond.and(col(&h, VoHead::AccessRestrictedAt).is_null());
+        for predicate in self.gates.on_head(&h) {
+            cond = cond.and(predicate);
         }
         if latest {
             cond =

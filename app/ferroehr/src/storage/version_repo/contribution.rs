@@ -89,8 +89,8 @@ pub async fn contribution_version_refs(
     pool: &PgPool,
     contribution_id: Uuid,
 ) -> Result<Vec<(VoId, (i32, i32, i32), String, String)>, StorageError> {
-    // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), a member under an
-    // access restriction is left out while the request enforces it.
+    // NOTE: EHDS Art. 8 and Art. 3(3) (`docs/law/eu/ehds/text.html`), a member under an
+    // access restriction, or withheld from the person, is left out while enforced.
     let rows = sqlx::query(
         "SELECT m.* FROM (\
          SELECT vo_id, trunk_version, branch_number, branch_version, creating_system_id, \
@@ -101,12 +101,15 @@ pub async fn contribution_version_refs(
          v.creating_system_id, v.kind FROM version v \
          JOIN vo_attestation att ON att.vo_id = v.vo_id AND att.sys_version = v.sys_version \
          WHERE att.contribution_id = $1) m \
-         WHERE NOT $2 OR NOT EXISTS (SELECT 1 FROM vo_head h \
-             WHERE h.vo_id = m.vo_id AND h.access_restricted_at IS NOT NULL) \
+         WHERE (NOT $2 OR NOT EXISTS (SELECT 1 FROM vo_head h \
+             WHERE h.vo_id = m.vo_id AND h.access_restricted_at IS NOT NULL)) \
+           AND (NOT $3 OR NOT EXISTS (SELECT 1 FROM vo_head h \
+             WHERE h.vo_id = m.vo_id AND h.person_withheld_until > now())) \
          ORDER BY m.vo_id",
     )
     .bind(contribution_id)
     .bind(crate::system_log::access_context::access_restriction_enforced())
+    .bind(crate::system_log::access_context::access_delay_enforced())
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
