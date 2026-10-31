@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
+use crate::locale::{Msg, tr};
 
 /// Total EHRs — a fixed count AQL. Validated by the `dashboard_aql_consts_parse` test.
 const EHR_COUNT_AQL: &str = "SELECT COUNT(*) FROM EHR e";
@@ -34,15 +35,79 @@ const TREND_AQL: &str = "SELECT v/commit_audit/time_committed/value FROM EHR e C
 /// Rows pulled for the commit-activity trend before day-bucketing.
 const TREND_FETCH: u32 = 500;
 
+/// Why the CDR's answer to a `SELECT COUNT(*)` query is no count.
+///
+/// A count answers one row holding one cell, a whole number zero or above;
+/// any other result set is a defective answer, kept as this error and never
+/// read as 0.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum CountShape {
+    /// The result set holds no row.
+    #[error("the count answer holds no row")]
+    NoRow,
+    /// The result set holds more than one row.
+    #[error("the count answer holds more than one row")]
+    SeveralRows,
+    /// The row holds no cell.
+    #[error("the count answer's row holds no cell")]
+    NoCell,
+    /// The row holds more than one cell.
+    #[error("the count answer's row holds more than one cell")]
+    SeveralCells,
+    /// The cell is not a whole number zero or above.
+    #[error("the count answer's cell is not a whole number zero or above")]
+    NotACount,
+}
+
+impl CountShape {
+    /// Why the count is unavailable, in the reader's words.
+    #[must_use]
+    pub fn reason(self) -> String {
+        tr(match self {
+            Self::NoRow => Msg::CountNoRow,
+            Self::SeveralRows => Msg::CountSeveralRows,
+            Self::NoCell => Msg::CountNoCell,
+            Self::SeveralCells => Msg::CountSeveralCells,
+            Self::NotACount => Msg::CountNotACount,
+        })
+    }
+}
+
+/// A count the CDR answered: the number, or why its answer held none.
+pub type Count = Result<u64, CountShape>;
+
+/// Reads the one cell of a count's result set.
+///
+/// # Errors
+/// The [`CountShape`] the result set has when it is not one row of one
+/// whole-number cell.
+pub(crate) fn read_count(page: &crate::bff::ehrs::ResultPage) -> Count {
+    let row = match page.rows.as_slice() {
+        [] => return Err(CountShape::NoRow),
+        [row] => row,
+        _ => return Err(CountShape::SeveralRows),
+    };
+    match row.as_slice() {
+        [] => Err(CountShape::NoCell),
+        [cell] => cell.as_u64().ok_or(CountShape::NotACount),
+        _ => Err(CountShape::SeveralCells),
+    }
+}
+
 /// Run a `SELECT COUNT(*)`-shaped AQL with `parameters` and read its single
-/// numeric cell, `None` when the result set is not the expected 1×1 numeric
-/// shape.
+/// cell ([`read_count`]).
+///
+/// # Errors
+/// CDR errors normalized via
+/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// [`ViewerError::Internal`] when the result set is not JSON. A result set of
+/// another shape is the `Ok` value's [`CountShape`].
 pub(crate) async fn run_count_aql(
     state: &crate::state::AppState,
     session: &crate::session::ViewerSession,
     aql: &str,
     parameters: serde_json::Value,
-) -> Result<Option<i64>, ViewerError> {
+) -> Result<Count, ViewerError> {
     let url = state.cdr.rest_v1("query/aql");
     let body = serde_json::json!({ "q": aql, "query_parameters": parameters }).to_string();
     let response = state
@@ -58,11 +123,7 @@ pub(crate) async fn run_count_aql(
         .await?;
     let response = crate::cdr::CdrClient::expect_success(response)?;
     let page = crate::bff::ehrs::parse_result_set(&response.body, 0)?;
-    Ok(page
-        .rows
-        .first()
-        .and_then(|row| row.first())
-        .and_then(serde_json::Value::as_i64))
+    Ok(read_count(&page))
 }
 
 /// The dashboard's three headline counts: total EHRs, total compositions, and
@@ -70,23 +131,21 @@ pub(crate) async fn run_count_aql(
 ///
 /// Runs the two fixed count AQLs against `POST query/aql` and reads the
 /// template count from
-/// [`list_templates`](crate::bff::templates::list_templates).
+/// [`list_templates`](crate::bff::templates::list_templates). A count whose
+/// answer has another shape is its [`CountShape`], so its tile draws as
+/// unavailable.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
 /// normalized via
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] on an unparseable result set.
-pub async fn dashboard_counts() -> Result<(i64, i64, u32), ViewerError> {
+/// [`ViewerError::Internal`] on a result set that is not JSON.
+pub async fn dashboard_counts() -> Result<(Count, Count, u32), ViewerError> {
     let session = crate::session::require_session()?;
     let state = crate::scope::state()?;
     let none = || serde_json::json!({});
-    let ehrs = run_count_aql(&state, &session, EHR_COUNT_AQL, none())
-        .await?
-        .unwrap_or(0);
-    let compositions = run_count_aql(&state, &session, COMPOSITION_COUNT_AQL, none())
-        .await?
-        .unwrap_or(0);
+    let ehrs = run_count_aql(&state, &session, EHR_COUNT_AQL, none()).await?;
+    let compositions = run_count_aql(&state, &session, COMPOSITION_COUNT_AQL, none()).await?;
     let templates =
         u32::try_from(crate::bff::templates::list_templates().await?.len()).unwrap_or(u32::MAX);
     Ok((ehrs, compositions, templates))
@@ -231,12 +290,82 @@ pub async fn commit_trend() -> Result<Vec<ActivityPoint>, ViewerError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{COMPOSITION_COUNT_AQL, EHR_COUNT_AQL, TREND_AQL};
+    use super::{COMPOSITION_COUNT_AQL, CountShape, EHR_COUNT_AQL, TREND_AQL, read_count};
+    use crate::bff::ehrs::ResultPage;
 
     #[test]
     fn dashboard_aql_consts_parse() {
         for aql in [EHR_COUNT_AQL, COMPOSITION_COUNT_AQL, TREND_AQL] {
             openehr_query::parser::parse_str(aql).expect("dashboard AQL const must parse");
+        }
+    }
+
+    fn page(rows: &serde_json::Value) -> ResultPage {
+        let body = serde_json::json!({ "columns": [{ "name": "count" }], "rows": rows });
+        crate::bff::ehrs::parse_result_set(&body.to_string(), 0).expect("a JSON result set")
+    }
+
+    #[test]
+    fn a_real_zero_is_a_count_of_zero() {
+        assert_eq!(read_count(&page(&serde_json::json!([[0]]))), Ok(0));
+        assert_eq!(read_count(&page(&serde_json::json!([[42]]))), Ok(42));
+    }
+
+    #[test]
+    fn a_result_set_without_a_row_is_no_count() {
+        assert_eq!(
+            read_count(&page(&serde_json::json!([]))),
+            Err(CountShape::NoRow)
+        );
+        let absent =
+            crate::bff::ehrs::parse_result_set(r#"{"columns":[]}"#, 0).expect("a JSON result set");
+        assert_eq!(read_count(&absent), Err(CountShape::NoRow));
+        assert_eq!(
+            read_count(&page(&serde_json::json!([[1], [2]]))),
+            Err(CountShape::SeveralRows)
+        );
+    }
+
+    #[test]
+    fn a_row_without_one_cell_is_no_count() {
+        assert_eq!(
+            read_count(&page(&serde_json::json!([[]]))),
+            Err(CountShape::NoCell)
+        );
+        assert_eq!(
+            read_count(&page(&serde_json::json!([[1, 2]]))),
+            Err(CountShape::SeveralCells)
+        );
+    }
+
+    #[test]
+    fn a_cell_that_is_no_whole_number_is_no_count() {
+        for cell in [
+            serde_json::json!("0"),
+            serde_json::json!(null),
+            serde_json::json!(1.5),
+            serde_json::json!(-1),
+            serde_json::json!({ "value": 0 }),
+        ] {
+            assert_eq!(
+                read_count(&page(&serde_json::json!([[cell]]))),
+                Err(CountShape::NotACount),
+                "{cell}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_shape_names_its_reason_in_plain_words() {
+        for shape in [
+            CountShape::NoRow,
+            CountShape::SeveralRows,
+            CountShape::NoCell,
+            CountShape::SeveralCells,
+            CountShape::NotACount,
+        ] {
+            let reason = shape.reason();
+            assert!(reason.contains(' '), "{shape:?}: {reason}");
         }
     }
 }

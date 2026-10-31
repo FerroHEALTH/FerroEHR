@@ -318,6 +318,18 @@ messages! {
         SessionMayNotAdministerSignAdmin = "session-may-not-administer-sign-admin",
         /// A value the server did not state.
         NoValue = "no-value",
+        /// `Unavailable`
+        CountUnavailable = "count-unavailable",
+        /// `The CDR answered the count with no row.`
+        CountNoRow = "count-no-row",
+        /// `The CDR answered the count with more than one row.`
+        CountSeveralRows = "count-several-rows",
+        /// `The CDR answered the count with an empty row.`
+        CountNoCell = "count-no-cell",
+        /// `The CDR answered the count with more than one value.`
+        CountSeveralCells = "count-several-cells",
+        /// `The CDR answered the count with a value that is no whole number.`
+        CountNotACount = "count-not-a-count",
         /// `FerroEHR`
         BrandName = "brand-name",
         /// `Viewer`
