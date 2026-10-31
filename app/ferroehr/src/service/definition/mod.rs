@@ -27,6 +27,8 @@
 //!   template/query shapes). Their route
 //!   wiring is the ITS-REST layer's concern; behaviour rides on the logic
 //!   in the sibling files.
+//! - `version_selector` — the ITS-REST `version` path parameter: its SEMVER
+//!   grammar, checked before any versioned read resolves, and its matching.
 //! - [`types`] — the shared data shapes ([`types::TemplateListFilter`],
 //!   [`types::QueryDescriptor`]) the REST adapter consumes.
 //!
@@ -50,6 +52,7 @@ mod binding_uri;
 pub(super) mod lineage;
 mod opt14_convert;
 mod query;
+mod version_selector;
 mod wire;
 
 pub mod types;

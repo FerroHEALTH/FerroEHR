@@ -79,6 +79,9 @@ quick-xml.workspace = true
 # ADL 1.4 / OPT / stored-query id-pattern matching (SM-2 `list_matching_*`):
 # RE2-class regexes for the `I_DEFINITION_*` regex-pattern list calls.
 regex.workspace = true
+# The ITS-REST `version` path parameter is "a SEMVER version number", judged
+# by the Semantic Versioning 2.0.0 grammar this crate implements.
+semver.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 # One-config-tree loader (`config` module): serialize the effective config to

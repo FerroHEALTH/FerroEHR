@@ -10,7 +10,7 @@ app/ferroehr-rest/src/api/definition/openapi_routes.rs 2089
 app/ferroehr-rest/src/api/demographic/openapi_routes.rs 10077
 app/ferroehr-rest/src/api/demographic/relationship.rs 1254
 app/ferroehr-rest/src/api/ehr/openapi_routes.rs 7196
-app/ferroehr-rest/src/api/query/openapi_routes.rs 2049
+app/ferroehr-rest/src/api/query/openapi_routes.rs 2045
 app/ferroehr-rest/src/extensions/access/authn/mod.rs 2145
 app/ferroehr-rest/src/extensions/access/authz/mod.rs 886
 app/ferroehr-rest/src/extensions/access/pep.rs 1463
@@ -42,9 +42,9 @@ app/ferroehr/src/config/mod.rs 3064
 app/ferroehr/src/db/mod.rs 2178
 app/ferroehr/src/privacy/detect.rs 901
 app/ferroehr/src/service/admin/dump_load.rs 2453
-app/ferroehr/src/service/definition/adl2.rs 1074
+app/ferroehr/src/service/definition/adl2.rs 1043
 app/ferroehr/src/service/definition/opt14_convert.rs 2727
-app/ferroehr/src/service/definition/query.rs 1003
+app/ferroehr/src/service/definition/query.rs 988
 app/ferroehr/src/service/demographic/api.rs 1226
 app/ferroehr/src/service/ehr/composition.rs 1197
 app/ferroehr/src/service/ehr/service.rs 874

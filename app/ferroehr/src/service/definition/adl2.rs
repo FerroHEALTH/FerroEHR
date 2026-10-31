@@ -53,6 +53,7 @@ use crate::service::list::Page;
 use crate::service::status::{ServiceStatus, StatusError};
 
 use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
+use super::version_selector::{check_version_selector, cmp_version, version_prefix_matches};
 use super::{compile_pattern, page_bounds, paginate};
 
 /// The `WebTemplate`-cache key namespace for ADL2/OPT2 templates. The trailing
@@ -509,12 +510,15 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// No stored artefact matches → `NotFound` (`404`).
+    /// - A `version` that is no SEMVER version or prefix → `BadRequest`
+    ///   (`400`), before any lookup.
+    /// - No stored artefact matches → `NotFound` (`404`).
     pub(super) async fn adl2_resolve(
         &self,
         template_id: &str,
         version: Option<&str>,
     ) -> Result<String, ServiceError> {
+        version.map(check_version_selector).transpose()?;
         // Fast path: an exact HRID (no explicit version filter).
         if version.is_none()
             && let Some(hrid) = sqlx::query_scalar::<_, String>(
@@ -1006,23 +1010,6 @@ fn store_kind(kind: &str) -> &str {
     }
 }
 
-/// Whether `full` (a `major.minor.patch` release) matches the SEMVER `prefix`
-/// (`1`, `1.2`, or `1.2.3` — `version.yaml`: "an exact version … or a pattern
-/// as partial prefix"). Each supplied prefix component must equal the
-/// corresponding `full` component.
-fn version_prefix_matches(full: &str, prefix: &str) -> bool {
-    let mut want = prefix.split('.').filter(|p| !p.is_empty() && *p != "*");
-    let mut have = full.split('.');
-    want.all(|w| have.next() == Some(w))
-}
-
-/// Compare two numeric release versions (`major.minor.patch`) component-wise so
-/// the highest matching version can be selected (`Ordering::Equal` on ties).
-fn cmp_version(a: &str, b: &str) -> std::cmp::Ordering {
-    let parse = |v: &str| -> Vec<u64> { v.split('.').map(|p| p.parse().unwrap_or(0)).collect() };
-    parse(a).cmp(&parse(b))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1052,23 +1039,5 @@ mod tests {
         let hrid = "openEHR-EHR-OBSERVATION.lab_result.v2.0.0-rc.1";
         assert_eq!(raw_id_concept(hrid), "lab_result");
         assert_eq!(raw_id_version(hrid), "2.0.0");
-    }
-
-    #[test]
-    fn version_prefix_matches_semver_prefix() {
-        assert!(version_prefix_matches("1.2.3", "1"));
-        assert!(version_prefix_matches("1.2.3", "1.2"));
-        assert!(version_prefix_matches("1.2.3", "1.2.3"));
-        assert!(version_prefix_matches("1.2.3", "*"));
-        assert!(!version_prefix_matches("1.2.3", "2"));
-        assert!(!version_prefix_matches("1.2.3", "1.3"));
-    }
-
-    #[test]
-    fn cmp_version_orders_numerically() {
-        use std::cmp::Ordering;
-        assert_eq!(cmp_version("1.2.10", "1.2.9"), Ordering::Greater);
-        assert_eq!(cmp_version("2.0.0", "1.9.9"), Ordering::Greater);
-        assert_eq!(cmp_version("1.0.0", "1.0.0"), Ordering::Equal);
     }
 }

@@ -209,6 +209,65 @@ async fn version_get_resolves_prefixes_to_highest() {
     }
 }
 
+#[tokio::test]
+async fn version_reads_refuse_a_malformed_version_before_any_lookup() {
+    let (_pg, app) = app().await;
+    let (status, _h, body) = send(
+        &app,
+        put(format!("{BASE}/definition/query/org.test::v/1.2.0")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    // The definition read, the stored-query GET execution and its POST form all
+    // take `parameters/path/version.yaml`.
+    let reads = |version: &str| {
+        let get = |uri: String| {
+            Request::builder()
+                .method("GET")
+                .uri(uri)
+                .header(header::ACCEPT, "application/json")
+                .body(Body::empty())
+                .unwrap()
+        };
+        [
+            get(format!("{BASE}/definition/query/org.test::v/{version}")),
+            get(format!("{BASE}/query/org.test::v/{version}")),
+            Request::builder()
+                .method("POST")
+                .uri(format!("{BASE}/query/org.test::v/{version}"))
+                .header(header::ACCEPT, "application/json")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from("{}"))
+                .unwrap(),
+        ]
+    };
+    // No SEMVER version and no `{major}` / `{major}.{minor}` prefix: a
+    // syntactically invalid parameter (responses/400.yaml, 400_Query.yaml).
+    for bad in ["v1.x", "1.x", "01", "1.02", "1.2.0.0"] {
+        for req in reads(bad) {
+            let uri = req.uri().to_string();
+            let (status, _h, body) = send(&app, req).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+        }
+    }
+    // The exact version and its prefixes resolve; a well-formed version the
+    // store does not hold is the 404 of 404_Query_version.yaml.
+    for (version, expect) in [
+        ("1.2.0", StatusCode::OK),
+        ("1.2", StatusCode::OK),
+        ("1", StatusCode::OK),
+        ("2", StatusCode::NOT_FOUND),
+        ("1.3", StatusCode::NOT_FOUND),
+        ("1.2.1", StatusCode::NOT_FOUND),
+    ] {
+        for req in reads(version) {
+            let uri = req.uri().to_string();
+            let (status, _h, body) = send(&app, req).await;
+            assert_eq!(status, expect, "{uri}: {body}");
+        }
+    }
+}
+
 // ── a non-text/plain declared body type is 415, never a parse-time 400 ──────
 
 #[tokio::test]
