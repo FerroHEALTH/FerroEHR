@@ -52,7 +52,8 @@
 #   CONF_SMART_OUT    where the SMART run writes its views (default:
 #                     the artefact root with `ferroehr-smart` appended).
 #   CONF_PLATFORM_URL the SMART Platform base URL (default: the composed
-#                     deployment, http://localhost:8080).
+#                     deployment's REST root, http://localhost:8080/ferroehr/rest,
+#                     where it serves /.well-known/smart-configuration).
 #   CONF_NETWORK      the network the instrument container joins (default:
 #                     host, as the Veredictum Action runs it).
 #   SKIP_BUILD        if set, compose up without --build (published image).
@@ -78,7 +79,7 @@ IXIT="$PARTY/ixit.json"
 # issuer it declares needs the key in the run's environment.
 SMART_IXIT="$PARTY/ixit-smart.json"
 SMART_KEY="$REPO_ROOT/docs/conformance/party/smart/cnf-smart-test.key.pem"
-PLATFORM_URL="${CONF_PLATFORM_URL:-http://localhost:8080}"
+PLATFORM_URL="${CONF_PLATFORM_URL:-http://localhost:8080/ferroehr/rest}"
 BASE_URL="${CONF_BASE_URL:-http://localhost:8080/ferroehr/rest/openehr/v1}"
 NETWORK="${CONF_NETWORK:-host}"
 

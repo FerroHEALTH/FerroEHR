@@ -240,7 +240,7 @@ jobs:
         if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
         env:
           CONF_BASE_URL: http://127.0.0.1:8080/ferroehr/rest/openehr/v1
-          CONF_PLATFORM_URL: http://127.0.0.1:8080
+          CONF_PLATFORM_URL: http://127.0.0.1:8080/ferroehr/rest
           CONF_SMART_OUT: conformance-results-smart
         run: |
           set -euo pipefail
