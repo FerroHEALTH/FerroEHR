@@ -139,16 +139,26 @@ source, and `CONTAINER_ENGINE` to choose between Docker and Podman.
 The script also takes one stage: `review` runs `veredictum validate
 --statement` alone, `up` composes the deployment and leaves it serving, and
 `down` removes it with its volumes. The Conformance workflow uses these stages
-to run the same deployment in CI. It builds FerroEHR from the commit, runs
-`up`, and drives the catalogue through the Veredictum GitHub Action, pinned by
+to run the same deployment in CI. It compiles no server of its own: it judges
+the server another lane built for the commit, runs `up`, and drives the
+catalogue through the Veredictum GitHub Action, pinned by
 commit SHA, on the same release image by digest, twice: once under the
 `released` profile and once, on fresh volumes, under the `development`
 profile. Both runs include the SMART documents. The released run decides the
 job: it fails on a failed or errored row there. Each run's Markdown summary
 goes on the job summary under its own heading, and each profile's results,
-JUnit and CTRF views are kept as an artifact of their own. It runs on pull requests that
-touch the server, the party set, the conformance compose files or the
-workflow, on `main`, on a release tag and twice a week.
+JUnit and CTRF views are kept as an artifact of their own.
+
+Which server a run judges depends on the event:
+
+| Event | Server under test | Called from |
+|---|---|---|
+| A pull request or the merge queue, when the change touches the server, the party set, the conformance compose files or the workflow | the binary CI compiled for the change, packaged into the runtime image | the CI workflow |
+| A push to `main` | the server and database images the Containers workflow pushed for that commit, by digest (`:main` for an image the push did not rebuild) | the Containers workflow |
+| A release tag | the release pipeline's own images, built cold, by digest | the Release workflow |
+| Twice a week, or by hand | `ghcr.io/ferrohealth/ferroehr:main`, or the image a manual run names | the Conformance workflow |
+
+The README badges come from the runs on `main`: every push and the twice-weekly run.
 
 ### The posture a run covers
 
