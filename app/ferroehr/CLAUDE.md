@@ -42,7 +42,8 @@ module.**
   one `node` table (nested-set interval index, canonical JSON fragments — no
   aliasing, no synthetic fields — of which a row stores only what its columns
   do not hold: `storage::slim` writes it, typed ELEMENT value columns hold the
-  common value shapes, and every reader goes through `ext.node_fragment` or the
+  common value shapes, the header columns `rm_version`, `language` and
+  `encoding` hold a non-root row's archetype header and codes, and every reader goes through `ext.node_fragment` or the
   AQL emitter's `fragment_source`, never bare `node.data`). `version`, `node` and `vo_attestation` are
   partitioned `BY LIST (tier)` with `hot`/`cold` partitions, so archiving is
   `UPDATE … SET tier = 'cold'` and the foreign keys carry the referencing rows
