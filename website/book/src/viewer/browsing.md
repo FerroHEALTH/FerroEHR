@@ -10,7 +10,12 @@ contributions and tags.
 
 The list has a tab per family, **ADL 1.4** and **ADL 2**, each with its count,
 a find field over id, concept and archetype, and a row per template with
-**Build a query** and **Delete…** in its menu.
+**Build a query** and **Delete…** in its menu. The releases of one template
+share a group: the newest release leads with the number of releases, and the
+earlier releases follow under it, each its own row. Releases belong together
+when their ids differ only in the `.v` version at the end; an ADL 1.4
+template whose id has no version joins the templates with the same concept
+and root archetype.
 
 ![Templates](img/templates/templates.png)
 
@@ -26,8 +31,12 @@ the openEHR-ADL engine's own words. With JavaScript off, paste the source.
 
 ### A template
 
-A template's page has four tabs. **Overview** reads its identity and how to
-query it.
+A template's page has four tabs, and a fifth, **Compare**, when it has more
+than one release. **Overview** reads its identity, its releases with the
+number of compositions committed against each, and how to query it. The
+release you are reading is named beside the title; with more than one
+release it opens a list of the others, the newest marked, each a link that
+works with FerroUI's scripts refused too.
 
 ![A template](img/templates/template.png)
 
@@ -43,13 +52,18 @@ answers the arrow keys; without them each node is a link.
 is the composition the CDR generates for it, in the format, type and detail
 you pick.
 
+**Compare** reads two releases, the one you are reading and the one before it
+unless you choose others, and lists each path the later release adds,
+removes or changes, with what it was and what it is.
+
+![Compare two releases](img/templates/template-compare.png)
+
 ### ADL 2 templates
 
-The ADL 2 tab lists every release of every ADL 2 template, one row each. A
-template's page shows its latest release with a picker over the others, and
-the JSON tab beside Source shows the `OperationalTemplateV2` document. An
-older release opens on its Overview, says which release you are reading, and
-links back to the latest.
+An ADL 2 template's page opens on its latest release, and the JSON tab beside
+Source shows the `OperationalTemplateV2` document. An older release opens on
+its Overview, says which release you are reading, and links back to the
+latest.
 
 A template whose archetypes the CDR no longer holds says so on every tab,
 names each missing archetype and links to uploading them. Its Paths, JSON and

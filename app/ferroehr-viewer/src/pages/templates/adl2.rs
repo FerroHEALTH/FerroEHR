@@ -7,12 +7,13 @@ use crate::adl2::{TemplateFamily, family_versions, split_hrid};
 use crate::bff::template_adl2::{
     Compiled, adl2_catalog_from_json, fetch_adl2_compiled, fetch_adl2_example, fetch_adl2_source,
 };
-use crate::bff::templates::{TemplateRow, list_adl2_templates};
+use crate::bff::templates::list_adl2_templates;
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
+use crate::pages::template_releases::{CompareAsk, Releases, load_releases};
 
-use super::{ExampleAsk, TemplateTab, adl2_href, delete_posted};
+use super::{ExampleAsk, TemplateTab, delete_posted};
 
 /// What the tab of an ADL 2 template read.
 #[derive(Debug, Clone)]
@@ -39,16 +40,14 @@ pub(super) struct Adl2Template {
     pub(super) acted: Option<ViewerError>,
     /// The HRID without its release.
     pub(super) stem: String,
-    /// Every release the CDR holds of the template, oldest first.
-    pub(super) releases: Vec<String>,
     /// The latest release.
     pub(super) latest: Option<String>,
     /// The release read.
     pub(super) release: Option<String>,
     /// The HRID read.
     pub(super) hrid: String,
-    /// The template's row in the list.
-    pub(super) row: Option<TemplateRow>,
+    /// Its releases, with what the tab draws of them.
+    pub(super) releases: Releases,
     /// The tab shown.
     pub(super) tab: TemplateTab,
     /// What the tab read.
@@ -59,18 +58,9 @@ pub(super) struct Adl2Template {
     pub(super) download: String,
 }
 
-/// What an ADL 2 template's page loads: the page, or nothing for a post or
-/// a release choice it answered by sending the browser on.
-#[derive(Debug, Clone)]
-pub(super) enum Adl2Page {
-    /// The page.
-    Read(Box<Adl2Template>),
-    /// The browser was sent on.
-    Left,
-}
-
-/// The tabs an ADL 2 template offers: Overview alone for an older release.
-pub(super) fn adl2_tabs(older: bool) -> Vec<TemplateTab> {
+/// The tabs an ADL 2 template offers: Overview alone for an older release,
+/// and Compare when it has `several` releases.
+pub(super) fn adl2_tabs(older: bool, several: bool) -> Vec<TemplateTab> {
     let mut tabs = vec![TemplateTab::Overview];
     if !older {
         tabs.extend([
@@ -80,13 +70,15 @@ pub(super) fn adl2_tabs(older: bool) -> Vec<TemplateTab> {
             TemplateTab::Example,
         ]);
     }
+    if several {
+        tabs.push(TemplateTab::Compare);
+    }
     tabs
 }
 
-/// Answers a delete posted to the ADL 2 template `asked_id`, sends a release
-/// `chosen` in the form on to its page, and reads the release
-/// `asked_release` names, the latest for none, with what its tab `tab`
-/// draws.
+/// Answers a delete posted to the ADL 2 template `asked_id` and reads the
+/// release `asked_release` names, the latest for none, with its releases,
+/// the archetypes it lacks and what its tab `tab` draws.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
@@ -95,13 +87,11 @@ pub(super) async fn load_adl2_template(
     asked_id: String,
     // The release the address names.
     asked_release: Option<String>,
-    // The release chosen in the release form.
-    chosen: Option<String>,
     // The tab the address names.
     tab: TemplateTab,
     // The example options the address names.
     ask: ExampleAsk,
-) -> Result<Adl2Page, ViewerError> {
+) -> Result<Adl2Template, ViewerError> {
     crate::session::require_session()?;
     let acted = delete_posted("/templates?family=adl2").await;
     let (stem, named) = split_hrid(&asked_id);
@@ -111,8 +101,8 @@ pub(super) async fn load_adl2_template(
         .as_ref()
         .map(|rows| rows.iter().map(|row| row.template_id.clone()).collect())
         .unwrap_or_default();
-    let releases = family_versions(&ids, &stem);
-    let latest = releases.last().cloned();
+    let versions = family_versions(&ids, &stem);
+    let (latest, several) = (versions.last().cloned(), versions.len() > 1);
     let release = asked_release
         .clone()
         .or_else(|| named.map(str::to_owned))
@@ -120,23 +110,20 @@ pub(super) async fn load_adl2_template(
     let hrid = release
         .as_ref()
         .map_or_else(|| stem.clone(), |release| format!("{stem}.v{release}"));
-    if let Some(chosen) = chosen {
-        crate::request::redirect(&adl2_href(
-            &stem,
-            (Some(&chosen) != latest.as_ref()).then_some(chosen.as_str()),
-        ));
-        return Ok(Adl2Page::Left);
-    }
-    let row = listed
-        .as_ref()
-        .ok()
-        .and_then(|rows| rows.iter().find(|row| row.template_id == hrid).cloned());
     let older = release.is_some() && release != latest;
-    let tab = if adl2_tabs(older).contains(&tab) {
+    let tab = if adl2_tabs(older, several).contains(&tab) {
         tab
     } else {
         TemplateTab::Overview
     };
+    let releases = load_releases(
+        TemplateFamily::Adl2,
+        listed,
+        &hrid,
+        tab,
+        CompareAsk::asked(),
+    )
+    .await?;
     let version = release.clone();
     // Every tab asks whether the template compiles, so each can name the
     // archetypes it lacks (our own design: no openEHR spec governs the viewer).
@@ -169,20 +156,19 @@ pub(super) async fn load_adl2_template(
                     .map(|text| text.map(|text| crate::bff::pretty_body(&text, format))),
             )
         }
-        TemplateTab::Overview => Adl2Body::Overview,
+        TemplateTab::Overview | TemplateTab::Compare => Adl2Body::Overview,
     };
     let download = crate::download::template_href(TemplateFamily::Adl2, &hrid);
-    Ok(Adl2Page::Read(Box::new(Adl2Template {
+    Ok(Adl2Template {
         acted,
         stem,
-        releases,
         latest,
         release,
         hrid,
-        row,
+        releases,
         tab,
         body,
         missing,
         download,
-    })))
+    })
 }

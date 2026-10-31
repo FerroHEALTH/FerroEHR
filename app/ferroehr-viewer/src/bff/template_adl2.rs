@@ -222,6 +222,34 @@ pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     Ok(crate::builder::catalog::from_web_template(&web_template))
 }
 
+/// Fetch the Web-Template path catalog of a stored ADL2 template, built
+/// viewer-side by [`adl2_catalog_from_json`] from [`fetch_adl2_compiled`].
+/// `404` → `Ok(None)`.
+///
+/// # Errors
+/// [`ViewerError::Invalid`] naming the constituent archetypes the CDR does
+/// not hold; otherwise as [`fetch_adl2_compiled`] and
+/// [`adl2_catalog_from_json`].
+pub async fn fetch_adl2_catalog(
+    // The ADL2 template to build the path catalog from.
+    template_id: String,
+    // The release version to pin the read to, or `None`.
+    version: Option<String>,
+) -> Result<Option<CatalogNode>, ViewerError> {
+    match fetch_adl2_compiled(template_id, version).await? {
+        Compiled::Json(json) => adl2_catalog_from_json(&json).map(Some),
+        Compiled::Absent => Ok(None),
+        Compiled::Missing(ids) => Err(ViewerError::Invalid(format!(
+            "{} {}",
+            tr_with(
+                DefinitionsMsg::TemplateIncomplete,
+                &[("count", crate::pages::common::count(ids.len()))],
+            ),
+            ids.join(", ")
+        ))),
+    }
+}
+
 /// Fetch the CDR-generated example composition for a stored ADL2 template, in
 /// `format`.
 ///

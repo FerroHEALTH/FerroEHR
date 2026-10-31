@@ -239,7 +239,7 @@ pub fn family_versions(template_ids: &[String], stem: &str) -> Vec<String> {
 
 /// The numeric ordering key of a release version, saturating at three
 /// components and treating a non-integer component as `0`.
-fn version_key(version: &str) -> (u32, u32, u32) {
+pub(crate) fn version_key(version: &str) -> (u32, u32, u32) {
     let mut parts = version
         .split('.')
         .map(|part| part.parse::<u32>().unwrap_or(0));
