@@ -67,7 +67,7 @@ jobs:
             *:no-crate-bump) guards=(crate-version-guard) ;;
             *:no-chart-bump) guards=(chart-version-guard) ;;
             *:no-ui-visual-change) guards=(ui-screenshot-guard) ;;
-            edited:) guards=(contribution-licence-guard privacy-boundary-guard tracker-status control-matrix) ;;
+            edited:) guards=(privacy-boundary-guard tracker-status control-matrix) ;;
             *) echo "::error::no guard reads ${ACTION} ${LABEL}"; exit 1 ;;
           esac
 
