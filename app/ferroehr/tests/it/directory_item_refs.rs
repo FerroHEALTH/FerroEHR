@@ -11,7 +11,7 @@
 
 use serde_json::{Value, json};
 
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 
 use crate::fixtures::{composition, uv};
@@ -36,10 +36,10 @@ fn folder_with_item(namespace: &str, id_value: &str) -> Value {
     })
 }
 
-fn assert_unresolvable(err: &SmError, expected_path_fragment: &str) {
+fn assert_unresolvable(err: &StatusError, expected_path_fragment: &str) {
     assert_eq!(
         err.status,
-        CallStatusType::ContentInvalid,
+        ServiceStatus::ContentInvalid,
         "an unresolvable this-system reference is content-invalid (→ 422), got {err:?}"
     );
     assert!(
@@ -243,7 +243,7 @@ async fn contribution_path_gates_this_system_refs() {
         .expect_err("a dangling this-system reference refuses the whole set");
     assert_eq!(
         err.status,
-        CallStatusType::ContentInvalid,
+        ServiceStatus::ContentInvalid,
         "contribution refusal is content-invalid, got {err:?}"
     );
     assert!(err.message.contains("/items[0]"), "got: {}", err.message);

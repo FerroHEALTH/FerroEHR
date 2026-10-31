@@ -29,7 +29,7 @@
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::list::Page;
 use ferroehr::service::version_update::lifecycle_state_coded;
@@ -114,18 +114,26 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
     assert_eq!(att["change_type"]["defining_code"]["code_string"], "666");
 
     // (2) A later 666-only CONTRIBUTION attesting that same version. Its
-    // member states a lifecycle_state like every other member (SM master03
-    // §Version Update Semantics: "must be supplied in all cases").
+    // member states a lifecycle_state like every other member
+    // (`UpdateVersion.yaml` lists it under `required`), its commit_audit is a
+    // plain UPDATE_AUDIT carrying the 666 change type, and the attestation
+    // travels in its `attestations` (ruling 3 of #3595; ITS-REST
+    // schemas/ehr/UpdateVersion.yaml).
     let attest_contribution = json!({
         "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }],
         // The change set's own change type is the CLIENT's account of it (the
         // released commit schema requires it), never a server-derived
@@ -214,10 +222,15 @@ async fn attestation_error_cases() {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }]
     }))
     .await
@@ -225,8 +238,8 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -240,10 +253,15 @@ async fn attestation_error_cases() {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            },
+            }],
             "data": composition("nope")
         }]
     }))
@@ -252,24 +270,31 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ),
         "got {err:?}"
     );
 
-    // Attestation missing reason → 422 (ATTESTATION.reason 1..1).
+    // Attestation missing reason → 400: ruling 4 of #3595, a member
+    // `schemas/common/UpdateAttestation.yaml` lists under `required` is a
+    // schema failure, syntactically invalid content (ATTESTATION.reason 1..1).
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "is_pending": false
-            }
+            }]
         }]
     }))
     .await
@@ -277,24 +302,31 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
         "got {err:?}"
     );
 
-    // Attestation missing is_pending → 422 (ATTESTATION.is_pending 1..1).
+    // Attestation missing is_pending → 400: ruling 4 of #3595, a member
+    // `schemas/common/UpdateAttestation.yaml` lists under `required` is a
+    // schema failure, syntactically invalid content (ATTESTATION.is_pending 1..1).
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" }
-            }
+            }]
         }]
     }))
     .await
@@ -302,8 +334,8 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -311,8 +343,7 @@ async fn attestation_error_cases() {
     );
 
     // Attestation of a non-existent version → precondition violation, not an
-    // existence error: SM I_EHR_CONTRIBUTION.commit_contribution declares only
-    // `ehr_id_does_not_exist` (SM `i_ehr_contribution.adoc`) — a missing
+    // existence error: a missing
     // body-referenced target is invalid committed content (ITS-REST
     // `400_CONTRIBUTION`: the modification does not match a stored object).
     let ghost = "00000000-0000-7000-8000-000000000000::ferroehr.local::1";
@@ -322,10 +353,15 @@ async fn attestation_error_cases() {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }]
     }))
     .await
@@ -333,8 +369,8 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -343,8 +379,8 @@ async fn attestation_error_cases() {
 }
 
 /// A `666|attestation|` member states its `lifecycle_state` like every other
-/// member (#3590). SM `master03-common_package.adoc` §Version Update Semantics:
-/// "The `lifecycle_state` must be supplied in all cases". A member without
+/// member (#3590): ITS-REST `UpdateVersion.yaml` lists `lifecycle_state` under
+/// `required`. A member without
 /// one is the 400; a stated code outside the openEHR `version_lifecycle_state`
 /// group is the 422 every member's out-of-group state gets; the twin stating
 /// `532|complete|` commits the attestation.
@@ -365,10 +401,15 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
             "preceding_version_uid": { "value": ovid.clone() },
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         });
         if let Some(state) = lifecycle_state {
             member["lifecycle_state"] = state;
@@ -388,12 +429,12 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
         .expect_err("an attestation member without lifecycle_state is refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "the refusal is the 400, got {err:?}"
     );
     assert!(
         err.message
-            .starts_with("versions[0]: lifecycle_state is required"),
+            .contains("missing field `lifecycle_state` (at $.versions[0])"),
         "the refusal names the member and the attribute, got {err:?}"
     );
 
@@ -401,7 +442,7 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
         .create_ehr_contribution(ehr_uuid, attest(Some(change_type("999", "nonsense"))))
         .await
         .expect_err("an out-of-group lifecycle_state is refused");
-    assert_eq!(err.status, CallStatusType::ContentInvalid, "got {err:?}");
+    assert_eq!(err.status, ServiceStatus::ContentInvalid, "got {err:?}");
     assert!(
         err.message.contains("versions[0]/lifecycle_state")
             && err.message.contains("version_lifecycle_state"),
@@ -450,10 +491,14 @@ async fn attestation_without_committer_is_refused() {
                     "preceding_version_uid": { "value": ovid.clone() },
                     "lifecycle_state": change_type("532", "complete"),
                     "commit_audit": {
+                        "change_type": change_type("666", "attestation")
+                    },
+                    "attestations": [{
+                        "_type": "UPDATE_ATTESTATION",
                         "change_type": change_type("666", "attestation"),
                         "reason": { "_type": "DV_TEXT", "value": "authorised" },
                         "is_pending": false
-                    }
+                    }]
                 }],
                 "audit": audit.clone()
             }),
@@ -462,12 +507,11 @@ async fn attestation_without_committer_is_refused() {
         .expect_err("a 666 member without a committer is refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "got {err:?}"
     );
     assert!(
-        err.message
-            .starts_with("versions[0]: commit_audit.committer is required"),
+        err.message.contains("(at $.versions[0].commit_audit)"),
         "got {err:?}"
     );
 
@@ -497,12 +541,11 @@ async fn attestation_without_committer_is_refused() {
         .expect_err("an accompanying attestation without a committer is refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "got {err:?}"
     );
     assert!(
-        err.message
-            .starts_with("versions[0]: UPDATE_ATTESTATION.committer is required"),
+        err.message.contains("(at $.versions[0].attestations[0])"),
         "got {err:?}"
     );
 }
@@ -544,14 +587,10 @@ async fn non_canonical_committer_is_refused_with_400() {
             .expect_err("a non-canonical CONTRIBUTION committer is refused");
         assert_eq!(
             err.status,
-            CallStatusType::PreconditionViolation,
+            ServiceStatus::PreconditionViolation,
             "{bad}: got {err:?}"
         );
-        assert!(
-            err.message
-                .starts_with("CONTRIBUTION.audit.committer is not a canonical PARTY_PROXY"),
-            "{bad}: got {err:?}"
-        );
+        assert!(err.message.contains("(at $.audit)"), "{bad}: got {err:?}");
 
         let err = svc
             .create_ehr_contribution(ehr_uuid, body(committer("author"), bad.clone()))
@@ -559,12 +598,11 @@ async fn non_canonical_committer_is_refused_with_400() {
             .expect_err("a non-canonical member committer is refused");
         assert_eq!(
             err.status,
-            CallStatusType::PreconditionViolation,
+            ServiceStatus::PreconditionViolation,
             "{bad}: got {err:?}"
         );
         assert!(
-            err.message
-                .starts_with("versions[0]: commit_audit.committer is not a canonical PARTY_PROXY"),
+            err.message.contains("(at $.versions[0].commit_audit)"),
             "{bad}: got {err:?}"
         );
     }
@@ -579,7 +617,7 @@ async fn non_canonical_committer_is_refused_with_400() {
         )
         .await
         .expect_err("an identity-less member committer is refused");
-    assert_eq!(err.status, CallStatusType::ContentInvalid, "got {err:?}");
+    assert_eq!(err.status, ServiceStatus::ContentInvalid, "got {err:?}");
 }
 
 /// A `666|attestation|` member whose `UPDATE_ATTESTATION` payload fails its
@@ -617,10 +655,15 @@ async fn attestation_member_refusal_names_its_index() {
                         "lifecycle_state": change_type("532", "complete"),
                         "commit_audit": {
                             "change_type": change_type("666", "attestation"),
+                            "committer": committer("senior reviewer")
+                        },
+                        "attestations": [{
+                            "_type": "UPDATE_ATTESTATION",
+                            "change_type": change_type("666", "attestation"),
                             "committer": committer("senior reviewer"),
                             "reason": change_type("999", "nonsense"),
                             "is_pending": false
-                        }
+                        }]
                     }
                 ],
                 "audit": {
@@ -631,7 +674,7 @@ async fn attestation_member_refusal_names_its_index() {
         )
         .await
         .expect_err("an attestation member with an out-of-group reason is refused");
-    assert_eq!(err.status, CallStatusType::ContentInvalid, "got {err:?}");
+    assert_eq!(err.status, ServiceStatus::ContentInvalid, "got {err:?}");
     assert!(
         err.message
             .contains("versions[1]/ATTESTATION.reason.defining_code"),
@@ -657,38 +700,36 @@ fn ehr_status(queryable: bool) -> Value {
     })
 }
 
-/// SM `I_EHR_CONTRIBUTION.list_contributions` / `contribution_count` +
-/// `I_EHR_SERVICE.get_ehr` → `EHR_SUMMARY`, against a real PG 18. Native-API
-/// calls only (no ITS-REST route); see `i_ehr_contribution.adoc` +
-/// `ehr_summary.adoc`.
+/// `list_contributions` / `contribution_count` + `get_ehr` → `EHR_SUMMARY`,
+/// against a real PG 18. Native-API calls only (no ITS-REST route).
 #[tokio::test]
 async fn contribution_listing_count_and_ehr_summary() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // Unknown EHR → NotFound (SM `ehr_id_does_not_exist`, carried granularly
+    // Unknown EHR → NotFound (`ehr_id_does_not_exist`, carried granularly
     // through the ServiceError round-trip) for every native call.
     let ghost = "00000000-0000-7000-8000-0000000000ff";
     assert!(matches!(
         svc.list_contributions(ghost.parse().expect("uuid"), None, Page::all())
             .await,
-        Err(SmError {
-            status: CallStatusType::EhrIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::EhrIdDoesNotExist,
             ..
         })
     ));
     assert!(matches!(
         svc.contribution_count(ghost.parse().expect("uuid"), None)
             .await,
-        Err(SmError {
-            status: CallStatusType::EhrIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::EhrIdDoesNotExist,
             ..
         })
     ));
     assert!(matches!(
         svc.get_ehr(ghost.parse().expect("uuid")).await,
-        Err(SmError {
-            status: CallStatusType::EhrIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::EhrIdDoesNotExist,
             ..
         })
     ));
@@ -773,8 +814,8 @@ async fn contribution_listing_count_and_ehr_summary() {
     assert!(matches!(
         svc.contribution_count(ehr_uuid, Some((Some("not-a-time".to_owned()), None)))
             .await,
-        Err(SmError {
-            status: CallStatusType::PreconditionViolation,
+        Err(StatusError {
+            status: ServiceStatus::PreconditionViolation,
             ..
         })
     ));
@@ -805,14 +846,14 @@ async fn ehr_contribution_list_page_extension() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // Unknown EHR → NotFound (404, SM `ehr_id_does_not_exist`), like the
+    // Unknown EHR → NotFound (404, `ehr_id_does_not_exist`), like the
     // sibling EHR reads.
     let ghost = "00000000-0000-7000-8000-0000000000ee";
     assert!(matches!(
         svc.ehr_contribution_list_page(ghost.parse().expect("uuid"), 0, 20)
             .await,
-        Err(SmError {
-            status: CallStatusType::EhrIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::EhrIdDoesNotExist,
             ..
         })
     ));
@@ -894,12 +935,13 @@ async fn ehr_contribution_list_page_extension() {
     );
 }
 
-/// The SM `Terminology_code` spelling of `UPDATE_VERSION.lifecycle_state`
-/// (`UML/classes/update_version.adoc`: `{terminology_id, code_string}`), which
-/// the raw-body CONTRIBUTION lane accepts beside the `DV_CODED_TEXT` the
-/// released ITS-REST `UpdateVersion.yaml` declares.
+/// `UPDATE_VERSION.lifecycle_state` in its released wire shape, a
+/// `DV_CODED_TEXT` (ITS-REST `schemas/ehr/UpdateVersion.yaml`). The `CODE_PHRASE`
+/// shape `{terminology_id, code_string}` this helper used to send is refused
+/// since ruling 1 of #3595; [`code_phrase_lifecycle_spellings_are_refused`]
+/// pins that.
 fn lifecycle(code: &str) -> Value {
-    json!({ "terminology_id": "openehr", "code_string": code })
+    crate::fixtures::lifecycle(code)
 }
 
 /// Read the `lifecycle_state.defining_code.code_string` of a served
@@ -986,8 +1028,8 @@ async fn contribution_honors_the_five_lifecycle_states() {
     assert!(
         matches!(
             illegal,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ) && illegal.message.contains("state machine"),
@@ -1047,8 +1089,8 @@ async fn contribution_honors_the_five_lifecycle_states() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ) && err.message.contains("version_lifecycle_state"),
@@ -1096,9 +1138,9 @@ async fn contribution_honors_the_five_lifecycle_states() {
 /// RM common `master06-change_control_package.adoc` §Committal and Audits: the
 /// CONTRIBUTION audit's `system_id`/`committer`/`time_committed` "should be
 /// copied" into each version's `commit_audit`, and `time_committed` "should
-/// therefore be computed on the server". SM `UML/classes/update_version.adoc`
-/// gives every member its own mandatory audit, whose `committer` is 1..1
-/// (`update_audit.adoc`), so a stated member committer is kept. ITS-REST
+/// therefore be computed on the server". ITS-REST `UpdateVersion.yaml` gives
+/// every member its own mandatory audit, whose `committer` is required
+/// (`UpdateAudit.yaml`), so a stated member committer is kept. ITS-REST
 /// `schemas/common/UpdateAudit.yaml`: an omitted `system_id` is the server's,
 /// which is also what the CONTRIBUTION audit carries when it states none.
 #[tokio::test]
@@ -1235,9 +1277,9 @@ async fn member_commit_audit_keeps_its_committer_and_shares_the_commit_instant()
 /// A member `commit_audit` without `committer` is refused with the 400 (#3550),
 /// never filled from the CONTRIBUTION audit: ITS-REST
 /// `schemas/common/UpdateAudit.yaml` `required: [change_type, committer]` types
-/// every `versions[i].commit_audit` (`schemas/ehr/UpdateVersion.yaml`), SM
-/// `openehr_platform/master03-common_package.adoc` §Version Update Semantics
-/// names only `time_committed` and `system_id` as server-generated, so the
+/// every `versions[i].commit_audit` (`schemas/ehr/UpdateVersion.yaml`), and
+/// `UpdateAudit.yaml` leaves only `time_committed` and `system_id` to the
+/// server, so the
 /// body is the "syntactically invalid … content" of
 /// `responses/400_CONTRIBUTION.yaml`. A `null` committer is the same absence;
 /// the twin stating one commits.
@@ -1282,12 +1324,11 @@ async fn member_commit_audit_without_committer_is_refused() {
             .expect_err("a member commit_audit without a committer is refused");
         assert_eq!(
             err.status,
-            CallStatusType::PreconditionViolation,
+            ServiceStatus::PreconditionViolation,
             "{commit_audit}: the refusal is the 400, got {err:?}"
         );
         assert!(
-            err.message
-                .starts_with("versions[1]: commit_audit.committer is required"),
+            err.message.contains("(at $.versions[1].commit_audit)"),
             "{commit_audit}: the refusal names the member, got {err:?}"
         );
     }
@@ -1371,7 +1412,7 @@ async fn contribution_supplied_uid() {
         "uid": { "_type": "HIER_OBJECT_ID", "value": wanted.to_string() },
         "versions": [{
             "data": composition("obs"),
-            "lifecycle_state": { "code_string": "532", "terminology_id": { "value": "openehr" } },
+            "lifecycle_state": crate::fixtures::lifecycle("532"),
             "commit_audit": { "change_type": { "value": "creation",
                 "defining_code": { "code_string": "249", "terminology_id": { "value": "openehr" } } },
                 "committer": { "_type": "PARTY_IDENTIFIED", "name": "T" } }
@@ -1463,10 +1504,14 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
         .create_composition(ehr_uuid, uv(&composition("obs2"), "249", None))
         .await
         .expect_err("non-modifiable EHR blocks content writes");
-    let ServiceError::Conflict(sm) = &blocked else {
+    let ServiceError::Conflict(err) = &blocked else {
         panic!("is_modifiable = false → 409 conflict, got {blocked:?}");
     };
-    assert!(sm.message.contains("not modifiable"), "got {}", sm.message);
+    assert!(
+        err.message.contains("not modifiable"),
+        "got {}",
+        err.message
+    );
 }
 
 /// One valid version per lineage at any instant (RM common master06 §The
@@ -1646,8 +1691,8 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ) && err.message.contains("Logical Deletion"),
@@ -1662,12 +1707,12 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
         .update_composition(ehr_uuid, vo_uuid, direct)
         .await
         .expect_err("a data-carrying 523 header is refused");
-    let err = SmError::from(err);
+    let err = StatusError::from(err);
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ) && err.message.contains("Logical Deletion"),
@@ -1753,8 +1798,8 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ) && err.message.contains("Logical Deletion")
@@ -1770,8 +1815,8 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ) && err.message.contains("version_lifecycle_state"),
@@ -1849,8 +1894,8 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ) && err.message.contains("already deleted"),
@@ -1978,8 +2023,8 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -1998,8 +2043,8 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ),
@@ -2015,8 +2060,8 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::ContentInvalid,
+            StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             }
         ),
@@ -2074,8 +2119,8 @@ async fn incomplete_relaxes_the_folder_kind_too() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -2083,10 +2128,8 @@ async fn incomplete_relaxes_the_folder_kind_too() {
     );
 }
 
-/// `UPDATE_VERSION.lifecycle_state` is REQUIRED on the CONTRIBUTION wire — SM
-/// `master03-common_package.adoc` §Version Update Semantics ("The
-/// `lifecycle_state` must be supplied in all cases") + the released
-/// `UpdateVersion` schema's `required` list. A member that omits it is refused
+/// `UPDATE_VERSION.lifecycle_state` is REQUIRED on the CONTRIBUTION wire — the
+/// released `UpdateVersion` schema's `required` list. A member that omits it is refused
 /// as the shape failure it is; the twin that states it commits.
 #[tokio::test]
 async fn contribution_member_without_lifecycle_state_is_refused() {
@@ -2114,8 +2157,8 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ) && err.message.contains("lifecycle_state"),
@@ -2192,8 +2235,8 @@ async fn merge_provenance_is_refused_on_the_commit_wire() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ) && err.message.contains("other_input_version_uids"),
@@ -2291,8 +2334,8 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
         assert!(
             matches!(
                 err,
-                SmError {
-                    status: CallStatusType::PreconditionViolation,
+                StatusError {
+                    status: ServiceStatus::PreconditionViolation,
                     ..
                 }
             ) && err.message.contains(key),
@@ -2438,11 +2481,12 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         .expect_err("a CONTRIBUTION audit without a change type must be refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "the refusal is the 400 row, got {err:?}"
     );
     assert!(
-        err.message.contains("CONTRIBUTION.audit.change_type"),
+        err.message
+            .contains("missing field `change_type` (at $.audit)"),
         "the refusal names the missing attribute, got {err:?}"
     );
 
@@ -2463,11 +2507,12 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         .expect_err("a CONTRIBUTION audit without a committer must be refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "the refusal is the 400 row, got {err:?}"
     );
     assert!(
-        err.message.contains("CONTRIBUTION.audit.committer"),
+        err.message
+            .contains("missing field `committer` (at $.audit)"),
         "the refusal names the missing attribute, got {err:?}"
     );
 
@@ -2479,11 +2524,11 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         .expect_err("a CONTRIBUTION with no audit at all must be refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "got {err:?}"
     );
     assert!(
-        err.message.starts_with("CONTRIBUTION.audit is required"),
+        err.message.contains("missing field `audit`"),
         "the refusal names the missing audit, got {err:?}"
     );
 
@@ -2545,11 +2590,10 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         )
         .await
         .expect_err("a non-decoding member is refused");
-    let sm = err;
     assert!(
-        sm.message.contains("versions[1]"),
+        err.message.contains("versions[1]"),
         "the parse refusal names the member: {}",
-        sm.message
+        err.message
     );
 
     // (b) the second member's change_type contradicts its shape — 422 naming
@@ -2557,7 +2601,7 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
     let bad_change = json!({
         "data": composition("attributed-change"),
         "lifecycle_state": good["lifecycle_state"],
-        "preceding_version_uid": format!("{}::ferroehr.local::1", uuid::Uuid::nil()),
+        "preceding_version_uid": { "value": format!("{}::ferroehr.local::1", uuid::Uuid::nil()) },
         "commit_audit": { "change_type": change_type("249", "creation"), "committer": committer("conformance tester") }
     });
     let err = svc
@@ -2567,11 +2611,10 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         )
         .await
         .expect_err("creation with a preceding version is refused");
-    let sm = err;
     assert!(
-        sm.message.contains("versions[1]"),
+        err.message.contains("versions[1]"),
         "the change-type refusal names the member: {}",
-        sm.message
+        err.message
     );
 
     // (c) the second member names a template the store does not hold — the
@@ -2596,11 +2639,10 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         )
         .await
         .expect_err("an unknown template is refused");
-    let sm = err;
     assert!(
-        sm.message.contains("versions[1]") && sm.message.contains("no_such_template.v1"),
+        err.message.contains("versions[1]") && err.message.contains("no_such_template.v1"),
         "the template refusal names the member and the template: {}",
-        sm.message
+        err.message
     );
 }
 
@@ -2869,7 +2911,7 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         .expect_err("content into a deactivated EHR is refused");
     assert_eq!(
         refused.status,
-        CallStatusType::Conflict,
+        ServiceStatus::Conflict,
         "the state conflict comes first, got {refused:?}"
     );
     assert!(
@@ -2897,7 +2939,263 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         .expect_err("the defective body is refused");
     assert_ne!(
         refused.status,
-        CallStatusType::Conflict,
+        ServiceStatus::Conflict,
         "a reactivating set is judged on its content, got {refused:?}"
     );
+}
+
+/// One creation member under a CONTRIBUTION audit, each part replaceable, in
+/// the released wire shapes (ITS-REST `schemas/ehr/NewContribution.yaml`).
+fn typed_body(lifecycle_state: Value, commit_audit: Value, audit: Value) -> Value {
+    let mut body = json!({
+        "versions": [{ "data": composition("typed envelope") }]
+    });
+    body["versions"][0]["lifecycle_state"] = lifecycle_state;
+    body["versions"][0]["commit_audit"] = commit_audit;
+    body["audit"] = audit;
+    body
+}
+
+/// A `249|creation|` audit with its `_type` replaced (or dropped).
+fn creation_audit(tag: Option<&str>) -> Value {
+    let mut audit = json!({
+        "change_type": change_type("249", "creation"),
+        "committer": committer("author")
+    });
+    if let Some(tag) = tag {
+        audit["_type"] = json!(tag);
+    }
+    audit
+}
+
+/// Assert the body is refused with the 400 of syntactically invalid content.
+async fn assert_shape_refused(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId, body: Value) {
+    let err = svc
+        .create_ehr_contribution(ehr, body.clone())
+        .await
+        .expect_err("a shape the released schema does not define is refused");
+    assert_eq!(
+        err.status,
+        ServiceStatus::PreconditionViolation,
+        "{body}: the refusal is the 400, got {err:?}"
+    );
+}
+
+/// Ruling 1 of #3595: `UPDATE_VERSION.lifecycle_state` is a `DV_CODED_TEXT`
+/// (ITS-REST `schemas/ehr/UpdateVersion.yaml` → `data_types/DvCodedText.yaml`,
+/// `required: [defining_code]`). The `CODE_PHRASE` shape
+/// `{terminology_id, code_string}`, a plain
+/// string and a bare `{value}` are each the 400; the `DV_CODED_TEXT` commits.
+#[tokio::test]
+async fn code_phrase_lifecycle_spellings_are_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    for refused in [
+        json!({ "terminology_id": "openehr", "code_string": "532" }),
+        json!({ "terminology_id": { "value": "openehr" }, "code_string": "532" }),
+        json!("532"),
+        json!("complete"),
+        json!({ "value": "complete" }),
+    ] {
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(refused, creation_audit(None), creation_audit(None)),
+        )
+        .await;
+    }
+    let created = svc
+        .create_ehr_contribution(
+            ehr,
+            typed_body(lifecycle("532"), creation_audit(None), creation_audit(None)),
+        )
+        .await
+        .expect("a DV_CODED_TEXT lifecycle_state commits");
+    let ovid = first_version_uid(&created.body);
+    assert_eq!(
+        lifecycle_code_of(&svc, &ehr_id, vo_of(&ovid), &ovid).await,
+        "532"
+    );
+}
+
+/// Ruling 1 of #3595: an audit `description` is a `DV_TEXT` or
+/// `DV_CODED_TEXT` object (`schemas/common/UpdateAudit.yaml` →
+/// `data_types/UDvText.yaml`). A plain string is the 400 on the member
+/// `commit_audit`, on the CONTRIBUTION `audit` and on an attestation; both
+/// object spellings commit and come back whole.
+#[tokio::test]
+async fn a_plain_string_description_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let mut described = creation_audit(None);
+    described["description"] = json!("free text");
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), described.clone(), creation_audit(None)),
+    )
+    .await;
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), creation_audit(None), described),
+    )
+    .await;
+    let mut with_attestation =
+        typed_body(lifecycle("532"), creation_audit(None), creation_audit(None));
+    let mut described_attestation = attestation("witnessed", false);
+    described_attestation["description"] = json!("countersigned");
+    with_attestation["versions"][0]["attestations"] = json!([described_attestation]);
+    assert_shape_refused(&svc, ehr, with_attestation).await;
+
+    let mut text = creation_audit(None);
+    text["description"] = json!({ "_type": "DV_TEXT", "value": "free text" });
+    let mut coded = creation_audit(None);
+    coded["description"] = json!({ "_type": "DV_CODED_TEXT", "value": "corrected",
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+            "code_string": "at0007" } });
+    let created = svc
+        .create_ehr_contribution(ehr, typed_body(lifecycle("532"), coded, text))
+        .await
+        .expect("both DV_TEXT spellings commit");
+    assert_eq!(created.body["audit"]["description"]["value"], "free text");
+    let ovid = first_version_uid(&created.body);
+    let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+    assert_eq!(
+        ov["commit_audit"]["description"]["defining_code"]["code_string"],
+        "at0007"
+    );
+}
+
+/// Rulings 2 and 4 of #3595: `UpdateAudit.yaml` `required: [change_type,
+/// committer]` and `NewContribution.yaml` `required: [versions, audit]`. A
+/// member `commit_audit` without `change_type` is the 400 (no change type is
+/// inferred from `preceding_version_uid` any more), as are a CONTRIBUTION
+/// `audit` without one and an absent `audit`; `contribution_create.yaml`
+/// declares no 422.
+#[tokio::test]
+async fn a_missing_change_type_or_audit_is_the_400() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr: ferroehr::ids::EhrId = create_ehr(&svc).await.parse().expect("ehr uuid");
+    let without = json!({ "committer": committer("author") });
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), without.clone(), creation_audit(None)),
+    )
+    .await;
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), creation_audit(None), without),
+    )
+    .await;
+    let mut no_audit = typed_body(lifecycle("532"), creation_audit(None), Value::Null);
+    no_audit
+        .as_object_mut()
+        .expect("built as an object")
+        .remove("audit");
+    assert_shape_refused(&svc, ehr, no_audit).await;
+}
+
+/// Ruling 3 of #3595: a commit audit is sent as `UPDATE_AUDIT`,
+/// `AUDIT_DETAILS` or with no `_type` (`schemas/common/UpdateAudit.yaml`), and
+/// each commits; `ATTESTATION` and `UPDATE_ATTESTATION` are the 400, on a
+/// member `commit_audit` and on the CONTRIBUTION `audit`, an attestation
+/// travelling in `versions[].attestations[]` instead.
+#[tokio::test]
+async fn an_attestation_audit_is_refused_and_the_three_audit_spellings_commit() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr: ferroehr::ids::EhrId = create_ehr(&svc).await.parse().expect("ehr uuid");
+    for tag in ["ATTESTATION", "UPDATE_ATTESTATION"] {
+        let mut audit = creation_audit(Some(tag));
+        audit["reason"] = json!({ "_type": "DV_TEXT", "value": "witnessed" });
+        audit["is_pending"] = json!(false);
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(lifecycle("532"), audit.clone(), creation_audit(None)),
+        )
+        .await;
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(lifecycle("532"), creation_audit(None), audit),
+        )
+        .await;
+    }
+    for tag in [Some("UPDATE_AUDIT"), Some("AUDIT_DETAILS"), None] {
+        svc.create_ehr_contribution(
+            ehr,
+            typed_body(lifecycle("532"), creation_audit(tag), creation_audit(tag)),
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{tag:?} is an accepted audit spelling: {e:?}"));
+    }
+}
+
+/// A `666|attestation|` member adds an `ATTESTATION` to an existing version
+/// (RM common master06 §Contributions) and carries it in its `attestations`
+/// (ruling 3 of #3595), so a member with none is the 400. An attestation's
+/// own `system_id` is kept, and one without takes the member audit's (RM
+/// common master06 §Committal and Audits).
+#[tokio::test]
+async fn an_attestation_member_carries_its_attestations() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ovid = svc
+        .create_composition(ehr, uv(&composition("attested"), "249", None))
+        .await
+        .expect("composition_create")
+        .version_uid();
+    let attest = |attestations: Value| {
+        json!({
+            "versions": [{
+                "preceding_version_uid": { "value": ovid.clone() },
+                "lifecycle_state": lifecycle("532"),
+                "commit_audit": {
+                    "change_type": change_type("666", "attestation"),
+                    "system_id": "member.system",
+                    "committer": committer("senior reviewer")
+                },
+                "attestations": attestations
+            }],
+            "audit": {
+                "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            }
+        })
+    };
+    let err = svc
+        .create_ehr_contribution(ehr, attest(json!([])))
+        .await
+        .expect_err("a 666 member without attestations is refused");
+    assert_eq!(
+        err.status,
+        ServiceStatus::PreconditionViolation,
+        "got {err:?}"
+    );
+    assert!(err.message.starts_with("versions[0]:"), "got {err:?}");
+
+    let mut stated = attestation("authorised", false);
+    stated["system_id"] = json!("attesting.system");
+    svc.create_ehr_contribution(ehr, attest(json!([stated, attestation("witnessed", true)])))
+        .await
+        .expect("a 666 member with two attestations commits");
+    let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+    let atts = ov["attestations"].as_array().expect("attestations");
+    let systems: Vec<&str> = atts
+        .iter()
+        .filter_map(|a| a["system_id"].as_str())
+        .collect();
+    assert_eq!(systems, vec!["attesting.system", "member.system"]);
 }

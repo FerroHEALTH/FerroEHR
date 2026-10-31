@@ -44,7 +44,7 @@ use crate::service::FerroEhrService;
 use crate::service::error::{internal_fault, internal_fault_caused};
 use crate::service::linkage::LinkageError;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -96,7 +96,7 @@ impl FerroEhrService {
         job: &JoinRequest<'_>,
     ) -> Result<QueryOutcome, Failure> {
         if !job.request.ehr_ids.is_empty() {
-            return Err(Failure::analysis(SmError::precondition(
+            return Err(Failure::analysis(StatusError::precondition(
                 "a query rooted at a demographic class names its EHRs through the party, so an \
                  `ehr_id` scope cannot apply to it; send the query without one"
                     .to_owned(),
@@ -369,9 +369,9 @@ impl FerroEhrService {
     /// naming how many parties the served rows came from.
     ///
     /// # Errors
-    /// [`SmError`] when the record is refused under `fail_mode = "closed"`;
+    /// [`StatusError`] when the record is refused under `fail_mode = "closed"`;
     /// the caller withholds its result.
-    fn record_party_query(&self, parties: u64) -> Result<(), SmError> {
+    fn record_party_query(&self, parties: u64) -> Result<(), StatusError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -426,7 +426,7 @@ fn refuse_above(ceiling: Option<i64>, rows: usize, what: &str) -> Result<(), Fai
         return Ok(());
     };
     if i64::try_from(rows).unwrap_or(i64::MAX) > ceiling {
-        return Err(Failure::analysis(SmError::precondition(format!(
+        return Err(Failure::analysis(StatusError::precondition(format!(
             "the {what} half of a query that joins a demographic root to its EHR matches more \
              than {ceiling} rows (`query.max_result_rows`); narrow it with a WHERE condition"
         ))));
@@ -574,7 +574,7 @@ fn empty_result() -> QueryResult {
 
 /// A linkage failure as the query surface reports it: a refused access record
 /// keeps its own status, everything else is the store failing.
-fn linkage_failure(error: LinkageError) -> SmError {
+fn linkage_failure(error: LinkageError) -> StatusError {
     match error {
         LinkageError::Unrecorded(e) => e,
         other => internal_fault_caused("read the party-to-EHR map", &other),

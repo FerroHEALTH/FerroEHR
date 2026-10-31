@@ -8,11 +8,11 @@
 //! Description.md` §Status) and mounts exactly two operations, both physical EHR
 //! delete: `admin_ehr_delete` (`operations/admin_ehr_delete.yaml` — a physical
 //! cascade of every owned resource, `204` sync / `202` async / `404` for an
-//! unknown id, matching SM `I_ADMIN_SERVICE.physical_ehr_delete`) and
+//! unknown id) and
 //! `admin_ehr_delete_all` (`operations/admin_ehr_delete_all.yaml` — all EHRs or
 //! the `ehr_id` subset, same status set). Beside them sit four of our own
 //! extension routes that no ITS-REST operation governs: template delete,
-//! physical party delete (SM `I_ADMIN_SERVICE.physical_party_delete`),
+//! physical party delete,
 //! stored-query-version delete, and the redacted config read.
 //!
 //! The group is config-gated (`AppConfig::admin.enabled`, default false): while
@@ -63,7 +63,7 @@ async fn run(
                 AdminEhrDeleteParams::from_request,
                 AdminEhrDeleteParams::PARAMS,
             )?;
-            // SM physical_ehr_delete → 204 No Content; unknown EHR → 404
+            // Physical EHR delete → 204 No Content; unknown EHR → 404
             // (the service maps `ehr_id_does_not_exist` to NotFound).
             state.backend().admin_ehr_delete(p.ehr_id).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
@@ -77,8 +77,8 @@ async fn run(
             state.backend().admin_template_delete(template_id).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
-        // SM `I_ADMIN_SERVICE.physical_party_delete`: the party with its
-        // relationships; a malformed id is 400, an unknown one 404.
+        // The party with its relationships; a malformed id is 400, an unknown
+        // one 404.
         "admin_party_delete" => {
             let party_id = path_segment(&parts, "party_id")?;
             state.backend().physical_party_delete(party_id).await?;

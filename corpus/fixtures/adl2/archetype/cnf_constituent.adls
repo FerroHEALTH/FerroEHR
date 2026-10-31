@@ -1,0 +1,47 @@
+archetype (adl_version=2.0.6; rm_release=1.0.2; generated)
+    openEHR-EHR-OBSERVATION.cnf_constituent.v1.0.0
+
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <"unmanaged">
+    original_author = <
+        ["name"] = <"openEHR CNF">
+    >
+
+definition
+    OBSERVATION[id1] matches {    -- Constituent observation
+        data matches {
+            HISTORY[id2] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[id3] occurrences matches {0..*} matches {
+                        data matches {
+                            ITEM_TREE[id4] matches {
+                                items cardinality matches {1..1; unordered} matches {
+                                    ELEMENT[id5] occurrences matches {1..1} matches {
+                                        value matches {
+                                            DV_COUNT[id6]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Constituent observation">; description = <"The archetype a template is built on, deleted by the missing-constituent journey">>
+            ["id2"] = <text = <"History">; description = <"Event history">>
+            ["id3"] = <text = <"Any event">; description = <"A point event">>
+            ["id4"] = <text = <"Tree">; description = <"Item tree">>
+            ["id5"] = <text = <"Count item">; description = <"A count element">>
+            ["id6"] = <text = <"Count value">; description = <"The count value">>
+        >
+    >

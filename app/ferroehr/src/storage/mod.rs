@@ -24,7 +24,7 @@
 //!   to the BMM-generated RM model plus the demographic delta (the party roots
 //!   and the containers nested in them).
 //! - [`error::StorageError`] plus the crate-internal `error::classify_sqlx` —
-//!   the error surface and the SQLSTATE to SM-status bridge.
+//!   the error surface and the SQLSTATE to status bridge.
 //! - [`promoted::PROMOTED_LEAVES`] — the `(rm_type, path)` to node-column
 //!   mapping the write codec and the AQL read lowering both consult, so a hot
 //!   leaf reads an indexed column.

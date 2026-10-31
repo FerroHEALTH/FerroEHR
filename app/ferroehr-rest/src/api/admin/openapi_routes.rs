@@ -207,12 +207,6 @@ pub(crate) async fn admin_config(
 /// the `202` branch is never produced (hence not declared; see the module
 /// docs).
 ///
-/// This operation realizes NO SM interface operation:
-/// `I_ADMIN_SERVICE.physical_ehr_delete` takes one `UUID[1]`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`) and the
-/// archive operations archive rather than delete — a released wire behaviour
-/// with no service-model anchor to name it by.
-///
 /// The released generic `404` (`responses/404.yaml`: "`404 Not Found` is
 /// returned when, based on the request parameters, the server did not find a
 /// current representation of a target resource, or is not willing to disclose
@@ -337,9 +331,7 @@ pub(crate) async fn admin_ehr_delete_all(
 /// the `202` branch is never produced (hence not declared; see the module
 /// docs).
 ///
-/// Realizes SM `I_ADMIN_SERVICE.physical_ehr_delete`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc` —
-/// precondition `has_ehr`, error `ehr_id_does_not_exist`). Note that the
+/// An unknown EHR is `ehr_id_does_not_exist`. Note that the
 /// released operation does NOT carry the bulk route's development/testing NOTE
 /// and does NOT enumerate `405`: this single-EHR delete is not declared
 /// disable-in-production by the released text, so the group's config gate
@@ -393,11 +385,7 @@ pub(crate) async fn admin_ehr_delete_all(
                                       (`responses/404_unknown_ehr_id.yaml`), \
                                       distinct from the generic \
                                       `responses/404.yaml` the bulk route \
-                                      binds. It is the REST reading of the SM \
-                                      precondition `has_ehr` failing \
-                                      (`ehr_id_does_not_exist`, which \
-                                      `i_admin_service.adoc` defines only \
-                                      abstractly, with no HTTP binding).",
+                                      binds.",
          body = serde_json::Value,
          example = json!({
              "error": "Not Found",
@@ -449,12 +437,9 @@ pub(crate) async fn admin_ehr_delete(
 /// `/definition/template/adl1.4*` path either. This route is excluded from any
 /// conformance-profile claim.
 ///
-/// SM relation: it is the wire ANALOGUE of `I_DEFINITION_ADL14.delete_opt`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_definition_adl14.adoc`), not a
-/// realization of it — that SM operation has no released wire at all — and it
-/// is keyed by the OPT's internal id whereas this route is
-/// addressed by the wire `template_id` (matched case-insensitively, overview
-/// §"Composite Identifiers and Case").
+/// The route is addressed by the wire `template_id` (matched
+/// case-insensitively, overview §"Composite Identifiers and Case"), while the
+/// native `delete_opt` is keyed by the OPT's internal id.
 ///
 /// The delete is guarded: it refuses with `409` while any committed version
 /// still references the template, so a physical delete can never orphan
@@ -563,10 +548,8 @@ pub(crate) async fn admin_template_delete(
 /// logical (they add a deleted version). This route is excluded from any
 /// conformance-profile claim.
 ///
-/// It realizes SM `I_ADMIN_SERVICE.physical_party_delete`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`): "Physical
-/// delete of specified Party, along with related Party relationships", error
-/// `party_id_does_not_exist`. Every version of the party and of each
+/// It physically deletes the party along with its relationships; an unknown
+/// party is `party_id_does_not_exist`. Every version of the party and of each
 /// relationship naming it as `source` or `target` is removed, with their
 /// contributions and audits. The access records naming the party stay, as for
 /// the EHR physical delete.
@@ -579,9 +562,8 @@ pub(crate) async fn admin_template_delete(
     params(
         ("party_id" = String, Path,
          description = "The versioned-object id of the demographic `PARTY` \
-                        (`AGENT`, `GROUP`, `ORGANISATION`, `PERSON` or `ROLE`): \
-                        the SM `a_party_id: UUID`. A value that is not a UUID \
-                        is `400`.",
+                        (`AGENT`, `GROUP`, `ORGANISATION`, `PERSON` or `ROLE`), \
+                        a UUID. A value that is not a UUID is `400`.",
          example = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
     ),
     responses(
@@ -593,8 +575,7 @@ pub(crate) async fn admin_template_delete(
                                       nothing to tag, and §\"Deprecated \
                                       headers\" deprecates `Location` on \
                                       `DELETE`."),
-        (status = 400, description = "`party_id` is not a UUID (SM \
-                                      `a_party_id: UUID`).",
+        (status = 400, description = "`party_id` is not a UUID.",
          body = serde_json::Value,
          example = json!({ "error": "Bad Request", "message": "invalid party id: not-a-uuid" })),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
@@ -605,8 +586,7 @@ pub(crate) async fn admin_template_delete(
                                       Our own authorization design.",
          body = serde_json::Value,
          example = json!({ "error": "Forbidden", "message": "operation requires the 'ADMIN' role" })),
-        (status = 404, description = "No demographic `PARTY` with that id (SM \
-                                      `party_id_does_not_exist`); a \
+        (status = 404, description = "No demographic `PARTY` with that id; a \
                                       `PARTY_RELATIONSHIP` id is this failure \
                                       too. The status follows the overview \
                                       table's `404` row \
@@ -667,14 +647,8 @@ pub(crate) async fn admin_party_delete(
 /// `DELETE` on `/definition/query/…` either. This route is excluded from any
 /// conformance-profile claim.
 ///
-/// It does **NOT** realize SM `I_DEFINITION_QUERY.delete_query`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_definition_query.adoc`): that
-/// operation is keyed by NAME ALONE — `Pre_has_query: has_query(a_query_name)`,
-/// `Post_query_deleted: not has_query (a_query_name)` — so it removes every
-/// version of the query, whereas this route removes exactly one
-/// `(name, version)` row and leaves the query's other versions in place. The
-/// SM operation therefore stays unrealized on this server;
-/// naming it here would be a false claim.
+/// This route removes exactly one `(name, version)` row and leaves the query's
+/// other versions in place.
 #[utoipa::path(
     delete, path = "/admin/query/{qualified_query_name}/{version}", tag = "ADMIN",
     params(
@@ -686,8 +660,8 @@ pub(crate) async fn admin_party_delete(
          example = "org.openehr::compositions"),
         ("version" = String, Path,
          description = "The exact stored SEMVER version to delete. Only this \
-                        one row is removed; the query's other versions survive \
-                        (which is why this is not SM `delete_query`).",
+                        one row is removed; the query's other versions \
+                        survive.",
          example = "1.0.2")
     ),
     responses(

@@ -25,9 +25,8 @@
 //! The shape follows the OWASP **Authorization Testing Automation** Cheat
 //! Sheet's data-driven matrix
 //! (<https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html>).
-//! No openEHR spec governs authorization — the SM places it out of band
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master02-overview.adoc`
-//! §General Assumptions) — so every expectation here is our own design, except
+//! No openEHR spec governs authorization, so every expectation here is our own
+//! design, except
 //! the 401-vs-403 split (ITS-REST overview `Requests_and_responses.md`).
 
 #![expect(
@@ -167,7 +166,7 @@ const MANAGEMENT: &[(&str, &str)] = &[
 
 /// Clinical reads (relative to their namespace, [`crate::common::full`]). `POST /query/**` is a read despite its verb
 /// (AQL execution selects, it never commits), and so is `POST /message/export`
-/// — SM `I_EHR_EXTRACT_SERVICE.export_ehr_extracts`, whose selector is an
+/// — `export_ehr_extracts`, whose selector is an
 /// `EXTRACT_SPEC` body.
 const CLINICAL_READ: &[(&str, &str)] = &[
     ("GET", "/ehr"),
@@ -406,8 +405,8 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // The other two destructive shared-definition routes. They do not sit under
     // /admin/, and they used to take Clinical from that fallback — so the
     // privilege depended on the path prefix rather than on the blast radius
-    // (issue #2071). SM master04 puts removal of archetypes AND templates in one
-    // clause and one pair of interfaces, so the three must match.
+    // (issue #2071). Removing an archetype and removing a template have the
+    // same blast radius, so the three must match.
     ("DELETE", "/definition/archetype/adl1.4/{archetype_id}"),
     ("DELETE", "/definition/artefact/adl2/{artefact_id}"),
     ("DELETE", "/admin/query/{qualified_query_name}/{version}"),

@@ -28,7 +28,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::{item_tag_refusal, normalized_target_path, tag_target_tail};
 use crate::service::error::ServiceError;
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::storage::tag_repo;
 use crate::versioning::object_version_id::{VersionIdError, hier_object_id};
 
@@ -89,8 +89,8 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         let stored = crate::versioning::read::object_kind(&self.demographic_pool, vo_id).await?;
         if stored != Some(crate::service::demographic::support::kind_of(kind)) {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("tag target {} {vo_id}", kind.rm_type()),
             ));
         }
@@ -106,8 +106,8 @@ impl FerroEhrService {
             )
             .await?
             {
-                return Err(ServiceError::sm(
-                    CallStatusType::ObjectVersionDoesNotExist,
+                return Err(ServiceError::new(
+                    ServiceStatus::ObjectVersionDoesNotExist,
                     format!("tag target version {}", version.value()),
                 ));
             }
@@ -218,8 +218,8 @@ impl FerroEhrService {
         )
         .await?
         {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("item tag {key:?}"),
             ));
         }

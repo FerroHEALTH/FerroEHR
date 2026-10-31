@@ -1,6 +1,6 @@
 ---
 name: party-related-name-is-not-subject-identification
-description: APP-bin overreach class — a named PARTY_RELATED is only the subject when relationship codes openehr::0 `self`; SM content_valid == RM validity is the oracle for "may we refuse this at all"
+description: APP-bin overreach class — a named PARTY_RELATED is only the subject when relationship codes openehr::0 `self`; RM validity is the oracle for "may we refuse this at all"
 metadata:
   type: project
 ---
@@ -14,13 +14,11 @@ relationship `openehr::10` (mother).
 **Why:** the released chain obliges acceptance, and it is the general oracle
 for any "may the app refuse this content?" question:
 
-- SM `docs/UML/classes/i_ehr_composition.adoc` §create_composition —
-  `Pre_content_valid: valid_content(a_comp)`, errors exactly
-  {ehr_id_does_not_exist, composition_already_exists, definition_unknown,
-  content_invalid}, `Post_has_composition`.
-- SM `docs/UML/classes/i_validity_checker.adoc` §content_valid — "Return
-  `True` if the content structure is a valid instance of the relevant RM
-  classes." So content-invalidity IS RM-invalidity, nothing else.
+- ITS-REST `Requests_and_responses.md` §HTTP status codes gives `422` to
+  content that is well-formed but semantically invalid, and the semantics a
+  CDR checks are the RM's: content-invalidity IS RM-invalidity, nothing
+  else. (The Service Model says the same of `content_valid`, but it is
+  reference text, never an authority: owner ruling 2026-10-27.)
 - RM `docs/UML/classes/org.openehr.rm.common.party_related.adoc` declares ONE
   invariant, `Relationship_valid` (the code is in the openEHR
   `subject_relationship` group). Nothing forbids `name`.

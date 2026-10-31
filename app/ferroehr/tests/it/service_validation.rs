@@ -37,12 +37,12 @@ use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 
-/// The SM `UPDATE_VERSION` commit envelope for a bare-RM write.
+/// The `UPDATE_VERSION` commit envelope for a bare-RM write.
 fn uv<T: serde::de::DeserializeOwned>(
     data: &Value,
     change_code: &str,
@@ -342,10 +342,7 @@ fn incomplete_creation_contribution(data: &Value) -> Value {
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "data": data,
             "commit_audit": { "change_type": coded_text_value("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } },
-            "lifecycle_state": {
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
-                "code_string": "553"
-            }
+            "lifecycle_state": crate::fixtures::lifecycle("553")
         }]
     })
 }
@@ -413,8 +410,8 @@ async fn incomplete_lifecycle_relaxes_lower_bounds_but_not_wrongness() {
     assert!(
         matches!(
             wrong,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -495,7 +492,7 @@ async fn warm_template_is_served_from_cache_without_a_store_read() {
     );
 }
 
-/// Deleting a template through the SM `delete_opt` path invalidates its cached
+/// Deleting a template through the native `delete_opt` path invalidates its cached
 /// `WebTemplate`. Proof: warm the cache via the example endpoint (no committed
 /// composition, so no `version` FK reference blocks the delete), delete the
 /// OPT, then commit against it. With invalidation the resolver misses, re-reads
@@ -530,7 +527,7 @@ async fn deleting_a_template_invalidates_its_web_template_cache() {
         "example is a COMPOSITION"
     );
 
-    // Delete the OPT through the real SM path (opt_delete), which invalidates
+    // Delete the OPT through the real native path (opt_delete), which invalidates
     // the cache entry.
     let opt_uuid = svc
         .list_opts_adl14(ferroehr::service::list::Page::all())
@@ -725,8 +722,8 @@ async fn direct_route_commit_against_an_adl2_template_stamps_and_guards() {
     assert!(
         matches!(
             &in_use,
-            SmError {
-                status: CallStatusType::Conflict,
+            StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             }
         ) && in_use

@@ -125,8 +125,8 @@ impl FerroEhrService {
         // Resolve existence first so an unknown id is a 404 (not the 422 the
         // WebTemplate cache maps for a commit-time unknown template).
         if !self.template_stored(template_id).await? {
-            return Err(ServiceError::sm(
-                crate::service::status::CallStatusType::TemplateDoesNotExist,
+            return Err(ServiceError::new(
+                crate::service::status::ServiceStatus::TemplateDoesNotExist,
                 format!("template {template_id}"),
             ));
         }

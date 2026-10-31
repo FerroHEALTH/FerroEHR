@@ -34,15 +34,17 @@ const TREND_AQL: &str = "SELECT v/commit_audit/time_committed/value FROM EHR e C
 /// Rows pulled for the commit-activity trend before day-bucketing.
 const TREND_FETCH: u32 = 500;
 
-/// Run a `SELECT COUNT(*)`-shaped AQL and read its single numeric cell (0 when
-/// the result set is not the expected 1×1 numeric shape).
-async fn run_count_aql(
+/// Run a `SELECT COUNT(*)`-shaped AQL with `parameters` and read its single
+/// numeric cell, `None` when the result set is not the expected 1×1 numeric
+/// shape.
+pub(crate) async fn run_count_aql(
     state: &crate::state::AppState,
     session: &crate::session::ViewerSession,
     aql: &str,
-) -> Result<i64, ViewerError> {
+    parameters: serde_json::Value,
+) -> Result<Option<i64>, ViewerError> {
     let url = state.cdr.rest_v1("query/aql");
-    let body = serde_json::json!({ "q": aql, "query_parameters": {} }).to_string();
+    let body = serde_json::json!({ "q": aql, "query_parameters": parameters }).to_string();
     let response = state
         .cdr
         .post(
@@ -60,8 +62,7 @@ async fn run_count_aql(
         .rows
         .first()
         .and_then(|row| row.first())
-        .and_then(serde_json::Value::as_i64)
-        .unwrap_or(0))
+        .and_then(serde_json::Value::as_i64))
 }
 
 /// The dashboard's three headline counts: total EHRs, total compositions, and
@@ -79,8 +80,13 @@ async fn run_count_aql(
 pub async fn dashboard_counts() -> Result<(i64, i64, u32), ViewerError> {
     let session = crate::session::require_session()?;
     let state = crate::scope::state()?;
-    let ehrs = run_count_aql(&state, &session, EHR_COUNT_AQL).await?;
-    let compositions = run_count_aql(&state, &session, COMPOSITION_COUNT_AQL).await?;
+    let none = || serde_json::json!({});
+    let ehrs = run_count_aql(&state, &session, EHR_COUNT_AQL, none())
+        .await?
+        .unwrap_or(0);
+    let compositions = run_count_aql(&state, &session, COMPOSITION_COUNT_AQL, none())
+        .await?
+        .unwrap_or(0);
     let templates =
         u32::try_from(crate::bff::templates::list_templates().await?.len()).unwrap_or(u32::MAX);
     Ok((ehrs, compositions, templates))

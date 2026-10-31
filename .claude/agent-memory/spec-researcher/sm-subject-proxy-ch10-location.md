@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
+
 # SM Platform ch.10 "Subject Proxy Service (SPS)" — navigation
 
 Largest platform chapter. Shares the master02/master03 conventions catalogued

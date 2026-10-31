@@ -1,18 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The SM **System Log** component at the wire — the IHE ATNA audit
-//! middleware and the operation → audit-event classification.
+//! The **system log** at the wire — the IHE ATNA audit middleware and the
+//! operation → audit-event classification.
 //!
-//! Spec-governed, not an extension. The openEHR platform model defines this
-//! component by one normative line — "System Log | IHE ATNA-compliant system
-//! log" (SM `master02-overview.adoc` §openEHR Platform Model) — with an empty
-//! interface stub (`i_system_log.adoc` has no calls); logging is a
-//! STANDARD-profile capability ("STANDARD … adds AQL querying and logging to
-//! the CORE", CNF `profiles/master03-profiles.adoc` §Default Profiles). The
-//! audit-record shape is therefore governed by the external standards openEHR
-//! points at: IHE **ATNA**, whose payload is the DICOM Audit Message
-//! (DICOM PS3.15 §A.5).
+//! Logging is a STANDARD-profile capability ("STANDARD … adds AQL querying and
+//! logging to the CORE", CNF `profiles/master03-profiles.adoc` §Default
+//! Profiles). openEHR fixes no audit-record shape, so the shape follows IHE
+//! **ATNA**, whose payload is the DICOM Audit Message (DICOM PS3.15 §A.5).
 //!
 //! This module is the capability's request-path half, over the
 //! `ferroehr::service::SystemLog` seam (`ferroehr::service::system_log`),

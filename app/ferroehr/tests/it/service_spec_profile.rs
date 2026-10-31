@@ -34,7 +34,7 @@ use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use crate::fixtures::uv;
 
@@ -161,8 +161,8 @@ async fn a_development_only_composition_stamps_false_and_is_refused_under_stable
     let refused = stable_service(&db.pool())
         .get_composition_latest(ehr_id, vo_id)
         .await;
-    let Err(SmError {
-        status: CallStatusType::Conflict,
+    let Err(StatusError {
+        status: ServiceStatus::Conflict,
         message,
         ..
     }) = refused
@@ -202,8 +202,8 @@ async fn an_unstamped_row_is_assessed_on_the_fly() {
     assert!(
         matches!(
             refused,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -245,8 +245,8 @@ async fn archive_and_restore_preserve_the_stamp() {
     assert!(
         matches!(
             refused,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -282,8 +282,7 @@ fn archive_dir() -> String {
 /// under `stable` there, and still served under `development`.
 ///
 /// Dump/load is the one path that reconstructs a version in a database that
-/// never saw the commit (SM `I_ADMIN_DUMP_LOAD.export_ehrs`/`load_ehrs`,
-/// `docs/specs/openehr/SM/docs/UML/classes/i_admin_dump_load.adoc`), so it is
+/// never saw the commit (`export_ehrs`/`load_ehrs`), so it is
 /// where an inherited `stable_compatible = true` would be a claim nothing made:
 /// the loaded rows must never read as compatible with a generation set that
 /// cannot express them.
@@ -338,8 +337,8 @@ async fn dump_and_load_into_a_fresh_repository_preserve_the_stamp() {
     let refused = stable_service(&target_db.pool())
         .get_composition_latest(ehr_id, vo_id)
         .await;
-    let Err(SmError {
-        status: CallStatusType::Conflict,
+    let Err(StatusError {
+        status: ServiceStatus::Conflict,
         message,
         ..
     }) = refused
@@ -397,8 +396,8 @@ async fn dump_and_load_keep_a_released_surface_body_readable_under_stable() {
 
 // ── AQL: whole-object projections take the same gate; leaf projections do not ─
 
-/// Scope a query to one EHR (`i_query_service.adoc` `ehr_ids: List<UUID>`; the
-/// single-EHR REST scope is the one-element case).
+/// Scope a query to one EHR (the `ehr_ids` list; the single-EHR REST scope is
+/// the one-element case).
 fn ehr_scope(ehr_id: EhrId) -> AqlQueryRequest {
     AqlQueryRequest {
         ehr_ids: vec![ehr_id.to_string()],
@@ -423,8 +422,8 @@ async fn query_conflict(svc: &FerroEhrService, aql: &str, ehr_id: EhrId) -> Stri
     let refused = svc
         .execute_ad_hoc_query(aql.to_owned(), ehr_scope(ehr_id))
         .await;
-    let Err(SmError {
-        status: CallStatusType::Conflict,
+    let Err(StatusError {
+        status: ServiceStatus::Conflict,
         message,
         ..
     }) = refused

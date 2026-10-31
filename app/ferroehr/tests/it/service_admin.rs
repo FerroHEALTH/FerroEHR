@@ -4,9 +4,8 @@
 //! End-to-end service tests for the ADMIN API (physical EHR delete) against a
 //! real `PostgreSQL` 18 (shared testkit harness).
 //!
-//! Spec: SM `I_ADMIN_SERVICE.physical_ehr_delete`
-//! (`docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`) — precondition
-//! `has_ehr`, error `ehr_id_does_not_exist`. The cascade contract is the CNF
+//! Spec: ITS-REST `operations/admin_ehr_delete.yaml`; an unknown EHR is
+//! `ehr_id_does_not_exist`. The cascade contract is the CNF
 //! Robot prior art
 //! (`docs/specs/openehr/CNF/tests/platform/robot/I_ADMIN_SERVICE/001-EHR.robot`):
 //! after delete, every backing table returns to its pre-EHR baseline count. We
@@ -41,7 +40,7 @@ use crate::fixtures::uv;
 use crate::typed_body::typed;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::platform_service::PlatformService;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 /// Row counts scoped to one EHR across every table a physical delete must clear.
 /// `audit` has no `ehr_id`, so it is counted by the audit ids the EHR's
@@ -120,7 +119,7 @@ async fn admin_delete_cascades_and_leaves_other_ehr_untouched() {
     assert!(before1.ehr == 1 && before1.version >= 4 && before1.node >= 4);
     assert!(before1.contribution >= 3 && before1.item_tag == 1 && before1.audit >= 3);
 
-    // Physical delete via the ADMIN seam (SM physical_ehr_delete).
+    // Physical delete via the ADMIN seam.
     svc.admin_ehr_delete(ehr1.to_string())
         .await
         .expect("admin delete");
@@ -208,8 +207,8 @@ async fn admin_delete_unknown_ehr_is_not_found() {
     assert!(
         matches!(
             res,
-            Err(SmError {
-                status: CallStatusType::EhrIdDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::EhrIdDoesNotExist,
                 ..
             })
         ),
@@ -221,8 +220,8 @@ async fn admin_delete_unknown_ehr_is_not_found() {
     assert!(
         matches!(
             bad,
-            Err(SmError {
-                status: CallStatusType::PreconditionViolation,
+            Err(StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             })
         ),
@@ -265,8 +264,8 @@ async fn admin_delete_all_deletes_present_and_skips_missing() {
     assert!(
         matches!(
             res,
-            Err(SmError {
-                status: CallStatusType::PreconditionViolation,
+            Err(StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             })
         ),
@@ -335,10 +334,9 @@ async fn template_rows(pool: &PgPool, template_id: &str) -> i64 {
 
 /// Whether the call failed with the expected granular does-not-exist status
 /// (a wire `404`; the `ServiceError` round-trip preserves the status the
-/// construction site named — `master03-common_package.adoc` §Representing
-/// Call Status).
-fn is_not_found(res: &Result<(), SmError>, status: CallStatusType) -> bool {
-    matches!(res, Err(SmError { status: got, .. }) if *got == status)
+/// construction site named).
+fn is_not_found(res: &Result<(), StatusError>, status: ServiceStatus) -> bool {
+    matches!(res, Err(StatusError { status: got, .. }) if *got == status)
 }
 
 #[tokio::test]
@@ -351,7 +349,7 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
         .admin_template_delete("no-such-template.v9".to_owned())
         .await;
     assert!(
-        is_not_found(&res, CallStatusType::TemplateDoesNotExist),
+        is_not_found(&res, ServiceStatus::TemplateDoesNotExist),
         "unknown template → template_does_not_exist, got {res:?}"
     );
 
@@ -370,8 +368,8 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
     );
 
     // Re-upload, then reference it from a committed version: the delete must be
-    // refused (409; the generic SM `conflict` — a referenced-template conflict
-    // is not a COMPOSITION conflict and the SM names nothing more precise,
+    // refused (409; the generic `conflict` — a referenced-template conflict
+    // is not a COMPOSITION conflict and has no more precise status,
     // #2151) so a physical delete never
     // orphans clinical data. Pointing an existing version row at the template
     // exercises the `version.template_id` FK-reference guard directly (lighter
@@ -396,8 +394,8 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
     assert!(
         matches!(
             res,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -430,7 +428,7 @@ async fn admin_query_delete_exact_version_and_unknown() {
         .admin_query_delete(name.to_owned(), "9.9.9".to_owned())
         .await;
     assert!(
-        is_not_found(&res, CallStatusType::ArtefactDoesNotExist),
+        is_not_found(&res, ServiceStatus::ArtefactDoesNotExist),
         "unknown version → artefact_does_not_exist, got {res:?}"
     );
 
@@ -443,12 +441,12 @@ async fn admin_query_delete_exact_version_and_unknown() {
         .admin_query_delete(name.to_owned(), "1.0.0".to_owned())
         .await;
     assert!(
-        is_not_found(&again, CallStatusType::ArtefactDoesNotExist),
+        is_not_found(&again, ServiceStatus::ArtefactDoesNotExist),
         "already-deleted version → artefact_does_not_exist, got {again:?}"
     );
 }
 
-// ─── SM-4: statistics / physical_party_delete / archive ───────────────────────
+// ─── statistics / physical_party_delete / archive ────────────────────────────
 
 /// A minimal valid demographic PERSON (PARTY invariant `Identities_valid`),
 /// with no structured identity detail beyond the mandatory legal name.
@@ -601,8 +599,8 @@ async fn admin_statistics_per_service_and_time_range() {
     assert!(
         matches!(
             bad,
-            Err(SmError {
-                status: CallStatusType::PreconditionViolation,
+            Err(StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             })
         ),
@@ -767,7 +765,7 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     .expect("orphan audits before");
     assert_eq!(orphan_audits_before, 0);
 
-    // Delete p1 physically (SM physical_party_delete).
+    // Delete p1 physically.
     svc.physical_party_delete(p1.clone())
         .await
         .expect("physical party delete");
@@ -805,8 +803,8 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     assert!(
         matches!(
             unknown,
-            Err(SmError {
-                status: CallStatusType::PartyIdDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::PartyIdDoesNotExist,
                 ..
             })
         ),
@@ -817,8 +815,8 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     let bad = svc.physical_party_delete("not-a-uuid".to_owned()).await;
     assert!(matches!(
         bad,
-        Err(SmError {
-            status: CallStatusType::PreconditionViolation,
+        Err(StatusError {
+            status: ServiceStatus::PreconditionViolation,
             ..
         })
     ));
@@ -908,8 +906,8 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     assert!(
         matches!(
             res,
-            Err(SmError {
-                status: CallStatusType::EhrIdDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::EhrIdDoesNotExist,
                 ..
             })
         ),
@@ -926,8 +924,8 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     let bad_party = svc.archive_parties(vec![Uuid::now_v7().to_string()]).await;
     assert!(matches!(
         bad_party,
-        Err(SmError {
-            status: CallStatusType::PartyIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::PartyIdDoesNotExist,
             ..
         })
     ));
@@ -953,13 +951,12 @@ async fn tier_rows(pool: &PgPool, relation: &str, ehr: ferroehr::ids::EhrId) -> 
         .expect("tier row count")
 }
 
-/// SM `I_ADMIN_ARCHIVE` "Move … to archival storage" is a PHYSICAL move: the
+/// Archiving is a PHYSICAL move to archival storage: the
 /// primary tier shrinks to zero rows for the archived EHR, the cold tier gains
 /// exactly those rows, reads keep serving them, and the move reverses.
 ///
-/// No openEHR spec governs storage tiering — our own design/extension; what the
-/// SM does fix is the word "Move" and the archived objects' continued
-/// existence, which is what the read assertions below pin.
+/// No openEHR spec governs storage tiering — our own design/extension; the
+/// archived objects keep existing, which is what the read assertions below pin.
 #[tokio::test]
 async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     let (_db, pool, svc) = repository().await;
@@ -1002,7 +999,7 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
         .expect("the unarchived EHR still reads");
 
     // 3. The archived EHR still serves the same content, now from the cold
-    //    tier (SM: archiving MOVES storage, it does not remove the object).
+    //    tier (archiving MOVES storage, it does not remove the object).
     let status_after = svc
         .get_ehr_status_at_time(ehr, None)
         .await

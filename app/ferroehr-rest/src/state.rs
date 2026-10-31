@@ -11,8 +11,8 @@
 //! dispatchers call into, the optional authorization handle, and the
 //! [`Observability`] bundle (management surface + telemetry handles + health
 //! registry) — which defaults to fully off, so a server without observability
-//! is the clean default. ATNA auditing lives in the platform service `S` (the
-//! SM `SystemLog` component), reached through `AppState::backend`.
+//! is the clean default. ATNA auditing lives in the platform service `S` (its
+//! `SystemLog` component), reached through `AppState::backend`.
 //!
 //! The REST layer holds **no caches of its own** — in particular, `WebTemplate`
 //! resolution is a single service-owned concern reached through

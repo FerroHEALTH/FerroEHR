@@ -28,7 +28,7 @@ use openehr_rm::prelude::{ItemTag, PartyProxy};
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::versioning::change::Committed;
 
 use crate::fixtures::{change_type, composition, folder, uid, uv};
@@ -109,8 +109,8 @@ async fn ehr_composition_lifecycle_end_to_end() {
     assert!(
         matches!(
             stale,
-            Err(SmError {
-                status: CallStatusType::VersionMismatch,
+            Err(StatusError {
+                status: ServiceStatus::VersionMismatch,
                 ..
             })
         ),
@@ -388,7 +388,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     // (Compositions, Folders); "the EHR_STATUS object itself is always
     // modifiable" (§"EHR Creation"), which is how the EHR is reactivated.
     // Wire code for a blocked content write is underdetermined by ITS-REST →
-    // we return 409 Conflict (the generic SM `conflict` — no SM status names an is_modifiable block, #2151).
+    // we return 409 Conflict (the generic `conflict` — no status names an is_modifiable block, #2151).
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
@@ -429,16 +429,16 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
         .await
         .expect("deactivating EHR_STATUS is allowed");
 
-    // A blocked EHR-content write is 409 Conflict (the generic SM `conflict`
+    // A blocked EHR-content write is 409 Conflict (the generic `conflict`
     // → `ServiceError::Conflict` on the composition write path; the directory
-    // write path still surfaces the raw `SmError`).
+    // write path still surfaces the raw `StatusError`).
     let comp_blocked =
         |r: &Result<Committed, ServiceError>| matches!(r, Err(ServiceError::Conflict(_)));
-    let dir_blocked = |r: &Result<ferroehr::service::response::ResourceMeta, SmError>| {
+    let dir_blocked = |r: &Result<ferroehr::service::response::ResourceMeta, StatusError>| {
         matches!(
             r,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         )
@@ -488,7 +488,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("Via contribution"),
                     "commit_audit": {
                         "change_type": change_type("249", "creation"),
@@ -501,8 +501,8 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     assert!(
         matches!(
             content_contrib,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -773,7 +773,7 @@ async fn contribution_commits_a_composition_atomically() {
             "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" }
         },
         "versions": [{
-            "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+            "lifecycle_state": crate::fixtures::lifecycle("532"),
             "data": composition("Via contribution"),
             "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" } }
         }]
@@ -821,7 +821,7 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v1"),
                     "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
@@ -844,9 +844,9 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
                     "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }
                 },
                 "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v2 corrected"),
-                    "preceding_version_uid": ovid_v1,
+                    "preceding_version_uid": { "value": ovid_v1 },
                     "commit_audit": { "change_type": change_type("250", "amendment"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
@@ -885,9 +885,9 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v3"),
-                    "preceding_version_uid": ovid_v2,
+                    "preceding_version_uid": { "value": ovid_v2 },
                     "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
@@ -896,8 +896,8 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     assert!(
         matches!(
             bad_creation,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -913,9 +913,9 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": composition("v3"),
-                    "preceding_version_uid": ovid_v2,
+                    "preceding_version_uid": { "value": ovid_v2 },
                     "commit_audit": { "change_type": change_type("999", "bogus"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
@@ -924,8 +924,8 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     assert!(
         matches!(
             bad_code,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -973,7 +973,7 @@ async fn contribution_rejects_an_invalid_composition() {
             "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" }
         },
         "versions": [{
-            "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+            "lifecycle_state": crate::fixtures::lifecycle("532"),
             "data": composition_with_bad_category(),
             "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr. Contribution" } }
         }]
@@ -982,8 +982,8 @@ async fn contribution_rejects_an_invalid_composition() {
     assert!(
         matches!(
             res,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -1611,8 +1611,8 @@ async fn item_tag_put_replaces_the_whole_collection() {
         assert!(
             matches!(
                 res,
-                Err(SmError {
-                    status: CallStatusType::ContentInvalid,
+                Err(StatusError {
+                    status: ServiceStatus::ContentInvalid,
                     ..
                 })
             ),
@@ -1707,8 +1707,8 @@ async fn duplicate_subject_ehr_creation_conflicts() {
     assert!(
         matches!(
             dup,
-            Err(SmError {
-                status: CallStatusType::EhrForSubjectAlreadyExists,
+            Err(StatusError {
+                status: ServiceStatus::EhrForSubjectAlreadyExists,
                 ..
             })
         ),
@@ -1762,8 +1762,8 @@ async fn version_get_at_time_returns_the_original_version() {
     assert!(
         matches!(
             too_early,
-            Err(SmError {
-                status: CallStatusType::ObjectVersionDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::ObjectVersionDoesNotExist,
                 ..
             })
         ),
@@ -1776,8 +1776,8 @@ async fn version_get_at_time_returns_the_original_version() {
     assert!(
         matches!(
             bad_time,
-            Err(SmError {
-                status: CallStatusType::PreconditionViolation,
+            Err(StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             })
         ),
@@ -1856,7 +1856,7 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": secondary,
                     "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
@@ -1904,9 +1904,9 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": secondary_v2,
-                    "preceding_version_uid": f2_ovid_v1,
+                    "preceding_version_uid": { "value": f2_ovid_v1 },
                     "commit_audit": { "change_type": change_type("251", "modification"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
             }),
@@ -1973,7 +1973,7 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": folder("primary"),
                     "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
@@ -1993,7 +1993,7 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
             ehr_uuid,
             json!({
                 "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                    "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                    "lifecycle_state": crate::fixtures::lifecycle("532"),
                     "data": folder("secondary"),
                     "commit_audit": { "change_type": change_type("249", "creation"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
                 }]
@@ -2018,8 +2018,8 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
         ehr_uuid,
         json!({
             "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
-                "lifecycle_state": { "terminology_id": "openehr", "code_string": "523" },
-                "preceding_version_uid": f2_ovid,
+                "lifecycle_state": crate::fixtures::lifecycle("523"),
+                "preceding_version_uid": { "value": f2_ovid },
                 "commit_audit": { "change_type": change_type("523", "deleted"), "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }
             }]
         }),
@@ -2042,7 +2042,7 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
 /// T1 — single-hierarchy behaviour is unchanged: `POST /directory` manages the
 /// single directory slot (`folders[1]`, RM ehr §EHR Class `Directory_in_folders`)
 /// and 409s on a second create. Additional hierarchies are added via CONTRIBUTION
-/// only (ITS-REST/SM bind only the directory).
+/// only (ITS-REST binds only the directory).
 #[tokio::test]
 async fn directory_endpoint_rejects_a_second_directory_create() {
     let db = testkit::db().await.expect("testkit database");
@@ -2059,8 +2059,8 @@ async fn directory_endpoint_rejects_a_second_directory_create() {
     assert!(
         matches!(
             second,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -2131,8 +2131,8 @@ async fn ehr_uri_resolves_local_structures_and_item_paths() {
     assert!(err.to_string().contains("foreign system"), "got {err}");
 }
 
-/// The discrete `I_EHR_STATUS` mutators (`i_ehr_status.adoc`
-/// §`set/clear_ehr_queryable`, §`set/clear_ehr_modifiable`, §`update_other_details)`:
+/// The discrete `EHR_STATUS` mutators (`set/clear_ehr_queryable`,
+/// `set/clear_ehr_modifiable`, `update_other_details`):
 /// each commits a new implicit-CONTRIBUTION `EHR_STATUS` version and its
 /// post-condition is observable via `get_ehr_status`. Critically,
 /// `clear_ehr_modifiable` must stay committable on the EHR it disables and
@@ -2240,7 +2240,7 @@ async fn ehr_status_discrete_mutators() {
     assert_eq!(after["other_details"]["archetype_node_id"], "at0001");
 }
 
-/// `I_EHR_DIRECTORY` §`has_directory_version` + §`get_versioned_directory`: the
+/// `has_directory_version` + `get_versioned_directory`: the
 /// existence check is true for real versions (incl. across updates) and false
 /// for an unknown version id; the `VERSIONED_OBJECT` view carries the mandatory
 /// `time_created` (`VERSIONED_OBJECT.time_created`, RM common `change_control`).
@@ -2479,10 +2479,9 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
 
 #[tokio::test]
 async fn the_default_ehr_status_satisfies_the_locatable_root_invariants() {
-    // A create without an EHR_STATUS makes the server mint one (SM
-    // i_ehr_service.adoc §create_ehr: "otherwise a default `EHR_STATUS` is
-    // created, in which `_is_modifiable_` and `_is_queryable_` are both True"),
-    // and that instance must satisfy the same RM invariants a client-supplied
+    // A create without an EHR_STATUS makes the server mint one, modifiable and
+    // queryable (our own default), and that instance must satisfy the same RM
+    // invariants a client-supplied
     // one does. RM ehr EHR_STATUS §Invariants — `Is_archetype_root`, which RM
     // common locatable.adoc defines as `archetype_details /= Void`; a bootstrap
     // status without it would be an archetype root by position and not by
@@ -2513,12 +2512,10 @@ async fn the_default_ehr_status_satisfies_the_locatable_root_invariants() {
             .is_some_and(|v| !v.is_empty()),
         "ARCHETYPED.rm_version is 1..1, got {details}"
     );
-    // The SM's own defaults for the generated status.
+    // Our own defaults for the generated status.
     assert_eq!(status["is_modifiable"], json!(true));
     assert_eq!(status["is_queryable"], json!(true));
-    // RM ehr EHR_STATUS: `subject` is 1..1 PARTY_SELF — SM create_ehr, "A
-    // default `_subject_` will be generating containing a `PARTY_SELF`
-    // object".
+    // RM ehr EHR_STATUS: `subject` is 1..1, and the default is a PARTY_SELF.
     assert_eq!(status["subject"]["_type"], "PARTY_SELF");
 }
 
@@ -2604,8 +2601,8 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
     assert!(
         matches!(
             dup,
-            Err(SmError {
-                status: CallStatusType::EhrForSubjectAlreadyExists,
+            Err(StatusError {
+                status: ServiceStatus::EhrForSubjectAlreadyExists,
                 ..
             })
         ),
@@ -2711,8 +2708,8 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
     assert!(
         matches!(
             &cross,
-            Err(SmError {
-                status: CallStatusType::CompositionDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::CompositionDoesNotExist,
                 ..
             })
         ),

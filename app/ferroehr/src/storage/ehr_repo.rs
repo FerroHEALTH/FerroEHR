@@ -43,8 +43,8 @@ use crate::storage::version_repo::meta::CurrentMeta;
 /// The subject columns back the one-EHR-per-subject unique index
 /// (`uq_ehr_subject`, RM ehr master04 §EHR Status), so a second EHR for the same
 /// subject is reported as [`StorageError::SubjectInUse`] distinctly from the id
-/// conflict. `is_queryable` backs the AQL full-population gate (SM
-/// `I_QUERY_SERVICE`) and `is_modifiable` the content-write guard (RM ehr
+/// conflict. `is_queryable` backs the AQL full-population gate and
+/// `is_modifiable` the content-write guard (RM ehr
 /// master04 §EHR Active Status). No openEHR spec governs the promoted columns —
 /// our own storage design.
 ///

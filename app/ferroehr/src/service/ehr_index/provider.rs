@@ -82,8 +82,8 @@ impl EhrIndexProvider {
 impl FerroEhrService {
     /// Install the provider that holds the subject-to-EHR cross-reference.
     ///
-    /// Without it the service refuses every subject-scoped `I_EHR_SERVICE`
-    /// call and every `I_EHR_INDEX` call; the binary installs the one
+    /// Without it the service refuses every subject-scoped EHR call and every
+    /// EHR-index call; the binary installs the one
     /// `[ehr_index]` names, and a test opts in to [`EhrIndexProvider::Local`]
     /// explicitly.
     #[must_use]
@@ -149,8 +149,8 @@ impl FerroEhrService {
     /// Under an identity source, the one subject is the clinical identifier
     /// the EHR's `EHR_STATUS` carries, with a `Primary` status and no
     /// location: the source holds no `RESOURCE_STATUS` or `LOCATION_DESC`,
-    /// and FerroEHR invents none beyond the SM's own default instance type
-    /// (`i_ehr_index.adoc`). The source is never asked which identifiers other
+    /// and FerroEHR invents none beyond the default instance type. The source
+    /// is never asked which identifiers other
     /// domains hold for that pseudonym: resolving it back would hand the CDR
     /// the additional information GDPR Art. 4(5) keeps separately. An EHR
     /// whose subject is in no clinical-domain namespace has none to answer.
@@ -219,7 +219,7 @@ impl FerroEhrService {
         }
     }
 
-    /// Refuse an `I_EHR_INDEX` call the installed provider does not serve
+    /// Refuse an EHR-index call the installed provider does not serve
     /// from the local map.
     ///
     /// # Errors

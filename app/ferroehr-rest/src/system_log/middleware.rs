@@ -7,9 +7,8 @@
 //! so it observes every response, including the auth rejections the inner
 //! handlers never see. ATNA requires one record per audited access describing
 //! who acted, on what, with what outcome, from where and when; this layer
-//! assembles that and hands it to the SM System Log component, the only
-//! normative openEHR requirement being "System Log | IHE ATNA-compliant system
-//! log" (SM `master02-overview.adoc` §openEHR Platform Model). The DICOM PS3.15
+//! assembles that and hands it to the platform's system log, which follows IHE
+//! ATNA. The DICOM PS3.15
 //! §A.5 rendering and the syslog transport belong to `ferroehr::system_log`.
 //!
 //! It reads four response extensions the rest of the stack sets, so no handler
@@ -249,10 +248,10 @@ fn caller_organisation(state: &AppState, principal: Option<&Principal>) -> Optio
     ferrohealth_smart::roles::claim_text(&principal.claims, claim).map(str::to_owned)
 }
 
-/// The ATNA audit middleware, routing emission through the platform's SM
+/// The ATNA audit middleware, routing emission through the platform's
 /// `SystemLog` component.
 pub async fn middleware(State(state): State<AppState>, req: Request, next: Next) -> Response {
-    // The SM System Log master switch: disabled means no per-request work.
+    // The system-log master switch: disabled means no per-request work.
     if !state.backend().audit_enabled() {
         return next.run(req).await;
     }

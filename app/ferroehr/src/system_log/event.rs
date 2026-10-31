@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The transport-agnostic audit **event model** for the SM System Log
-//! component (`I_SYSTEM_LOG`).
+//! The transport-agnostic audit **event model** for the system log.
 //!
 //! NOTE: no openEHR specification governs this: our own design, shaped
 //! for the IHE ATNA record the platform emits.
@@ -67,7 +66,7 @@ pub enum ObjectClass {
     /// uid). Demographic data is person-identifiable, so it is audited under
     /// the Patient-Record `EventID` family.
     Demographic,
-    /// EHR-Extract communication (SM-5 export/import of whole-EHR or
+    /// EHR-Extract communication (export/import of whole-EHR or
     /// spec-driven extracts) → "extract"; Patient-Number + object-URI
     /// participants. Extract communication carries patient-identifiable
     /// clinical data across systems and is audited for **non-repudiation** —
@@ -75,7 +74,7 @@ pub enum ObjectClass {
     /// Extracts … can be used to guarantee non-repudiation of information
     /// passed between systems" (BASE
     /// `architecture_overview/master07-security.adoc` §Non-repudiation).
-    // The SM-5 EHR-Extract export/import path emits an
+    // The EHR-Extract export/import path emits an
     // `AuditEvent { object: Extract, .. }` on completion
     // (`FerroEhrService::emit_extract_audit`); this variant is its resource class.
     Extract,

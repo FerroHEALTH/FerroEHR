@@ -23,7 +23,7 @@ use openehr_query::parser::MAX_EXPRESSION_DEPTH;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 
 /// The stack the server gives each runtime thread.
 const SERVER_THREAD_STACK_BYTES: usize = 16 * 1024 * 1024;
@@ -119,7 +119,7 @@ fn chains_beyond_the_depth_bound_are_refused_as_invalid_queries() {
                 .execute_ad_hoc_query(aql, scope(&ehr_id))
                 .await
                 .expect_err("a chain beyond the bound is refused");
-            assert_eq!(refused.status, CallStatusType::PreconditionViolation);
+            assert_eq!(refused.status, ServiceStatus::PreconditionViolation);
             assert!(
                 refused.message.contains("deepest this parser accepts"),
                 "the refusal says why, got {:?}",

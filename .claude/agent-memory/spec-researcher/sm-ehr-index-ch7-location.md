@@ -1,9 +1,12 @@
 ---
 name: sm-ehr-index-ch7-location
-description: Where SM Platform ch.7 (EHR Index service) requirements live — master07 prose + 4 class files, the 5 write-only calls, the total absence of any READ call, and the zero ITS-REST/CNF footprint
+description: Where SM Platform ch.7 (EHR Index service) reference text lives — master07 prose + 4 class files, the 5 write-only calls, the total absence of any READ call, and the zero ITS-REST/CNF footprint
 metadata:
   type: reference
 ---
+
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
 
 # SM Platform ch.7 "EHR Index Service" — navigation
 

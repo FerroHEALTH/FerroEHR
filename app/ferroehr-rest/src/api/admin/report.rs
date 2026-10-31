@@ -6,17 +6,13 @@
 //! No openEHR ITS-REST operation governs any route here. The released Admin API
 //! is exactly two operations, both EHR deletes
 //! (`specifications/admin.openapi.yaml` → `operations/admin_ehr_delete.yaml` +
-//! `operations/admin_ehr_delete_all.yaml`), while the SM declares four
-//! reporting calls the release never surfaced —
-//! `docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`:
-//! `list_contributions`, `contribution_count`, `versioned_composition_count`,
-//! `composition_version_count`, each taking a `PLATFORM_SERVICE` (`a_service`,
-//! "Name of a versioned content service") and an optional
-//! `Interval<Iso8601_date_time>`. No released ITS-REST operation covers these calls.
+//! `operations/admin_ehr_delete_all.yaml`). The four reporting calls here
+//! (`list_contributions`, `contribution_count`, `versioned_composition_count`,
+//! `composition_version_count`) each take the platform service to report on
+//! (`a_service`) and an optional time interval.
 //!
-//! These routes are the honest realization of that service basis, and are
-//! **excluded from ITS-REST wire conformance**: they gate the `ActivityReport`
-//! CAPABILITY verdict only.
+//! These routes are **excluded from ITS-REST wire conformance**: they gate the
+//! `ActivityReport` CAPABILITY verdict only.
 //!
 //! Gating: mounted under `/admin/`, so they inherit the group's two gates
 //! unchanged — the coarse RBAC `OperationClass::Admin` classifier (`401`
@@ -61,21 +57,21 @@ pub(crate) fn report_routes() -> OpenApiRouter<AppState> {
 /// (`GET /admin/report/contribution`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_ADMIN_SERVICE.list_contributions`.
+/// docs).
 #[utoipa::path(
     get, path = "/admin/report/contribution", tag = "admin-report",
     params(
         ("a_service" = String, Query,
-         description = "The `PLATFORM_SERVICE` member naming the \
+         description = "The platform service naming the \
                         versioned-content service to report on — one of \
                         `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log` (SM \
-                        `platform_service.adoc`; matched case-insensitively). \
+                        `Demographic`, `Message`, `Query`, `System_log`, \
+                        matched case-insensitively. \
                         A service that holds no versioned content reports \
                         empty/zero rather than failing.",
          example = "Ehr"),
         ("time_interval" = Option<String>, Query,
-         description = "The optional SM `Interval<Iso8601_date_time>` as \
+         description = "The optional time interval as \
                         `<lower>/<upper>`, matched CLOSED against the \
                         CONTRIBUTION / version audit `time_committed`. Either \
                         bound may be empty for an open interval \
@@ -93,13 +89,12 @@ pub(crate) fn report_routes() -> OpenApiRouter<AppState> {
          body = Vec<String>,
          example = json!(["8849182c-82ad-4088-a07f-48ead4180515"])),
         (status = 400, description = "`a_service` is absent or names no \
-                                      `PLATFORM_SERVICE` member, `time_interval` \
+                                      platform service, `time_interval` \
                                       is not `<lower>/<upper>`, a bound is not a \
                                       valid ISO 8601 date-time, or the bounded \
                                       pair has its lower bound AFTER its upper \
                                       bound (BASE `Interval` invariant \
-                                      `Limits_consistent`) — SM \
-                                      `precondition_violation`.",
+                                      `Limits_consistent`).",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                       principal). Our own authorization design \
@@ -131,23 +126,22 @@ pub(crate) async fn admin_report_contributions(
 /// (`GET /admin/report/contribution/count`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_ADMIN_SERVICE.contribution_count`. The SM
-/// return is an `Integer`, so the body is a bare JSON number — the count IS the
+/// docs). The body is a bare JSON number — the count IS the
 /// resource, and an object wrapper would invent a schema no spec defines.
 #[utoipa::path(
     get, path = "/admin/report/contribution/count", tag = "admin-report",
     params(
         ("a_service" = String, Query,
-         description = "The `PLATFORM_SERVICE` member naming the \
+         description = "The platform service naming the \
                         versioned-content service to report on — one of \
                         `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log` (SM \
-                        `platform_service.adoc`; matched case-insensitively). \
+                        `Demographic`, `Message`, `Query`, `System_log`, \
+                        matched case-insensitively. \
                         A service that holds no versioned content reports \
                         empty/zero rather than failing.",
          example = "Ehr"),
         ("time_interval" = Option<String>, Query,
-         description = "The optional SM `Interval<Iso8601_date_time>` as \
+         description = "The optional time interval as \
                         `<lower>/<upper>`, matched CLOSED against the \
                         CONTRIBUTION / version audit `time_committed`. Either \
                         bound may be empty for an open interval \
@@ -163,13 +157,12 @@ pub(crate) async fn admin_report_contributions(
                                       that holds no versioned content).",
          body = i64, example = json!(0)),
         (status = 400, description = "`a_service` is absent or names no \
-                                      `PLATFORM_SERVICE` member, `time_interval` \
+                                      platform service, `time_interval` \
                                       is not `<lower>/<upper>`, a bound is not a \
                                       valid ISO 8601 date-time, or the bounded \
                                       pair has its lower bound AFTER its upper \
                                       bound (BASE `Interval` invariant \
-                                      `Limits_consistent`) — SM \
-                                      `precondition_violation`.",
+                                      `Limits_consistent`).",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                       principal). Our own authorization design \
@@ -201,23 +194,22 @@ pub(crate) async fn admin_report_contribution_count(
 /// (`GET /admin/report/versioned_composition/count`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM
-/// `I_ADMIN_SERVICE.versioned_composition_count` — distinct version
+/// docs). It counts distinct version
 /// CONTAINERS, as against the individual versions its sibling counts.
 #[utoipa::path(
     get, path = "/admin/report/versioned_composition/count", tag = "admin-report",
     params(
         ("a_service" = String, Query,
-         description = "The `PLATFORM_SERVICE` member naming the \
+         description = "The platform service naming the \
                         versioned-content service to report on — one of \
                         `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log` (SM \
-                        `platform_service.adoc`; matched case-insensitively). \
+                        `Demographic`, `Message`, `Query`, `System_log`, \
+                        matched case-insensitively. \
                         A service that holds no versioned content reports \
                         empty/zero rather than failing.",
          example = "Ehr"),
         ("time_interval" = Option<String>, Query,
-         description = "The optional SM `Interval<Iso8601_date_time>` as \
+         description = "The optional time interval as \
                         `<lower>/<upper>`, matched CLOSED against the \
                         CONTRIBUTION / version audit `time_committed`. Either \
                         bound may be empty for an open interval \
@@ -235,13 +227,12 @@ pub(crate) async fn admin_report_contribution_count(
                                       only `a_service=Ehr` can be non-zero.",
          body = i64, example = json!(0)),
         (status = 400, description = "`a_service` is absent or names no \
-                                      `PLATFORM_SERVICE` member, `time_interval` \
+                                      platform service, `time_interval` \
                                       is not `<lower>/<upper>`, a bound is not a \
                                       valid ISO 8601 date-time, or the bounded \
                                       pair has its lower bound AFTER its upper \
                                       bound (BASE `Interval` invariant \
-                                      `Limits_consistent`) — SM \
-                                      `precondition_violation`.",
+                                      `Limits_consistent`).",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                       principal). Our own authorization design \
@@ -279,22 +270,21 @@ pub(crate) async fn admin_report_versioned_composition_count(
 /// (`GET /admin/report/composition_version/count`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM
-/// `I_ADMIN_SERVICE.composition_version_count`.
+/// docs).
 #[utoipa::path(
     get, path = "/admin/report/composition_version/count", tag = "admin-report",
     params(
         ("a_service" = String, Query,
-         description = "The `PLATFORM_SERVICE` member naming the \
+         description = "The platform service naming the \
                         versioned-content service to report on — one of \
                         `Admin`, `Definitions`, `Ehr`, `Ehr_index`, \
-                        `Demographic`, `Message`, `Query`, `System_log` (SM \
-                        `platform_service.adoc`; matched case-insensitively). \
+                        `Demographic`, `Message`, `Query`, `System_log`, \
+                        matched case-insensitively. \
                         A service that holds no versioned content reports \
                         empty/zero rather than failing.",
          example = "Ehr"),
         ("time_interval" = Option<String>, Query,
-         description = "The optional SM `Interval<Iso8601_date_time>` as \
+         description = "The optional time interval as \
                         `<lower>/<upper>`, matched CLOSED against the \
                         CONTRIBUTION / version audit `time_committed`. Either \
                         bound may be empty for an open interval \
@@ -312,13 +302,12 @@ pub(crate) async fn admin_report_versioned_composition_count(
                                       be non-zero.",
          body = i64, example = json!(0)),
         (status = 400, description = "`a_service` is absent or names no \
-                                      `PLATFORM_SERVICE` member, `time_interval` \
+                                      platform service, `time_interval` \
                                       is not `<lower>/<upper>`, a bound is not a \
                                       valid ISO 8601 date-time, or the bounded \
                                       pair has its lower bound AFTER its upper \
                                       bound (BASE `Interval` invariant \
-                                      `Limits_consistent`) — SM \
-                                      `precondition_violation`.",
+                                      `Limits_consistent`).",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                       principal). Our own authorization design \
@@ -412,8 +401,8 @@ async fn run(
     }
 }
 
-/// Read the mandatory `a_service` query parameter as a `PLATFORM_SERVICE`
-/// member; absent or unknown → `400` (SM `precondition_violation`).
+/// Read the mandatory `a_service` query parameter as a [`PlatformService`];
+/// absent or unknown → `400`.
 fn platform_service(query: Option<&str>) -> Result<PlatformService, RestError> {
     let raw = params::query_param(query, "a_service").ok_or_else(|| {
         RestError::from(ApiError::BadRequest(
@@ -427,11 +416,10 @@ fn platform_service(query: Option<&str>) -> Result<PlatformService, RestError> {
     })
 }
 
-/// Read the optional `time_interval` query parameter as the SM
-/// `Interval<Iso8601_date_time>` bound pair. The wire form is
-/// `<lower>/<upper>` with either side empty for an open bound; the bound VALUES
-/// are validated by the service (SM `precondition_violation` on a malformed
-/// ISO 8601 date-time), so this only splits the pair.
+/// Read the optional `time_interval` query parameter as an ISO 8601 date-time
+/// bound pair. The wire form is `<lower>/<upper>` with either side empty for
+/// an open bound; the bound VALUES are validated by the service (a `400` on a
+/// malformed ISO 8601 date-time), so this only splits the pair.
 ///
 /// A `/`-less value is rejected here rather than silently read as a lower
 /// bound: an interval that names one instant with no separator is not an

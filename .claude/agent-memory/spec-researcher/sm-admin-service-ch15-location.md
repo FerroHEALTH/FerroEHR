@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
+
 # SM Platform ch.15 "Admin Service" — navigation
 
 The SM-side companion of [[admin-api-location]] (the 2-op ITS-REST Admin API +
