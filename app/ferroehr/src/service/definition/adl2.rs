@@ -8,9 +8,9 @@
 //! Validation is the real `openehr-adl` engine (parse → AOM2 phase 1 → RM
 //! phase 2 → specialisation phase 2 against the flat parent). The engine needs
 //! an [`ArchetypeRepository`] to resolve specialisation parents +
-//! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds one by
-//! parsing every stored ADL2 source (the registry is low-volume — an admin
-//! surface — so parse-on-demand is cheap; the
+//! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds one per
+//! artefact from the stored ADL2 sources (the registry is low-volume — an
+//! admin surface — so parse-on-demand is cheap; the
 //! `openehr-adl` phases degrade gracefully when a parent is unresolved).
 
 #![expect(
@@ -53,6 +53,7 @@ use crate::service::list::Page;
 use crate::service::status::{ServiceStatus, StatusError};
 
 use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
+use super::adl2_resolution::{parse_stored, repository_for};
 use super::{compile_pattern, page_bounds, paginate};
 
 /// The `WebTemplate`-cache key namespace for ADL2/OPT2 templates. The trailing
@@ -280,31 +281,22 @@ impl FerroEhrService {
         .await?)
     }
 
-    /// Build an in-memory [`ArchetypeRepository`] from every stored ADL2 source,
-    /// so the `openehr-adl` engine can resolve specialisation parents +
-    /// `use_archetype` fillers when validating an upload or projecting an OPT.
-    ///
-    /// A stored source that no longer parses is skipped rather than failing the
-    /// whole build; every source was engine-validated at its own upload.
+    /// Build the [`ArchetypeRepository`] `root` resolves against, so the
+    /// `openehr-adl` engine can resolve specialisation parents +
+    /// `use_archetype` fillers when validating an upload or projecting an OPT:
+    /// each reference takes the stored release [`repository_for`] picks.
     ///
     /// NOTE: the repository is re-parsed on every call, this path being reached
     /// only for an ADL2 upload or an OPT projection, so a memoized copy would
     /// cost invalidation on every ADL2 write for no clinical-path gain. No
     /// openEHR spec governs this — our own design/extension.
-    async fn adl2_repository(&self) -> Result<ArchetypeRepository, ServiceError> {
-        let sources: Vec<String> = sqlx::query_scalar("SELECT adl FROM adl2_artefact")
-            .fetch_all(&mut *acquire(&self.pool).await?)
-            .await?;
-        on_engine_stack(move || {
-            let mut repo = ArchetypeRepository::new();
-            for src in &sources {
-                if let Ok(archetype) = parse_artefact(src, Dialect::Adl2) {
-                    repo.insert(archetype);
-                }
-            }
-            repo
-        })
-        .await
+    async fn adl2_repository(&self, root: &Archetype) -> Result<ArchetypeRepository, ServiceError> {
+        let rows: Vec<(String, String)> =
+            sqlx::query_as("SELECT hrid, adl FROM adl2_artefact ORDER BY hrid")
+                .fetch_all(&mut *acquire(&self.pool).await?)
+                .await?;
+        let root = root.clone();
+        on_engine_stack(move || repository_for(&root, &parse_stored(&rows))).await
     }
 
     /// Validate one uploaded ADL2 source with the `openehr-adl` engine and return
@@ -326,7 +318,7 @@ impl FerroEhrService {
         let archetype = on_engine_stack(move || parse_artefact(&owned, Dialect::Adl2))
             .await?
             .map_err(|errs| syntax_bad_request(&errs))?;
-        let repo = self.adl2_repository().await?;
+        let repo = self.adl2_repository(&archetype).await?;
         let governed = production_model_governs(&archetype);
         // VETDF: external term bindings are verified against the terminology
         // service, pre-resolved here into the synchronous validator seam
@@ -759,7 +751,7 @@ impl FerroEhrService {
         {
             return Ok(opt.as_ref().clone());
         }
-        let repo = self.adl2_repository().await?;
+        let repo = self.adl2_repository(&archetype).await?;
         on_engine_stack(move || {
             create_opt(&archetype, &repo).map_err(|e| match e {
                 OptError::UnresolvedReference(_) => {

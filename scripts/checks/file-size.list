@@ -42,7 +42,7 @@ app/ferroehr/src/config/mod.rs 3064
 app/ferroehr/src/db/mod.rs 2178
 app/ferroehr/src/privacy/detect.rs 901
 app/ferroehr/src/service/admin/dump_load.rs 2453
-app/ferroehr/src/service/definition/adl2.rs 1074
+app/ferroehr/src/service/definition/adl2.rs 1066
 app/ferroehr/src/service/definition/opt14_convert.rs 2727
 app/ferroehr/src/service/definition/query.rs 1003
 app/ferroehr/src/service/demographic/api.rs 1226

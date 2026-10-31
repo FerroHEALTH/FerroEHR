@@ -129,6 +129,14 @@ the archetypes before the templates built on them. A template naming one the
 CDR does not hold is refused with a 422 whose `errors` carry one `VARXR` entry
 per missing archetype id.
 
+A reference may name its archetype down to the major version only
+(`openEHR-EHR-OBSERVATION.bp.v1`). With several releases of that archetype
+loaded, it resolves to the newest release of that major version (`v1.10.0`
+before `v1.9.0`, and never `v2.0.0`), a release before a release candidate. A
+reference with a minor or patch version (`.v1.2`, `.v1.2.3`) narrows the match
+to it, and an alpha or beta version is matched only by its full id. A
+reference to a major version no loaded release carries is a missing archetype.
+
 A duplicate artefact id returns **409 Conflict**.
 
 A loaded ADL 2 template is retrieved in either of two representations, chosen by
