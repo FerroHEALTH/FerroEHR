@@ -40,6 +40,7 @@ use crate::bff::ehr_detail::contributions::ContributionPage as Listed;
 use crate::bff::ehr_detail::contributions::{
     contribution_activity, fetch_contribution, list_contributions,
 };
+use crate::bff::wire::committer_label;
 use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
@@ -51,8 +52,7 @@ use crate::pages::common::{
     EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, document_section, drawn,
     panel, section, shortened, version_number, when,
 };
-use crate::pages::ehr::EhrModel;
-use crate::pages::ehr::{EhrTab, crumbs, ehr_href, ehr_id_param, ehr_view, tab_href};
+use crate::pages::ehr::{EhrModel, EhrTab, crumbs, ehr_href, ehr_id_param, ehr_view, tab_href};
 use crate::paging::Listing;
 use crate::routes::Drawn;
 
@@ -326,7 +326,7 @@ fn read(body: &str) -> Result<Read, serde_json::Error> {
         .unwrap_or_default();
     Ok(Read {
         committed: text("/audit/time_committed/value").unwrap_or_default(),
-        committer: text("/audit/committer/name").unwrap_or_default(),
+        committer: committer_label(|key| text(&format!("/audit/committer/{key}"))),
         change: text("/audit/change_type/value").unwrap_or_default(),
         description: text("/audit/description/value"),
         system: text("/audit/system_id").unwrap_or_default(),

@@ -2069,6 +2069,7 @@ async fn resolving_a_party_to_its_ehr_is_recorded_as_an_access() {
         id_type: "basic",
         issuer: None,
         client: Some("dr.house".to_owned()),
+        person: false,
     };
     let resolved = ferroehr::service::committer::with_committer(
         Some(committer),

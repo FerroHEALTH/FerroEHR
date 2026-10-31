@@ -213,9 +213,9 @@ impl AuditInput {
     ///   group and the operation; absent or empty takes the operation's
     ///   default;
     /// - `description` — the caller's when supplied, else the server default;
-    /// - `committer` — the caller's `PARTY_PROXY` (the protocol adapter has
-    ///   already defaulted an absent committer to the authenticated
-    ///   principal / system identity);
+    /// - `committer` — the caller's `PARTY_PROXY` (defaulted by the adapter to
+    ///   the principal / system identity), or the person's own `PARTY_SELF`
+    ///   ([`crate::service::committer::attributed`]);
     /// - `system_id` — the caller's when supplied, else this server's.
     ///
     /// # Errors
@@ -252,7 +252,7 @@ impl AuditInput {
                     .cloned()
                     .unwrap_or_else(|| dv_text(default_description)),
             ),
-            committer: base.committer.clone(),
+            committer: crate::service::committer::attributed(base.committer.clone()),
             // `UPDATE_VERSION.commit_audit` is polymorphic on the released wire
             // (`UpdateAudit.yaml`), which is the RM's own pair: "the committing
             // party … `AUDIT_DETAILS` … or its subtype `ATTESTATION`" (RM common

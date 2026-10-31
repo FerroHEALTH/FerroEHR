@@ -299,8 +299,8 @@ pub enum ServiceError {
         #[source] openehr_rm::v1_2::common::change_control::version_impl::CanonicalFormError,
     ),
     /// A server-side fault with no more specific variant (the `500`-class SM
-    /// statuses — `exception`, `file_not_writable`, `auth_failure`,
-    /// `not_implemented`, `service_overloaded`).
+    /// statuses — `exception`, `file_not_writable`, `not_implemented`,
+    /// `service_overloaded`).
     ///
     /// The carried [`SmError`]'s message is a LOG detail, not a wire message,
     /// and this is the ONE row whose SM status does not survive the round trip:
@@ -321,18 +321,14 @@ pub enum ServiceError {
     /// produced, so the SM route reports the same status.
     #[error(transparent)]
     Unrecorded(SmError),
-    /// Processing of the addressed object is restricted: the server holds it
-    /// in storage and refuses everything else — the wire's `403`.
+    /// A refusal the law asks of the server itself, the wire's `403`.
     ///
-    /// GDPR Art. 4(3) defines restriction as "the marking of stored personal
-    /// data with the aim of limiting their processing in the future" and
-    /// Art. 18(2) leaves storage as the only processing it admits
-    /// (`docs/law/eu/gdpr/text.html`). No openEHR spec governs restriction of
-    /// processing and no ITS-REST operation declares it, so this refusal is
-    /// our own design/extension; the carried message names the restriction so
-    /// a caller can tell it from an authorization refusal.
-    ///
-    /// Construct with [`ServiceError::restricted`].
+    /// The object's processing is restricted (GDPR Art. 4(3), 18(2),
+    /// `docs/law/eu/gdpr/text.html`; [`ServiceError::restricted`]), or a person
+    /// may not make the change (EHDS Art. 5, `auth_failure`;
+    /// [`ServiceError::not_permitted`]). No openEHR spec governs either: our own
+    /// design/extension; the message names the rule, which tells it from an
+    /// authorization refusal.
     #[error(transparent)]
     Restricted(SmError),
 }
@@ -441,9 +437,8 @@ impl From<SmError> for ServiceError {
     fn from(e: SmError) -> Self {
         use super::status::CallStatusType as S;
         match e.status {
-            // `success` is not an error; constructing it is a server bug.
-            // Auth is decided at the adapter (401/403 before dispatch), so a
-            // service-side auth failure is likewise a server fault. A
+            // `success` is not an error; constructing it is a server bug. The
+            // one service-side auth failure is the EHDS Art. 5 write rule. A
             // not-implemented status is unreachable (the service implements
             // every catalog call), and `service_overloaded` originates at the
             // storage bridge and flows *up* to the wire as an `SmError`
@@ -451,10 +446,9 @@ impl From<SmError> for ServiceError {
             S::Success
             | S::Exception
             | S::FileNotWritable
-            | S::AuthFailure
             | S::NotImplemented
             | S::ServiceOverloaded => ServiceError::Internal(e),
-            S::ProcessingRestricted => ServiceError::Restricted(e),
+            S::ProcessingRestricted | S::AuthFailure => ServiceError::Restricted(e),
             S::PreconditionViolation | S::InvalidIdPattern => ServiceError::BadRequest(e),
             S::ObjectVersionDoesNotExist
             | S::VersionedObjectDoesNotExist
@@ -541,6 +535,12 @@ impl ServiceError {
                  otherwise processed until the restriction is lifted (GDPR Art. 18)"
             ),
         ))
+    }
+
+    /// A refusal (`403`) of a change a person may not make (EHDS Art. 5).
+    #[must_use]
+    pub fn not_permitted(message: impl Into<String>) -> Self {
+        ServiceError::Restricted(SmError::new(CallStatusType::AuthFailure, message))
     }
 
     /// A refusal (`403`) of a research-side disclosure the subject objected to.
@@ -1013,11 +1013,11 @@ mod tests {
             (S::InvalidQuery, C::UNPROCESSABLE_ENTITY),
             (S::DefinitionUnknown, C::UNPROCESSABLE_ENTITY),
             (S::ContentInvalid, C::UNPROCESSABLE_ENTITY),
-            // Service-side auth/exception faults surface as 500 (auth is the
-            // adapter's job before dispatch — see `ServiceError::sm`).
+            // Service-side exception faults surface as 500; the service's one
+            // auth failure, the EHDS Art. 5 write rule, is a 403.
             (S::Exception, C::INTERNAL_SERVER_ERROR),
             (S::FileNotWritable, C::INTERNAL_SERVER_ERROR),
-            (S::AuthFailure, C::INTERNAL_SERVER_ERROR),
+            (S::AuthFailure, C::FORBIDDEN),
         ];
         for (status, expected) in rows {
             let got = ApiError::from(ServiceError::sm(status, "m")).status();
@@ -1365,7 +1365,6 @@ mod tests {
             S::Success,
             S::Exception,
             S::FileNotWritable,
-            S::AuthFailure,
             S::NotImplemented,
             S::ServiceOverloaded,
         ];

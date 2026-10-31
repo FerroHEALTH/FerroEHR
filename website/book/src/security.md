@@ -347,6 +347,52 @@ entry inside a composition) is not built: an object is the unit the version
 reads, the queries and the exports already decide on, and splitting a
 composition would change what the stored, signed version holds.
 
+### Information a person inserts (EHDS Art. 5)
+
+Regulation (EU) 2025/327 Art. 5 lets a person, or their representative, insert
+information in their own EHR through the access services. That information
+"shall be clearly distinguishable as having been inserted by the natural
+person or by his or her representative", and the person "shall not be able to
+directly alter the electronic health data and related information inserted by
+health professionals". FerroEHR keeps both rules at the commit. No openEHR
+specification governs who may change what, so the rules are our own design;
+the marker is the RM's own.
+
+- **Who counts as the person.** A bearer token with a `patient/` scope and no
+  `user/` or `system/` scope (for example `patient/composition-*.cruds`), from an
+  issuer in [`[smart] patient_issuers`](smart-app-launch.md#launch-context-binding-to-one-ehr).
+  The SMART scope grammar reserves `patient/` for "applications acting in the
+  context of a specific patient/EHR" and `user/` for those acting for a
+  logged-in practitioner, so a clinician's app uses `user/` scopes and keeps
+  every professional right. The ABAC patient claim does not make a caller the
+  person, because a professional's token in a patient's context carries it
+  too. The rule is the FerroHEALTH family's strict answer, shared through
+  `ferrohealth-smart`; the Art. 3(3) delay below asks its broad one.
+- **The marker.** Every version and CONTRIBUTION the person commits records
+  `PARTY_SELF` as `AUDIT_DETAILS.committer`, the RM's way to say the committer
+  is the record subject (RM common, Audit Details). Its `external_ref` names the
+  login: a `GENERIC_ID` holding the token subject, in the scheme of the token
+  issuer. FerroEHR writes this committer itself and ignores any committer the
+  request names, in the `openehr-audit-details` header or in a CONTRIBUTION
+  body. Every read of the version carries it, an AQL query reads it with
+  `v/commit_audit/committer`, the contribution list extension flags the change
+  set with `inserted_by_person`, and the viewer names the committer "The person
+  or their representative". The marker is part of the stored version, so a
+  dump and its restore keep it.
+- **The composer.** A COMPOSITION the person commits names the person
+  (`PARTY_SELF`) or their representative (`PARTY_RELATED`) as its composer.
+  Any other composer is refused with **403**, so the person cannot present what
+  they insert as a professional's.
+- **What the person may change.** The person may update and delete a version
+  whose committer is `PARTY_SELF`. An update or a deletion of a version anyone
+  else committed, a professional or a system, is refused with **403** and a
+  body that names EHDS Art. 5, whether it comes as a direct write or inside a
+  CONTRIBUTION. Nothing is written.
+- **What a professional may change.** A professional's writes are unchanged.
+  A professional may update or delete an entry the person inserted; the new
+  version is the professional's, which the person may then no longer alter.
+  The person's own versions stay in the version history.
+
 ### Delayed access by the person (EHDS Art. 3(3))
 
 Regulation (EU) 2025/327 Art. 3(1) gives a person access to their data

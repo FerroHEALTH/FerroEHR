@@ -38,7 +38,7 @@ use crate::versioning::lifecycle::{
     self, reject_deleted_with_data, resolve_lifecycle, validate_transition,
 };
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id};
-use crate::versioning::{Kind, SigningCtx, integrity, profile};
+use crate::versioning::{Kind, SigningCtx, integrity, person, profile};
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -284,6 +284,8 @@ struct NextVersion {
     preceding_uid: String,
     /// The preceding version's lifecycle state (the transition "from" state).
     preceding_lifecycle: String,
+    /// The preceding version's place in the version tree.
+    preceding_tree: TreeId,
     /// The transaction timestamp — the commit instant every row of this
     /// transaction stamps, carried by the merged placement read so the
     /// signature is computable before any insert.
@@ -420,6 +422,7 @@ async fn next_version(
         tree,
         preceding_uid,
         preceding_lifecycle: tip.lifecycle_state,
+        preceding_tree: tip.tree,
         now,
     })
 }
@@ -778,31 +781,6 @@ async fn ensure_not_access_restricted_tx(
     Ok(())
 }
 
-/// Refuses a logical deletion whose preceding version is already deleted.
-///
-/// The master06 §Version Lifecycle state machine draws a `delete` edge out of
-/// every live state and none out of `deleted` (only `revert`), and ITS-REST
-/// answers the repeat as `400` (`responses/400_already_deleted.yaml`: "the
-/// resource identified by the request parameters is already deleted"). The
-/// check runs on the locked placement read, so the `DELETE` routes and a
-/// CONTRIBUTION deletion member reach the same refusal.
-///
-/// # Errors
-/// [`ServiceError::BadRequest`] when `preceding_lifecycle` is `523|deleted|`.
-fn refuse_already_deleted(
-    kind: Kind,
-    vo_id: VoId,
-    preceding_lifecycle: &str,
-) -> Result<(), ServiceError> {
-    if preceding_lifecycle != lifecycle::state::DELETED {
-        return Ok(());
-    }
-    Err(ServiceError::precondition(format!(
-        "{} {vo_id} is already deleted",
-        kind.as_str()
-    )))
-}
-
 #[expect(
     clippy::too_many_lines,
     reason = "the three change arms build one resolved write; splitting them \
@@ -847,6 +825,7 @@ async fn apply_change(
             reject_deleted_with_data(&lifecycle)?;
             // a first version can only be `complete`/`incomplete`.
             validate_transition(None, &lifecycle)?;
+            person::refuse_composing_for_others(kind, &canonical)?;
             let vo_id = VoId::minted(ctx.stamp);
             seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
             stamp_version_uid(
@@ -907,6 +886,8 @@ async fn apply_change(
             reject_deleted_with_data(&lifecycle)?;
             let next =
                 next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
+            person::refuse_composing_for_others(kind, &canonical)?;
+            person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
             // the transition from the preceding version's state must be
             // legal (master06 §Version Lifecycle state machine).
             validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
@@ -946,7 +927,8 @@ async fn apply_change(
         } => {
             let next =
                 next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
-            refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
+            person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
+            lifecycle::refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
             retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
             // A deleted version carries no data — its `ORIGINAL_VERSION.data` is
             // Void (master06 §Logical Deletion); the signature is over the

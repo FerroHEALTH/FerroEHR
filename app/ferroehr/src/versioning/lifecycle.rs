@@ -15,7 +15,9 @@
 //! the current state from the preceding version and rejecting a transition the
 //! spec does not sanction.
 
+use crate::ids::VoId;
 use crate::service::error::{ServiceError, Violation};
+use crate::versioning::Kind;
 use openehr_term::bundle::openehr;
 
 /// The `version_lifecycle_state` openEHR terminology group id.
@@ -177,6 +179,31 @@ pub(crate) fn validate_transition(from: Option<&str>, to: &str) -> Result<(), Se
         ))
         .with_invariant("RM common master06 §Version Lifecycle state machine"),
     ))
+}
+
+/// Refuses a logical deletion whose preceding version is already deleted.
+///
+/// The master06 §Version Lifecycle state machine draws a `delete` edge out of
+/// every live state and none out of `deleted` (only `revert`), and ITS-REST
+/// answers the repeat as `400` (`responses/400_already_deleted.yaml`: "the
+/// resource identified by the request parameters is already deleted"). The
+/// check runs on the locked placement read, so the `DELETE` routes and a
+/// CONTRIBUTION deletion member reach the same refusal.
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when `preceding_lifecycle` is `523|deleted|`.
+pub(crate) fn refuse_already_deleted(
+    kind: Kind,
+    vo_id: VoId,
+    preceding_lifecycle: &str,
+) -> Result<(), ServiceError> {
+    if preceding_lifecycle != state::DELETED {
+        return Ok(());
+    }
+    Err(ServiceError::precondition(format!(
+        "{} {vo_id} is already deleted",
+        kind.as_str()
+    )))
 }
 
 #[cfg(test)]

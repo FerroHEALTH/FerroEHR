@@ -25,9 +25,11 @@ use crate::locale::tr_with;
 /// for the same fact.
 const ACTIVITY_FETCH: u32 = 200;
 
-/// One row of the EHR's contribution list. Fixed-size-safe strings; the shape
-/// is the CDR's contribution-list contract (`{uid, time_committed, committer,
-/// change_type, change_type_rubric}`).
+/// One row of the EHR's contribution list.
+///
+/// Fixed-size-safe strings; the shape is the CDR's contribution-list contract
+/// (`{uid, time_committed, committer, inserted_by_person, change_type,
+/// change_type_rubric}`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContributionRow {
     /// The CONTRIBUTION uid.
@@ -122,7 +124,12 @@ fn contribution_row(value: &Value) -> ContributionRow {
     ContributionRow {
         uid: contribution_field(value, "uid"),
         time_committed: contribution_field(value, "time_committed"),
-        committer: contribution_field(value, "committer"),
+        // The list names a `PARTY_SELF` committer by its flag alone (EHDS Art. 5).
+        committer: if value.get("inserted_by_person").and_then(Value::as_bool) == Some(true) {
+            crate::locale::tr(crate::locale::Msg::CommitterPerson)
+        } else {
+            contribution_field(value, "committer")
+        },
         change_type: contribution_field(value, "change_type"),
         change_type_rubric: contribution_field(value, "change_type_rubric"),
     }
@@ -237,6 +244,17 @@ mod tests {
         assert_eq!(page.rows[1].committer, "");
         assert_eq!(page.rows[1].change_type, "");
         assert_eq!(page.rows[1].change_type_rubric, "");
+    }
+
+    /// EHDS Art. 5: a contribution the person inserted is named as theirs.
+    #[test]
+    fn a_contribution_the_person_inserted_reads_as_theirs() {
+        let body = r#"{"rows": [{"uid": "c1", "committer": null, "inserted_by_person": true}]}"#;
+        let page = parse_contributions(body).expect("valid contributions page");
+        assert_eq!(
+            page.rows[0].committer,
+            crate::locale::tr(crate::locale::Msg::CommitterPerson)
+        );
     }
 
     #[test]

@@ -9,9 +9,9 @@ app/ferroehr-rest/src/api/admin/marks.rs 825
 app/ferroehr-rest/src/api/definition/openapi_routes.rs 2112
 app/ferroehr-rest/src/api/demographic/openapi_routes.rs 10077
 app/ferroehr-rest/src/api/demographic/relationship.rs 1258
-app/ferroehr-rest/src/api/ehr/openapi_routes.rs 7226
+app/ferroehr-rest/src/api/ehr/openapi_routes.rs 7225
 app/ferroehr-rest/src/api/query/openapi_routes.rs 2062
-app/ferroehr-rest/src/extensions/access/authn/mod.rs 2161
+app/ferroehr-rest/src/extensions/access/authn/mod.rs 2146
 app/ferroehr-rest/src/extensions/access/authz/mod.rs 892
 app/ferroehr-rest/src/extensions/access/pep.rs 1465
 app/ferroehr-rest/src/extensions/management/mod.rs 831
@@ -51,7 +51,7 @@ app/ferroehr/src/service/ehr/composition.rs 1199
 app/ferroehr/src/service/ehr/service.rs 874
 app/ferroehr/src/service/ehr/status.rs 951
 app/ferroehr/src/service/ehr/validation.rs 1593
-app/ferroehr/src/service/error.rs 1533
+app/ferroehr/src/service/error.rs 1532
 app/ferroehr/src/service/message/export.rs 1135
 app/ferroehr/src/service/message/import.rs 923
 app/ferroehr/src/service/query/execute.rs 815
@@ -65,7 +65,7 @@ app/ferroehr/src/system_log/sender.rs 1181
 app/ferroehr/src/system_log/store.rs 2159
 app/ferroehr/src/versioning/attestation.rs 992
 app/ferroehr/src/versioning/audit.rs 889
-app/ferroehr/src/versioning/change.rs 1592
+app/ferroehr/src/versioning/change.rs 1574
 app/ferroehr/src/versioning/contribution.rs 2121
 crates/openehr-adl/src/adl14/convert.rs 1013
 crates/openehr-adl/src/adl14/domain.rs 1112

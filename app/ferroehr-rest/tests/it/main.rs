@@ -59,6 +59,7 @@ mod demographic_http;
 mod demographic_tags_http;
 mod demographic_template_http;
 mod directory_http;
+mod ehds_person_inserted_http;
 mod ehr_access_gate;
 mod error_chain;
 mod event_subscription_http;

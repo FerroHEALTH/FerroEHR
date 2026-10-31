@@ -10,6 +10,7 @@
 not-found-title = No such screen
 not-found-heading = Page not found
 not-found-body = The viewer has no page at { $path }. EHRs live under /ehrs.
+committer-person = The person or their representative
 example = Example
 path-catalog = Path catalog
 aom2-json = AOM2 JSON

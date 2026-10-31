@@ -131,6 +131,9 @@ messages! {
         Body404 = "not-found-body",
         /// `Example`
         Example = "example",
+        /// `The person or their representative`, a committer that is the
+        /// record's person (EHDS Art. 5).
+        CommitterPerson = "committer-person",
         /// `Path catalog`
         PathCatalog = "path-catalog",
         /// `AOM2 JSON`

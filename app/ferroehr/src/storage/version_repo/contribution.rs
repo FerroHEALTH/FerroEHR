@@ -139,6 +139,9 @@ pub struct ContributionSummary {
     /// The committer `PARTY_PROXY`'s `name` (`PARTY_IDENTIFIED` /
     /// `PARTY_RELATED`); `None` for a `PARTY_SELF` committer, which has no name.
     pub committer: Option<String>,
+    /// Whether the committer is `PARTY_SELF`: the record's person inserted the
+    /// change set (EHDS Art. 5; RM common master04 §Audit Details).
+    pub person: bool,
     /// The numeric `audit_change_type` group code of the change set.
     pub change_type: String,
 }
@@ -160,7 +163,8 @@ pub async fn list_contribution_summaries(
     limit: i64,
 ) -> Result<Vec<ContributionSummary>, StorageError> {
     let rows = sqlx::query(
-        "SELECT c.id, a.time_committed, a.change_type, a.committer #>> '{name}' AS committer_name \
+        "SELECT c.id, a.time_committed, a.change_type, a.committer #>> '{name}' AS committer_name, \
+                a.committer ->> '_type' IS NOT DISTINCT FROM 'PARTY_SELF' AS person \
          FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
          WHERE c.ehr_id = $1 \
          -- newest-first: this extension is an activity feed (the sibling SM
@@ -182,6 +186,7 @@ pub async fn list_contribution_summaries(
                     .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
                     .to_jiff(),
                 committer: row.try_get("committer_name")?,
+                person: row.try_get("person")?,
                 change_type: row.try_get("change_type")?,
             })
         })

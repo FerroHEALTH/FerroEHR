@@ -5715,13 +5715,11 @@ pub(crate) async fn contribution_create(
 /// catalogue — but this route is not a binding of it either: it answers a
 /// SUMMARY row per CONTRIBUTION rather than the ids that operation returns.
 ///
-/// The response is `{ "rows": [ { uid, time_committed, committer, change_type,
-/// change_type_rubric } ], "total" }`. `committer` is the audit committer's
-/// name only (a summary string — the by-uid GET returns the full `PARTY_PROXY`),
-/// `change_type` the stored `audit_change_type` code and `change_type_rubric`
-/// its display rubric from the same terminology bundle the by-uid GET's
-/// `DV_CODED_TEXT.value` uses, so consumers never map codes locally. `total`
-/// counts ALL of the EHR's CONTRIBUTIONs, not the returned window.
+/// Rows `{ uid, time_committed, committer, inserted_by_person, change_type,
+/// change_type_rubric }` and the `total` of ALL the EHR's CONTRIBUTIONs: the
+/// committer's name only (the by-uid GET returns the `PARTY_PROXY`), whether it
+/// is `PARTY_SELF` (the record's person, EHDS Art. 5), the stored
+/// `audit_change_type` code and its rubric from the by-uid GET's bundle.
 #[utoipa::path(
     get, path = "/ehr/{ehr_id}/contribution", tag = "CONTRIBUTION",
     params(
@@ -5758,6 +5756,7 @@ pub(crate) async fn contribution_create(
                  "uid": "0826851c-c4c2-4d61-92b9-410fb8275ff0",
                  "time_committed": "2026-07-26T09:12:44.512331Z",
                  "committer": "Dr Jane Roe",
+                 "inserted_by_person": false,
                  "change_type_rubric": "modification",
                  "change_type": "251"
              } ],

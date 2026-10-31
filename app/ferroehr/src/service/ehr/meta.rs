@@ -38,7 +38,7 @@ use crate::versioning::read::VersionRead;
 ///
 /// NOTE: no openEHR spec governs the value — our own design/extension (see
 /// [`committer`]).
-const LOCAL_ISSUER: &str = "ferroehr";
+pub(in crate::service) const LOCAL_ISSUER: &str = "ferroehr";
 
 impl FerroEhrService {
     /// The current version `(vo_id, VERSION_TREE_ID)` of an EHR's object of a
@@ -271,6 +271,9 @@ impl FerroEhrService {
 /// system identity (RM common master04 `AUDIT_DETAILS.committer` 1..1).
 pub(in crate::service) fn committer() -> PartyProxy {
     let party = match crate::service::committer::current_committer() {
+        Some(identity) if identity.person => {
+            return crate::service::committer::person_committer(identity);
+        }
         Some(identity) => PartyIdentifiedData {
             external_ref: None,
             name: Some(identity.subject.clone()),
