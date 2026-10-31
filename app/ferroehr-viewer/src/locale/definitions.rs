@@ -130,6 +130,12 @@ crate::locale::messages! {
         TemplateReadingRelease = "template-reading-release",
         /// `The template could not be read.`
         TemplateRefused = "template-refused",
+        /// `{ $count ->`
+        TemplateIncomplete = "template-incomplete",
+        /// `Upload the missing archetypes`
+        TemplateIncompleteUpload = "template-incomplete-upload",
+        /// `This view needs the missing archetypes. Upload them, then open it again.`
+        TemplateIncompleteTab = "template-incomplete-tab",
         /// `Release`
         TemplateRelease = "template-release",
         /// `{ $count ->`

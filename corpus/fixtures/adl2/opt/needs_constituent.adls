@@ -1,0 +1,27 @@
+template (adl_version=2.0.6; rm_release=1.0.2; generated)
+    openEHR-EHR-COMPOSITION.cnf_needs_constituent.v1.0.0
+
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <"unmanaged">
+    original_author = <
+        ["name"] = <"openEHR CNF">
+    >
+
+definition
+    COMPOSITION[id1] matches {    -- Needs a constituent
+        content cardinality matches {1..*; unordered} matches {
+            use_archetype OBSERVATION[id2, openEHR-EHR-OBSERVATION.cnf_constituent.v1.0.0]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Needs a constituent">; description = <"A template built on one archetype the CDR may not hold">>
+            ["id2"] = <text = <"Constituent">; description = <"The observation filling the content slot">>
+        >
+    >

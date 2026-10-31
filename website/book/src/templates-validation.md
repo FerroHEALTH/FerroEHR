@@ -123,12 +123,22 @@ The two failure modes are again distinguished by status:
   whose `errors` list the AOM2 validity (`V`-prefixed) rule codes:
   `VARD`, `VCORM`, `VACSD` and friends.
 
+Every archetype a template or archetype fills a slot with or references
+through `use_archetype` must already be loaded (AOM2 rule `VARXR`), so upload
+the archetypes before the templates built on them. A template naming one the
+CDR does not hold is refused with a 422 whose `errors` carry one `VARXR` entry
+per missing archetype id.
+
 A duplicate artefact id returns **409 Conflict**.
 
 A loaded ADL 2 template is retrieved in either of two representations, chosen by
 `Accept`: the stored ADL 2 **source** (`text/plain`, the default) or the
 **operational template as JSON** (`application/json`). `Accept: application/xml`
-has no declared body here and is a **406**. A partial `template_id` resolves to
+has no declared body here and is a **406**. A template whose constituent
+archetype was deleted after its upload cannot be compiled: its JSON form and
+its example answer **422**, and with `Prefer: return=representation` the
+`errors` list one `VARXR` entry per missing archetype, its `detail` the
+archetype id. Upload the archetype again to restore it. A partial `template_id` resolves to
 the latest matching version, and a separate route addresses a version
 explicitly:
 

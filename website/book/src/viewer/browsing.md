@@ -51,6 +51,10 @@ the JSON tab beside Source shows the `OperationalTemplateV2` document. An
 older release opens on its Overview, says which release you are reading, and
 links back to the latest.
 
+A template whose archetypes the CDR no longer holds says so on every tab,
+names each missing archetype and links to uploading them. Its Paths, JSON and
+Example tabs stay empty until the archetypes are back.
+
 ![An ADL 2 template](img/templates/template-adl2.png)
 
 ### Deleting a template

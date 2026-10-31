@@ -42,6 +42,7 @@ mod legacy14_corpus;
 mod nesting_bounds;
 mod opt_spec;
 mod rules_parse;
+mod template_constituents;
 mod templates_corpus;
 mod validate_source_flat_form;
 mod validation_adl14;

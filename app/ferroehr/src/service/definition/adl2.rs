@@ -26,7 +26,7 @@ use openehr_adl::artefact::ArchetypeRepository;
 use openehr_adl::assemble::parse_artefact;
 use openehr_adl::hrid::{raw_id_concept, raw_id_lookup_key, raw_id_version};
 use openehr_adl::meta::{ArtefactSummary, summarize};
-use openehr_adl::opt::create_opt;
+use openehr_adl::opt::{OptError, create_opt, unresolved_constituents};
 use openehr_adl::parse::Dialect;
 use openehr_adl::validate::bindings::{TerminologyResolver, external_term_bindings};
 use openehr_adl::validate::catalogue::Severity;
@@ -52,6 +52,7 @@ use crate::service::error::{ErrorChain, ServiceError, Violation};
 use crate::service::list::Page;
 use crate::service::status::{CallStatusType, SmError};
 
+use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
 use super::{compile_pattern, page_bounds, paginate};
 
 /// The `WebTemplate`-cache key namespace for ADL2/OPT2 templates. The trailing
@@ -571,8 +572,9 @@ impl FerroEhrService {
     ///
     /// - The stored source no longer parses → `Internal` (`500`; a stored source
     ///   was engine-valid at upload, so this is a server fault).
-    /// - The OPT cannot be compiled (an unresolved constituent reference) →
-    ///   `Unprocessable` (`422`).
+    /// - A constituent archetype is not stored → `ValidationFailed` (`422`,
+    ///   one `VARXR` violation per missing archetype id).
+    /// - The OPT cannot be compiled otherwise → `Unprocessable` (`422`).
     pub(super) async fn adl2_opt_json(&self, source: &str) -> Result<String, ServiceError> {
         let opt = self.adl2_operational_template(source).await?;
         Ok(openehr_its::json::to_canonical_json(&opt))
@@ -598,8 +600,10 @@ impl FerroEhrService {
     ///   `template_id`.
     /// - [`ServiceError::Internal`] (`500`) — the stored source no longer parses
     ///   (it was engine-valid at upload, so this is a server fault).
-    /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled (an
-    ///   unresolved constituent reference) or built into a `WebTemplate`.
+    /// - [`ServiceError::ValidationFailed`] (`422`) — a constituent archetype
+    ///   is not stored (one `VARXR` violation per missing archetype id).
+    /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled
+    ///   otherwise or built into a `WebTemplate`.
     /// - [`ServiceError::BadRequest`] (`400`) — the template's root is neither a
     ///   COMPOSITION nor a party class, so no example exists for it.
     pub(super) async fn adl2_example(
@@ -732,9 +736,12 @@ impl FerroEhrService {
     ///
     /// - The stored source no longer parses → `Internal` (`500`; a stored source
     ///   was engine-valid at upload, so this is a server fault).
-    /// - The OPT cannot be compiled (an unresolved or cyclic constituent
-    ///   reference, a lineage or nesting past the engine bound) →
-    ///   `Unprocessable` (`422`).
+    /// - A constituent archetype the template needs is not stored →
+    ///   `ValidationFailed` (`422`), one `VARXR` violation per missing
+    ///   archetype id ([`missing_constituents`]).
+    /// - The OPT cannot be compiled otherwise (a cyclic constituent reference,
+    ///   a lineage or nesting past the engine bound) → `Unprocessable`
+    ///   (`422`).
     async fn adl2_operational_template(
         &self,
         source: &str,
@@ -754,17 +761,20 @@ impl FerroEhrService {
             return Ok(opt.as_ref().clone());
         }
         let repo = self.adl2_repository().await?;
-        on_engine_stack(move || create_opt(&archetype, &repo))
-            .await?
-            .map_err(|e| {
-                ServiceError::content_invalid(
-                    Violation::new(format!(
-                        "cannot compile operational template: {}",
-                        ErrorChain::new(&e)
-                    ))
-                    .with_source(e),
-                )
+        on_engine_stack(move || {
+            create_opt(&archetype, &repo).map_err(|e| match e {
+                OptError::UnresolvedReference(_) => {
+                    let missing = unresolved_constituents(&archetype, &repo);
+                    if missing.is_empty() {
+                        not_compiled(e)
+                    } else {
+                        missing_constituents(&missing)
+                    }
+                }
+                other => not_compiled(other),
             })
+        })
+        .await?
     }
 
     /// The ADL2 source of the artefact with `ARCHETYPE_HRID` `an_id`; absent
@@ -1013,40 +1023,6 @@ fn version_prefix_matches(full: &str, prefix: &str) -> bool {
 fn cmp_version(a: &str, b: &str) -> std::cmp::Ordering {
     let parse = |v: &str| -> Vec<u64> { v.split('.').map(|p| p.parse().unwrap_or(0)).collect() };
     parse(a).cmp(&parse(b))
-}
-
-/// The stack the AOM engine runs on.
-///
-/// Parsing, flattening and validating an archetype recurse over the artefact
-/// and over the stored repository (slot fillers, specialisation parents), and
-/// a well-stocked store crossed a tokio worker's 2 MiB stack (#3062). The
-/// reservation is virtual: pages are committed only as the stack grows.
-const ENGINE_STACK_BYTES: usize = 256 * 1024 * 1024;
-
-/// Run `f` on a dedicated thread with [`ENGINE_STACK_BYTES`] of stack and await
-/// its result without blocking the runtime.
-///
-/// # Errors
-/// [`ServiceError::Internal`] when the thread cannot be spawned or ends without
-/// delivering a result (a panic inside `f` surfaces as that, never as an abort
-/// of the process).
-async fn on_engine_stack<T, F>(f: F) -> Result<T, ServiceError>
-where
-    T: Send + 'static,
-    F: FnOnce() -> T + Send + 'static,
-{
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    std::thread::Builder::new()
-        .name("adl2-engine".to_owned())
-        .stack_size(ENGINE_STACK_BYTES)
-        .spawn(move || {
-            // The receiver is gone only when the request was cancelled, in
-            // which case the result has no reader left.
-            drop(tx.send(f()));
-        })
-        .map_err(|e| ServiceError::internal("spawning the ADL2 engine thread", e))?;
-    rx.await
-        .map_err(|e| ServiceError::internal("the ADL2 engine thread ended without a result", e))
 }
 
 #[cfg(test)]

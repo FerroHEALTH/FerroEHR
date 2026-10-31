@@ -518,6 +518,11 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
         "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define (the 2013 converter carried ADL 1.4 C_DV_QUANTITY.property into an attribute position)",
     ),
     (
+        "openEHR-EHR-COMPOSITION.t_encounter_opt_test.v1.0.0.adls",
+        ValidationCode::Varxr,
+        "fills `content` with openEHR-EHR-OBSERVATION.apgar.v1, which is refused below, so the reference resolves to no stored archetype (master04.5 VARXR)",
+    ),
+    (
         "openEHR-EHR-EVALUATION.goal.v1.0.0.adls",
         ValidationCode::Vcarm,
         "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define (the 2013 converter carried ADL 1.4 C_DV_QUANTITY.property into an attribute position)",
