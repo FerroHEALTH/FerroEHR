@@ -252,8 +252,10 @@ blocks() {
 
 write_baseline() {
   {
+    # REUSE-IgnoreStart
     printf '# SPDX-FileCopyrightText: Cadasto B.V.\n'
     printf '# SPDX-License-Identifier: BUSL-1.1\n'
+    # REUSE-IgnoreEnd
     printf '# The key of every block scripts/checks/duplication.sh counts, written\n'
     printf '# by --update: both places of the block, each as its path and the\n'
     printf '# sha256 of the text of its lines, the two sorted.\n'
@@ -279,8 +281,10 @@ committed_count() {
 
 write_count() {
   {
+    # REUSE-IgnoreStart
     printf '# SPDX-FileCopyrightText: Cadasto B.V.\n'
     printf '# SPDX-License-Identifier: BUSL-1.1\n'
+    # REUSE-IgnoreEnd
     printf '# The duplicated lines scripts/checks/duplication.sh measures in\n'
     printf '# app/*/src/, crates/*/src/ and tools/*/src/. It may fall and never\n'
     printf '# rise; --update writes a lower one, and a higher one is a hand edit\n'
