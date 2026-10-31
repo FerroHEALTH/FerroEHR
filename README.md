@@ -30,12 +30,11 @@
 [![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](https://ferroehr.eu/docs/latest/verifying-releases.html#what-slsa-level-each-artifact-reaches)
 
 **Conformance and compliance**<br>
-[![openEHR CNF conformance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge.json)](docs/conformance/ferroehr/CONFORMANCE_REPORT.md)
-[![CNF CORE](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-core.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
-[![CNF STANDARD](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-standard.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
-[![CNF OPTIONS](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-options.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
-[![CNF SEC-BASIC](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-sec-basic.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
-[![CNF performance](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FFerroHEALTH%2FFerroEHR%2Fmain%2Fdocs%2Fconformance%2Fferroehr%2Fbadge-performance.json)](docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md)
+[![openEHR BASE](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![openEHR options](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![openEHR warnings](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/warnings.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![specification](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
+[![veredictum](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
 <br>
 [![EHDS](https://img.shields.io/badge/EHDS-readiness%20statement-blue?logo=europeanunion)](https://ferrohealth.eu/docs/ehds/readiness.html)
 [![CRA](https://img.shields.io/badge/CRA-risk%20assessment-blue?logo=europeanunion)](https://ferroehr.eu/docs/latest/compliance/cra-risk-assessment.html)
