@@ -17,6 +17,16 @@
 /// other than a synthesized canonical shape, each with the reason.
 const ALLOWLIST: &[(&str, &str)] = &[
     (
+        "versioning/attestation/tests.rs",
+        "the out-of-line unit tests of `versioning::attestation`: wire request \
+         fixtures, including shapes the generated types must refuse",
+    ),
+    (
+        "versioning/contribution/tests.rs",
+        "the out-of-line unit tests of `versioning::contribution`: wire \
+         request fixtures, including shapes the generated types must refuse",
+    ),
+    (
         "service/message/export.rs",
         "EXTRACT envelope composed over ALREADY-CANONICAL opaque fragments \
          (versioned-object bodies, version envelopes, revision histories) — \
