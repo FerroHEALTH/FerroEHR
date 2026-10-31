@@ -72,6 +72,8 @@ openehr-adl = { path = "../openehr-adl" }
 openehr-its = { path = "../openehr-its", default-features = false, features = ["opt14"] }
 # The vendored Veredictum ADL 2 content cases are Arazzo YAML documents.
 serde_norway.workspace = true
+# The vendored cases' expected statuses are compared as typed `StatusCode`s.
+http.workspace = true
 
 [lints]
 workspace = true

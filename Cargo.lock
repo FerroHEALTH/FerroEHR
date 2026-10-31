@@ -5130,6 +5130,7 @@ name = "openehr-sdt"
 version = "0.0.127"
 dependencies = [
  "fancy-regex",
+ "http",
  "indexmap 2.14.2",
  "insta",
  "moka",

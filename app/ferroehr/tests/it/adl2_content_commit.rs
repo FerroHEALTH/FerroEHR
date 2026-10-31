@@ -30,6 +30,7 @@ use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
+use http::StatusCode;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 use openehr_rm::prelude::PartyProxy;
 
@@ -37,7 +38,7 @@ use openehr_rm::prelude::PartyProxy;
 struct Case {
     workflow: String,
     template: String,
-    status: u16,
+    status: StatusCode,
     body: Value,
 }
 
@@ -107,7 +108,8 @@ fn cases() -> Vec<Case> {
                     .to_owned(),
                 status: condition
                     .strip_prefix("$statusCode == ")
-                    .and_then(|s| s.parse().ok())
+                    .and_then(|s| s.parse::<u16>().ok())
+                    .and_then(|n| StatusCode::from_u16(n).ok())
                     .unwrap_or_else(|| panic!("status condition {condition}")),
                 body: commit
                     .pointer("/requestBody/payload")
@@ -170,9 +172,15 @@ async fn every_adl2_content_case_gets_its_answer_on_the_canonical_commit() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let all = cases();
-    let committed: Vec<&Case> = all.iter().filter(|c| c.status != 400).collect();
+    let committed: Vec<&Case> = all
+        .iter()
+        .filter(|c| c.status != StatusCode::BAD_REQUEST)
+        .collect();
     assert_eq!(
-        committed.iter().filter(|c| c.status == 422).count(),
+        committed
+            .iter()
+            .filter(|c| c.status == StatusCode::UNPROCESSABLE_ENTITY)
+            .count(),
         30,
         "the catalogue's 30 refusal rows"
     );
@@ -180,16 +188,20 @@ async fn every_adl2_content_case_gets_its_answer_on_the_canonical_commit() {
     let ehr = new_ehr(&svc).await;
     for case in committed {
         let outcome = svc.create_composition(ehr, creation(&case.body)).await;
-        match (case.status, outcome) {
-            (201, Ok(_)) => {}
-            (422, Err(ServiceError::ValidationFailed(violations))) => assert!(
-                !violations.is_empty(),
-                "{}: refused without a violation",
-                case.workflow
-            ),
-            (status, outcome) => panic!(
-                "{}: the catalogue expects {status}, the commit answered {outcome:?}",
-                case.workflow
+        match outcome {
+            Ok(_) if case.status == StatusCode::CREATED => {}
+            Err(ServiceError::ValidationFailed(violations))
+                if case.status == StatusCode::UNPROCESSABLE_ENTITY =>
+            {
+                assert!(
+                    !violations.is_empty(),
+                    "{}: refused without a violation",
+                    case.workflow
+                );
+            }
+            outcome => panic!(
+                "{}: the catalogue expects {}, the commit answered {outcome:?}",
+                case.workflow, case.status
             ),
         }
     }
