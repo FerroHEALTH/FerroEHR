@@ -21,7 +21,7 @@
 )]
 
 use openehr_base::prelude::{HierObjectId, ObjectId, ObjectRef, ObjectRefData, ObjectVersionId};
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
+use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
 use serde_json::{Value, json};
 use sqlx::Connection as _;
 use uuid::Uuid;
@@ -33,7 +33,7 @@ use crate::service::list::Page;
 use crate::service::status::ServiceStatus;
 use crate::versioning::attestation::{AttestationInput, AttestationParts, PendingAttest};
 use crate::versioning::audit::{
-    AuditInput, change_type, change_type_code, decode_description, party_proxy,
+    AuditInput, change_type, change_type_code, decode_description, party_proxy, plain_audit,
     validate_commit_audit,
 };
 use crate::versioning::change::{Change, CommittedContribution};
@@ -434,35 +434,6 @@ pub(crate) fn decode_new_contribution<T: serde::de::DeserializeOwned>(
             e,
         )
     })
-}
-
-/// The plain `UPDATE_AUDIT` of a commit audit, refusing the attestation
-/// subtype.
-///
-/// ITS-REST `schemas/common/UpdateAudit.yaml` names what a server accepts for
-/// an audit: "Clients SHOULD send `_type: \"UPDATE_AUDIT\"`. For
-/// interoperability with existing implementations, servers SHOULD additionally
-/// accept `_type: \"AUDIT_DETAILS\"` or an omitted `_type` for this attribute."
-/// An attestation travels in its own member, `UpdateVersion.attestations[]`
-/// (`schemas/ehr/UpdateVersion.yaml`, items `schemas/common/UpdateAttestation.yaml`),
-/// as RM common master06 §Contributions states it: "a new `ATTESTATION` is
-/// added to the attestations list of an existing `ORIGINAL_VERSION`".
-///
-/// # Errors
-/// [`ServiceError::BadRequest`] when the audit is an `UPDATE_ATTESTATION`.
-fn plain_audit<'a>(
-    audit: &'a UpdateAudit,
-    owner: &str,
-) -> Result<&'a UpdateAuditData, ServiceError> {
-    match audit {
-        UpdateAudit::UpdateAudit(data) => Ok(data),
-        UpdateAudit::UpdateAttestation(_) => Err(ServiceError::precondition(format!(
-            "{owner} is an UPDATE_ATTESTATION: an audit is sent with _type UPDATE_AUDIT, \
-             AUDIT_DETAILS or no _type (ITS-REST schemas/common/UpdateAudit.yaml), and an \
-             attestation travels in versions[].attestations as UPDATE_ATTESTATION \
-             (schemas/ehr/UpdateVersion.yaml)"
-        ))),
-    }
 }
 
 /// Commit a CONTRIBUTION's version set atomically under one contribution +

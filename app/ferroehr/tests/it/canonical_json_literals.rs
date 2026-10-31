@@ -22,6 +22,11 @@ const ALLOWLIST: &[(&str, &str)] = &[
          fixtures, including shapes the generated types must refuse",
     ),
     (
+        "versioning/audit/tests.rs",
+        "the out-of-line unit tests of `versioning::audit`: wire commit-audit \
+         fixtures, including shapes the generated types must refuse",
+    ),
+    (
         "versioning/contribution/tests.rs",
         "the out-of-line unit tests of `versioning::contribution`: wire \
          request fixtures, including shapes the generated types must refuse",

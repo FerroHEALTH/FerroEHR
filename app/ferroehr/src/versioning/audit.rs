@@ -218,28 +218,37 @@ impl AuditInput {
     ///   ([`crate::service::committer::attributed`]);
     /// - `system_id` — the caller's when supplied, else this server's.
     ///
+    /// The audit is a plain `UPDATE_AUDIT` ([`plain_audit`]), as on the
+    /// CONTRIBUTION path: an attestation travels in
+    /// `UPDATE_VERSION.attestations`.
+    ///
     /// # Errors
     /// [`ServiceError::Unprocessable`] for a `change_type` outside the
-    /// `audit_change_type` group (`AUDIT_DETAILS.Change_type_valid`);
+    /// `audit_change_type` group (`AUDIT_DETAILS.Change_type_valid`) or a
+    /// stated empty `system_id` ([`validate_system_id`]);
     /// [`ServiceError::BadRequest`] for a group code that contradicts the
     /// operation (mirroring the CONTRIBUTION path's change-control mismatch,
-    /// `versioning/contribution.rs`).
+    /// `versioning/contribution.rs`) or an `UPDATE_ATTESTATION` audit.
     pub(crate) fn from_update(
         update: &UpdateAudit,
         operation_change_type: &str,
         default_description: &str,
         fallback_system_id: &str,
     ) -> Result<Self, ServiceError> {
-        let base = crate::service::version_update::audit_base(update);
+        let base = plain_audit(update, "commit_audit")?;
         let change_type = merged_change_type(
             &base.change_type.defining_code.code_string,
             operation_change_type,
         )?;
+        // `UpdateAudit.yaml`: a `system_id` "When provided it will be validated;
+        // when omitted the server sets its own value".
+        let system_id = base
+            .system_id
+            .clone()
+            .unwrap_or_else(|| fallback_system_id.to_owned());
+        validate_system_id(&system_id)?;
         Ok(Self {
-            system_id: base
-                .system_id
-                .filter(|s| !s.is_empty())
-                .map_or_else(|| fallback_system_id.to_owned(), str::to_owned),
+            system_id,
             change_type,
             // The wire types `description` as `DV_TEXT`
             // (`schemas/common/UpdateAudit.yaml`), whose `DV_CODED_TEXT` subtype
@@ -248,22 +257,13 @@ impl AuditInput {
             // `defining_code`.
             description: Some(
                 base.description
+                    .as_ref()
                     .filter(|d| !crate::service::version_update::text_value(d).is_empty())
                     .cloned()
                     .unwrap_or_else(|| dv_text(default_description)),
             ),
             committer: crate::service::committer::attributed(base.committer.clone()),
-            // `UPDATE_VERSION.commit_audit` is polymorphic on the released wire
-            // (`UpdateAudit.yaml`), which is the RM's own pair: "the committing
-            // party … `AUDIT_DETAILS` … or its subtype `ATTESTATION`" (RM common
-            // master06 §Committal and Audits). The shared decoder is the one
-            // place the subtype's invariants are evaluated.
-            attestation: match update {
-                UpdateAudit::UpdateAudit(_) => None,
-                UpdateAudit::UpdateAttestation(att) => Some(Box::new(
-                    crate::versioning::attestation::AttestationInput::from_update(att)?.parts,
-                )),
-            },
+            attestation: None,
         })
     }
 
@@ -276,6 +276,11 @@ impl AuditInput {
     /// the CONTRIBUTION audit, the CONTRIBUTION audit's for a member: RM common
     /// master06 §Committal and Audits). A stated one is kept as stated, so an
     /// empty one reaches [`validate_commit_audit`]'s `System_id_valid`.
+    ///
+    /// ITS-REST `schemas/common/UpdateAudit.yaml` leaves `additionalProperties`
+    /// open (`schemas/common/ItemTag.yaml` closes its object with `false`), so a
+    /// member it does not declare (`reason` or `is_pending` on a plain audit) is
+    /// valid content that is not part of the audit.
     pub(crate) fn from_commit_audit(
         update: &UpdateAuditData,
         change_type: String,
@@ -475,6 +480,59 @@ pub(crate) fn party_proxy(committer: &Value) -> Result<PartyProxy, ServiceError>
     })
 }
 
+/// The plain `UPDATE_AUDIT` of a commit audit, refusing the attestation
+/// subtype.
+///
+/// ITS-REST `schemas/common/UpdateAudit.yaml` names what a server accepts for
+/// an audit: "Clients SHOULD send `_type: \"UPDATE_AUDIT\"`. For
+/// interoperability with existing implementations, servers SHOULD additionally
+/// accept `_type: \"AUDIT_DETAILS\"` or an omitted `_type` for this attribute."
+/// An attestation travels in its own member, `UpdateVersion.attestations[]`
+/// (`schemas/ehr/UpdateVersion.yaml`, items `schemas/common/UpdateAttestation.yaml`),
+/// as RM common master06 §Contributions states it: "a new `ATTESTATION` is
+/// added to the attestations list of an existing `ORIGINAL_VERSION`".
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when the audit is an `UPDATE_ATTESTATION`.
+pub(crate) fn plain_audit<'a>(
+    audit: &'a UpdateAudit,
+    owner: &str,
+) -> Result<&'a UpdateAuditData, ServiceError> {
+    match audit {
+        UpdateAudit::UpdateAudit(data) => Ok(data),
+        UpdateAudit::UpdateAttestation(_) => Err(ServiceError::precondition(format!(
+            "{owner} is an UPDATE_ATTESTATION: an audit is sent with _type UPDATE_AUDIT, \
+             AUDIT_DETAILS or no _type (ITS-REST schemas/common/UpdateAudit.yaml), and an \
+             attestation travels in versions[].attestations as UPDATE_ATTESTATION \
+             (schemas/ehr/UpdateVersion.yaml)"
+        ))),
+    }
+}
+
+/// Refuses an empty `AUDIT_DETAILS.system_id`.
+///
+/// RM `UML/classes/org.openehr.rm.common.audit_details.adoc` §Invariants:
+/// `System_id_valid: not system_id.is_empty`. A stated one is validated, never
+/// replaced (ITS-REST `schemas/common/UpdateAudit.yaml`: "When provided it will
+/// be validated; when omitted the server sets its own value").
+///
+/// NOTE: an empty string is schema-valid content that breaks an RM invariant,
+/// the `422` row of ITS-REST `docs/overview/Requests_and_responses.md`
+/// §HTTP status codes; a non-string `system_id` fails the schema and is `400`.
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] naming `AUDIT_DETAILS.System_id_valid`.
+pub(crate) fn validate_system_id(system_id: &str) -> Result<(), ServiceError> {
+    if system_id.is_empty() {
+        return Err(ServiceError::content_invalid(
+            Violation::new("is mandatory and non-void")
+                .with_path("AUDIT_DETAILS.system_id")
+                .with_invariant("AUDIT_DETAILS.System_id_valid"),
+        ));
+    }
+    Ok(())
+}
+
 /// Validate a client-supplied commit `AUDIT_DETAILS`' non-terminology RM
 /// invariants before it is persisted (a CONTRIBUTION audit or a version
 /// `commit_audit`).
@@ -496,13 +554,7 @@ pub(crate) fn party_proxy(committer: &Value) -> Result<PartyProxy, ServiceError>
 ///   A PARTY appearing as content is validated by the RM-invariant pass, but the
 ///   audit committer is stored verbatim, so it is checked here.
 pub(crate) fn validate_commit_audit(audit: &AuditInput) -> Result<(), ServiceError> {
-    if audit.system_id.is_empty() {
-        return Err(ServiceError::content_invalid(
-            Violation::new("is mandatory and non-void")
-                .with_path("AUDIT_DETAILS.system_id")
-                .with_invariant("AUDIT_DETAILS.System_id_valid"),
-        ));
-    }
+    validate_system_id(&audit.system_id)?;
     validate_committer(&audit.committer)
 }
 
@@ -551,289 +603,4 @@ pub(crate) fn validate_committer(committer: &PartyProxy) -> Result<(), ServiceEr
 }
 
 #[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::*;
-
-    /// ITS-REST overview §"openehr-version and openehr-audit-details": a
-    /// caller-supplied `change_type` "MUST be merged" — legal divergent
-    /// values are honoured; out-of-group tokens are 422; operation
-    /// mismatches are 400 (mirroring the CONTRIBUTION path).
-    #[test]
-    fn merged_change_type_honours_legal_client_codes() {
-        // Absent/empty and restated defaults resolve to the operation's code.
-        assert_eq!(
-            merged_change_type("", change_type::MODIFICATION).unwrap(),
-            change_type::MODIFICATION
-        );
-        assert_eq!(
-            merged_change_type(change_type::MODIFICATION, change_type::MODIFICATION).unwrap(),
-            change_type::MODIFICATION
-        );
-        // 250|amendment| is a legal divergent value on an update.
-        assert_eq!(
-            merged_change_type("250", change_type::MODIFICATION).unwrap(),
-            "250"
-        );
-        // Rubric tokens resolve to their numeric group code.
-        assert_eq!(
-            merged_change_type("amendment", change_type::MODIFICATION).unwrap(),
-            "250"
-        );
-        // Creates carry 249 only; deletes carry 523 only.
-        assert_eq!(
-            merged_change_type(change_type::CREATION, change_type::CREATION).unwrap(),
-            change_type::CREATION
-        );
-        assert_eq!(
-            merged_change_type(change_type::DELETED, change_type::DELETED).unwrap(),
-            change_type::DELETED
-        );
-    }
-
-    #[test]
-    fn merged_change_type_rejects_mismatch_as_bad_request() {
-        for (supplied, operation) in [
-            (change_type::CREATION, change_type::MODIFICATION),
-            (change_type::DELETED, change_type::MODIFICATION),
-            (change_type::ATTESTATION, change_type::MODIFICATION),
-            ("250", change_type::CREATION),
-            ("250", change_type::DELETED),
-            (change_type::CREATION, change_type::DELETED),
-        ] {
-            let err = merged_change_type(supplied, operation).unwrap_err();
-            assert!(
-                matches!(err, ServiceError::BadRequest(_)),
-                "{supplied} on op {operation}: {err:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn merged_change_type_rejects_out_of_group_as_unprocessable() {
-        for token in ["999", "banana", "creation-x"] {
-            match merged_change_type(token, change_type::MODIFICATION) {
-                // The refusal is asserted as DATA: the attribute path and the
-                // named RM invariant, not a fragment of the sentence.
-                Err(ServiceError::Unprocessable { violation: v, .. }) => {
-                    assert_eq!(v.path(), Some("change_type"), "{token}");
-                    assert_eq!(
-                        v.invariant(),
-                        Some("AUDIT_DETAILS.Change_type_valid"),
-                        "{token}"
-                    );
-                }
-                other => panic!("{token}: expected Unprocessable, got {other:?}"),
-            }
-        }
-    }
-
-    /// Every named constant is a real group member, and the constants cover
-    /// the COMPLETE `audit_change_type` group — a code added to the TERM
-    /// bundle without a constant here fails this test.
-    #[test]
-    fn change_type_constants_are_the_complete_group() {
-        let all = [
-            change_type::CREATION,
-            change_type::AMENDMENT,
-            change_type::MODIFICATION,
-            change_type::SYNTHESIS,
-            change_type::UNKNOWN,
-            change_type::DELETED,
-            change_type::ATTESTATION,
-            change_type::RESTORATION,
-            change_type::FORMAT_CONVERSION,
-        ];
-        let t = openehr();
-        for code in all {
-            assert!(t.is_valid_audit_change_type(code), "code {code}");
-            // code_string must be numeric (AUDIT_DETAILS.Change_type_valid).
-            assert!(code.chars().all(|c| c.is_ascii_digit()));
-        }
-        let mut group: Vec<String> = t
-            .concepts_in_group(AUDIT_CHANGE_TYPE)
-            .iter()
-            .map(|c| c.id.clone())
-            .collect();
-        group.sort();
-        let mut named: Vec<String> = all.iter().map(|c| (*c).to_owned()).collect();
-        named.sort();
-        assert_eq!(group, named, "constants must mirror the full TERM group");
-    }
-
-    #[test]
-    fn change_type_code_accepts_code_or_rubric_and_rejects_non_members() {
-        assert_eq!(change_type_code("249").as_deref(), Some("249"));
-        assert_eq!(change_type_code("creation").as_deref(), Some("249"));
-        assert_eq!(change_type_code("Deleted").as_deref(), Some("523"));
-        assert_eq!(change_type_code("amendment").as_deref(), Some("250"));
-        assert_eq!(change_type_code("synthesis").as_deref(), Some("252"));
-        assert_eq!(change_type_code("unknown").as_deref(), Some("253"));
-        assert_eq!(change_type_code("666").as_deref(), Some("666"));
-        // Out-of-group tokens are rejected, not passed through
-        // (AUDIT_DETAILS.Change_type_valid).
-        assert_eq!(change_type_code("not-a-change-type"), None);
-        assert_eq!(change_type_code("532"), None); // lifecycle code, wrong group
-    }
-
-    #[test]
-    fn rubric_round_trips() {
-        assert_eq!(change_type_rubric(change_type::CREATION), "creation");
-        assert_eq!(
-            change_type_rubric(change_type::MODIFICATION),
-            "modification"
-        );
-        assert_eq!(change_type_rubric(change_type::DELETED), "deleted");
-    }
-
-    /// A commit audit whose committer is the canonical `PARTY_PROXY` the
-    /// fragment denotes. The decode is `expect`ed because every caller below
-    /// passes a structurally well-formed proxy; a committer that is NOT
-    /// structurally a `PARTY_PROXY` is refused by [`party_proxy`] itself, which
-    /// [`committer_decode_refuses_structurally_invalid_party`] pins.
-    fn audit_input(system_id: &str, committer: &Value) -> AuditInput {
-        AuditInput {
-            system_id: system_id.to_owned(),
-            change_type: change_type::CREATION.to_owned(),
-            description: None,
-            committer: party_proxy(committer).expect("the fixture is a canonical PARTY_PROXY"),
-            attestation: None,
-        }
-    }
-
-    #[test]
-    fn commit_audit_rejects_empty_system_id() {
-        let audit = audit_input(
-            "",
-            &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }),
-        );
-        match validate_commit_audit(&audit) {
-            Err(ServiceError::Unprocessable { violation: v, .. }) => {
-                assert_eq!(v.path(), Some("AUDIT_DETAILS.system_id"));
-                assert_eq!(v.invariant(), Some("AUDIT_DETAILS.System_id_valid"));
-            }
-            other => panic!("expected Unprocessable(System_id_valid), got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn commit_audit_rejects_committer_without_identity() {
-        let audit = audit_input("ferroehr.local", &json!({ "_type": "PARTY_IDENTIFIED" }));
-        match validate_commit_audit(&audit) {
-            // The nested dispatcher violations survive as DATA: the causes
-            // list is asserted, not a substring of the rendered message.
-            Err(ServiceError::Unprocessable { violation: v, .. }) => {
-                assert_eq!(v.path(), Some("AUDIT_DETAILS.committer"));
-                assert!(
-                    v.causes()
-                        .iter()
-                        .any(|c| c.message.contains("Basic_validity")),
-                    "causes must carry the PARTY_IDENTIFIED invariant, got {:?}",
-                    v.causes()
-                );
-            }
-            other => panic!("expected Unprocessable(Basic_validity), got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn commit_audit_rejects_empty_committer_name() {
-        let audit = audit_input(
-            "ferroehr.local",
-            &json!({ "_type": "PARTY_IDENTIFIED", "name": "" }),
-        );
-        match validate_commit_audit(&audit) {
-            Err(ServiceError::Unprocessable { violation: v, .. }) => assert!(
-                v.causes().iter().any(|c| c.message.contains("Name_valid")),
-                "causes must carry Name_valid, got {:?}",
-                v.causes()
-            ),
-            other => panic!("expected Unprocessable(Name_valid), got {other:?}"),
-        }
-    }
-
-    /// `PARTY_RELATED.relationship` is a mandatory `DV_CODED_TEXT` (1..1 — RM
-    /// `UML/classes/org.openehr.rm.common.party_related.adoc` §Attributes), so
-    /// a committer that omits it, or supplies an uncoded `DV_TEXT`, is not a
-    /// `PARTY_PROXY` at all: the strict reader refuses it before any invariant
-    /// runs, naming the attribute. The refusal is asserted as DATA (the
-    /// committer path plus the decode failure's own JSON path).
-    #[test]
-    fn committer_decode_refuses_structurally_invalid_party() {
-        for bad in [
-            json!({ "_type": "PARTY_RELATED", "name": "Mum" }),
-            json!({ "_type": "PARTY_RELATED", "name": "Mum",
-                    "relationship": { "_type": "DV_TEXT", "value": "mother" } }),
-        ] {
-            match party_proxy(&bad) {
-                Err(ServiceError::Unprocessable { violation: v, .. }) => {
-                    assert_eq!(v.path(), Some("AUDIT_DETAILS.committer"));
-                    assert!(
-                        v.causes().iter().any(|c| c.message.contains("relationship")
-                            || c.path.contains("relationship")),
-                        "causes must name the offending attribute, got {:?}",
-                        v.causes()
-                    );
-                }
-                other => panic!("{bad}: expected Unprocessable, got {other:?}"),
-            }
-        }
-    }
-
-    #[test]
-    fn commit_audit_party_related_relationship_is_enforced() {
-        // Group member 10 = "mother"; a non-member relationship code is a 422
-        // (Relationship_valid, party proxies).
-        let related = |relationship: Value| {
-            let mut c = json!({ "_type": "PARTY_RELATED", "name": "Mum" });
-            c.as_object_mut()
-                .unwrap()
-                .insert("relationship".into(), relationship);
-            audit_input("sys", &c)
-        };
-        let bad = related(json!({
-            "_type": "DV_CODED_TEXT", "value": "colleague",
-            "defining_code": { "_type": "CODE_PHRASE", "code_string": "99999",
-                               "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" } }
-        }));
-        // The refusal is produced by the generated `PARTY_RELATED` core, whose
-        // violation message names the invariant, not the rejected code.
-        match validate_commit_audit(&bad) {
-            Err(ServiceError::Unprocessable { violation: v, .. }) => {
-                assert!(
-                    v.causes()
-                        .iter()
-                        .any(|c| c.message.contains("Relationship_valid")),
-                    "causes must carry Relationship_valid, got {:?}",
-                    v.causes()
-                );
-            }
-            other => panic!("non-member relationship code must be 422, got {other:?}"),
-        }
-        validate_commit_audit(&related(json!({
-            "_type": "DV_CODED_TEXT", "value": "mother",
-            "defining_code": { "_type": "CODE_PHRASE", "code_string": "10",
-                               "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" } }
-        })))
-        .expect("subject_relationship group member accepted");
-    }
-
-    #[test]
-    fn commit_audit_accepts_valid_committers() {
-        validate_commit_audit(&audit_input(
-            "sys",
-            &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }),
-        ))
-        .expect("named committer");
-        validate_commit_audit(&audit_input(
-            "sys",
-            &json!({ "_type": "PARTY_IDENTIFIED", "identifiers": [
-                { "_type": "DV_IDENTIFIER", "id": "42", "issuer": "x", "type": "id" }
-            ] }),
-        ))
-        .expect("identifier-only committer");
-        validate_commit_audit(&audit_input("sys", &json!({ "_type": "PARTY_SELF" })))
-            .expect("PARTY_SELF committer");
-    }
-}
+mod tests;

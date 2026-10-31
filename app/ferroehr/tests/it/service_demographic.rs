@@ -1094,3 +1094,62 @@ async fn demographic_contribution_refuses_the_lenient_spellings() {
         .await
         .expect("the released spelling commits");
 }
+
+/// The audit refusals of #4543 on the demographic CONTRIBUTION path answer as
+/// on the EHR path: a non-string `system_id` (`schemas/common/UpdateAudit.yaml`
+/// `type: string`) and an untagged `description` (`data_types/UDvText.yaml`)
+/// are the 400, an empty `system_id` the 422 of `AUDIT_DETAILS.System_id_valid`,
+/// and undeclared members commit (`schemas/demographic/NewContribution.yaml`
+/// and `UpdateAudit.yaml` leave `additionalProperties` open).
+#[tokio::test]
+async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let complete = json!({ "value": "complete",
+        "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" } });
+    let audit = json!({ "change_type": { "value": "creation",
+            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" } },
+        "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } });
+    let with = |member: &str, value: Value| {
+        let mut changed = audit.clone();
+        changed[member] = value;
+        changed
+    };
+    let body = |commit_audit: Value, contribution_audit: Value| {
+        json!({
+            "versions": [{
+                "lifecycle_state": complete.clone(),
+                "commit_audit": commit_audit,
+                "data": person("Audited")
+            }],
+            "audit": contribution_audit
+        })
+    };
+    for (shape, status) in [
+        (
+            with("system_id", json!(7)),
+            ServiceStatus::PreconditionViolation,
+        ),
+        (
+            with("description", json!({ "value": "no tag" })),
+            ServiceStatus::PreconditionViolation,
+        ),
+        (with("system_id", json!("")), ServiceStatus::ContentInvalid),
+    ] {
+        for refused in [
+            body(shape.clone(), audit.clone()),
+            body(audit.clone(), shape.clone()),
+        ] {
+            let err = svc
+                .demographic_contribution_create(refused.clone())
+                .await
+                .expect_err("the shape is refused");
+            assert_eq!(err.status, status, "{refused}: got {err:?}");
+        }
+    }
+    let mut undeclared = body(with("is_pending", json!(false)), audit.clone());
+    undeclared["extension"] = json!({ "note": "an undeclared CONTRIBUTION member" });
+    svc.demographic_contribution_create(undeclared)
+        .await
+        .expect("undeclared members are valid content and commit");
+}

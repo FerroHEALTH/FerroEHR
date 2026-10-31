@@ -75,6 +75,8 @@ impl FerroEhrService {
         ehr_id: EhrId,
         body: &Value,
     ) -> Result<crate::versioning::change::CommittedContribution, ServiceError> {
+        // NOTE: ITS-REST `schemas/ehr/NewContribution.yaml` leaves `additionalProperties` open
+        // (`ItemTag.yaml` closes its object with `false`), so an undeclared member is ignored.
         let NewContribution {
             uid,
             versions,

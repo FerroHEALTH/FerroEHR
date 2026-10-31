@@ -947,10 +947,9 @@ fn emit_struct(
     schema: &Value,
     ctx: &Ctx,
 ) {
-    // The vendored OAS `required` list, minus the docs-text-wins
-    // corrections (`plan::overrides::REST_OPTIONAL_OVERRIDES` — the
-    // ITS-REST docs text wins every conflict with the released OAS; where
-    // it contradicts the OAS shape, the field is emitted optional).
+    // The vendored OAS `required` list, minus the docs-text-wins corrections
+    // (`plan::overrides::REST_OPTIONAL_OVERRIDES`): where the ITS-REST docs
+    // text contradicts the OAS shape, the field is emitted optional.
     let required: BTreeSet<&str> = all_required
         .iter()
         .map(String::as_str)
@@ -1048,11 +1047,9 @@ fn emit_struct_field(b: &mut String, f: &StructField<'_>, ctx: &Ctx) {
     if !f.is_required {
         ty = format!("Option<{ty}>");
     }
-    // A struct field is a public item `missing_docs` checks; the OAS property
-    // name is the honest, deterministic summary.
+    // `missing_docs` checks a field; the OAS property name is its summary.
     let _ = writeln!(b, "    /// The `{}` property of `{}`.", f.pname, f.owner);
-    // A docs-text-wins correction carries its citation into the generated code
-    // (the OAS lists the field as required; the ITS-REST docs text wins).
+    // A docs-text-wins correction carries its citation into the generated code.
     if let Some(ov) = crate::plan::overrides::rest_optional_override(f.ty_name, f.pname) {
         let _ = writeln!(b, "    /// OPTIONAL by the docs text — {}", ov.citation);
         let _ = writeln!(b, "    /// ({})", ov.reason);
@@ -1063,6 +1060,8 @@ fn emit_struct_field(b: &mut String, f: &StructField<'_>, ctx: &Ctx) {
         let _ = writeln!(b, "    /// DEFAULT when absent — {}", dm.citation);
         let _ = writeln!(b, "    /// ({})", dm.reason);
     }
+    let tagged = crate::plan::rest_tagged::tagged_field(f.owner, f.pname, f.is_required);
+    b.push_str(tagged.as_ref().map_or("", |t| t.doc.as_str()));
     if let Some(rename) = naming::serde_rename(f.pname, &ident) {
         let _ = writeln!(b, "    #[serde(rename = \"{rename}\")]");
     }
@@ -1072,6 +1071,7 @@ fn emit_struct_field(b: &mut String, f: &StructField<'_>, ctx: &Ctx) {
     if default_member.is_some() {
         b.push_str("    #[serde(default)]\n");
     }
+    b.push_str(tagged.as_ref().map_or("", |t| t.attr));
     let _ = writeln!(b, "    pub {ident}: {ty},");
 }
 
