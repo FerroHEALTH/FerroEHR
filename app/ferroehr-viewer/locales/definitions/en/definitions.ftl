@@ -48,6 +48,12 @@ template-download = Download
 template-copy-id = Copy id
 template-views = Views of this template
 template-refused = The template could not be read.
+template-incomplete = { $count ->
+    [one] This template cannot be used yet: it is built on an archetype this CDR does not hold.
+   *[other] This template cannot be used yet: it is built on { $count } archetypes this CDR does not hold.
+}
+template-incomplete-upload = Upload the missing archetypes
+template-incomplete-tab = This view needs the missing archetypes. Upload them, then open it again.
 template-adl-14-line = ADL 1.4
 template-adl-14-subtitle = { $concept } · ADL 1.4
 template-adl-2-subtitle = { $hrid } · ADL 2

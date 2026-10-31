@@ -360,6 +360,7 @@ pub fn validate(
     }
     run_parent_conformance(archetype, repo, rm, &mut issues);
     run_flat_form_checks(archetype, repo, &mut issues);
+    run_filler_checks(archetype, repo, &mut issues);
     bindings::check_external_term_bindings(&view(archetype), resolver, &mut issues);
     issues
 }
@@ -441,6 +442,29 @@ fn run_flat_form_checks(
     }
 }
 
+/// Run the repository-dependent filler checks (VARXR, VTPL) through
+/// [`slots::validate_fillers`], gated on a supplied repository and a
+/// still-clean issue list (`master08` §Phase 2 lists VARXR under "Validate
+/// Specialised Definition"; `master04.5` §Validity Rules: `C_ARCHETYPE_ROOT`
+/// states it for every external reference).
+fn run_filler_checks(
+    archetype: &Archetype,
+    repo: Option<&ArchetypeRepository>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    if issues.iter().any(|i| i.severity == Severity::Error) {
+        return;
+    }
+    // NOTE: OPT2 `master03-opt_raw` gathers each constituent, flattened, into the
+    // operational template, so it carries no external reference left to resolve.
+    if view(archetype).kind == crate::source::ArtefactKind::OperationalTemplate {
+        return;
+    }
+    if let Some(repo) = repo {
+        issues.extend(slots::validate_fillers(archetype, repo));
+    }
+}
+
 /// Parses and validates ADL2 `src` against the same schedule as [`validate`].
 ///
 /// The source-level integrity checks are added: basic integrity, then — only
@@ -484,6 +508,7 @@ pub fn validate_source(
     }
     run_parent_conformance(&archetype, repo, rm, &mut issues);
     run_flat_form_checks(&archetype, repo, &mut issues);
+    run_filler_checks(&archetype, repo, &mut issues);
     bindings::check_external_term_bindings(&view(&archetype), resolver, &mut issues);
     Ok(issues)
 }

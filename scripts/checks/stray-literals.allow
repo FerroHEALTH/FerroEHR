@@ -17,4 +17,5 @@ allow Path=/; SameSite=Lax; HttpOnly        # Set-Cookie attribute lists
 allow -L$                                   # the line-anchor suffix of a code panel's ids
 allow ^fhirUser$                            # the SMART scope token, a protocol word
 allow ^attachment; filename=                 # the Content-Disposition header value
+allow ^Prefer$                                  # the Prefer request header name (RFC 7240)
 allow ^[a-z_]+([.][a-z_]+)+ [a-z`]            # a configuration refusal opening with the key it names: the operator reads it at startup, never on a viewer page

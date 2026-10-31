@@ -15,7 +15,7 @@
 //!
 //! The fourth, **Path catalog**, is built viewer-side: the ADL2 resource
 //! serves no Web Template representation, so the BFF reads the same
-//! `application/json` body, parses the AOM2 operational template, builds its
+//! `application/json` body ([`fetch_adl2_compiled`]), parses the AOM2 operational template, builds its
 //! Web Template and projects the [`crate::builder::catalog::CatalogNode`] tree
 //! the ADL 1.4 detail screen renders — same tree component, same node
 //! inspector, one code path for both families.
@@ -71,22 +71,95 @@ pub async fn fetch_adl2_source(
     Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
 }
 
-/// Fetch the `OperationalTemplateV2` canonical JSON of a stored ADL2 template.
+/// What the CDR answers when it compiles a stored ADL2 template into its
+/// operational form.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Compiled {
+    /// The `OperationalTemplateV2` canonical JSON.
+    Json(String),
+    /// No such template or release (`404`).
+    Absent,
+    /// The constituent archetypes the template needs and the CDR does not
+    /// hold, by archetype id.
+    Missing(Vec<String>),
+}
+
+impl Compiled {
+    /// The JSON, `None` for an absent template or one that cannot compile.
+    #[must_use]
+    pub fn json(self) -> Option<String> {
+        match self {
+            Self::Json(json) => Some(json),
+            Self::Absent | Self::Missing(_) => None,
+        }
+    }
+}
+
+/// The rule code of the CDR's refusal of an external reference that does not
+/// resolve (AOM2 `master04.5` §Validity Rules: `C_ARCHETYPE_ROOT`, VARXR).
+const VARXR: &str = "VARXR";
+
+/// The archetype ids a `422` problem names as missing constituents: each
+/// `errors` entry whose `path` is the rule code `VARXR` carries one id as
+/// its `detail`.
+///
+/// The shape is the CDR's own refusal of a stored template it cannot compile;
+/// no openEHR spec governs it (our own design).
+#[must_use]
+pub fn missing_constituents(body: &str) -> Vec<String> {
+    let Ok(problem) = serde_json::from_str::<Problem>(body) else {
+        return Vec::new();
+    };
+    let mut ids: Vec<String> = problem
+        .errors
+        .into_iter()
+        .filter(|entry| entry.path == VARXR)
+        .map(|entry| entry.detail)
+        .collect();
+    ids.sort();
+    ids.dedup();
+    ids
+}
+
+/// The members of a refusal [`missing_constituents`] reads.
+#[derive(Debug, serde::Deserialize)]
+struct Problem {
+    /// Every violation, when the request preferred the representation.
+    #[serde(default)]
+    errors: Vec<ProblemError>,
+}
+
+/// One violation of a refusal.
+#[derive(Debug, serde::Deserialize)]
+struct ProblemError {
+    /// Where it applies, or the rule code it breaks.
+    #[serde(default)]
+    path: String,
+    /// What it says.
+    #[serde(default)]
+    detail: String,
+}
+
+/// Compile a stored ADL2 template: fetch its `OperationalTemplateV2`
+/// canonical JSON.
 ///
 /// The same resource as [`fetch_adl2_source`] under
 /// `Accept: application/json`, which the CDR answers with the AOM2
-/// canonical-JSON projection of the operational template. `404` → `Ok(None)`.
+/// canonical-JSON projection of the operational template, asked with
+/// `Prefer: return=representation` so a refusal names its violations. A `422`
+/// naming missing constituents is [`Compiled::Missing`]; `404` is
+/// [`Compiled::Absent`].
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
-pub async fn fetch_adl2_json(
+pub async fn fetch_adl2_compiled(
     // The ADL2 template to read.
     template_id: String,
     // The release version to pin the read to, or `None`.
     version: Option<String>,
-) -> Result<Option<String>, ViewerError> {
+) -> Result<Compiled, ViewerError> {
     let session = crate::session::require_session()?;
     let state = crate::scope::state()?;
     let url = state.cdr.rest_v1(&crate::adl2::template_path(
@@ -95,12 +168,25 @@ pub async fn fetch_adl2_json(
     ));
     let response = state
         .cdr
-        .get(&session.credential, &url, "application/json")
+        .get_with(
+            &session.credential,
+            &url,
+            "application/json",
+            &[("Prefer", "return=representation")],
+        )
         .await?;
     if response.is(http::StatusCode::NOT_FOUND) {
-        return Ok(None);
+        return Ok(Compiled::Absent);
     }
-    Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
+    if response.is(http::StatusCode::UNPROCESSABLE_ENTITY) {
+        let missing = missing_constituents(&response.body);
+        if !missing.is_empty() {
+            return Ok(Compiled::Missing(missing));
+        }
+    }
+    Ok(Compiled::Json(
+        crate::cdr::CdrClient::expect_success(response)?.body,
+    ))
 }
 
 /// Build the Web-Template path catalog of one `OperationalTemplateV2`
@@ -136,42 +222,32 @@ pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
     Ok(crate::builder::catalog::from_web_template(&web_template))
 }
 
-/// Fetch the Web-Template path catalog of a stored ADL2 template.
-///
-/// The same resource and `Accept` as [`fetch_adl2_json`]: the ADL2 template
-/// GET's `application/json` 200 body IS the `OperationalTemplateV2` canonical
-/// form (`docs/specs/openehr/ITS-REST/specifications/responses/
-/// 200_Template_adl2_retrieved.yaml`). The catalog is built viewer-side by
-/// [`adl2_catalog_from_json`], because the resource serves no `wt+json`
-/// representation. `404` → `Ok(None)`.
+/// Fetch the Web-Template path catalog of a stored ADL2 template, built
+/// viewer-side by [`adl2_catalog_from_json`] from [`fetch_adl2_compiled`].
+/// `404` → `Ok(None)`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR;
-/// [`ViewerError::Internal`] when the served JSON fails to parse or its Web
-/// Template fails to build.
+/// [`ViewerError::Invalid`] naming the constituent archetypes the CDR does
+/// not hold; otherwise as [`fetch_adl2_compiled`] and
+/// [`adl2_catalog_from_json`].
 pub async fn fetch_adl2_catalog(
     // The ADL2 template to build the path catalog from.
     template_id: String,
     // The release version to pin the read to, or `None`.
     version: Option<String>,
 ) -> Result<Option<CatalogNode>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&crate::adl2::template_path(
-        &template_id,
-        version.as_deref(),
-    ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    if response.is(http::StatusCode::NOT_FOUND) {
-        return Ok(None);
+    match fetch_adl2_compiled(template_id, version).await? {
+        Compiled::Json(json) => adl2_catalog_from_json(&json).map(Some),
+        Compiled::Absent => Ok(None),
+        Compiled::Missing(ids) => Err(ViewerError::Invalid(format!(
+            "{} {}",
+            tr_with(
+                DefinitionsMsg::TemplateIncomplete,
+                &[("count", crate::pages::common::count(ids.len()))],
+            ),
+            ids.join(", ")
+        ))),
     }
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    adl2_catalog_from_json(&body).map(Some)
 }
 
 /// Fetch the CDR-generated example composition for a stored ADL2 template, in
@@ -213,4 +289,34 @@ pub async fn fetch_adl2_example(
         return Ok(None);
     }
     Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::missing_constituents;
+
+    #[test]
+    fn the_missing_constituents_are_the_varxr_entries_of_the_problem() {
+        let body = r#"{"type":"validation-failed","status":422,"errors":[
+            {"path":"VARXR","detail":"openEHR-EHR-OBSERVATION.b.v1"},
+            {"path":"VARXR","detail":"openEHR-EHR-OBSERVATION.a.v1"},
+            {"path":"VARXR","detail":"openEHR-EHR-OBSERVATION.a.v1"},
+            {"path":"VASID","detail":"another rule"}]}"#;
+        assert_eq!(
+            missing_constituents(body),
+            vec![
+                "openEHR-EHR-OBSERVATION.a.v1".to_owned(),
+                "openEHR-EHR-OBSERVATION.b.v1".to_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn a_refusal_without_varxr_entries_names_no_constituent() {
+        assert_eq!(
+            missing_constituents(r#"{"status":422,"detail":"cannot compile"}"#),
+            Vec::<String>::new()
+        );
+        assert_eq!(missing_constituents("not json"), Vec::<String>::new());
+    }
 }
