@@ -37,8 +37,9 @@ use openehr_sdt::flat::convert::{
     composition_to_structured,
 };
 use openehr_sdt::flat::validation::validate_archetype_conformance;
+use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
-use openehr_sdt::flat::webtemplate::model::WebTemplate;
+use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use openehr_sdt::rm_instance::{ValidationKind, ValidationMessage, validate_rm_and_terminology};
 use serde_json::Value;
 
@@ -471,4 +472,129 @@ fn the_simplified_read_keeps_the_content_below_a_full_archetype_reference() {
         stored,
         "an ELEMENT is lost in STRUCTURED"
     );
+}
+
+/// The admitted catalogue cases whose ELEMENT holds a `DV_INTERVAL` the
+/// template constrains the parts of.
+fn interval_cases() -> Vec<Case> {
+    let rows: Vec<Case> = cases()
+        .into_iter()
+        .filter(|c| c.status == 201 && c.workflow.starts_with("adl2-dv_interval_"))
+        .filter(|c| !c.workflow.contains("-validate_open-"))
+        .collect();
+    assert_eq!(
+        rows.len(),
+        8,
+        "the catalogue's 8 admitted constrained interval cases"
+    );
+    rows
+}
+
+/// Every admitted `DV_INTERVAL` case [`interval_cases`] names reads back in FLAT and STRUCTURED with
+/// its value: the composition built back from either form holds the ELEMENT
+/// unchanged. The FLAT format reaches the interval's parts as `/lower` and
+/// `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
+/// §DV_INTERVAL).
+#[test]
+fn every_interval_case_reads_back_with_its_value() {
+    let templates = templates();
+    let now = "2026-01-01T10:00:00Z";
+    for case in interval_cases() {
+        let wt = templates.get(&case.template).expect("the case's template");
+        let stored = elements(&under_interface_ids(&case.body, wt));
+        assert_eq!(
+            stored.len(),
+            1,
+            "{}: the one interval ELEMENT",
+            case.workflow
+        );
+        let flat = composition_to_flat(&case.body, wt).expect("FLAT read");
+        assert!(
+            flat.keys()
+                .any(|k| k.contains("/lower") || k.contains("/upper")),
+            "{}: no interval part in the FLAT read {flat:?}",
+            case.workflow
+        );
+        let structured = composition_to_structured(&case.body, wt).expect("STRUCTURED read");
+        let from_flat = composition_from_flat(&flat, wt, now).expect("FLAT build");
+        let from_structured =
+            composition_from_structured(&structured, wt, now).expect("STRUCTURED build");
+        assert_eq!(
+            elements(&from_flat),
+            stored,
+            "{}: the FLAT read loses the interval",
+            case.workflow
+        );
+        assert_eq!(
+            elements(&from_structured),
+            stored,
+            "{}: the STRUCTURED read loses the interval",
+            case.workflow
+        );
+    }
+}
+
+/// The `DV_INTERVAL` node of `wt` and its parts, each as its id, RM type and
+/// path below the ELEMENT that holds the interval as its `value`.
+fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
+    fn find(node: &WebTemplateNode) -> Option<&WebTemplateNode> {
+        node.children.iter().find_map(|child| {
+            if child.rm_type.starts_with("DV_INTERVAL") {
+                Some(child)
+            } else {
+                find(child)
+            }
+        })
+    }
+    let interval = find(&wt.tree).expect("an interval node");
+    let element = interval
+        .aql_path
+        .strip_suffix("/value")
+        .unwrap_or_else(|| panic!("{} is no ELEMENT value", interval.aql_path));
+    let below = |n: &WebTemplateNode| {
+        let path = n.aql_path.strip_prefix(element).expect("below the ELEMENT");
+        (n.id.clone(), n.rm_type.clone(), path.to_owned())
+    };
+    std::iter::once(interval)
+        .chain(&interval.children)
+        .map(below)
+        .collect()
+}
+
+/// The ADL 2 Web Template writes a `DV_INTERVAL` and its parts below their
+/// ELEMENT as the ADL 1.4 one does, `/value`, `/value/lower` and
+/// `/value/upper`: a data value is no `LOCATABLE` (RM `data_types`), so an
+/// `[idN]` predicate (ADL2 `master05-paths.adoc` §"Relationship with W3C
+/// Xpath") cannot select it.
+#[test]
+fn the_interval_aql_paths_match_the_adl14_web_template() {
+    let templates = templates();
+    let cases = interval_cases();
+    for (workflow, opt14) in [
+        (
+            "adl2-dv_interval_count-validate_lower_upper-accepted",
+            "interval_count_range.opt",
+        ),
+        (
+            "adl2-dv_interval_count-validate_lower_upper_list-accepted",
+            "interval_count_list.opt",
+        ),
+    ] {
+        let case = cases
+            .iter()
+            .find(|c| c.workflow == workflow)
+            .expect(workflow);
+        let adl2 = interval_paths(templates.get(&case.template).expect("the case's template"));
+        let path = corpus().join("../../templates").join(opt14);
+        let xml = std::fs::read_to_string(&path).expect("the ADL 1.4 template");
+        let opt = openehr_its::opt14::from_xml(&xml).expect("the ADL 1.4 OPT parses");
+        let adl14 = interval_paths(&build_web_template(&opt).expect("the ADL 1.4 Web Template"));
+        assert_eq!(adl2, adl14, "{workflow} against {opt14}");
+        let parts: Vec<&str> = adl2.iter().map(|(_, _, p)| p.as_str()).collect();
+        assert_eq!(
+            parts,
+            ["/value", "/value/lower", "/value/upper"],
+            "{workflow}"
+        );
+    }
 }
