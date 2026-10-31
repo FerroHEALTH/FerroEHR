@@ -6,7 +6,6 @@
 - [Owner work style](owner-work-style.md) — defer nothing, proper rewrites over quick fixes, specs re-read first-hand, never copy a number forward
 - [Autonomous phase flow](autonomous-phase-flow.md) — PR+merge each phase, checkout main, start the next without asking
 - [Merge on local gates](merge-on-local-gates.md) — local gates green → merge immediately; CI is a post-merge backstop
-- [Tick the PR licensing box](tick-pr-licensing-box.md) — every PR body carries the ticked contribution-licensing line
 - [Max 5 concurrent workers](max-five-concurrent-workers.md): family cap since 2026-10-19, at most 5 implementation subagents at once; the owner may raise it on request
 - [One worker per phase, hard fences](one-worker-per-phase-hard-fences.md) — one worker per refactor phase with file fences; reverts orchestrator-only
 - [Concurrent sessions share this tree](concurrent-sessions-shared-tree.md) — explicit-pathspec commits, scoped gates, one `./target`, `cargo clean` above ~30 GB
@@ -96,5 +95,4 @@
 - [Release closes milestone](release-closes-milestone.md): release.yml refuses a tag whose milestone is missing or not empty and closes it after every leg; check it after a manual or recovery release; owner 2026-10-19 (#3858)
 - [Helm and Kubernetes in Podman](helm-kubernetes-in-podman.md): owner 2026-10-25, test charts locally on kind over Podman; install helm when missing; never build images locally
 - [Reactive console UI](reactive-console-ui.md): owner 2026-10-25, no full page reload for an interaction; WebAssembly is the normal path, the no-WebAssembly page the fallback (FerroUI #410)
-- [Contribution licence attestation](contribution-licence-attestation.md): owner 2026-10-25, always tick the licence checkbox on PRs opened for the owner, never ask
 - [No hand-written copies](no-hand-written-copies.md): owner 2026-10-25, the family rule; use the shared crate a family repo publishes, and add a missing piece there, never a local copy

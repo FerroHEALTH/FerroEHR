@@ -108,8 +108,8 @@ commit-message wording. Late labels: since #2777 applying a label raises a fresh
   group cancels the previous run). `gh pr checks` then reports every cancelled
   job as `fail`, which reads exactly like a real breakage — check
   `gh run list --branch <b>` for a newer run before chasing any of them. Cost
-  two full CI cycles on 2026-09-04 (#3112, #3115). Write the body once, with
-  the licensing checkbox included, rather than editing it after opening.
+  two full CI cycles on 2026-09-04 (#3112, #3115). Write the body once,
+  rather than editing it after opening.
 - **A hung `docker-credential-desktop` silently blocks every `docker pull`**
   (hit 2026-08-14, cost ~2 h): pulls/builds hang with NO output while
   `docker run`/`images`/host curl all work — the client stalls calling the
@@ -255,11 +255,6 @@ commit-message wording. Late labels: since #2777 applying a label raises a fresh
     and the 10-minute foreground tool limit kills it — run cold gates as
     `nohup caffeinate -i bash -c '…' > log &` with a background `until grep`
     waiter.
-  - `gh pr create --body` bypasses the PR template, and the
-    `contribution-licence-guard` CI job then fails on the missing ticked
-    line. Every PR body must carry, verbatim and ticked:
-    `- [x] I accept the terms in [CONTRIBUTING.md § Licensing of contributions](../CONTRIBUTING.md#licensing-of-contributions): …`
-    (PR #3090 merged red on exactly this).
 
 9. **A PR with a merge conflict runs NO CI, and auto-merge never fires**
    (hit 2026-09-11, #3248: main moved under it and the changelog conflicted).
