@@ -1,0 +1,1 @@
+- The viewer's dashboard draws the EHR or composition count as unavailable, with the reason in plain words, when the CDR answers its count query with a result set of another shape (no row, several rows, an empty row, several values, or a value that is no whole number), where it drew 0 before. The template Releases table draws such a count the same way. A real zero still draws 0.
