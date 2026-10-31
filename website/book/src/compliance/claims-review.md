@@ -842,7 +842,7 @@ run FerroPIX 0.0.12 (#4392); chart 21.0.0-rc3 with `appVersion` 5.6.0-rc3.
 
 ## The review of 2026-10-31, for 5.6.0-rc4
 
-Read on the tree after commit `80d1dfdda`, for the FerroEHR release candidate
+Read on the tree after commit `d79ef8b40`, for the FerroEHR release candidate
 5.6.0-rc4. The review of 2026-10-29 for 5.6.0-rc3 stands for everything that
 release candidate carried. The facts added since and checked in every text in
 scope: an AQL lookup by an ELEMENT value reads a value index in both stores
@@ -856,9 +856,11 @@ party, template and Simplified Format fixes of the Veredictum 0.3.0 catalogue
 (#4458 to #4464, #4468 to #4475); a token holding only `system/` SMART on
 openEHR scopes passes the role gate on clinical operations (#4467); the viewer
 draws every page on its server with FerroUI 0.6, with no WebAssembly (#4433);
-the conformance pipeline runs the Veredictum 0.3.0 catalogue against one
-deployment and keeps no EHRbase comparison (#4448); chart 21.0.0-rc4 with
-`appVersion` 5.6.0-rc4.
+AQL `TERMINOLOGY('expand', …)` takes the value set from the `url` argument of
+a `$expand` query form (#4488); the conformance pipeline runs the Veredictum
+0.3.0 catalogue against one deployment with FerroTERM beside it, in CI through
+the Veredictum GitHub Action, and keeps no EHRbase comparison (#4448, #4449,
+#4476); chart 21.0.0-rc4 with `appVersion` 5.6.0-rc4.
 
 ### Changed on 2026-10-31, for 5.6.0-rc4
 
