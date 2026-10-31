@@ -16,6 +16,9 @@
 #      `--target runtime-from-source`; ONE runtime stage, zero drift — issue #282
 #      D5). A multi-arch buildx push takes seconds because no code runs inside.
 #   3. The smoke test pulls the pushed image by digest instead of rebuilding.
+#   4. The openEHR conformance run (the reusable conformance.yml) judges the
+#      pushed server and postgres images by digest and publishes the Veredictum
+#      badges, so main compiles no server for conformance (#4539).
 #
 # DEVELOP PUSHES AND MANUAL DISPATCHES ONLY (#2776). A `v*` tag is owned end to
 # end by release.yml — THE release pipeline — which runs these same lanes with
@@ -472,6 +475,29 @@ jobs:
       postgres-image: ghcr.io/ferrohealth/ferroehr-postgres
       postgres-digest: ${{ needs.postgres-image.outputs.digest }}
       postgres-tags: ${{ needs.postgres-image.outputs.tags }}
+
+  # ── openEHR conformance against the images this push shipped (#4539) ───────
+  # The reusable conformance.yml on the digests app-image and postgres-image
+  # pushed for this commit, so nothing is compiled for it and the run judges
+  # what users pull. An image this push did not rebuild is judged at `:main`:
+  # its inputs did not change, and this workflow's queued concurrency means the
+  # previous run has tagged it. Every push runs it, the badges included, as
+  # conformance.yml did on main before. A failed or cancelled build sits it out.
+  conformance:
+    name: conformance
+    needs: [binary, app-image, postgres-image]
+    if: >-
+      !cancelled() &&
+      contains(fromJSON('["success", "skipped"]'), needs.binary.result) &&
+      contains(fromJSON('["success", "skipped"]'), needs.app-image.result) &&
+      contains(fromJSON('["success", "skipped"]'), needs.postgres-image.result)
+    permissions:
+      contents: write # each run pushes its badges to its own branch, from main only
+      packages: read # pull the digests this run pushed
+    uses: ./.github/workflows/conformance.yml
+    with:
+      server-image: ${{ case(needs.app-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr@{0}', needs.app-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr:main') }}
+      postgres-image: ${{ case(needs.postgres-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr-postgres@{0}', needs.postgres-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr-postgres:main') }}
 
   # The pushed VIEWER artifact was once assembled from two jobs (the per-arch
   # binary and a separately built site bundle), and an assembly that

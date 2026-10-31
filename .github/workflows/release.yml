@@ -25,7 +25,9 @@
 #         └─ (smoke hangs off app-image; viewer-smoke off both images —
 #             it drives the viewer against this run's own CDR; performance
 #             hangs off app-image, and scan-and-tag and finalize-release
-#             need it)
+#             need it;
+#             conformance hangs off app-image and postgres-image, and
+#             nothing needs it)
 #   milestone ── needs every leg, if: always()
 #   announce ── needs everything, if: always()
 #
@@ -1156,6 +1158,24 @@ jobs:
           tag_name: ${{ needs.plan.outputs.tag }}
           files: ferroehr-${{ needs.plan.outputs.tag }}-logging-performance.md
 
+  # ── openEHR conformance against this release's own images (#4539) ──────────
+  # The reusable conformance.yml on the digests app-image and postgres-image
+  # pushed, which this pipeline compiled cold from no cache: the run pulls them
+  # and compiles nothing. It reports and gates nothing yet (#4455): announce
+  # names its outcome without failing on it, nothing else needs it, and the
+  # milestone does not wait for it. The badge push is the Action's on main
+  # only, so a tag run pushes none.
+  conformance:
+    name: conformance
+    needs: [plan, app-image, postgres-image]
+    permissions:
+      contents: write # the reusable job's badge push, which never happens off main
+      packages: read # pull the digests this run pushed
+    uses: ./.github/workflows/conformance.yml
+    with:
+      server-image: ghcr.io/ferrohealth/ferroehr@${{ needs.app-image.outputs.digest }}
+      postgres-image: ghcr.io/ferrohealth/ferroehr-postgres@${{ needs.postgres-image.outputs.digest }}
+
   # ── The Helm chart ──────────────────────────────────────────────────────────
   # `needs: scan-and-tag` is the whole fix for the defect class this pipeline
   # was built around: the chart is judged against the appVersion image, and
@@ -1476,6 +1496,7 @@ jobs:
       - docs-freeze
       - crates
       - milestone
+      - conformance
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1515,6 +1536,7 @@ jobs:
           R_DOCS_FREEZE: ${{ needs.docs-freeze.result }}
           R_CRATES: ${{ needs.crates.result }}
           R_MILESTONE: ${{ needs.milestone.result }}
+          R_CONFORMANCE: ${{ needs.conformance.result }}
         run: |
           set -uo pipefail
           fail=0
@@ -1534,6 +1556,10 @@ jobs:
             fi
             if [ "$skip_ok" = "prerelease" ] && [ "$result" = "skipped" ] && [ "$IS_RELEASE" != "true" ]; then
               rows="${rows}| ${leg} | skipped — pre-release |"$'\n'
+              return
+            fi
+            if [ "$skip_ok" = "advisory" ]; then
+              rows="${rows}| ${leg} | ${result} (reported, not gating) |"$'\n'
               return
             fi
             rows="${rows}| ${leg} | **${result}** |"$'\n'
@@ -1560,6 +1586,8 @@ jobs:
           check "docs freeze" "$R_DOCS_FREEZE" prerelease
           check "crates.io" "$R_CRATES" prerelease
           check "milestone closed" "$R_MILESTONE"
+          # Reported, not gating, until conformance on main is green (#4455).
+          check "conformance (released profile)" "$R_CONFORMANCE" advisory
 
           chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | sed -n 1p)"
           crates_version="$(bash scripts/release/publish-crates.sh version || echo unknown)"
