@@ -1003,7 +1003,7 @@ async fn commit_resolved(
     // reused verbatim for the insert, so signed bytes and stored bytes are the
     // same bytes.
     let at_committal_attestations: Vec<Value> =
-        attestation::complete_accompanying(&r.attestations, &ctx.system_id, r.time_committed)
+        attestation::complete_accompanying(&r.attestations, &audit.system_id, r.time_committed)
             .iter()
             .map(openehr_its::json::to_canonical_value)
             .collect();
@@ -1537,7 +1537,7 @@ pub(crate) async fn commit_contribution(
     for item in attests {
         ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id)).await?;
         let full =
-            attestation::complete_attestation(&item.partial, &ctx.system_id, contribution_time);
+            attestation::complete_attestation(&item.partial, &item.system_id, contribution_time);
         committed.push(
             attestation::attest(
                 tx,

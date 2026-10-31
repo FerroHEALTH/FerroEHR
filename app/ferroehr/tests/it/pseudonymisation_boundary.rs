@@ -915,7 +915,7 @@ fn persons_with_bsn(families: &[&str], bsn: &str) -> serde_json::Value {
             let person = person_carrying(family, &[("nl-bsn", bsn)]);
             serde_json::json!({
                 "_type": "ORIGINAL_VERSION",
-                "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                "lifecycle_state": crate::fixtures::lifecycle("532"),
                 "commit_audit": {
                     "change_type": coded("249", "creation"),
                     "committer": committer

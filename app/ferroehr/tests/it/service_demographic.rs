@@ -612,8 +612,7 @@ async fn demographic_contribution_member_without_committer_is_refused() {
         "got {err:?}"
     );
     assert!(
-        err.message
-            .starts_with("versions[0]: commit_audit.committer is required"),
+        err.message.contains("(at $.versions[0].commit_audit)"),
         "got {err:?}"
     );
 }
@@ -627,7 +626,7 @@ async fn demographic_contribution_multi_version() {
         "_type": "CONTRIBUTION",
         "versions": [
             {
-                "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                "lifecycle_state": crate::fixtures::lifecycle("532"),
                 "_type": "ORIGINAL_VERSION",
                 "commit_audit": {
                     "change_type": {
@@ -644,7 +643,7 @@ async fn demographic_contribution_multi_version() {
                 "data": person("Alice")
             },
             {
-                "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                "lifecycle_state": crate::fixtures::lifecycle("532"),
                 "_type": "ORIGINAL_VERSION",
                 "commit_audit": {
                     "change_type": {
@@ -1028,4 +1027,72 @@ async fn versioned_party_owner_id_names_the_serving_system() {
         "the container owner_id names the serving system — the same identifier \
          the commit audits carry"
     );
+}
+
+/// Rulings 1 to 4 of #3595 on the demographic CONTRIBUTION path, which decodes
+/// through its own generated `NewContribution`
+/// (`schemas/demographic/NewContribution.yaml`): an SM-spelled
+/// `lifecycle_state`, a plain-string `description`, a member without
+/// `change_type`, an `UPDATE_ATTESTATION` commit audit and a missing `audit`
+/// are each the 400, and the spec spelling commits.
+#[tokio::test]
+async fn demographic_contribution_refuses_the_lenient_spellings() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let coded = |code: &str, value: &str| {
+        json!({ "value": value,
+            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": code } })
+    };
+    let audit = json!({ "change_type": coded("249", "creation"),
+        "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } });
+    let body = |lifecycle: Value, commit_audit: Value, audit: Value| {
+        json!({
+            "versions": [{
+                "lifecycle_state": lifecycle,
+                "commit_audit": commit_audit,
+                "data": person("Typed")
+            }],
+            "audit": audit
+        })
+    };
+    let mut described = audit.clone();
+    described["description"] = json!("free text");
+    let mut attestation = audit.clone();
+    attestation["_type"] = json!("UPDATE_ATTESTATION");
+    attestation["reason"] = json!({ "_type": "DV_TEXT", "value": "witnessed" });
+    attestation["is_pending"] = json!(false);
+    let mut no_audit = body(coded("532", "complete"), audit.clone(), Value::Null);
+    no_audit
+        .as_object_mut()
+        .expect("built as an object")
+        .remove("audit");
+    for refused in [
+        body(
+            json!({ "terminology_id": "openehr", "code_string": "532" }),
+            audit.clone(),
+            audit.clone(),
+        ),
+        body(json!("532"), audit.clone(), audit.clone()),
+        body(coded("532", "complete"), described, audit.clone()),
+        body(
+            coded("532", "complete"),
+            json!({ "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } }),
+            audit.clone(),
+        ),
+        body(coded("532", "complete"), attestation, audit.clone()),
+        no_audit,
+    ] {
+        let err = svc
+            .demographic_contribution_create(refused.clone())
+            .await
+            .expect_err("a lenient spelling is refused");
+        assert_eq!(
+            err.status,
+            CallStatusType::PreconditionViolation,
+            "{refused}: got {err:?}"
+        );
+    }
+    svc.demographic_contribution_create(body(coded("532", "complete"), audit.clone(), audit))
+        .await
+        .expect("the released spelling commits");
 }

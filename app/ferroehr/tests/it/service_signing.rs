@@ -800,10 +800,15 @@ async fn after_committal_attestation_is_outside_the_signed_form() {
                 "lifecycle_state": change_type("532", "complete"),
                 "commit_audit": {
                     "change_type": change_type("666", "attestation"),
+                    "committer": { "_type": "PARTY_IDENTIFIED", "name": "senior reviewer" }
+                },
+                "attestations": [{
+                    "_type": "UPDATE_ATTESTATION",
+                    "change_type": change_type("666", "attestation"),
                     "committer": { "_type": "PARTY_IDENTIFIED", "name": "senior reviewer" },
                     "reason": { "_type": "DV_TEXT", "value": "authorised" },
                     "is_pending": false
-                }
+                }]
             }]
         }),
     )

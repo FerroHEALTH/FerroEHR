@@ -1032,10 +1032,15 @@ fn later_attest_contribution(ovid: &str) -> Value {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }],
         "audit": {
             "change_type": change_type("666", "attestation"),

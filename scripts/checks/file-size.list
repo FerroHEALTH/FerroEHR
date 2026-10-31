@@ -63,10 +63,9 @@ app/ferroehr/src/system_log/categories.rs 989
 app/ferroehr/src/system_log/fhir.rs 1374
 app/ferroehr/src/system_log/sender.rs 1181
 app/ferroehr/src/system_log/store.rs 2159
-app/ferroehr/src/versioning/attestation.rs 992
-app/ferroehr/src/versioning/audit.rs 889
+app/ferroehr/src/versioning/audit.rs 839
 app/ferroehr/src/versioning/change.rs 1574
-app/ferroehr/src/versioning/contribution.rs 2121
+app/ferroehr/src/versioning/contribution.rs 1608
 crates/openehr-adl/src/adl14/convert.rs 1013
 crates/openehr-adl/src/adl14/domain.rs 1112
 crates/openehr-adl/src/assemble.rs 831

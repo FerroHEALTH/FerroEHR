@@ -59,6 +59,13 @@ pub(crate) fn change_type(code: &str, value: &str) -> Value {
     })
 }
 
+/// A `version_lifecycle_state` member in the released wire shape of
+/// `UPDATE_VERSION.lifecycle_state`, a `DV_CODED_TEXT` (ITS-REST
+/// `schemas/ehr/UpdateVersion.yaml` → `data_types/DvCodedText.yaml`).
+pub(crate) fn lifecycle(code: &str) -> Value {
+    openehr_its::json::to_canonical_value(&lifecycle_state_coded(code))
+}
+
 /// Returns a minimal *valid* RM COMPOSITION named `name`, composed by
 /// `composer`.
 ///

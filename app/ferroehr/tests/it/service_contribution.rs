@@ -115,17 +115,25 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
 
     // (2) A later 666-only CONTRIBUTION attesting that same version. Its
     // member states a lifecycle_state like every other member (SM master03
-    // §Version Update Semantics: "must be supplied in all cases").
+    // §Version Update Semantics: "must be supplied in all cases"), its
+    // commit_audit is a plain UPDATE_AUDIT carrying the 666 change type, and
+    // the attestation travels in its `attestations` (ruling 3 of #3595;
+    // ITS-REST schemas/ehr/UpdateVersion.yaml).
     let attest_contribution = json!({
         "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }],
         // The change set's own change type is the CLIENT's account of it (the
         // released commit schema requires it), never a server-derived
@@ -214,10 +222,15 @@ async fn attestation_error_cases() {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }]
     }))
     .await
@@ -240,10 +253,15 @@ async fn attestation_error_cases() {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            },
+            }],
             "data": composition("nope")
         }]
     }))
@@ -260,16 +278,23 @@ async fn attestation_error_cases() {
         "got {err:?}"
     );
 
-    // Attestation missing reason → 422 (ATTESTATION.reason 1..1).
+    // Attestation missing reason → 400: ruling 4 of #3595, a member
+    // `schemas/common/UpdateAttestation.yaml` lists under `required` is a
+    // schema failure, syntactically invalid content (ATTESTATION.reason 1..1).
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "is_pending": false
-            }
+            }]
         }]
     }))
     .await
@@ -278,23 +303,30 @@ async fn attestation_error_cases() {
         matches!(
             err,
             SmError {
-                status: CallStatusType::ContentInvalid,
+                status: CallStatusType::PreconditionViolation,
                 ..
             }
         ),
         "got {err:?}"
     );
 
-    // Attestation missing is_pending → 422 (ATTESTATION.is_pending 1..1).
+    // Attestation missing is_pending → 400: ruling 4 of #3595, a member
+    // `schemas/common/UpdateAttestation.yaml` lists under `required` is a
+    // schema failure, syntactically invalid content (ATTESTATION.is_pending 1..1).
     let err = attempt(json!({
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } }, "committer": { "_type": "PARTY_IDENTIFIED", "name": "conformance tester" } }, "versions": [{
             "preceding_version_uid": { "value": ovid_v1.clone() },
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" }
-            }
+            }]
         }]
     }))
     .await
@@ -303,7 +335,7 @@ async fn attestation_error_cases() {
         matches!(
             err,
             SmError {
-                status: CallStatusType::ContentInvalid,
+                status: CallStatusType::PreconditionViolation,
                 ..
             }
         ),
@@ -322,10 +354,15 @@ async fn attestation_error_cases() {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("x")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("x"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }]
     }))
     .await
@@ -365,10 +402,15 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
             "preceding_version_uid": { "value": ovid.clone() },
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         });
         if let Some(state) = lifecycle_state {
             member["lifecycle_state"] = state;
@@ -393,7 +435,7 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
     );
     assert!(
         err.message
-            .starts_with("versions[0]: lifecycle_state is required"),
+            .contains("missing field `lifecycle_state` (at $.versions[0])"),
         "the refusal names the member and the attribute, got {err:?}"
     );
 
@@ -450,10 +492,14 @@ async fn attestation_without_committer_is_refused() {
                     "preceding_version_uid": { "value": ovid.clone() },
                     "lifecycle_state": change_type("532", "complete"),
                     "commit_audit": {
+                        "change_type": change_type("666", "attestation")
+                    },
+                    "attestations": [{
+                        "_type": "UPDATE_ATTESTATION",
                         "change_type": change_type("666", "attestation"),
                         "reason": { "_type": "DV_TEXT", "value": "authorised" },
                         "is_pending": false
-                    }
+                    }]
                 }],
                 "audit": audit.clone()
             }),
@@ -466,8 +512,7 @@ async fn attestation_without_committer_is_refused() {
         "got {err:?}"
     );
     assert!(
-        err.message
-            .starts_with("versions[0]: commit_audit.committer is required"),
+        err.message.contains("(at $.versions[0].commit_audit)"),
         "got {err:?}"
     );
 
@@ -501,8 +546,7 @@ async fn attestation_without_committer_is_refused() {
         "got {err:?}"
     );
     assert!(
-        err.message
-            .starts_with("versions[0]: UPDATE_ATTESTATION.committer is required"),
+        err.message.contains("(at $.versions[0].attestations[0])"),
         "got {err:?}"
     );
 }
@@ -547,11 +591,7 @@ async fn non_canonical_committer_is_refused_with_400() {
             CallStatusType::PreconditionViolation,
             "{bad}: got {err:?}"
         );
-        assert!(
-            err.message
-                .starts_with("CONTRIBUTION.audit.committer is not a canonical PARTY_PROXY"),
-            "{bad}: got {err:?}"
-        );
+        assert!(err.message.contains("(at $.audit)"), "{bad}: got {err:?}");
 
         let err = svc
             .create_ehr_contribution(ehr_uuid, body(committer("author"), bad.clone()))
@@ -563,8 +603,7 @@ async fn non_canonical_committer_is_refused_with_400() {
             "{bad}: got {err:?}"
         );
         assert!(
-            err.message
-                .starts_with("versions[0]: commit_audit.committer is not a canonical PARTY_PROXY"),
+            err.message.contains("(at $.versions[0].commit_audit)"),
             "{bad}: got {err:?}"
         );
     }
@@ -617,10 +656,15 @@ async fn attestation_member_refusal_names_its_index() {
                         "lifecycle_state": change_type("532", "complete"),
                         "commit_audit": {
                             "change_type": change_type("666", "attestation"),
+                            "committer": committer("senior reviewer")
+                        },
+                        "attestations": [{
+                            "_type": "UPDATE_ATTESTATION",
+                            "change_type": change_type("666", "attestation"),
                             "committer": committer("senior reviewer"),
                             "reason": change_type("999", "nonsense"),
                             "is_pending": false
-                        }
+                        }]
                     }
                 ],
                 "audit": {
@@ -894,12 +938,12 @@ async fn ehr_contribution_list_page_extension() {
     );
 }
 
-/// The SM `Terminology_code` spelling of `UPDATE_VERSION.lifecycle_state`
-/// (`UML/classes/update_version.adoc`: `{terminology_id, code_string}`), which
-/// the raw-body CONTRIBUTION lane accepts beside the `DV_CODED_TEXT` the
-/// released ITS-REST `UpdateVersion.yaml` declares.
+/// `UPDATE_VERSION.lifecycle_state` in its released wire shape, a
+/// `DV_CODED_TEXT` (ITS-REST `schemas/ehr/UpdateVersion.yaml`). The SM
+/// `Terminology_code` spelling this helper used to send is refused since
+/// ruling 1 of #3595; [`sm_lifecycle_spellings_are_refused`] pins that.
 fn lifecycle(code: &str) -> Value {
-    json!({ "terminology_id": "openehr", "code_string": code })
+    crate::fixtures::lifecycle(code)
 }
 
 /// Read the `lifecycle_state.defining_code.code_string` of a served
@@ -1286,8 +1330,7 @@ async fn member_commit_audit_without_committer_is_refused() {
             "{commit_audit}: the refusal is the 400, got {err:?}"
         );
         assert!(
-            err.message
-                .starts_with("versions[1]: commit_audit.committer is required"),
+            err.message.contains("(at $.versions[1].commit_audit)"),
             "{commit_audit}: the refusal names the member, got {err:?}"
         );
     }
@@ -1371,7 +1414,7 @@ async fn contribution_supplied_uid() {
         "uid": { "_type": "HIER_OBJECT_ID", "value": wanted.to_string() },
         "versions": [{
             "data": composition("obs"),
-            "lifecycle_state": { "code_string": "532", "terminology_id": { "value": "openehr" } },
+            "lifecycle_state": crate::fixtures::lifecycle("532"),
             "commit_audit": { "change_type": { "value": "creation",
                 "defining_code": { "code_string": "249", "terminology_id": { "value": "openehr" } } },
                 "committer": { "_type": "PARTY_IDENTIFIED", "name": "T" } }
@@ -2442,7 +2485,8 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         "the refusal is the 400 row, got {err:?}"
     );
     assert!(
-        err.message.contains("CONTRIBUTION.audit.change_type"),
+        err.message
+            .contains("missing field `change_type` (at $.audit)"),
         "the refusal names the missing attribute, got {err:?}"
     );
 
@@ -2467,7 +2511,8 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         "the refusal is the 400 row, got {err:?}"
     );
     assert!(
-        err.message.contains("CONTRIBUTION.audit.committer"),
+        err.message
+            .contains("missing field `committer` (at $.audit)"),
         "the refusal names the missing attribute, got {err:?}"
     );
 
@@ -2483,7 +2528,7 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         "got {err:?}"
     );
     assert!(
-        err.message.starts_with("CONTRIBUTION.audit is required"),
+        err.message.contains("missing field `audit`"),
         "the refusal names the missing audit, got {err:?}"
     );
 
@@ -2557,7 +2602,7 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
     let bad_change = json!({
         "data": composition("attributed-change"),
         "lifecycle_state": good["lifecycle_state"],
-        "preceding_version_uid": format!("{}::ferroehr.local::1", uuid::Uuid::nil()),
+        "preceding_version_uid": { "value": format!("{}::ferroehr.local::1", uuid::Uuid::nil()) },
         "commit_audit": { "change_type": change_type("249", "creation"), "committer": committer("conformance tester") }
     });
     let err = svc
@@ -2900,4 +2945,259 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         CallStatusType::Conflict,
         "a reactivating set is judged on its content, got {refused:?}"
     );
+}
+
+/// One creation member under a CONTRIBUTION audit, each part replaceable, in
+/// the released wire shapes (ITS-REST `schemas/ehr/NewContribution.yaml`).
+fn typed_body(lifecycle_state: Value, commit_audit: Value, audit: Value) -> Value {
+    let mut body = json!({
+        "versions": [{ "data": composition("typed envelope") }]
+    });
+    body["versions"][0]["lifecycle_state"] = lifecycle_state;
+    body["versions"][0]["commit_audit"] = commit_audit;
+    body["audit"] = audit;
+    body
+}
+
+/// A `249|creation|` audit with its `_type` replaced (or dropped).
+fn creation_audit(tag: Option<&str>) -> Value {
+    let mut audit = json!({
+        "change_type": change_type("249", "creation"),
+        "committer": committer("author")
+    });
+    if let Some(tag) = tag {
+        audit["_type"] = json!(tag);
+    }
+    audit
+}
+
+/// Assert the body is refused with the 400 of syntactically invalid content.
+async fn assert_shape_refused(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId, body: Value) {
+    let err = svc
+        .create_ehr_contribution(ehr, body.clone())
+        .await
+        .expect_err("a shape the released schema does not define is refused");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "{body}: the refusal is the 400, got {err:?}"
+    );
+}
+
+/// Ruling 1 of #3595: `UPDATE_VERSION.lifecycle_state` is a `DV_CODED_TEXT`
+/// (ITS-REST `schemas/ehr/UpdateVersion.yaml` → `data_types/DvCodedText.yaml`,
+/// `required: [defining_code]`). The SM `Terminology_code` spelling, a plain
+/// string and a bare `{value}` are each the 400; the `DV_CODED_TEXT` commits.
+#[tokio::test]
+async fn sm_lifecycle_spellings_are_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    for refused in [
+        json!({ "terminology_id": "openehr", "code_string": "532" }),
+        json!({ "terminology_id": { "value": "openehr" }, "code_string": "532" }),
+        json!("532"),
+        json!("complete"),
+        json!({ "value": "complete" }),
+    ] {
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(refused, creation_audit(None), creation_audit(None)),
+        )
+        .await;
+    }
+    let created = svc
+        .create_ehr_contribution(
+            ehr,
+            typed_body(lifecycle("532"), creation_audit(None), creation_audit(None)),
+        )
+        .await
+        .expect("a DV_CODED_TEXT lifecycle_state commits");
+    let ovid = first_version_uid(&created.body);
+    assert_eq!(
+        lifecycle_code_of(&svc, &ehr_id, vo_of(&ovid), &ovid).await,
+        "532"
+    );
+}
+
+/// Ruling 1 of #3595: an audit `description` is a `DV_TEXT` or
+/// `DV_CODED_TEXT` object (`schemas/common/UpdateAudit.yaml` →
+/// `data_types/UDvText.yaml`). A plain string is the 400 on the member
+/// `commit_audit`, on the CONTRIBUTION `audit` and on an attestation; both
+/// object spellings commit and come back whole.
+#[tokio::test]
+async fn a_plain_string_description_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let mut described = creation_audit(None);
+    described["description"] = json!("free text");
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), described.clone(), creation_audit(None)),
+    )
+    .await;
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), creation_audit(None), described),
+    )
+    .await;
+    let mut with_attestation =
+        typed_body(lifecycle("532"), creation_audit(None), creation_audit(None));
+    let mut described_attestation = attestation("witnessed", false);
+    described_attestation["description"] = json!("countersigned");
+    with_attestation["versions"][0]["attestations"] = json!([described_attestation]);
+    assert_shape_refused(&svc, ehr, with_attestation).await;
+
+    let mut text = creation_audit(None);
+    text["description"] = json!({ "_type": "DV_TEXT", "value": "free text" });
+    let mut coded = creation_audit(None);
+    coded["description"] = json!({ "_type": "DV_CODED_TEXT", "value": "corrected",
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+            "code_string": "at0007" } });
+    let created = svc
+        .create_ehr_contribution(ehr, typed_body(lifecycle("532"), coded, text))
+        .await
+        .expect("both DV_TEXT spellings commit");
+    assert_eq!(created.body["audit"]["description"]["value"], "free text");
+    let ovid = first_version_uid(&created.body);
+    let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+    assert_eq!(
+        ov["commit_audit"]["description"]["defining_code"]["code_string"],
+        "at0007"
+    );
+}
+
+/// Rulings 2 and 4 of #3595: `UpdateAudit.yaml` `required: [change_type,
+/// committer]` and `NewContribution.yaml` `required: [versions, audit]`. A
+/// member `commit_audit` without `change_type` is the 400 (no change type is
+/// inferred from `preceding_version_uid` any more), as are a CONTRIBUTION
+/// `audit` without one and an absent `audit`; `contribution_create.yaml`
+/// declares no 422.
+#[tokio::test]
+async fn a_missing_change_type_or_audit_is_the_400() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr: ferroehr::ids::EhrId = create_ehr(&svc).await.parse().expect("ehr uuid");
+    let without = json!({ "committer": committer("author") });
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), without.clone(), creation_audit(None)),
+    )
+    .await;
+    assert_shape_refused(
+        &svc,
+        ehr,
+        typed_body(lifecycle("532"), creation_audit(None), without),
+    )
+    .await;
+    let mut no_audit = typed_body(lifecycle("532"), creation_audit(None), Value::Null);
+    no_audit
+        .as_object_mut()
+        .expect("built as an object")
+        .remove("audit");
+    assert_shape_refused(&svc, ehr, no_audit).await;
+}
+
+/// Ruling 3 of #3595: a commit audit is sent as `UPDATE_AUDIT`,
+/// `AUDIT_DETAILS` or with no `_type` (`schemas/common/UpdateAudit.yaml`), and
+/// each commits; `ATTESTATION` and `UPDATE_ATTESTATION` are the 400, on a
+/// member `commit_audit` and on the CONTRIBUTION `audit`, an attestation
+/// travelling in `versions[].attestations[]` instead.
+#[tokio::test]
+async fn an_attestation_audit_is_refused_and_the_three_audit_spellings_commit() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr: ferroehr::ids::EhrId = create_ehr(&svc).await.parse().expect("ehr uuid");
+    for tag in ["ATTESTATION", "UPDATE_ATTESTATION"] {
+        let mut audit = creation_audit(Some(tag));
+        audit["reason"] = json!({ "_type": "DV_TEXT", "value": "witnessed" });
+        audit["is_pending"] = json!(false);
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(lifecycle("532"), audit.clone(), creation_audit(None)),
+        )
+        .await;
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(lifecycle("532"), creation_audit(None), audit),
+        )
+        .await;
+    }
+    for tag in [Some("UPDATE_AUDIT"), Some("AUDIT_DETAILS"), None] {
+        svc.create_ehr_contribution(
+            ehr,
+            typed_body(lifecycle("532"), creation_audit(tag), creation_audit(tag)),
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{tag:?} is an accepted audit spelling: {e:?}"));
+    }
+}
+
+/// A `666|attestation|` member adds an `ATTESTATION` to an existing version
+/// (RM common master06 §Contributions) and carries it in its `attestations`
+/// (ruling 3 of #3595), so a member with none is the 400. An attestation's
+/// own `system_id` is kept, and one without takes the member audit's (RM
+/// common master06 §Committal and Audits).
+#[tokio::test]
+async fn an_attestation_member_carries_its_attestations() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr_id = create_ehr(&svc).await;
+    let ehr: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
+    let ovid = svc
+        .create_composition(ehr, uv(&composition("attested"), "249", None))
+        .await
+        .expect("composition_create")
+        .version_uid();
+    let attest = |attestations: Value| {
+        json!({
+            "versions": [{
+                "preceding_version_uid": { "value": ovid.clone() },
+                "lifecycle_state": lifecycle("532"),
+                "commit_audit": {
+                    "change_type": change_type("666", "attestation"),
+                    "system_id": "member.system",
+                    "committer": committer("senior reviewer")
+                },
+                "attestations": attestations
+            }],
+            "audit": {
+                "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            }
+        })
+    };
+    let err = svc
+        .create_ehr_contribution(ehr, attest(json!([])))
+        .await
+        .expect_err("a 666 member without attestations is refused");
+    assert_eq!(
+        err.status,
+        CallStatusType::PreconditionViolation,
+        "got {err:?}"
+    );
+    assert!(err.message.starts_with("versions[0]:"), "got {err:?}");
+
+    let mut stated = attestation("authorised", false);
+    stated["system_id"] = json!("attesting.system");
+    svc.create_ehr_contribution(ehr, attest(json!([stated, attestation("witnessed", true)])))
+        .await
+        .expect("a 666 member with two attestations commits");
+    let ov = read_version(&svc, &ehr_id, vo_of(&ovid), &ovid).await;
+    let atts = ov["attestations"].as_array().expect("attestations");
+    let systems: Vec<&str> = atts
+        .iter()
+        .filter_map(|a| a["system_id"].as_str())
+        .collect();
+    assert_eq!(systems, vec!["attesting.system", "member.system"]);
 }
