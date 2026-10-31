@@ -182,7 +182,7 @@ wildcards = "deny"
 # crates by bare path, which is fine and never reaches a registry. The eight
 # PUBLISHED `openehr-*` crates do not rely on this: cargo refuses to package a
 # path dependency without a version requirement, so each of their internal deps
-# carries an explicit `version = "0.0.x"` bumped in lockstep. External wildcards
+# carries an explicit `version = "0.0.x"` the publish step stamps in lockstep. External wildcards
 # stay denied either way.
 allow-wildcard-paths = true
 # Deny known-unmaintained or footgun crates here as they surface.

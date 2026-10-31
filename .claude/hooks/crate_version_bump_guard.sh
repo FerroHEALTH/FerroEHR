@@ -4,15 +4,15 @@
 # .claude/hooks/crate_version_bump_guard.sh
 #
 # Claude Code PreToolUse hook (matcher: Bash). Blocks `git push` when the
-# outgoing commits change PACKAGED content of the published crates/* members
-# without the lockstep 0.0.x crate bump (.claude/rules/crates-publishing.md;
-# published versions are immutable). The judgement is
+# outgoing commits edit the lockstep 0.0.x version of the published crates/*
+# members or an internal requirement: the publish step sets it, never a pull
+# request (.claude/rules/crates-publishing.md, #4555). The judgement is
 # scripts/checks/crate-version-guard.sh, the guard the crate-version-guard CI
 # job runs, called on origin/main and HEAD, so the hook and CI cannot drift
 # (#4217); this hook fails the push before CI would.
 #
-# Escape hatch (mirrors the CI `no-crate-bump` label, for diffs that provably
-# do not alter packaged bytes): FERROEHR_SKIP_CRATE_BUMP_GUARD=1 git push …
+# Escape hatch (mirrors the CI `no-crate-bump` label, for a change that must
+# set the version by hand): FERROEHR_SKIP_CRATE_BUMP_GUARD=1 git push …
 #
 # Reads the tool-call JSON on stdin. Exit 2 blocks; exit 0 allows.
 
@@ -43,11 +43,11 @@ case "$verdict" in
 0) exit 0 ;;
 1)
   echo "BLOCKED: $reason" >&2
-  echo "If the diff provably does not alter packaged bytes, re-run with FERROEHR_SKIP_CRATE_BUMP_GUARD=1 and apply the 'no-crate-bump' label to the PR." >&2
+  echo "If this change must set the version by hand, re-run with FERROEHR_SKIP_CRATE_BUMP_GUARD=1 and apply the 'no-crate-bump' label to the PR." >&2
   exit 2
   ;;
 *)
-  echo "BLOCKED: $guard failed (exit $verdict), so the crate bump could not be judged:" >&2
+  echo "BLOCKED: $guard failed (exit $verdict), so the crate version could not be judged:" >&2
   echo "$reason" >&2
   exit 2
   ;;

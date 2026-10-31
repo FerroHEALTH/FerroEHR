@@ -28,6 +28,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use http::StatusCode;
 use openehr_adl::assemble::parse_artefact;
 use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
@@ -47,7 +48,7 @@ use serde_json::Value;
 struct Case {
     workflow: String,
     template: String,
-    status: u16,
+    status: StatusCode,
     body: Value,
 }
 
@@ -132,7 +133,8 @@ fn cases() -> Vec<Case> {
                 .expect("status condition");
             let status = condition
                 .strip_prefix("$statusCode == ")
-                .and_then(|s| s.parse().ok())
+                .and_then(|s| s.parse::<u16>().ok())
+                .and_then(|n| StatusCode::from_u16(n).ok())
                 .unwrap_or_else(|| panic!("status condition {condition}"));
             out.push(Case {
                 workflow: wf
@@ -171,7 +173,7 @@ fn assert_refused(kinds: &[&str]) {
     for kind in kinds {
         let rows: Vec<&Case> = cases
             .iter()
-            .filter(|c| c.status == 422 && c.workflow.ends_with(kind))
+            .filter(|c| c.status == StatusCode::UNPROCESSABLE_ENTITY && c.workflow.ends_with(kind))
             .collect();
         assert!(!rows.is_empty(), "no 422 case ends in {kind}");
         for case in rows {
@@ -210,7 +212,7 @@ const KINDS: [&str; 13] = [
 fn every_refusal_case_belongs_to_a_tested_constraint_kind() {
     let refusals: Vec<String> = cases()
         .into_iter()
-        .filter(|c| c.status == 422)
+        .filter(|c| c.status == StatusCode::UNPROCESSABLE_ENTITY)
         .map(|c| c.workflow)
         .collect();
     assert_eq!(refusals.len(), 30, "the 30 refusal rows of the catalogue");
@@ -277,7 +279,10 @@ fn attribute_cardinality_is_enforced() {
 #[test]
 fn every_admitted_composition_passes() {
     let templates = templates();
-    let admitted: Vec<Case> = cases().into_iter().filter(|c| c.status == 201).collect();
+    let admitted: Vec<Case> = cases()
+        .into_iter()
+        .filter(|c| c.status == StatusCode::CREATED)
+        .collect();
     assert!(!admitted.is_empty(), "the catalogue's 201 cases");
     for case in &admitted {
         let mut findings = validate_rm_and_terminology(&case.body);
@@ -421,7 +426,10 @@ fn elements(composition: &Value) -> BTreeMap<String, (Value, Value)> {
 #[test]
 fn the_simplified_read_matches_a_full_archetype_reference_to_its_node() {
     let templates = templates();
-    let admitted: Vec<Case> = cases().into_iter().filter(|c| c.status == 201).collect();
+    let admitted: Vec<Case> = cases()
+        .into_iter()
+        .filter(|c| c.status == StatusCode::CREATED)
+        .collect();
     assert!(!admitted.is_empty(), "the catalogue's 201 cases");
     for case in &admitted {
         let wt = templates.get(&case.template).expect("the case's template");
@@ -479,7 +487,7 @@ fn the_simplified_read_keeps_the_content_below_a_full_archetype_reference() {
 fn interval_cases() -> Vec<Case> {
     let rows: Vec<Case> = cases()
         .into_iter()
-        .filter(|c| c.status == 201 && c.workflow.starts_with("adl2-dv_interval_"))
+        .filter(|c| c.status == StatusCode::CREATED && c.workflow.starts_with("adl2-dv_interval_"))
         .filter(|c| !c.workflow.contains("-validate_open-"))
         .collect();
     assert_eq!(

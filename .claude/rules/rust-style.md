@@ -246,13 +246,17 @@ VernumBOEK's rule of the same name).
   `app/*/src/`, `crates/*/src/` and `tools/*/src/` in the `duplication` CI
   job and holds the total of duplicated lines to the count in
   `scripts/checks/duplication.count`. A rise fails and names both places of
-  each new block. A fall fails too, until you run
-  `scripts/checks/duplication.sh --update` and commit the lower count with
+  each new block. A fall passes with a one-line note, and your pull request
+  leaves the count alone: the `Ratchet tighten` workflow runs
+  `scripts/checks/duplication.sh --update` on `main` each day and opens one
+  pull request with the lower count and
   `scripts/checks/duplication-baseline.txt`, the guard's own key of every
   counted block: its two paths and the sha256 of the lines at each, with no
   line number, so a change that leaves a block's lines alone leaves its key
-  alone. `--update` never raises the count; a rise that has to stay is a
-  hand edit of the file in a change that says why. Locally the guard takes a
+  alone. A pull request that rewrote the shared count files would conflict
+  with every other open one (#4554). `--update` never raises the count; a
+  rise that has to stay is a hand edit of the file in a change that says
+  why. Locally the guard takes a
   `jscpd` on `PATH` of the pinned version, then the pinned image through
   docker or podman, then the release binary
   `scripts/checks/duplication.sh --install` puts under `target/tools/`.
@@ -283,9 +287,11 @@ VernumBOEK's rule of the same name).
   with `// @generated`, in the `file-size` CI job and per edit through
   `.claude/hooks/rust_fmt_clippy.sh`. The 113 files over the budget when the
   guard landed stand in `scripts/checks/file-size.list` with their length;
-  a listed file may shrink and never grow, and a shrink fails until
-  `--update` lowers its entry, so the list only tightens. A file over the
-  budget is split by concern.
+  a listed file may shrink and never grow. A shrink, a listed file back
+  within the budget and a listed file that is gone pass with a one-line
+  note, and the `Ratchet tighten` workflow lowers or removes the entry on
+  `main`; your pull request leaves the list alone. A file over the budget is
+  split by concern.
 
 ## No Python, anywhere (owner hard rule, 2026-08-10)
 

@@ -68,8 +68,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - no stored query matches the name/version, or the stored record
-    ///   carries no query text → the definition-store error / exception;
+    /// - a malformed `version` (`400`), no matching stored query, or a stored
+    ///   record with no query text → the definition-store error / exception;
     /// - otherwise exactly the [`FerroEhrService::execute_ad_hoc_query`]
     ///   failure conditions (the stored text executes identically).
     pub async fn execute_stored_query(

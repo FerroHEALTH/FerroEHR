@@ -387,6 +387,7 @@ uuid = { version = "1", features = ["serde"] }
 jiff = { version = "0.2.31", features = ["serde"] }   # 1.0 not yet out as of 2026-07; 0.2.31 pinned for ISO 8601 temporal work
 url = "2"
 urlencoding = "2.1.3"
+semver = "1.0.28"                  # Semantic Versioning 2.0.0 grammar for the ITS-REST `version` path parameter (#4541)
 csv = "1.4"                        # RESULT_SET → CSV export (viewer BFF; verified live 2026-07-18)
 
 # ── Viewer (app/ferroehr-viewer: axum handlers drawing FerroUI's server-rendered parts) ──
@@ -461,8 +462,8 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 #
 # Toolchain: Rust stable 1.99.1, edition 2024; the MSRV is 1.98.
 # The MSRV is the toolchain minus one minor and is only ever raised, the rule every
-# FerroHEALTH repository follows; the toolchain watcher moves both, and the nine
-# published crates take a lockstep bump with each MSRV move (docs/VERSIONS.md §MSRV policy).
+# FerroHEALTH repository follows; the toolchain watcher moves both, and the next
+# crates publish takes a new lockstep version for an MSRV move (docs/VERSIONS.md §MSRV policy).
 # Database: PostgreSQL 18 (target 18.6+; 18.x is the current stable line; PG 19 in beta — do not target).
 
 # ── Build-speed profiles ─────────────────────────────────────────────────────

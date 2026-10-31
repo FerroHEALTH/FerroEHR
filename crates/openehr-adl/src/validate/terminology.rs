@@ -19,7 +19,7 @@
 //! (`master08` §Overview, "more basic kinds of errors being checked first" — a
 //! code cannot be judged against a missing or inconsistent terminology).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
@@ -27,7 +27,7 @@ use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObje
 use openehr_base::v1_3::base_types::definitions::definitions_impl::LOCAL_TERMINOLOGY_ID;
 
 use super::ValidationIssue;
-use super::bindings::check_bindings;
+use super::bindings::{check_bindings, check_term_bindings};
 use super::catalogue::ValidationCode;
 use super::identification::languages;
 use super::scope;
@@ -71,26 +71,35 @@ pub(super) fn check_terminology(
     // Rules).
     check_bindings(v, &defined, issues);
     check_unused_codes(v, dialect, &usage, &defined, issues);
-    check_constituents(v, roots, issues);
+    let first_roots = check_constituents(v, roots, issues);
+    check_component_terminologies(v, &first_roots, issues);
 }
 
 /// The nested archetype roots a scoped usage scan stopped at, with their paths.
 type Roots<'o> = Vec<(String, &'o CComplexObject)>;
 
+/// The first archetype root met for each constituent, with its path.
+type FirstRoots<'o> = BTreeMap<&'o str, (String, &'o CComplexObject)>;
+
 /// VATDF / VACDF / VATDA below each nested archetype root of an operational
 /// template, judged against that constituent's own flat terminology
 /// ([`super::scope`]); a root met below a root is judged against its own.
-fn check_constituents(
+/// Returns the first root met for each constituent.
+fn check_constituents<'o>(
     v: &ArchetypeView<'_>,
-    mut roots: Roots<'_>,
+    mut roots: Roots<'o>,
     issues: &mut Vec<ValidationIssue>,
-) {
+) -> FirstRoots<'o> {
+    let mut first = FirstRoots::new();
     let mut next = 0;
     while let Some((path, cco)) = roots.get(next).cloned() {
         next += 1;
         let CComplexObject::CArchetypeRoot(root) = cco else {
             continue;
         };
+        first
+            .entry(root.archetype_ref.as_str())
+            .or_insert_with(|| (path.clone(), cco));
         let Some(term) = scope::constituent_terminology(v.components, root) else {
             continue;
         };
@@ -103,6 +112,41 @@ fn check_constituents(
         check_assumed_values(term, &usage, issues);
         for issue in issues.iter_mut().skip(start) {
             issue.path.get_or_insert_with(|| path.clone());
+        }
+    }
+    first
+}
+
+/// The rules that judge a terminology on its own, run on each
+/// `component_terminologies` entry of an operational template
+/// (`OPT2/master03-opt_raw.adoc`), each violation naming the component.
+///
+/// The entry is the constituent's flat terminology, so the flat-form halves
+/// (VTSD `<=`, VTVSMD) apply. VTSD needs the constituent's level, which only a
+/// carried `concept_code` gives. A binding path key resolves against the first
+/// root that includes the constituent. VOTM and WOUC do not run: a component
+/// carries no description and its use spans every root that includes it.
+fn check_component_terminologies(
+    v: &ArchetypeView<'_>,
+    first_roots: &FirstRoots<'_>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    for (id, term) in v.components.into_iter().flatten() {
+        let start = issues.len();
+        let defined = scope::defined_codes(term);
+        if let Some(level) = codes::specialisation_depth(&term.concept_code) {
+            check_code_levels(&defined, level, false, issues);
+        }
+        check_defined_code_forms(&defined, issues);
+        check_language_coverage(term, issues);
+        check_value_sets(term, &defined, true, issues);
+        let root = first_roots.get(id.as_str());
+        check_term_bindings(term, root.map(|(_, cco)| *cco), &defined, issues);
+        for issue in issues.iter_mut().skip(start) {
+            issue.message = format!("component terminology {id}: {}", issue.message);
+            if let Some((path, _)) = root {
+                issue.path.get_or_insert_with(|| path.clone());
+            }
         }
     }
 }
@@ -249,8 +293,18 @@ fn check_defined_code_levels(
     defined: &BTreeSet<&str>,
     issues: &mut Vec<ValidationIssue>,
 ) {
-    let level = v.specialisation_level();
     let differential = v.is_differential && dialect == Dialect::Adl2;
+    check_code_levels(defined, v.specialisation_level(), differential, issues);
+}
+
+/// VTSD over `defined` at archetype `level`: differential codes sit at the
+/// level, flat codes at or below it, ac-codes never above it.
+fn check_code_levels(
+    defined: &BTreeSet<&str>,
+    level: usize,
+    differential: bool,
+    issues: &mut Vec<ValidationIssue>,
+) {
     for code in defined {
         let Some(d) = codes::specialisation_depth(code) else {
             continue;
