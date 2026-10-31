@@ -322,9 +322,8 @@ pub fn build_web_template(
     // normal sibling-uniqueness discipline (super::id).
     shape::synthesize_in_context(&mut tree);
     super::id::build_ids(&mut tree);
-    // Parse the archetype-conformance walk's template-static constraint paths
-    // ONCE now, so the validation walk never re-parses them per instance-node
-    // visit.
+    // Parse the walk's template-static constraint paths ONCE, so the validation
+    // walk never re-parses them per instance-node visit.
     crate::flat::validation::prepare_walk(&mut tree);
 
     Ok(WebTemplate {
@@ -338,6 +337,7 @@ pub fn build_web_template(
         languages: ctx.languages.clone(),
         tree,
         other_details: other_details(opt),
+        archetype_refs: None,
     })
 }
 

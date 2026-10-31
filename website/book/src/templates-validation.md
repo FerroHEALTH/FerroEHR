@@ -156,6 +156,10 @@ curl -u ferroehr:ferroehr -H 'Accept: text/plain' \
   http://localhost:8080/ferroehr/rest/openehr/v1/definition/template/adl2/openEHR-EHR-COMPOSITION.t_vitals/1.0
 ```
 
+A version on that route that is no SemVer and no `{major}` or `{major}.{minor}`
+prefix (`v1.x`, `01`) is a **400**; a well-formed version that is not stored is
+a **404**.
+
 > [!NOTE]
 > The Basic-authenticated examples on this page run against the quickstart,
 > whose user holds `user/template-*.cruds`. The template family is

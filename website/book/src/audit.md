@@ -453,6 +453,42 @@ Records fan out to independently configured sinks (`[audit]` in
 Emission never blocks the request path: a record is handed to a bounded queue
 (`queue_capacity`) and written by a background drain.
 
+### While a composition is held from the person
+
+With [`[access_delay]`](security.md#delayed-access-by-the-person-ehds-art-33)
+on, a new composition can be held from the person under
+[EHDS](https://eur-lex.europa.eu/eli/reg/2025/327/oj) Art. 3(3) until a
+professional releases it or its period passes. Only one route honours the
+hold: the subject-scoped [ITI-81 read](#retrieving-audit-records-iti-81), the
+one a patient portal serves the person's own trail from, leaves out every
+record that names a held composition. Every other sink and stream is a feed to
+the controller's own systems and carries those records and events while the
+hold is in force:
+
+| Sink or stream | What it carries during a hold | Why it is not filtered |
+|---|---|---|
+| `[audit.store]`, read without the `patient` scope | every record, the hold's own included | The unscoped ITI-81 read is the controller's, under the admin role |
+| `[audit.syslog]` | every record, sent as it is written: the commit and each read name the composition, and the placing of the hold names the patient | An ITI-20 feed goes to an Audit Record Repository, which "receives event audit reports and stores them" ([IHE ITI TF-1 §9.1.1.3](https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html)) |
+| `[audit.fhir_feed]` | the same records as FHIR `AuditEvent` resources, `POST`ed as they are written; here the hold's own record names the composition too | The same ITI-20 repository, over ATX: FHIR Feed; the reader of a BALP `AuditEvent` is an Audit Consumer ([BALP §1:52.1](https://profiles.ihe.net/ITI/BALP/volume-1.html)) |
+| [Change events](beyond-core/amqp.md) (`[events]`) | the commit of the held composition: its `vo_id`, kind, change type and template | The broker serves the deployment's own services; the stream withholds what binds them, a restriction or objection (GDPR Art. 18 and 21, EHDS Art. 8), and the Art. 3(3) hold binds only the person's access |
+
+EHDS Art. 9(2) gives the person the access information "through electronic
+health data access services", which are yours to run. A repository, a broker
+or anything built on them never reaches the person from FerroEHR, so none of
+them filters the hold: a filter there would also hide the record from the
+controller who answers for it. What you must not do, while a hold is in force:
+
+- Serve the person's trail from the external Audit Record Repository the
+  syslog or FHIR feed writes to, for example through that repository's own
+  ITI-81 query. Serve it from FerroEHR's subject-scoped read instead.
+- Send the person a notification, under Art. 9(1) or otherwise, from a record
+  on either feed or from a change event that names a held composition. Ask
+  the hold first: a request in the person's context reads the composition as
+  absent (**404**) until the hold ends.
+
+The [shared-responsibility page](compliance/shared-responsibility.md#the-delay-of-the-persons-access-ehds-art-33)
+puts the same duty on the deployment's side.
+
 The local store is the durability anchor. Under `fail_mode = "closed"`, an
 operation whose audit record cannot be recorded answers
 `503 Service Unavailable`: the deployment demanded an audit trail it cannot

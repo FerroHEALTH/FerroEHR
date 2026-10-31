@@ -153,6 +153,7 @@ fn coded_leaf_wt(list_open: bool) -> WebTemplate {
         languages: vec!["en".to_owned()],
         tree: root,
         other_details: IndexMap::new(),
+        archetype_refs: None,
     }
 }
 

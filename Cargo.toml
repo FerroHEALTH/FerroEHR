@@ -387,6 +387,7 @@ uuid = { version = "1", features = ["serde"] }
 jiff = { version = "0.2.31", features = ["serde"] }   # 1.0 not yet out as of 2026-07; 0.2.31 pinned for ISO 8601 temporal work
 url = "2"
 urlencoding = "2.1.3"
+semver = "1.0.28"                  # Semantic Versioning 2.0.0 grammar for the ITS-REST `version` path parameter (#4541)
 csv = "1.4"                        # RESULT_SET → CSV export (viewer BFF; verified live 2026-07-18)
 
 # ── Viewer (app/ferroehr-viewer: axum handlers drawing FerroUI's server-rendered parts) ──

@@ -36,6 +36,7 @@ use crate::service::error::ServiceError;
 use crate::service::list::Page;
 use crate::service::status::{ServiceStatus, StatusError};
 
+use super::version_selector::{check_version_selector, is_partial_semver};
 use super::{compile_pattern, page_bounds, paginate};
 
 /// The SEMVER a no-version store assigns a query. The no-version store path is
@@ -642,11 +643,19 @@ impl FerroEhrService {
     /// (`{major}` or `{major}.{minor}` → the *highest* matching stored version,
     /// `parameters/path/version.yaml`), or the latest when no version
     /// is given. Identity is case-insensitive.
+    ///
+    /// # Errors
+    ///
+    /// - A `version` that is no SEMVER version or prefix → `BadRequest`
+    ///   (`400`), before any lookup.
+    /// - No stored query matches → not-found (`404`).
+    /// - A database or row-decode failure → `500`.
     pub(in crate::service) async fn get_stored_query(
         &self,
         qualified_name: &str,
         version: Option<&str>,
     ) -> Result<Value, ServiceError> {
+        version.map(check_version_selector).transpose()?;
         // The same canonical key as the store path (the `misc` default).
         let qualified = parse_qualified_name(qualified_name).qualified();
         let (rdn, semantic) = split_qualified(&qualified);
@@ -889,17 +898,6 @@ pub(super) fn is_aql_v1(a_type: &str) -> bool {
     major == "1"
 }
 
-/// Whether a `version` path parameter is a SEMVER *prefix* (`{major}` or
-/// `{major}.{minor}`) rather than an exact `{major}.{minor}.{patch}` triple
-/// (`parameters/path/version.yaml`).
-fn is_partial_semver(version: &str) -> bool {
-    let segments: Vec<&str> = version.split('.').collect();
-    segments.len() < 3
-        && segments
-            .iter()
-            .all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
-}
-
 /// Whether a `version` value is an EXACT numeric `major.minor.patch` triple —
 /// the only form the versioned store accepts (the prefix forms of
 /// `parameters/path/version.yaml` are read-side resolution patterns; see
@@ -974,19 +972,6 @@ mod tests {
         assert!(!valid_query_text("SELECT c FROM COMPOSITION c", "cql"));
         // AQL but unparseable.
         assert!(!valid_query_text("this is not aql", "AQL"));
-    }
-
-    #[test]
-    fn partial_semver_detection() {
-        // `{major}` / `{major}.{minor}` prefixes (version.yaml).
-        assert!(is_partial_semver("1"));
-        assert!(is_partial_semver("1.0"));
-        assert!(is_partial_semver("12.34"));
-        // Exact triples and malformed tokens are not prefixes.
-        assert!(!is_partial_semver("1.0.0"));
-        assert!(!is_partial_semver("1..0"));
-        assert!(!is_partial_semver("1.a"));
-        assert!(!is_partial_semver(""));
     }
 
     /// The store path rejects a body that is not valid AQL (ECC-SQR-006/007):

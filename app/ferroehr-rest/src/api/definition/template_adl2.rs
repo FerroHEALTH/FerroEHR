@@ -145,8 +145,8 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
 /// operational template at an explicit SEMVER `version`
 /// (`operations/definition_template_adl2_version_get.yaml`; `deprecated: true`
 /// in the OAS but spec-declared, so served). `version` is an exact version or a
-/// `{major}`/`{major}.{minor}` prefix resolving to the highest match; a missing
-/// template/version → `404`.
+/// `{major}`/`{major}.{minor}` prefix resolving to the highest match; a value of
+/// neither form → `400`, a missing template/version → `404`.
 pub(super) async fn version_get(
     state: &AppState,
     parts: &RequestParts,
