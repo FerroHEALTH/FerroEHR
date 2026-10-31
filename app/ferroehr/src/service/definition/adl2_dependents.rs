@@ -109,3 +109,24 @@ fn dependents_of(target: &str, rows: Vec<(String, String, String)>) -> Vec<Strin
         .map(|(s, _)| s.hrid.clone())
         .collect()
 }
+
+/// Take the transaction-scoped advisory lock every ADL2 upload and delete
+/// holds from its repository read to its commit.
+///
+/// The delete refuses while a stored artefact depends on its target, and an
+/// upload is refused while a constituent it needs is not stored; each decides
+/// on a read the other's write changes, so they run one after the other, the
+/// second deciding on what the first committed. PostgreSQL releases the lock at
+/// the end of the transaction (`pg_advisory_xact_lock`, PostgreSQL
+/// documentation §13.3.5 Advisory Locks). No openEHR spec governs
+/// storage integrity: our own design.
+///
+/// # Errors
+///
+/// A database failure → `500`.
+pub(super) async fn adl2_write_lock(tx: &mut PgConnection) -> Result<(), ServiceError> {
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended('ferroehr.adl2_artefact', 0))")
+        .execute(tx)
+        .await?;
+    Ok(())
+}

@@ -46,6 +46,7 @@ mod adl14;
 mod adl2;
 mod adl2_dependents;
 mod adl2_engine;
+mod adl2_terminology;
 mod binding_uri;
 pub(super) mod lineage;
 mod opt14_convert;

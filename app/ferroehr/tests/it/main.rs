@@ -30,6 +30,7 @@ mod adl14_knowledge_archetypes;
 mod adl2_fixture;
 mod adl2_vetdf;
 mod adl2_vetdf_ferroterm;
+mod adl2_write_race;
 mod admin_fixture;
 mod aql_depth_bound;
 mod aql_planner;
