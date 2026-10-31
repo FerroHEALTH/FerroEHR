@@ -112,6 +112,16 @@ jobs:
               - 'rust-toolchain.toml'
               - '.cargo/**'
               - 'docker/Dockerfile'
+              # What docker/Dockerfile copies into the runtime stage beside the
+              # binary; scripts/lib/image-inputs.sh --self-test holds this list
+              # to its COPY sources.
+              - 'deploy/hosted/docker-compose.yml'
+              - 'deploy/hosted/Caddyfile'
+              - 'deploy/hosted/ferroehr.sandbox.toml'
+              - 'deploy/hosted/ferroehr-viewer.sandbox.toml'
+              - 'deploy/hosted/ferropix.sandbox.toml'
+              - 'deploy/hosted/ferropix-seed.sh'
+              - 'docker/terminology/seed/**'
               - 'docker/smoke-test.sh'
               - 'docker-compose.yml'
               - '.github/workflows/containers.yml'

@@ -133,17 +133,24 @@ self_test() {
 
   # The lists against the filters of containers.yml, and the sources read
   # from docker/Dockerfile.
+  got="$(dockerfile_sources "$repo/docker/Dockerfile")"
   while IFS= read -r entry; do
     printf '%s\n' "${NOT_IN_IMAGE[@]}" | covered "$entry" && continue
-    printf '%s\n' "${SERVER_INPUTS[@]}" | covered "$entry" || fail "containers.yml rebuilds the app image on $entry, which the server inputs miss"
+    printf '%s\n' "${SERVER_INPUTS[@]}" "$got" | covered "$entry" || fail "containers.yml rebuilds the app image on $entry, which the server inputs miss"
   done < <(filter_entries app "$repo/.github/workflows/containers.yml")
   while IFS= read -r entry; do
     [[ "$entry" == .github/workflows/containers.yml ]] && continue
     printf '%s\n' "${POSTGRES_INPUTS[@]}" | covered "$entry" || fail "containers.yml rebuilds the postgres image on $entry, which the postgres inputs miss"
   done < <(filter_entries postgres "$repo/.github/workflows/containers.yml")
-  got="$(dockerfile_sources "$repo/docker/Dockerfile")"
   grep -qxF docker/terminology/seed <<<"$got" || fail "the COPY sources of docker/Dockerfile were misread: $got"
   if grep -qE '^(bin/|/)' <<<"$got"; then fail "a binary or a stage path was read as a source: $got"; fi
+  # Every source the runtime stage copies rebuilds the app image when it
+  # changes, so a push never leaves `:main` behind the tree's inputs.
+  local app_filter
+  app_filter="$(filter_entries app "$repo/.github/workflows/containers.yml")"
+  while IFS= read -r entry; do
+    covered "$entry" <<<"$app_filter" || fail "docker/Dockerfile copies $entry into the runtime stage, and the app filter of containers.yml does not rebuild the image on it"
+  done <<<"$got"
 
   # A miniature origin and a depth-1 checkout of its head, as CI checks out.
   (
