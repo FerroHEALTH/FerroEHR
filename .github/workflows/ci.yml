@@ -445,6 +445,8 @@ jobs:
         run: bash scripts/checks/shellcheck-lane.sh
       - name: The guards' changed-path helper reads a branch's own change from the merge base
         run: bash scripts/lib/changed-paths.sh --self-test
+      - name: The conformance image check compares an image's inputs with the tree's, and its lists match containers.yml
+        run: bash scripts/lib/image-inputs.sh --self-test
       - name: The early-reader check refuses head and grep -q, -m or -l on a pipe, and allows the here-string forms
         run: bash scripts/checks/pipe-early-exit.sh --self-test
       - name: No workflow or shell program feeds a reader that stops early from a pipe
