@@ -330,7 +330,8 @@ These things about the payload are worth calling out:
   `change_type` is a `DV_CODED_TEXT` naming a code of the openEHR *audit change
   type* group, such as `249` (creation), `251` (modification), `523` (deleted)
   or `666` (attestation); a code outside the group is a **422**. The server
-  fills in `time_committed`, and `system_id` when you do not supply one.
+  fills in `time_committed`, and `system_id` when you do not supply one. A
+  `system_id` that is not a string is a **400**, and an empty one a **422**.
 - **An audit is sent as `UPDATE_AUDIT`**, `AUDIT_DETAILS` or with no `_type`.
   An `ATTESTATION` or `UPDATE_ATTESTATION` audit is a **400**: attestations go
   in the version's `attestations` list (see below).
@@ -343,8 +344,13 @@ These things about the payload are worth calling out:
   even when it differs from the shared audit's. A version that omits
   `system_id` gets the shared audit's, and every audit in the contribution
   carries the same `time_committed`.
-- **A `description` is a `DV_TEXT` or `DV_CODED_TEXT` object**, never a plain
-  string, which is a **400**. A coded description keeps its `defining_code`.
+- **A `description` is a `DV_TEXT` or `DV_CODED_TEXT` object that names its
+  `_type`.** A plain string, or an object without `_type`, is a **400**. A
+  coded description keeps its `defining_code`. The same holds for an
+  attestation's `reason` and `description`.
+- **Members an audit or the contribution does not declare are accepted and
+  ignored.** The released schemas leave both objects open, so a `reason` or
+  `is_pending` on a plain audit, or an extra top-level member, changes nothing.
 - **`lifecycle_state` is required on every version** and is a
   `DV_CODED_TEXT`, as in the example. Omitting it, or sending it as a plain
   string or as `{"terminology_id": …, "code_string": …}`, is a **400**, on an

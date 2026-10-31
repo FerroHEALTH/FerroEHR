@@ -659,6 +659,36 @@ async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
         .expect("a restated creation change_type is accepted");
 }
 
+/// A stated `system_id` is validated and never replaced
+/// (`schemas/common/UpdateAudit.yaml`: "When provided it will be validated;
+/// when omitted the server sets its own value"), so an empty one on a direct
+/// write is the `422` of `AUDIT_DETAILS.System_id_valid`, the status the
+/// CONTRIBUTION path answers.
+#[tokio::test]
+async fn ehr_creation_refuses_a_stated_empty_system_id() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let committal = Committal {
+        audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+            _type: None,
+            system_id: Some(String::new()),
+            change_type: ferroehr::service::version_update::unstated_code(),
+            description: None,
+            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
+                &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Chart" }),
+            )
+            .expect("committer"),
+            additional_properties: std::collections::BTreeMap::new(),
+        }),
+        lifecycle_state: None,
+    };
+    let err = svc
+        .create_ehr_meta(None, Some(&committal))
+        .await
+        .expect_err("an empty system_id is refused");
+    assert_eq!(err.status, ServiceStatus::ContentInvalid, "{err:?}");
+}
+
 #[tokio::test]
 async fn unknown_ehr_is_not_found() {
     let db = testkit::db().await.expect("testkit database");

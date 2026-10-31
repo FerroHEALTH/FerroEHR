@@ -6343,13 +6343,12 @@ pub(crate) async fn versioned_party_version_get_by_id(
                                       `committer`, or one that does not decode as \
                                       a canonical `PARTY_PROXY` \
                                       (`UpdateAudit.yaml` lists it under \
-                                      `required` and types it `UPartyProxy`); a \
-                                      member, an attestation (`666`) member \
-                                      included, states no `lifecycle_state` \
-                                      (`UpdateVersion.yaml` lists it under \
-                                      `required`); a \
-                                      non-creation change type on a member with \
-                                      no `preceding_version_uid` (the released \
+                                      `required` and types it `UPartyProxy`); an audit `system_id` \
+                                      that is not a string, or an audit `description` or attestation \
+                                      `reason` without `_type` (`UDvText.yaml` requires it); a member, \
+                                      an attestation (`666`) member included, states no `lifecycle_state` \
+                                      (`UpdateVersion.yaml` lists it under `required`); a non-creation \
+                                      change type on a member with no `preceding_version_uid` (the released \
                                       first-version-of-a-MODIFICATION trigger); \
                                       a member carrying a property \
                                       `UpdateVersion.yaml` does not declare \

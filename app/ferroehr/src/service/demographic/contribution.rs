@@ -47,6 +47,8 @@ impl FerroEhrService {
         &self,
         body: Value,
     ) -> Result<ServiceResponse, ServiceError> {
+        // NOTE: ITS-REST `schemas/demographic/NewContribution.yaml` leaves `additionalProperties` open
+        // (`ItemTag.yaml` closes its object with `false`), so an undeclared member is ignored.
         let NewContribution {
             uid,
             versions,

@@ -5481,12 +5481,11 @@ pub(crate) async fn directory_get_by_version_id(
                                       decode as a canonical `PARTY_PROXY` \
                                       (`UpdateAudit.yaml` lists it under \
                                       `required` and types it `UPartyProxy`, \
-                                      inherited by `UpdateAttestation.yaml`); \
-                                      a member, an \
-                                      attestation (`666`) member included, \
-                                      states no `lifecycle_state` \
-                                      (`UpdateVersion.yaml` lists it under \
-                                      `required`); or a member names a \
+                                      inherited by `UpdateAttestation.yaml`); an audit `system_id` that is \
+                                      not a string, or an audit `description` or attestation `reason` \
+                                      without `_type` (`UDvText.yaml` requires it); a member, an \
+                                      attestation (`666`) member included, states no `lifecycle_state` \
+                                      (`UpdateVersion.yaml` lists it under `required`); or a member names a \
                                       `preceding_version_uid` whose \
                                       VERSIONED_OBJECT does not exist (the \
                                       modification matches no stored object — a \

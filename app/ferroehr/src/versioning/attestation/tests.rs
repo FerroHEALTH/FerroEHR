@@ -376,7 +376,7 @@ fn flat_terminology_code_change_type_is_refused() {
     >(&json!({
         "change_type": { "terminology_id": "openehr", "code_string": "666" },
         "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" },
-        "reason": { "value": "signed" },
+        "reason": { "_type": "DV_TEXT", "value": "signed" },
         "is_pending": false
     }));
     let err = refused.expect_err("a flat TERMINOLOGY_CODE change_type must be refused");

@@ -224,7 +224,9 @@ pub struct UpdateAuditData {
     /// The `change_type` property of `UpdateAudit`.
     pub change_type: openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText,
     /// The `description` property of `UpdateAudit`.
+    /// `_type` REQUIRED by `UDvText`: ITS-REST `schemas/common/UpdateAudit.yaml` types `description` as `UDvText.yaml`, whose members `UMDvText.yaml` and `UMDvCodedText.yaml` both list `_type` under `required`
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, deserialize_with = "crate::rest::tagged::optional")]
     pub description: Option<openehr_rm::v1_2::data_types::text::dv_text::DvText>,
     /// The `committer` property of `UpdateAudit`.
     pub committer: openehr_rm::v1_2::common::generic::party_proxy::PartyProxy,
@@ -337,7 +339,9 @@ pub struct UpdateAttestation {
     /// The `change_type` property of `UpdateAttestation`.
     pub change_type: openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText,
     /// The `description` property of `UpdateAttestation`.
+    /// `_type` REQUIRED by `UDvText`: ITS-REST `schemas/common/UpdateAttestation.yaml` inherits `description` from `UpdateAudit.yaml` (`UDvText.yaml`; `UMDvText.yaml` and `UMDvCodedText.yaml` require `_type`)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, deserialize_with = "crate::rest::tagged::optional")]
     pub description: Option<openehr_rm::v1_2::data_types::text::dv_text::DvText>,
     /// The `committer` property of `UpdateAttestation`.
     pub committer: openehr_rm::v1_2::common::generic::party_proxy::PartyProxy,
@@ -352,6 +356,8 @@ pub struct UpdateAttestation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub items: Option<Vec<openehr_rm::v1_2::data_types::uri::dv_ehr_uri::DvEhrUri>>,
     /// The `reason` property of `UpdateAttestation`.
+    /// `_type` REQUIRED by `UDvText`: ITS-REST `schemas/common/UpdateAttestation.yaml` types `reason` as `UDvText.yaml`, whose members `UMDvText.yaml` and `UMDvCodedText.yaml` both list `_type` under `required`
+    #[serde(deserialize_with = "crate::rest::tagged::required")]
     pub reason: openehr_rm::v1_2::data_types::text::dv_text::DvText,
     /// The `is_pending` property of `UpdateAttestation`.
     pub is_pending: bool,

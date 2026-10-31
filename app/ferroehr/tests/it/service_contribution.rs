@@ -3141,6 +3141,66 @@ async fn an_attestation_audit_is_refused_and_the_three_audit_spellings_commit() 
     }
 }
 
+/// The audit refusals of #4543 answer the same on a member `commit_audit` and
+/// on the CONTRIBUTION `audit`: a non-string `system_id` fails
+/// `schemas/common/UpdateAudit.yaml` (`type: string`) and an untagged
+/// `description` fails `data_types/UDvText.yaml` (both members require `_type`),
+/// each the 400; an empty `system_id` is schema-valid and breaks
+/// `AUDIT_DETAILS.System_id_valid`, the 422. Members neither
+/// `NewContribution.yaml` nor `UpdateAudit.yaml` declare are accepted: neither
+/// closes `additionalProperties`.
+#[tokio::test]
+async fn audit_refusals_agree_on_both_audits_and_undeclared_members_commit() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let ehr: ferroehr::ids::EhrId = create_ehr(&svc).await.parse().expect("ehr uuid");
+    let with = |member: &str, value: Value| {
+        let mut audit = creation_audit(None);
+        audit[member] = value;
+        audit
+    };
+    for shape in [
+        with("system_id", json!(7)),
+        with("description", json!({ "value": "no tag" })),
+    ] {
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(lifecycle("532"), shape.clone(), creation_audit(None)),
+        )
+        .await;
+        assert_shape_refused(
+            &svc,
+            ehr,
+            typed_body(lifecycle("532"), creation_audit(None), shape),
+        )
+        .await;
+    }
+    let empty = with("system_id", json!(""));
+    for body in [
+        typed_body(lifecycle("532"), empty.clone(), creation_audit(None)),
+        typed_body(lifecycle("532"), creation_audit(None), empty),
+    ] {
+        let err = svc
+            .create_ehr_contribution(ehr, body.clone())
+            .await
+            .expect_err("an empty system_id is refused");
+        assert_eq!(err.status, ServiceStatus::ContentInvalid, "{body}: {err:?}");
+    }
+    let mut undeclared = typed_body(
+        lifecycle("532"),
+        with("is_pending", json!(false)),
+        with(
+            "reason",
+            json!({ "_type": "DV_TEXT", "value": "not an attestation" }),
+        ),
+    );
+    undeclared["extension"] = json!({ "note": "an undeclared CONTRIBUTION member" });
+    svc.create_ehr_contribution(ehr, undeclared)
+        .await
+        .expect("undeclared members are valid content and commit");
+}
+
 /// A `666|attestation|` member adds an `ATTESTATION` to an existing version
 /// (RM common master06 §Contributions) and carries it in its `attestations`
 /// (ruling 3 of #3595), so a member with none is the 400. An attestation's

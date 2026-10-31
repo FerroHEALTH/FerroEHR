@@ -353,7 +353,8 @@ The attributes the server merges:
 
 A client-supplied `system_id` is merged into the commit audit, useful when a
 gateway commits on behalf of a source system; when absent, the server stamps its
-own system id.
+own system id. An empty `system_id=""` is refused with a **422**, as on a
+CONTRIBUTION: leave the key out to get the server's.
 
 Both EHR creates (`POST /ehr` and `PUT /ehr/{ehr_id}`) accept the headers too:
 creating an EHR commits its EHR_STATUS and EHR_ACCESS in a contribution, so the
