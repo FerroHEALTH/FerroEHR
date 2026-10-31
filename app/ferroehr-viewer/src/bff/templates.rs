@@ -19,6 +19,7 @@
 )]
 
 use crate::adl2::TemplateFamily;
+use crate::bff::dashboard::Count;
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr_served, tr_served_with};
 
@@ -311,8 +312,9 @@ pub async fn delete_adl2_artefact(
 const COMPOSITIONS_OF_TEMPLATE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = $template_id";
 
 /// How many compositions the CDR holds against each of `template_ids`, in
-/// their order: `Ok(None)` when the CDR answered a result set of another
-/// shape, `Err` with the CDR's refusal of that one count.
+/// their order: the [`CountShape`](crate::bff::dashboard::CountShape) when
+/// the CDR answered a result set of another shape, `Err` with the CDR's
+/// refusal of that one count.
 ///
 /// One `POST query/aql` per template, the id a query parameter and never
 /// part of the query text, bounded by
@@ -324,7 +326,7 @@ const COMPOSITIONS_OF_TEMPLATE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS 
 pub async fn count_compositions(
     // The templates to count the compositions of.
     template_ids: Vec<String>,
-) -> Result<Vec<Result<Option<i64>, ViewerError>>, ViewerError> {
+) -> Result<Vec<Result<Count, ViewerError>>, ViewerError> {
     use futures::stream::StreamExt;
 
     let session = crate::session::require_session()?;

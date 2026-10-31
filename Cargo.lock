@@ -2498,6 +2498,7 @@ dependencies = [
  "sea-query",
  "sea-query-sqlx",
  "secrecy",
+ "semver",
  "serde",
  "serde_json",
  "serde_norway",
@@ -5130,6 +5131,7 @@ name = "openehr-sdt"
 version = "0.0.128"
 dependencies = [
  "fancy-regex",
+ "http",
  "indexmap 2.14.2",
  "insta",
  "moka",

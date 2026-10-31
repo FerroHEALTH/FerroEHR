@@ -26,6 +26,7 @@ use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::tag::Tag;
 
 use crate::adl2::{TemplateFamily, split_hrid};
+use crate::bff::dashboard::Count;
 use crate::bff::template_adl2::fetch_adl2_catalog;
 use crate::bff::template_detail::fetch_template_catalog;
 use crate::bff::templates::{TemplateRow, count_compositions};
@@ -186,7 +187,7 @@ pub struct Compared {
 
 /// The compositions committed against each release, in the lineage's order,
 /// or the refusal of the session.
-type Counts = Result<Vec<Result<Option<i64>, ViewerError>>, ViewerError>;
+type Counts = Result<Vec<Result<Count, ViewerError>>, ViewerError>;
 
 /// What the releases of a template read for its page.
 #[derive(Debug, Clone, Default)]
@@ -390,12 +391,12 @@ impl Releases {
                     marks.push(tr(DefinitionsMsg::TemplateShownHere));
                 }
                 let compositions = match counts.get(place) {
-                    Some(Ok(Some(number))) => t(ferrohealth_ui::i18n::number::grouped(
-                        &current(),
-                        u64::try_from(*number).unwrap_or_default(),
-                    )),
+                    Some(Ok(Ok(number))) => {
+                        t(ferrohealth_ui::i18n::number::grouped(&current(), *number))
+                    }
+                    Some(Ok(Err(shape))) => crate::pages::dashboard::unavailable(*shape),
                     Some(Err(_)) => t(tr(DefinitionsMsg::TemplateCountRefused)),
-                    _ => t(tr(Msg::NoValue)),
+                    None => t(tr(Msg::NoValue)),
                 };
                 h(format!(
                     "<tr>{}{}{}</tr>",

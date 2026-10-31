@@ -1,0 +1,178 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# Ratchet tighten (#4554). No specification governs this: our own design.
+#
+# The ratchet guards (scripts/checks/duplication.sh, file-size.sh and
+# stray-literals.sh) fail a rise and pass a fall with a note, so a pull
+# request that removes duplication, shortens a file or moves strings to the
+# catalogs touches none of the shared ratchet files and conflicts with no
+# other open pull request. This lane does the tightening instead: once a day
+# it runs each guard's --update on main and opens one pull request that holds
+# only the ratchet files, or moves its open one to the new counts. When
+# nothing fell it does nothing.
+#
+# It is a pull request, never a push to main. The commit is made through the
+# Git Data REST API, so GitHub signs it and it shows Verified, the same
+# mechanism toolchain-watcher.yml uses
+# (docs.github.com/en/rest/git/commits, "Signature verification").
+#
+# THE TOKEN. Events raised with GITHUB_TOKEN start no workflow run, so a pull
+# request opened with it arrives with no checks and the required
+# `conclusion` check never reports
+# (docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication).
+# A fine-grained PAT or GitHub App token with contents:write and
+# pull-requests:write in RATCHET_TIGHTEN_TOKEN (or the toolchain watcher's
+# TOOLCHAIN_BUMP_TOKEN) avoids that. Without either the lane still opens the
+# pull request and says in its body to close and reopen it.
+name: Ratchet tighten
+
+on:
+  schedule:
+    # Daily 04:53 UTC, off the hour and in a slot of its own; read the
+    # estate's slots with `grep -rE '^ +- cron:' .github/workflows/`.
+    - cron: "53 4 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ratchet-tighten
+  cancel-in-progress: false
+
+jobs:
+  tighten:
+    name: tighten
+    # The counts are main's; a dispatch from another branch would lower them
+    # to that branch's tree.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # create the blob, tree, commit and branch ref
+      pull-requests: write # open the pull request and arm its auto-merge
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A rise on main is a failure for a person to look at, never a count
+      # this lane writes down.
+      - name: No ratchet has risen on main
+        run: |
+          set -euo pipefail
+          bash scripts/checks/duplication.sh
+          bash scripts/checks/file-size.sh
+          bash scripts/checks/stray-literals.sh app/ferroehr-viewer/src
+
+      - name: Lower the counts
+        id: update
+        run: |
+          set -euo pipefail
+          count_before=$(git show HEAD:scripts/checks/duplication.count | awk '/^[[:space:]]*(#|$)/ { next } { print; exit }')
+          bash scripts/checks/duplication.sh --update
+          count_after=$(awk '/^[[:space:]]*(#|$)/ { next } { print; exit }' scripts/checks/duplication.count)
+          # A block that moved and kept the count changes only its key, which
+          # the check already tolerates; that alone is no reason for a PR.
+          if [ "$count_before" = "$count_after" ]; then
+            git checkout -- scripts/checks/duplication.count scripts/checks/duplication-baseline.txt
+          fi
+          bash scripts/checks/file-size.sh --update
+          bash scripts/checks/stray-literals.sh --update app/ferroehr-viewer/src
+
+          git diff --name-only -- \
+            scripts/checks/duplication.count scripts/checks/duplication-baseline.txt \
+            scripts/checks/file-size.list scripts/checks/stray-literals.baseline >changed-files.txt
+          other=$(git status --porcelain --untracked-files=no | awk '{ print $2 }' | grep -vxF -f changed-files.txt || true)
+          if [ -n "$other" ]; then
+            echo "$other"
+            echo "::error::--update changed a file outside the four ratchet files."
+            exit 1
+          fi
+          if [ ! -s changed-files.txt ]; then
+            echo "::notice::No ratchet fell. Nothing to do."
+            echo "changed=0" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=1" >>"$GITHUB_OUTPUT"
+          {
+            echo "duplication_before=$count_before"
+            echo "duplication_after=$count_after"
+          } >>"$GITHUB_OUTPUT"
+          {
+            echo '### Ratchet files lowered'
+            echo
+            echo '```diff'
+            git diff --stat
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Open or move the tightening pull request
+        if: steps.update.outputs.changed == '1'
+        env:
+          GH_TOKEN: ${{ secrets.RATCHET_TIGHTEN_TOKEN || secrets.TOOLCHAIN_BUMP_TOKEN || github.token }}
+          HAVE_TOKEN: ${{ (secrets.RATCHET_TIGHTEN_TOKEN != '' || secrets.TOOLCHAIN_BUMP_TOKEN != '') && '1' || '0' }}
+          REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.sha }}
+          DUP_BEFORE: ${{ steps.update.outputs.duplication_before }}
+          DUP_AFTER: ${{ steps.update.outputs.duplication_after }}
+        run: |
+          set -euo pipefail
+          branch="chore/ratchet-tighten"
+
+          # The parent is the commit the counts were measured on, so the
+          # lowered counts hold for it; CI on the pull request measures them
+          # again against main as it is at merge time.
+          base_tree=$(gh api "repos/${REPO}/git/commits/${BASE_SHA}" --jq .tree.sha)
+          tree_args=()
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            blob=$(gh api "repos/${REPO}/git/blobs" \
+                     -f encoding=base64 -f content="$(base64 -w0 "$f")" --jq .sha)
+            tree_args+=( -f "tree[][path]=$f" -f "tree[][mode]=100644" \
+                         -f "tree[][type]=blob" -f "tree[][sha]=$blob" )
+            echo "staged $f ($blob)"
+          done <changed-files.txt
+          tree=$(gh api "repos/${REPO}/git/trees" \
+                   -f "base_tree=${base_tree}" "${tree_args[@]}" --jq .sha)
+          commit=$(gh api "repos/${REPO}/git/commits" \
+                     -f "message=chore(checks): lower the ratchet counts" \
+                     -f "tree=${tree}" -f "parents[]=${BASE_SHA}" --jq .sha)
+
+          # One pull request at a time: an open one moves to the new commit,
+          # which is this lane's own branch and never main.
+          open=$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh api -X PATCH "repos/${REPO}/git/refs/heads/${branch}" \
+              -f "sha=${commit}" -F force=true --jq .ref
+            echo "::notice::Moved #${open} to ${commit}."
+            exit 0
+          fi
+          if gh api "repos/${REPO}/git/ref/heads/${branch}" --silent 2>/dev/null; then
+            gh api -X DELETE "repos/${REPO}/git/refs/heads/${branch}"
+          fi
+          gh api "repos/${REPO}/git/refs" \
+            -f "ref=refs/heads/${branch}" -f "sha=${commit}" --jq .ref
+
+          {
+            echo "The ratchet guards pass a fall and fail only a rise, so pull requests leave the ratchet files alone (#4554). This pull request records what fell on \`main\`, and carries only the ratchet files:"
+            echo
+            while IFS= read -r f; do echo "- \`$f\`"; done <changed-files.txt
+            if [ -n "$DUP_BEFORE" ] && [ "$DUP_BEFORE" != "$DUP_AFTER" ]; then
+              echo
+              echo "Duplicated lines: ${DUP_BEFORE} -> ${DUP_AFTER}."
+            fi
+            echo
+            echo "Made by \`.github/workflows/ratchet-tighten.yml\` from each guard's \`--update\`. No user-visible change, so no changelog fragment."
+            if [ "$HAVE_TOKEN" != "1" ]; then
+              echo
+              echo "No \`RATCHET_TIGHTEN_TOKEN\` is configured, so this pull request was opened with the workflow token and its checks did not start. Close and reopen it to raise them."
+            fi
+          } >pr-body.md
+
+          url=$(gh pr create --repo "$REPO" --base main --head "$branch" \
+                  --title "chore(checks): lower the ratchet counts" \
+                  --body-file pr-body.md)
+          echo "::notice::Opened $url"
+          echo "$url" >>"$GITHUB_STEP_SUMMARY"
+          gh pr merge "$url" --repo "$REPO" --auto --squash

@@ -1288,12 +1288,10 @@ pub(crate) async fn definition_template_adl2_example_get(
                         prefix will be considered\" (ITS-REST \
                         `specifications/parameters/path/version.yaml`). Matching \
                         runs over the NUMERIC `major.minor.patch` axis of the \
-                        stored `ARCHETYPE_HRID` only: a pre-release/build suffix \
-                        on a stored artefact (`…v2.0.0-rc.1`) is ignored when \
-                        matching and ordering, and a `{version}` value that \
-                        carries such a suffix therefore matches nothing. \"SEMVER \
-                        version number\" is all the released text says, so that \
-                        reading of the pre-release axis is OURS.",
+                        stored `ARCHETYPE_HRID` only (OUR reading): a stored \
+                        pre-release/build suffix is ignored, and a `{version}` \
+                        carrying one matches nothing (`404`). A value of neither \
+                        form (`v1.x`, a leading zero) is the `400`.",
          example = "1.0"),
         ("Accept" = Option<String>, Header,
          description = "`text/plain` (the ADL2 source; also the default for \
@@ -1351,6 +1349,12 @@ description
                 (serde_json::Value = "application/json")
             )
         ),
+        (status = 400, description = "`version` is no SEMVER version and no \
+                                      `{major}` or `{major}.{minor}` prefix \
+                                      (`parameters/path/version.yaml`): a \
+                                      \"syntactically invalid … parameter\" \
+                                      (`specifications/responses/400.yaml`).",
+         body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
                                       Found` \"is returned when a template with \
                                       the specified `template_id` at given \
@@ -1799,11 +1803,10 @@ pub(crate) async fn definition_query_store_yaml(
                         system must use the latest `version` with the supplied \
                         prefix\"). Prefixes match on a dot boundary (`1` matches \
                         `1.x.y`, never `10.0.0`) and resolve over the numeric \
-                        `major.minor.patch` axis. A value that matches no stored \
-                        version — including a malformed one — is the `404` below; \
-                        the read side never rejects the selector itself, which is \
-                        where it differs from the versioned STORE (whose \
-                        `version` must be an exact three-part number).",
+                        `major.minor.patch` axis. A well-formed value matching \
+                        no stored version is the `404`, a malformed one (`v1.x`, \
+                        a leading zero) the `400`; the versioned STORE takes an \
+                        exact three-part number only.",
          example = "1.0"),
         ("Accept" = Option<String>, Header,
          description = "`application/json` — the single representation this \
@@ -1860,15 +1863,12 @@ pub(crate) async fn definition_query_store_yaml(
                                       syntactically invalid header, parameter or \
                                       content)\" (ITS-REST \
                                       `specifications/responses/400.yaml`). Here \
-                                      the only reachable trigger is malformed \
-                                      request URL syntax: a path segment whose \
-                                      percent-encoding does not decode to valid \
-                                      UTF-8, so no name/version can be read from \
-                                      the URL. A well-formed selector that \
-                                      resolves to nothing is the `404` below. The \
-                                      released operation does not enumerate \
-                                      `400`; the trigger is the cross-cutting \
-                                      one.",
+                                      the triggers are a path segment whose \
+                                      percent-encoding is not valid UTF-8 and a \
+                                      `version` that is no SEMVER version or \
+                                      `{major}[.{minor}]` prefix. The released \
+                                      operation does not enumerate `400`; the \
+                                      trigger is the cross-cutting one.",
          body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
                                       Found` \"is returned when a stored query \
