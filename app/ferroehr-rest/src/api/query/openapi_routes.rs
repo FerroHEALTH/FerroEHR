@@ -1339,13 +1339,10 @@ pub(crate) async fn query_execute_stored_query_body(
                         `version` with the supplied prefix\" \
                         (`docs/query/Qualified_query_name.md`). Matching is on \
                         a dot boundary, so `1` selects the highest `1.x.y` and \
-                        `1.2` the highest `1.2.x`. A `{version}` that is \
-                        neither an exact SEMVER nor such a numeric prefix \
-                        matches no stored version and takes the `404` — no \
-                        released text assigns a malformed `{version}` its own \
-                        code, and the released `404` trigger is worded exactly \
-                        as \"a stored query with `qualified_query_name` and \
-                        `version` does not exist\", so that is where it lands.",
+                        `1.2` the highest `1.2.x`. A `{version}` that is no \
+                        SEMVER version and no such prefix (`v1.x`, a leading \
+                        zero) has \"an invalid syntax\", the `400` of \
+                        `responses/400_Query.yaml`, refused before any lookup.",
          example = "1.0"),
         ("openehr-ehr-id" = Option<String>, Header,
          description = "The EHR scope in its header form: clients \"MAY supply \
@@ -1516,9 +1513,10 @@ pub(crate) async fn query_execute_stored_query_body(
                                       not a UUID; `offset`/`fetch` are not \
                                       non-negative integers; `fetch` is \
                                       combined with the deprecated AQL `TOP`; \
-                                      or the `ehr_id` query parameter and the \
+                                      the `ehr_id` query parameter and the \
                                       `openehr-ehr-id` header name different \
-                                      EHRs.",
+                                      EHRs; or `{version}` is no SEMVER \
+                                      version or `{major}[.{minor}]` prefix.",
          body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
                                       Found` \"is returned when a stored query \
@@ -1529,12 +1527,10 @@ pub(crate) async fn query_execute_stored_query_body(
                                       together: an existing name with no \
                                       version matching the exact value or the \
                                       `{major}`/`{major}.{minor}` prefix is \
-                                      this branch, as is a `{version}` that is \
-                                      not a SEMVER value at all (no released \
-                                      text gives a malformed `{version}` its \
-                                      own code) and a `query-name` of the \
-                                      reserved `aql` (such a name cannot be \
-                                      stored). This server ALSO answers `404` \
+                                      this branch, as is a `query-name` of \
+                                      the reserved `aql` (such a name cannot \
+                                      be stored); a malformed `{version}` is \
+                                      the `400`. This server ALSO answers `404` \
                                       when a well-formed `ehr_id` scope names \
                                       no existing EHR — OUR OWN assignment (no \
                                       released query operation declares a \
@@ -1638,10 +1634,8 @@ pub(crate) async fn query_execute_stored_query_version(
                         system must use the latest `version` with the supplied \
                         prefix\"). Matching is on a dot boundary — `1` selects \
                         the highest `1.x.y`, `1.2` the highest `1.2.x`. A \
-                        `{version}` that is neither an exact SEMVER nor such a \
-                        numeric prefix matches no stored version and takes the \
-                        `404`; no released text assigns a malformed \
-                        `{version}` its own code.",
+                        `{version}` that is no SEMVER version and no such \
+                        prefix (`v1.x`, a leading zero) is the `400`.",
          example = "1.0"),
         ("openehr-ehr-id" = Option<String>, Header,
          description = "The EHR scope in its header form: clients \"MAY supply \
@@ -1839,7 +1833,9 @@ pub(crate) async fn query_execute_stored_query_version(
                                       carry CONFLICTING values for the same \
                                       `offset`/`fetch`/named parameter (OUR OWN \
                                       handling of the unassigned precedence — \
-                                      equal values are accepted). An EMPTY body \
+                                      equal values are accepted); or `{version}` \
+                                      is no SEMVER version or \
+                                      `{major}[.{minor}]` prefix. An EMPTY body \
                                       `{}` is NOT an error.",
          body = serde_json::Value),
         (status = 404, description = "The released trigger, verbatim: `404 Not \
@@ -1851,10 +1847,10 @@ pub(crate) async fn query_execute_stored_query_version(
                                       together: an existing name with no \
                                       version matching the exact value or the \
                                       `{major}`/`{major}.{minor}` prefix is \
-                                      this branch, as is a `{version}` that is \
-                                      not a SEMVER value at all and a \
-                                      `query-name` of the reserved `aql` (such \
-                                      a name cannot be stored). This server \
+                                      this branch, and so is the reserved \
+                                      `query-name` `aql` (no such name can be \
+                                      stored); a `{version}` that is no SEMVER \
+                                      value is the `400`. This server \
                                       ALSO answers `404` when a well-formed \
                                       `ehr_id` scope names no existing EHR — \
                                       OUR OWN assignment (no released query \

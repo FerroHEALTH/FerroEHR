@@ -32,6 +32,8 @@
 use std::collections::BTreeSet;
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
+use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 
 use super::ValidationIssue;
 use super::catalogue::ValidationCode;
@@ -48,12 +50,23 @@ pub(super) fn check_bindings(
     defined: &BTreeSet<&str>,
     issues: &mut Vec<ValidationIssue>,
 ) {
-    let Some(bindings) = v.terminology.term_bindings.as_ref() else {
+    check_term_bindings(v.terminology, Some(v.definition), defined, issues);
+}
+
+/// VTTBK / VTCBK over the `term_bindings` of `term`, whose path keys resolve
+/// against `definition`; with no definition only the key form is judged.
+pub(super) fn check_term_bindings(
+    term: &ArchetypeTerminology,
+    definition: Option<&CComplexObject>,
+    defined: &BTreeSet<&str>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    let Some(bindings) = term.term_bindings.as_ref() else {
         return;
     };
     for terms in bindings.values() {
         for key in terms.keys() {
-            if let Some(issue) = binding_key_issue(v, defined, key) {
+            if let Some(issue) = binding_key_issue(definition, defined, key) {
                 issues.push(issue);
             }
         }
@@ -69,7 +82,7 @@ pub(super) fn check_bindings(
 /// resolve within the archetype. A pure-RM path (no predicate) is a
 /// reference-model concern ([`super::rm`]).
 fn binding_key_issue(
-    v: &ArchetypeView<'_>,
+    definition: Option<&CComplexObject>,
     defined: &BTreeSet<&str>,
     key: &str,
 ) -> Option<ValidationIssue> {
@@ -95,7 +108,10 @@ fn binding_key_issue(
             format!("term binding key {key:?} is neither an at-code nor a path"),
         ));
     }
-    if has_node_id_predicate(key) && resolve(v.definition, key) != Resolution::Found {
+    if let Some(definition) = definition
+        && has_node_id_predicate(key)
+        && resolve(definition, key) != Resolution::Found
+    {
         return Some(ValidationIssue::new(
             ValidationCode::Vttbk,
             format!("term binding key path {key:?} is not valid in the archetype"),

@@ -52,15 +52,17 @@ use openehr_am::v2_4::aom2::rules::expr_constraint::ExprConstraint;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 use openehr_am::v2_4::beom::core::assertion::Assertion;
 use openehr_am::v2_4::beom::core::expression::Expression;
-use openehr_base::prelude::{Cardinality, Interval, MultiplicityInterval, ProperInterval};
+use openehr_base::prelude::{Cardinality, Interval, MultiplicityInterval};
 use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
 use super::inputs::{assumed_code, default_string};
+use super::interval_v2_4::{
+    int_range, point_f64, point_i32, point_list, real_range, sole_interval,
+};
 use super::model::{
     WebTemplate, WebTemplateArchetypeSlot, WebTemplateBindingCodedValue, WebTemplateCardinality,
     WebTemplateClosedAttribute, WebTemplateCodedValue, WebTemplateExistence, WebTemplateInput,
-    WebTemplateInputType, WebTemplateNode, WebTemplateRange, WebTemplateStructuralStub,
-    WebTemplateValidation,
+    WebTemplateInputType, WebTemplateNode, WebTemplateStructuralStub, WebTemplateValidation,
 };
 use super::shape;
 
@@ -115,9 +117,8 @@ pub fn build_web_template_v2_4(
     let mut tree = shape::compact(tree, 1).unwrap_or_else(shape::tree_placeholder);
     shape::synthesize_in_context(&mut tree);
     super::id::build_ids(&mut tree);
-    // Parse the (empty, for this front end) archetype-conformance walk plan so
-    // the WebTemplate is uniform with the OPT-1.4 form; the v2_4 example is
-    // validated by RM invariants + terminology, not this walk (module NOTE).
+    // Parse the archetype-conformance walk plan once, as the OPT-1.4 front end
+    // does, so a commit against this template is walked without re-parsing.
     crate::flat::validation::prepare_walk(&mut tree);
 
     Ok(WebTemplate {
@@ -130,7 +131,38 @@ pub fn build_web_template_v2_4(
         languages: ctx.languages.clone(),
         tree,
         other_details: IndexMap::new(),
+        archetype_refs: Some(archetype_refs(&root_co, &ctx.overlay_parents)),
     })
+}
+
+/// Every archetype reference the OPT inlined at a `C_ARCHETYPE_ROOT`, mapped to
+/// the interface id the root's web-template node carries.
+///
+/// OPT2 resolves each reference to the full identifier ("guaranteed to include
+/// full 3-part versions", AM OPT2 `master03-opt_raw.adoc` §Archetype
+/// References), which is the identifier data records (BASE
+/// `artefact_identification` `master07-referencing.adoc` §Reconstitutability).
+fn archetype_refs(
+    co: &CObject,
+    overlay_parents: &BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    let mut stack = vec![co];
+    while let Some(co) = stack.pop() {
+        if let CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) = co {
+            let reference = overlay_parents
+                .get(&r.archetype_ref)
+                .unwrap_or(&r.archetype_ref);
+            let interface = interface_id(reference);
+            if *reference != interface {
+                out.insert(reference.clone(), interface);
+            }
+        }
+        for attr in co_attributes(co) {
+            stack.extend(attr.children.iter().flatten());
+        }
+    }
+    out
 }
 
 /// The `other_meta_data` key naming each inlined template overlay's parent.
@@ -439,6 +471,9 @@ fn build_children(
 
     node.cardinalities = cardinalities(co, &node.aql_path);
     node.card_all = all_cardinalities(co, &node.aql_path);
+    if !node.inputs.is_empty() {
+        capture_leaf_constraints(co, node);
+    }
     // Existence / closed-attribute / structural-stub capture is meaningful only
     // for attribute-recursing (structural) nodes; a DV leaf's constraints are
     // handled by `inputs` (mirrors the OPT-1.4 front end's `recurse_attrs` guard).
@@ -804,10 +839,10 @@ fn tuple_row_unit<'a>(
                     .find(|s| delimited_regex(s).is_none());
             }
             ("magnitude", Some(CPrimitiveObject::CReal(cr))) => {
-                validation.range = cr.constraint.iter().flatten().next().and_then(real_range);
+                validation.range = sole_interval(cr.constraint.as_ref()).and_then(real_range);
             }
             ("precision", Some(CPrimitiveObject::CInteger(ci))) => {
-                validation.precision = ci.constraint.iter().flatten().next().and_then(int_range);
+                validation.precision = sole_interval(ci.constraint.as_ref()).and_then(int_range);
             }
             _ => {}
         }
@@ -837,7 +872,7 @@ fn quantity_inputs(ctx: &Ctx, term: &ArchetypeTerminology, co: &CObject) -> Vec<
         }
     }
     if let Some(cr) = creal_under(co, "magnitude")
-        && let Some(range) = cr.constraint.iter().flatten().next().and_then(real_range)
+        && let Some(range) = sole_interval(cr.constraint.as_ref()).and_then(real_range)
     {
         magnitude.validation = Some(WebTemplateValidation {
             range: Some(range),
@@ -861,7 +896,7 @@ fn quantity_inputs(ctx: &Ctx, term: &ArchetypeTerminology, co: &CObject) -> Vec<
 fn count_input(co: &CObject) -> WebTemplateInput {
     let mut input = WebTemplateInput::new(WebTemplateInputType::Integer, None);
     if let Some(ci) = cinteger_under(co, "magnitude") {
-        if let Some(range) = ci.constraint.iter().flatten().next().and_then(int_range) {
+        if let Some(range) = sole_interval(ci.constraint.as_ref()).and_then(int_range) {
             input.validation = Some(WebTemplateValidation {
                 range: Some(range),
                 ..Default::default()
@@ -1103,7 +1138,7 @@ fn proportion_inputs(co: &CObject, proportion_types: &mut Vec<String>) -> Vec<We
         .map(|suffix| {
             let mut input = WebTemplateInput::new(ty, Some(suffix));
             if let Some(cr) = creal_under(co, suffix) {
-                if let Some(range) = cr.constraint.iter().flatten().next().and_then(real_range) {
+                if let Some(range) = sole_interval(cr.constraint.as_ref()).and_then(real_range) {
                     input.validation = Some(WebTemplateValidation {
                         range: Some(range),
                         ..Default::default()
@@ -1674,85 +1709,28 @@ fn build_path(parent_path: &str, attr_name: Option<&str>, arch_node_id: &str) ->
     format!("{parent_path}/{attr}{predicate}")
 }
 
-// ── interval → range helpers ──────────────────────────────────────────────
-
-fn json_f64(v: f64) -> serde_json::Value {
-    serde_json::Number::from_f64(v).map_or(serde_json::Value::Null, serde_json::Value::Number)
-}
-
-/// A `WebTemplateRange` from a `C_REAL` interval (bounds + inclusivity ops).
-fn real_range(iv: &Interval<f64>) -> Option<WebTemplateRange> {
-    let (lo, hi, lo_inc, hi_inc, lo_unb, hi_unb) = interval_bounds(iv)?;
-    let min = if lo_unb { None } else { lo };
-    let max = if hi_unb { None } else { hi };
-    if min.is_none() && max.is_none() {
-        return None;
-    }
-    Some(WebTemplateRange {
-        min_op: min.map(|_| if lo_inc { ">=" } else { ">" }.to_owned()),
-        min: min.map(json_f64),
-        max_op: max.map(|_| if hi_inc { "<=" } else { "<" }.to_owned()),
-        max: max.map(json_f64),
-    })
-}
-
-/// A `WebTemplateRange` from a `C_INTEGER` interval (used for count/precision).
-fn int_range(iv: &Interval<i32>) -> Option<WebTemplateRange> {
-    let (lo, hi, lo_inc, hi_inc, lo_unb, hi_unb) = interval_bounds(iv)?;
-    let min = if lo_unb { None } else { lo }.map(|v| if lo_inc { v } else { v + 1 });
-    let max = if hi_unb { None } else { hi }.map(|v| if hi_inc { v } else { v - 1 });
-    if min.is_none() && max.is_none() {
-        return None;
-    }
-    Some(WebTemplateRange {
-        min_op: min.map(|_| ">=".to_owned()),
-        min: min.map(serde_json::Value::from),
-        max_op: max.map(|_| "<=".to_owned()),
-        max: max.map(serde_json::Value::from),
-    })
-}
-
-/// `(lower, upper, lower_included, upper_included, lower_unbounded,
-/// upper_unbounded)` of an `Interval<T>` — both the point and proper forms.
-#[expect(
-    clippy::type_complexity,
-    reason = "the six-element tuple IS the interval-bounds result named in the doc comment; a struct would only wrap it for one call site"
-)]
-fn interval_bounds<T: Clone>(
-    iv: &Interval<T>,
-) -> Option<(Option<T>, Option<T>, bool, bool, bool, bool)> {
-    match iv {
-        Interval::PointInterval(p) => Some((
-            p.lower.clone(),
-            p.lower.clone(),
-            true,
-            true,
-            p.lower_unbounded,
-            p.lower_unbounded,
-        )),
-        Interval::ProperInterval(ProperInterval::ProperInterval(p)) => Some((
-            p.lower.clone(),
-            p.upper.clone(),
-            p.lower_included,
-            p.upper_included,
-            p.lower_unbounded,
-            p.upper_unbounded,
-        )),
-        Interval::ProperInterval(ProperInterval::MultiplicityInterval(_)) => None,
-    }
-}
-
-fn point_i32(iv: &Interval<i32>) -> Option<i32> {
-    match iv {
-        Interval::PointInterval(p) => p.lower,
-        Interval::ProperInterval(_) => None,
-    }
-}
-
-fn point_f64(iv: &Interval<f64>) -> Option<f64> {
-    match iv {
-        Interval::PointInterval(p) => p.lower,
-        Interval::ProperInterval(_) => None,
+/// Capture the numeric leaf constraints the `inputs` do not carry onto the
+/// node's validation-only fields: a `C_INTEGER`/`C_REAL` value list on a
+/// numeric datum ([`WebTemplateNode::numeric_lists`]) and the interval on
+/// `DV_MULTIMEDIA.size` ([`WebTemplateNode::numeric_ranges`]), per AOM2
+/// `master04.5-constraint_model-class_definitions.adoc` §"Conformance
+/// semantics: C_ORDERED". The twin of the OPT 1.4 builder's capture.
+fn capture_leaf_constraints(co: &CObject, node: &mut WebTemplateNode) {
+    for datum in ["magnitude", "value", "numerator", "denominator", "size"] {
+        if let Some(ci) = cinteger_under(co, datum) {
+            if let Some(list) = point_list(ci.constraint.as_ref()) {
+                node.numeric_lists
+                    .push((datum.to_owned(), list.into_iter().map(f64::from).collect()));
+            } else if datum == "size"
+                && let Some(range) = sole_interval(ci.constraint.as_ref()).and_then(int_range)
+            {
+                node.numeric_ranges.push((datum.to_owned(), range));
+            }
+        } else if let Some(cr) = creal_under(co, datum)
+            && let Some(list) = point_list(cr.constraint.as_ref())
+        {
+            node.numeric_lists.push((datum.to_owned(), list));
+        }
     }
 }
 

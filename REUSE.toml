@@ -256,6 +256,15 @@ precedence = "override"
 SPDX-FileCopyrightText = "IHE International"
 SPDX-License-Identifier = "CC-BY-4.0"
 
+# The Veredictum ADL 2 content cases are the catalogue's own Arazzo documents,
+# under the Apache-2.0 its LICENSE grants, with its NOTICE vendored beside
+# them; the subtree's PROVENANCE.md records the pin.
+[[annotations]]
+path = "corpus/veredictum/**"
+precedence = "override"
+SPDX-FileCopyrightText = ["Vernum Projecten B.V.", "the Veredictum contributors"]
+SPDX-License-Identifier = "Apache-2.0"
+
 # The ADL2 regression library inside the openehr-adl corpus is the same
 # upstream repository as the tree above but a different subtree, and it was
 # measured separately (#3150): of 302 archetypes, 111 state a licence and 191

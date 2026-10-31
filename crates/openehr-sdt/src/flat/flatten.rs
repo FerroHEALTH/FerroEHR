@@ -37,6 +37,7 @@ use crate::flat::error::FlatError;
 use crate::flat::map;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode};
+use crate::flat::validation::node_ids::as_template_node_ids;
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 
 /// Flatten a canonical-JSON composition into the simplified tree, driven by
@@ -53,6 +54,9 @@ pub fn flatten_composition(
             "composition must be a JSON object".to_owned(),
         ));
     }
+    // An archetype root recorded by its full reference matches its template
+    // node the way the commit path matches it (`node_ids`).
+    let composition = &*as_template_node_ids(composition, wt);
     let mut doc = SimNode::default();
     ctx::emit(composition, doc.occurrence_mut("ctx", None));
     let root = doc.occurrence_mut(&wt.tree.id, None);

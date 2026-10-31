@@ -104,6 +104,12 @@ cdr-already-holds-subscription-name-so = The CDR already holds a subscription wi
 not-cdr-any-more-another-operator = { $object } is not on the CDR any more ({ $message }): another operator may have deleted it. Reload this screen.
 session-may-not-administer-sign-admin = This session may not administer { $object } ({ $message }). Sign in with an ADMIN-role account and retry.
 no-value = (no value)
+count-unavailable = Unavailable
+count-no-row = The CDR answered the count with no row.
+count-several-rows = The CDR answered the count with more than one row.
+count-no-cell = The CDR answered the count with an empty row.
+count-several-cells = The CDR answered the count with more than one value.
+count-not-a-count = The CDR answered the count with a value that is no whole number.
 
 audit-chip-agent = Principal: { $value }
 audit-chip-outcome = Outcome: { $value }

@@ -7,43 +7,55 @@ paths: ["crates/**"]
 The nine `crates/*` spec crates are **published on crates.io** (issue #1886;
 policy in `docs/VERSIONS.md` §Product and crate versioning, procedure in
 `.claude/rules/changelog.md` §Publishing the openehr-* crates). Published
-versions are immutable, so version hygiene is a hard rule, machine-enforced
-by `scripts/checks/crate-version-guard.sh <base> <head>`, which the
-`crate-version-guard` CI job runs on every pull request and you can run
-before you push (`--self-test` proves it).
+versions are immutable, so version hygiene is a hard rule. The version is set
+when the crates are published, never in a pull request (#4555): two open pull
+requests that both took "the next version" rewrote the same lines in nine
+manifests and two lockfiles, and the second always conflicted.
 
-## The bump rule
+## The version rule
 
-- **A PR that changes any PACKAGED content of any `crates/*` member bumps the
-  crate version in the SAME PR** — packaged content is what the crate's
-  `include` list ships: `src/**`, `assets/**` (term), the embedded ITS-JSON
-  schema (its), `README.md`, the `LICENSE-*` texts, and `Cargo.toml` itself.
-  Tests, fixtures, vendored codegen inputs, and `CLAUDE.md` are NOT packaged
-  and need no bump. **The root `[workspace.dependencies]` table is part of
-  this rule too** (#3036): changing an entry a `crates/*` member consumes
-  with `workspace = true` changes that member's PACKAGED manifest —
-  `cargo package` renders the concrete requirement — so a workspace-table
-  version bump of a crates-consumed dependency needs the lockstep step even
-  though no `crates/*` file moves; both guard halves detect it.
-- **Bumps are lockstep across all nine** (`0.0.x` — cargo treats every
+- **A pull request never edits the lockstep version.** It changes crate
+  content freely and leaves every crate's `version` and every internal
+  `path = "../openehr-*", version = "…"` requirement as they are, and so
+  leaves both lockfiles' `openehr-*` entries alone.
+  `scripts/checks/crate-version-guard.sh <base> <head>` refuses a change that
+  moves either; the `crate-version-guard` CI job runs it on every pull
+  request and the push hook runs it locally (`--self-test` proves it). It
+  also reports whether packaged content changed, which needs nothing from
+  the author: the publish turns it into a new version.
+- **Packaged content** is what the crate's `include` list ships: `src/**`,
+  `assets/**` (term), the embedded ITS-JSON schema (its), `README.md`, the
+  `LICENSE-*` texts, and `Cargo.toml` itself, plus a root
+  `[workspace.dependencies]` or `[workspace.package]` entry a member inherits
+  with `workspace = true`, because `cargo package` renders the concrete value
+  (#3036; an MSRV move is one). Tests, fixtures, vendored codegen inputs, and
+  `CLAUDE.md` are not packaged.
+- **The publish step bumps, once per publish.** `scripts/release/publish-crates.sh
+  plan` reads the newest version crates.io holds of the nine, downloads
+  `openehr-base`'s archive of it (checked against the index checksum), and
+  reads the commit it was packaged from out of the `.cargo_vcs_info.json`
+  cargo writes into every package. When packaged content is unchanged since
+  that commit (`crate-version-guard.sh changed <sha> HEAD`), the version stays
+  and the publish is a no-op; otherwise it is the next `0.0.x`, never below
+  the manifests' own version. `publish-crates.sh stamp <version>` writes it
+  into the nine manifests, every internal requirement, `Cargo.lock` and
+  `fuzz/Cargo.lock` of the publishing checkout, uncommitted; cargo records
+  the commit with `"dirty": true`. The manifests on `main` keep the version
+  last set there, a floor below the published line.
+- **Changed content is never published under an existing version.** Before
+  any upload, `publish-crates.sh publish` checks every crate that already
+  holds the stamped version: the commit its archive was packaged from must
+  have the same packaged content as `HEAD`, or the publish is refused. An
+  archive that records no commit, or one this history does not hold, is
+  refused too, because its content cannot be compared.
+- **Bumps are lockstep across all nine** (`0.0.x`: cargo treats every
   `0.0.x` as its own compatibility set, so the internal `version =`
-  requirements must move together): bump every crate's `version` AND every
-  internal dependency requirement to the same new `0.0.x` in one edit sweep.
-- **`fuzz/Cargo.lock` follows the bump in the same PR.** `fuzz/` is its own
-  workspace (never a root member), so the root `Cargo.lock` refresh does not
-  reach it and its recorded path-dependency versions go stale silently — the
-  fuzz lane then builds against manifests its lock contradicts. Refresh with
-  `cargo update --manifest-path fuzz/Cargo.toml --workspace` and commit it;
-  the `crate-version-guard` job and the push hook both fail otherwise.
-- Escape hatch: the `no-crate-bump` PR label, ONLY when the diff provably
-  does not alter packaged bytes (e.g. a comment-only change would still
-  alter packaged bytes — that needs a bump; a `tests/`-only change does
-  not and the guard does not fire on it anyway).
-- Not every bumped version must be published — a later PR may bump again
-  before a release is cut; gaps in the published sequence are normal. What
-  is FORBIDDEN is publishing different content under an existing version
-  (crates.io refuses it) or bumping in a release commit separate from the
-  content change (the guard pins bump-with-change).
+  requirements move together). The stamp refuses a tree whose nine manifests
+  disagree.
+- Escape hatch: the `no-crate-bump` PR label, ONLY for a pull request that
+  must set the version by hand (a crate's first, manual release).
+- Gaps in the published sequence are normal: a crate published on its own
+  takes a number the set then skips.
 
 ## Version identity
 
@@ -71,9 +83,9 @@ before you push (`--self-test` proves it).
 
 Both lanes publish the nine members **one at a time in dependency order**
 (`openehr-base`, `openehr-lang`, `openehr-term`, `openehr-rm`, `openehr-am`,
-`openehr-query`, `openehr-its`, `openehr-sdt`, `openehr-adl`), treat "already exists on crates.io index" as done, and read the registry back
+`openehr-query`, `openehr-its`, `openehr-sdt`, `openehr-adl`), treat "already exists on crates.io index" as done once the content is proven the same, and read the registry back
 before reporting success. That is one implementation,
-`scripts/release/publish-crates.sh` (`publish` / `verify` / `version`), called
+`scripts/release/publish-crates.sh` (`plan` / `stamp` / `publish` / `verify`), called
 from an inline step in each lane — never a reusable workflow, because the OIDC
 `workflow_ref` claim names the CALLING workflow, so sharing the job would
 present the same identity while hiding which workflow file each Trusted

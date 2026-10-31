@@ -173,6 +173,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
+    /// - A `version` that is no SEMVER version or prefix → `BadRequest` (`400`).
     /// - No stored template matches → `NotFound` (`404`).
     /// - A database failure (`500`).
     pub async fn template_adl2_source(
@@ -192,6 +193,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
+    /// - A `version` that is no SEMVER version or prefix → `BadRequest` (`400`).
     /// - No stored template matches → `NotFound` (`404`).
     /// - The OPT cannot be compiled → `Unprocessable` (`422`).
     /// - A database failure (`500`).
@@ -251,6 +253,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
+    /// - A `version` that is no SEMVER version or prefix → `precondition_violation`
+    ///   (`400`).
     /// - No stored query matching that name + version → not-found (`404`).
     /// - A row-decode failure (a genuine server fault) → `exception` (`500`).
     /// - A database failure (`exception` → `500`).
