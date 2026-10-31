@@ -151,16 +151,16 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "smart", description = "SMART App Launch service discovery (config-gated: FERROEHR_REST_SMART__ENABLED)."),
         (name = "openapi", description = "`OpenAPI` document + Swagger UI discoverability (config-gated: FERROEHR_REST_SWAGGER_UI)."),
         (name = "management", description = "Ops-introspection surface — info/prometheus/metrics/env/loggers/flamegraph, the per-indicator health detail and the full status document (config-gated: FERROEHR__MANAGEMENT__*); each endpoint opt-in via its access level. The orchestrator probes are NOT here: see the `status` tag."),
-        (name = "terminology", description = "Terminology extension wire — SM I_TERMINOLOGY_SERVICE (config-gated: FERROEHR_REST_TERMINOLOGY__ENABLED)."),
-        (name = "demographic-relationship", description = "PARTY_RELATIONSHIP demographic extension (SM-3; no ITS-REST contract)."),
-        (name = "definition-archetype", description = "ADL 1.4 / ADL 2 archetype + artefact provisioning — SM I_DEFINITION_ADL14 / I_DEFINITION_ADL2 operations the released Definition API never surfaced (it provisions operational templates only). OUR OWN EXTENSION: no ITS-REST operation governs these routes."),
-        (name = "admin-report", description = "The SM I_ADMIN_SERVICE activity-report calls (contribution/version statistics per PLATFORM_SERVICE). OUR OWN EXTENSION: the released Admin API is the two EHR deletes alone, so no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
-        (name = "admin-archive", description = "The SM I_ADMIN_ARCHIVE calls (move selected EHRs / parties to archival storage) plus the reverse movement the SM declares no operation for (restore selected EHRs / parties from archival storage). OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
-        (name = "admin-integrity", description = "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation and no SM interface governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."),
-        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[demographic.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation and no SM interface governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."),
-        (name = "admin-marks", description = "The legal marks storage carries beside the clinical content: the GDPR Art. 18 restriction register, the Art. 21(6) research objection, and the Art. 5(1)(e) / Art. 30(1)(f) retention register with its due list. OUR OWN EXTENSION: no ITS-REST operation and no SM interface governs these routes, and nothing here deletes anything (same admin gate + RBAC Admin class)."),
-        (name = "admin-dump-load", description = "The SM I_ADMIN_DUMP_LOAD calls (export every EHR to a file-system archive; populate the repository from one). OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
-        (name = "message", description = "The SM MESSAGE component — I_EHR_EXTRACT_SERVICE (EHR-Extract export/import). OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."),
+        (name = "terminology", description = "Terminology extension wire (config-gated: FERROEHR_REST_TERMINOLOGY__ENABLED)."),
+        (name = "demographic-relationship", description = "PARTY_RELATIONSHIP demographic extension (no ITS-REST contract)."),
+        (name = "definition-archetype", description = "ADL 1.4 / ADL 2 archetype + artefact provisioning, which the released Definition API does not cover (it provisions operational templates only). OUR OWN EXTENSION: no ITS-REST operation governs these routes."),
+        (name = "admin-report", description = "The activity-report calls (contribution/version statistics per platform service). OUR OWN EXTENSION: the released Admin API is the two EHR deletes alone, so no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
+        (name = "admin-archive", description = "Move selected EHRs / parties to archival storage, and restore them from it. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
+        (name = "admin-integrity", description = "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."),
+        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[demographic.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."),
+        (name = "admin-marks", description = "The legal marks storage carries beside the clinical content: the GDPR Art. 18 restriction register, the Art. 21(6) research objection, and the Art. 5(1)(e) / Art. 30(1)(f) retention register with its due list. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and nothing here deletes anything (same admin gate + RBAC Admin class)."),
+        (name = "admin-dump-load", description = "Export every EHR to a file-system archive, and populate the repository from one. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
+        (name = "message", description = "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."),
         (name = "event-subscription", description = "Event-subscription CRUD extension (config-gated: FERROEHR_REST_EVENT_SUBSCRIPTION__ENABLED)."),
     )
 )]
@@ -637,7 +637,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
     (
         "FerroEHR: Messaging",
         "messaging",
-        // The SM MESSAGE component on our own `/message/` routes; the release
+        // EHR-Extract export and import on our own `/message/` routes; the release
         // publishes no message API, so the whole family is an extension.
         Members::Tags(&["message"]),
     ),

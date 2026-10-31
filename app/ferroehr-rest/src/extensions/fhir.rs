@@ -5,8 +5,7 @@
 //! `GET /fhir/r4/AuditEvent`, over the local Audit Record Repository.
 //!
 //! No openEHR spec governs this — our own extension, excluded from the
-//! ITS-REST drift check. The SM names `I_SYSTEM_LOG` as "IHE ATNA-compliant"
-//! and defines no wire; the route realizes IHE ITI TF-2 transaction ITI-81
+//! ITS-REST drift check. The route realizes IHE ITI TF-2 transaction ITI-81
 //! (Retrieve ATNA Audit Event). FHIR R4 resource mapping is not served here.
 //!
 //! The route is gated by the local store (`[audit.store]`) and answers `404` as
@@ -62,8 +61,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 /// this: the ITS-REST resource set defines no audit-retrieval endpoint. Its
 /// basis is IHE ITI TF-2, transaction **ITI-81 (Retrieve ATNA Audit Event)**,
 /// whose RESTful-ATNA option this realizes over the local Audit Record
-/// Repository; the SM only names `I_SYSTEM_LOG` as "IHE ATNA-compliant" and
-/// defines no wire.
+/// Repository.
 #[utoipa::path(
     get, path = "/fhir/r4/AuditEvent", tag = "audit",
     params(
@@ -486,7 +484,7 @@ fn operation_outcome(status: StatusCode, code: IssueType, diagnostics: &str) -> 
     fhir_json(status, &refusal(code, diagnostics))
 }
 
-/// Map an [`StatusError`] to a FHIR `OperationOutcome`, reusing the maintained SM →
+/// Map a [`StatusError`] to a FHIR `OperationOutcome`, reusing the maintained status →
 /// HTTP table ([`RestError`]) for the status and surfacing the message in
 /// `diagnostics`.
 fn status_error_outcome(e: StatusError) -> Response {

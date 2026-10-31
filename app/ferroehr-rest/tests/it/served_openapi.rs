@@ -1268,23 +1268,24 @@ async fn admin_operations_are_fully_documented() {
         "DELETE {path} 409 must state the never-orphan-committed-data guard; has: {conflict}"
     );
     assert!(
-        text(&op).contains("delete_opt"),
-        "DELETE {path} must name the SM I_DEFINITION_ADL14.delete_opt relation"
+        text(&op).contains("delete_opt") && text(&op).contains("case-insensitively"),
+        "DELETE {path} must state that it is addressed by the case-insensitive \
+         `template_id`, unlike the native `delete_opt`"
     );
 
-    // ── the stored-query-version delete: NOT SM delete_query ─────────────────
+    // ── the stored-query-version delete: one version, never the whole query ──
     let path = format!("{EXT}/query/{{qualified_query_name}}/{{version}}");
     let op = doc["paths"][&path]["delete"].clone();
     require(&op, &path, "DELETE", &["204", "404"]);
     let body = text(&op);
     assert!(
-        body.contains("delete_query") && body.contains("NOT"),
-        "DELETE {path} must state that it does NOT realize SM delete_query; has: {body}"
+        body.contains("other versions") && body.contains("survive"),
+        "DELETE {path} must state that the query's other versions survive; has: {body}"
     );
     assert!(
         body.contains("(name, version)"),
         "DELETE {path} must state that it deletes exactly one (name, version) \
-         row while SM delete_query deletes by name alone; has: {body}"
+         row; has: {body}"
     );
 
     // ── the config read: 200 with a redacted tree, no versioning headers ─────
@@ -1454,26 +1455,24 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         operations: 5,
     },
     NonSpecFamily {
-        // SM I_ADMIN_SERVICE's four statistics calls; the released Admin API
-        // is the two EHR deletes alone.
+        // The four statistics calls; the released Admin API is the two EHR
+        // deletes alone.
         label: "the ADMIN activity-report extension",
         prefixes: &["/ferroehr/rest/extensions/v1/admin/report/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },
     NonSpecFamily {
-        // SM I_ADMIN_ARCHIVE's two calls plus the two restore routes, which the
-        // SM declares no operation for at all; nothing released moves a resource
-        // to archival storage in either direction.
+        // The two archive calls plus the two restore routes; nothing released
+        // moves a resource to archival storage in either direction.
         label: "the ADMIN archive extension",
         prefixes: &["/ferroehr/rest/extensions/v1/admin/archive/"],
         flag: "no its-rest operation governs this",
         operations: 4,
     },
     NonSpecFamily {
-        // The SM archetype/artefact operations of I_DEFINITION_ADL14 +
-        // I_DEFINITION_ADL2; the released Definition API provisions
-        // operational templates only.
+        // The ADL 1.4 and ADL 2 archetype/artefact operations; the released
+        // Definition API provisions operational templates only.
         label: "the ADL 1.4 / ADL 2 archetype + artefact extension",
         prefixes: &[
             "/ferroehr/rest/extensions/v1/definition/archetype/",
@@ -1483,7 +1482,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         operations: 9,
     },
     NonSpecFamily {
-        // SM I_ADMIN_DUMP_LOAD's export/load pair; nothing released reads or
+        // The export/load pair; nothing released reads or
         // writes a file-system archive.
         label: "the ADMIN dump/load extension",
         prefixes: &[
@@ -1494,7 +1493,7 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         operations: 2,
     },
     NonSpecFamily {
-        // The SM MESSAGE component (I_EHR_EXTRACT_SERVICE); the release
+        // EHR-Extract export and import; the release
         // publishes no message API at all.
         label: "the MESSAGE extension group",
         prefixes: &["/ferroehr/rest/extensions/v1/message/"],
@@ -1707,5 +1706,30 @@ async fn expand_multimedia_is_declared_on_every_read_that_can_serve_externalized
     assert_eq!(
         declared, expected,
         "the reads declaring `expand_multimedia` drifted from the reads that honour it"
+    );
+}
+
+/// The served document names no openEHR Service Model vocabulary: an
+/// operation is described by what it does and by the wire specification that
+/// governs it, never by a Service Model interface (`SM`, `I_EHR_SERVICE`).
+#[tokio::test]
+async fn the_served_document_names_no_service_model_operation() {
+    let doc = served_document().await.to_string();
+    let named: Vec<&str> = doc
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .filter(|word| {
+            *word == "SM"
+                || word.strip_prefix("I_").is_some_and(|rest| {
+                    !rest.is_empty() && rest.chars().all(|c| c.is_ascii_uppercase() || c == '_')
+                })
+        })
+        .collect();
+    assert!(
+        named.is_empty(),
+        "the served document names Service Model vocabulary: {named:?}"
+    );
+    assert!(
+        !doc.contains("Service Model"),
+        "the served document names the Service Model"
     );
 }

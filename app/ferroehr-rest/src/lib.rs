@@ -165,7 +165,7 @@ async fn build_authenticator(
 ///
 /// Binds `server.listen` and, when `management.port` is set, the management
 /// surface on its own internal listener (otherwise merged into the main app),
-/// and hands both to [`serve_on`]. ATNA auditing lives in the backend's SM
+/// and hands both to [`serve_on`]. ATNA auditing lives in the backend's
 /// `SystemLog` component.
 ///
 /// # Errors

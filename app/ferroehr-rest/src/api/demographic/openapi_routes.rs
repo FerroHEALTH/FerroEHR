@@ -6345,9 +6345,9 @@ pub(crate) async fn versioned_party_version_get_by_id(
                                       (`UpdateAudit.yaml` lists it under \
                                       `required` and types it `UPartyProxy`); a \
                                       member, an attestation (`666`) member \
-                                      included, states no `lifecycle_state` (SM \
-                                      master03 §\"Version Update Semantics\": \
-                                      \"must be supplied in all cases\"); a \
+                                      included, states no `lifecycle_state` \
+                                      (`UpdateVersion.yaml` lists it under \
+                                      `required`); a \
                                       non-creation change type on a member with \
                                       no `preceding_version_uid` (the released \
                                       first-version-of-a-MODIFICATION trigger); \

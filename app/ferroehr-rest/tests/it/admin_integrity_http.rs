@@ -3,7 +3,7 @@
 
 //! End-to-end HTTP tests for the ADMIN storage-integrity route
 //! (`POST /admin/integrity/verify`) — **our own extension**; no ITS-REST
-//! operation and no SM interface governs it.
+//! operation governs it.
 //!
 //! What the streaming half proves is a property of the MIDDLEWARE, so it is
 //! asserted against the middleware rather than argued: `tower_http`'s

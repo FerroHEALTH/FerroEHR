@@ -18,8 +18,7 @@
 //! (RFC 7617). It issues no token. Its [`Refusal`] gives each refusal its status
 //! and challenge (RFC 6750 §3.1); the body is the ITS-REST error body.
 //!
-//! No openEHR spec governs role-based authorization — the SM places it out of
-//! band, so the coarse RBAC gate is our own enterprise extension. It runs as one
+//! No openEHR spec governs role-based authorization, so the coarse RBAC gate is our own enterprise extension. It runs as one
 //! axum middleware over the API router: a successful authentication puts a
 //! [`Principal`] into the request extensions, and when an
 //! [`crate::extensions::access::authz::AuthzHandle`] is wired the gate then

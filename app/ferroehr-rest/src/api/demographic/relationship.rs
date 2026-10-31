@@ -6,9 +6,7 @@
 //! No openEHR ITS-REST operation governs this: the vendored Demographic API
 //! (`demographic.openapi.yaml`) defines **no** `party_relationship` /
 //! `versioned_party_relationship` paths anywhere. These routes are our own
-//! extension realizing SM `I_PARTY_RELATIONSHIP`
-//! (`docs/specs/openehr/SM/.../i_party_relationship.adoc` — the *service*
-//! basis, not a *wire* basis) and are **excluded from any
+//! extension and are **excluded from any
 //! conformance-profile claim**. The envelope mirrors the party CRUD + versioned
 //! reads with one fixed `party_relationship` / `versioned_party_relationship`
 //! segment; because there is no wire contract, the generated party `*Params`
@@ -47,7 +45,7 @@ use crate::state::AppState;
 use ferroehr::service::response::ServiceResponse;
 
 /// The `PARTY_RELATIONSHIP` extension routes as a native `utoipa-axum` router,
-/// realizing SM `I_PARTY_RELATIONSHIP` on our own wire with no ITS-REST contract
+/// on our own wire with no ITS-REST contract
 /// (see the module docs).
 ///
 /// Paths are group-relative, and every operation runs through
@@ -79,9 +77,7 @@ pub(crate) fn relationship_routes() -> OpenApiRouter<AppState> {
 ///
 /// **Our own extension — no ITS-REST operation governs this.** The released
 /// Demographic API defines no `party_relationship` path anywhere; this route
-/// realizes SM `I_PARTY_RELATIONSHIP`
-/// (`docs/specs/openehr/SM/docs/UML/classes/i_party_relationship.adoc` — a
-/// *service* basis, not a *wire* basis) over an envelope that deliberately
+/// uses an envelope that deliberately
 /// mirrors the released party CRUD so clients see one consistent surface. It is
 /// **excluded from any conformance-profile claim**: none of the branches below
 /// is a released ITS-REST requirement, and the overview citations describe the
@@ -276,8 +272,8 @@ pub(crate) async fn party_relationship_create(
 /// (`GET /demographic/party_relationship/{uid_based_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs); realizes SM
-/// `I_PARTY_RELATIONSHIP` and is excluded from any conformance-profile claim.
+/// [`party_relationship_create`] and the module docs) and is excluded from any
+/// conformance-profile claim.
 #[utoipa::path(
     get, path = "/demographic/party_relationship/{uid_based_id}", tag = "demographic-relationship",
     params(
@@ -396,8 +392,8 @@ pub(crate) async fn party_relationship_get(
 /// (`PUT /demographic/party_relationship/{uid_based_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs); realizes SM
-/// `I_PARTY_RELATIONSHIP` and is excluded from any conformance-profile claim.
+/// [`party_relationship_create`] and the module docs) and is excluded from any
+/// conformance-profile claim.
 #[utoipa::path(
     put, path = "/demographic/party_relationship/{uid_based_id}", tag = "demographic-relationship",
     params(
@@ -595,8 +591,8 @@ pub(crate) async fn party_relationship_update(
 /// (`DELETE /demographic/party_relationship/{uid_based_id}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs); realizes SM
-/// `I_PARTY_RELATIONSHIP` and is excluded from any conformance-profile claim.
+/// [`party_relationship_create`] and the module docs) and is excluded from any
+/// conformance-profile claim.
 /// The delete is LOGICAL — it commits a deletion VERSION rather than removing
 /// history (RM `common/master06` §Change Control), matching the released party
 /// deletes.
@@ -721,8 +717,8 @@ pub(crate) async fn party_relationship_delete(
 /// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs); realizes SM
-/// `I_PARTY_RELATIONSHIP` and is excluded from any conformance-profile claim.
+/// [`party_relationship_create`] and the module docs) and is excluded from any
+/// conformance-profile claim.
 #[utoipa::path(
     get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}", tag = "demographic-relationship",
     params(
@@ -797,8 +793,8 @@ pub(crate) async fn versioned_party_relationship_get(
 /// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}/revision_history`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs); realizes SM
-/// `I_PARTY_RELATIONSHIP` and is excluded from any conformance-profile claim.
+/// [`party_relationship_create`] and the module docs) and is excluded from any
+/// conformance-profile claim.
 #[utoipa::path(
     get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}/revision_history", tag = "demographic-relationship",
     params(
@@ -871,8 +867,8 @@ pub(crate) async fn party_relationship_revision_history(
 /// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}/version`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs); realizes SM
-/// `I_PARTY_RELATIONSHIP` and is excluded from any conformance-profile claim.
+/// [`party_relationship_create`] and the module docs) and is excluded from any
+/// conformance-profile claim.
 #[utoipa::path(
     get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}/version", tag = "demographic-relationship",
     params(
@@ -949,8 +945,8 @@ pub(crate) async fn party_relationship_version_get_at_time(
 /// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}/version/{version_uid}`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs); realizes SM
-/// `I_PARTY_RELATIONSHIP` and is excluded from any conformance-profile claim.
+/// [`party_relationship_create`] and the module docs) and is excluded from any
+/// conformance-profile claim.
 #[utoipa::path(
     get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}/version/{version_uid}", tag = "demographic-relationship",
     params(

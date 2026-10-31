@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the ADL2 template wire (SM-2, `I_DEFINITION_ADL2`):
+//! End-to-end HTTP tests for the ADL2 template wire:
 //! `POST /definition/template/adl2` (text/plain source upload, `Location` +
 //! `Prefer` body, `422`-with-rule-codes on an invalid source),
 //! `GET /definition/template/adl2/{template_id}` (text/plain source /
@@ -660,8 +660,8 @@ async fn upload_empty_source_is_400() {
 
 /// A specialised upload whose `specialise` clause names a parent the repository
 /// does not hold is refused as `422` carrying VASID: without the flat parent
-/// the archetype cannot validate (AOM2 master03 VASID, master08 §Phase 2; SM
-/// `upload_artefact` "The artefact must validate"), and storing it unchecked
+/// the archetype cannot validate (AOM2 master03 VASID, master08 §Phase 2), and
+/// storing it unchecked
 /// would let a child uploaded before its parent skip conformance for good.
 #[tokio::test]
 async fn upload_with_absent_parent_is_422_with_vasid() {

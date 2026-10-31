@@ -5,17 +5,11 @@
 //!
 //! ITS-REST 1.1.0 publishes seven API groups (overview, system, ehr,
 //! demographic, query, definition, admin) and NO message / EHR-Extract
-//! group in either the docs text or the OAS, while the SM devotes a whole
-//! chapter to one —
-//! `docs/specs/openehr/SM/docs/openehr_platform/master09-message_service.adoc`,
-//! including `i_ehr_extract_service.adoc` (`export_ehrs`,
-//! `export_ehr_extracts`, `import_ehr`, `import_ehr_extract`;
-//! `i_message_service.adoc` itself declares no functions). The chapter's
-//! `i_tdd_service.adoc` is not realized (Template Data Documents were removed,
-//! #4199). No released ITS-REST operation covers these calls.
+//! group in either the docs text or the OAS. The group exports and imports
+//! RM EHR-Extracts (`export_ehrs`, `export_ehr_extracts`, `import_ehr`,
+//! `import_ehr_extract`); Template Data Documents are not served (#4199).
 //!
-//! These routes are the honest realization of that service basis, and are
-//! **excluded from ITS-REST wire conformance**: they gate the `EhrExtract` /
+//! These routes are **excluded from ITS-REST wire conformance**: they gate the `EhrExtract` /
 //! `MessageApi` CAPABILITY verdicts only.
 //!
 //! ## Why a group of their own, mounted beside the released groups
@@ -23,14 +17,13 @@
 //! Every route lives under `/message/`, a resource root the release does not
 //! define, so no released path shape is extended or shadowed. The RM
 //! EHR-Extract content the group moves is ordinary EHR content read and written
-//! by an authenticated clinical principal, and SM puts these operations in the
-//! MESSAGE component rather than ADMIN — so the group carries the coarse
+//! by an authenticated clinical principal, so the group carries the coarse
 //! `OperationClass::Clinical` classification the rest of the clinical surface
 //! does (no `/admin/` gate, no ADMIN role). NO openEHR SPEC GOVERNS THE
 //! PRIVILEGE LEVEL of these routes — our own design/extension, stated here
 //! because the choice is ours.
 //!
-//! [`extract`] realizes `I_EHR_EXTRACT_SERVICE`.
+//! [`extract`] holds the export and import routes.
 
 pub mod extract;
 
@@ -42,7 +35,7 @@ use crate::api::RequestParts;
 use crate::overview::error::RestError;
 
 /// The `{ehr_id}` path segment shared by the group's EHR-scoped routes. A
-/// malformed identifier is a `400` (SM `precondition_violation`) — never a
+/// malformed identifier is a `400` — never a
 /// panic, and never a lookup with a fabricated id.
 fn path_ehr_id(parts: &RequestParts) -> Result<EhrId, RestError> {
     let raw = parts.path.get("ehr_id").ok_or_else(|| {

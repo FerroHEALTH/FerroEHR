@@ -1,16 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the **MESSAGE** extension group — the SM
-//! EHR-Extract service (`/message/export*`, `/message/import*`,
-//! `i_ehr_extract_service.adoc`) — driven through the assembled router over a real
+//! End-to-end HTTP tests for the **MESSAGE** extension group — EHR-Extract
+//! export and import (`/message/export*`, `/message/import*`) — driven
+//! through the assembled router over a real
 //! `FerroEhrService` on a real `PostgreSQL`.
 //!
 //! **No openEHR spec governs these routes**: ITS-REST 1.1.0 publishes seven API
-//! groups and no message/extract API at all, so the operation SEMANTICS
-//! come from the vendored SM chapter
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master09-message_service.adoc`)
-//! and the RM EHR-Extract IM (`docs/specs/openehr/RM/docs/ehr_extract/`), while
+//! groups and no message/extract API at all, so the content follows the RM
+//! EHR-Extract IM (`docs/specs/openehr/RM/docs/ehr_extract/`), while
 //! the wire shape is our own design/extension. What is asserted here is exactly
 //! what the CNF extension bindings drive: the `message-extract` family in
 //! Veredictum's `artifacts/vocab/wire_surface.yaml`, over the same corpus
@@ -90,9 +88,9 @@ async fn create_ehr(app: &Router) -> String {
         .to_owned()
 }
 
-// ── I_EHR_EXTRACT_SERVICE ────────────────────────────────────────────────────
+// ── EHR-Extract export and import ────────────────────────────────────────────
 
-/// `export_ehrs(an_ehr_id)` answers `200` with the SM `List<EXTRACT>`: one
+/// `export_ehrs(an_ehr_id)` answers `200` with a list of `EXTRACT`s: one
 /// `EXTRACT` carrying the EHR's versioned objects (an EHR fresh off `POST /ehr`
 /// holds its `EHR_STATUS` and `EHR_ACCESS` — RM ehr `master04` §EHR Creation).
 #[tokio::test]
@@ -115,7 +113,7 @@ async fn export_ehrs_returns_one_extract_for_an_existing_ehr() {
     );
 }
 
-/// SM `ehr_id_does_not_exist` → `404`.
+/// `ehr_id_does_not_exist` → `404`.
 #[tokio::test]
 async fn export_ehrs_of_an_unknown_ehr_is_not_found() {
     let (_pg, app) = common::test_router().await;
@@ -164,7 +162,7 @@ async fn export_ehr_extracts_honours_the_manifest() {
     assert_eq!(extracts.as_array().expect("array").len(), 1);
 }
 
-/// An entity naming neither `ehr_id` nor `subject_id` cannot be resolved — SM
+/// An entity naming neither `ehr_id` nor `subject_id` cannot be resolved —
 /// `precondition_violation` → `400`.
 #[tokio::test]
 async fn export_ehr_extracts_with_an_unresolvable_entity_is_bad_request() {
@@ -226,7 +224,7 @@ async fn import_ehr_without_an_id_reuses_the_source_identifier() {
 }
 
 /// `import_ehr` with a fixed `ehr_id` lands the clone under THAT identifier
-/// (the SM's "same patient in other EHR services" case).
+/// (the same patient in another EHR system).
 #[tokio::test]
 async fn import_ehr_with_a_fixed_id_lands_under_it() {
     let (_pg, app) = common::test_router().await;
@@ -246,8 +244,7 @@ async fn import_ehr_with_a_fixed_id_lands_under_it() {
     assert_eq!(created["uid"], target);
 }
 
-/// "import EHRs with duplicate EHR ids will fail" (`i_admin_dump_load.adoc`'s
-/// sibling wording in `i_ehr_extract_service.adoc`'s Case-1 clone): the target
+/// Importing a whole EHR under an id that already exists fails: the target
 /// must be empty, so an existing id is `ehr_create_fail_duplicate_id` → `409`.
 #[tokio::test]
 async fn import_ehr_into_an_existing_id_is_a_conflict() {
@@ -289,7 +286,7 @@ async fn import_ehr_extract_lands_content_in_an_existing_ehr() {
     assert_eq!(status, StatusCode::OK, "imported directory: {body}");
 }
 
-/// SM `ehr_id_does_not_exist` → `404`.
+/// `ehr_id_does_not_exist` → `404`.
 #[tokio::test]
 async fn import_ehr_extract_into_an_unknown_ehr_is_not_found() {
     let (_pg, app) = common::test_router().await;

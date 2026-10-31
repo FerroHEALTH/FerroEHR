@@ -97,7 +97,7 @@ pub(super) const H_EHR_ID: &str = "openehr-ehr-id";
 /// (`Request.md` §About the `ehr_id` parameter).
 ///
 /// The caller collects the result into [`AqlQueryRequest::ehr_ids`], a single
-/// wire `ehr_id` being the one-element case of the SM `List<UUID>` scope.
+/// wire `ehr_id` being the one-element case of the `ehr_ids` list scope.
 ///
 /// The released text never says what happens when a request carries both forms,
 /// so the handling is our own: one form, or both naming the same EHR, is the

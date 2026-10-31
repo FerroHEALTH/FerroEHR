@@ -4,26 +4,21 @@
 //! HTTP dispatch for the terminology extension API group over the
 //! `ferroehr::service::TerminologyService` seam.
 //!
-//! The operation semantics are SM `I_TERMINOLOGY_SERVICE`
-//! (`SM/docs/openehr_platform/master12-terminology_service.adoc`): the nine
-//! calls from `get_terminology_ids` to `get_value_set`, with their
-//! `Pre_has_terminology` / `Pre_has_term` / `Pre_has_value_set` preconditions.
-//! Every handler below realizes one of them, its meaning cited inline from the
-//! master12 signature.
+//! The routes list the known terminologies, read a terminology, a term and a
+//! value set, and answer subsumption and value-set membership; an unknown
+//! terminology, term or value set is a `404`.
 //!
 //! No openEHR spec governs the wire shape — our own design/extension. No
 //! released OAS set defines a terminology REST contract, so this surface is
-//! ours: exposed under the extension namespace `/terminology`, shaped from the
-//! master12 call semantics, and excluded from the ITS-REST drift check.
+//! ours: exposed under the extension namespace `/terminology` and excluded from
+//! the ITS-REST drift check.
 //!
 //! The extension groups mount inside the ITS-REST API router, so the full path
 //! is `{rest_root}/extensions/v1/terminology/...`; nesting keeps the auth, ATNA-audit and ABAC
-//! middleware stack uniform across the whole HTTP surface, which the SM does not
-//! govern (it defines the abstract interface, not a URL layout). The boolean
-//! `has_*` calls are surfaced through the `200`-versus-`404` of their `get`
-//! counterparts rather than as separate endpoints: the bundle provider maps a
-//! failed precondition to `versioned_object_does_not_exist`, so no new SM
-//! `CALL_STATUS_TYPE` is needed.
+//! middleware stack uniform across the whole HTTP surface. Existence is
+//! answered through the `200`-versus-`404` of each read rather than by
+//! separate endpoints: the bundle provider maps an unknown terminology, term or
+//! value set to `versioned_object_does_not_exist`.
 //!
 //! The group is config-gated (`AppConfig::terminology_api_enabled`, default
 //! `false`), answering `404` on every route when disabled.
@@ -66,12 +61,12 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(terminology_value_set_validate))
 }
 
-// ── Handlers (SM `I_TERMINOLOGY_SERVICE` semantics; our own wire shape) ───────
+// ── Handlers (our own wire shape) ─────────────────────────────────────────────
 // Every handler snapshots the request into `RequestParts` (identical to the
 // generated-group adapter) and runs it through the shared guarded dispatch, so
 // the EHR_ACCESS gate, ABAC PEP, and ATNA audit tagging apply uniformly.
 
-/// Every terminology id the server knows — SM `get_terminology_ids`
+/// Every terminology id the server knows
 /// (`GET /terminology`).
 ///
 /// Body: `{"terminology_ids": [..]}`. Config-gated: `404` when
@@ -79,11 +74,8 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 /// never consulted).
 ///
 /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The operation semantics are the SM
-/// `I_TERMINOLOGY_SERVICE` call cited above
-/// (`docs/specs/openehr/SM/docs/openehr_platform/master12-terminology_service.adoc`);
-/// the URL layout, the JSON envelopes, and the existence-by-`404` convention
-/// are ours.
+/// contract defines a terminology API. The URL layout, the JSON envelopes, and
+/// the existence-by-`404` convention are ours.
 #[utoipa::path(
     get, path = "/terminology", tag = "terminology",
     responses(
@@ -99,17 +91,14 @@ pub(crate) async fn terminology_ids(
     guarded_dispatch(state, "terminology_ids", parts, dispatch).await
 }
 
-/// One terminology's descriptor — SM `get_terminology_description` (also the
-/// `has_terminology` existence check) (`GET /terminology/{terminology_id}`).
+/// One terminology's descriptor, which also answers whether it exists
+/// (`GET /terminology/{terminology_id}`).
 ///
-/// A failed `Pre_has_terminology` maps to `404`.
+/// An unknown terminology maps to `404`.
 ///
 /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The operation semantics are the SM
-/// `I_TERMINOLOGY_SERVICE` call cited above
-/// (`docs/specs/openehr/SM/docs/openehr_platform/master12-terminology_service.adoc`);
-/// the URL layout, the JSON envelopes, and the existence-by-`404` convention
-/// are ours.
+/// contract defines a terminology API. The URL layout, the JSON envelopes, and
+/// the existence-by-`404` convention are ours.
 #[utoipa::path(
     get, path = "/terminology/{terminology_id}", tag = "terminology",
     params(("terminology_id" = String, Path, description = "The terminology id.")),
@@ -126,18 +115,15 @@ pub(crate) async fn terminology_description(
     guarded_dispatch(state, "terminology_description", parts, dispatch).await
 }
 
-/// A term definition — SM `get_term`
+/// A term definition
 /// (`GET /terminology/{terminology_id}/term/{code}`).
 ///
-/// The optional `at_date` selects an effective-dated definition. A failed
-/// `Pre_has_term` (unknown terminology or code) maps to `404`.
+/// The optional `at_date` selects an effective-dated definition. An unknown
+/// terminology or code maps to `404`.
 ///
 /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The operation semantics are the SM
-/// `I_TERMINOLOGY_SERVICE` call cited above
-/// (`docs/specs/openehr/SM/docs/openehr_platform/master12-terminology_service.adoc`);
-/// the URL layout, the JSON envelopes, and the existence-by-`404` convention
-/// are ours.
+/// contract defines a terminology API. The URL layout, the JSON envelopes, and
+/// the existence-by-`404` convention are ours.
 #[utoipa::path(
     get, path = "/terminology/{terminology_id}/term/{code}", tag = "terminology",
     params(
@@ -158,17 +144,14 @@ pub(crate) async fn terminology_get_term(
     guarded_dispatch(state, "terminology_get_term", parts, dispatch).await
 }
 
-/// Strict subsumption test — SM `subsumes`
+/// Strict subsumption test
 /// (`GET /terminology/{terminology_id}/subsumes`).
 ///
 /// Body: `{"subsumes": bool}`. Both codes are required query parameters.
 ///
 /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The operation semantics are the SM
-/// `I_TERMINOLOGY_SERVICE` call cited above
-/// (`docs/specs/openehr/SM/docs/openehr_platform/master12-terminology_service.adoc`);
-/// the URL layout, the JSON envelopes, and the existence-by-`404` convention
-/// are ours.
+/// contract defines a terminology API. The URL layout, the JSON envelopes, and
+/// the existence-by-`404` convention are ours.
 #[utoipa::path(
     get, path = "/terminology/{terminology_id}/subsumes", tag = "terminology",
     params(
@@ -190,18 +173,14 @@ pub(crate) async fn terminology_subsumes(
     guarded_dispatch(state, "terminology_subsumes", parts, dispatch).await
 }
 
-/// A value set's extract — SM `get_value_set` (also the `has_value_set`
-/// existence check)
+/// A value set's extract, which also answers whether it exists
 /// (`GET /terminology/{terminology_id}/value_set/{value_set_id}`).
 ///
-/// A failed `Pre_has_value_set` maps to `404`.
+/// An unknown value set maps to `404`.
 ///
 /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The operation semantics are the SM
-/// `I_TERMINOLOGY_SERVICE` call cited above
-/// (`docs/specs/openehr/SM/docs/openehr_platform/master12-terminology_service.adoc`);
-/// the URL layout, the JSON envelopes, and the existence-by-`404` convention
-/// are ours.
+/// contract defines a terminology API. The URL layout, the JSON envelopes, and
+/// the existence-by-`404` convention are ours.
 #[utoipa::path(
     get, path = "/terminology/{terminology_id}/value_set/{value_set_id}", tag = "terminology",
     params(
@@ -221,17 +200,14 @@ pub(crate) async fn terminology_value_set(
     guarded_dispatch(state, "terminology_value_set", parts, dispatch).await
 }
 
-/// Value-set membership test — SM `value_set_validate`
+/// Value-set membership test
 /// (`GET /terminology/{terminology_id}/value_set/{value_set_id}/validate`).
 ///
 /// Body: `{"valid": bool}`. `candidate_code` is a required query parameter.
 ///
 /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
-/// contract defines a terminology API. The operation semantics are the SM
-/// `I_TERMINOLOGY_SERVICE` call cited above
-/// (`docs/specs/openehr/SM/docs/openehr_platform/master12-terminology_service.adoc`);
-/// the URL layout, the JSON envelopes, and the existence-by-`404` convention
-/// are ours.
+/// contract defines a terminology API. The URL layout, the JSON envelopes, and
+/// the existence-by-`404` convention are ours.
 #[utoipa::path(
     get, path = "/terminology/{terminology_id}/value_set/{value_set_id}/validate", tag = "terminology",
     params(

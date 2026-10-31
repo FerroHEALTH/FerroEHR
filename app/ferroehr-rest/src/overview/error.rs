@@ -181,10 +181,9 @@ impl From<VersionIdError> for RestError {
     }
 }
 
-/// Maps an [`StatusError`]'s `CALL_STATUS_TYPE` onto its ITS-REST 1.1.0 status code.
+/// Maps a [`StatusError`]'s [`ServiceStatus`] onto its ITS-REST 1.1.0 status code.
 ///
-/// The wire oracle decides each row: where the SM name and the wire disagree,
-/// the wire's status wins. A free function rather than
+/// The wire oracle decides each row. A free function rather than
 /// `impl From<StatusError> for ApiError`, because both types are foreign to this
 /// crate and the orphan rule forbids that impl.
 #[must_use]

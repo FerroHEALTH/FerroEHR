@@ -13,9 +13,7 @@
 //! component's hazard log lists first: an access that is not recorded.
 //! Regulation (EU) 2025/327 Annex II 3.2 asks the logging component to record
 //! "every access event" (`docs/law/eu/ehds/text.html Annex II 3.2`). No openEHR
-//! spec governs access logging beyond "System Log | IHE ATNA-compliant system
-//! log" (SM `master02-overview.adoc` §openEHR Platform Model) — the coverage
-//! property is our own design.
+//! spec governs access logging, so the coverage property is our own design.
 
 #![expect(
     clippy::expect_used,

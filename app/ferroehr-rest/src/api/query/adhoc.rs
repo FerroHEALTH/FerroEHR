@@ -28,8 +28,8 @@ use crate::state::AppState;
 /// or `openehr-ehr-id` header — resolved for both methods by
 /// [`response::ehr_id_from_request`], `Request.md` §About the `ehr_id`
 /// parameter) is collected into the one-element [`AqlQueryRequest::ehr_ids`]
-/// scope (the SM `List<UUID>` is realized as an extension; the conformant wire
-/// binds one `ehr_id`).
+/// scope (a list scope is our own extension; the conformant wire binds one
+/// `ehr_id`).
 pub(super) async fn execute(
     state: &AppState,
     op: &str,

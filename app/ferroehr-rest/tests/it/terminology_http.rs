@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end HTTP tests for the terminology extension API group (SM
-//! `I_TERMINOLOGY_SERVICE`): the config gate
+//! End-to-end HTTP tests for the terminology extension API group: the config gate
 //! (`AppConfig::terminology_api_enabled`), the `200`/`404`/`400` wire outcomes
 //! for `get_terminology_ids` / `get_terminology_description` / `get_term` /
 //! `subsumes` / `get_value_set` / `value_set_validate`, and the JSON body shapes
@@ -11,9 +10,8 @@
 //! in-process openEHR bundle (TERM 3.1.0), so no DB seeding is needed and every
 //! assertion observes the real bundle.
 //!
-//! Spec grounding: `docs/specs/openehr/SM/docs/UML/classes/
-//! i_terminology_service.adoc` (the nine calls + `Pre_has_*` preconditions).
-//! A failed precondition surfaces as `versioned_object_does_not_exist` (the
+//! An unknown terminology, term or value set surfaces as
+//! `versioned_object_does_not_exist` (the
 //! bundle provider's convention), which the adapter maps to HTTP `404`.
 #![expect(
     clippy::unwrap_used,

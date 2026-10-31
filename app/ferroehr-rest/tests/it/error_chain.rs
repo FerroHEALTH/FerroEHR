@@ -135,8 +135,8 @@ async fn a_carried_cause_leaves_a_4xx_body_byte_identical() {
     assert_eq!(carried, flat);
 }
 
-/// Every granular SM status renders the SAME wire response whether it reaches
-/// the adapter as a bare `StatusError` (the SM bridge, `status_api_error`) or through
+/// Every granular status renders the SAME wire response whether it reaches
+/// the adapter as a bare `StatusError` (the status bridge, `status_api_error`) or through
 /// `ServiceError` (the service bridge) — so restoring the granular statuses
 /// changed nothing a client can observe.
 ///
@@ -183,7 +183,7 @@ async fn a_granular_status_renders_identically_on_both_bridges() {
     }
 }
 
-/// A refusal that carries a cause reports the granular SM status back — the
+/// A refusal that carries a cause reports the granular status back — the
 /// property #2124 restored — while the wire response is byte-identical to the
 /// cause-less twin's.
 #[tokio::test]

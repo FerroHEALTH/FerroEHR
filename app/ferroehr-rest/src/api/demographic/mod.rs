@@ -15,7 +15,7 @@
 //!
 //! The only genuinely spec-absent surface is `PARTY_RELATIONSHIP` (see
 //! `relationship`), which the vendored API does not define: those routes are our
-//! own extension realizing SM `I_PARTY_RELATIONSHIP` and are excluded from
+//! own extension and are excluded from
 //! conformance-profile claims.
 //!
 //! The five per-kind operation families collapse by mapping the operation-id

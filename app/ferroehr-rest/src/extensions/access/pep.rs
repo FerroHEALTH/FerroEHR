@@ -6,9 +6,7 @@
 //! Composes the ABAC gate with the SMART resource-scope + launch-context gate,
 //! driven from the generic dispatch mount (`crate::api`).
 //!
-//! ABAC and RBAC are our own enterprise design — no openEHR spec governs them
-//! (the SM places authorisation out of band, SM
-//! `openehr_platform/master02-overview.adoc` §General Assumptions). SMART is
+//! ABAC and RBAC are our own enterprise design — no openEHR spec governs them. SMART is
 //! spec-grounded: the scope grammar and launch-context binding come from
 //! `ITS-REST/docs/smart_app_launch/master08-scopes.adoc` §Resource Scopes and
 //! `master07-*.adoc` §Context Selection, and the 401/403 discipline from

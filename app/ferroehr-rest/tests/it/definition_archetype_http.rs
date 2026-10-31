@@ -11,9 +11,7 @@
 //! **No openEHR spec governs these routes**: the released Definition API
 //! provisions operational templates only
 //! (`specifications/operations/definition_template_adl{1.4,2}_*.yaml`). The
-//! operation SEMANTICS come from
-//! `docs/specs/openehr/SM/docs/UML/classes/i_definition_adl14.adoc` and
-//! `i_definition_adl2.adoc`; the wire shape is our own design/extension
+//! operations and their wire shape are our own design/extension
 //! for both generations. What is asserted here is exactly what the CNF
 //! `adl14-archetype` / `adl2-archetype` `served_extensions` families declare.
 #![expect(
@@ -87,8 +85,7 @@ fn post_text(path: &str, body: String) -> Request<Body> {
 /// lists `[]`, an upload answers `201` + `Location` + the stored
 /// `ARCHETYPE_ID`, the source comes back byte-identical as `text/plain`, the id
 /// appears in the list, and the delete answers `204` and makes both the read
-/// and a second delete `404` (SM `Post_archetype_removed` /
-/// `artefact_does_not_exist`).
+/// and a second delete `404` (`artefact_does_not_exist`).
 #[tokio::test]
 async fn the_adl14_archetype_store_round_trips_over_the_extension_wire() {
     let (_pg, app) = common::test_router().await;
@@ -156,7 +153,7 @@ async fn the_adl14_archetype_store_round_trips_over_the_extension_wire() {
 }
 
 /// The upload's two refusals: a source that is not a valid ADL 1.4 archetype is
-/// `422` (SM `Pre_valid_archetype`), and a payload DECLARING a media type the
+/// `422`, and a payload DECLARING a media type the
 /// route cannot process as ADL source is `415`.
 #[tokio::test]
 async fn the_adl14_upload_refuses_invalid_source_and_a_wrong_media_type() {
@@ -183,8 +180,8 @@ async fn the_adl14_upload_refuses_invalid_source_and_a_wrong_media_type() {
 }
 
 /// The ADL 2 views on an empty store: both lists answer `[]` and both counts
-/// the bare SM `Integer` `0`, and a DELETE of an absent artefact is `404`
-/// (SM `artefact_does_not_exist`).
+/// the bare JSON integer `0`, and a DELETE of an absent artefact is `404`
+/// (`artefact_does_not_exist`).
 #[tokio::test]
 async fn the_adl2_archetype_and_artefact_views_answer_the_sm_shapes() {
     let (_pg, app) = common::test_router().await;
@@ -200,7 +197,7 @@ async fn the_adl2_archetype_and_artefact_views_answer_the_sm_shapes() {
     ] {
         let (status, _, body) = send(&app, get(path)).await;
         assert_eq!(status, StatusCode::OK, "{path}: {body}");
-        assert_eq!(body, "0", "{path} returns the bare SM Integer");
+        assert_eq!(body, "0", "{path} returns a bare JSON integer");
     }
 
     let (status, _, body) = send(
@@ -211,7 +208,7 @@ async fn the_adl2_archetype_and_artefact_views_answer_the_sm_shapes() {
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
 }
 
-/// The SM list cursor (`master02-overview.adoc` §List Handling) is honoured on
+/// The `offset` / `fetch` list cursor is honoured on
 /// the list routes, and a non-numeric cursor is a `400`.
 #[tokio::test]
 async fn the_list_cursor_pages_and_refuses_a_non_numeric_value() {

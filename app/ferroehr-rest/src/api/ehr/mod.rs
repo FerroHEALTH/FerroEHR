@@ -11,10 +11,10 @@
 //! [`versioned_ehr_status`], [`composition`], [`versioned_composition`],
 //! [`directory`] and [`contribution`].
 //!
-//! Each arm rebuilds the operation's `*Params`, decodes wire strings into the SM
-//! catalog's native argument types through [`crate::overview::version_id`],
+//! Each arm rebuilds the operation's `*Params`, decodes wire strings into the
+//! service's native argument types through [`crate::overview::version_id`],
 //! decodes any body (RM-typed bodies accept JSON or canonical XML), calls the
-//! SM catalog methods on the platform service `S`, and rebuilds a
+//! service methods on the platform service `S`, and rebuilds a
 //! [`ServiceResponse`] from the result, which the `negotiate::*` helpers render
 //! with the spec's `ETag`/`Location`/`Prefer` behaviour. The shared write, read
 //! and committal helpers below back all seven modules; the `ITEM_TAG`
@@ -153,7 +153,7 @@ pub(super) fn read_resp(ehr_id: &str, body: Value) -> ServiceResponse {
 /// is attributed to this CDR's own system identity
 /// ([`ferroehr::service::SYSTEM_COMMITTER_NAME`]) — the same constant the
 /// platform library uses, so both layers name the system committer identically.
-/// The SM service impl re-derives the committer from the same principal, so
+/// The service re-derives the committer from the same principal, so
 /// this rides in the [`UpdateVersion`] envelope for completeness.
 pub(crate) fn committer_proxy() -> PartyProxy {
     let party = match crate::extensions::access::authn::current_principal() {
@@ -182,7 +182,7 @@ pub(crate) fn committer_proxy() -> PartyProxy {
     PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party))
 }
 
-/// Synthesizes the SM `UPDATE_VERSION` commit envelope for a bare-RM-body write
+/// Synthesizes the `UPDATE_VERSION` commit envelope for a bare-RM-body write
 /// route: the RM object is the `data`, the `If-Match` is the
 /// `preceding_version_uid`, and the audit carries the change type and committer.
 ///
@@ -221,7 +221,7 @@ pub(super) fn mk_update_version<T>(
 }
 
 /// Decomposes an [`ObjectVersionId`] into the `(versioned-object uuid,
-/// version_tree_id)` pair the SM `*_at_version` reads take.
+/// version_tree_id)` pair the service's `*_at_version` reads take.
 ///
 /// Branch version ids are first-class (RM common master06 §The 'Virtual Version
 /// Tree').

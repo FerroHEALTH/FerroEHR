@@ -69,8 +69,8 @@ fn emergency_override(state: &AppState) -> bool {
 /// Answer, as an unknown target would be answered, a request whose path names
 /// an EHR or a versioned object under an EHDS Art. 8 access restriction.
 ///
-/// `Ok(None)` lets the request proceed. A refusal is `404` with the status the
-/// SM gives an unknown target, and nothing in it names the restriction.
+/// `Ok(None)` lets the request proceed. A refusal is `404` with the status an
+/// unknown target gets, and nothing in it names the restriction.
 ///
 /// # Errors
 /// A ready `500` response when the marks cannot be read: an access decision

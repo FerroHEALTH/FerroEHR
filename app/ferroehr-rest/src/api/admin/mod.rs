@@ -10,10 +10,9 @@
 //!
 //! Four further groups sit beside it under the same `/admin/` prefix and the
 //! same gates — **our own extensions, governed by no ITS-REST operation**.
-//! Three realize SM admin interfaces the release never surfaced: [`archive`]
-//! (`I_ADMIN_ARCHIVE`), [`report`] (the four `I_ADMIN_SERVICE` statistics
-//! calls) and [`dump_load`] (`I_ADMIN_DUMP_LOAD`). The fourth, [`integrity`],
-//! realizes no SM interface at all: it sweeps the storage's two content copies
+//! They are [`archive`] (archival storage), [`report`] (the four activity
+//! statistics) and [`dump_load`] (file-system export and load), and
+//! [`integrity`], which sweeps the storage's two content copies
 //! for disagreement, and no openEHR spec governs storage mechanics. Beside
 //! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
 //! delay of the person's own access, and [`identifiers`] serves the audited

@@ -18,7 +18,7 @@
 //!
 //! - **ADL 2 upload** (`definition_template_adl2_upload.yaml`): the OAS declares
 //!   `201/400/409`; the REST adapter emits the `409` on a duplicate HRID (the
-//!   native SM `upload_artefact` would replace — this seam does not), and
+//!   native `upload_artefact` replaces — this seam does not), and
 //!   additionally returns `422` when the ADL2/AOM2 artefact is invalid on the
 //!   store path (the OAS folds that under `400`). A request DECLARING a media
 //!   type other than the operation's single `text/plain` body type is refused
@@ -953,14 +953,7 @@ description
                                       (ITS-REST \
                                       `specifications/responses/409_template_already_exists.yaml`) \
                                       — here, an ADL2 artefact already stored \
-                                      under the same `ARCHETYPE_HRID`. The \
-                                      released wire wins over the SM \
-                                      `upload_artefact`, which would \"replace\" \
-                                      the existing artefact \
-                                      (`SM/docs/UML/classes/i_definition_adl2.adoc`: \
-                                      \"If an artefact with the same physical \
-                                      identifier and namespace exists, replace \
-                                      it\").",
+                                      under the same `ARCHETYPE_HRID`.",
          body = serde_json::Value),
         (status = 415, description = "The request DECLARES a payload media type \
                                       the service cannot process as this \
@@ -994,9 +987,7 @@ description
                                       errors\" (`Requests_and_responses.md` \
                                       §\"HTTP status codes\") — and \"additional \
                                       status codes MAY be used as long as they do \
-                                      not conflict with the predefined codes\"; \
-                                      it realizes the SM `invalid_artefact` \
-                                      outcome of `upload_artefact`.",
+                                      not conflict with the predefined codes\".",
          body = serde_json::Value)
     )
 )]
@@ -1522,10 +1513,8 @@ pub(crate) async fn definition_query_list_all(
                         starting with `org.openehr`\"). The prefix match is \
                         case-insensitive, and a namespace-less prefix also \
                         matches its `misc::`-namespaced form, because that is \
-                        the canonical key every surface stores under (SM \
-                        `docs/openehr_platform/master04-definition_package.adoc` \
-                        §Registered Queries: \"If no namespace is supplied, the \
-                        namespace `misc` is assumed\").",
+                        the canonical key every surface stores under (our own \
+                        naming design).",
          example = "org.openehr::compositions"),
         ("Accept" = Option<String>, Header,
          description = "`application/json` — the single representation this \
@@ -1653,10 +1642,8 @@ pub(crate) async fn definition_query_list(
                         below. An EXACT name on this operation (no prefix \
                         matching); identity is case-insensitive but stored \
                         case-preserving. A namespace-less name is keyed under \
-                        the assumed `misc` namespace — SM \
-                        `docs/openehr_platform/master04-definition_package.adoc` \
-                        §Registered Queries: \"If no namespace is supplied, the \
-                        namespace `misc` is assumed\" — the same canonical key \
+                        the assumed `misc` namespace (our own naming design), \
+                        the same canonical key \
                         every other stored-query surface uses.",
          example = "org.openehr::compositions"),
         ("query_type" = Option<String>, Query,
@@ -1667,9 +1654,8 @@ pub(crate) async fn definition_query_list(
                         validates and persists AQL, so an unsupported non-AQL \
                         formalism is an honest unsupported-formalism `400` rather \
                         than a blanket \"invalid AQL\". Matching is \
-                        case-insensitive and accepts the SM formalism-with-version \
-                        spelling (`aql`, `AQL::1.0.3`) — SM \
-                        `master04-definition_package.adoc` §Query Formalism.",
+                        case-insensitive and accepts the formalism-with-version \
+                        spelling (`aql`, `AQL::1.0.3`).",
          example = "AQL"),
         ("Content-Type" = Option<String>, Header,
          description = "`text/plain` — the operation's only declared payload \
@@ -1744,11 +1730,8 @@ pub(crate) async fn definition_query_list(
                                       as that is a reserved name\" \
                                       (`docs/query/Qualified_query_name.md` \
                                       NOTE); the body is not syntactically valid \
-                                      AQL (a store-time parse, realizing the SM \
-                                      `Pre_valid_query` precondition of \
-                                      `store_query` — SM \
-                                      `docs/UML/classes/i_definition_query.adoc` \
-                                      — syntactically, which is the only branch \
+                                      AQL (a store-time parse, syntactically, \
+                                      which is the only branch \
                                       the released status set grounds: this \
                                       operation declares `200` and `400` only, \
                                       and QUERY 1.1.0 states no store-time \
@@ -1802,9 +1785,7 @@ pub(crate) async fn definition_query_store_yaml(
                         be `aql` (case-insensitive), as that is a reserved \
                         name\"). Matched EXACTLY here — case-insensitively, and \
                         with a namespace-less name resolving against the `misc` \
-                        namespace the store keys it under (SM \
-                        `docs/openehr_platform/master04-definition_package.adoc` \
-                        §Registered Queries) — never as a prefix; that is the \
+                        namespace the store keys it under — never as a prefix; that is the \
                         sibling list operation's semantic.",
          example = "org.openehr::compositions"),
         ("version" = String, Path,
@@ -1948,9 +1929,8 @@ pub(crate) async fn definition_query_version_get(
                         such a name is the `400` below. Identity is \
                         case-insensitive, stored case-preserving; a \
                         namespace-less name is keyed under the assumed `misc` \
-                        namespace (SM \
-                        `docs/openehr_platform/master04-definition_package.adoc` \
-                        §Registered Queries).",
+                        namespace (our own \
+                        naming design).",
          example = "org.openehr::compositions"),
         ("version" = String, Path,
          description = "The SEMVER version to store the query under — \"in the \
@@ -1988,8 +1968,8 @@ pub(crate) async fn definition_query_version_get(
                         `default: \"AQL\"`); only AQL is supported, so an \
                         unsupported non-AQL formalism is an honest \
                         unsupported-formalism `400`. Matching is case-insensitive \
-                        and accepts the SM formalism-with-version spelling (SM \
-                        `master04-definition_package.adoc` §Query Formalism).",
+                        and accepts the formalism-with-version spelling \
+                        (`aql`, `AQL::1.0.3`).",
          example = "AQL")
     ),
     request_body(content((String = "text/plain",
@@ -2057,10 +2037,7 @@ pub(crate) async fn definition_query_version_get(
                                       (case-insensitive), as that is a reserved \
                                       name\" (`docs/query/Qualified_query_name.md` \
                                       NOTE); the body is not syntactically valid \
-                                      AQL (the store-time parse realizing the SM \
-                                      `Pre_valid_query` precondition of \
-                                      `store_query`, SM \
-                                      `docs/UML/classes/i_definition_query.adoc`, \
+                                      AQL (the store-time parse, \
                                       syntactically — the only branch the \
                                       released status set grounds); an \
                                       unsupported non-AQL `query_type`; or a body \
