@@ -32,7 +32,6 @@
 **Conformance and compliance**<br>
 [![openEHR BASE](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
 [![openEHR options](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
-[![openEHR warnings](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/warnings.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
 [![specification](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
 [![veredictum](https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg)](https://github.com/FerroHEALTH/FerroEHR/actions/workflows/conformance.yml?query=branch%3Amain)
 <br>
