@@ -128,6 +128,17 @@ tool, never the record), `CONF_OUT` for a different artefact root,
 FerroEHR, `SKIP_BUILD` to compose a published image instead of building from
 source, and `CONTAINER_ENGINE` to choose between Docker and Podman.
 
+The script also takes one stage: `review` runs `veredictum validate
+--statement` alone, `up` composes the deployment and leaves it serving, and
+`down` removes it with its volumes. The Conformance workflow uses these stages
+to run the same deployment in CI. It builds FerroEHR from the commit, runs
+`up`, and drives the catalogue through the Veredictum GitHub Action, pinned by
+commit SHA, on the same release image by digest. The job fails on a failed or
+errored row, puts the Markdown summary on the job summary, and keeps the
+results, JUnit and CTRF views as an artifact. It runs on pull requests that
+touch the server, the party set, the conformance compose files or the
+workflow, on `main`, on a release tag and twice a week.
+
 ### The posture a run covers
 
 The one deployment runs the SMART resource-server role with a trusted test

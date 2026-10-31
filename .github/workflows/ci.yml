@@ -2444,53 +2444,6 @@ jobs:
       - name: The committed chart release facts are coherent
         run: bash scripts/checks/chart-appversion.sh
 
-  # Veredictum-pin guard (#2867, #3593): scripts/lib/veredictum.sh promises every
-  # pin bump is re-proven by a full `scripts/conformance.sh` run against the
-  # committed baseline, and this job is the failing check behind that promise
-  # (a rule without one is a wish — reliability.md). A PR that changes
-  # VEREDICTUM_VERSION passes when the `artifacts/`, `specs/`, `schemas/` and
-  # runner (`app/veredictum/src/`) git trees are all identical at the old and
-  # new tag (read from the GitHub API, failing closed), and otherwise must
-  # refresh docs/conformance/ferroehr/ (the
-  # run's committed record) or carry the `no-conformance-run` label as an
-  # explicit, visible deferral. scripts/checks/veredictum-pin.sh holds the logic;
-  # its --self-test drives it against a stub gh first.
-  #
-  # PULL-REQUEST ONLY, deliberately (the crate-version pattern, #2777): it
-  # compares the pull request's base and head trees and reads a pull-request
-  # label, neither of which a merge_group event carries.
-  veredictum-pin:
-    name: veredictum-pin-guard
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read # the labels when the step runs
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: The pin guard passes and fails its stub-gh cases
-        run: bash scripts/checks/veredictum-pin.sh --self-test
-      - name: A pin bump carries its acceptance run or moves no catalogue content
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          # Read when the step runs: a re-run replays the event payload (#3948).
-          HAS_LABEL=$(gh api "repos/${GH_REPO}/pulls/${PR}" --jq 'any(.labels[].name; . == "no-conformance-run")')
-          label=()
-          if [ "$HAS_LABEL" = "true" ]; then
-            label=(--no-conformance-run)
-          fi
-          bash scripts/checks/veredictum-pin.sh "${label[@]}" "$BASE" "$HEAD"
-
   # A person's pull request records acceptance of the contribution licensing
   # terms (CONTRIBUTING.md § Licensing of contributions) through the template's
   # checkbox; this gate is what makes the checkbox binding. Bot authors are
@@ -2809,6 +2762,25 @@ jobs:
       - name: Every FerroPIX pin is one release, and its configurations read under it
         run: bash scripts/checks/ferropix-pins.sh
 
+  # Veredictum pin guard (#4449): the conformance workflow runs the Veredictum
+  # Action at the commit of the tag VEREDICTUM_VERSION names, on the image
+  # digest VEREDICTUM_IMAGE names, both in scripts/lib/veredictum.sh. The tag
+  # and the digest are read from GitHub and ghcr.io, failing closed.
+  veredictum-action:
+    name: veredictum-action
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Veredictum pin guard self-test
+        run: bash scripts/checks/veredictum-action.sh --self-test
+      - name: The Action SHA, its version comment, the image digest and VEREDICTUM_VERSION agree
+        run: bash scripts/checks/veredictum-action.sh
+
   # ── The one-check aggregate gate (the rust-analyzer/ruff pattern) ───────────
   # A single job that needs everything and passes iff nothing failed — skipped
   # jobs count as satisfied, exactly like branch protection treats them. Point
@@ -2881,10 +2853,10 @@ jobs:
       - compose-version-guard
       - quickstart-config
       - ferropix-pins
+      - veredictum-action
       - crate-version
       - chart-version
       - chart-appversion
-      - veredictum-pin
       - chart-boot
     runs-on: ubuntu-latest
     timeout-minutes: 5

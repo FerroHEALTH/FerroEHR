@@ -63,8 +63,9 @@ impl TerminologyExpander for FerroEhrService {
                 ))
             })?;
             // The server ignores `terminology_id` for `$expand`; the value set
-            // is identified by `params_uri` (its URL).
-            server.get_value_set(service_api, params_uri).await
+            // is identified by its URL, which `params_uri` carries.
+            let url = expand_value_set_url(params_uri)?;
+            server.get_value_set(service_api, &url).await
         } else if service_api == BUNDLE_SERVICE_API {
             // The bundle's value sets live under the `"openehr"` terminology;
             // `params_uri` is the group / code-set id.
@@ -184,6 +185,28 @@ fn codes_of(extract: super::types::TerminologyExtract) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// The value-set URL a FHIR `TERMINOLOGY('expand', …)` names. QUERY master03
+/// §TERMINOLOGY gives `params_uri` as "URI path and query sections" and shows
+/// two forms: the bare value-set URL (`http://snomed.info/sct?fhir_vs=…`), and
+/// the `$expand` query whose `url` argument is that URL
+/// (`url=http://snomed.info/sct?fhir_vs=…`, AQL examples §TERMINOLOGY).
+///
+/// NOTE: master03 §TERMINOLOGY; a value-set URL starts with a scheme, so a
+/// `params_uri` that starts with a `name=` pair whose name holds no `:` or `/`
+/// is the query form.
+fn expand_value_set_url(params_uri: &str) -> Result<String, AqlError> {
+    let query = params_uri.strip_prefix('?').unwrap_or(params_uri);
+    let is_query_form = query
+        .split_once('=')
+        .is_some_and(|(name, _)| !name.is_empty() && !name.contains([':', '/', '?', '&']));
+    if !is_query_form {
+        return Ok(params_uri.to_owned());
+    }
+    params_uri_args(params_uri)
+        .remove("url")
+        .ok_or_else(|| AqlFeatureError::TerminologyParams("url").into())
+}
+
 /// The query arguments of a `params_uri` (`system=…&code=…&url=…`), which
 /// QUERY master03 §TERMINOLOGY gives as "URI path and query sections". A path
 /// ends at a `?` that comes before the first `=`; with no such path the whole
@@ -238,6 +261,34 @@ mod tests {
         assert!(is_fhir_service_api("HL7.org/FHIR/r4"));
         assert!(!is_fhir_service_api("openehr"));
         assert!(!is_fhir_service_api("ocean"));
+    }
+
+    #[test]
+    fn expand_names_the_value_set_in_either_params_uri_form() {
+        let url = |p: &str| expand_value_set_url(p).ok();
+        // The bare value-set URL (master03 §TERMINOLOGY) passes through.
+        assert_eq!(
+            url("http://snomed.info/sct?fhir_vs=isa/50697003").as_deref(),
+            Some("http://snomed.info/sct?fhir_vs=isa/50697003")
+        );
+        // The `$expand` query form (AQL examples §TERMINOLOGY) names it by `url`.
+        assert_eq!(
+            url("url=http://snomed.info/sct?fhir_vs=isa/50697003").as_deref(),
+            Some("http://snomed.info/sct?fhir_vs=isa/50697003")
+        );
+        assert_eq!(
+            url("url=http://hl7.org/fhir/ValueSet/administrative-gender").as_deref(),
+            Some("http://hl7.org/fhir/ValueSet/administrative-gender")
+        );
+        assert_eq!(
+            url("?count=10&url=http%3A%2F%2Fexample.test%2Fvs").as_deref(),
+            Some("http://example.test/vs")
+        );
+        // A query form without `url` names no value set.
+        assert!(matches!(
+            expand_value_set_url("count=10"),
+            Err(AqlError::Feature(AqlFeatureError::TerminologyParams("url")))
+        ));
     }
 
     #[test]

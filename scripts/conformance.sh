@@ -14,7 +14,19 @@
 #   $CONF_OUT/ferroehr/junit.xml, ctrf.json, summary.md
 #
 # Usage:
-#   scripts/conformance.sh
+#   scripts/conformance.sh [run]   compose, review, drive, export, tear down
+#   scripts/conformance.sh review  review the party statement against the
+#                                  catalogue, with no deployment
+#   scripts/conformance.sh up      compose the deployment on fresh volumes and
+#                                  leave it serving, for a driver of its own
+#                                  (the conformance workflow runs the
+#                                  Veredictum Action against it)
+#   scripts/conformance.sh down    tear the deployment and its volumes down
+#
+# The deployment runs FerroTERM beside FerroEHR (the `terminology` profile,
+# pinned by digest in docker/sut-ferroehr.yml), and docker/sut-terminology.yml
+# points `[terminology.server]` at it, so the AQL TERMINOLOGY() arm the
+# statement selects runs against a real terminology server (#4476).
 #
 # Env:
 #   CONF_OUT          artefact root (default: docs/conformance; `ferroehr` is
@@ -48,6 +60,16 @@ STATEMENT="$PARTY/statement.json"
 IXIT="$PARTY/ixit.json"
 BASE_URL="${CONF_BASE_URL:-http://localhost:8080/ferroehr/rest/openehr/v1}"
 NETWORK="${CONF_NETWORK:-host}"
+
+STAGE="${1:-run}"
+case "$STAGE" in
+  run | review | up | down) ;;
+  *)
+    echo "usage: scripts/conformance.sh [run|review|up|down]" >&2
+    exit 2
+    ;;
+esac
+[[ "$#" -le 1 ]] || { echo "usage: scripts/conformance.sh [run|review|up|down]" >&2; exit 2; }
 
 # shellcheck source=scripts/lib/veredictum.sh
 source "$REPO_ROOT/scripts/lib/veredictum.sh"
@@ -97,27 +119,32 @@ instrument() {
     --entrypoint /usr/local/bin/veredictum "$VEREDICTUM_IMAGE" "$@"
 }
 
-echo "==> Pulling the pinned instrument (veredictum $VEREDICTUM_VERSION)"
-"$ENGINE" pull --quiet "$VEREDICTUM_IMAGE" >/dev/null
-reported="$("$ENGINE" run --rm --entrypoint /usr/local/bin/veredictum "$VEREDICTUM_IMAGE" --version)"
-[[ "$reported" == "veredictum $VEREDICTUM_VERSION ("* ]] || {
-  echo "conformance: the pinned image reports '$reported', not veredictum $VEREDICTUM_VERSION" >&2
-  exit 2
+# Pulls the pinned image and refuses one whose engine reports another release.
+pull_instrument() {
+  echo "==> Pulling the pinned instrument (veredictum $VEREDICTUM_VERSION)"
+  "$ENGINE" pull --quiet "$VEREDICTUM_IMAGE" >/dev/null
+  local reported
+  reported="$("$ENGINE" run --rm --entrypoint /usr/local/bin/veredictum "$VEREDICTUM_IMAGE" --version)"
+  [[ "$reported" == "veredictum $VEREDICTUM_VERSION ("* ]] || {
+    echo "conformance: the pinned image reports '$reported', not veredictum $VEREDICTUM_VERSION" >&2
+    exit 2
+  }
 }
 
-echo "==> Reviewing the party statement against the catalogue"
-instrument --network none -- validate --root /work/catalogue --specs /work/specs/openehr \
-  --statement /work/input/statement.json
+review_statement() {
+  echo "==> Reviewing the party statement against the catalogue"
+  instrument --network none -- validate --root /work/catalogue --specs /work/specs/openehr \
+    --statement /work/input/statement.json
+}
 
 compose_down() {
   (cd "$REPO_ROOT" && "${COMPOSE[@]}" down -v) || true
 }
 
-if [[ -z "${CONF_NO_COMPOSE:-}" ]]; then
+compose_up() {
   # A conformance deployment sends no usage report, whatever the caller's shell holds.
   export FERROEHR__USAGE_REPORT__ENABLED=false
-  trap compose_down EXIT
-  echo "==> Composing FerroEHR on fresh volumes (the exclusive-server ground)"
+  echo "==> Composing FerroEHR and FerroTERM on fresh volumes (the exclusive-server ground)"
   compose_down
   if [[ -n "${SKIP_BUILD:-}" ]]; then
     (cd "$REPO_ROOT" && "${COMPOSE[@]}" up -d --wait ferroehr)
@@ -126,6 +153,30 @@ if [[ -z "${CONF_NO_COMPOSE:-}" ]]; then
     # sources, so the image is built unless explicitly skipped.
     (cd "$REPO_ROOT" && "${COMPOSE[@]}" up -d --build --wait ferroehr)
   fi
+}
+
+case "$STAGE" in
+  review)
+    pull_instrument
+    review_statement
+    exit 0
+    ;;
+  up)
+    compose_up
+    exit 0
+    ;;
+  down)
+    compose_down
+    exit 0
+    ;;
+esac
+
+pull_instrument
+review_statement
+
+if [[ -z "${CONF_NO_COMPOSE:-}" ]]; then
+  trap compose_down EXIT
+  compose_up
 fi
 
 mkdir -p "$OUT"
