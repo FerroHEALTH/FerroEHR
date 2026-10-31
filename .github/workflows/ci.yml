@@ -843,7 +843,7 @@ jobs:
   # and never rise. jscpd runs from its official image, pinned by digest in
   # docs/VERSIONS.md, and the count and the key of every counted block are
   # committed beside the guard. A rise fails and names the new blocks by both
-  # places; a fall fails until the count is lowered with --update.
+  # places; a fall passes, and ratchet-tighten.yml lowers the count on main.
   duplication:
     name: duplication
     runs-on: ubuntu-latest
@@ -856,13 +856,13 @@ jobs:
           persist-credentials: false
       - name: Duplication ratchet self-test
         run: bash scripts/checks/duplication.sh --self-test
-      - name: The duplicated lines have not risen or fallen
+      - name: The duplicated lines have not risen
         run: bash scripts/checks/duplication.sh
 
   # A hand-written source file carries at most 800 lines, its inline tests
   # included (#4454). A file over it on the day the guard landed stands in
   # scripts/checks/file-size.list with its length and may shrink and never
-  # grow; a shrink fails until the entry is lowered, so the list only tightens.
+  # grow; a shrink passes, and ratchet-tighten.yml lowers the entry on main.
   file-size:
     name: file-size
     runs-on: ubuntu-latest
