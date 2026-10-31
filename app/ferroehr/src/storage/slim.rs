@@ -8,11 +8,13 @@
 //! (`rm_type`), a lowercase `archetype_node_id` (`archetype`), a plain or
 //! simply coded `name` (`name`, `name_code`, `name_terminology`), and on an
 //! `ELEMENT` a `value` of one of the common data value shapes, which the typed
-//! value columns hold instead. [`slim`] removes exactly those keys, only when
-//! the columns rebuild them byte for byte, and keeps everything else verbatim;
-//! [`rebuild`] and its SQL twins `ext.node_name`, `ext.node_value` and
-//! `ext.node_fragment` put the removed keys back on read. A fragment with nothing left is stored as
-//! SQL `NULL`.
+//! value columns hold instead. Below the root, the `archetype_details` and
+//! `archetype_node_id` an archetype root repeats, and the `language` and
+//! `encoding` every entry repeats, move to the [`Header`] columns. [`slim`]
+//! removes exactly those keys, only when the columns rebuild them byte for
+//! byte, and keeps everything else verbatim; [`rebuild`] and its SQL twins
+//! `ext.node_name`, `ext.node_value` and `ext.node_fragment` put the removed
+//! keys back on read. A fragment with nothing left is stored as SQL `NULL`.
 //!
 //! No openEHR spec governs storage layout: our own design (RM common
 //! `master06-change_control_package.adoc` §Overview admits any physical
@@ -25,6 +27,8 @@
 )]
 
 use serde_json::{Map, Value};
+
+use crate::storage::header::{Header, code_phrase_of, restore, slim_header};
 
 /// An `ELEMENT.value` held in the typed value columns instead of the
 /// fragment.
@@ -62,6 +66,8 @@ pub struct Slim {
     pub data: Option<Value>,
     /// The `ELEMENT.value` the typed columns hold, if any.
     pub value: Option<TypedValue>,
+    /// The header keys the row's columns hold, empty on a root row.
+    pub header: Header,
 }
 
 /// The data value types whose whole value is one string under `value`.
@@ -79,19 +85,25 @@ pub const STRING_VALUED: [&str; 7] = [
 /// rebuild.
 ///
 /// `rm_type` is the row's `rm_type` column (the fragment's `_type`), and
-/// `name_code` / `name_terminology` the row's coded-name columns, which the
-/// decomposer derived from the same fragment.
+/// `root` whether the row is the versioned object's root (`num = 0`), whose
+/// header keys stay in its fragment.
 #[must_use]
-pub fn slim(rm_type: &str, data: Value) -> Slim {
+pub fn slim(rm_type: &str, root: bool, data: Value) -> Slim {
     let Value::Object(mut map) = data else {
         return Slim {
             data: Some(data),
             value: None,
+            header: Header::default(),
         };
     };
     if map.get("_type").and_then(Value::as_str) == Some(rm_type) {
         map.shift_remove("_type");
     }
+    let header = if root {
+        Header::default()
+    } else {
+        slim_header(&mut map)
+    };
     if map
         .get("archetype_node_id")
         .and_then(Value::as_str)
@@ -112,6 +124,7 @@ pub fn slim(rm_type: &str, data: Value) -> Slim {
     Slim {
         data: (!map.is_empty()).then_some(Value::Object(map)),
         value,
+        header,
     }
 }
 
@@ -128,6 +141,13 @@ pub struct Columns<'a> {
     pub name_code: Option<&'a str>,
     /// `name_terminology`, a coded name's terminology id.
     pub name_terminology: Option<&'a str>,
+    /// `rm_version`, set when `archetype_details` and `archetype_node_id`
+    /// are rebuilt from `archetype` ([`Header::rm_version`]).
+    pub rm_version: Option<&'a str>,
+    /// `language`, the code of the `language` the fragment omits.
+    pub language: Option<&'a str>,
+    /// `encoding`, the code of the `encoding` the fragment omits.
+    pub encoding: Option<&'a str>,
 }
 
 /// The whole canonical fragment of a stored row: what it stores, with every
@@ -147,6 +167,15 @@ pub fn rebuild(
         Some(other) => return Some(other),
         None => Map::new(),
     };
+    restore(
+        &mut map,
+        columns.archetype,
+        &Header {
+            rm_version: columns.rm_version.map(str::to_owned),
+            language: columns.language.map(str::to_owned),
+            encoding: columns.encoding.map(str::to_owned),
+        },
+    );
     map.insert("_type".to_owned(), Value::from(columns.rm_type));
     if let (Some(archetype), false) = (columns.archetype, map.contains_key("archetype_node_id")) {
         map.insert("archetype_node_id".to_owned(), Value::from(archetype));
@@ -201,25 +230,12 @@ fn coded_text(value: &str, code: &str, terminology: &str) -> Value {
     object([
         ("_type", Value::from("DV_CODED_TEXT")),
         ("value", Value::from(value)),
-        (
-            "defining_code",
-            object([
-                ("_type", Value::from("CODE_PHRASE")),
-                ("code_string", Value::from(code)),
-                (
-                    "terminology_id",
-                    object([
-                        ("_type", Value::from("TERMINOLOGY_ID")),
-                        ("value", Value::from(terminology)),
-                    ]),
-                ),
-            ]),
-        ),
+        ("defining_code", code_phrase_of(code, terminology)),
     ])
 }
 
 /// A JSON object of `fields`.
-fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
+pub(crate) fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
     Value::Object(
         fields
             .into_iter()
@@ -320,7 +336,7 @@ fn coded(fields: &Map<String, Value>) -> Option<(String, (String, String))> {
 }
 
 /// Whether `fields` carries exactly `keys`, in any order.
-fn has_keys(fields: &Map<String, Value>, keys: &[&str]) -> bool {
+pub(crate) fn has_keys(fields: &Map<String, Value>, keys: &[&str]) -> bool {
     fields.len() == keys.len() && keys.iter().all(|key| fields.contains_key(*key))
 }
 
@@ -330,7 +346,7 @@ fn is_string(fields: &Map<String, Value>, key: &str) -> bool {
 }
 
 /// `fields[key]` when it is a JSON string.
-fn string(fields: &Map<String, Value>, key: &str) -> Option<String> {
+pub(crate) fn string(fields: &Map<String, Value>, key: &str) -> Option<String> {
     fields.get(key).and_then(Value::as_str).map(str::to_owned)
 }
 
@@ -346,59 +362,145 @@ fn number(fields: &Map<String, Value>, key: &str) -> Option<String> {
 mod tests {
     use super::*;
     use crate::storage::codec::decompose;
+    use crate::storage::header::jsonb_key_order;
     use serde_json::json;
 
-    /// Every row of `composition` rebuilds to the fragment the codec cut.
-    fn assert_round_trip(composition: Value) -> (usize, usize, usize) {
+    /// What one corpus pass counted.
+    #[derive(Debug, Default)]
+    struct Tally {
+        rows: usize,
+        empty: usize,
+        typed: usize,
+        archetyped: usize,
+        language: usize,
+        encoding: usize,
+    }
+
+    /// `value` with every object's keys in jsonb order, as PostgreSQL hands a
+    /// stored `data` back.
+    fn jsonb_ordered(value: &Value) -> Value {
+        match value {
+            Value::Object(map) => {
+                let mut entries: Vec<(String, Value)> = map
+                    .iter()
+                    .map(|(key, value)| (key.clone(), jsonb_ordered(value)))
+                    .collect();
+                entries.sort_by(|(a, _), (b, _)| jsonb_key_order(a, b));
+                Value::Object(entries.into_iter().collect())
+            }
+            Value::Array(items) => Value::Array(items.iter().map(jsonb_ordered).collect()),
+            other => other.clone(),
+        }
+    }
+
+    /// The fragment as a read served it before the header columns: every key
+    /// `data` held in jsonb order, then the keys the name, archetype and value
+    /// columns append, in the order [`rebuild`] appends them.
+    fn served_before(
+        fragment: &Value,
+        rebuilt: &Value,
+        data: Option<&Value>,
+        header: &Header,
+    ) -> String {
+        let held = |key: &str| data.and_then(|d| d.get(key)).is_some();
+        let appended: Vec<&str> = ["_type", "archetype_node_id", "name", "value"]
+            .into_iter()
+            .filter(|key| {
+                fragment.get(*key).is_some()
+                    && !held(key)
+                    && !(*key == "archetype_node_id" && header.rm_version.is_some())
+            })
+            .collect();
+        let mut kept = fragment.clone();
+        if let Some(map) = kept.as_object_mut() {
+            for key in &appended {
+                map.shift_remove(*key);
+            }
+        }
+        let Value::Object(mut out) = jsonb_ordered(&kept) else {
+            panic!("a node fragment is an object");
+        };
+        for key in appended {
+            out.insert(key.to_owned(), rebuilt[key].clone());
+        }
+        serde_json::to_string(&Value::Object(out)).expect("serializable")
+    }
+
+    /// Every row of `composition` rebuilds to the fragment the codec cut, and
+    /// serializes with the keys in the order a read served before the header
+    /// columns existed.
+    fn assert_round_trip(composition: Value, tally: &mut Tally) {
         let rows = decompose(composition).expect("the composition decomposes");
-        let (mut slimmed, mut typed) = (0, 0);
         for row in &rows {
-            let stored = slim(&row.rm_type, row.data.clone());
+            let stored = slim(&row.rm_type, row.num == 0, row.data.clone());
             let columns = Columns {
                 rm_type: &row.rm_type,
                 archetype: row.archetype.as_deref(),
                 name: row.name.as_deref(),
                 name_code: row.name_code.as_deref(),
                 name_terminology: row.name_terminology.as_deref(),
+                rm_version: stored.header.rm_version.as_deref(),
+                language: stored.header.language.as_deref(),
+                encoding: stored.header.encoding.as_deref(),
             };
-            let rebuilt = rebuild(stored.data.clone(), &columns, stored.value.as_ref());
+            let from_db = stored.data.as_ref().map(jsonb_ordered);
+            let rebuilt = rebuild(from_db.clone(), &columns, stored.value.as_ref())
+                .expect("a stored row rebuilds");
+            assert_eq!(rebuilt, row.data, "row {} at {:?}", row.num, row.path);
             assert_eq!(
-                rebuilt,
-                Some(row.data.clone()),
-                "row {} at {:?}",
+                serde_json::to_string(&rebuilt).expect("serializable"),
+                served_before(&row.data, &rebuilt, from_db.as_ref(), &stored.header),
+                "key order of row {} at {:?}",
                 row.num,
                 row.path
             );
-            slimmed += usize::from(stored.data.is_none());
-            typed += usize::from(stored.value.is_some());
+            tally.rows += 1;
+            tally.empty += usize::from(stored.data.is_none());
+            tally.typed += usize::from(stored.value.is_some());
+            tally.archetyped += usize::from(stored.header.rm_version.is_some());
+            tally.language += usize::from(stored.header.language.is_some());
+            tally.encoding += usize::from(stored.header.encoding.is_some());
         }
-        (rows.len(), slimmed, typed)
+    }
+
+    /// The JSON files of a corpus directory, relative to the crate.
+    fn corpus(dir: &str, suffix: &str) -> Vec<Value> {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(dir);
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .expect("the vendored corpus is readable")
+            .map(|entry| entry.expect("a directory entry").path())
+            .filter(|path| path.to_string_lossy().ends_with(suffix))
+            .collect();
+        files.sort();
+        files
+            .into_iter()
+            .filter_map(|path| {
+                let raw = std::fs::read_to_string(&path).expect("a corpus file is readable");
+                serde_json::from_str::<Value>(&raw).ok()
+            })
+            .collect()
     }
 
     #[test]
     fn every_vendored_example_composition_round_trips() {
-        let dir =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/templates/ckm");
-        let mut files: Vec<_> = std::fs::read_dir(&dir)
-            .expect("the vendored templates are readable")
-            .map(|entry| entry.expect("a directory entry").path())
-            .filter(|path| path.to_string_lossy().ends_with(".example.json"))
-            .collect();
-        files.sort();
+        let examples = corpus("../../corpus/templates/ckm", ".example.json");
         assert!(
-            files.len() >= 10,
+            examples.len() >= 10,
             "found only {} example compositions",
-            files.len()
+            examples.len()
         );
-        let (mut rows, mut empty, mut typed) = (0, 0, 0);
-        for path in files {
-            let raw = std::fs::read_to_string(&path).expect("an example is readable");
-            let composition: Value = serde_json::from_str(&raw).expect("an example is JSON");
-            let (r, e, t) = assert_round_trip(composition);
-            rows += r;
-            empty += e;
-            typed += t;
+        let mut tally = Tally::default();
+        for composition in examples {
+            assert_round_trip(composition, &mut tally);
         }
+        let Tally {
+            rows,
+            empty,
+            typed,
+            archetyped,
+            language,
+            encoding,
+        } = tally;
         assert!(
             empty * 4 > rows,
             "only {empty} of {rows} rows store no fragment"
@@ -407,12 +509,44 @@ mod tests {
             typed * 10 > rows,
             "only {typed} of {rows} rows hold a typed value"
         );
+        // The CKM examples carry 625 non-root archetype roots, 19 of them with
+        // an id the recasing does not give back, and 270 entries.
+        assert!(
+            archetyped >= 600,
+            "only {archetyped} archetype headers moved"
+        );
+        assert!(
+            language >= 270 && encoding >= 270,
+            "{language} languages, {encoding} encodings"
+        );
+    }
+
+    #[test]
+    fn the_openehr_sdk_composition_corpus_round_trips() {
+        let compositions: Vec<Value> = corpus(
+            "../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json",
+            ".json",
+        )
+        .into_iter()
+        .filter(|c| c.get("_type").and_then(Value::as_str) == Some("COMPOSITION"))
+        .collect();
+        assert!(
+            compositions.len() >= 50,
+            "found only {}",
+            compositions.len()
+        );
+        let mut tally = Tally::default();
+        for composition in compositions {
+            assert_round_trip(composition, &mut tally);
+        }
+        assert!(tally.archetyped > 0 && tally.language > 0, "{tally:?}");
     }
 
     #[test]
     fn the_keys_the_columns_hold_are_left_out() {
         let stored = slim(
             "ELEMENT",
+            false,
             json!({"_type": "ELEMENT", "archetype_node_id": "at0004",
                 "name": {"_type": "DV_TEXT", "value": "Systolic"},
                 "value": {"_type": "DV_QUANTITY", "magnitude": 120.0, "units": "mm[Hg]"}}),
@@ -440,7 +574,7 @@ mod tests {
             "name": {"_type": "DV_TEXT", "value": "x", "mappings": []},
             "value": {"_type": "DV_QUANTITY", "magnitude": 1, "units": "1", "precision": 0},
             "null_flavour": {"_type": "DV_CODED_TEXT", "value": "unknown"}});
-        let stored = slim("ELEMENT", fragment.clone());
+        let stored = slim("ELEMENT", false, fragment.clone());
         let mut expected = fragment;
         expected.as_object_mut().map(|m| m.shift_remove("_type"));
         assert_eq!(stored.data, Some(expected));
@@ -451,6 +585,7 @@ mod tests {
     fn a_value_off_an_element_is_never_typed() {
         let stored = slim(
             "CLUSTER",
+            false,
             json!({"_type": "CLUSTER", "value": {"_type": "DV_TEXT", "value": "x"}}),
         );
         assert_eq!(stored.value, None);
@@ -464,12 +599,14 @@ mod tests {
     fn a_boolean_and_an_ordinal_are_typed() {
         let flag = slim(
             "ELEMENT",
+            false,
             json!({"_type": "ELEMENT",
             "value": {"_type": "DV_BOOLEAN", "value": false}}),
         );
         assert_eq!(flag.value.map(|v| v.text), Some(Some("false".to_owned())));
         let ordinal = slim(
             "ELEMENT",
+            false,
             json!({"_type": "ELEMENT",
             "value": {"_type": "DV_ORDINAL", "value": 2, "symbol": {"_type": "DV_CODED_TEXT",
                 "value": "moderate", "defining_code": {"_type": "CODE_PHRASE",

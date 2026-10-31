@@ -98,7 +98,7 @@ async fn ehr_access_settings_round_trip_through_contribution() {
             "_type": "ORIGINAL_VERSION",
             "commit_audit": { "change_type": coded("251", "modification"), "committer": committer("alice") },
             "lifecycle_state": coded("532", "complete"),
-            "preceding_version_uid": preceding,
+            "preceding_version_uid": { "value": preceding },
             "data": ehr_access_with_settings()
         } ],
         "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("alice") }

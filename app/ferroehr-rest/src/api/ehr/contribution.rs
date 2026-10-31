@@ -62,10 +62,6 @@ pub(super) async fn run(
                 ContributionCreateParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            // TODO(#3595): commit through the typed `NewContribution`; the raw
-            // body stays while the service still accepts member spellings the
-            // generated envelope refuses (the `Terminology_code` form, an
-            // omitted member `change_type`, an `ATTESTATION` member `_type`).
             // NOTE: a CONTRIBUTION commit is a wrapper DTO, not a single
             // canonical RM value with a defined canonical-XML shape — so it is
             // accepted as JSON only.

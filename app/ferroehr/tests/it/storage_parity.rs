@@ -119,7 +119,7 @@ const TYPED_VALUE_TEMPLATES: [&str; 4] = [
 
 /// Commits the `medium` example of every [`TYPED_VALUE_TEMPLATES`] entry into
 /// one new EHR.
-async fn seed_typed_value_compositions(svc: &FerroEhrService) {
+pub(crate) async fn seed_typed_value_compositions(svc: &FerroEhrService) {
     let ehr_id = svc.create_ehr(None).await.expect("ehr create");
     for template in TYPED_VALUE_TEMPLATES {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -196,7 +196,7 @@ async fn node_fragment_rebuilds_every_row_the_decomposer_cut() {
         let stored: Vec<(i32, Value)> = sqlx::query_as(
             "SELECT num, ext.node_fragment(data, rm_type, archetype, name, name_code, \
                     name_terminology, value_type, value_num, value_text, value_code, \
-                    value_terminology) \
+                    value_terminology, rm_version, language, encoding) \
                FROM node WHERE vo_id = $1 AND sys_version = $2 ORDER BY num",
         )
         .bind(vo_id)
@@ -1255,7 +1255,8 @@ async fn stored_demographic_rows(pool: &PgPool, vo_id: VoId, sys_version: i32) -
     let rows: Vec<(i32, i32, i32, String, Value)> = sqlx::query_as(
         "SELECT num, num_cap, parent_num, path, \
                 ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
-                value_type, value_num, value_text, value_code, value_terminology) FROM party.node \
+                value_type, value_num, value_text, value_code, value_terminology, rm_version, \
+                language, encoding) FROM party.node \
          WHERE vo_id = $1 AND sys_version = $2 ORDER BY num",
     )
     .bind(vo_id.0)
@@ -1436,7 +1437,7 @@ async fn node_search_text_reads_the_same_text_from_the_columns_and_the_fragment(
                     IS DISTINCT FROM ext.node_search_text(NULL, NULL, \
                         ext.node_fragment(data, rm_type, archetype, name, name_code, \
                             name_terminology, value_type, value_num, value_text, value_code, \
-                            value_terminology))) \
+                            value_terminology, rm_version, language, encoding))) \
            FROM node WHERE rm_type = 'ELEMENT'",
     )
     .fetch_one(&pool)

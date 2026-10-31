@@ -828,7 +828,8 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
     let nodes: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM party.node WHERE vo_id = $1 \
          AND ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
-             value_type, value_num, value_text, value_code, value_terminology)::text LIKE $2",
+             value_type, value_num, value_text, value_code, value_terminology, rm_version, \
+             language, encoding)::text LIKE $2",
     )
     .bind(vo_id)
     .bind(format!("%{SYNTHETIC_BSN}%"))
@@ -915,7 +916,7 @@ fn persons_with_bsn(families: &[&str], bsn: &str) -> serde_json::Value {
             let person = person_carrying(family, &[("nl-bsn", bsn)]);
             serde_json::json!({
                 "_type": "ORIGINAL_VERSION",
-                "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                "lifecycle_state": crate::fixtures::lifecycle("532"),
                 "commit_audit": {
                     "change_type": coded("249", "creation"),
                     "committer": committer

@@ -59,7 +59,7 @@ fn modify_contribution(data: &Value, preceding: &str) -> Value {
             "preceding_version_uid": { "value": preceding },
             // Required on every CONTRIBUTION member (ITS-REST
             // UpdateVersion.yaml `required`).
-            "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+            "lifecycle_state": crate::fixtures::lifecycle("532"),
             "commit_audit": {
                 "change_type": change_type("251", "modification"),
                 "committer": committer("branching tester")

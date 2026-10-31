@@ -102,7 +102,7 @@ async fn seed_scheme(svc: &FerroEhrService, ehr_id: ferroehr::ids::EhrId, scheme
             "_type": "ORIGINAL_VERSION",
             "commit_audit": { "change_type": coded("251", "modification"), "committer": committer("alice") },
             "lifecycle_state": coded("532", "complete"),
-            "preceding_version_uid": preceding,
+            "preceding_version_uid": { "value": preceding },
             "data": {
                 "_type": "EHR_ACCESS",
                 "archetype_node_id": "openEHR-EHR-EHR_ACCESS.generic.v1",

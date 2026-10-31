@@ -34,7 +34,7 @@ app/ferroehr-viewer/src/pages/templates.rs 1346
 app/ferroehr-viewer/src/pages/terminology.rs 812
 app/ferroehr/src/aql/ir.rs 822
 app/ferroehr/src/aql/sql/from.rs 1557
-app/ferroehr/src/aql/sql/value.rs 1143
+app/ferroehr/src/aql/sql/value.rs 1129
 app/ferroehr/src/config/auth.rs 993
 app/ferroehr/src/config/authz.rs 848
 app/ferroehr/src/config/deployment.rs 1237
@@ -62,10 +62,9 @@ app/ferroehr/src/system_log/categories.rs 989
 app/ferroehr/src/system_log/fhir.rs 1374
 app/ferroehr/src/system_log/sender.rs 1180
 app/ferroehr/src/system_log/store.rs 2075
-app/ferroehr/src/versioning/attestation.rs 990
-app/ferroehr/src/versioning/audit.rs 888
+app/ferroehr/src/versioning/audit.rs 839
 app/ferroehr/src/versioning/change.rs 1574
-app/ferroehr/src/versioning/contribution.rs 2115
+app/ferroehr/src/versioning/contribution.rs 1604
 crates/openehr-adl/src/adl14/convert.rs 1013
 crates/openehr-adl/src/adl14/domain.rs 1112
 crates/openehr-adl/src/assemble.rs 831

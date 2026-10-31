@@ -1215,10 +1215,26 @@ async fn attesting_an_imported_version_is_refused() {
                 "committer": {
                     "_type": "PARTY_IDENTIFIED",
                     "name": "senior reviewer"
+                }
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": {
+                    "_type": "DV_CODED_TEXT",
+                    "value": "attestation",
+                    "defining_code": {
+                        "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                        "code_string": "666"
+                    }
+                },
+                "committer": {
+                    "_type": "PARTY_IDENTIFIED",
+                    "name": "senior reviewer"
                 },
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }]
     });
     let err = target

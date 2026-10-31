@@ -24,7 +24,7 @@
 )]
 
 use openehr_base::prelude::TerminologyId;
-use openehr_its::rest::generated::common::UpdateAudit;
+use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData};
 use openehr_rm::prelude::{
     Attestation, AuditDetails, AuditDetailsData, CodePhrase, DvCodedText, DvDateTime, DvText,
     DvTextData, PartyProxy,
@@ -267,6 +267,32 @@ impl AuditInput {
         })
     }
 
+    /// Build a CONTRIBUTION commit audit (the CONTRIBUTION's own or a member's
+    /// `commit_audit`) from its generated `UPDATE_AUDIT`, with the client's
+    /// already-resolved numeric `audit_change_type` code.
+    ///
+    /// The `committer` and `description` are the ones the audit states, kept
+    /// whole; an omitted `system_id` is `default_system_id` (this server's for
+    /// the CONTRIBUTION audit, the CONTRIBUTION audit's for a member: RM common
+    /// master06 §Committal and Audits). A stated one is kept as stated, so an
+    /// empty one reaches [`validate_commit_audit`]'s `System_id_valid`.
+    pub(crate) fn from_commit_audit(
+        update: &UpdateAuditData,
+        change_type: String,
+        default_system_id: &str,
+    ) -> Self {
+        Self {
+            system_id: update
+                .system_id
+                .clone()
+                .unwrap_or_else(|| default_system_id.to_owned()),
+            change_type,
+            description: update.description.clone(),
+            committer: crate::service::committer::attributed(update.committer.clone()),
+            attestation: None,
+        }
+    }
+
     /// The commit audit of a stored version-metadata row: the three jsonb
     /// columns decoded back into the RM values they hold.
     ///
@@ -449,51 +475,6 @@ pub(crate) fn party_proxy(committer: &Value) -> Result<PartyProxy, ServiceError>
     })
 }
 
-/// Reads the `committer` a client-supplied commit audit states, which every
-/// commit audit must state.
-///
-/// ITS-REST `specifications/schemas/common/UpdateAudit.yaml` lists `committer`
-/// under `required` (inherited by `UpdateAttestation.yaml` through `allOf`),
-/// and the schema leaves only `time_committed` and `system_id` to the server.
-/// A missing
-/// one (absent or `null`), or one that does not decode as the canonical
-/// `PARTY_PROXY` its `UPartyProxy.yaml` schema describes (a string, an empty
-/// object), is therefore a body that does not match its schema, the
-/// "syntactically invalid … content" of `responses/400_CONTRIBUTION.yaml`. A
-/// decoded committer that breaks its own RM invariants is the semantic `422`
-/// of [`validate_commit_audit`]. `owner` names the audit in the refusal
-/// (`CONTRIBUTION.audit`, `commit_audit`, `UPDATE_ATTESTATION`).
-///
-/// # Errors
-/// [`ServiceError::BadRequest`] when `committer` is absent, `null`, or not a
-/// canonical `PARTY_PROXY`.
-pub(crate) fn required_committer(
-    audit: Option<&Value>,
-    owner: &str,
-) -> Result<PartyProxy, ServiceError> {
-    match audit
-        .and_then(|a| a.get("committer"))
-        .filter(|c| !c.is_null())
-    {
-        Some(supplied) => {
-            openehr_its::json::from_canonical_value::<PartyProxy>(supplied).map_err(|e| {
-                ServiceError::bad_request(
-                    format!(
-                        "{owner}.committer is not a canonical PARTY_PROXY ({e}): UPDATE_AUDIT \
-                         types it UPartyProxy (ITS-REST schemas/common/UpdateAudit.yaml)"
-                    ),
-                    e,
-                )
-            })
-        }
-        None => Err(ServiceError::precondition(format!(
-            "{owner}.committer is required: UPDATE_AUDIT requires committer (ITS-REST \
-             schemas/common/UpdateAudit.yaml; SM update_audit.adoc committer 1..1), and \
-             the server never supplies it on the client's behalf"
-        ))),
-    }
-}
-
 /// Validate a client-supplied commit `AUDIT_DETAILS`' non-terminology RM
 /// invariants before it is persisted (a CONTRIBUTION audit or a version
 /// `commit_audit`).
@@ -548,7 +529,10 @@ pub(crate) fn validate_commit_audit(audit: &AuditInput) -> Result<(), ServiceErr
 /// serialized here to be judged; running only
 /// [`openehr_base::validate::Validate`] on the typed value would drop the
 /// terminology tier that decides `PARTY_RELATED.Relationship_valid`.
-fn validate_committer(committer: &PartyProxy) -> Result<(), ServiceError> {
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] carrying the dispatcher's violations.
+pub(crate) fn validate_committer(committer: &PartyProxy) -> Result<(), ServiceError> {
     let mut violations = Vec::new();
     openehr_its::wire_validate::validate_rm_value(
         &openehr_its::json::to_canonical_value(committer),
@@ -795,39 +779,6 @@ mod tests {
                 other => panic!("{bad}: expected Unprocessable, got {other:?}"),
             }
         }
-    }
-
-    /// A client-supplied committer that does not decode as a canonical
-    /// `PARTY_PROXY` does not match its `UPartyProxy` schema
-    /// (`schemas/common/UpdateAudit.yaml`), so [`required_committer`] refuses it
-    /// with the 400 of `responses/400_CONTRIBUTION.yaml` ("syntactically invalid
-    /// … content"); a decoded committer breaking its own invariants stays the
-    /// 422 [`commit_audit_rejects_committer_without_identity`] pins.
-    #[test]
-    fn required_committer_refuses_a_non_canonical_committer_as_400() {
-        for bad in [
-            json!("Dr Jones"),
-            json!({}),
-            json!(42),
-            json!({ "_type": "PARTY_RELATED", "name": "Mum" }),
-        ] {
-            let audit = json!({ "committer": bad });
-            match required_committer(Some(&audit), "commit_audit") {
-                Err(ServiceError::BadRequest(e)) => assert!(
-                    e.message
-                        .starts_with("commit_audit.committer is not a canonical PARTY_PROXY"),
-                    "{bad}: {e:?}"
-                ),
-                other => panic!("{bad}: expected the 400 refusal, got {other:?}"),
-            }
-        }
-        // The decodable twin: an identity-less PARTY_IDENTIFIED decodes here
-        // and is left to the invariant check.
-        let decodable = json!({ "committer": { "_type": "PARTY_IDENTIFIED" } });
-        assert!(
-            required_committer(Some(&decodable), "commit_audit").is_ok(),
-            "a canonical PARTY_PROXY decodes"
-        );
     }
 
     #[test]
