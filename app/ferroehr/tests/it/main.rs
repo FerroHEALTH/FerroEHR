@@ -23,6 +23,7 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+mod access_delay_sinks;
 mod access_event_fail_closed;
 mod access_origins;
 mod adl14_knowledge_archetypes;
