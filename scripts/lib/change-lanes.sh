@@ -2,7 +2,8 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Which CI lanes a change needs: the path classifiers of the `changes` jobs in
-# ci.yml, docs.yml, sonar.yml and conformance.yml, in one place (#4208).
+# ci.yml, docs.yml and sonar.yml, in one place (#4208). ci.yml reads the
+# conformance lane too, for the catalogue it runs on a pull request (#4539).
 #
 # It reads the changed-path list on stdin, whole, and prints one `lane=true`
 # or `lane=false` line per lane of the named workflow, the form
@@ -42,7 +43,7 @@ set -euo pipefail
 # sonar: the scanned trees, their manifests, the scan scope and the recipe.
 # conformance (#4449): the server build (never the viewer), the party set,
 # the conformance deployment's compose files and what it mounts, the
-# pipeline scripts and the recipe.
+# pipeline scripts and the recipe, conformance.yml, which ci.yml calls.
 readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/)
 ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
 ci|msrv|(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$

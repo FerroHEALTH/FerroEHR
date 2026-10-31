@@ -56,8 +56,7 @@ Distributed]).
   requires the data deleted.
 - **`UPDATE_VERSION.lifecycle_state` is optional in practice**:
   `contribution.rs:972 lifecycle_of` returns `Option`, defaulting to 532 —
-  SM master03 §Version Update Semantics says "must be supplied in all cases"
-  and `UpdateVersion.yaml` marks it required.
+  `UpdateVersion.yaml` marks it required.
 - **The transition-legality 422 is invented and unregistered**:
   `versioning/lifecycle.rs:107 validate_transition` refuses e.g.
   `complete → incomplete`, `abandoned → complete` with a 422 naming

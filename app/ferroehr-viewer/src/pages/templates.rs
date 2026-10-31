@@ -18,16 +18,15 @@
 
 use std::collections::BTreeSet;
 
+mod adl2;
+
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::StateSource;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, menu_cell, title_cell,
-};
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu, row_menu};
+use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::browser::{BrowserPane, Heading, Panes, PathNode, browser, path_node};
 use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::diagnostics::diagnostics;
@@ -43,11 +42,7 @@ use ferrohealth_ui::view::template::list::{
 };
 use ferrohealth_ui::view::tree::{Tree, TreeKind, TreeNode, TreeWords, tree_view};
 
-use crate::adl2::family_versions;
 use crate::adl2::{TemplateFamily, split_hrid};
-use crate::bff::template_adl2::{
-    fetch_adl2_catalog, fetch_adl2_example, fetch_adl2_json, fetch_adl2_source,
-};
 use crate::bff::template_detail::TemplateDetail;
 use crate::bff::template_detail::{fetch_example, fetch_template_detail};
 use crate::bff::templates::TemplateRow;
@@ -66,10 +61,13 @@ use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, ago, card_panel, count, dock_editor, document_section, findings_of, info_note,
-    panel, plain_section, refused, section, when,
+    EditorDock, card_panel, count, dock_editor, document_section, findings_of, info_note, panel,
+    plain_section, refused, section, when,
 };
+use crate::pages::template_releases::{CompareAsk, Releases, lineage_table, load_releases};
 use crate::routes::Drawn;
+use crate::template_releases::{Lineage, lineages};
+use adl2::{Adl2Body, Adl2Template, adl2_tabs, load_adl2_template};
 
 /// The id of Delete template's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-template";
@@ -94,7 +92,8 @@ pub fn adl2_href(stem: &str, release: Option<&str>) -> String {
 }
 
 /// The query builder over `template_id`, at `path` when one is named.
-fn query_href(template_id: &str, path: Option<&str>) -> String {
+#[must_use]
+pub fn query_href(template_id: &str, path: Option<&str>) -> String {
     let mut href = format!("/query?template={}", urlencoding::encode(template_id));
     if let Some(path) = path {
         href.push_str("&path=");
@@ -108,83 +107,6 @@ fn asked_family() -> TemplateFamily {
     crate::request::query("family")
         .as_deref()
         .map_or(TemplateFamily::Adl14, TemplateFamily::from_query)
-}
-
-/// The templates of one family as a table, each with its row menu and its
-/// delete confirmation.
-fn rows_table(family: TemplateFamily, rows: &[TemplateRow]) -> Html {
-    let columns = [
-        Column::text("template", tr(DefinitionsMsg::ColumnTemplate)).role(Role::Title),
-        Column::text("root", tr(DefinitionsMsg::ColumnRootArchetype)).role(Role::Sub),
-        Column::text("uploaded", tr(DefinitionsMsg::ColumnUploaded)).role(Role::Meta),
-        Column::text("menu", tr(Msg::ColumnActions)).role(Role::Menu),
-    ];
-    let body = rows
-        .iter()
-        .enumerate()
-        .map(|(index, row)| {
-            let (href, name) = match family {
-                TemplateFamily::Adl14 => (template_href(&row.template_id), t(&row.template_id)),
-                TemplateFamily::Adl2 => {
-                    let (stem, release) = split_hrid(&row.template_id);
-                    (
-                        adl2_href(stem, release),
-                        h(format!("<code>{}</code>", t(&row.template_id))),
-                    )
-                }
-            };
-            let sub = h(format!(
-                r#"<span class="fui-row-sub">{}</span>"#,
-                t(&row.concept)
-            ));
-            let confirm = format!(
-                "{href}{}confirm=delete",
-                if href.contains('?') { '&' } else { '?' }
-            );
-            let menu = row_menu(
-                &current(),
-                &Menu::new(
-                    format!("template-{index}"),
-                    tr_with(
-                        Msg::TemplateActionsFor,
-                        &[("name", row.template_id.clone().into())],
-                    ),
-                    row.is_composition()
-                        .then(|| {
-                            Item::new(Action::new(
-                                Some(Glyph::SQUARE_TERMINAL),
-                                tr(DefinitionsMsg::TemplateBuildQuery),
-                                Act::Link(query_href(&row.template_id, None)),
-                            ))
-                        })
-                        .into_iter()
-                        .collect(),
-                )
-                .destructive(vec![Item::new(Action::new(
-                    Some(Glyph::TRASH),
-                    tr(DefinitionsMsg::TemplateDeleteRow),
-                    Act::Link(confirm),
-                ))]),
-            );
-            h(format!(
-                "<tr>{}{}{}{}</tr>",
-                title_cell(Some(&href), name, Some(sub)),
-                cell(
-                    &columns[1],
-                    h(format!("<code>{}</code>", t(&row.archetype_id)))
-                ),
-                cell(&columns[2], ago(&row.created)),
-                menu_cell(menu)
-            ))
-        })
-        .collect();
-    let caption = tr(family.label());
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(body),
-    })
 }
 
 /// The confirmation of deleting the template `template_id` of `family`,
@@ -340,26 +262,27 @@ pub async fn list_page() -> Drawn {
     };
     let acted = delete_refused(acted.as_ref());
     let needle = find.to_lowercase();
-    let keep =
-        |rows: Result<Vec<TemplateRow>, ViewerError>| -> Result<Vec<TemplateRow>, ViewerError> {
-            rows.map(|rows| {
-                rows.into_iter()
-                    .filter(|row| {
-                        needle.is_empty()
-                            || row.template_id.to_lowercase().contains(&needle)
-                            || row.concept.to_lowercase().contains(&needle)
-                            || row.archetype_id.to_lowercase().contains(&needle)
-                    })
-                    .collect()
-            })
-        };
+    let matches = |row: &TemplateRow| {
+        needle.is_empty()
+            || row.template_id.to_lowercase().contains(&needle)
+            || row.concept.to_lowercase().contains(&needle)
+            || row.archetype_id.to_lowercase().contains(&needle)
+    };
+    let keep = |rows: Result<Vec<TemplateRow>, ViewerError>| {
+        rows.map(|rows| {
+            lineages(rows)
+                .into_iter()
+                .filter(|lineage| lineage.releases().iter().any(matches))
+                .collect::<Vec<Lineage>>()
+        })
+    };
     let (adl14, adl2) = (keep(adl14), keep(adl2));
-    let size = |rows: &Result<Vec<TemplateRow>, ViewerError>| {
+    let size = |rows: &Result<Vec<Lineage>, ViewerError>| {
         rows.as_ref()
             .ok()
             .map(|rows| u64::try_from(rows.len()).unwrap_or(u64::MAX))
     };
-    let tab = |each: TemplateFamily, rows: &Result<Vec<TemplateRow>, ViewerError>| {
+    let tab = |each: TemplateFamily, rows: &Result<Vec<Lineage>, ViewerError>| {
         let mut href = format!("/templates?family={}", each.as_query());
         if !find.is_empty() {
             href.push_str("&q=");
@@ -389,7 +312,7 @@ pub async fn list_page() -> Drawn {
             }),
             None,
         ),
-        Ok(rows) => rows_table(family, &rows),
+        Ok(rows) => lineage_table(family, &rows),
         Err(error) => refused(tr(DefinitionsMsg::TemplatesRefused), &error, None),
     };
     let action = "/templates".to_owned();
@@ -603,16 +526,20 @@ pub enum TemplateTab {
     Json,
     /// An example composition.
     Example,
+    /// The comparison of two releases.
+    Compare,
 }
 
 impl TemplateTab {
     /// The tab the address names.
-    fn asked() -> Self {
+    #[must_use]
+    pub fn asked() -> Self {
         match crate::request::query("tab").as_deref() {
             Some("paths") => Self::Paths,
             Some("source") => Self::Source,
             Some("json") => Self::Json,
             Some("example") => Self::Example,
+            Some("compare") => Self::Compare,
             _ => Self::Overview,
         }
     }
@@ -625,6 +552,7 @@ impl TemplateTab {
             Self::Source => "source",
             Self::Json => "json",
             Self::Example => "example",
+            Self::Compare => "compare",
         }
     }
 
@@ -636,6 +564,7 @@ impl TemplateTab {
             Self::Source => tr(DefinitionsMsg::TemplateSource),
             Self::Json => tr(DefinitionsMsg::TemplateJson),
             Self::Example => tr(DefinitionsMsg::TemplateExample),
+            Self::Compare => tr(DefinitionsMsg::TemplateCompare),
         }
     }
 }
@@ -886,16 +815,16 @@ fn example_panel(
     panel(plain_section(form).then(shown))
 }
 
-/// The header of a template: its name, its family line, Build a query (for a
-/// template the query builder reaches, `queryable`), the More menu with the
-/// template's `download` address, and what comes `after`.
+/// The header of a template: its name with its release `badge`, its family
+/// line, Build a query (for a template the query builder reaches,
+/// `queryable`) and the More menu with the template's `download` address.
 fn template_header(
     title: String,
     subtitle: String,
     template_id: &str,
     family: TemplateFamily,
     download: String,
-    after: Option<Html>,
+    badge: Option<Html>,
     queryable: bool,
 ) -> Html {
     let more = Menu::new(
@@ -919,7 +848,7 @@ fn template_header(
         tr(DefinitionsMsg::TemplateDelete),
         Act::Dialog(DELETE_DIALOG.to_owned()),
     ))]);
-    let heading = page_heading(
+    page_heading(
         &current(),
         Header {
             title: title.into(),
@@ -929,7 +858,7 @@ fn template_header(
                 format!("/templates?family={}", family.as_query()),
             )],
             mono: false,
-            badge: None,
+            badge,
             subtitle_view: None,
         },
         if queryable {
@@ -942,8 +871,7 @@ fn template_header(
             ActionGroup::none()
         }
         .more(more),
-    );
-    heading.then(opt(after))
+    )
 }
 
 /// What one ADL 1.4 template's page read.
@@ -955,15 +883,15 @@ pub struct Template {
     detail: Result<TemplateDetail, ViewerError>,
     /// The template's download address.
     download: String,
-    /// When it was uploaded, on the Overview tab.
-    uploaded: Option<String>,
+    /// Its releases, with what the tab draws of them.
+    releases: Releases,
     /// The example the CDR built, on the Example tab of a root it builds
     /// examples for.
     example: Option<Result<Option<String>, ViewerError>>,
 }
 
 /// Answers a delete posted to the ADL 1.4 template `template_id` and reads
-/// what its tab `tab` draws, the example as `ask` names it.
+/// its releases and what its tab `tab` draws, the example as `ask` names it.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session.
@@ -979,7 +907,14 @@ pub async fn load_template(
     let acted = delete_posted("/templates").await;
     let download = crate::download::template_href(TemplateFamily::Adl14, &template_id);
     let mut detail = fetch_template_detail(template_id.clone()).await;
-    let mut uploaded = None;
+    let releases = load_releases(
+        TemplateFamily::Adl14,
+        list_templates().await,
+        &template_id,
+        tab,
+        CompareAsk::asked(),
+    )
+    .await?;
     let mut example = None;
     match &mut detail {
         Err(error) => {
@@ -1008,16 +943,11 @@ pub async fn load_template(
                         );
                     }
                 }
-                TemplateTab::Overview => {
-                    uploaded = list_templates()
-                        .await
-                        .ok()
-                        .and_then(|rows| {
-                            rows.into_iter().find(|row| row.template_id == template_id)
-                        })
-                        .map(|row| row.created);
-                }
-                TemplateTab::Paths | TemplateTab::Source | TemplateTab::Json => {}
+                TemplateTab::Overview
+                | TemplateTab::Paths
+                | TemplateTab::Source
+                | TemplateTab::Json
+                | TemplateTab::Compare => {}
             }
         }
     }
@@ -1025,7 +955,7 @@ pub async fn load_template(
         acted,
         detail,
         download,
-        uploaded,
+        releases,
         example,
     })
 }
@@ -1050,7 +980,7 @@ pub async fn page() -> Drawn {
         acted,
         detail,
         download,
-        uploaded,
+        releases,
         example,
     } = match load_template(template_id.clone(), tab, ask.clone()).await {
         Ok(template) => template,
@@ -1087,11 +1017,14 @@ pub async fn page() -> Drawn {
         TemplateTab::Paths,
         TemplateTab::Source,
         TemplateTab::Example,
+        TemplateTab::Compare,
     ]
     .into_iter()
+    .filter(|each| *each != TemplateTab::Compare || releases.several())
     .map(|each| Tab::new(each.key(), tab_of(&base, each), each.label()))
     .collect();
     let body = match tab {
+        TemplateTab::Compare => releases.compare_panel(TemplateFamily::Adl14, &base),
         TemplateTab::Paths => paths_panel(&template_id, &base, &detail.catalog, None),
         TemplateTab::Source => panel(document_section(
             tr(DefinitionsMsg::TemplateSourceTitle),
@@ -1135,8 +1068,8 @@ pub async fn page() -> Drawn {
                     h(format!("<code>{}</code>", t(&detail.catalog.node_id))),
                 ),
             ];
-            if let Some(uploaded) = uploaded {
-                facts.push((tr(DefinitionsMsg::ColumnUploaded), when(&uploaded)));
+            if let Some(row) = releases.row(&template_id) {
+                facts.push((tr(DefinitionsMsg::ColumnUploaded), when(&row.created)));
             }
             let use_section = queryable.then(|| {
                 section(
@@ -1157,6 +1090,7 @@ pub async fn page() -> Drawn {
                     None,
                     definitions(facts),
                 )
+                .then(opt(releases.overview(TemplateFamily::Adl14, &template_id)))
                 .then(opt(use_section)),
             )
         }
@@ -1183,7 +1117,7 @@ pub async fn page() -> Drawn {
             &template_id,
             TemplateFamily::Adl14,
             download,
-            None,
+            releases.badge(TemplateFamily::Adl14, &template_id),
             queryable,
         ),
         h(format!(
@@ -1194,158 +1128,6 @@ pub async fn page() -> Drawn {
         delete_dialog(TemplateFamily::Adl14, &template_id, DELETE_DIALOG, &base),
     ]);
     Drawn::page(title, page)
-}
-
-/// What the tab of an ADL 2 template read.
-#[derive(Debug, Clone)]
-pub enum Adl2Body {
-    /// Its identity, from the list.
-    Overview,
-    /// Its path catalog.
-    Paths(Result<Option<CatalogNode>, ViewerError>),
-    /// Its source.
-    Source(Result<Option<String>, ViewerError>),
-    /// Its operational JSON, pretty-printed.
-    Json(Result<Option<String>, ViewerError>),
-    /// The example the CDR built, pretty-printed.
-    Example(Result<Option<String>, ViewerError>),
-}
-
-/// What one ADL 2 template's page read.
-#[derive(Debug, Clone)]
-pub struct Adl2Template {
-    /// The CDR's refusal of the delete posted.
-    acted: Option<ViewerError>,
-    /// The HRID without its release.
-    stem: String,
-    /// Every release the CDR holds of the template, oldest first.
-    releases: Vec<String>,
-    /// The latest release.
-    latest: Option<String>,
-    /// The release read.
-    release: Option<String>,
-    /// The HRID read.
-    hrid: String,
-    /// The template's row in the list.
-    row: Option<TemplateRow>,
-    /// The tab shown.
-    tab: TemplateTab,
-    /// What the tab read.
-    body: Adl2Body,
-    /// The template's download address.
-    download: String,
-}
-
-/// What an ADL 2 template's page loads: the page, or nothing for a post or
-/// a release choice it answered by sending the browser on.
-#[derive(Debug, Clone)]
-pub enum Adl2Page {
-    /// The page.
-    Read(Box<Adl2Template>),
-    /// The browser was sent on.
-    Left,
-}
-
-/// The tabs an ADL 2 template offers: Overview alone for an older release.
-fn adl2_tabs(older: bool) -> Vec<TemplateTab> {
-    let mut tabs = vec![TemplateTab::Overview];
-    if !older {
-        tabs.extend([
-            TemplateTab::Paths,
-            TemplateTab::Source,
-            TemplateTab::Json,
-            TemplateTab::Example,
-        ]);
-    }
-    tabs
-}
-
-/// Answers a delete posted to the ADL 2 template `asked_id`, sends a release
-/// `chosen` in the form on to its page, and reads the release
-/// `asked_release` names, the latest for none, with what its tab `tab`
-/// draws.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
-pub async fn load_adl2_template(
-    // The template id the address names.
-    asked_id: String,
-    // The release the address names.
-    asked_release: Option<String>,
-    // The release chosen in the release form.
-    chosen: Option<String>,
-    // The tab the address names.
-    tab: TemplateTab,
-    // The example options the address names.
-    ask: ExampleAsk,
-) -> Result<Adl2Page, ViewerError> {
-    crate::session::require_session()?;
-    let acted = delete_posted("/templates?family=adl2").await;
-    let (stem, named) = split_hrid(&asked_id);
-    let stem = stem.to_owned();
-    let listed = list_adl2_templates().await;
-    let ids: Vec<String> = listed
-        .as_ref()
-        .map(|rows| rows.iter().map(|row| row.template_id.clone()).collect())
-        .unwrap_or_default();
-    let releases = family_versions(&ids, &stem);
-    let latest = releases.last().cloned();
-    let release = asked_release
-        .clone()
-        .or_else(|| named.map(str::to_owned))
-        .or_else(|| latest.clone());
-    let hrid = release
-        .as_ref()
-        .map_or_else(|| stem.clone(), |release| format!("{stem}.v{release}"));
-    if let Some(chosen) = chosen {
-        crate::request::redirect(&adl2_href(
-            &stem,
-            (Some(&chosen) != latest.as_ref()).then_some(chosen.as_str()),
-        ));
-        return Ok(Adl2Page::Left);
-    }
-    let row = listed
-        .as_ref()
-        .ok()
-        .and_then(|rows| rows.iter().find(|row| row.template_id == hrid).cloned());
-    let older = release.is_some() && release != latest;
-    let tab = if adl2_tabs(older).contains(&tab) {
-        tab
-    } else {
-        TemplateTab::Overview
-    };
-    let version = release.clone();
-    let body = match tab {
-        TemplateTab::Paths => Adl2Body::Paths(fetch_adl2_catalog(hrid.clone(), version).await),
-        TemplateTab::Source => Adl2Body::Source(fetch_adl2_source(hrid.clone(), version).await),
-        TemplateTab::Json => {
-            Adl2Body::Json(fetch_adl2_json(hrid.clone(), version).await.map(|json| {
-                json.map(|json| crate::bff::pretty_body(&json, ReprFormat::CanonicalJson))
-            }))
-        }
-        TemplateTab::Example => {
-            let format = ask.format(crate::example_options::CANONICAL_EXAMPLE_FORMATS);
-            Adl2Body::Example(
-                fetch_adl2_example(hrid.clone(), format, ask.detail, ask.kind)
-                    .await
-                    .map(|text| text.map(|text| crate::bff::pretty_body(&text, format))),
-            )
-        }
-        TemplateTab::Overview => Adl2Body::Overview,
-    };
-    let download = crate::download::template_href(TemplateFamily::Adl2, &hrid);
-    Ok(Adl2Page::Read(Box::new(Adl2Template {
-        acted,
-        stem,
-        releases,
-        latest,
-        release,
-        hrid,
-        row,
-        tab,
-        body,
-        download,
-    })))
 }
 
 /// One ADL 2 template, at the release the address names or the latest.
@@ -1364,14 +1146,12 @@ pub async fn adl2_page() -> Drawn {
     let template = match load_adl2_template(
         asked_id.clone(),
         asked_release.clone(),
-        crate::request::query("release"),
         TemplateTab::asked(),
         ask.clone(),
     )
     .await
     {
-        Ok(Adl2Page::Read(template)) => *template,
-        Ok(Adl2Page::Left) => return Drawn::default(),
+        Ok(template) => template,
         Err(error) => {
             return Drawn::page(
                 asked_id,
@@ -1382,20 +1162,20 @@ pub async fn adl2_page() -> Drawn {
     let Adl2Template {
         acted,
         stem,
-        releases,
         latest,
         release,
         hrid,
-        row,
+        releases,
         tab,
         body,
+        missing,
         download,
     } = template;
     let acted = delete_refused(acted.as_ref());
     let base = adl2_href(&stem, asked_release.as_deref());
     let older = release.is_some() && release != latest;
-    let after = if older {
-        Some(info_note(h(format!(
+    let older_note = older.then(|| {
+        info_note(h(format!(
             r#"{} <a href="{}">{}</a>"#,
             t(tr_with(
                 DefinitionsMsg::TemplateReadingRelease,
@@ -1406,33 +1186,13 @@ pub async fn adl2_page() -> Drawn {
                 DefinitionsMsg::TemplateReadLatest,
                 &[("release", latest.clone().unwrap_or_default().into())],
             ))
-        ))))
-    } else if releases.len() > 1 {
-        let options: Html = releases
-            .iter()
-            .rev()
-            .map(|each| {
-                h(format!(
-                    r#"<option value="{}"{}>{}</option>"#,
-                    t(each),
-                    flag("selected", Some(each) == release.as_ref()),
-                    t(each)
-                ))
-            })
-            .collect();
-        Some(h(format!(
-            r#"<form class="fui-cluster fui-title-select" method="get" action="{}"><label class="fui-label" for="ver">{}</label><select id="ver" name="release" class="fui-select">{options}</select><button type="submit" class="fui-button fui-button-secondary fui-button-small">{}</button></form>"#,
-            t(adl2_href(&stem, None)),
-            t(tr(DefinitionsMsg::TemplateRelease)),
-            t(tr(Msg::PartiesOpen))
         )))
-    } else {
-        None
-    };
+    });
+    let row = releases.row(&hrid).cloned();
     let title = row
         .as_ref()
         .map_or_else(|| stem.clone(), |row| row.concept.clone());
-    let tab_list: Vec<Tab> = adl2_tabs(older)
+    let tab_list: Vec<Tab> = adl2_tabs(older, releases.several())
         .iter()
         .map(|each| Tab::new(each.key(), tab_of(&base, *each), each.label()))
         .collect();
@@ -1444,6 +1204,7 @@ pub async fn adl2_page() -> Drawn {
         )))
     };
     let body = match body {
+        _ if tab == TemplateTab::Compare => releases.compare_panel(TemplateFamily::Adl2, &base),
         Adl2Body::Paths(catalog) => match catalog {
             Ok(Some(root)) => paths_panel(
                 &hrid,
@@ -1491,6 +1252,9 @@ pub async fn adl2_page() -> Drawn {
             );
             example_panel(form, format, example)
         }
+        Adl2Body::Incomplete => panel(plain_section(info_note(t(tr(
+            DefinitionsMsg::TemplateIncompleteTab,
+        ))))),
         Adl2Body::Overview => {
             let mut facts = vec![(tr(DefinitionsMsg::TemplateConcept), t(&title))];
             if let Some(release) = &release {
@@ -1503,10 +1267,6 @@ pub async fn adl2_page() -> Drawn {
                 ));
                 facts.push((tr(DefinitionsMsg::ColumnUploaded), when(&row.created)));
             }
-            facts.push((
-                tr(DefinitionsMsg::TemplateReleases),
-                t(count_words(releases.len())),
-            ));
             panel(
                 section(
                     Some(tr(DefinitionsMsg::TemplateIdentity)),
@@ -1514,6 +1274,7 @@ pub async fn adl2_page() -> Drawn {
                     None,
                     definitions(facts),
                 )
+                .then(opt(releases.overview(TemplateFamily::Adl2, &hrid)))
                 .then(section(
                     Some(tr(DefinitionsMsg::TemplateUse)),
                     None,
@@ -1545,23 +1306,41 @@ pub async fn adl2_page() -> Drawn {
             &hrid,
             TemplateFamily::Adl2,
             download,
-            after,
+            releases.badge(TemplateFamily::Adl2, &hrid),
             true,
         ),
         h(format!(
-            r#"<div class="fui-stack">{}{}{binder}</div>"#,
+            r#"<div class="fui-stack">{}{}{}{}{binder}</div>"#,
+            opt(older_note),
             opt(acted),
-            opt(inline_confirm(TemplateFamily::Adl2, &hrid, &base))
+            opt(inline_confirm(TemplateFamily::Adl2, &hrid, &base)),
+            opt(incomplete_note(&missing))
         )),
         delete_dialog(TemplateFamily::Adl2, &hrid, DELETE_DIALOG, &base),
     ]);
     Drawn::page(title, page)
 }
 
-/// The words counting the releases of an ADL 2 template.
-fn count_words(total: usize) -> String {
-    tr_with(
-        DefinitionsMsg::TemplateReleaseCount,
-        &[("count", count(total))],
-    )
+/// The notice over every tab of an ADL 2 template the CDR cannot compile:
+/// the archetypes it lacks, by id, and the way to upload them.
+fn incomplete_note(missing: &[String]) -> Option<Html> {
+    if missing.is_empty() {
+        return None;
+    }
+    let ids: Html = missing
+        .iter()
+        .map(|id| h(format!("<li><code>{}</code></li>", t(id))))
+        .collect();
+    Some(crate::pages::common::warn_note(h(format!(
+        r#"<p>{}</p><ul>{ids}</ul><p><a href="{}">{}</a></p>"#,
+        t(tr_with(
+            DefinitionsMsg::TemplateIncomplete,
+            &[("count", count(missing.len()))],
+        )),
+        t(format!(
+            "/templates/upload?family={}",
+            TemplateFamily::Adl2.as_query()
+        )),
+        t(tr(DefinitionsMsg::TemplateIncompleteUpload))
+    ))))
 }

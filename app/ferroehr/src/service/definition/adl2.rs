@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_DEFINITION_ADL2` (`i_definition_adl2.adoc`): ADL2 artefacts (archetype /
+//! The ADL2 definitions: ADL2 artefacts (archetype /
 //! template / `operational_template`) keyed by `ARCHETYPE_HRID`, on the
 //! `adl2_artefact` store.
 //!
@@ -9,8 +9,8 @@
 //! phase 2 → specialisation phase 2 against the flat parent). The engine needs
 //! an [`ArchetypeRepository`] to resolve specialisation parents +
 //! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds one by
-//! parsing every stored ADL2 source (the registry is low-volume — SM
-//! `I_DEFINITION_ADL2` is an admin surface — so parse-on-demand is cheap; the
+//! parsing every stored ADL2 source (the registry is low-volume — an admin
+//! surface — so parse-on-demand is cheap; the
 //! `openehr-adl` phases degrade gracefully when a parent is unresolved).
 
 #![expect(
@@ -26,7 +26,7 @@ use openehr_adl::artefact::ArchetypeRepository;
 use openehr_adl::assemble::parse_artefact;
 use openehr_adl::hrid::{raw_id_concept, raw_id_lookup_key, raw_id_version};
 use openehr_adl::meta::{ArtefactSummary, summarize};
-use openehr_adl::opt::create_opt;
+use openehr_adl::opt::{OptError, create_opt, unresolved_constituents};
 use openehr_adl::parse::Dialect;
 use openehr_adl::validate::bindings::{TerminologyResolver, external_term_bindings};
 use openehr_adl::validate::catalogue::Severity;
@@ -50,8 +50,9 @@ use sqlx::Row;
 use crate::service::FerroEhrService;
 use crate::service::error::{ErrorChain, ServiceError, Violation};
 use crate::service::list::Page;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
+use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
 use super::{compile_pattern, page_bounds, paginate};
 
 /// The `WebTemplate`-cache key namespace for ADL2/OPT2 templates. The trailing
@@ -93,7 +94,7 @@ impl TerminologyResolver for AdlTerminologyResolver {
     }
 }
 
-// ── SM Definitions native API (I_DEFINITION_ADL2) — the catalog contract ─────
+// ── the native ADL2 definition calls ────────────────────────────────────────
 
 impl FerroEhrService {
     /// `has_artefact` — true if an ADL2 artefact with `ARCHETYPE_HRID` `an_id`
@@ -103,7 +104,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn has_artefact(&self, an_id: String) -> Result<bool, SmError> {
+    pub async fn has_artefact(&self, an_id: String) -> Result<bool, StatusError> {
         Ok(self.adl2_exists(&an_id).await?)
     }
 
@@ -114,7 +115,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// Never — the `Result` shape mirrors the SM catalog; validity is reported
+    /// Never — the `Result` shape matches the other calls; validity is reported
     /// in the `Ok` boolean.
     #[expect(
         clippy::unused_self,
@@ -123,7 +124,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn valid_artefact(&self, adl2: &str) -> Result<bool, SmError> {
+    pub fn valid_artefact(&self, adl2: &str) -> Result<bool, StatusError> {
         Ok(matches!(
             validate_source_integrity(adl2, Dialect::Adl2, None),
             Ok(issues) if issues.iter().all(|i| i.severity != Severity::Error)
@@ -135,9 +136,7 @@ impl FerroEhrService {
     ///
     /// An existing artefact with the same `ARCHETYPE_HRID` is a conflict, never
     /// replaced: the released REST API answers `409` (ITS-REST definition OAS,
-    /// `POST /definition/template/adl2` → `409_template_already_exists`), and
-    /// the wire is the API oracle where the SM's `i_definition_adl2.adoc`
-    /// wording ("replace it") differs.
+    /// `POST /definition/template/adl2` → `409_template_already_exists`).
     ///
     /// # Errors
     ///
@@ -145,7 +144,7 @@ impl FerroEhrService {
     ///   invalid content — `responses/400.yaml`); source that fails an AOM2
     ///   validation phase → `invalid_artefact` (`422`, via [`ServiceError`]).
     /// - A database failure (`exception` → `500`).
-    pub async fn upload_artefact(&self, adl2: String) -> Result<(), SmError> {
+    pub async fn upload_artefact(&self, adl2: String) -> Result<(), StatusError> {
         let summary = self.adl2_validate(&adl2).await?;
         self.adl2_persist(&summary, &adl2, true).await?;
         Ok(())
@@ -158,7 +157,7 @@ impl FerroEhrService {
     ///
     /// - No artefact with that HRID → `artefact_does_not_exist` (`404`).
     /// - A database failure (`exception` → `500`).
-    pub async fn get_artefact(&self, an_id: String) -> Result<String, SmError> {
+    pub async fn get_artefact(&self, an_id: String) -> Result<String, StatusError> {
         Ok(self.adl2_get(&an_id).await?)
     }
 
@@ -168,7 +167,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_artefacts(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_artefacts(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list(page).await?)
     }
 
@@ -178,7 +177,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_archetypes_adl2(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_archetypes_adl2(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_by_kind("archetype", page).await?)
     }
 
@@ -188,7 +187,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_templates_adl2(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_templates_adl2(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_by_kind("template", page).await?)
     }
 
@@ -198,7 +197,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_opts_adl2(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_opts_adl2(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_by_kind("operational_template", page).await?)
     }
 
@@ -213,7 +212,7 @@ impl FerroEhrService {
         &self,
         id_pattern: String,
         page: Page,
-    ) -> Result<Vec<String>, SmError> {
+    ) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_matching(&id_pattern, page).await?)
     }
 
@@ -225,7 +224,7 @@ impl FerroEhrService {
     /// - No artefact with that HRID → `artefact_does_not_exist` (`404`).
     /// - Committed versions or another stored artefact need it → `409`.
     /// - A database failure (`exception` → `500`).
-    pub async fn delete_artefact(&self, an_id: String) -> Result<(), SmError> {
+    pub async fn delete_artefact(&self, an_id: String) -> Result<(), StatusError> {
         Ok(self.adl2_delete(&an_id).await?)
     }
 
@@ -234,7 +233,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn artefacts_count(&self) -> Result<i64, SmError> {
+    pub async fn artefacts_count(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count().await?)
     }
 
@@ -243,7 +242,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn archetypes_count_adl2(&self) -> Result<i64, SmError> {
+    pub async fn archetypes_count_adl2(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count_by_kind("archetype").await?)
     }
 
@@ -252,7 +251,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn templates_count(&self) -> Result<i64, SmError> {
+    pub async fn templates_count(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count_by_kind("template").await?)
     }
 
@@ -262,7 +261,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn opts_count_adl2(&self) -> Result<i64, SmError> {
+    pub async fn opts_count_adl2(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count_by_kind("operational_template").await?)
     }
 }
@@ -415,7 +414,7 @@ impl FerroEhrService {
     }
 
     /// Store a validated ADL2 artefact. With `replace`, any case-variant of the
-    /// same HRID is removed first (SM `upload_artefact` replace semantics); the
+    /// same HRID is removed first (the native `upload_artefact` replaces); the
     /// insert is then verbatim (BASE master05 §Composite Identifiers and Case).
     ///
     /// The artefact's declared `specialize` parent travels with it into
@@ -478,8 +477,8 @@ impl FerroEhrService {
 
     /// The wire upload path (`POST /definition/template/adl2`): validate through
     /// the engine, reject a duplicate HRID with a `409` (the REST contract
-    /// declares `409_template_already_exists.yaml`, diverging from the SM native
-    /// replace), then store. Returns the stored `ARCHETYPE_HRID`.
+    /// declares `409_template_already_exists.yaml`, unlike the native replace),
+    /// then store. Returns the stored `ARCHETYPE_HRID`.
     ///
     /// # Errors
     ///
@@ -547,8 +546,8 @@ impl FerroEhrService {
             })
             .max_by(|a, b| cmp_version(raw_id_version(a), raw_id_version(b)))
             .ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::TemplateDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::TemplateDoesNotExist,
                     format!(
                         "ADL2 template {template_id}{}",
                         version
@@ -572,8 +571,9 @@ impl FerroEhrService {
     ///
     /// - The stored source no longer parses → `Internal` (`500`; a stored source
     ///   was engine-valid at upload, so this is a server fault).
-    /// - The OPT cannot be compiled (an unresolved constituent reference) →
-    ///   `Unprocessable` (`422`).
+    /// - A constituent archetype is not stored → `ValidationFailed` (`422`,
+    ///   one `VARXR` violation per missing archetype id).
+    /// - The OPT cannot be compiled otherwise → `Unprocessable` (`422`).
     pub(super) async fn adl2_opt_json(&self, source: &str) -> Result<String, ServiceError> {
         let opt = self.adl2_operational_template(source).await?;
         Ok(openehr_its::json::to_canonical_json(&opt))
@@ -599,8 +599,10 @@ impl FerroEhrService {
     ///   `template_id`.
     /// - [`ServiceError::Internal`] (`500`) — the stored source no longer parses
     ///   (it was engine-valid at upload, so this is a server fault).
-    /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled (an
-    ///   unresolved constituent reference) or built into a `WebTemplate`.
+    /// - [`ServiceError::ValidationFailed`] (`422`) — a constituent archetype
+    ///   is not stored (one `VARXR` violation per missing archetype id).
+    /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled
+    ///   otherwise or built into a `WebTemplate`.
     /// - [`ServiceError::BadRequest`] (`400`) — the template's root is neither a
     ///   COMPOSITION nor a party class, so no example exists for it.
     pub(super) async fn adl2_example(
@@ -733,9 +735,12 @@ impl FerroEhrService {
     ///
     /// - The stored source no longer parses → `Internal` (`500`; a stored source
     ///   was engine-valid at upload, so this is a server fault).
-    /// - The OPT cannot be compiled (an unresolved or cyclic constituent
-    ///   reference, a lineage or nesting past the engine bound) →
-    ///   `Unprocessable` (`422`).
+    /// - A constituent archetype the template needs is not stored →
+    ///   `ValidationFailed` (`422`), one `VARXR` violation per missing
+    ///   archetype id ([`missing_constituents`]).
+    /// - The OPT cannot be compiled otherwise (a cyclic constituent reference,
+    ///   a lineage or nesting past the engine bound) → `Unprocessable`
+    ///   (`422`).
     async fn adl2_operational_template(
         &self,
         source: &str,
@@ -755,17 +760,20 @@ impl FerroEhrService {
             return Ok(opt.as_ref().clone());
         }
         let repo = self.adl2_repository().await?;
-        on_engine_stack(move || create_opt(&archetype, &repo))
-            .await?
-            .map_err(|e| {
-                ServiceError::content_invalid(
-                    Violation::new(format!(
-                        "cannot compile operational template: {}",
-                        ErrorChain::new(&e)
-                    ))
-                    .with_source(e),
-                )
+        on_engine_stack(move || {
+            create_opt(&archetype, &repo).map_err(|e| match e {
+                OptError::UnresolvedReference(_) => {
+                    let missing = unresolved_constituents(&archetype, &repo);
+                    if missing.is_empty() {
+                        not_compiled(e)
+                    } else {
+                        missing_constituents(&missing)
+                    }
+                }
+                other => not_compiled(other),
             })
+        })
+        .await?
     }
 
     /// The ADL2 source of the artefact with `ARCHETYPE_HRID` `an_id`; absent
@@ -778,8 +786,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("ADL2 artefact {an_id}"),
             )
         })
@@ -842,8 +850,8 @@ impl FerroEhrService {
                 .fetch_optional(&mut *tx)
                 .await?;
         let Some((hrid, kind)) = stored else {
-            return Err(ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("ADL2 artefact {an_id}"),
             ));
         };
@@ -1013,40 +1021,6 @@ fn version_prefix_matches(full: &str, prefix: &str) -> bool {
 fn cmp_version(a: &str, b: &str) -> std::cmp::Ordering {
     let parse = |v: &str| -> Vec<u64> { v.split('.').map(|p| p.parse().unwrap_or(0)).collect() };
     parse(a).cmp(&parse(b))
-}
-
-/// The stack the AOM engine runs on.
-///
-/// Parsing, flattening and validating an archetype recurse over the artefact
-/// and over the stored repository (slot fillers, specialisation parents), and
-/// a well-stocked store crossed a tokio worker's 2 MiB stack (#3062). The
-/// reservation is virtual: pages are committed only as the stack grows.
-const ENGINE_STACK_BYTES: usize = 256 * 1024 * 1024;
-
-/// Run `f` on a dedicated thread with [`ENGINE_STACK_BYTES`] of stack and await
-/// its result without blocking the runtime.
-///
-/// # Errors
-/// [`ServiceError::Internal`] when the thread cannot be spawned or ends without
-/// delivering a result (a panic inside `f` surfaces as that, never as an abort
-/// of the process).
-pub(super) async fn on_engine_stack<T, F>(f: F) -> Result<T, ServiceError>
-where
-    T: Send + 'static,
-    F: FnOnce() -> T + Send + 'static,
-{
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    std::thread::Builder::new()
-        .name("adl2-engine".to_owned())
-        .stack_size(ENGINE_STACK_BYTES)
-        .spawn(move || {
-            // The receiver is gone only when the request was cancelled, in
-            // which case the result has no reader left.
-            drop(tx.send(f()));
-        })
-        .map_err(|e| ServiceError::internal("spawning the ADL2 engine thread", e))?;
-    rx.await
-        .map_err(|e| ServiceError::internal("the ADL2 engine thread ended without a result", e))
 }
 
 #[cfg(test)]

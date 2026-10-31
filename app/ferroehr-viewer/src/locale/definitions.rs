@@ -128,8 +128,42 @@ crate::locale::messages! {
         TemplateReadLatest = "template-read-latest",
         /// `You are reading release { $release }.`
         TemplateReadingRelease = "template-reading-release",
+        /// `Newest`
+        TemplateNewest = "template-newest",
+        /// `On this page`
+        TemplateShownHere = "template-shown-here",
+        /// `Earlier release`
+        TemplateEarlierRelease = "template-earlier-release",
+        /// `Compositions`
+        TemplateCompositions = "template-compositions",
+        /// `The releases could not be read.`
+        TemplateCountsRefused = "template-counts-refused",
+        /// `Not counted`
+        TemplateCountRefused = "template-count-refused",
+        /// `Compare`
+        TemplateCompare = "template-compare",
+        /// `From`
+        TemplateCompareFrom = "template-compare-from",
+        /// `To`
+        TemplateCompareTo = "template-compare-to",
+        /// `{ $added -> … } removed, … changed`
+        TemplateCompareSummary = "template-compare-summary",
+        /// `The paths from { $from } to { $to }`
+        TemplateCompareCaption = "template-compare-caption",
+        /// `Both sides name the same release: choose two to compare.`
+        TemplateCompareSame = "template-compare-same",
+        /// `The template has one release, so there is nothing to compare.`
+        TemplateCompareNone = "template-compare-none",
+        /// `The releases could not be compared.`
+        TemplateCompareRefused = "template-compare-refused",
         /// `The template could not be read.`
         TemplateRefused = "template-refused",
+        /// `{ $count ->`
+        TemplateIncomplete = "template-incomplete",
+        /// `Upload the missing archetypes`
+        TemplateIncompleteUpload = "template-incomplete-upload",
+        /// `This view needs the missing archetypes. Upload them, then open it again.`
+        TemplateIncompleteTab = "template-incomplete-tab",
         /// `Release`
         TemplateRelease = "template-release",
         /// `{ $count ->`

@@ -3,7 +3,7 @@
 
 //! The ADMIN **protected-identifier read** wire — **our own extension**.
 //!
-//! No openEHR ITS-REST operation and no SM interface governs this route. The
+//! No openEHR ITS-REST operation governs this route. The
 //! RM models an identifier as a plain `DV_IDENTIFIER` (RM `data_types`
 //! `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc`) and says nothing
 //! about protecting its value; `[demographic.identifier_protection]` seals the

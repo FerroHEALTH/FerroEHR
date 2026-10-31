@@ -4,8 +4,7 @@
 //! Authorization configuration ([`AuthzConfig`]).
 //!
 //! The `[authz]` section of the one server configuration tree, with no loader of
-//! its own. No openEHR spec governs RBAC or ABAC, the SM placing authorization
-//! out of band, so this is our own design.
+//! its own. No openEHR spec governs RBAC or ABAC, so this is our own design.
 //!
 //! Two sections: the coarse RBAC keys (`rbac.*`, always evaluated when auth is
 //! enabled) and the opt-in ABAC keys (`abac.*`, master switch `abac.enabled`,

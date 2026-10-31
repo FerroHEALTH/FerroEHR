@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The DEFINITION data shapes shared with the REST adapter: the wire
-//! template-list filter and the SM stored-query descriptor.
+//! template-list filter and the stored-query descriptor.
 
 /// The template-list filter carried by the ITS-REST
 /// `definition_template_*_list` operations.
 ///
-/// All three are optional query parameters the wire decodes but the SM
-/// `I_DEFINITION_*` list interfaces (which return plain `List<UUID>`) do not
-/// express — so they ride on the wire-shaped list methods alongside the SM
-/// cursor [`Page`](crate::service::list::Page).
+/// All three are optional query parameters the wire decodes, carried on the
+/// wire-shaped list methods alongside the cursor
+/// [`Page`](crate::service::list::Page).
 ///
 /// - `template_id`: glob pattern matching `template_id`, `*` wildcard
 ///   (`parameters/query/filter_template_id.yaml`, "supports wildcards `*`").
@@ -53,8 +52,7 @@ pub struct Adl2Template {
     pub payload: String,
 }
 
-/// The SM `QUERY_DESCRIPTOR` (`query_descriptor.adoc`) — the registration
-/// record `I_DEFINITION_QUERY.store_query` / `list_queries` return.
+/// The registration record `store_query` / `list_queries` return.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueryDescriptor {
     /// `qualified_query_name [1]` — "Unique qualified name of query.

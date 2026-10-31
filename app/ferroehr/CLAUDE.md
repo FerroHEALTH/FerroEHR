@@ -1,7 +1,7 @@
 # `ferroehr` — the platform library
 
 The application core (five app crates, zero re-exports). Top-level modules
-(`src/lib.rs`): `service` (the SM service layer), `storage`, `aql` (the query
+(`src/lib.rs`): `service` (the service layer), `storage`, `aql` (the query
 engine), `versioning` (change control + VERSION `signature` signing),
 `validation`, `templates`, `db` (sqlx pools + migrations), `config` (the full
 `ferroehr.toml` tree), `telemetry`, `system_log` (IHE ATNA, including the
@@ -25,11 +25,13 @@ adapter (`ferroehr-rest`) depends on this crate and calls the concrete
 `FerroEhrService` directly. **Zero re-exports: every import names its defining
 module.**
 
-- **Service layer = one module per SM chapter, concrete methods, no trait
+- **Service layer = one module per domain area, concrete methods, no trait
   catalog** (`service::{ehr, definition, demographic, query, validity, admin,
   ehr_index, terminology, message}`, plus `linkage` and the support modules
   `committer`, `version_update`, `status`, `response`, `list`, `error`,
-  `platform_service`). SM design authority: `docs/specs/openehr/SM/`.
+  `platform_service`). Our own design: the openEHR Service Model under
+  `docs/specs/openehr/SM/` is reference text, never an authority, and no
+  identifier or doc comment is named for it.
 - **Spec first:** every spec-facing behaviour (versioning/change-control,
   validation, AQL semantics) is implemented from the vendored text under
   `docs/specs/openehr/` (`/spec-lookup`) — never from memory or EHRbase
@@ -42,7 +44,8 @@ module.**
   one `node` table (nested-set interval index, canonical JSON fragments — no
   aliasing, no synthetic fields — of which a row stores only what its columns
   do not hold: `storage::slim` writes it, typed ELEMENT value columns hold the
-  common value shapes, and every reader goes through `ext.node_fragment` or the
+  common value shapes, the header columns `rm_version`, `language` and
+  `encoding` hold a non-root row's archetype header and codes, and every reader goes through `ext.node_fragment` or the
   AQL emitter's `fragment_source`, never bare `node.data`). `version`, `node` and `vo_attestation` are
   partitioned `BY LIST (tier)` with `hot`/`cold` partitions, so archiving is
   `UPDATE … SET tier = 'cold'` and the foreign keys carry the referencing rows

@@ -167,9 +167,9 @@ pub async fn list_contribution_summaries(
                 a.committer ->> '_type' IS NOT DISTINCT FROM 'PARTY_SELF' AS person \
          FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
          WHERE c.ehr_id = $1 \
-         -- newest-first: this extension is an activity feed (the sibling SM
-         -- list_contributions stays oldest-first; a deliberate divergence for
-         -- a UI-facing summary — our own extension, no openEHR spec governs it)
+         -- newest-first: this extension is an activity feed (the sibling
+         -- list_contributions stays oldest-first; a UI-facing summary — our
+         -- own extension, no openEHR spec governs it)
          ORDER BY a.time_committed DESC, c.id DESC \
          OFFSET $2 LIMIT $3",
     )
@@ -251,7 +251,7 @@ pub async fn count_contributions(
 }
 
 /// The total number of an EHR's CONTRIBUTIONs (the
-/// `EHR_SUMMARY.contribution_count` — SM `ehr_summary.adoc`), unwindowed.
+/// EHR summary's `contribution_count`), unwindowed.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.

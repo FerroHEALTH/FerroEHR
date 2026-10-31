@@ -452,7 +452,7 @@ async fn corrupted_blob_fails_integrity_on_expand() {
     let err = svc.expand_multimedia(stored).await.expect_err("must fail");
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::Exception,
+        ferroehr::service::status::ServiceStatus::Exception,
         "integrity failure maps to a server fault (500)"
     );
 }

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end SM-3 tests against a real PostgreSQL 18 (shared testkit harness): the
+//! End-to-end tests against a real PostgreSQL 18 (shared testkit harness): the
 //! `PARTY_RELATIONSHIP` CRUD + versioning + `VERSIONED_OBJECT` + revision
 //! history + error cases (driven through the `PartyRelationshipService` seam),
 //! and the EHR Index N:M / duplicate-management lifecycle (through the
@@ -28,7 +28,7 @@ use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::{
     LocationDesc, ResourceInstanceType, ResourceStatus, SubjectRef,
 };
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 /// The bare versioned-object UUID of a versioned-object body.
 fn vo_uuid(v: &Value) -> String {
@@ -81,13 +81,11 @@ async fn seed_ehr(pool: &PgPool) -> Uuid {
 
 // ─── PARTY_RELATIONSHIP ───────────────────────────────────────────────────────
 
-/// The literal SM `I_PARTY_RELATIONSHIP` calls (typed Uuid/version arguments),
-/// not the wire seam: `create_party_relationship (UV_PARTY_RELATIONSHIP): UUID`
-/// → `has`/`get`/`get_at_version` → `update` → `delete`, checking the
-/// `Post_relationship_deleted: not has_party_relationship` post-condition
-/// (`i_party_relationship.adoc`).
+/// The typed relationship calls (Uuid/version arguments), not the wire seam:
+/// `create_party_relationship` → `has`/`get`/`get_at_version` → `update` →
+/// `delete`, checking that a deleted relationship is no longer present.
 #[tokio::test]
-async fn relationship_sm_calls_round_trip() {
+async fn relationship_typed_calls_round_trip() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
@@ -145,14 +143,14 @@ async fn relationship_sm_calls_round_trip() {
         !svc.has_party_relationship(vo_id)
             .await
             .expect("has after delete"),
-        "Post_relationship_deleted: not has_party_relationship"
+        "a deleted relationship is no longer present"
     );
     let after = svc.get_party_relationship(vo_id).await;
     assert!(
         matches!(
             after,
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ),
@@ -243,8 +241,8 @@ async fn relationship_lifecycle_end_to_end() {
     assert!(
         matches!(
             stale,
-            Err(SmError {
-                status: CallStatusType::VersionMismatch,
+            Err(StatusError {
+                status: ServiceStatus::VersionMismatch,
                 ..
             })
         ),
@@ -301,8 +299,8 @@ async fn relationship_error_cases() {
     assert!(
         matches!(
             unknown,
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ),
@@ -312,7 +310,7 @@ async fn relationship_error_cases() {
     // Invalid content (missing `target`): `PARTY_RELATIONSHIP.target` is a
     // mandatory `PARTY_REF` (RM demographic `party_relationship.adoc`
     // §Attributes), so a body without it is not a `PARTY_RELATIONSHIP` at all.
-    // The SM seam's argument is the typed RM value, which makes the defect
+    // The typed seam's argument is the RM value, which makes the defect
     // unrepresentable past the door; the refusal is the strict canonical
     // reader's — the PARSE class, answered `400` on the wire (ITS-REST
     // overview `Requests_and_responses.md` §HTTP status codes: content that
@@ -341,8 +339,8 @@ async fn relationship_error_cases() {
         .await;
     assert!(matches!(
         vp_unknown,
-        Err(SmError {
-            status: CallStatusType::VersionedObjectDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::VersionedObjectDoesNotExist,
             ..
         })
     ));
@@ -359,7 +357,7 @@ async fn relationship_via_demographic_contribution() {
     let body = json!({
         "_type": "CONTRIBUTION",
         "versions": [{
-            "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+            "lifecycle_state": crate::fixtures::lifecycle("532"),
             "_type": "ORIGINAL_VERSION",
             "commit_audit": {
                 "change_type": {
@@ -451,7 +449,7 @@ async fn ehr_index_local_map_holds_an_ehr_created_for_a_subject() {
         .create_ehr_for_subject(subject.clone(), None)
         .await
         .expect_err("the subject already owns an EHR");
-    assert_eq!(refused.status, CallStatusType::EhrForSubjectAlreadyExists);
+    assert_eq!(refused.status, ServiceStatus::EhrForSubjectAlreadyExists);
     let ehrs = svc.subject_ehrs(subject).await.expect("subject ehrs");
     assert_eq!(ehrs.len(), 1, "a refused create enters nothing");
 }
@@ -468,7 +466,7 @@ async fn ehr_index_n_to_m() {
     let subj_x = SubjectRef::person("X", "mpi");
     let subj_y = SubjectRef::person("Y", "mpi");
 
-    // two subjects on one EHR (the dangerous error state master07 describes)
+    // two subjects on one EHR (the dangerous error state)
     svc.add_ehr_subject(ehr_a.to_string(), subj_x.clone(), None, None)
         .await
         .expect("a-x");
@@ -561,14 +559,13 @@ async fn ehr_index_update_status_loc_and_remove() {
         Vec::<ferroehr::service::ehr_index::types::EhrIndexEntry>::new()
     );
 
-    // removing again → the precise SM subject_id_does_not_exist (404) — the
-    // index chapter maps its own errors instead of the generic collapse
-    // (SM i_ehr_index error names).
+    // removing again → the precise subject_id_does_not_exist (404) — the
+    // index chapter maps its own errors instead of the generic collapse.
     let again = svc.remove_ehr_subject(ehr.to_string(), subject).await;
     assert!(matches!(
         again,
-        Err(SmError {
-            status: CallStatusType::SubjectIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::SubjectIdDoesNotExist,
             ..
         })
     ));
@@ -607,21 +604,21 @@ async fn ehr_index_remove_subject_wide_and_unknown_ehr() {
     assert!(
         matches!(
             unknown,
-            Err(SmError {
-                status: CallStatusType::EhrIdDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::EhrIdDoesNotExist,
                 ..
             })
         ),
         "unknown ehr is 404, got {unknown:?}"
     );
 
-    // unknown subject on remove_subject → the precise SM
-    // subject_id_does_not_exist (404, SM i_ehr_index error names).
+    // unknown subject on remove_subject → the precise
+    // subject_id_does_not_exist (404).
     let no_subject = svc.remove_subject(SubjectRef::person("nope", "mpi")).await;
     assert!(matches!(
         no_subject,
-        Err(SmError {
-            status: CallStatusType::SubjectIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::SubjectIdDoesNotExist,
             ..
         })
     ));

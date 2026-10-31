@@ -66,7 +66,7 @@ async fn run(
 
 /// Fold the wire `template_id`/`concept`/`version`/`offset`/`fetch` query
 /// parameters (decoded on both `definition_template_*_list` operations) into the
-/// [`TemplateListFilter`] + SM [`Page`] the `DefinitionAdapter` list methods
+/// [`TemplateListFilter`] + [`Page`] the `DefinitionAdapter` list methods
 /// carry. `offset` defaults to `0` (`parameters/query/offset.yaml`); a `fetch`
 /// of `0`/absent is normalized to "all" by [`Page::limit`]. Negative wire values
 /// (out of the spec's `integer`/`0`-based range) degrade to the defaults rather

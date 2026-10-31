@@ -6,9 +6,9 @@
 //! Two composable layers inside the protocol adapter, authorization being an
 //! adapter concern by design.
 //!
-//! No openEHR spec governs this: the SM places authorization out of band (SM
-//! `openehr_platform/master02-overview.adoc` §General Assumptions), so
-//! everything here is our own enterprise design. The spec-grounded access
+//! No openEHR spec governs this: ITS-REST `Requests_and_responses.md`
+//! §Authentication and authorization mandates no scheme, so everything here is
+//! our own enterprise design. The spec-grounded access
 //! authority is the sibling `EHR_ACCESS` gate
 //! ([`crate::extensions::access::ehr_access`]), which these layers compose on
 //! top of:
@@ -414,11 +414,10 @@ pub(crate) struct RbacGate {
 /// request body (the released ad-hoc AQL read's shape), or a bodyless
 /// computation over held data:
 ///
-/// - `POST /message/export` — SM `I_EHR_EXTRACT_SERVICE.export_ehr_extracts`
-///   (`SM/docs/UML/classes/i_ehr_extract_service.adoc`), a query over held
+/// - `POST /message/export` — `export_ehr_extracts`, a query over held
 ///   versions whose selector is an `EXTRACT_SPEC` (RM `ehr_extract`
 ///   `extract_spec.adoc`). It commits nothing: the import operations are the
-///   mutating half of that interface.
+///   mutating half of the group.
 /// - `POST /admin/integrity/verify` — the storage-parity sweep (#2680): a
 ///   whole-store comparison of the two stored content copies that writes
 ///   nothing and answers identifiers + defect classes only, strictly less
@@ -443,15 +442,10 @@ const EXTENSION_READ_ROUTES: &[(&str, &str)] = &[
 /// against, and the deletion is physical: this store has no logical tier to
 /// undelete from.
 ///
-/// The class is OUR OWN DESIGN, on the blast radius, and the specification
-/// explicitly leaves it to us rather than being silent on it. SM
-/// `master02-overview.adoc` §Global Conventions → §Functional Style lists
-/// "approach to access control and authorisation" among the implementation
-/// choices and states that "Authentication and authorisation is assumed to have
-/// been dealt with before any particular call has been made … and role-based
-/// access control"; ITS-REST `Requests_and_responses.md` §Authentication and
-/// authorization adds that it "does not mandate a specific authentication
-/// scheme". So no released clause requires or forbids this, and the uploads
+/// The class is OUR OWN DESIGN, on the blast radius. ITS-REST
+/// `Requests_and_responses.md` §Authentication and authorization "does not
+/// mandate a specific authentication scheme", so no released clause requires
+/// or forbids this, and the uploads
 /// staying Clinical is a deliberate asymmetry: an upload is additive and
 /// reversible, a delete is neither.
 ///
@@ -596,9 +590,9 @@ mod tests {
     }
 
     /// The read-only gate classifies an EXTENSION route by what the operation
-    /// DOES, not by its HTTP verb: `POST /message/export` realizes SM
-    /// `I_EHR_EXTRACT_SERVICE.export_ehr_extracts`, a query over held versions,
-    /// while the import routes of the same interface commit and stay writes.
+    /// DOES, not by its HTTP verb: `POST /message/export` is
+    /// `export_ehr_extracts`, a query over held versions, while the import
+    /// routes of the same group commit and stay writes.
     #[test]
     fn message_export_is_a_read_for_the_readonly_gate() {
         let g = gate();

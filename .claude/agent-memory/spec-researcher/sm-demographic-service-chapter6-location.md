@@ -1,9 +1,12 @@
 ---
 name: sm-demographic-service-chapter6-location
-description: Where SM Platform ch.6 (Demographic service) requirements live — master06 is include-only, the §6.1 SVG is the ONLY source of the inheritance chain + the UPDATE_VERSION<T> bindings, the 17-op inventory, and the confirmed defect set incl. the exact 2-site valid_content scope
+description: Where SM Platform ch.6 (Demographic service) reference text lives — master06 is include-only, the §6.1 SVG is the ONLY source of the inheritance chain + the UPDATE_VERSION<T> bindings, the 17-op inventory, and the confirmed defect set incl. the exact 2-site valid_content scope
 metadata:
   type: reference
 ---
+
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
 
 # SM Platform ch.6 "Demographic Service" — navigation
 

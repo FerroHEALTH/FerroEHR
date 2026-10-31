@@ -326,7 +326,7 @@ pub async fn content_of(
 
 // ── existence / kind / ownership ──────────────────────────────────────────────
 
-/// Whether the EHR row exists (the CONTRIBUTION-commit `Pre_has_ehr` precheck
+/// Whether the EHR row exists (the CONTRIBUTION-commit EHR-existence precheck
 /// and the contribution-listing 404 distinction).
 ///
 /// # Errors
@@ -825,9 +825,8 @@ pub async fn current_composition_meta(
 
 // ── counts / enumeration ──────────────────────────────────────────────────────
 
-/// The number of distinct (versioned) COMPOSITIONs in an EHR — the
-/// `EHR_SUMMARY.composition_count` (SM `ehr_summary.adoc`: "(versioned)
-/// Compositions", i.e. distinct `vo_id`, not versions).
+/// The number of distinct (versioned) COMPOSITIONs in an EHR — the EHR
+/// summary's `composition_count`, i.e. distinct `vo_id`, not versions.
 ///
 /// Counted over BOTH storage tiers: an EHR may hold archived and live
 /// compositions at once, and a summary that silently dropped the archived ones

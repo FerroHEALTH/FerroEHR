@@ -7,10 +7,8 @@
 //! outcome, as a DICOM Audit Message (PS3.15 §A.5). This table supplies the
 //! what-and-which half for one ITS-REST operation: its `EventActionCode`
 //! (§A.5.1) and the resource `ObjectClass` driving the participant-object
-//! rendering in the platform emitter. openEHR is silent on audit-record shape —
-//! the only normative line is "System Log | IHE ATNA-compliant system log" (SM
-//! `master02-overview.adoc` §openEHR Platform Model) — so the mapping here is
-//! our own design over those external standards.
+//! rendering in the platform emitter. openEHR is silent on audit-record shape,
+//! so the mapping here is our own design over those external standards.
 //!
 //! Every operation id in every generated `ROUTES` table is explicitly
 //! classified, and the completeness test fails the build the moment a newly

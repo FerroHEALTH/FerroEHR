@@ -364,10 +364,7 @@ pub(crate) async fn ehr_create(
             description = "EHR identifier, taken from EHR.ehr_id.value — a UUID \
                            (`Resources.md` §\"Identifier types\": \"the EHR \
                            identifier is `7d44b88c-4199-4bad-97dc-d78268e01398`, \
-                           taken from EHR.ehr_id.value\"; the SM types the \
-                           argument `UUID` — `master02-overview.adoc` §\"Functional \
-                           Style\", `interface I_EHR_SERVICE { Boolean \
-                           has_ehr(UUID an_ehr_id); … }`).",
+                           taken from EHR.ehr_id.value\").",
             example = "7d44b88c-4199-4bad-97dc-d78268e01398")),
     responses(
         (status = 200, description = "The EHR (canonical JSON/XML per `Accept`). \
@@ -435,10 +432,8 @@ pub(crate) async fn ehr_get_by_id(
 
 /// Create an EHR with a client-supplied id (`PUT /ehr/{ehr_id}`).
 ///
-/// `ehr_id` is a UUID: the SM types the argument `UUID`
-/// (`SM/docs/openehr_platform/master02-overview.adoc` §"Functional Style":
-/// `UUID create_ehr_with_id(UUID an_ehr_id)`), and ITS-REST identifies an EHR
-/// by `EHR.ehr_id.value` in UUID form (`Resources.md` §"Identifier types").
+/// `ehr_id` is a UUID: ITS-REST identifies an EHR by `EHR.ehr_id.value` in
+/// UUID form (`Resources.md` §"Identifier types").
 /// Every UUID is a valid `HIER_OBJECT_ID` root, so no released sentence is
 /// narrowed by accepting only UUIDs.
 /// The committal headers `openehr-version` / `openehr-audit-details` are
@@ -449,10 +444,8 @@ pub(crate) async fn ehr_get_by_id(
     params(
         ("ehr_id" = String, Path,
          description = "The client-supplied EHR id — a UUID, which becomes \
-                        `EHR.ehr_id.value` (`Resources.md` §\"Identifier types\"; \
-                        the SM argument is typed `UUID` — \
-                        `master02-overview.adoc` §\"Functional Style\", `UUID \
-                        create_ehr_with_id(UUID an_ehr_id)`). Every UUID is a \
+                        `EHR.ehr_id.value` (`Resources.md` §\"Identifier \
+                        types\"). Every UUID is a \
                         valid `HIER_OBJECT_ID` root, so this accepts every id the \
                         released text requires.",
          example = "7d44b88c-4199-4bad-97dc-d78268e01398"),
@@ -3777,8 +3770,7 @@ pub(crate) async fn versioned_composition_version_get_by_id(
                         sentence — the path \"consists of slash-separated \
                         values of the name attribute of FOLDERs in the \
                         directory\" (ITS-REST \
-                        `specifications/parameters/query/path.yaml`; SM \
-                        `i_ehr_directory.adoc` `has_path` repeats it) — and \
+                        `specifications/parameters/query/path.yaml`) — and \
                         only the addressed sub-FOLDER is returned. The \
                         resolution grammar beyond that sentence is OUR OWN \
                         DESIGN, adjudicated: the path is rooted at the directory root, \
@@ -3955,9 +3947,7 @@ pub(crate) async fn directory_get_at_time(
 ///
 /// The whole hierarchy is replaced by the submitted FOLDER tree: a new version
 /// of the EHR's directory versioned object is committed inside a new
-/// CONTRIBUTION (SM `i_ehr_directory.adoc` `update_directory`: "Create or
-/// update a directory from a complete structure … Causes server-side creation
-/// of a new `ORIGINAL_VERSION` and a new `CONTRIBUTION`"). The committal
+/// CONTRIBUTION, with a new `ORIGINAL_VERSION`. The committal
 /// headers `openehr-version` / `openehr-audit-details` are accepted and merged
 /// into that commit (`Requests_and_responses.md` §openehr-version-and-audit-details).
 #[utoipa::path(
@@ -4084,9 +4074,8 @@ pub(crate) async fn directory_get_at_time(
             (serde_json::Value = "application/xml")
         ),
         description = "The COMPLETE new directory FOLDER tree — the update \
-                       replaces the hierarchy, it does not patch it (SM \
-                       `update_directory`: \"Directory structure with which to \
-                       replace current structure\"). Canonical JSON or XML per \
+                       replaces the hierarchy, it does not patch it. \
+                       Canonical JSON or XML per \
                        `Content-Type`; the two Simplified Formats do NOT apply \
                        — they are defined for templated COMPOSITION content \
                        (`Resources.md` §\"Simplified Formats\") and a FOLDER is \
@@ -4242,11 +4231,8 @@ pub(crate) async fn directory_get_at_time(
                                       but indexes NO directory, so there is \
                                       nothing to update. The second branch has \
                                       no released assignment: \
-                                      `404_unknown_ehr_id` does not cover it and \
-                                      SM `update_directory`'s \
-                                      `Pre_has_directory: has_directory(ehr_id)` \
-                                      states the rule without a status code, so \
-                                      answering `404` (the addressed resource \
+                                      `404_unknown_ehr_id` does not cover it, \
+                                      so answering `404` (the addressed resource \
                                       does not exist) is OUR OWN DESIGN, \
                                       adjudicated.",
          body = serde_json::Value),
@@ -4377,8 +4363,8 @@ pub(crate) async fn directory_update(
 /// Create the directory (FOLDER) (`POST /ehr/{ehr_id}/directory`).
 ///
 /// Creates the EHR's directory hierarchy from a complete FOLDER tree: a new
-/// `VERSIONED_OBJECT`, its first `ORIGINAL_VERSION` and a new CONTRIBUTION (SM
-/// `i_ehr_directory.adoc` `create_directory`). The committal headers
+/// `VERSIONED_OBJECT`, its first `ORIGINAL_VERSION` and a new CONTRIBUTION.
+/// The committal headers
 /// `openehr-version` / `openehr-audit-details` are accepted and merged into
 /// that commit (`Requests_and_responses.md` §openehr-version-and-audit-details).
 #[utoipa::path(
@@ -4614,11 +4600,7 @@ pub(crate) async fn directory_update(
                                       are OUR OWN DESIGN — no released ITS-REST \
                                       text assigns either a status, and both are \
                                       adjudicated: (1) the EHR already holds a \
-                                      LIVE directory — the rule itself is SM \
-                                      `i_ehr_directory.adoc` `create_directory` \
-                                      `Pre_no_directory: not has_directory \
-                                      (ehr_id)`, which states the precondition \
-                                      without a wire code; after a logical \
+                                      LIVE directory; after a logical \
                                       delete the version container survives but \
                                       the directory slot is vacant (RM common \
                                       master06 §\"Logical Deletion\"), so a \
@@ -4712,9 +4694,7 @@ pub(crate) async fn directory_create(
 /// Delete the directory (FOLDER) (`DELETE /ehr/{ehr_id}/directory`).
 ///
 /// Deletion is LOGICAL: a new `523|deleted|` version of the directory with no
-/// `data` is committed (RM common master06 §"Logical Deletion"; SM
-/// `i_ehr_directory.adoc` `delete_directory`: "Logically delete the directory
-/// by creating a new version in which the contents are removed"), and the
+/// `data` is committed (RM common master06 §"Logical Deletion"), and the
 /// `204` reports THAT version in `ETag`/`Last-Modified`.
 ///
 /// The precondition travels in the `If-Match` HEADER, not in the path — this
@@ -4829,11 +4809,8 @@ pub(crate) async fn directory_create(
                                       but indexes NO directory, so there is \
                                       nothing to delete. The second branch has \
                                       no released assignment: \
-                                      `404_unknown_ehr_id` does not cover it and \
-                                      SM `delete_directory`'s \
-                                      `Pre_has_directory: has_directory(ehr_id)` \
-                                      states the rule without a status code, so \
-                                      answering `404` (the addressed resource \
+                                      `404_unknown_ehr_id` does not cover it, \
+                                      so answering `404` (the addressed resource \
                                       does not exist) is OUR OWN DESIGN, \
                                       adjudicated. It is evaluated before the \
                                       `If-Match` precondition — there is no \
@@ -5340,9 +5317,9 @@ pub(crate) async fn directory_get_by_version_id(
                        Audits\" (\"should be copied into the corresponding \
                        attributes of the `commit_audit` of each VERSION \
                        included in the CONTRIBUTION\") applies to `system_id` \
-                       and `time_committed` only, the two attributes SM \
-                       master03 §\"Version Update Semantics\" has the server \
-                       generate: the CONTRIBUTION audit's `system_id` is \
+                       and `time_committed` only, the two attributes \
+                       `UpdateAudit.yaml` leaves to the server: the \
+                       CONTRIBUTION audit's `system_id` is \
                        copied into every member that omits one, and one \
                        server-set `time_committed` is stamped on every audit \
                        of the set; a member's `committer` is never copied. \
@@ -5507,9 +5484,9 @@ pub(crate) async fn directory_get_by_version_id(
                                       inherited by `UpdateAttestation.yaml`); \
                                       a member, an \
                                       attestation (`666`) member included, \
-                                      states no `lifecycle_state` (SM master03 \
-                                      §\"Version Update Semantics\": \"must be \
-                                      supplied in all cases\"); or a member names a \
+                                      states no `lifecycle_state` \
+                                      (`UpdateVersion.yaml` lists it under \
+                                      `required`); or a member names a \
                                       `preceding_version_uid` whose \
                                       VERSIONED_OBJECT does not exist (the \
                                       modification matches no stored object — a \
@@ -5524,9 +5501,7 @@ pub(crate) async fn directory_get_by_version_id(
         (status = 404, description = "Unknown `ehr_id` (the released trigger, \
                                       `404_unknown_ehr_id`) — the target EHR \
                                       must exist before a change-set can be \
-                                      committed to it (SM \
-                                      `i_ehr_contribution.adoc` \
-                                      `commit_contribution` `Pre_has_ehr`). \
+                                      committed to it. \
                                       Content the committed CONTRIBUTION merely \
                                       REFERS to is not covered by this branch \
                                       (see `400`/`412`).",
@@ -5709,11 +5684,7 @@ pub(crate) async fn contribution_create(
 /// defines exactly one CONTRIBUTION read, the by-uid GET
 /// (`specifications/operations/contribution_get.yaml`); there is no collection
 /// GET on `/ehr/{ehr_id}/contribution`, so nothing about the shape below is
-/// spec-derived. The SM does declare a `list_contributions` operation (SM
-/// `i_ehr_contribution.adoc`) that the released REST API never surfaced — the
-/// unrealized-operation gap is adjudicated in the conformance
-/// catalogue — but this route is not a binding of it either: it answers a
-/// SUMMARY row per CONTRIBUTION rather than the ids that operation returns.
+/// spec-derived. It answers a SUMMARY row per CONTRIBUTION.
 ///
 /// Rows `{ uid, time_committed, committer, inserted_by_person, change_type,
 /// change_type_rubric }` and the `total` of ALL the EHR's CONTRIBUTIONs: the

@@ -30,12 +30,12 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::Folder;
 
 use ferroehr::service::response::ServiceResponse;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
-use crate::overview::error::{RestError, sm_api_error};
+use crate::overview::error::{RestError, status_api_error};
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid, require_if_match};
 use crate::state::AppState;
 
@@ -150,7 +150,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             stored_tags.echo(&mut resp);
             Ok(resp)
         }
-        Err(e) if e.status == CallStatusType::VersionMismatch => {
+        Err(e) if e.status == ServiceStatus::VersionMismatch => {
             let meta = state
                 .backend()
                 .directory_latest_meta(ehr_id)
@@ -158,7 +158,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .ok()
                 .flatten();
             Ok(negotiate::error_with_meta(
-                sm_api_error(e),
+                status_api_error(e),
                 &base,
                 Some("directory"),
                 meta.as_ref(),
@@ -251,7 +251,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             Some("directory"),
             &resp,
         )),
-        Err(e) if e.status == CallStatusType::VersionMismatch => {
+        Err(e) if e.status == ServiceStatus::VersionMismatch => {
             let meta = state
                 .backend()
                 .directory_latest_meta(ehr_id)
@@ -259,7 +259,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .ok()
                 .flatten();
             Ok(negotiate::error_with_meta(
-                sm_api_error(e),
+                status_api_error(e),
                 &base,
                 Some("directory"),
                 meta.as_ref(),

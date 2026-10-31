@@ -7,8 +7,7 @@
 //! **No openEHR spec governs the storage — our own design/extension.** The
 //! relation carries two kinds of row and this module is the only writer of
 //! either: the party-to-EHR mapping the linkage service opens, and the EHR
-//! Index association the SM `I_EHR_INDEX` operations record
-//! (`docs/specs/openehr/SM/docs/openehr_platform/master07-ehr_index_service.adoc`).
+//! Index association the EHR-index operations record.
 //! Keeping both behind one module is what lets [`super`] and
 //! [`crate::service::ehr_index`] stay a service seam over a store rather than
 //! two dialects of the same table.
@@ -271,7 +270,7 @@ pub(crate) async fn set_association_location(
 
 /// The shared body of the two closes.
 ///
-/// Closed, not deleted: the SM's `remove_ehr_subject` and `remove_subject` END
+/// Closed, not deleted: `remove_ehr_subject` and `remove_subject` END
 /// an association, and ending one is exactly what a closed period records. The
 /// role holds no `DELETE` to do otherwise with.
 ///

@@ -1,14 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADMIN group's information classes (SM `I_ADMIN_SERVICE` +
-//! `I_ADMIN_DUMP_LOAD` parameter/report types).
+//! The ADMIN group's parameter and report types: the activity-report time
+//! filter and the dump/load formats, spec and failure report.
 
 /// A statistics time filter: an optional `(lower, upper)` pair of ISO 8601
 /// date-time bounds, each independently optional (open bounds allowed).
 ///
-/// Realizes the SM `time_interval: Interval<Iso8601_date_time> [0..1]`
-/// parameter of the four `i_admin_service.adoc` statistics calls.
+/// The four activity-report calls take it as their optional time filter.
 ///
 /// NOTE: the range is treated as **closed** `[lower, upper]` — the
 /// default openEHR `Interval` bound inclusivity — matched against each
@@ -19,9 +18,7 @@
 /// (`Limits_consistent`) makes such a pair no `Interval` at all.
 pub type StatTimeRange = Option<(Option<String>, Option<String>)>;
 
-/// `EXPORT_FORMAT` enumeration
-/// (`docs/specs/openehr/SM/docs/UML/classes/export_format.adoc`): the logical
-/// serialization flavour a dump is written in.
+/// The logical serialization flavour a dump is written in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExportFormat {
     /// `openehr_canonical_xml`.
@@ -31,23 +28,23 @@ pub enum ExportFormat {
 }
 
 impl ExportFormat {
-    /// The SM enumeration literal, exactly as the spec spells it.
+    /// The name of this format as the dump/load extension spells it.
     #[must_use]
-    pub fn sm_name(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::OpenehrCanonicalXml => "openehr_canonical_xml",
             Self::OpenehrCanonicalJson => "openehr_canonical_json",
         }
     }
 
-    /// Both vendored members, in `export_format.adoc` order.
+    /// Both members, in declaration order.
     pub const ALL: &[ExportFormat] = &[Self::OpenehrCanonicalXml, Self::OpenehrCanonicalJson];
 }
 
 impl std::str::FromStr for ExportFormat {
     type Err = ();
 
-    /// Parse an SM enumeration literal ASCII-case-insensitively (the same
+    /// Parse a format name ASCII-case-insensitively (the same
     /// case rule [`crate::service::platform_service::PlatformService`] states:
     /// BASE `master05` §"Composite Identifiers and Case" — case alone must not
     /// make two spellings name different things). No openEHR spec governs how
@@ -55,69 +52,60 @@ impl std::str::FromStr for ExportFormat {
     /// endpoint at all, so the transport is our own design/extension.
     ///
     /// # Errors
-    /// `Err(())` when the text is neither vendored member; the caller decides
+    /// `Err(())` when the text names neither member; the caller decides
     /// the wire status.
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         Self::ALL
             .iter()
             .copied()
-            .find(|member| member.sm_name().eq_ignore_ascii_case(raw))
+            .find(|member| member.as_str().eq_ignore_ascii_case(raw))
             .ok_or(())
     }
 }
 
-/// `COMPRESSION_FORMAT` enumeration
-/// (`docs/specs/openehr/SM/docs/UML/classes/compression_format.adoc`): the
-/// compression to apply while dumping.
+/// The compression to apply while dumping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionFormat {
     /// `zip`.
     Zip,
-    /// `7z` (not a valid Rust identifier — the SM literal is `7z`).
+    /// `7z`, which is not a valid Rust identifier.
     SevenZip,
 }
 
 impl CompressionFormat {
-    /// The SM enumeration literal, exactly as the spec spells it.
+    /// The name of this compression as the dump/load extension spells it.
     #[must_use]
-    pub fn sm_name(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::Zip => "zip",
             Self::SevenZip => "7z",
         }
     }
 
-    /// Both vendored members, in `compression_format.adoc` order.
+    /// Both members, in declaration order.
     pub const ALL: &[CompressionFormat] = &[Self::Zip, Self::SevenZip];
 }
 
 impl std::str::FromStr for CompressionFormat {
     type Err = ();
 
-    /// Parse an SM enumeration literal ASCII-case-insensitively (see
+    /// Parse a compression name ASCII-case-insensitively (see
     /// `ExportFormat::from_str` for the case rule and the spec-silence flag).
     ///
     /// # Errors
-    /// `Err(())` when the text is neither vendored member.
+    /// `Err(())` when the text names neither member.
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         Self::ALL
             .iter()
             .copied()
-            .find(|member| member.sm_name().eq_ignore_ascii_case(raw))
+            .find(|member| member.as_str().eq_ignore_ascii_case(raw))
             .ok_or(())
     }
 }
 
-/// `EXPORT_SPEC` class
-/// (`docs/specs/openehr/SM/docs/UML/classes/export_spec.adoc`): "the details for
-/// an export operation".
+/// The details of one export: format, compression and segment size.
 ///
-/// NOTE: `export_ehrs` takes an `ExportSpec` rather than the loose format enums
-/// its `I_ADMIN_DUMP_LOAD` signature passes, because `EXPORT_SPEC` is the SM's
-/// own richer bundle for exactly this operation (it also carries the mandatory
-/// `segment_split_size [1..1]` the signature omits). `ENCODING_FORMAT` is an
-/// **empty enumeration** (no values in `encoding_format.adoc`), so the SM
-/// `encoding` attribute has no representable value and is dropped here.
+/// No openEHR spec governs the dump/load extension: our own design.
 #[derive(Debug, Clone)]
 pub struct ExportSpec {
     /// Logical format to use, i.e. flavour of XML, JSON etc.
@@ -158,9 +146,7 @@ impl ExportSpec {
     }
 }
 
-/// `DUMP_LOAD_FAIL_REPORT` class
-/// (`docs/specs/openehr/SM/docs/UML/classes/dump_load_fail_report.adoc`):
-/// "Dump or Load fail report for a single entity, e.g. `EHR`, `PARTY` etc."
+/// The dump or load outcome of one entity (an `EHR`, a `PARTY`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DumpLoadFailReport {
     /// Type name of entity (`entity_type`, 1..1).
@@ -182,10 +168,10 @@ mod tests {
     fn format_enum_literals_round_trip_through_from_str() {
         use std::str::FromStr;
         for member in ExportFormat::ALL {
-            assert_eq!(ExportFormat::from_str(member.sm_name()), Ok(*member));
+            assert_eq!(ExportFormat::from_str(member.as_str()), Ok(*member));
         }
         for member in CompressionFormat::ALL {
-            assert_eq!(CompressionFormat::from_str(member.sm_name()), Ok(*member));
+            assert_eq!(CompressionFormat::from_str(member.as_str()), Ok(*member));
         }
         // The case rule (BASE master05 §"Composite Identifiers and Case").
         assert_eq!(
@@ -198,17 +184,17 @@ mod tests {
     }
 
     #[test]
-    fn format_enum_sm_names_match_the_spec_literals() {
+    fn format_enum_names_keep_their_wire_spelling() {
         assert_eq!(
-            ExportFormat::OpenehrCanonicalXml.sm_name(),
+            ExportFormat::OpenehrCanonicalXml.as_str(),
             "openehr_canonical_xml"
         );
         assert_eq!(
-            ExportFormat::OpenehrCanonicalJson.sm_name(),
+            ExportFormat::OpenehrCanonicalJson.as_str(),
             "openehr_canonical_json"
         );
-        assert_eq!(CompressionFormat::Zip.sm_name(), "zip");
-        assert_eq!(CompressionFormat::SevenZip.sm_name(), "7z");
+        assert_eq!(CompressionFormat::Zip.as_str(), "zip");
+        assert_eq!(CompressionFormat::SevenZip.as_str(), "7z");
     }
 
     #[test]

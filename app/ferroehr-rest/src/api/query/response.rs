@@ -97,7 +97,7 @@ pub(super) const H_EHR_ID: &str = "openehr-ehr-id";
 /// (`Request.md` §About the `ehr_id` parameter).
 ///
 /// The caller collects the result into [`AqlQueryRequest::ehr_ids`], a single
-/// wire `ehr_id` being the one-element case of the SM `List<UUID>` scope.
+/// wire `ehr_id` being the one-element case of the `ehr_ids` list scope.
 ///
 /// The released text never says what happens when a request carries both forms,
 /// so the handling is our own: one form, or both naming the same EHR, is the
@@ -539,8 +539,8 @@ mod tests {
 
 // ── Query error-status mapping (the QUERY responses enumerate 400/404/408) ─────
 //
-// The status codes are assembled platform-side as typed `SmError`s and turned
-// into the ITS-REST status by `crate::overview::error::sm_api_error`; this
+// The status codes are assembled platform-side as typed `StatusError`s and turned
+// into the ITS-REST status by `crate::overview::error::status_api_error`; this
 // renderer emits the success `RESULT_SET` (and its `meta`, including the
 // parameter-substituted `_executed_aql`) verbatim. `ehr_id_does_not_exist` →
 // `404` for a well-formed-but-absent EHR id, while a malformed UUID stays a

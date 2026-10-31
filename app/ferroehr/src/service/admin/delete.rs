@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Physical deletion (SM `I_ADMIN_SERVICE.physical_ehr_delete` /
-//! `physical_party_delete` + the `admin_ehr_delete_all` bulk extension).
+//! Physical deletion (`physical_ehr_delete` / `physical_party_delete` + the
+//! `admin_ehr_delete_all` bulk extension).
 //!
-//! Spec: `docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc`
-//! (`physical_ehr_delete`, precondition `has_ehr`, error `ehr_id_does_not_exist`;
-//! `physical_party_delete`, "along with related Party relationships", error
-//! `party_id_does_not_exist`). Behaviour is anchored by the CNF Robot prior art
+//! Spec: ITS-REST `operations/admin_ehr_delete.yaml`; an unknown EHR is
+//! `ehr_id_does_not_exist`, and a party goes with its relationships, an unknown
+//! one `party_id_does_not_exist`. Behaviour is anchored by the CNF Robot prior art
 //! (`I_ADMIN_SERVICE/001-EHR.robot` + `admin_keywords.robot`): a physical,
 //! cascading delete after which every backing table returns to its pre-EHR
 //! baseline count. No openEHR spec governs the cascade SQL / FK graph — our own
@@ -31,10 +30,10 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::demographic::identifier::store::IdentifierStore;
 use crate::service::error::ServiceError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 impl FerroEhrService {
-    /// SM `physical_ehr_delete`: physically delete one EHR and every trace of
+    /// Physically delete one EHR and every trace of
     /// it.
     ///
     /// # Errors
@@ -42,7 +41,7 @@ impl FerroEhrService {
     /// - `versioned_object_does_not_exist` (`404`) — no EHR with that id
     ///   (`has_ehr` false → `ehr_id_does_not_exist`).
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn admin_ehr_delete(&self, ehr_id: String) -> Result<(), SmError> {
+    pub async fn admin_ehr_delete(&self, ehr_id: String) -> Result<(), StatusError> {
         Ok(self
             .delete_ehr(EhrId(super::parse_uuid(&ehr_id, "EHR")?))
             .await?)
@@ -58,7 +57,7 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — any id in the list is malformed
     ///   (the whole bulk request is rejected before any deletion runs).
     /// - `exception` — a database fault while deleting.
-    pub async fn admin_ehr_delete_all(&self, ehr_ids: Vec<String>) -> Result<u64, SmError> {
+    pub async fn admin_ehr_delete_all(&self, ehr_ids: Vec<String>) -> Result<u64, StatusError> {
         let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
             .into_iter()
             .map(EhrId)
@@ -71,7 +70,7 @@ impl FerroEhrService {
     /// §Composite Identifiers and Case), evicting its `WebTemplate` cache entry.
     ///
     /// NOTE: no openEHR spec governs this operation, the ITS-REST Admin API
-    /// defining only EHR deletes — our own design/extension, mirroring the SM
+    /// defining only EHR deletes — our own design/extension, mirroring the
     /// UUID-keyed delete ([`Self::delete_opt`]) but addressed by the wire id.
     ///
     /// # Errors
@@ -80,7 +79,7 @@ impl FerroEhrService {
     ///   the template (`version.template_id` FK, `clinical/0006_definitions.sql`);
     ///   a physical delete must never orphan the compositions built on it.
     /// - `exception` — a database fault.
-    pub async fn admin_template_delete(&self, template_id: String) -> Result<(), SmError> {
+    pub async fn admin_template_delete(&self, template_id: String) -> Result<(), StatusError> {
         Ok(self.delete_template_by_id(&template_id).await?)
     }
 
@@ -90,9 +89,9 @@ impl FerroEhrService {
     /// exact on the version.
     ///
     /// NOTE: no openEHR spec governs this operation, the ITS-REST Admin API
-    /// defining only EHR deletes — our own design/extension; the SM
-    /// `I_DEFINITION_QUERY.delete_query` deletes every version by name while
-    /// this surface targets a single `(name, version)` row.
+    /// defining only EHR deletes — our own design/extension; the native
+    /// `delete_query` deletes every version by name while this surface targets
+    /// a single `(name, version)` row.
     ///
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — no stored query at that
@@ -102,7 +101,7 @@ impl FerroEhrService {
         &self,
         qualified_name: String,
         version: String,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         Ok(self
             .delete_stored_query_version(&qualified_name, &version)
             .await?)
@@ -126,8 +125,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *tx)
         .await?;
         let Some(stored) = stored else {
-            return Err(ServiceError::sm(
-                CallStatusType::TemplateDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::TemplateDoesNotExist,
                 format!("template {template_id}"),
             ));
         };
@@ -162,14 +161,14 @@ impl FerroEhrService {
         .await?;
         tx.commit().await?;
         // Evict the derived-runtime cache for the deleted id (case-canonical key,
-        // matching the SM delete path). No openEHR spec governs the cache.
+        // matching the native delete path). No openEHR spec governs the cache.
         self.web_templates
             .invalidate(&crate::templates::identity::canonical_key(&stored))
             .await;
         Ok(())
     }
 
-    /// SM `physical_party_delete`: physically delete a demographic PARTY "along
+    /// Physically delete a demographic PARTY "along
     /// with related Party relationships".
     ///
     /// # Errors
@@ -179,7 +178,7 @@ impl FerroEhrService {
     ///   demographic PARTY root (`party_id_does_not_exist`; a
     ///   `PARTY_RELATIONSHIP` or unknown id is also this failure).
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn physical_party_delete(&self, a_party_id: String) -> Result<(), SmError> {
+    pub async fn physical_party_delete(&self, a_party_id: String) -> Result<(), StatusError> {
         Ok(self
             .physical_delete_party(VoId(super::parse_uuid(&a_party_id, "party")?))
             .await?)
@@ -214,10 +213,8 @@ impl FerroEhrService {
     /// Row-count 0 on the EHR delete means the EHR did not exist (`has_ehr`
     /// false) → [`ServiceError::NotFound`].
     ///
-    /// NOTE (already-correct — `i_admin_service.adoc` defines the failure
-    /// only abstractly (`ehr_id_does_not_exist`) with no HTTP binding): we map it
-    /// to `NotFound` → HTTP `404`, the natural REST reading of an operation on a
-    /// non-existent resource.
+    /// NOTE: ITS-REST `operations/admin_ehr_delete.yaml` answers `404` for an
+    /// unknown id, so `ehr_id_does_not_exist` maps to `NotFound`.
     async fn delete_ehr(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
         // Read before the delete: the reference rows go with the versions that
         // carry them.
@@ -252,8 +249,8 @@ impl FerroEhrService {
         if deleted.rows_affected() == 0 {
             // `has_ehr(ehr_id)` is false → `ehr_id_does_not_exist`. Rolls back
             // (nothing was written), so the audit capture above is discarded.
-            return Err(ServiceError::sm(
-                CallStatusType::EhrIdDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::EhrIdDoesNotExist,
                 format!("EHR {ehr_id}"),
             ));
         }
@@ -295,8 +292,7 @@ impl FerroEhrService {
     /// cascade and the erasure tombstones, and the linkage erasure runs per
     /// EHR once that transaction has committed.
     ///
-    /// NOTE (keep — spec-silent extension): `i_admin_service.adoc` has no
-    /// bulk call, so the idempotent skip-missing semantics + returned count are
+    /// NOTE: the idempotent skip-missing semantics + returned count are
     /// our own design (no openEHR spec governs bulk-delete internals); a
     /// partial success is observable at the REST edge.
     async fn delete_ehr_set(&self, ehr_ids: &[EhrId]) -> Result<u64, ServiceError> {
@@ -492,7 +488,7 @@ impl FerroEhrService {
     )]
     async fn gc_unreferenced_blobs(&self, _candidates: Vec<String>) {}
 
-    /// `physical_party_delete` (`i_admin_service.adoc`): physically delete a
+    /// Physically delete a
     /// PARTY "along with related Party relationships", in one transaction —
     /// mirroring [`Self::delete_ehr`]'s capture-then-cascade approach.
     ///
@@ -523,8 +519,8 @@ impl FerroEhrService {
         .await?;
         if !kind.as_deref().is_some_and(super::is_party_kind) {
             // `party_id_does_not_exist` → NotFound (→ 404). Rolls back cleanly.
-            return Err(ServiceError::sm(
-                CallStatusType::PartyIdDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::PartyIdDoesNotExist,
                 format!("party {party_id}"),
             ));
         }

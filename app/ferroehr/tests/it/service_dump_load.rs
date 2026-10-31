@@ -4,10 +4,8 @@
 //! End-to-end service tests for the ADMIN dump/load API against a real
 //! `PostgreSQL` 18 (shared testkit harness).
 //!
-//! Spec: SM `I_ADMIN_DUMP_LOAD.export_ehrs`/`load_ehrs`
-//! (`docs/specs/openehr/SM/docs/UML/classes/i_admin_dump_load.adoc`), with
-//! `EXPORT_SPEC` (`export_spec.adoc`, `segment_split_size` kb) and
-//! `DUMP_LOAD_FAIL_REPORT` (`dump_load_fail_report.adoc`). The acceptance
+//! The operations are `export_ehrs` / `load_ehrs`, with the export spec
+//! (`segment_split_size` kb) and the per-entity fail report. The acceptance
 //! properties:
 //!
 //! 1. **Round-trip fidelity** — export N EHRs from a source repository, load the
@@ -20,12 +18,12 @@
 //! 3. **Promoted-column re-derivation** — the `ehr.subject_*` columns are a
 //!    projection of `EHR_STATUS.subject` (RM ehr master04 §EHR Status), so the
 //!    load re-derives them from the loaded status: a loaded EHR is found by the
-//!    subject lookup (SM `I_EHR_SERVICE.get_ehrs_for_subject`,
-//!    `operations/ehr_get_by_subject.yaml`) even when the archive's projection
+//!    subject lookup (`operations/ehr_get_by_subject.yaml`) even when the
+//!    archive's projection
 //!    was stale, and a PARTIAL load carrying a subject this repository already
 //!    holds is reported like a duplicate id, never silently duplicated
 //!    (one EHR per subject).
-//! 4. **Both `EXPORT_FORMAT` members** (`export_format.adoc`) — the
+//! 4. **Both export formats** — the
 //!    `openehr_canonical_xml` archive externalizes each version payload as an
 //!    `ORIGINAL_VERSION` document under the ITS-XML published `<version>` root
 //!    (`its-xml-1.0.2-nsv1/ALL/Version.xsd`), and the round trip through
@@ -59,7 +57,7 @@ use ferroehr::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use openehr_its::rest::generated::common::UpdateVersion;
 
 /// An `EXPORT_SPEC` in `logical_format`/`compression_format` whose
@@ -262,7 +260,7 @@ async fn load_promotes_the_subject_from_the_loaded_status() {
     // them from the loaded status instead of trusting the archived projection:
     // an archive whose projection is absent — the shape an EHR landed by a path
     // that never promoted has — still yields an EHR the subject lookup finds
-    // (SM `I_EHR_SERVICE.get_ehrs_for_subject`).
+    // (`get_ehrs_for_subject`).
     let (_src_db, src_pool, source) = repository().await;
     let (_dst_db, _dst_pool, target) = repository().await;
 
@@ -372,9 +370,9 @@ async fn load_reports_an_ehr_whose_subject_the_repository_already_holds() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// SM `compression_format.adoc` member `zip`: the archive is one `archive.zip`
+/// Compression `zip`: the archive is one `archive.zip`
 /// container carrying the identical entry set, and `load_ehrs` — which is
-/// passed no format (`i_admin_dump_load.adoc`: `load_ehrs(file_sys_loc)`) —
+/// passed no format (`load_ehrs(file_sys_loc)`) —
 /// detects and reads it, round-tripping byte-equal.
 #[tokio::test]
 async fn zip_compressed_export_round_trips_through_the_detected_container() {
@@ -420,7 +418,7 @@ async fn zip_compressed_export_round_trips_through_the_detected_container() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// SM `compression_format.adoc` member `7z` (owner-approved 2026-07-29,
+/// Compression `7z` (owner-approved 2026-07-29,
 /// `sevenz-rust2`): the archive is one `archive.7z` container carrying the
 /// identical entry set, and the format-less `load_ehrs` detects and reads it,
 /// round-tripping byte-equal — the exact mirror of the `zip` sibling above.
@@ -710,11 +708,10 @@ async fn the_canonical_xml_archive_holds_original_version_documents_under_the_pu
 }
 
 /// A corrupt version document is a PER-RECORD failure, not an operation
-/// failure: the EHR it belongs to is reported in a `DUMP_LOAD_FAIL_REPORT`
-/// (`dump_load_fail_report.adoc`) and skipped whole — nothing of it committed —
-/// while the rest of the archive still loads. That is the same per-entity shape
-/// the SM gives a duplicate EHR id ("import EHRs with duplicate EHR ids will
-/// fail", `i_admin_dump_load.adoc`), which is what a payload belonging to
+/// failure: the EHR it belongs to is reported in a fail report and skipped
+/// whole — nothing of it committed — while the rest of the archive still
+/// loads. That is the same per-entity shape as a duplicate EHR id, which is
+/// what a payload belonging to
 /// exactly one EHR warrants; a mangled MANIFEST or SEGMENT stays the
 /// whole-operation `file_not_writable`, because neither belongs to one entity.
 #[tokio::test]
@@ -769,8 +766,8 @@ async fn a_corrupt_version_document_reports_that_record_and_commits_nothing() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// `EXPORT_SPEC.segment_split_size` is `Integer [1..1]` in kb
-/// (`export_spec.adoc`); a non-positive size names no segment size at all and
+/// `segment_split_size` is a mandatory integer in kb; a non-positive size
+/// names no segment size at all and
 /// is a `precondition_violation`, distinct from the unrealized-member branch.
 #[tokio::test]
 async fn non_positive_segment_split_size_is_a_precondition_violation() {
@@ -788,13 +785,12 @@ async fn non_positive_segment_split_size_is_a_precondition_violation() {
         )
         .await
         .expect_err("a non-positive split size is refused");
-    assert_eq!(err.status, CallStatusType::PreconditionViolation);
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// `load_ehrs` against a location holding neither container is the SM's own
-/// `file_not_writable` (the only error `i_admin_dump_load.adoc` declares),
-/// never a panic or a silent empty load.
+/// `load_ehrs` against a location holding neither container is
+/// `file_not_writable`, never a panic or a silent empty load.
 #[tokio::test]
 async fn load_from_a_location_with_no_archive_is_file_not_writable() {
     let (_db, _pool, service) = repository().await;
@@ -804,7 +800,7 @@ async fn load_from_a_location_with_no_archive_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("no archive at the location");
-    assert_eq!(err.status, CallStatusType::FileNotWritable);
+    assert_eq!(err.status, ServiceStatus::FileNotWritable);
     // The SERVER FILESYSTEM PATH never reaches the body: it is deployment
     // layout, and the caller supplied only the configured location name. The
     // path + the OS diagnostic ride the trace record instead.
@@ -830,8 +826,7 @@ async fn ehr_row_exists(pool: &PgPool, ehr_id: Uuid) -> bool {
 
 /// A CORRUPT archive is the same fact as an unreadable one: a `manifest.json`
 /// that will not parse as this format leaves `file_sys_loc` holding no readable
-/// archive, so the load is the SM's own `file_not_writable`
-/// (`i_admin_dump_load.adoc` — the one error it declares) — never an
+/// archive, so the load is `file_not_writable` — never an
 /// `exception` blaming the server for the caller's archive, and never a
 /// partial load.
 #[tokio::test]
@@ -855,7 +850,7 @@ async fn load_from_an_archive_with_a_mangled_manifest_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("a mangled manifest is refused");
-    assert_eq!(err.status, CallStatusType::FileNotWritable);
+    assert_eq!(err.status, ServiceStatus::FileNotWritable);
     // The caller's-archive defect NAMES THE ENTRY (that is what the caller can
     // act on) and nothing else: no server path, no serde offsets/field names.
     assert!(
@@ -908,7 +903,7 @@ async fn load_from_a_truncated_container_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("a truncated container is refused");
-    assert_eq!(err.status, CallStatusType::FileNotWritable);
+    assert_eq!(err.status, ServiceStatus::FileNotWritable);
     assert!(
         !err.message.contains(&dir) && !err.message.contains("archive.zip"),
         "the container path must not reach the wire body, got {err:?}"
@@ -1032,10 +1027,15 @@ fn later_attest_contribution(ovid: &str) -> Value {
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": {
                 "change_type": change_type("666", "attestation"),
+                "committer": committer("senior reviewer")
+            },
+            "attestations": [{
+                "_type": "UPDATE_ATTESTATION",
+                "change_type": change_type("666", "attestation"),
                 "committer": committer("senior reviewer"),
                 "reason": { "_type": "DV_TEXT", "value": "authorised" },
                 "is_pending": false
-            }
+            }]
         }],
         "audit": {
             "change_type": change_type("666", "attestation"),

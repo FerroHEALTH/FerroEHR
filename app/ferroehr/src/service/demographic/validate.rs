@@ -4,7 +4,7 @@
 //! Inbound-body validation for the demographic chapter — the RM
 //! PARTY/ACTOR/ROLE/`PARTY_RELATIONSHIP` invariants and the BASE
 //! `PARTY_REF`/`OBJECT_REF` rules enforced at the write boundary
-//! (`valid_content` → `422`, `i_demographic_service.adoc §create_party`).
+//! (`valid_content` → `422`).
 //!
 //! Spec oracles:
 //! - `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc`

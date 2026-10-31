@@ -3,12 +3,9 @@
 
 //! The ADMIN **storage-integrity** wire — **our own extension**.
 //!
-//! No openEHR ITS-REST operation governs this route, and no SM interface
-//! declares it either. The released Admin API is exactly two EHR deletes
-//! (`specifications/admin.openapi.yaml`), and
-//! `docs/specs/openehr/SM/docs/UML/classes/i_admin_service.adoc` declares
-//! deletes, archival and reporting — nothing that inspects stored data for
-//! damage. No openEHR spec governs storage mechanics at all, so both the
+//! No openEHR ITS-REST operation governs this route. The released Admin API is
+//! exactly two EHR deletes (`specifications/admin.openapi.yaml`). No openEHR
+//! spec governs storage mechanics at all, so both the
 //! two-copy storage design and this route over it are ours.
 //!
 //! What it exposes: the storage keeps every version's content twice — the
@@ -72,8 +69,8 @@ pub(crate) fn integrity_routes() -> OpenApiRouter<AppState> {
 /// Sweep the stored versions for content-copy disagreement
 /// (`POST /admin/integrity/verify`).
 ///
-/// **Our own extension — no ITS-REST operation governs this, and it realizes
-/// no SM operation either** (module docs). Every stored version in both
+/// **Our own extension — no ITS-REST operation governs this** (module docs).
+/// Every stored version in both
 /// storage tiers is reassembled from its `node` rows and compared with its
 /// materialized body; the response is the resulting report.
 #[utoipa::path(
@@ -175,8 +172,8 @@ pub(crate) async fn admin_verify_storage_parity(
 /// Re-derive the node rows of every damaged version from its stored body
 /// (`POST /admin/integrity/rebuild-nodes`).
 ///
-/// **Our own extension — no ITS-REST operation governs this, and it realizes
-/// no SM operation either** (module docs). It is the repair the storage-parity
+/// **Our own extension — no ITS-REST operation governs this** (module docs).
+/// It is the repair the storage-parity
 /// sweep had no counterpart for: the sweep reports where a version's two
 /// content copies disagree, and this replaces the derived copy from the
 /// authoritative one.

@@ -1,9 +1,12 @@
 ---
 name: sm-ehr-service-chapter5-location
-description: Where SM Platform ch.5 (EHR service) requirements live — master05 is include-only, the §5.1 SVG is the ONLY source of the inheritance chain + commit_contribution [1..*], and which cross-cutting rules live in master02/master03
+description: Where SM Platform ch.5 (EHR service) reference text lives — master05 is include-only, the §5.1 SVG is the ONLY source of the inheritance chain + commit_contribution [1..*], and which cross-cutting rules live in master02/master03
 metadata:
   type: reference
 ---
+
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
 
 # SM Platform ch.5 "EHR Service" — navigation
 

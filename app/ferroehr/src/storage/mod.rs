@@ -24,12 +24,14 @@
 //!   to the BMM-generated RM model plus the demographic delta (the party roots
 //!   and the containers nested in them).
 //! - [`error::StorageError`] plus the crate-internal `error::classify_sqlx` —
-//!   the error surface and the SQLSTATE to SM-status bridge.
+//!   the error surface and the SQLSTATE to status bridge.
 //! - [`promoted::PROMOTED_LEAVES`] — the `(rm_type, path)` to node-column
 //!   mapping the write codec and the AQL read lowering both consult, so a hot
 //!   leaf reads an indexed column.
 //! - [`slim::slim`] — what a `node` row stores of its fragment once its
 //!   columns hold the rest, and the typed `ELEMENT` value columns.
+//! - [`header`] — the archetype header, language and encoding a node below
+//!   the root keeps in columns.
 //! - [`node_repo`] — `node`-table writes and the node-to-canonical reloads.
 //! - [`blob_ref`] — the multimedia blob reference index the node write path
 //!   maintains and the blob collector reads.
@@ -54,6 +56,7 @@ pub mod codec;
 pub mod ddl_template;
 pub mod ehr_repo;
 pub mod error;
+pub mod header;
 pub mod marks;
 pub mod node_repo;
 pub mod promoted;

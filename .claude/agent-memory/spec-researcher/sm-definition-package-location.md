@@ -1,9 +1,12 @@
 ---
 name: sm-definition-package-location
-description: Where SM Platform ch.4 (Definition package) requirements live — the 38 interface calls across 3 files, the diagram-only I_STATUS inheritance, the master02/03 inherited conventions, and the confirmed defect set (AOM2 mistyping, 3 incompatible qualified-name grammars, missing get_query)
+description: Where SM Platform ch.4 (Definition package) reference text lives — the 38 interface calls across 3 files, the diagram-only I_STATUS inheritance, the master02/03 inherited conventions, and the confirmed defect set (AOM2 mistyping, 3 incompatible qualified-name grammars, missing get_query)
 metadata:
   type: reference
 ---
+
+Reference text only: the Service Model is not an authority (owner ruling
+2026-10-27); it grounds no verdict and no feature.
 
 # SM Platform ch.4 — Definition package: file map
 

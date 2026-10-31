@@ -200,7 +200,7 @@ async fn a_refused_grant_is_a_typed_error_not_an_anonymous_request() {
     // error) stays on the trace record, off the wire body.
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::Exception,
+        ferroehr::service::status::ServiceStatus::Exception,
         "got {err:?}"
     );
     assert!(

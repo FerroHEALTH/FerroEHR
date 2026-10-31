@@ -19,15 +19,14 @@
 //! or database roles — our own design/extension; the wire contract and the
 //! change-control semantics are unchanged.
 //!
-//! One file per concern (the interface names borrow from
-//! the openEHR SM text, kept as reference and never an oracle):
+//! One file per concern:
 //! - `types` — the public [`types::PartyKind`] resource-family key,
 //! - `validate` — the inbound-body RM/BASE invariant checks and the
 //!   CONTRIBUTION-path validator entry points,
 //! - `support` — the shared seam onto [`crate::versioning`] (kind mapping,
 //!   ehr-less version loads, commit audits, canonical wire assembly),
-//! - `party` — `I_PARTY` CRUD plus `I_DEMOGRAPHIC_SERVICE.create_party`,
-//! - `relationship` — `I_PARTY_RELATIONSHIP` plus `create_party_relationship`,
+//! - `party` — party CRUD plus `create_party`,
+//! - `relationship` — relationship CRUD plus `create_party_relationship`,
 //!   the one surface absent from the released Demographic API (our extension),
 //! - `versioned` — the `VERSIONED_PARTY` read surface,
 //! - `contribution` — the demographic (ehr-less) CONTRIBUTION,
@@ -39,14 +38,12 @@
 //! status/`ETag`/`Location`/`Prefer`/`If-Match`/deleted-read semantics are
 //! identical to the EHR group by the spec's own design.
 //!
-//! Three deliberate divergences:
-//! - The `UV_PARTY`/`UV_PARTY_RELATIONSHIP` envelope (`uv_party.adoc`) is
-//!   realized server-side; the wire seam carries a bare RM party and
-//!   `lifecycle_state` defaults to `532|complete|`.
-//! - The `definitions_valid` precondition and `definition_unknown` error
-//!   (`i_demographic_service.adoc` §`create_party`) are unimplemented, there
-//!   being no demographic archetype or OPT store; only `valid_content` → `422`
-//!   is enforced.
+//! Three design points:
+//! - The wire seam carries a bare RM party, wrapped in its commit envelope
+//!   server-side, and `lifecycle_state` defaults to `532|complete|`.
+//! - A party's archetype and template ids are not checked against a store,
+//!   there being no demographic archetype or OPT store; only RM validity →
+//!   `422` is enforced.
 //! - `PARTY.reverse_relationships` (`party.adoc`
 //!   §`Reverse_relationships_validity`) is a derived `0..1` attribute the server
 //!   leaves unpopulated.
@@ -59,9 +56,7 @@
 //!   (`Capabilities_valid`, `performer`),
 //!   `…demographic.party_relationship.adoc` (`source`/`target`),
 //! - `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.party_ref.adoc`
-//!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`),
-//! - `docs/specs/openehr/SM/docs/UML/classes/i_party.adoc` /
-//!   `i_demographic_service.adoc` / `i_party_relationship.adoc`.
+//!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`).
 
 pub mod identifier;
 pub mod types;

@@ -18,8 +18,6 @@
 //!
 //! Everything below the store, version and audit obligation is therefore an
 //! extension: no openEHR spec governs the concrete scheme — our own design. The
-//! SM likewise defines no `I_EHR_ACCESS` interface, placing authorisation out of
-//! band (`openehr_platform/master02-overview.adoc` §General Assumptions), so the
 //! settings read (`FerroEhrService::current_ehr_access_settings`) is a
 //! native-API extension exposing the current scheme settings for the protocol
 //! adapter to enforce after authentication.

@@ -1,20 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `I_PARTY_RELATIONSHIP` (`i_party_relationship.adoc`) + the
-//! `I_DEMOGRAPHIC_SERVICE.create_party_relationship` factory
-//! (`i_demographic_service.adoc`) — the demographic `PARTY_RELATIONSHIP` domain
-//! logic, built on the shared [`crate::versioning`] machinery with
+//! The demographic `PARTY_RELATIONSHIP` operations and their create factory —
+//! the domain logic, built on the shared [`crate::versioning`] machinery with
 //! `ehr_id = None` (no EHR scope — our own design).
 //!
-//! NOTE: a relationship has TWO modelled representations the released text
-//! reconciles nowhere, and this module realizes the SM's — all six
-//! `I_PARTY_RELATIONSHIP` operations are keyed by `a_versioned_party_rel_id`, so
-//! every relationship gets its own version container (SM
-//! `UML/classes/i_party_relationship.adoc`) — where the RM instead makes it
-//! compositional data of its source party, versioned with that party and with no
-//! `VERSIONED_PARTY_RELATIONSHIP` class (RM demographic
-//! `docs/demographic/master02-demographic_package.adoc` §Party Relationships).
+//! NOTE: every relationship gets its own version container, our own design,
+//! where the RM instead makes it compositional data of its source party,
+//! versioned with that party and with no `VERSIONED_PARTY_RELATIONSHIP` class
+//! (RM demographic `docs/demographic/master02-demographic_package.adoc` §Party
+//! Relationships).
 //!
 //! The two representations are DISJOINT: neither is auto-synchronized into the
 //! other, and an inline `relationships` list in a committed PARTY body stays
@@ -40,7 +35,7 @@ use crate::service::demographic::support;
 use crate::service::demographic::validate::relationship_check;
 use crate::service::error::ServiceError;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::service::version_update::Committal;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::WriteEnvelope;
@@ -87,16 +82,15 @@ impl FerroEhrService {
         version: Option<TreeId>,
         at: Option<jiff::Timestamp>,
     ) -> Result<VersionRead, ServiceError> {
-        // The granular SM status: a version-addressed read that misses is
+        // The granular status: a version-addressed read that misses is
         // `object_version_does_not_exist`, a current read the generic
-        // `versioned_object_does_not_exist` (`i_party_relationship.adoc`
-        // mirrors `i_party.adoc` here).
+        // `versioned_object_does_not_exist`, as for a party.
         let miss = || {
-            ServiceError::sm(
+            ServiceError::new(
                 if version.is_some() || at.is_some() {
-                    CallStatusType::ObjectVersionDoesNotExist
+                    ServiceStatus::ObjectVersionDoesNotExist
                 } else {
-                    CallStatusType::VersionedObjectDoesNotExist
+                    ServiceStatus::VersionedObjectDoesNotExist
                 },
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
@@ -117,18 +111,18 @@ impl FerroEhrService {
 
     /// Confirm `vo_id` is a relationship (any version) — the check for the
     /// `versioned_party_relationship` reads. A non-relationship id is `404`,
-    /// reported with the caller-supplied granular SM status
+    /// reported with the caller-supplied granular status
     /// (`versioned_object_does_not_exist` for object-addressed reads,
-    /// `object_version_does_not_exist` for version-addressed ones —
-    /// `i_party_relationship.adoc` mirrors `i_party.adoc` here).
+    /// `object_version_does_not_exist` for version-addressed ones, as for a
+    /// party).
     async fn ensure_any_relationship(
         &self,
         vo_id: VoId,
-        miss: CallStatusType,
+        miss: ServiceStatus,
     ) -> Result<(), ServiceError> {
         match object_kind(&self.demographic_pool, vo_id).await? {
             Some(Kind::PartyRelationship) => Ok(()),
-            _ => Err(ServiceError::sm(
+            _ => Err(ServiceError::new(
                 miss,
                 format!("versioned party relationship {vo_id}"),
             )),
@@ -170,7 +164,7 @@ impl FerroEhrService {
             .map(|c| c.resource_meta()))
     }
 
-    /// `create_party_relationship` (`i_demographic_service.adoc`): create the
+    /// Create the
     /// first version of a new `PARTY_RELATIONSHIP` (server-side
     /// `VERSIONED_OBJECT` + `ORIGINAL_VERSION` + `CONTRIBUTION`). Returns it with
     /// its `uid` set and the create-response `ETag`/`Location` metadata. The
@@ -227,8 +221,8 @@ impl FerroEhrService {
         }
     }
 
-    /// `get_party_relationship` / `get_party_relationship_at_time`
-    /// (`i_party_relationship.adoc`): retrieve a relationship by its
+    /// `get_party_relationship` / `get_party_relationship_at_time`: retrieve a
+    /// relationship by its
     /// versioned-object id, optionally at a specific version or instant (else
     /// the latest). A deleted current version resolves to `Null` (→ `204`); an
     /// unknown or wrong-kind id is `404`.
@@ -245,7 +239,7 @@ impl FerroEhrService {
         Ok(support::version_response(vo_id, read)?)
     }
 
-    /// `update_party_relationship` (`i_party_relationship.adoc`): commit a new
+    /// Commit a new
     /// version. Resolves the current version once (existence gate, pre
     /// `has_party_relationship`) and delegates to
     /// [`Self::commit_relationship_update`]; the wire seam resolves for
@@ -259,8 +253,8 @@ impl FerroEhrService {
         committal: Option<&Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         })?;
@@ -282,8 +276,8 @@ impl FerroEhrService {
         committal: Option<&Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         if current.deleted {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("PARTY_RELATIONSHIP {} is deleted", current.vo_id),
             ));
         }
@@ -329,8 +323,7 @@ impl FerroEhrService {
     }
 
     /// Commit the logical delete of an already-resolved relationship
-    /// (`i_party_relationship.adoc §delete_party_relationship`): a new
-    /// `523|deleted|` version — RM common master06 §Logical Deletion.
+    /// as a new `523|deleted|` version — RM common master06 §Logical Deletion.
     /// `expected` is the caller-supplied trunk version (from `If-Match` or the
     /// path `OBJECT_VERSION_ID`); when `Some`, a stale value → `409`; when
     /// `None`, the current version is deleted unconditionally (no precondition
@@ -398,7 +391,7 @@ impl FerroEhrService {
     /// analogy with the EHR group (assembly + owner NOTE in
     /// `support::versioned_wrapper`).
     pub(super) async fn versioned_relationship(&self, vo_id: VoId) -> Result<Value, ServiceError> {
-        self.ensure_any_relationship(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.versioned_wrapper(vo_id, "VERSIONED_OBJECT", "versioned party relationship")
             .await
@@ -411,21 +404,21 @@ impl FerroEhrService {
         &self,
         vo_id: VoId,
     ) -> Result<Value, ServiceError> {
-        self.ensure_any_relationship(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.demographic_revision_history(vo_id).await
     }
 
-    /// `get_party_relationship_at_version` (`i_party_relationship.adoc`): the
+    /// The
     /// `ORIGINAL_VERSION` at a specific version. A non-relationship id is `404`.
     pub(super) async fn relationship_version(
         &self,
         vo_id: VoId,
         version: TreeId,
     ) -> Result<Value, ServiceError> {
-        // Version-addressed: `object_version_does_not_exist` is the declared
-        // does-not-exist code (`i_party_relationship.adoc`, as `i_party.adoc`).
-        self.ensure_any_relationship(vo_id, CallStatusType::ObjectVersionDoesNotExist)
+        // Version-addressed: `object_version_does_not_exist` is the
+        // does-not-exist code, as for a party.
+        self.ensure_any_relationship(vo_id, ServiceStatus::ObjectVersionDoesNotExist)
             .await?;
         self.demographic_version_envelope(vo_id, version, "party relationship")
             .await
@@ -438,7 +431,7 @@ impl FerroEhrService {
         vo_id: VoId,
         at: Option<jiff::Timestamp>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.ensure_any_relationship(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.demographic_version_envelope_at(vo_id, at, "party relationship")
             .await

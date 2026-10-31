@@ -4,30 +4,25 @@
 //! The ADMIN **archive** wire — **our own extension**.
 //!
 //! No openEHR ITS-REST operation governs any route here. The released Admin
-//! API is exactly two EHR deletes (`specifications/admin.openapi.yaml`), while
-//! the SM declares an archive interface the release never surfaced —
-//! `docs/specs/openehr/SM/docs/UML/classes/i_admin_archive.adoc`:
-//! `archive_ehrs` ("Move selected EHRs to archival storage") and
-//! `archive_parties` ("Move selected Parties and relationships to archival
-//! storage"), with `ehr_id_does_not_exist` / `party_id_does_not_exist` as their
-//! declared errors. No released ITS-REST operation covers either call.
+//! API is exactly two EHR deletes (`specifications/admin.openapi.yaml`).
+//! `archive_ehrs` moves selected EHRs to archival storage and
+//! `archive_parties` moves selected parties and their relationships there,
+//! answering `ehr_id_does_not_exist` / `party_id_does_not_exist` for an
+//! unknown id.
 //!
-//! These routes are the honest realization of that service basis, and are
-//! **excluded from ITS-REST wire conformance**: they gate the `EhrArchive` /
+//! These routes are **excluded from ITS-REST wire conformance**: they gate the `EhrArchive` /
 //! `DemographicArchive` CAPABILITY verdicts only.
 //!
 //! Every route is all-or-nothing: each id in the list is existence-checked
 //! before anything is written, so an unknown id leaves the repository untouched
-//! (the SM declares the not-found error on the operation, not per element).
+//! (the not-found error belongs to the operation, not to an element).
 //! Archiving marks the objects archived AND physically moves their rows to the
 //! server's cold storage tier; archival stays read-neutral — the archived
 //! objects remain retrievable, served from that tier — so no resource
 //! representation changes and the success is a bodyless `204`.
 //!
-//! The two `…/restore` routes are the reverse movement, and they realize NO SM
-//! operation: `i_admin_archive.adoc` declares the two archive calls and no
-//! un-archive counterpart, so naming one would be a false claim. They are our
-//! own design end to end — an archival tier is only trustworthy if the move it
+//! The two `…/restore` routes are the reverse movement, our own design end to
+//! end — an archival tier is only trustworthy if the move it
 //! performs can be undone deliberately rather than only as the side effect of a
 //! write (which thaws the object it touches). Restoring is idempotent in the
 //! same way archiving is: an object with nothing archived restores nothing and
@@ -73,24 +68,24 @@ pub(crate) fn archive_routes() -> OpenApiRouter<AppState> {
 /// Move selected EHRs to archival storage (`POST /admin/archive/ehrs`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_ADMIN_ARCHIVE.archive_ehrs`.
+/// docs).
 #[utoipa::path(
     post, path = "/admin/archive/ehrs", tag = "admin-archive",
     request_body(content = serde_json::Value,
                  description = "`{ \"ehr_ids\": [ … ] }` — the EHR ids to \
-                                archive, as the SM `List<String>` parameter. \
+                                archive, as a list of strings. \
                                 An empty list archives nothing and succeeds.",
                  example = json!({ "ehr_ids": ["7d44b88c-4199-4bad-97dc-d78268e01398"] })),
     responses(
         (status = 204, description = "Every named EHR is marked archived \
                                       (idempotent — re-archiving an archived \
-                                      EHR is a no-op). No body: the SM \
+                                      EHR is a no-op). No body: the \
                                       operation returns nothing and archival is \
                                       read-neutral, so no representation \
                                       changed."),
         (status = 400, description = "The body is not `{ \"ehr_ids\": [ … ] }`, \
-                                      or an id is not a well-formed UUID — SM \
-                                      `precondition_violation`. The whole \
+                                      or an id is not a well-formed UUID. \
+                                      The whole \
                                       request is rejected before anything is \
                                       archived.",
          body = serde_json::Value),
@@ -104,8 +99,8 @@ pub(crate) fn archive_routes() -> OpenApiRouter<AppState> {
                                       `/admin/` path). Our own authorization \
                                       design.",
          body = serde_json::Value),
-        (status = 404, description = "An id in the list names no EHR — SM \
-                                      `ehr_id_does_not_exist`. Nothing is \
+        (status = 404, description = "An id in the list names no EHR. \
+                                      Nothing is \
                                       archived (all-or-nothing).",
          body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server \
@@ -129,13 +124,13 @@ pub(crate) async fn admin_archive_ehrs(
 /// Move selected parties to archival storage (`POST /admin/archive/parties`).
 ///
 /// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). Realizes SM `I_ADMIN_ARCHIVE.archive_parties`.
+/// docs).
 #[utoipa::path(
     post, path = "/admin/archive/parties", tag = "admin-archive",
     request_body(content = serde_json::Value,
                  description = "`{ \"party_ids\": [ … ] }` — the demographic \
-                                PARTY version-container ids to archive, as the \
-                                SM `List<String>` parameter. An empty list \
+                                PARTY version-container ids to archive, as a \
+                                list of strings. An empty list \
                                 archives nothing and succeeds.",
                  example = json!({ "party_ids": ["8849182c-82ad-4088-a07f-48ead4180515"] })),
     responses(
@@ -143,8 +138,8 @@ pub(crate) async fn admin_archive_ehrs(
                                       (idempotent). No body — as for the EHR \
                                       half."),
         (status = 400, description = "The body is not `{ \"party_ids\": [ … ] }`, \
-                                      or an id is not a well-formed UUID — SM \
-                                      `precondition_violation`. The whole \
+                                      or an id is not a well-formed UUID. \
+                                      The whole \
                                       request is rejected before anything is \
                                       archived.",
          body = serde_json::Value),
@@ -155,7 +150,7 @@ pub(crate) async fn admin_archive_ehrs(
                                       Our own authorization design.",
          body = serde_json::Value),
         (status = 404, description = "An id in the list names no demographic \
-                                      PARTY root — SM `party_id_does_not_exist` \
+                                      PARTY root \
                                       (a `PARTY_RELATIONSHIP` id is not a party \
                                       root and is refused the same way). Nothing \
                                       is archived.",
@@ -181,9 +176,8 @@ pub(crate) async fn admin_archive_parties(
 /// Bring selected EHRs back from archival storage
 /// (`POST /admin/archive/ehrs/restore`).
 ///
-/// **Our own extension — no ITS-REST operation governs this, and it realizes no
-/// SM operation either** (module docs): `i_admin_archive.adoc` declares
-/// `archive_ehrs` / `archive_parties` and no un-archive counterpart. The reverse
+/// **Our own extension — no ITS-REST operation governs this** (module docs).
+/// The reverse
 /// of [`admin_archive_ehrs`], addressed as an action on the archive itself
 /// because a `DELETE` carrying the id list would be the one method whose
 /// "content … has no generally defined semantics" (RFC 9110 §9.3.5), while
@@ -250,8 +244,8 @@ pub(crate) async fn admin_restore_archived_ehrs(
 /// Bring selected parties back from archival storage
 /// (`POST /admin/archive/parties/restore`).
 ///
-/// **Our own extension — no ITS-REST operation governs this, and it realizes no
-/// SM operation either** (module docs). The reverse of
+/// **Our own extension — no ITS-REST operation governs this** (module docs).
+/// The reverse of
 /// [`admin_archive_parties`], with the same action-on-the-archive shape its EHR
 /// twin above documents.
 #[utoipa::path(
@@ -357,8 +351,8 @@ async fn run(
 }
 
 /// Read the `{ "<field>": [ … ] }` id list out of the request body. A missing
-/// or non-array member, or a non-string element, is a `400` — the SM parameter
-/// is a `List<String>`, and guessing a shape would archive the wrong set. The
+/// or non-array member, or a non-string element, is a `400` — the parameter
+/// is a list of strings, and guessing a shape would archive the wrong set. The
 /// id VALUES are validated by the service (`precondition_violation` on a
 /// malformed UUID), which rejects the whole request before writing anything.
 fn id_list(body: &serde_json::Value, field: &str) -> Result<Vec<String>, RestError> {

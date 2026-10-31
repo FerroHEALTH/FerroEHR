@@ -38,7 +38,7 @@ use uuid::Uuid;
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 
 /// Write the audit and contribution rows every version row needs, leaving the
 /// boundary constraints exactly as the migrated clone carries them.
@@ -828,7 +828,8 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
     let nodes: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM party.node WHERE vo_id = $1 \
          AND ext.node_fragment(data, rm_type, archetype, name, name_code, name_terminology, \
-             value_type, value_num, value_text, value_code, value_terminology)::text LIKE $2",
+             value_type, value_num, value_text, value_code, value_terminology, rm_version, \
+             language, encoding)::text LIKE $2",
     )
     .bind(vo_id)
     .bind(format!("%{SYNTHETIC_BSN}%"))
@@ -915,7 +916,7 @@ fn persons_with_bsn(families: &[&str], bsn: &str) -> serde_json::Value {
             let person = person_carrying(family, &[("nl-bsn", bsn)]);
             serde_json::json!({
                 "_type": "ORIGINAL_VERSION",
-                "lifecycle_state": { "terminology_id": "openehr", "code_string": "532" },
+                "lifecycle_state": crate::fixtures::lifecycle("532"),
                 "commit_audit": {
                     "change_type": coded("249", "creation"),
                     "committer": committer
@@ -956,7 +957,7 @@ async fn a_failed_commit_leaves_no_sealed_identifier(service: &FerroEhrService, 
         .expect_err("two parties cannot hold one national identifier");
     assert_eq!(
         refused.status,
-        CallStatusType::Conflict,
+        ServiceStatus::Conflict,
         "a value another party holds is the 409 conflict, never a 500: {refused:?}"
     );
     assert_eq!(
@@ -1180,7 +1181,7 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
         )
         .await
         .expect_err("another party may not take a live value");
-    assert_eq!(refused.status, CallStatusType::Conflict, "{refused:?}");
+    assert_eq!(refused.status, ServiceStatus::Conflict, "{refused:?}");
     service
         .party_create(
             PartyKind::Person,
@@ -1293,11 +1294,7 @@ async fn a_reference_to_another_partys_identifier_is_refused() {
         )
         .await
         .expect_err("another party's row cannot be carried");
-    assert_eq!(
-        refused.status,
-        CallStatusType::ContentInvalid,
-        "{refused:?}"
-    );
+    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
     assert_eq!(
         sealed_and_versions(&party_pool).await,
         (1, 1),
@@ -1323,11 +1320,7 @@ async fn two_values_in_one_scheme_are_refused() {
         )
         .await
         .expect_err("one party, two values in one scheme");
-    assert_eq!(
-        refused.status,
-        CallStatusType::ContentInvalid,
-        "{refused:?}"
-    );
+    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
     assert_eq!(sealed_and_versions(&party_pool).await, (0, 0));
 }
 
@@ -1378,7 +1371,7 @@ async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
         .expect_err("an unregistered scheme cannot be sealed");
     assert_eq!(
         refused.status,
-        CallStatusType::Exception,
+        ServiceStatus::Exception,
         "the client cannot fix the deployment's configuration: {refused:?}"
     );
     assert_eq!(
@@ -1506,11 +1499,7 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
         .import_ehr(None, extract)
         .await
         .expect_err("a plaintext protected value cannot be stored verbatim");
-    assert_eq!(
-        refused.status,
-        CallStatusType::ContentInvalid,
-        "{refused:?}"
-    );
+    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
     assert_eq!(
         sealed_and_versions(&target_party).await,
         (0, 0),
@@ -1582,11 +1571,7 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
         .import_ehr(None, extract)
         .await
         .expect_err("a reference to a row this deployment does not hold is refused");
-    assert_eq!(
-        refused.status,
-        CallStatusType::ContentInvalid,
-        "{refused:?}"
-    );
+    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
     assert!(
         format!("{refused:?}").contains("does not travel in an EHR extract"),
         "the refusal names the remedy: {refused:?}"
