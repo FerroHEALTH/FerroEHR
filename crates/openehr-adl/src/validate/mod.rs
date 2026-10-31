@@ -62,6 +62,7 @@ mod flat;
 mod identification;
 mod resource_meta;
 pub mod rm;
+mod scope;
 pub mod slots;
 mod source_level;
 mod specialisation;

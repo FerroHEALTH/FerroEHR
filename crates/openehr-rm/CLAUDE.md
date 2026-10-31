@@ -57,7 +57,9 @@ the package version is the crate's own SemVer line
   manual `serde::Serialize`/`Deserialize` impls in `src/json_serde.rs` (never a
   serde DERIVE); flattened concrete structs.
 - The BMM-generated RM *model* (attribute→types, multiplicity,
-  descendants) feeds the AQL planner and the validator — treat model-shape
+  descendants, and the computed attributes the BMM's no-argument functions
+  declare, kept apart from the stored ones) feeds the AQL planner and the
+  validator — treat model-shape
   changes as engine-facing and re-run the CNF pipeline.
 - Downstream crates consume these types directly; never add
   application-specific helpers here.

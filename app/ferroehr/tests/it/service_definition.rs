@@ -1185,6 +1185,131 @@ async fn adl2_template_upload_wire_conflicts_on_duplicate() {
     );
 }
 
+/// An ADL 2 operational template whose included OBSERVATION archetype reuses
+/// the template's node ids `id2` and `id3` (a synthetic fixture).
+const OPT2_REUSED_IDS: &str = "operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+    openEHR-EHR-COMPOSITION.t_archetype_scope.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        [\"name\"] = <\"Veredictum contributors\">
+    >
+    lifecycle_state = <\"unmanaged\">
+    details = <
+        [\"en\"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <\"A minimal operational template for conformance testing\">
+        >
+    >
+
+definition
+    COMPOSITION[id1] matches {
+        category matches {
+            DV_CODED_TEXT[id2] matches {
+                defining_code matches {[at1]}
+            }
+        }
+        content cardinality matches {0..*; unordered} matches {
+            OBSERVATION[id3, openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0] occurrences matches {0..*} matches {
+                data matches {
+                    HISTORY[id2] matches {
+                        events cardinality matches {1..*; unordered} matches {
+                            EVENT[id3] occurrences matches {0..*} matches {
+                                data matches {
+                                    ITEM_TREE[id4] matches {
+                                        items cardinality matches {0..*; unordered} matches {
+                                            ELEMENT[id5] occurrences matches {0..*} matches {
+                                                value matches {
+                                                    DV_TEXT[id6]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"id1\"] = <
+                text = <\"Minimal\">
+                description = <\"A minimal event composition\">
+            >
+            [\"id3\"] = <
+                text = <\"Minimal observation\">
+                description = <\"The observation the composition holds\">
+            >
+            [\"at1\"] = <
+                text = <\"event\">
+                description = <\"The openEHR composition category event\">
+            >
+        >
+    >
+    term_bindings = <
+        [\"openehr\"] = <
+            [\"at1\"] = <http://openehr.org/id/433>
+        >
+    >
+
+component_terminologies
+    [\"openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0\"] = <
+        term_definitions = <
+            [\"en\"] = <
+                [\"id1\"] = <
+                    text = <\"Minimal observation\">
+                    description = <\"An observation with one text element\">
+                >
+                [\"id3\"] = <
+                    text = <\"Any event\">
+                    description = <\"Any event\">
+                >
+                [\"id5\"] = <
+                    text = <\"Value\">
+                    description = <\"A text value\">
+                >
+            >
+        >
+    >
+";
+
+/// An included archetype's node ids are its own: AOM2 `master04.5` VCOSU holds
+/// "within the archetype", and OPT2 `master03-opt_raw` keeps each constituent's
+/// terminology under `component_terminologies`, so the upload is accepted
+/// (`201`); a node id repeated inside the included archetype is still `422`.
+#[tokio::test]
+async fn adl2_template_upload_accepts_node_ids_reused_by_an_included_archetype() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+
+    let hrid = svc
+        .template_adl2_upload(OPT2_REUSED_IDS.to_owned())
+        .await
+        .expect("an included archetype may reuse the template's node ids");
+    assert_eq!(hrid, "openEHR-EHR-COMPOSITION.t_archetype_scope.v1.0.0");
+
+    let duplicate = OPT2_REUSED_IDS
+        .replace("t_archetype_scope", "t_archetype_scope_dup")
+        .replace("ITEM_TREE[id4]", "ITEM_TREE[id2]");
+    let refused = svc
+        .template_adl2_upload(duplicate)
+        .await
+        .expect_err("a node id repeated inside one archetype is refused");
+    assert!(
+        matches!(&refused, ServiceError::ValidationFailed(errors)
+            if errors.iter().any(|e| format!("{e:?}").contains("VCOSU"))),
+        "got {refused:?}"
+    );
+}
+
 // ── ADL2/OPT2 FLAT parity: commit-path resolver fallback (#269) ───────────────
 
 /// The runtime `WebTemplate` resolver (`web_template`/`web_template_for`) falls

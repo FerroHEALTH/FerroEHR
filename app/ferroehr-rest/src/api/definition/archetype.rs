@@ -438,7 +438,12 @@ pub(crate) async fn definition_artefact_adl2_count(
                                       compositions still reference (the count \
                                       is named in the body): deleting it would \
                                       orphan committed content, so the store \
-                                      refuses. Archived content counts too.",
+                                      refuses. Archived content counts too. \
+                                      Also when another stored artefact does \
+                                      not compile without it (a slot filler, \
+                                      `use_archetype` or specialisation \
+                                      parent, directly or through another): \
+                                      the body names every one.",
          body = serde_json::Value)
     )
 )]

@@ -123,8 +123,9 @@ pub trait RmModel {
     /// caller cannot decide — VCORM reports the unknown type instead).
     fn conforms(&self, sub: &str, sup: &str) -> Option<bool>;
 
-    /// Resolve `attr` on `rm_type` (through inheritance), or `None` if the RM
-    /// type has no such attribute (VCARM) or the type is unknown.
+    /// Resolve `attr`, stored or computed (a function with no arguments, AOM2
+    /// `master04.2` §Attribute Nodes), on `rm_type` through inheritance, or
+    /// `None` if the type has no such attribute (`master04.5` VCARM) or is unknown.
     fn attribute(&self, rm_type: &str, attr: &str) -> Option<RmAttr>;
 
     /// If `rm_type` names an enumeration type in this model, its declared
@@ -282,16 +283,15 @@ impl RmModel for ProductionRmModel {
 
     fn attribute(&self, rm_type: &str, attr: &str) -> Option<RmAttr> {
         let class = production_class(base_type_name(rm_type))?;
-        let a = model::attribute(class.name, attr)?;
+        let a = model::attribute(class.name, attr)
+            .or_else(|| model::computed_attribute(class.name, attr))?;
         let is_multiple = a.container != model::Container::None;
         Some(RmAttr {
             declared_type: render_declared_type(a.declared_type, a.type_params),
             is_multiple,
             existence: Bounds::new(i32::from(a.is_mandatory), Some(1)),
-            // Real BMM cardinality where the model records it; the documented
-            // permissive `{0..*}` fallback only for a container the BMM leaves
-            // un-cardinalitied (`master04.5` §Validity Rules: `C_ATTRIBUTE`,
-            // VCACA).
+            // Real BMM cardinality where recorded; the permissive `{0..*}` only for
+            // a container the BMM leaves un-cardinalitied (`master04.5` VCACA).
             cardinality: is_multiple.then(|| {
                 a.cardinality
                     .map_or(Bounds::new(0, None), cardinality_bounds)
@@ -416,16 +416,11 @@ pub fn validate_rm_conformance(
     dialect: Dialect,
 ) -> Vec<ValidationIssue> {
     let v = view(archetype);
-    let defined: BTreeSet<String> = v
-        .terminology
-        .term_definitions
-        .values()
-        .flat_map(|m| m.keys().cloned())
-        .collect();
     let mut scan = RmScan {
         rm,
         root: v.definition,
-        defined,
+        defined: super::scope::defined_codes(v.terminology),
+        components: v.components,
         is_specialised: v.is_specialised(),
         issues: Vec::new(),
     };
@@ -458,14 +453,23 @@ struct RmScan<'a> {
     rm: &'a dyn RmModel,
     /// The definition root, against which a `use_node` target path resolves (VUNT).
     root: &'a CComplexObject,
-    /// The union of terminology-defined codes (for the interior-node VATID
-    /// half); a code defined in any language counts as defined.
-    defined: BTreeSet<String>,
+    /// The codes defined in scope (interior VATID); a constituent's below its root.
+    defined: BTreeSet<&'a str>,
+    components: super::scope::Components<'a>,
     is_specialised: bool,
     issues: Vec<ValidationIssue>,
 }
 
 impl RmScan<'_> {
+    /// Walk a complex `child` in the terminology scope it opens ([`super::scope::enter`]).
+    fn walk_child(&mut self, path: &str, rm_type: &str, child: &CObject) {
+        if let CObject::CComplexObject(cco) = child {
+            let outer = super::scope::enter(child, self.components, &mut self.defined);
+            self.walk_complex(path, rm_type, cco);
+            super::scope::leave(outer, &mut self.defined);
+        }
+    }
+
     /// Walk a complex object whose RM type is `rm_type`, checking every
     /// attribute and its child objects against the reference model.
     fn walk_complex(&mut self, path: &str, rm_type: &str, cco: &CComplexObject) {
@@ -650,9 +654,7 @@ impl RmScan<'_> {
                 self.check_proxy_type(&child_path, proxy);
             }
 
-            if let CObject::CComplexObject(cco) = child {
-                self.walk_complex(&child_path, child_type, cco);
-            }
+            self.walk_child(&child_path, child_type, child);
         }
     }
 
@@ -779,9 +781,7 @@ impl RmScan<'_> {
             if let CObject::CComplexObjectProxy(proxy) = child {
                 self.check_proxy_type(&child_path, proxy);
             }
-            if let CObject::CComplexObject(cco) = child {
-                self.walk_complex(&child_path, child_type, cco);
-            }
+            self.walk_child(&child_path, child_type, child);
         }
     }
 
