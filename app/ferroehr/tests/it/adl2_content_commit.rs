@@ -346,8 +346,10 @@ fn element_values(composition: &Value) -> Vec<Value> {
 /// recorded by their complete identifier, is committed and read back in FLAT
 /// and STRUCTURED (ITS-REST `simplified_formats/master04-basic_concepts.adoc`
 /// §Format variants) exactly as the same content under the interface ids the
-/// Web Template names them by; the `DV_COUNT` one, built back from either
-/// form, holds its ELEMENT unchanged.
+/// Web Template names them by. The `DV_COUNT` one and every `DV_INTERVAL` one
+/// whose template constrains the interval's parts, built back from either
+/// form, hold their ELEMENT unchanged (ITS-REST
+/// `simplified_formats/master05-rm_mapping.adoc` §`DV_INTERVAL`).
 #[tokio::test]
 async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost() {
     let db = testkit::db().await.expect("testkit database");
@@ -360,7 +362,7 @@ async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost
     assert!(!admitted.is_empty(), "the catalogue's 201 cases");
     upload(&svc, &admitted).await;
     let ehr = new_ehr(&svc).await;
-    let mut count_checked = false;
+    let mut read_back = 0;
     for case in admitted {
         let committed = svc
             .create_composition(ehr, creation(&case.body))
@@ -397,23 +399,35 @@ async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost
             "{}: the STRUCTURED read leaves content out",
             case.workflow
         );
-        if case.workflow == "adl2-dv_count-validate_range-accepted" {
+        if case.workflow == "adl2-dv_count-validate_range-accepted"
+            || (case.workflow.starts_with("adl2-dv_interval_")
+                && !case.workflow.contains("-validate_open-"))
+        {
             let now = "2026-01-01T10:00:00Z";
             let want = element_values(&stored);
-            assert_eq!(want.len(), 1, "the one DV_COUNT ELEMENT");
+            assert_eq!(want.len(), 1, "{}: the one ELEMENT", case.workflow);
             let from_flat =
                 openehr_sdt::flat::convert::composition_from_flat(&flat, &wt, now).expect("FLAT");
             let from_structured =
                 openehr_sdt::flat::convert::composition_from_structured(&structured, &wt, now)
                     .expect("STRUCTURED");
-            assert_eq!(element_values(&from_flat), want, "FLAT lost the ELEMENT");
+            assert_eq!(
+                element_values(&from_flat),
+                want,
+                "{}: FLAT lost the ELEMENT",
+                case.workflow
+            );
             assert_eq!(
                 element_values(&from_structured),
                 want,
-                "STRUCTURED lost the ELEMENT"
+                "{}: STRUCTURED lost the ELEMENT",
+                case.workflow
             );
-            count_checked = true;
+            read_back += 1;
         }
     }
-    assert!(count_checked, "the DV_COUNT case was read back");
+    assert_eq!(
+        read_back, 9,
+        "the DV_COUNT case and the 8 constrained interval cases were read back"
+    );
 }

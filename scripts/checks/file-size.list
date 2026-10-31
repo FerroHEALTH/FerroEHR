@@ -99,7 +99,7 @@ crates/openehr-sdt/src/flat/map/structures.rs 906
 crates/openehr-sdt/src/flat/validation/leaf.rs 1113
 crates/openehr-sdt/src/flat/validation/mod.rs 2778
 crates/openehr-sdt/src/flat/webtemplate/builder.rs 1699
-crates/openehr-sdt/src/flat/webtemplate/builder_v2_4.rs 1895
+crates/openehr-sdt/src/flat/webtemplate/builder_v2_4.rs 1892
 crates/openehr-sdt/src/flat/webtemplate/inputs.rs 1278
 crates/openehr-sdt/src/flat/webtemplate/shape.rs 886
 crates/openehr-term/src/bundle.rs 999

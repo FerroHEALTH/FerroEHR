@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The AOM2 `C_INTEGER`/`C_REAL` interval readings the `v2_4` Web Template
-//! front end ([`super::builder_v2_4`]) turns into input ranges and value lists.
+//! front end ([`super::builder_v2_4`]) turns into input ranges and value lists,
+//! and the occurrences, existence and cardinality intervals it turns into a
+//! node's `min` and `max`.
 //!
 //! A primitive constraint is a list of intervals and admits a value inside any
 //! one of them (AOM2 `master04.5-constraint_model-class_definitions.adoc`
@@ -14,7 +16,7 @@
               Formats), so serde_json::Value is the subject matter (#1694)"
 )]
 
-use openehr_base::prelude::{Interval, ProperInterval};
+use openehr_base::prelude::{Interval, MultiplicityInterval, ProperInterval};
 
 use super::model::WebTemplateRange;
 
@@ -120,4 +122,23 @@ pub(super) fn point_f64(iv: &Interval<f64>) -> Option<f64> {
         Interval::PointInterval(p) => p.lower,
         Interval::ProperInterval(_) => None,
     }
+}
+
+/// `(min, max)` from an object's occurrences; an unset occurrences defaults to
+/// `0..1`, a permitted, single, optional node: the safe default that never
+/// forces a spurious mandatory node into the example skeleton.
+pub(super) fn occurrences(iv: Option<&MultiplicityInterval>) -> (Option<i32>, i32) {
+    iv.map_or((Some(0), 1), occ)
+}
+
+/// `(min, max)` from a set occurrences, existence or cardinality interval;
+/// an unbounded upper end is `-1`.
+pub(super) fn occ(iv: &MultiplicityInterval) -> (Option<i32>, i32) {
+    let min = if iv.lower_unbounded { None } else { iv.lower };
+    let max = if iv.upper_unbounded {
+        -1
+    } else {
+        iv.upper.unwrap_or_else(|| iv.lower.unwrap_or(0))
+    };
+    (min, max)
 }

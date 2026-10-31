@@ -57,7 +57,7 @@ use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
 use super::inputs::{assumed_code, default_string};
 use super::interval_v2_4::{
-    int_range, point_f64, point_i32, point_list, real_range, sole_interval,
+    int_range, occ, occurrences, point_f64, point_i32, point_list, real_range, sole_interval,
 };
 use super::model::{
     WebTemplate, WebTemplateArchetypeSlot, WebTemplateBindingCodedValue, WebTemplateCardinality,
@@ -105,7 +105,7 @@ pub fn build_web_template_v2_4(
         &opt.terminology,
         None,
         &root_co,
-        "",
+        None,
         shape::Identity::Archetyped,
     );
     // master04 §"Web Template Metadata": the root `nodeId` is the archetype id
@@ -316,7 +316,7 @@ fn build_node(
     term: &ArchetypeTerminology,
     owner: Option<&CAttribute>,
     co: &CObject,
-    parent_path: &str,
+    parent: Option<&WebTemplateNode>,
     identity: shape::Identity,
 ) -> WebTemplateNode {
     // A `C_ARCHETYPE_ROOT` switches the terminology scope to its constituent's
@@ -332,7 +332,7 @@ fn build_node(
         }
         _ => term,
     };
-    let mut node = create_node(ctx, term, child_term, owner, co, parent_path, identity);
+    let mut node = create_node(ctx, term, child_term, owner, co, parent, identity);
     build_children(ctx, child_term, co, &mut node);
     node
 }
@@ -343,7 +343,7 @@ fn create_node(
     parent_term: &ArchetypeTerminology,
     owner: Option<&CAttribute>,
     co: &CObject,
-    parent_path: &str,
+    parent: Option<&WebTemplateNode>,
     identity: shape::Identity,
 ) -> WebTemplateNode {
     let attr_name = owner.map(|a| a.rm_attribute_name.as_str());
@@ -357,7 +357,7 @@ fn create_node(
     let (occ_min, max) = occurrences(object_occurrences(co));
     let min = meet_single_existence(occ_min, owner);
 
-    let path = build_path(parent_path, attr_name, &arch_node_id);
+    let path = build_path(parent, attr_name, &rm_type, &arch_node_id);
     let mut node = WebTemplateNode::new(rm_type, path);
     node.node_id = if arch_node_id.is_empty() {
         None
@@ -423,7 +423,7 @@ fn build_attribute_children(
             term,
             Some(attr),
             child_co,
-            &node.aql_path,
+            Some(node),
             identity,
         ));
     }
@@ -1680,33 +1680,30 @@ fn meet_single_existence(occurrences_min: Option<i32>, owner: Option<&CAttribute
     occurrences_min.map(|m| m.min(existence_min))
 }
 
-/// `(min, max)` from an object's occurrences; an unset occurrences defaults to
-/// `0..1` (a permitted, single, optional node — the safe default that never
-/// forces a spurious mandatory node into the example skeleton).
-fn occurrences(iv: Option<&MultiplicityInterval>) -> (Option<i32>, i32) {
-    iv.map_or((Some(0), 1), occ)
-}
-
-fn occ(iv: &MultiplicityInterval) -> (Option<i32>, i32) {
-    let min = if iv.lower_unbounded { None } else { iv.lower };
-    let max = if iv.upper_unbounded {
-        -1
+/// The data path of a node below `parent`. An `[idN]` predicate stands
+/// for `[@archetype_node_id = 'idN']` (ADL2 `master05-paths.adoc` §"Relationship
+/// with W3C Xpath"), which a `DATA_VALUE` lacks, being no `LOCATABLE` (RM
+/// `data_types`; RM `common` §Archetyped Package), so an ELEMENT's value and
+/// the parts of a data value take none: a `DV_INTERVAL`'s parts read `/lower`
+/// and `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
+/// §DV_INTERVAL).
+fn build_path(
+    parent: Option<&WebTemplateNode>,
+    attr: Option<&str>,
+    rm_type: &str,
+    id: &str,
+) -> String {
+    let (Some(parent), Some(a)) = (parent, attr) else {
+        return String::new();
+    };
+    let owner = parent.rm_type.as_str();
+    let value = rm_type.starts_with("DV_") && (owner == "ELEMENT" || owner.starts_with("DV_"));
+    let path = &parent.aql_path;
+    if id.is_empty() || value {
+        format!("{path}/{a}")
     } else {
-        iv.upper.unwrap_or_else(|| iv.lower.unwrap_or(0))
-    };
-    (min, max)
-}
-
-fn build_path(parent_path: &str, attr_name: Option<&str>, arch_node_id: &str) -> String {
-    let Some(attr) = attr_name else {
-        return String::new(); // root
-    };
-    let predicate = if arch_node_id.is_empty() {
-        String::new()
-    } else {
-        format!("[{arch_node_id}]")
-    };
-    format!("{parent_path}/{attr}{predicate}")
+        format!("{path}/{a}[{id}]")
+    }
 }
 
 /// Capture the numeric leaf constraints the `inputs` do not carry onto the
