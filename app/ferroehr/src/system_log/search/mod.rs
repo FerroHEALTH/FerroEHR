@@ -14,11 +14,18 @@
 //! record keeps the ids of its other tokens and its set, negated, in
 //! `search_tokens` under a GIN index.
 //!
+//! An `entity.identifier` that carries the record's request id or resource id
+//! is unique to few records, so it is answered from that column
+//! ([`IdentifierColumn`]): the record's set holds a token saying in which
+//! system the document carries the column's value, and no token of its own.
+//!
 //! A token is read from the document with the same nodes the profile's
 //! matching reads ([`AuditElement::nodes`]), so the stored tokens match what
 //! the document says.
 //!
 //! NOTE: no specification governs how a repository indexes its records: our own design.
+
+pub(crate) mod condition;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Mutex, PoisonError};
@@ -28,6 +35,7 @@ use sqlx::{PgPool, Row};
 
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
+use crate::system_log::event::AuditEvent;
 use crate::system_log::store::{
     AuditCriterion, AuditElement, AuditSearchFilter, AuditToken, AuditTokenSystem,
 };
@@ -95,13 +103,71 @@ impl AuditElement {
         ELEMENTS
             .iter()
             .any(|element| element.parameter() == parameter && element.shared())
+            || IdentifierColumn::ALL
+                .iter()
+                .any(|column| column.parameter() == parameter)
     }
 }
 
-/// The search tokens of `document`: each node a token parameter matches, as
-/// its system and its code or value, and each `agent.network.address`.
+/// A record column whose value the document may carry as an
+/// `entity.identifier`, which a search reads from the column.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum IdentifierColumn {
+    /// `request_id`, the request id of BALP `entity:transaction`.
+    RequestId,
+    /// `resource_id`, the object the record names.
+    ResourceId,
+}
+
+impl IdentifierColumn {
+    /// Every column, in the order a node is matched against them.
+    pub(crate) const ALL: [Self; 2] = [Self::RequestId, Self::ResourceId];
+
+    /// The parameter of the token that names the system the document carries
+    /// the column's value in.
+    pub(crate) const fn parameter(self) -> &'static str {
+        match self {
+            Self::RequestId => "entity.identifier=request_id",
+            Self::ResourceId => "entity.identifier=resource_id",
+        }
+    }
+
+    /// The column.
+    pub(crate) const fn column(self) -> &'static str {
+        match self {
+            Self::RequestId => "request_id",
+            Self::ResourceId => "resource_id",
+        }
+    }
+
+    /// The condition on the hash index of the column.
+    pub(super) const fn hashed(self) -> &'static str {
+        match self {
+            Self::RequestId => "hashtextextended(request_id, 0) = hashtextextended($1, 0)",
+            Self::ResourceId => "hashtextextended(resource_id, 0) = hashtextextended($1, 0)",
+        }
+    }
+
+    /// The value `event` stores in the column, when it stores one.
+    fn value(self, event: &AuditEvent) -> Option<&str> {
+        match self {
+            Self::RequestId => event.request_id.as_deref(),
+            Self::ResourceId => event.object_id.as_deref(),
+        }
+        .filter(|value| !value.is_empty())
+    }
+}
+
+/// The search tokens of `document`, the rendering of `event`: each node a
+/// token parameter matches, as its system and its code or value, and each
+/// `agent.network.address`. An `entity.identifier` whose value is the
+/// event's request id or resource id is the [`IdentifierColumn`] token of its
+/// system instead.
 #[must_use]
-pub(crate) fn document_tokens(document: &serde_json::Value) -> BTreeSet<SearchToken> {
+pub(crate) fn document_tokens(
+    document: &serde_json::Value,
+    event: &AuditEvent,
+) -> BTreeSet<SearchToken> {
     let text = |value: Option<&serde_json::Value>| {
         value.and_then(serde_json::Value::as_str).map(str::to_owned)
     };
@@ -110,10 +176,16 @@ pub(crate) fn document_tokens(document: &serde_json::Value) -> BTreeSet<SearchTo
         let (nodes, identifier) = element.nodes(document);
         let key = if identifier { "value" } else { "code" };
         for node in nodes {
+            let code = text(node.get(key));
+            let column = IdentifierColumn::ALL.into_iter().find(|column| {
+                element == AuditElement::EntityIdentifier
+                    && code.is_some()
+                    && column.value(event) == code.as_deref()
+            });
             tokens.insert(SearchToken {
-                parameter: element.parameter(),
+                parameter: column.map_or(element.parameter(), IdentifierColumn::parameter),
                 system: text(node.get("system")),
-                code: text(node.get(key)),
+                code: if column.is_some() { None } else { code },
             });
         }
     }
@@ -186,6 +258,10 @@ impl TokenRegistry {
         conn: &mut PgConnection,
         records: &[BTreeSet<SearchToken>],
     ) -> Result<(Vec<Vec<i32>>, LearnedSets), AuditError> {
+        // NOTE: our own design: the lock keeps retention from deleting a token this write names.
+        sqlx::query("SELECT audit.hold_search_tokens()")
+            .execute(&mut *conn)
+            .await?;
         let ids = token_ids(conn, records).await?;
         let mut learned = LearnedSets::default();
         let mut values = Vec::with_capacity(records.len());
@@ -309,38 +385,77 @@ async fn token_ids(
     }
 }
 
-/// The token ids each criterion of `filter` resolved to, in its order, or
-/// `None` when a criterion no stored token matches, which leaves no record.
+/// What a criterion on the document resolved to: the ids of the stored tokens
+/// a record may carry, and the record columns that answer it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct TokenMatch {
+    /// The token and negated set ids, any of which a record may carry.
+    pub(crate) ids: Vec<i32>,
+    /// The column matches, any of which a record may meet.
+    pub(crate) columns: Vec<ColumnMatch>,
+}
+
+impl From<Vec<i32>> for TokenMatch {
+    fn from(ids: Vec<i32>) -> Self {
+        Self {
+            ids,
+            columns: Vec::new(),
+        }
+    }
+}
+
+impl TokenMatch {
+    /// Whether no record can match.
+    fn is_empty(&self) -> bool {
+        self.ids.is_empty() && self.columns.is_empty()
+    }
+}
+
+/// An `entity.identifier` answered from a record column: the record carries
+/// one of `sets`, which says the document carries the column's value in the
+/// system the search names, and the column holds `value`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ColumnMatch {
+    /// The column.
+    pub(crate) column: IdentifierColumn,
+    /// The negated ids of the shared sets that hold a matching column token.
+    pub(crate) sets: Vec<i32>,
+    /// The value the column must hold; `None` for `[system]|`, which any value
+    /// in the system matches.
+    pub(crate) value: Option<String>,
+}
+
+/// What each criterion of `filter` resolved to, in its order, or `None` when
+/// a criterion no stored token matches, which leaves no record.
 ///
 /// # Errors
 /// [`AuditError::Store`] when a lookup fails.
 pub(crate) async fn resolve_criteria(
     pool: &PgPool,
     filter: &AuditSearchFilter,
-) -> Result<Option<Vec<Option<Vec<i32>>>>, AuditError> {
+) -> Result<Option<Vec<Option<TokenMatch>>>, AuditError> {
     let mut resolved = Vec::with_capacity(filter.criteria.len());
     for criterion in &filter.criteria {
-        let ids = criterion_ids(pool, criterion).await?;
-        if ids.as_ref().is_some_and(Vec::is_empty) {
+        let found = criterion_ids(pool, criterion).await?;
+        if found.as_ref().is_some_and(TokenMatch::is_empty) {
             // NOTE: `RESTful` ATNA §3.81.4.1.2.2 combines parameters with AND, so a parameter
             // no stored token matches leaves no record.
             return Ok(None);
         }
-        resolved.push(ids);
+        resolved.push(found);
     }
     Ok(Some(resolved))
 }
 
-/// The `search_tokens` ids that answer `criterion`, any of which a record must
-/// carry; `None` for a criterion on a column. An empty list means no record
-/// can match.
+/// What answers `criterion` on the document; `None` for a criterion on a
+/// column. An empty match means no record can match.
 ///
 /// # Errors
 /// [`AuditError::Store`] when a lookup fails.
 pub(crate) async fn criterion_ids(
     pool: &PgPool,
     criterion: &AuditCriterion,
-) -> Result<Option<Vec<i32>>, AuditError> {
+) -> Result<Option<TokenMatch>, AuditError> {
     let mut conn = acquire(pool).await?;
     match criterion {
         AuditCriterion::Address(values) => {
@@ -356,7 +471,7 @@ pub(crate) async fn criterion_ids(
                 .await?;
                 ids.extend(found);
             }
-            Ok(Some(ids.into_iter().collect()))
+            Ok(Some(TokenMatch::from(ids.into_iter().collect::<Vec<_>>())))
         }
         AuditCriterion::Element(element, tokens) => {
             let mut ids = BTreeSet::new();
@@ -366,17 +481,19 @@ pub(crate) async fn criterion_ids(
                     .await?;
                 ids.extend(found);
             }
+            let columns = if *element == AuditElement::EntityIdentifier {
+                column_matches(&mut conn, tokens).await?
+            } else {
+                Vec::new()
+            };
             if !element.shared() || ids.is_empty() {
-                return Ok(Some(ids.into_iter().collect()));
+                return Ok(Some(TokenMatch {
+                    ids: ids.into_iter().collect(),
+                    columns,
+                }));
             }
-            let tokens: Vec<i32> = ids.into_iter().collect();
-            let sets: Vec<i32> = sqlx::query_scalar(
-                "SELECT -id FROM audit.audit_search_set WHERE tokens && $1 ORDER BY 1",
-            )
-            .bind(tokens)
-            .fetch_all(&mut *conn)
-            .await?;
-            Ok(Some(sets))
+            let sets = sets_holding(&mut conn, ids.into_iter().collect()).await?;
+            Ok(Some(TokenMatch { ids: sets, columns }))
         }
         AuditCriterion::Patient(_)
         | AuditCriterion::Agent(_)
@@ -384,6 +501,67 @@ pub(crate) async fn criterion_ids(
         | AuditCriterion::Outcome(_)
         | AuditCriterion::Action(_) => Ok(None),
     }
+}
+
+/// The negated ids of the shared sets that hold any of `tokens`.
+async fn sets_holding(conn: &mut PgConnection, tokens: Vec<i32>) -> Result<Vec<i32>, AuditError> {
+    Ok(
+        sqlx::query_scalar("SELECT -id FROM audit.audit_search_set WHERE tokens && $1 ORDER BY 1")
+            .bind(tokens)
+            .fetch_all(&mut *conn)
+            .await?,
+    )
+}
+
+/// The column matches of an `entity.identifier` criterion: for each token
+/// value and column, the sets whose column token is in the system the value
+/// names (FHIR R4 Search §3.1.1.4.10).
+async fn column_matches(
+    conn: &mut PgConnection,
+    tokens: &[AuditToken],
+) -> Result<Vec<ColumnMatch>, AuditError> {
+    let mut matches = Vec::new();
+    for token in tokens {
+        for column in IdentifierColumn::ALL {
+            // NOTE: a column token carries no code, so the lookup reads the NULL entries of the
+            // code hash index.
+            let lookup = "SELECT id FROM audit.audit_search_token \
+                          WHERE hashtextextended(code, 0) IS NULL AND parameter = $1";
+            let ids: Vec<i32> = match (&token.system, &token.code) {
+                (AuditTokenSystem::Any, Some(_)) => {
+                    sqlx::query_scalar(lookup).bind(column.parameter())
+                }
+                (AuditTokenSystem::Absent, Some(_)) => sqlx::query_scalar(
+                    "SELECT id FROM audit.audit_search_token \
+                     WHERE hashtextextended(code, 0) IS NULL AND parameter = $1 \
+                     AND system IS NULL",
+                )
+                .bind(column.parameter()),
+                (AuditTokenSystem::Named(system), _) => sqlx::query_scalar(
+                    "SELECT id FROM audit.audit_search_token \
+                     WHERE hashtextextended(code, 0) IS NULL AND parameter = $1 \
+                     AND system = $2",
+                )
+                .bind(column.parameter())
+                .bind(system.clone()),
+                (AuditTokenSystem::Any | AuditTokenSystem::Absent, None) => continue,
+            }
+            .fetch_all(&mut *conn)
+            .await?;
+            if ids.is_empty() {
+                continue;
+            }
+            let sets = sets_holding(conn, ids).await?;
+            if !sets.is_empty() {
+                matches.push(ColumnMatch {
+                    column,
+                    sets,
+                    value: token.code.clone(),
+                });
+            }
+        }
+    }
+    Ok(matches)
 }
 
 /// The lookup of the stored tokens of `parameter` a token value names: the
@@ -474,7 +652,12 @@ mod tests {
                 "what": {"identifier": {"value": "patient-42"}}
             }]
         });
-        let tokens = document_tokens(&document);
+        let event = AuditEvent::new(
+            crate::system_log::event::EventActionCode::Read,
+            crate::system_log::event::ObjectClass::Composition,
+            crate::system_log::event::EventOutcome::Success,
+        );
+        let tokens = document_tokens(&document, &event);
         let token = |parameter, system: Option<&str>, code: &str| SearchToken {
             parameter,
             system: system.map(str::to_owned),
@@ -504,5 +687,46 @@ mod tests {
             assert!(tokens.contains(&expected), "{expected:?} in {tokens:?}");
         }
         assert_eq!(tokens.len(), 7, "{tokens:?}");
+    }
+
+    /// An `entity.identifier` carrying the event's request id or resource id
+    /// becomes the column token of its system, with no code; any other stays.
+    #[test]
+    fn a_request_id_and_a_resource_id_become_column_tokens() {
+        use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
+
+        let document = serde_json::json!({"entity": [
+            {"what": {"identifier": {"value": "req-7"}}},
+            {"what": {"identifier": {"system": "urn:openehr:object-id", "value": "8fa1::ferroehr::2"}}},
+            {"what": {"identifier": {"value": "patient-42"}}}
+        ]});
+        let mut event = AuditEvent::new(
+            EventActionCode::Create,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        event.request_id = Some("req-7".to_owned());
+        event.object_id = Some("8fa1::ferroehr::2".to_owned());
+        let tokens: Vec<SearchToken> = document_tokens(&document, &event).into_iter().collect();
+        let token = |parameter, system: Option<&str>, code: Option<&str>| SearchToken {
+            parameter,
+            system: system.map(str::to_owned),
+            code: code.map(str::to_owned),
+        };
+        assert_eq!(
+            tokens,
+            [
+                token("entity.identifier", None, Some("patient-42")),
+                token("entity.identifier=request_id", None, None),
+                token(
+                    "entity.identifier=resource_id",
+                    Some("urn:openehr:object-id"),
+                    None
+                ),
+            ]
+        );
+        assert!(AuditElement::shares("entity.identifier=request_id"));
+        assert!(AuditElement::shares("entity.identifier=resource_id"));
+        assert!(!AuditElement::shares("entity.identifier"));
     }
 }

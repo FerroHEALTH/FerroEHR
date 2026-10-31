@@ -199,6 +199,16 @@ A physical delete can never orphan committed clinical data. The count spans
 archived content too, so an archived composition's template cannot be deleted out
 from under it. Delete the compositions first.
 
+The ADL 2 delete also refuses with **409 Conflict** while another stored
+artefact still needs the one you delete, and the message names every one of
+them. An artefact needs another when it does not compile without it: a
+template or archetype that fills a slot with it or references it through
+`use_archetype`, a specialised archetype whose parent it is, and every
+artefact built on one of those. So an archetype a stored template uses is not
+deleted, and a specialised archetype keeps its parent. Delete the dependents
+first; an archetype nothing uses deletes at once. A stored
+operational template inlines its archetypes and needs none of them.
+
 ## Archetype sources (a FerroEHR extension)
 
 Beyond operational templates, FerroEHR can also hold the **source archetypes**
@@ -213,7 +223,7 @@ below is relative to it:
 | `GET|DELETE /definition/archetype/adl1.4/{archetype_id}` | Retrieve the stored source verbatim; remove it |
 | `GET /definition/archetype/adl2`, `…/adl2/count` | List the stored ADL 2 archetypes, and count them |
 | `GET /definition/artefact/adl2`, `…/adl2/count` | List and count *all* stored ADL 2 artefacts (archetypes, templates, OPTs) |
-| `DELETE /definition/artefact/adl2/{artefact_id}` | Remove one ADL 2 artefact |
+| `DELETE /definition/artefact/adl2/{artefact_id}` | Remove one ADL 2 artefact no other stored artefact needs |
 
 Properties worth knowing before you build on these:
 

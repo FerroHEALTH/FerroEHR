@@ -21,6 +21,7 @@
 
 use std::collections::BTreeSet;
 
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_base::v1_3::base_types::definitions::definitions_impl::LOCAL_TERMINOLOGY_ID;
@@ -29,6 +30,7 @@ use super::ValidationIssue;
 use super::bindings::check_bindings;
 use super::catalogue::ValidationCode;
 use super::identification::languages;
+use super::scope;
 use super::structure::complex_attribute_tuples;
 use crate::aom::access::{aom_type, complex_attributes, complex_node_id, object_node_id};
 use crate::artefact::ArchetypeView;
@@ -43,23 +45,19 @@ pub(super) fn check_terminology(
     issues: &mut Vec<ValidationIssue>,
 ) {
     let term = v.terminology;
+    let defined = scope::defined_codes(term);
 
-    // Union of all defined codes across languages (a code defined in any
-    // language counts as defined for the definedness checks).
-    let defined: BTreeSet<&str> = term
-        .term_definitions
-        .values()
-        .flat_map(|m| m.keys().map(String::as_str))
-        .collect();
-
-    // Re-scan the definition for referenced codes (usage + assumed values).
+    // Re-scan the definition for referenced codes (usage + assumed values); on
+    // an operational template the scan stops at each nested archetype root.
     let mut usage = CodeUsage::default();
     let root = CObject::CComplexObject(v.definition.clone());
-    collect_usage(&root, &mut usage);
+    let mut roots = Vec::new();
+    collect_usage_at(&root, "", &mut usage, v.components.map(|_| &mut roots));
 
     check_root_concept_code(v, &defined, issues);
     check_node_id_definedness(v, dialect, &usage, &defined, issues);
-    check_referenced_codes(v, &usage, &defined, issues);
+    let level = v.specialisation_level();
+    check_referenced_codes(Some(level), !v.is_specialised(), &usage, &defined, issues);
     check_assumed_values(term, &usage, issues);
     check_defined_code_levels(v, dialect, &defined, issues);
     check_defined_code_forms(&defined, issues);
@@ -73,6 +71,40 @@ pub(super) fn check_terminology(
     // Rules).
     check_bindings(v, &defined, issues);
     check_unused_codes(v, dialect, &usage, &defined, issues);
+    check_constituents(v, roots, issues);
+}
+
+/// The nested archetype roots a scoped usage scan stopped at, with their paths.
+type Roots<'o> = Vec<(String, &'o CComplexObject)>;
+
+/// VATDF / VACDF / VATDA below each nested archetype root of an operational
+/// template, judged against that constituent's own flat terminology
+/// ([`super::scope`]); a root met below a root is judged against its own.
+fn check_constituents(
+    v: &ArchetypeView<'_>,
+    mut roots: Roots<'_>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    let mut next = 0;
+    while let Some((path, cco)) = roots.get(next).cloned() {
+        next += 1;
+        let CComplexObject::CArchetypeRoot(root) = cco else {
+            continue;
+        };
+        let Some(term) = scope::constituent_terminology(v.components, root) else {
+            continue;
+        };
+        let mut usage = CodeUsage::default();
+        collect_complex_usage(cco, &path, &mut usage, Some(&mut roots));
+        let start = issues.len();
+        // NOTE: OPT2 master03-opt_raw keeps a constituent's terminology, not its
+        // root concept code, so its level (and VATCD) is not judged below a root.
+        check_referenced_codes(None, true, &usage, &scope::defined_codes(term), issues);
+        check_assumed_values(term, &usage, issues);
+        for issue in issues.iter_mut().skip(start) {
+            issue.path.get_or_insert_with(|| path.clone());
+        }
+    }
 }
 
 /// VATID: the root concept code must be defined in the terminology (master08
@@ -137,15 +169,14 @@ fn check_node_id_definedness(
 /// its own flat form (non-specialised); the specialised flat-form half runs in
 /// [`super::flat`]. VACDF: ac-codes defined in the current archetype (master03
 /// — "current", not flattened; runs for all). VATCD: at/id codes at a level
-/// greater than the archetype level.
+/// greater than the archetype level, when `level` is known.
 fn check_referenced_codes(
-    v: &ArchetypeView<'_>,
+    level: Option<usize>,
+    flat_self: bool,
     usage: &CodeUsage,
     defined: &BTreeSet<&str>,
     issues: &mut Vec<ValidationIssue>,
 ) {
-    let level = v.specialisation_level();
-    let flat_self = !v.is_specialised();
     for code in &usage.value_codes {
         if AdlCodeDefinitionsData::is_at_code(code) {
             if flat_self && !defined.contains(code.as_str()) {
@@ -163,6 +194,7 @@ fn check_referenced_codes(
             ));
         }
         if !AdlCodeDefinitionsData::is_value_set_code(code)
+            && let Some(level) = level
             && let Some(d) = codes::specialisation_depth(code)
             && d > level
         {
@@ -413,10 +445,17 @@ pub(super) struct CodeUsage {
 }
 
 pub(super) fn collect_usage(obj: &CObject, usage: &mut CodeUsage) {
-    collect_usage_at(obj, "", usage);
+    collect_usage_at(obj, "", usage, None);
 }
 
-fn collect_usage_at(obj: &CObject, path: &str, usage: &mut CodeUsage) {
+/// Collects the codes `obj` uses; with `roots`, a nested archetype root is
+/// recorded there and its subtree left to its own scope.
+fn collect_usage_at<'o>(
+    obj: &'o CObject,
+    path: &str,
+    usage: &mut CodeUsage,
+    roots: Option<&mut Roots<'o>>,
+) {
     let nid = object_node_id(obj);
     if !nid.is_empty()
         && (AdlCodeDefinitionsData::is_id_code(nid) || AdlCodeDefinitionsData::is_at_code(nid))
@@ -425,7 +464,12 @@ fn collect_usage_at(obj: &CObject, path: &str, usage: &mut CodeUsage) {
         usage.node_codes.insert(nid.to_owned());
     }
     match obj {
-        CObject::CComplexObject(cco) => collect_complex_usage(cco, path, usage),
+        CObject::CComplexObject(cco) => match roots {
+            Some(found) if !path.is_empty() && matches!(cco, CComplexObject::CArchetypeRoot(_)) => {
+                found.push((path.to_owned(), cco));
+            }
+            roots => collect_complex_usage(cco, path, usage, roots),
+        },
         CObject::CTerminologyCode(tc) => {
             let codes = constraint_codes(&tc.constraint);
             if let Some(a) = tc.assumed_value.as_ref()
@@ -448,16 +492,17 @@ fn collect_usage_at(obj: &CObject, path: &str, usage: &mut CodeUsage) {
 /// The tuples (e.g. ordinals) carry primitive constraints outside the normal
 /// attribute tree (master04.4), so their terminology-code values are collected
 /// too.
-fn collect_complex_usage(
-    cco: &openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject,
+fn collect_complex_usage<'o>(
+    cco: &'o CComplexObject,
     path: &str,
     usage: &mut CodeUsage,
+    mut roots: Option<&mut Roots<'o>>,
 ) {
     for attr in complex_attributes(cco) {
         let apath = format!("{path}/{}", attr.rm_attribute_name);
         for child in attr.children.iter().flatten() {
             let cpath = child_path(&apath, object_node_id(child));
-            collect_usage_at(child, &cpath, usage);
+            collect_usage_at(child, &cpath, usage, roots.as_deref_mut());
         }
     }
     for tuple in complex_attribute_tuples(cco) {
