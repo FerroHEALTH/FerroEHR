@@ -81,7 +81,7 @@ use openehr_its::rest::routes::{Lookup, Param, ParamLocation, PathParam, RouteMa
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::extensions::access::{ehr_access, pep, restriction};
+use crate::extensions::access::{delay, ehr_access, pep, restriction};
 #[cfg(feature = "events")]
 use crate::extensions::event_subscription;
 #[cfg(feature = "fhir")]
@@ -316,6 +316,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::dump_load::dump_load_routes())
         .merge(admin::integrity::integrity_routes())
         .merge(admin::marks::marks_routes())
+        .merge(admin::access_delay::access_delay_routes())
         .merge(admin::identifiers::identifier_routes())
         .merge(message::extract::extract_routes())
         .merge(terminology::routes())
@@ -387,29 +388,40 @@ pub(crate) async fn guarded_dispatch(
     // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), restricted data reads as
     // absent to every operation but the controller's own and an emergency access.
     let enforced = restriction::applies(&state, op);
-    let mut resp = ferroehr::system_log::access_context::with_access_restriction(
-        enforced,
-        Box::pin(async move {
-            match ehr_access::enforce(&state, op, &parts).await {
-                Ok(()) => {
-                    if enforced {
-                        match restriction::refuse_restricted(&state, op, &parts).await {
-                            Ok(Some(absent)) => return absent,
-                            Ok(None) => {}
-                            Err(fault) => return *fault,
-                        }
-                    }
-                    match pep::pre_check(&state, op, &parts).await {
-                        Ok(()) => {
-                            let resp = dispatch(state.clone(), op, parts).await;
-                            pep::post_check(&state, op, resp).await
-                        }
-                        Err(deny) => deny,
+    // NOTE: EHDS Art. 3(3) (`docs/law/eu/ehds/text.html`), data a professional has not
+    // released reads as absent to a patient-context request on a deployment that delays.
+    let delayed = delay::applies(&state, op);
+    let guarded = Box::pin(async move {
+        match ehr_access::enforce(&state, op, &parts).await {
+            Ok(()) => {
+                if enforced {
+                    match restriction::refuse_restricted(&state, op, &parts).await {
+                        Ok(Some(absent)) => return absent,
+                        Ok(None) => {}
+                        Err(fault) => return *fault,
                     }
                 }
-                Err(deny) => *deny,
+                if delayed {
+                    match delay::refuse_withheld(&state, op, &parts).await {
+                        Ok(Some(absent)) => return absent,
+                        Ok(None) => {}
+                        Err(fault) => return *fault,
+                    }
+                }
+                match pep::pre_check(&state, op, &parts).await {
+                    Ok(()) => {
+                        let resp = dispatch(state.clone(), op, parts).await;
+                        pep::post_check(&state, op, resp).await
+                    }
+                    Err(deny) => deny,
+                }
             }
-        }),
+            Err(deny) => *deny,
+        }
+    });
+    let mut resp = ferroehr::system_log::access_context::with_access_restriction(
+        enforced,
+        ferroehr::system_log::access_context::with_access_delay(delayed, guarded),
     )
     .await;
     resp.extensions_mut()

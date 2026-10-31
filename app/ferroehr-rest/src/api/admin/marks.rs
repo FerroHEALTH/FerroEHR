@@ -42,6 +42,7 @@ use utoipa_axum::routes;
 use ferroehr::storage::marks::RetentionPeriod;
 use openehr_its::rest::runtime::ApiError;
 
+use super::body::{optional_str, required_str};
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -829,35 +830,6 @@ async fn run(
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin marks operation: {other}"
-        )))),
-    }
-}
-
-/// A required string member of the request body.
-///
-/// A missing or non-string member is a `400`: guessing a shape here would
-/// record a legal mark against something the caller did not name.
-fn required_str<'a>(body: &'a serde_json::Value, field: &str) -> Result<&'a str, RestError> {
-    body.get(field)
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| {
-            RestError::from(ApiError::BadRequest(format!(
-                "request body must carry a `{field}` string"
-            )))
-        })
-}
-
-/// An optional string member of the request body; a present non-string is a
-/// `400` rather than a silent absence.
-fn optional_str<'a>(
-    body: &'a serde_json::Value,
-    field: &str,
-) -> Result<Option<&'a str>, RestError> {
-    match body.get(field) {
-        None | Some(serde_json::Value::Null) => Ok(None),
-        Some(serde_json::Value::String(s)) => Ok(Some(s.as_str())),
-        Some(other) => Err(RestError::from(ApiError::BadRequest(format!(
-            "`{field}` must be a string when present, got {other}"
         )))),
     }
 }

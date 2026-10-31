@@ -51,6 +51,7 @@
 mod condition;
 mod expr;
 mod from;
+mod gates;
 mod predicate;
 mod select;
 pub mod subject;
@@ -352,10 +353,9 @@ struct Builder<'a> {
     /// set while a plain `COUNT` lowers its argument, so the row stands for
     /// its rebuilt fragment, which is never `NULL` (`crate::storage::slim`).
     presence_only: bool,
-    /// Whether the request enforces the EHDS Art. 8 restriction of access, read
-    /// once when the builder starts: a restricted object or EHR then
-    /// contributes no row (`crate::system_log::access_context`).
-    access_restricted: bool,
+    /// The EHDS Art. 8 and Art. 3(3) access gates, read once when the builder
+    /// starts (`crate::system_log::access_context`).
+    gates: gates::Gates,
     /// The structure steps the SELECT paths bind once per row
     /// ([`Builder::bind_select_paths`]), one entry per distinct step prefix.
     step_bindings: Vec<StepBinding>,
@@ -391,7 +391,7 @@ impl<'a> Builder<'a> {
             sub_ctr: 0,
             streaming: false,
             presence_only: false,
-            access_restricted: crate::system_log::access_context::access_restriction_enforced(),
+            gates: gates::Gates::current(),
             step_bindings: Vec::new(),
         }
     }

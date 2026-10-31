@@ -55,6 +55,7 @@
 
 pub mod authn;
 pub mod authz;
+pub(crate) mod delay;
 pub mod ehr_access;
 pub mod pep;
 pub(crate) mod restriction;

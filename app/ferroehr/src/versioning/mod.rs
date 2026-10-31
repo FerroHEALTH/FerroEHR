@@ -67,6 +67,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::error::ServiceError;
 use crate::versioning::signature::signer::Signer;
 
+pub(crate) mod access_delay;
 pub(crate) mod attestation;
 pub(crate) mod audit;
 pub mod change;
@@ -215,6 +216,10 @@ pub(crate) struct SigningCtx<'a> {
     /// INSERT + envelope serialization is skipped entirely. No openEHR spec
     /// governs eventing — our own extension.
     pub(crate) outbox_enabled: bool,
+    /// The `[access_delay]` policy a new COMPOSITION is held under (EHDS Art.
+    /// 3(3), [`crate::versioning::access_delay`]); `None` holds nothing.
+    pub(crate) access_delay:
+        Option<&'a crate::service::admin::access_delay::config::AccessDelayPolicy>,
     /// The origin a body with no `FEEDER_AUDIT` is stamped with
     /// (`version.origins`): the committing client's registered origin, or
     /// [`Self::system_id`] (EHDS Annex II 3.4, [`crate::origins`]).

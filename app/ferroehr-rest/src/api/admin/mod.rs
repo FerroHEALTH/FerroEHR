@@ -15,11 +15,14 @@
 //! calls) and [`dump_load`] (`I_ADMIN_DUMP_LOAD`). The fourth, [`integrity`],
 //! realizes no SM interface at all: it sweeps the storage's two content copies
 //! for disagreement, and no openEHR spec governs storage mechanics. Beside
-//! them, [`marks`] keeps the legal marks and [`identifiers`] serves the audited
+//! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
+//! delay of the person's own access, and [`identifiers`] serves the audited
 //! read of a party's protected national identifiers. Each carries its own
 //! spec-silence flag and register citation.
 
+pub mod access_delay;
 pub mod archive;
+mod body;
 pub mod dispatch;
 pub mod dump_load;
 pub mod identifiers;

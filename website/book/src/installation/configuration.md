@@ -293,6 +293,7 @@ rather than inherit from a quickstart. See
 | `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC | [Authentication & access](config-auth.md) |
 | `[admin]`, `[management]` | The ADMIN API group and the ops-introspection surface | [Authentication & access](config-auth.md) |
 | `[smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
+| `[access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#access_delay) |
 | `[signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
 | `[licence]` | The commercial licence token | [Authentication & access](config-auth.md) |
 | `[query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |

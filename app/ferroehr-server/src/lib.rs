@@ -32,6 +32,7 @@ use ferroehr::decommission::{Decommission, Erasure};
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
+use ferroehr::service::admin::access_delay::config::AccessDelayPolicy;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::status::SmError;
 use ferroehr::storage::ehr_repo::ehr_subject_columns;
@@ -549,14 +550,6 @@ fn mounted_management_endpoints(levels: EndpointLevels) -> String {
     }
 }
 
-/// Announces the deployment postures that are legal but easy to leave on by
-/// accident, once logging is up.
-///
-/// The dev-default DSN and permissive CORS are announced rather than silently
-/// accepted (OWASP REST Security Cheat Sheet). The HTTPS posture is stated
-/// rather than enforced: this server cannot tell plaintext-because-misconfigured
-/// from plaintext-behind-a-TLS-terminating-ingress, so authentication over
-/// plaintext on a routable bind warns loudly and proceeds.
 /// Assembles the platform service from the resolved config tree.
 ///
 /// Every optional collaborator is attached here: the audit sender, the local
@@ -612,6 +605,10 @@ fn assemble_service(
         .with_origins(config.origins.clone())
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.query)
+        .with_access_delay(
+            AccessDelayPolicy::from_config(config)
+                .map_err(ferroehr::system_log::AuditError::CategoryMap)?,
+        )
         .with_ehr_index(ehr_index);
     if let Some(sender) = audit_sender {
         service = service.with_audit(sender);
@@ -1205,6 +1202,8 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .mirror_category_map(&category_map)
         .await
         .context("mirroring the [audit.categories] map into the retention register")?;
+    // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
+    service.spawn_access_delay_expiries(Duration::from_secs(60));
 
     // Outbound only and detached: neither boot, health nor readiness waits on
     // it, and a slow or unreachable collector reaches none of them.

@@ -867,3 +867,22 @@ endpoint = "https://report.ferropulse.eu/v1/report"   # https only (http to a lo
 # How the instance was deployed (helm | compose | binary | unknown). The Helm
 # chart and the compose files set it; leave it unset elsewhere.
 deployment = "unknown"
+
+# ── [access_delay] — EHDS Art. 3(3), the delay of the person's own access ─────
+# A Member State may delay a person's access to their data "for a limited
+# period of time until a health professional is able to properly communicate
+# and explain" it (Regulation (EU) 2025/327 Art. 3(3)). OFF by default, so
+# Art. 3(1) immediate access holds; turn it on only where your Member State's
+# rule provides for the delay. While on, a new COMPOSITION of a listed category
+# reads as absent to a patient-context request (a SMART patient/ grant or the
+# ABAC patient claim) until a professional releases it through
+# POST /admin/access-delay/release or `hours` pass; professionals read it as
+# before. A professional also holds one by hand through POST /admin/access-delay.
+[access_delay]
+enabled = false
+# The categories held at creation, named as [audit.categories] names one
+# (Laboratory-Reports, Medical-Imaging, …, <system>|<code>, or a national one).
+# EMPTY holds nothing at creation.
+categories = []
+# The limit of a hold, in hours, 1 to 8784; required while enabled.
+hours = 0
