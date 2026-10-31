@@ -470,6 +470,8 @@ jobs:
         run: bash scripts/release/chart-published.sh --self-test
       - name: The performance guard refuses a throughput or a p95 latency outside its budget
         run: bash scripts/perf/compare.sh --self-test
+      - name: The storage-bench verdict judges latency between two builds on one runner and refuses a rise the rounds separate
+        run: bash scripts/render/storage-bench-compare.sh --self-test
 
   # The tracker helpers set the native issue type and the Priority and Effort
   # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).

@@ -32,15 +32,97 @@ cargo bench -p ferroehr --bench storage -- --profile-time 10
 The database comes from the shared testkit harness (`testkit::db()`), so the
 run needs the same PostgreSQL 18 container the test suite uses and nothing else.
 
-`.github/workflows/storage-bench.yml` runs the same benchmark on a
-GitHub-hosted runner by dispatch and hands the fresh record to
-`scripts/render/storage-bench-compare.sh`, which compares it per operation with
-the record committed for the same generation and class and fails the run when
-a p50 or p99 rose further than the dispatched tolerance. A generation and class
-with no committed record fails the run too, with the error in the job summary:
-a schema-generation change once left the lane comparing nothing and passing
-(#4291), so the change that moves `ext.storage_generation()` commits the new
-generation's records with it. That comparison runs locally too:
+`.github/workflows/storage-bench.yml` runs the benchmark by dispatch on one
+GitHub-hosted runner for two builds, a baseline and a candidate, and judges
+the candidate against the baseline measured there (#4318):
+
+1. It builds the bench of both revisions. The candidate is the dispatched ref
+   (or the `candidate` input), and the baseline is the candidate's merge base
+   with `main` (or the `baseline` input). Dispatched on `main`, both are the
+   same commit and the run measures the lane's own noise.
+2. It runs the two builds in turn, `rounds` times each (8 by default, 4 to 8),
+   alternating the order (baseline then candidate, candidate then baseline),
+   so a runner that slows down part way through slows both alike. Each round
+   seeds a fresh database and runs `ANALYZE` before the first group, so every
+   round plans its statements over the same statistics. A clone starts with
+   none, and whether autovacuum's first `ANALYZE` landed before or during a
+   group used to decide that group's plans: the same build read `supersede`
+   at 9 ms in one round and 14 ms in the next, with ten times the buffer hits
+   (#4340). Eight rounds of the `poc` class take about four hours; dispatch
+   the `s` class with fewer, so the job stays inside its 360 minutes.
+3. `scripts/render/storage-bench-compare.sh --ab <dir>` reads two verdicts
+   from the rounds, and either one fails the run.
+
+**The plan verdict** reads pages per call: the operation's
+`database.blks_hit_delta` plus `blks_read_delta`, over its `iterations`. A
+plan reads the same pages on a fast runner and a slow one, so this verdict
+does not depend on the machine. An operation fails when the candidate's median
+pages per call is more than the page tolerance (10 % by default) and at least
+one page above the **highest** baseline round, whatever its time. The bound is
+the highest round because the counters are the whole database's, so a round
+can carry work beside the operation, and a plan the baseline itself reached
+in one round is no new plan. The two A/A runs of 2026-10-30 (41105458534 and
+41105463959, both directions) set the bound:
+
+- Read against the other build's median, the candidate's median moved up to
+  +360 % (`wide_projection_one_ehr`, where three of eight rounds read about
+  10 000 pages per call, one 4 700 and four 1 200 to 1 900, in both builds) and
+  +58 % (`retention_prune`, 1.3 against 2.1 pages).
+- Read against the other build's highest round, no median was more than
+  4.0 % above it (`wide_projection_population`), and none of the operations
+  that read about two pages moved by a whole page.
+- A plan change that this lane has met reads many times the pages: the node
+  foreign-key check read 2 000 or 17 000 to 19 000 hits per supersession
+  (#4340), and `revision_history` 16 or about 440 (#4438).
+
+10 % sits above the noise of both A/A runs by a factor of two and a half and
+far below any plan change seen so far.
+
+**The time verdict** reads the p50 and p99 of each round, divided first by
+the round's machine factor: the median, over the operations, of the round's
+p50 against that operation's median p50 across every round of both builds. A
+factor of 1.22 says the whole runner ran 22 % slow in that round; the
+summary lists every round with its factor and flags one beyond the tolerance
+as slower or faster across the board. The tolerance (15 % by default) then
+means two things:
+
+- An operation regresses when the median of its adjusted p50 or p99 rose
+  more than the tolerance above the baseline's AND every candidate round is
+  slower than every baseline round at that percentile. A rise beyond the
+  tolerance whose rounds overlap the baseline's reads as within the noise of
+  the rounds: the run cannot separate it, so dispatch it again.
+- The candidate build regresses as a whole when the median of its rounds'
+  factors is more than the tolerance above the baseline's AND every
+  candidate round's factor is above every baseline round's. Dividing by the
+  factor cannot tell a slow machine from code that slows every operation, and
+  interleaving can: a slow spell of the runner falls on rounds of both builds,
+  while slower code falls on every candidate round and no baseline round.
+
+The summary shows the raw change beside the adjusted one. With eight rounds a
+build, an unchanged operation's rounds separate by chance once in
+C(16, 8) = 12 870 orders, against once in 70 with four. Run 41105458534 shows
+why the factor is there: with four rounds a build, one candidate round ran
+22 % slow across the board (23 of 29 operations above their median), and the
+raw medians read 18 operations 15 to 27 % slower, two of them with the rounds
+separated, so unchanged code failed. Divided by the factors, one operation
+rose beyond 15 % (`latest_by_versioned_object_uid`, +20.7 % at p50) with its
+rounds overlapping the baseline's, and the candidate build
+ran 6.4 % slower across the board, inside the spread of the rounds' factors.
+The pages per call of the same rounds stayed within the bound above.
+
+The candidate's storage sizes are judged against the record committed for its
+generation and class, as before, because they do not depend on the machine.
+
+A latency is never compared across two runners: two hosted runs of the same
+bench code on 2026-10-28 read 20 of 27 operations 40 to 156 % apart, so a
+committed record is the source of the size facts and of the book's numbers,
+never of a latency verdict. A generation and class with no committed record
+fails the run, with the error in the job summary: a schema-generation change
+once left the lane comparing nothing and passing (#4291), so the change that
+moves `ext.storage_generation()` commits the new generation's records with it.
+
+The single-record comparison runs locally too, against the record committed at
+`HEAD`:
 
 ```bash
 bash scripts/render/storage-bench-compare.sh --tolerance 15
@@ -49,7 +131,9 @@ bash scripts/render/storage-bench-compare.sh --tolerance 15
 It reads the baseline from `HEAD`, because the run just overwrote the
 working-tree copy, and judges nothing when the two records carry different
 `bench_class` values. `--baseline <file>` compares against any other record,
-which is how a new generation is set against the one it replaces.
+which is how a new generation is set against the one it replaces. Like the
+lane's own judgement, a local verdict is sound only for two records measured
+on the same machine.
 
 ## The shape
 

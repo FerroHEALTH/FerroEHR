@@ -4,22 +4,36 @@
 # .github/workflows/storage-bench.yml
 #
 # Runs the storage benchmark (app/ferroehr/benches/storage.rs) against a
-# PostgreSQL 18 service and compares every operation with the record committed
-# for the same schema generation (#3370).
+# PostgreSQL 18 service for two builds on ONE runner, a baseline and a
+# candidate, in interleaved rounds, and judges the candidate's latency against
+# the baseline measured there (#4318). The candidate's storage sizes, which do
+# not depend on the machine, are judged against the record committed for its
+# schema generation and class (#3370, #4303).
 #
 # EXPLORATION, never a conformance record. Conformance is the CNF 2.0 suite
 # Veredictum runs, and the performance classes are earned by its own measured
 # runs under docs/conformance/<sut>/. This lane earns no class, publishes no
-# number, and writes nothing back to the repository: the fresh record leaves as
-# a run artifact, and the committed baseline changes only through a pull
+# number, and writes nothing back to the repository: the round records leave
+# as a run artifact, and the committed baseline changes only through a pull
 # request that says which machine measured it.
 #
-# DISPATCH ONLY, for the reason the issue states: a hosted runner is shared
-# hardware with noisy neighbours, so a latency measured here is comparable with
-# the committed baseline only loosely. The tolerance is therefore an input with
-# a wide default, and the summary names both machines so a red verdict is
-# attributed to the runner or to the code rather than guessed. Point this at a
-# dedicated runner and the tolerance can come down.
+# WHY THE SAME RUNNER (#4318). A hosted runner is shared hardware with noisy
+# neighbours: two runs of the same bench code on 2026-10-28 differed by up to
+# 156 %, so a latency compared with a record from another runner said little.
+# Both builds now run on this runner, alternating (A B, B A, ...), and two
+# verdicts come out of the rounds (scripts/render/storage-bench-compare.sh
+# --ab, docs/benchmarks/storage/README.md). The plan verdict fails an
+# operation whose pages per call rose beyond the page tolerance, whatever its
+# time. The time verdict divides each round by its machine factor, so one slow
+# spell of the runner does not read as the code, and an operation regresses
+# only when its median rose beyond the tolerance AND every candidate round is
+# slower than every baseline round at that percentile. With k rounds a build
+# an unchanged operation separates by chance once in C(2k, k) orders, 1 in 70
+# at four rounds and 1 in 12 870 at eight, so eight is the default: at four,
+# unchanged code read 18 operations 15 to 27 % slower when one candidate round
+# ran 22 % slow across the board (run 41105458534). The baseline defaults to
+# the candidate's merge base with main, so a dispatch on main measures the
+# same code twice: the lane's own noise check.
 #
 # The service container is NOT given the non-durable tuning the test job
 # applies (fsync, synchronous_commit, full_page_writes off): a commit's WAL
@@ -40,14 +54,34 @@ on:
           - poc
           - s
       tolerance_percent:
-        description: "How far an operation's p50 or p99 may rise above the committed record before the run fails"
+        description: "How far an operation's median p50 or p99, each round divided by its machine factor, may rise above the baseline's, outside the spread of the rounds, before the run fails"
         required: false
         default: "15"
+        type: string
+      page_tolerance_percent:
+        description: "How far an operation's median pages per call may rise above the baseline's highest round (and by at least one page) before the run fails"
+        required: false
+        default: "10"
         type: string
       size_budget_percent:
         description: "How far the bytes per composition version or per node row may grow above the committed record before the run fails"
         required: false
         default: "5"
+        type: string
+      rounds:
+        description: "Interleaved rounds per build (4 to 8); the spread of the rounds is the noise band"
+        required: false
+        default: "8"
+        type: string
+      baseline:
+        description: "The baseline revision (empty = the candidate's merge base with main)"
+        required: false
+        default: ""
+        type: string
+      candidate:
+        description: "The candidate revision (empty = the dispatched ref)"
+        required: false
+        default: ""
         type: string
 
 permissions: {}
@@ -63,7 +97,10 @@ jobs:
   bench:
     name: measure + compare
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # Two release builds of about 20 minutes each and 2 x rounds bench runs of
+    # about 15 minutes each: about 280 minutes at the default 8 rounds, the
+    # most a hosted job's 360 allows with a margin.
+    timeout-minutes: 360
     permissions:
       contents: read
     services:
@@ -86,33 +123,111 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache-save-if: false
-      - name: Run the storage benchmark
+      - name: Resolve the two revisions
+        id: revs
+        env:
+          BASELINE: ${{ inputs.baseline }}
+          CANDIDATE: ${{ inputs.candidate }}
+          ROUNDS: ${{ inputs.rounds }}
+        run: |
+          set -euo pipefail
+          [[ "$ROUNDS" =~ ^[4-8]$ ]] || { echo "::error::rounds takes 4 to 8, not '$ROUNDS'"; exit 1; }
+          candidate="$(git rev-parse --verify "${CANDIDATE:-HEAD}^{commit}")"
+          if [ -n "$BASELINE" ]; then
+            baseline="$(git rev-parse --verify "${BASELINE}^{commit}")"
+          else
+            baseline="$(git merge-base "$candidate" origin/main)"
+          fi
+          {
+            echo "candidate=$candidate"
+            echo "baseline=$baseline"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$baseline" = "$candidate" ]; then
+            echo "baseline and candidate are both ${candidate:0:12}: this run measures the lane's own noise"
+          else
+            echo "baseline ${baseline:0:12}, candidate ${candidate:0:12}"
+          fi
+      # Each build is checked out on its own, so each record lands under its
+      # own tree (the harness writes beside CARGO_MANIFEST_DIR), and each tree's
+      # target is removed once its binary is copied out: two release builds do
+      # not fit the runner's disk side by side.
+      - name: Build the bench of both revisions
+        env:
+          BASELINE: ${{ steps.revs.outputs.baseline }}
+          CANDIDATE: ${{ steps.revs.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bench"
+          for side in candidate baseline; do
+            rev="$CANDIDATE"
+            [ "$side" = baseline ] && rev="$BASELINE"
+            if [ "$side" = baseline ] && [ "$BASELINE" = "$CANDIDATE" ]; then
+              echo "the baseline is the candidate's build"
+              continue
+            fi
+            git worktree add --detach "$RUNNER_TEMP/tree-$side" "$rev"
+            (
+              cd "$RUNNER_TEMP/tree-$side"
+              rustup toolchain install
+              bin="$(cargo bench --locked -p ferroehr --bench storage --no-run --message-format=json \
+                | jq -r 'select(.reason == "compiler-artifact" and .target.name == "storage" and .executable != null) | .executable' \
+                | tail -n 1)"
+              [ -n "$bin" ] || { echo "::error::the $side build produced no storage bench binary"; exit 1; }
+              cp "$bin" "$RUNNER_TEMP/bench/storage-$side"
+              rm -rf target
+            )
+          done
+          ls -l "$RUNNER_TEMP/bench"
+      - name: Interleaved rounds
         env:
           STORAGE_BENCH_CLASS: ${{ inputs.class }}
-        run: cargo bench --locked -p ferroehr --bench storage
-      # The record leaves as an artifact whatever the comparison says: a red
-      # verdict is exactly when the numbers behind it are worth reading. It is
-      # never committed from here — the baseline moves in a pull request.
+          ROUNDS: ${{ inputs.rounds }}
+          SAME: ${{ steps.revs.outputs.baseline == steps.revs.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ab"
+          for r in $(seq 1 "$ROUNDS"); do
+            order="baseline candidate"
+            [ $((r % 2)) -eq 0 ] && order="candidate baseline"
+            for side in $order; do
+              build="$side"
+              [ "$SAME" = "true" ] && build=candidate
+              (
+                cd "$RUNNER_TEMP/tree-$build"
+                CRITERION_HOME="$RUNNER_TEMP/criterion-$side-$r" "$RUNNER_TEMP/bench/storage-$build" --bench \
+                  > "$RUNNER_TEMP/ab/$side-$r.log" 2>&1
+              ) || { tail -n 40 "$RUNNER_TEMP/ab/$side-$r.log"; echo "::error::the $side bench failed in round $r"; exit 1; }
+              record="$(sed -n 's/^storage benchmark record: //p' "$RUNNER_TEMP/ab/$side-$r.log" | tail -n 1)"
+              [ -f "$record" ] || { echo "::error::the $side bench of round $r named no record"; exit 1; }
+              cp "$record" "$RUNNER_TEMP/ab/$side-$r.json"
+              echo "round $r $side: $(jq -r '.measured_at_commit[0:12]' "$record")"
+            done
+          done
+      # The round records leave as an artifact whatever the comparison says: a
+      # red verdict is exactly when the numbers behind it are worth reading.
+      # They are never committed from here; the baseline moves in a pull request.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: storage-bench-record-${{ inputs.class }}
-          path: docs/benchmarks/storage/*/*/record.json
-          # A bench that died before writing has nothing to upload, and the
-          # step that died is already the run's failure.
+          name: storage-bench-rounds-${{ inputs.class }}
+          path: ${{ runner.temp }}/ab/
           if-no-files-found: warn
-      - name: Compare with the committed record
+      - name: Compare the candidate with the baseline
         env:
           TOLERANCE_PERCENT: ${{ inputs.tolerance_percent }}
+          PAGE_TOLERANCE_PERCENT: ${{ inputs.page_tolerance_percent }}
           SIZE_BUDGET_PERCENT: ${{ inputs.size_budget_percent }}
         # RUNNER_OS, RUNNER_ARCH and RUNNER_NAME are the runner's own default
         # environment, so the machine reaches the summary without a `${{ }}`
         # expression in a shell (reliability.md § The build pipeline is code).
         run: |
           bash scripts/render/storage-bench-compare.sh \
+            --ab "$RUNNER_TEMP/ab" \
             --tolerance "$TOLERANCE_PERCENT" \
+            --page-tolerance "$PAGE_TOLERANCE_PERCENT" \
             --size-budget "$SIZE_BUDGET_PERCENT" \
-            --runner "GitHub-hosted $RUNNER_OS/$RUNNER_ARCH ($RUNNER_NAME), $(nproc) cores"
+            --runner "GitHub-hosted $RUNNER_OS/$RUNNER_ARCH ($RUNNER_NAME), $(nproc) cores, both builds"

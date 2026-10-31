@@ -367,6 +367,15 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         class.compositions + kept.len(),
         class.persons
     );
+    // The clone starts with no planner statistics, and whether autovacuum's
+    // first ANALYZE landed before or during a group decided that group's plans:
+    // without them the node rows' foreign-key check walked every version of
+    // the superseded object (#4340). Every round measures the statistics a
+    // running server has (PostgreSQL docs § Updating Planner Statistics).
+    sqlx::query("ANALYZE")
+        .execute(pool)
+        .await
+        .expect("analyze the seeded database");
     // The partitioned parents' statistics, and `ehr`'s below the autoanalyze
     // threshold, as the server keeps them after a load (#4453).
     ferroehr::db::parent_statistics::refresh_pool(pool)
