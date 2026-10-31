@@ -33,6 +33,10 @@ use openehr_adl::assemble::parse_artefact;
 use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
+use openehr_sdt::flat::convert::{
+    composition_from_flat, composition_from_structured, composition_to_flat,
+    composition_to_structured,
+};
 use openehr_sdt::flat::validation::validate_archetype_conformance;
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
@@ -356,5 +360,123 @@ fn the_interface_archetype_id_is_still_matched() {
             .iter()
             .any(|m| m.kind == ValidationKind::RangeError),
         "the out-of-range magnitude under the interface id was not refused: {findings:?}"
+    );
+}
+
+/// `body` with every archetype root it records by a full reference retargeted
+/// to the interface id of its template node, the id the Web Template names it
+/// by.
+fn under_interface_ids(body: &Value, wt: &WebTemplate) -> Value {
+    fn retarget(value: &mut Value, refs: &BTreeMap<String, String>) {
+        match value {
+            Value::Object(o) => {
+                if let Some(Value::String(id)) = o.get_mut("archetype_node_id")
+                    && let Some(interface) = refs.get(id.as_str())
+                {
+                    interface.clone_into(id);
+                }
+                o.values_mut().for_each(|v| retarget(v, refs));
+            }
+            Value::Array(items) => items.iter_mut().for_each(|v| retarget(v, refs)),
+            _ => {}
+        }
+    }
+    let refs = wt.archetype_refs.as_ref().expect("an OPT2 Web Template");
+    let mut body = body.clone();
+    retarget(&mut body, refs);
+    body
+}
+
+/// Every ELEMENT in the `content` of `composition`, keyed by the chain of
+/// `archetype_node_id`s down to it, with its `name` and `value`.
+fn elements(composition: &Value) -> BTreeMap<String, (Value, Value)> {
+    fn collect(value: &Value, at: &str, out: &mut BTreeMap<String, (Value, Value)>) {
+        match value {
+            Value::Object(o) => {
+                let at = match o.get("archetype_node_id").and_then(Value::as_str) {
+                    Some(id) => format!("{at}/{id}"),
+                    None => at.to_owned(),
+                };
+                if o.get("_type").and_then(Value::as_str) == Some("ELEMENT") {
+                    let field = |k: &str| o.get(k).cloned().unwrap_or(Value::Null);
+                    out.insert(at, (field("name"), field("value")));
+                    return;
+                }
+                o.values().for_each(|v| collect(v, &at, out));
+            }
+            Value::Array(items) => items
+                .iter()
+                .enumerate()
+                .for_each(|(i, v)| collect(v, &format!("{at}:{i}"), out)),
+            _ => {}
+        }
+    }
+    let mut out = BTreeMap::new();
+    if let Some(content) = composition.get("content") {
+        collect(content, "", &mut out);
+    }
+    out
+}
+
+/// ITS-REST `simplified_formats/master04-basic_concepts.adoc` §Format variants:
+/// the FLAT and STRUCTURED read of a composition recording its inlined
+/// archetype roots by their complete identifier is the read of the same
+/// content under the interface ids the Web Template names them by.
+#[test]
+fn the_simplified_read_matches_a_full_archetype_reference_to_its_node() {
+    let templates = templates();
+    let admitted: Vec<Case> = cases()
+        .into_iter()
+        .filter(|c| c.status == StatusCode::CREATED)
+        .collect();
+    assert!(!admitted.is_empty(), "the catalogue's 201 cases");
+    for case in &admitted {
+        let wt = templates.get(&case.template).expect("the case's template");
+        let interface = under_interface_ids(&case.body, wt);
+        assert_ne!(
+            interface, case.body,
+            "{}: records no full reference",
+            case.workflow
+        );
+        let flat = composition_to_flat(&case.body, wt).expect("FLAT read");
+        assert_eq!(
+            flat,
+            composition_to_flat(&interface, wt).expect("FLAT read under interface ids"),
+            "{}: the FLAT read differs",
+            case.workflow
+        );
+        assert_eq!(
+            composition_to_structured(&case.body, wt).expect("STRUCTURED read"),
+            composition_to_structured(&interface, wt).expect("STRUCTURED under interface ids"),
+            "{}: the STRUCTURED read differs",
+            case.workflow
+        );
+    }
+}
+
+/// The FLAT and STRUCTURED read of the accepted `DV_COUNT` composition, whose
+/// OBSERVATION is recorded as `…cnf_minimal.v1.0.0`, carries its ELEMENT: the
+/// composition built back from either form holds it unchanged.
+#[test]
+fn the_simplified_read_keeps_the_content_below_a_full_archetype_reference() {
+    let (body, wt) = count_case_with(|obs| {
+        assert_eq!(
+            obs["archetype_node_id"],
+            Value::from("openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0")
+        );
+    });
+    let stored = elements(&under_interface_ids(&body, &wt));
+    assert_eq!(stored.len(), 1, "the one DV_COUNT ELEMENT");
+    let flat = composition_to_flat(&body, &wt).expect("FLAT read");
+    let structured = composition_to_structured(&body, &wt).expect("STRUCTURED read");
+    let now = "2026-01-01T10:00:00Z";
+    let from_flat = composition_from_flat(&flat, &wt, now).expect("FLAT build");
+    let from_structured =
+        composition_from_structured(&structured, &wt, now).expect("STRUCTURED build");
+    assert_eq!(elements(&from_flat), stored, "an ELEMENT is lost in FLAT");
+    assert_eq!(
+        elements(&from_structured),
+        stored,
+        "an ELEMENT is lost in STRUCTURED"
     );
 }

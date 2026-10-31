@@ -44,7 +44,7 @@
 )]
 
 mod leaf;
-mod node_ids;
+pub(crate) mod node_ids;
 mod subtype;
 
 use indexmap::IndexMap;

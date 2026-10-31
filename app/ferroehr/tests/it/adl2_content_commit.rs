@@ -229,18 +229,13 @@ async fn count_range(
 }
 
 /// The FLAT form of the accepted `DV_COUNT` composition with its magnitude set
-/// to `magnitude`, flattened from the interface id the Web Template names its
-/// OBSERVATION by.
+/// to `magnitude`.
 fn count_flat(
     body: &Value,
     wt: &openehr_sdt::flat::webtemplate::model::WebTemplate,
     magnitude: i64,
 ) -> Map<String, Value> {
-    let mut body = body.clone();
-    *body
-        .pointer_mut("/content/0/archetype_node_id")
-        .expect("the inlined OBSERVATION") = json!("openEHR-EHR-OBSERVATION.cnf_minimal.v1");
-    let mut flat = openehr_sdt::flat::convert::composition_to_flat(&body, wt)
+    let mut flat = openehr_sdt::flat::convert::composition_to_flat(body, wt)
         .expect("the accepted composition flattens");
     let key = flat
         .keys()
@@ -300,4 +295,125 @@ async fn a_structured_body_breaking_an_adl2_constraint_is_refused() {
             "STRUCTURED magnitude {magnitude}: {outcome:?}"
         );
     }
+}
+
+/// `body` with every archetype root it records by a full reference retargeted
+/// to the interface id the Web Template names it by.
+fn under_interface_ids(
+    body: &Value,
+    wt: &openehr_sdt::flat::webtemplate::model::WebTemplate,
+) -> Value {
+    fn retarget(value: &mut Value, refs: &BTreeMap<String, String>) {
+        match value {
+            Value::Object(o) => {
+                if let Some(Value::String(id)) = o.get_mut("archetype_node_id")
+                    && let Some(interface) = refs.get(id.as_str())
+                {
+                    interface.clone_into(id);
+                }
+                o.values_mut().for_each(|v| retarget(v, refs));
+            }
+            Value::Array(items) => items.iter_mut().for_each(|v| retarget(v, refs)),
+            _ => {}
+        }
+    }
+    let refs = wt.archetype_refs.as_ref().expect("an OPT2 Web Template");
+    let mut body = body.clone();
+    retarget(&mut body, refs);
+    body
+}
+
+/// Every ELEMENT value in the `content` of `composition`, in document order.
+fn element_values(composition: &Value) -> Vec<Value> {
+    fn collect(value: &Value, out: &mut Vec<Value>) {
+        match value {
+            Value::Object(o) if o.get("_type") == Some(&json!("ELEMENT")) => {
+                out.push(o.get("value").cloned().unwrap_or(Value::Null));
+            }
+            Value::Object(o) => o.values().for_each(|v| collect(v, out)),
+            Value::Array(items) => items.iter().for_each(|v| collect(v, out)),
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    if let Some(content) = composition.get("content") {
+        collect(content, &mut out);
+    }
+    out
+}
+
+/// Every admitted catalogue composition, whose inlined archetype roots are
+/// recorded by their complete identifier, is committed and read back in FLAT
+/// and STRUCTURED (ITS-REST `simplified_formats/master04-basic_concepts.adoc`
+/// §Format variants) exactly as the same content under the interface ids the
+/// Web Template names them by; the `DV_COUNT` one, built back from either
+/// form, holds its ELEMENT unchanged.
+#[tokio::test]
+async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let all = cases();
+    let admitted: Vec<&Case> = all
+        .iter()
+        .filter(|c| c.status == StatusCode::CREATED)
+        .collect();
+    assert!(!admitted.is_empty(), "the catalogue's 201 cases");
+    upload(&svc, &admitted).await;
+    let ehr = new_ehr(&svc).await;
+    let mut count_checked = false;
+    for case in admitted {
+        let committed = svc
+            .create_composition(ehr, creation(&case.body))
+            .await
+            .unwrap_or_else(|e| panic!("{}: commit: {e:?}", case.workflow));
+        let stored = svc
+            .get_composition_latest(ehr, committed.vo_id)
+            .await
+            .unwrap_or_else(|e| panic!("{}: read: {e:?}", case.workflow));
+        let wt = svc
+            .web_template(text(&stored, "/archetype_details/template_id/value"))
+            .await
+            .expect("the ADL 2 Web Template resolves");
+        let interface = under_interface_ids(&stored, &wt);
+        assert_ne!(
+            interface, stored,
+            "{}: the stored composition records no full reference",
+            case.workflow
+        );
+        let flat =
+            openehr_sdt::flat::convert::composition_to_flat(&stored, &wt).expect("the FLAT read");
+        let structured = openehr_sdt::flat::convert::composition_to_structured(&stored, &wt)
+            .expect("the STRUCTURED read");
+        assert_eq!(
+            flat,
+            openehr_sdt::flat::convert::composition_to_flat(&interface, &wt).expect("FLAT"),
+            "{}: the FLAT read leaves content out",
+            case.workflow
+        );
+        assert_eq!(
+            structured,
+            openehr_sdt::flat::convert::composition_to_structured(&interface, &wt)
+                .expect("STRUCTURED"),
+            "{}: the STRUCTURED read leaves content out",
+            case.workflow
+        );
+        if case.workflow == "adl2-dv_count-validate_range-accepted" {
+            let now = "2026-01-01T10:00:00Z";
+            let want = element_values(&stored);
+            assert_eq!(want.len(), 1, "the one DV_COUNT ELEMENT");
+            let from_flat =
+                openehr_sdt::flat::convert::composition_from_flat(&flat, &wt, now).expect("FLAT");
+            let from_structured =
+                openehr_sdt::flat::convert::composition_from_structured(&structured, &wt, now)
+                    .expect("STRUCTURED");
+            assert_eq!(element_values(&from_flat), want, "FLAT lost the ELEMENT");
+            assert_eq!(
+                element_values(&from_structured),
+                want,
+                "STRUCTURED lost the ELEMENT"
+            );
+            count_checked = true;
+        }
+    }
+    assert!(count_checked, "the DV_COUNT case was read back");
 }
