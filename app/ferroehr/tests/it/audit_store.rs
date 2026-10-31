@@ -159,7 +159,7 @@ async fn insert_batch_persists_every_record_with_identical_shape() {
     let store = store_over(&pool);
 
     // A drained batch: distinct events, one with a subject, one without.
-    let first = read_event("2026-07-10T09:00:00Z".parse().unwrap());
+    let first = read_event("2026-07-10T09:00:00Z".parse().expect("timestamp"));
     let mut second = read_event("2026-07-10T09:00:01Z".parse().unwrap());
     "bob".clone_into(&mut second.user_id);
     second.object_id = Some("9bb2::ferroehr::1".to_owned());
@@ -216,7 +216,7 @@ async fn repeated_batches_store_each_token_once_and_index_through_the_pending_li
     let pool = db.pool();
     let store = store_over(&pool);
 
-    let event = read_event("2026-07-10T09:00:00Z".parse().unwrap());
+    let event = read_event("2026-07-10T09:00:00Z".parse().expect("timestamp"));
     for _ in 0..3 {
         store
             .insert_batch(&[record(&event, Some("patient-42"))])
@@ -1154,4 +1154,245 @@ async fn every_search_parameter_matches_what_the_document_says() {
         matched > 40,
         "the candidates exercise matches, not only misses: {matched}"
     );
+}
+
+/// A classified access under [`classifying_policy`] with its own request id
+/// and object, of `action` (a read or a create).
+fn classified_access(
+    compiled: &ferroehr::system_log::render::CompiledPolicy,
+    action: EventActionCode,
+    request_id: &str,
+    object_id: &str,
+) -> AuditEvent {
+    use ferroehr::system_log::categories::{AccessedContent, ContentIds};
+
+    let mut event = read_event("2026-07-10T09:00:00Z".parse().expect("timestamp"));
+    event.action = action;
+    event.request_id = Some(request_id.to_owned());
+    event.object_id = Some(object_id.to_owned());
+    event.category = Some(compiled.categories.classify(
+        &AccessedContent::Objects(vec![ContentIds {
+            template_id: Some("Lab Report".to_owned()),
+            archetype_id: Some("openEHR-EHR-COMPOSITION.report.v1".to_owned()),
+            resource_kind: None,
+        }]),
+        false,
+    ));
+    event.category_map_digest = Some(compiled.categories.digest());
+    event
+}
+
+/// The ids of every stored search token.
+async fn token_ids(pool: &sqlx::PgPool) -> Vec<i32> {
+    sqlx::query_scalar("SELECT id FROM audit.audit_search_token ORDER BY id")
+        .fetch_all(pool)
+        .await
+        .expect("tokens")
+}
+
+/// Whether `criterion` finds any record, after asserting that the search finds
+/// exactly the records whose served document the profile's matching selects.
+async fn finds_what_the_documents_say(
+    store: &AuditStore,
+    documents: &[serde_json::Value],
+    criterion: ferroehr::system_log::store::AuditCriterion,
+) -> bool {
+    let mut expected: Vec<String> = documents
+        .iter()
+        .filter(|document| criterion.matches(document))
+        .map(ToString::to_string)
+        .collect();
+    let (total, found) = store
+        .search(&AuditSearchFilter {
+            count: 1000,
+            criteria: vec![criterion.clone()],
+            ..AuditSearchFilter::default()
+        })
+        .await
+        .expect("search");
+    let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
+    expected.sort();
+    found.sort();
+    assert_eq!(
+        usize::try_from(total).expect("a count"),
+        expected.len(),
+        "{criterion:?}"
+    );
+    assert_eq!(found, expected, "{criterion:?}");
+    !expected.is_empty()
+}
+
+/// A record stores no search token for its request id or for the version uid
+/// it created, so the token table stays flat across new requests (#4524), and
+/// ITI-81 `entity.identifier` (`RESTful` ATNA §3.81.4.1.2.2) still finds each
+/// record by both, in the three token forms of FHIR R4 Search §3.1.1.4.10.
+#[tokio::test]
+async fn request_ids_and_version_uids_add_no_token_and_stay_searchable() {
+    use ferroehr::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let policy = classifying_policy();
+    let compiled = policy.compile().expect("compile");
+    let store = AuditStore::new(pool.clone()).with_render_policy(policy);
+    let access = |action, n: usize| {
+        record(
+            &classified_access(
+                &compiled,
+                action,
+                &format!("req-{n}"),
+                &format!("8fa1::ferroehr::{n}"),
+            ),
+            Some("patient-42"),
+        )
+    };
+
+    store
+        .insert_batch(&[
+            access(EventActionCode::Read, 1),
+            access(EventActionCode::Create, 2),
+        ])
+        .await
+        .expect("first batch");
+    let before = token_ids(&pool).await;
+    store
+        .insert_batch(&[
+            access(EventActionCode::Read, 3),
+            access(EventActionCode::Create, 4),
+        ])
+        .await
+        .expect("second batch");
+    store
+        .insert(
+            &classified_access(
+                &compiled,
+                EventActionCode::Read,
+                "req-5",
+                "8fa1::ferroehr::5",
+            ),
+            Some("patient-42"),
+        )
+        .await
+        .expect("single insert");
+    assert_eq!(
+        token_ids(&pool).await,
+        before,
+        "a new request or version uid added a search token"
+    );
+    let named: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit.audit_search_token \
+         WHERE code LIKE 'req-%' OR code LIKE '8fa1::ferroehr::%'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count");
+    assert_eq!(named, 0, "a request id or version uid is stored as a token");
+
+    let documents = served(&store).await;
+    let token = |system: AuditTokenSystem, code: Option<&str>| AuditToken {
+        system,
+        code: code.map(str::to_owned),
+    };
+    let object_ids = AuditTokenSystem::Named("urn:openehr:object-id".to_owned());
+    let mut criteria = Vec::new();
+    for n in 1..=5 {
+        for value in [format!("req-{n}"), format!("8fa1::ferroehr::{n}")] {
+            for system in [
+                AuditTokenSystem::Any,
+                AuditTokenSystem::Absent,
+                object_ids.clone(),
+            ] {
+                criteria.push(vec![token(system, Some(&value))]);
+            }
+        }
+    }
+    criteria.push(vec![token(object_ids.clone(), None)]);
+    criteria.push(vec![
+        token(AuditTokenSystem::Any, Some("req-1")),
+        token(object_ids, Some("8fa1::ferroehr::4")),
+    ]);
+    let mut matched = 0;
+    for tokens in criteria {
+        let criterion = AuditCriterion::Element(AuditElement::EntityIdentifier, tokens);
+        matched += usize::from(finds_what_the_documents_say(&store, &documents, criterion).await);
+    }
+    // Of five records, each request id alone and without a system, each uid
+    // alone and in its system; then the system alone and the pair.
+    assert_eq!(matched, 5 * 4 + 2, "the searches exercise matches");
+    assert!(store.verify_chain().await.expect("verify").is_empty());
+}
+
+/// Retention removes the search tokens no remaining record names, among them
+/// the request id token of a record written before #4524, keeps a token a
+/// live record names, and the chain verifies records written before and
+/// after; outside reaping no token can be deleted, and within it no token a
+/// record names.
+#[tokio::test]
+async fn retention_removes_the_tokens_only_its_records_named() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = store_over(&pool);
+    store
+        .insert(&read_event(Timestamp::now()), Some("patient-42"))
+        .await
+        .expect("insert");
+    let live: i32 = sqlx::query_scalar(
+        "SELECT t FROM audit.audit_event, unnest(search_tokens) AS t WHERE t > 0 LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("a token of the live record");
+
+    // A record as 0017 wrote it: its request id is a token of its own.
+    let own: i32 = sqlx::query_scalar(
+        "INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
+         VALUES ('entity.identifier', NULL, 'req-before', \
+                 audit.search_token_digest('entity.identifier', NULL, 'req-before')) \
+         RETURNING id",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the old token");
+    sqlx::query(
+        "INSERT INTO audit.audit_event \
+         (recorded_at, action, outcome, event_code, resource_class, request_id, \
+          render_policy, search_tokens) \
+         SELECT now() - interval '40 days', 'R', 0, '110110', 'composition', 'req-before', \
+                render_policy, ARRAY[$1, $2] \
+           FROM audit.audit_event LIMIT 1",
+    )
+    .bind(own)
+    .bind(live)
+    .execute(&pool)
+    .await
+    .expect("the old record");
+    assert!(store.verify_chain().await.expect("verify").is_empty());
+
+    let mut tx = pool.begin().await.expect("tx");
+    let unreaped = sqlx::query("DELETE FROM audit.audit_search_token WHERE id = $1")
+        .bind(own)
+        .execute(&mut *tx)
+        .await;
+    assert!(unreaped.is_err(), "a token was deleted outside reaping");
+    tx.rollback().await.expect("rollback");
+    let mut tx = pool.begin().await.expect("tx");
+    sqlx::query("SELECT set_config('ferroehr.audit_reaping', 'on', true)")
+        .execute(&mut *tx)
+        .await
+        .expect("flag");
+    let named = sqlx::query("DELETE FROM audit.audit_search_token WHERE id = $1")
+        .bind(live)
+        .execute(&mut *tx)
+        .await;
+    assert!(named.is_err(), "a token a live record names was deleted");
+    tx.rollback().await.expect("rollback");
+
+    assert_eq!(store.reap(30).await.expect("reap"), 1);
+    let left = token_ids(&pool).await;
+    assert!(!left.contains(&own), "the reaped record's own token stayed");
+    assert!(
+        left.contains(&live),
+        "a token a live record names was removed"
+    );
+    assert!(store.verify_chain().await.expect("verify").is_empty());
 }
