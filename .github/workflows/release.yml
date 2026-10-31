@@ -151,10 +151,13 @@ jobs:
       # on a dispatch too. Checking it out (rather than the input-derived tag
       # string) keeps workflow_dispatch input out of every checkout, which is
       # also what the CodeQL actions taint model verifies (#2790).
+      # The full history: the crate version below is judged against the commit
+      # crates.io's newest openehr-* archive was packaged from.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
+          fetch-depth: 0
       - id: rev
         name: Record the pinned commit
         run: echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
@@ -167,14 +170,19 @@ jobs:
           tag: ${{ steps.tag.outputs.tag }}
 
       # The crates the crates.io leg publishes, for the per-crate SBOM matrix:
-      # the one list publish-crates.sh keeps, so the two cannot disagree.
+      # the one list publish-crates.sh keeps, so the two cannot disagree. The
+      # lockstep version is planned here, once per run (#4555): pull requests
+      # never set it, and the SBOM and crates legs stamp this one value into
+      # their checkouts, so they package the same bytes.
       - id: crates
-        name: The published crates and their lockstep version
+        name: The published crates and the lockstep version to publish
         run: |
           set -euo pipefail
+          list="$(bash scripts/release/publish-crates.sh list | jq -R . | jq -sc .)"
+          version="$(bash scripts/release/publish-crates.sh plan)"
           {
-            echo "list=$(bash scripts/release/publish-crates.sh list | jq -R . | jq -sc .)"
-            echo "version=$(bash scripts/release/publish-crates.sh version)"
+            echo "list=$list"
+            echo "version=$version"
           } >> "$GITHUB_OUTPUT"
 
       # The chart-version check of the list below reads the registry with helm.
@@ -418,6 +426,7 @@ jobs:
           VERSION: ${{ needs.plan.outputs.crate-version }}
         run: |
           set -euo pipefail
+          bash scripts/release/publish-crates.sh stamp "$VERSION"
           bash scripts/release/crate-sbom.sh archive "$CRATE" "$VERSION"
           bash scripts/release/crate-sbom.sh sbom "$CRATE" "$VERSION"
           {
@@ -1340,10 +1349,13 @@ jobs:
   # and unpublished). Until the reviewer is configured the environment simply
   # does not pause and the leg publishes straight through.
   #
-  # Idempotent: the shared script treats "already exists on the crates.io index"
-  # as done, so a release whose cycle changed no packaged crate content approves
-  # through as a green no-op, and a re-run after a partial publish finishes the
-  # set instead of being refused.
+  # The version is plan's `crate-version` (#4555): the newest crates.io version
+  # when packaged content is unchanged since the commit it was packaged from,
+  # the next 0.0.x otherwise. Idempotent: the shared script treats a version
+  # crates.io already holds as done only when its packaged content is the same,
+  # so a release whose cycle changed no packaged crate content approves through
+  # as a green no-op, a re-run after a partial publish finishes the set, and
+  # changed content under an existing version is refused before any upload.
   #
   # Real releases only. A prerelease is a rehearsal of a cut, and an immutable
   # public artifact is not something a rehearsal should produce — an `-rc` tree
@@ -1386,10 +1398,13 @@ jobs:
       id-token: write # OIDC token exchange (rust-lang/crates-io-auth-action)
       attestations: read # read the crate SBOM attestations back
     steps:
+      # The full history: the publish compares any version crates.io already
+      # holds with the commit it was packaged from.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
+          fetch-depth: 0
       # No cache in the lane that uploads to crates.io: a published version is
       # immutable, so it is built from this checkout and nothing else
       # (setup-rust-toolchain caches by default).
@@ -1399,6 +1414,14 @@ jobs:
       - id: auth
         name: Exchange the OIDC identity for a temporary crates.io token
         uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
+      # The version plan chose, written into this checkout only; the
+      # crate-sboms leg stamped the same value, so the archives match.
+      - name: Stamp the planned lockstep version
+        env:
+          CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
+        run: bash scripts/release/publish-crates.sh stamp "$CRATE_VERSION"
+      # Refuses before any upload when a crate already holds the version with
+      # different packaged content.
       - name: Publish the nine spec crates in dependency order
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
@@ -1511,6 +1534,7 @@ jobs:
         env:
           TAG: ${{ needs.plan.outputs.tag }}
           VERSION: ${{ needs.plan.outputs.version }}
+          CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
           IS_RELEASE: ${{ needs.plan.outputs.is-release }}
           APP_DIGEST: ${{ needs.app-image.outputs.digest }}
           VIEWER_DIGEST: ${{ needs.viewer-image.outputs.digest }}
@@ -1590,7 +1614,7 @@ jobs:
           check "conformance (released profile)" "$R_CONFORMANCE" advisory
 
           chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | sed -n 1p)"
-          crates_version="$(bash scripts/release/publish-crates.sh version || echo unknown)"
+          crates_version="${CRATE_VERSION:-unknown}"
           repo_url="https://github.com/${GITHUB_REPOSITORY}"
           {
             printf '## %s\n\n' "$TAG"

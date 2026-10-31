@@ -44,10 +44,11 @@
 )]
 
 mod leaf;
+pub(crate) mod node_ids;
 mod subtype;
 
 use indexmap::IndexMap;
-use openehr_rm::v1_2::paths::PathSegment;
+use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
 use serde_json::{Map, Value};
 
 use crate::rm_instance::{ValidationKind, ValidationMessage};
@@ -69,9 +70,7 @@ pub fn validate_archetype_conformance(
     composition: &Value,
     wt: &WebTemplate,
 ) -> Vec<ValidationMessage> {
-    let mut v = Validator::default();
-    v.walk(composition, &wt.tree);
-    v.out
+    node_ids::run(Validator::default(), composition, wt).out
 }
 
 /// Archetype-conformance pass for a `553|incomplete|` commit.
@@ -90,12 +89,11 @@ pub fn validate_archetype_conformance_incomplete(
     composition: &Value,
     wt: &WebTemplate,
 ) -> Vec<ValidationMessage> {
-    let mut v = Validator {
+    let v = Validator {
         relax_lower_bounds: true,
         ..Validator::default()
     };
-    v.walk(composition, &wt.tree);
-    v.out
+    node_ids::run(v, composition, wt).out
 }
 
 /// One terminology-server question the template's archetype **constraint
@@ -140,12 +138,11 @@ pub fn collect_constraint_binding_checks(
     composition: &Value,
     wt: &WebTemplate,
 ) -> Vec<ConstraintBindingCheck> {
-    let mut v = Validator {
+    let v = Validator {
         collect_bindings: true,
         ..Validator::default()
     };
-    v.walk(composition, &wt.tree);
-    v.bindings
+    node_ids::run(v, composition, wt).bindings
 }
 
 /// Validate the `|other` open-value-set rules on a **FLAT input** map, before
@@ -596,6 +593,8 @@ struct Validator {
     /// The collected constraint-binding checks (empty unless
     /// [`Self::collect_bindings`]).
     bindings: Vec<ConstraintBindingCheck>,
+    /// Whether [`WebTemplate::archetype_refs`] is set (an OPT2 template).
+    slot_fills_enumerated: bool,
 }
 
 /// Does the generated RM model declare an attribute named `attr` on ANY class?
@@ -901,7 +900,8 @@ impl Validator {
                 }
                 continue; // Matches a fixed sibling alternative.
             }
-            if ca.slots.is_empty() && openehr_rm::v1_2::paths::is_archetype_root_node_id(nid) {
+            if ca.slots.is_empty() && !self.slot_fills_enumerated && is_archetype_root_node_id(nid)
+            {
                 continue;
             }
             match ca.slots.iter().position(|s| slot_admits(s, ct, nid)) {

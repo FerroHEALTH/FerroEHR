@@ -189,7 +189,8 @@ with no code change.
   `Locale`, so the viewer's words and FerroUI's switch together.
 - `scripts/checks/stray-literals.sh app/ferroehr-viewer/src` runs in CI
   against `scripts/checks/stray-literals.baseline`: a file may hold no more
-  stray literals than its count, and a change that moves strings into the
-  catalog lowers the count with `--update`. A literal no reader sees (an RM
+  stray literals than its count. A change that moves strings into the
+  catalog passes with a note and leaves the baseline alone; the
+  `Ratchet tighten` workflow lowers the counts on `main`. A literal no reader sees (an RM
   type name, a header token, a cookie's attributes) is allowed by pattern in
   `scripts/checks/stray-literals.allow`, with the reason.

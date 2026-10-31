@@ -173,6 +173,7 @@ mod tests {
             languages: vec!["en".to_owned()],
             tree: node,
             other_details: indexmap::IndexMap::new(),
+            archetype_refs: None,
         }
     }
 

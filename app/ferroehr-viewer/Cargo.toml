@@ -103,6 +103,9 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time", "te
 # (test-only): the export journey re-posts the viewer's own
 # `<form method="post">` to /export/aql, which is url-encoded by definition.
 reqwest = { workspace = true, features = ["form"] }
+# The missing-constituent journey removes an archetype's row from the e2e
+# stack's database, a state the CDR's API refuses to make.
+sqlx.workspace = true
 
 [lints]
 workspace = true

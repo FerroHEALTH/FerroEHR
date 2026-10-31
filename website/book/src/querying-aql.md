@@ -326,6 +326,9 @@ the ad-hoc `/query/aql` route) and is rejected with a
   `GET|POST /query/{name}/{version}` executes that version, again by exact SemVer
   or prefix. Both take the same `offset`, `fetch`, `ehr_id` and named parameters
   as ad-hoc queries; a `POST` body of `{}` executes a parameterless stored query.
+- A `{version}` segment on these reads that is no SemVer and no `{major}` or
+  `{major}.{minor}` prefix (`v1.x`, `01`) is a **400**; a well-formed version
+  that is not stored is a **404**.
 
 Deleting a stored query is an admin operation; see
 [Admin & messaging APIs](operations-admin-apis.md).

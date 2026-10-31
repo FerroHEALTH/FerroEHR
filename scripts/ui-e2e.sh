@@ -49,6 +49,9 @@
 # The journeys themselves read:
 #   UI_E2E_BASE_URL        the viewer origin (set by this script)
 #   UI_E2E_WEBDRIVER_URL   the chromedriver endpoint (set by this script)
+#   UI_E2E_DB_URL          the stack's PostgreSQL, published on the host port
+#                          UI_E2E_DB_PORT (default 55432) by the db-publish
+#                          overlay; a caller with UI_E2E_NO_COMPOSE sets it
 #   UI_E2E_SHOTS_DIR       screenshot output dir (set by this script)
 # and skip-with-reason when unset, so a plain `cargo nextest run --workspace`
 # without Docker stays green (the B4 --tx-server-url precedent).
@@ -88,6 +91,15 @@ else
 fi
 VIEWER_URL="http://${VIEWER_ADDR}"
 CDR_URL="http://localhost:8080"
+# The db-publish overlay puts the stack's PostgreSQL on this loopback port, off
+# the 5432 a host-native or dev-stack PostgreSQL may hold, for the one journey
+# that builds its scene in SQL (a state the CDR's API refuses to make).
+DB_PORT="${UI_E2E_DB_PORT:-55432}"
+DB_URL="${UI_E2E_DB_URL:-postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@127.0.0.1:${DB_PORT}/${PG_INIT_DB:-ferroehr}}"
+# Every compose call that builds a model passes the same file chain, so no call
+# recreates a service another call started; the bare calls recreate nothing.
+COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.dev.yml
+  -f docker-compose.db-publish.yml -f docker/viewer/e2e-env.yml)
 KEYCLOAK_URL="http://localhost:8081"
 ACCEPT_JSON="Accept: application/json"
 CT_JSON="Content-Type: application/json"
@@ -155,8 +167,7 @@ if [[ -z "${UI_E2E_NO_COMPOSE:-}" ]]; then
   # The e2e overlay rides BOTH lanes: without it here, its `ferroehr:` env
   # block (terminology on, subscriptions on) never reached the host-mode CDR — the
   # lane CI actually runs.
-  docker compose -f docker-compose.yml -f docker-compose.dev.yml \
-    -f docker/viewer/e2e-env.yml \
+  FERROEHR_DB_PORT="$DB_PORT" docker compose "${COMPOSE_FILES[@]}" \
     up -d "${BUILD_ARGS[@]}" ferroehr-postgres ferroehr keycloak
 fi
 wait_http "$CDR_URL/ferroehr/rest/status" 150
@@ -271,16 +282,15 @@ if [[ -n "${UI_E2E_IMAGE:-}" ]]; then
   # (docker/viewer/Dockerfile) with the e2e-env override supplying the OIDC
   # test wiring; the issuer (https://keycloak:8443) resolves in-network via
   # docker DNS and in the E2E browser via the harness host-resolver mapping.
-  # The explicit -f chain here MATCHES the CDR up in step 1 (base + override +
-  # the e2e overlay): compose recreates any dependency whose model differs, so
-  # if this call's model gave `ferroehr` a different config than the running
-  # container, `up ferroehr-viewer` would RECREATE the server mid-run —
+  # The -f chain here (COMPOSE_FILES) MATCHES the CDR up in step 1 (base,
+  # override, db-publish and the e2e overlay): compose recreates any
+  # dependency whose model differs, so if this call's model gave `ferroehr` a
+  # different config than the running container, `up ferroehr-viewer` would RECREATE the server mid-run —
   # breaking the lane. The bare calls (stop/down/logs) recreate nothing.
   if [[ -n "${UI_E2E_IMAGE_REF:-}" ]]; then
     echo "── compose up the PUBLISHED viewer image ($UI_E2E_IMAGE_REF)"
-    FERROEHR_VIEWER_IMAGE="$UI_E2E_IMAGE_REF" \
-      docker compose -f docker-compose.yml -f docker-compose.dev.yml \
-      -f docker/viewer/e2e-env.yml \
+    FERROEHR_VIEWER_IMAGE="$UI_E2E_IMAGE_REF" FERROEHR_DB_PORT="$DB_PORT" \
+      docker compose "${COMPOSE_FILES[@]}" \
       up -d --no-build --pull always ferroehr-viewer
   else
     # `up --build ferroehr-viewer` would also rebuild the whole `depends_on`
@@ -291,12 +301,10 @@ if [[ -n "${UI_E2E_IMAGE:-}" ]]; then
       echo "── compose up the viewer image (UI_E2E_NO_BUILD: images as provided)"
     else
       echo "── compose build the viewer image (build from source)"
-      docker compose -f docker-compose.yml -f docker-compose.dev.yml \
-        -f docker/viewer/e2e-env.yml \
+      FERROEHR_DB_PORT="$DB_PORT" docker compose "${COMPOSE_FILES[@]}" \
         build ferroehr-viewer
     fi
-    docker compose -f docker-compose.yml -f docker-compose.dev.yml \
-      -f docker/viewer/e2e-env.yml \
+    FERROEHR_DB_PORT="$DB_PORT" docker compose "${COMPOSE_FILES[@]}" \
       up -d --no-build ferroehr-viewer
   fi
 else
@@ -391,6 +399,7 @@ E2E_ENV=(
   UI_E2E_ADMIN_USER="ferroehr-admin"
   UI_E2E_ADMIN_PASS="ferroehr"
   UI_E2E_CDR_URL="$CDR_URL"
+  UI_E2E_DB_URL="$DB_URL"
   UI_E2E_SEEDED_EHR_ID="$SEEDED_EHR_ID"
   UI_E2E_SEEDED_VO_ID="$SEEDED_VO_ID"
 )

@@ -70,6 +70,10 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 openehr-adl = { path = "../openehr-adl" }
 # The canonical JSON entry points and the OPT 1.4 reader the tests drive.
 openehr-its = { path = "../openehr-its", default-features = false, features = ["opt14"] }
+# The vendored Veredictum ADL 2 content cases are Arazzo YAML documents.
+serde_norway.workspace = true
+# The vendored cases' expected statuses are compared as typed `StatusCode`s.
+http.workspace = true
 
 [lints]
 workspace = true

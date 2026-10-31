@@ -223,6 +223,74 @@ fn an_interior_node_id_below_the_root_is_judged_against_the_constituent_terminol
     );
 }
 
+/// The constituent's archetype id, which a component violation names.
+const CONSTITUENT: &str = "openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0";
+
+/// The errors the full catalogue raises for `src` that name the constituent.
+fn component_errors(src: &str) -> Vec<ValidationCode> {
+    validate_source(src, None, &ProductionRmModel, &NoTerminologyResolver)
+        .expect("the fixture must parse")
+        .into_iter()
+        .filter(|i| i.severity == Severity::Error && i.message.contains(CONSTITUENT))
+        .map(|i| i.code)
+        .collect()
+}
+
+/// [`OPT`] with `language` added to the constituent's term definitions and
+/// `section` after them.
+fn with_component(language: &str, section: &str) -> String {
+    let end = "            >\n        >\n    >\n";
+    let head = OPT
+        .strip_suffix(end)
+        .expect("the fixture must end with the constituent");
+    format!("{head}            >\n{language}        >\n{section}    >\n")
+}
+
+/// `section` added to the constituent's terminology after its term definitions.
+fn with_component_section(section: &str) -> String {
+    with_component("", section)
+}
+
+/// VTVSMD and VTVSID (`AOM2/master07-terminology_package.adoc` §Validity Rules)
+/// run on a component terminology: a value set whose id and member the
+/// constituent never defines is refused.
+#[test]
+fn a_component_value_set_naming_undefined_codes_is_refused() {
+    let section = "        value_sets = <\n            [\"ac9\"] = <\n                id = <\"ac9\">\n                members = <\"at9\">\n            >\n        >\n";
+    let raised = component_errors(&with_component_section(section));
+    assert!(raised.contains(&ValidationCode::Vtvsmd), "{raised:?}");
+    assert!(raised.contains(&ValidationCode::Vtvsid), "{raised:?}");
+}
+
+/// VTLC (`AOM2/master07-terminology_package.adoc` §Validity Rules) runs on a
+/// component terminology: a code defined in one language only is refused.
+#[test]
+fn a_component_code_missing_from_a_language_is_refused() {
+    let nl = "            [\"nl\"] = <\n                [\"id1\"] = <\n                    text = <\"Minimaal\">\n                    description = <\"Minimaal\">\n                >\n            >\n";
+    let src = with_component(nl, "");
+    let raised = component_errors(&src);
+    assert!(raised.contains(&ValidationCode::Vtlc), "{raised:?}");
+}
+
+/// VTTBK (`AOM2/master07-terminology_package.adoc` §Validity Rules) runs on a
+/// component terminology: a binding key it never defines is refused, and a
+/// path key resolves against the root that includes the constituent.
+#[test]
+fn a_component_binding_key_is_judged_against_the_component() {
+    let binding = |key: &str| {
+        format!(
+            "        term_bindings = <\n            [\"snomed\"] = <\n                [\"{key}\"] = <http://snomed.info/id/1>\n            >\n        >\n"
+        )
+    };
+    let raised = component_errors(&with_component_section(&binding("at9")));
+    assert!(raised.contains(&ValidationCode::Vttbk), "{raised:?}");
+    let raised = component_errors(&with_component_section(&binding("/data[id9]")));
+    assert!(raised.contains(&ValidationCode::Vttbk), "{raised:?}");
+    assert_eq!(errors(&with_component_section(&binding("id5"))), Vec::new());
+    let path = binding("/data[id2]/events[id3]");
+    assert_eq!(errors(&with_component_section(&path)), Vec::new());
+}
+
 /// A parent OBSERVATION for the flat-form case, with `id2` on its `data`.
 const PARENT: &str = "\
 archetype (adl_version=2.0.6; rm_release=1.0.2)

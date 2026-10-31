@@ -15,6 +15,7 @@
 
 mod common;
 
+mod adl2_content_constraints;
 mod archetype_id_grammar;
 mod canonical_json_literals;
 mod category_default;

@@ -7,10 +7,10 @@
 # entries.
 app/ferroehr-rest/src/api/admin/marks.rs 824
 app/ferroehr-rest/src/api/definition/openapi_routes.rs 2089
-app/ferroehr-rest/src/api/demographic/openapi_routes.rs 10076
+app/ferroehr-rest/src/api/demographic/openapi_routes.rs 10077
 app/ferroehr-rest/src/api/demographic/relationship.rs 1254
-app/ferroehr-rest/src/api/ehr/openapi_routes.rs 7195
-app/ferroehr-rest/src/api/query/openapi_routes.rs 2049
+app/ferroehr-rest/src/api/ehr/openapi_routes.rs 7196
+app/ferroehr-rest/src/api/query/openapi_routes.rs 2045
 app/ferroehr-rest/src/extensions/access/authn/mod.rs 2145
 app/ferroehr-rest/src/extensions/access/authz/mod.rs 886
 app/ferroehr-rest/src/extensions/access/pep.rs 1463
@@ -42,9 +42,9 @@ app/ferroehr/src/config/mod.rs 3064
 app/ferroehr/src/db/mod.rs 2178
 app/ferroehr/src/privacy/detect.rs 901
 app/ferroehr/src/service/admin/dump_load.rs 2453
-app/ferroehr/src/service/definition/adl2.rs 1074
+app/ferroehr/src/service/definition/adl2.rs 1043
 app/ferroehr/src/service/definition/opt14_convert.rs 2727
-app/ferroehr/src/service/definition/query.rs 1003
+app/ferroehr/src/service/definition/query.rs 988
 app/ferroehr/src/service/demographic/api.rs 1226
 app/ferroehr/src/service/ehr/composition.rs 1197
 app/ferroehr/src/service/ehr/service.rs 874
@@ -62,8 +62,9 @@ app/ferroehr/src/system_log/categories.rs 989
 app/ferroehr/src/system_log/fhir.rs 1374
 app/ferroehr/src/system_log/sender.rs 1180
 app/ferroehr/src/system_log/store.rs 2075
+app/ferroehr/src/versioning/audit.rs 839
 app/ferroehr/src/versioning/change.rs 1574
-app/ferroehr/src/versioning/contribution.rs 1575
+app/ferroehr/src/versioning/contribution.rs 1604
 crates/openehr-adl/src/adl14/convert.rs 1013
 crates/openehr-adl/src/adl14/domain.rs 1112
 crates/openehr-adl/src/assemble.rs 831
@@ -98,7 +99,7 @@ crates/openehr-sdt/src/flat/map/structures.rs 906
 crates/openehr-sdt/src/flat/validation/leaf.rs 1113
 crates/openehr-sdt/src/flat/validation/mod.rs 2778
 crates/openehr-sdt/src/flat/webtemplate/builder.rs 1699
-crates/openehr-sdt/src/flat/webtemplate/builder_v2_4.rs 1917
+crates/openehr-sdt/src/flat/webtemplate/builder_v2_4.rs 1892
 crates/openehr-sdt/src/flat/webtemplate/inputs.rs 1278
 crates/openehr-sdt/src/flat/webtemplate/shape.rs 886
 crates/openehr-term/src/bundle.rs 999
