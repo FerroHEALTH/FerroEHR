@@ -568,7 +568,8 @@ jobs:
 
   # No viewer string a reader sees outside its catalog under
   # app/ferroehr-viewer/locales/, beyond the per-file baseline the remaining
-  # strings hold while they move (#300).
+  # strings hold while they move (#300). A fall passes, and
+  # ratchet-tighten.yml lowers the baseline on main.
   stray-literals:
     name: stray-literals
     runs-on: ubuntu-latest
@@ -579,6 +580,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Stray-literal ratchet self-test
+        run: bash scripts/checks/stray-literals.sh --self-test
       - name: Stray literals in the viewer
         run: bash scripts/checks/stray-literals.sh app/ferroehr-viewer/src
 

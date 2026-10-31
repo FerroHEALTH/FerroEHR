@@ -33,11 +33,14 @@
 # with a one-line note, so a pull request that moves strings to the catalogs
 # touches no baseline and conflicts with no other one; the scheduled
 # ratchet-tighten workflow runs --update on main and opens the one pull
-# request that lowers the counts (#4554). With --update the script rewrites
-# the baseline to the counts it finds.
+# request that lowers the counts (#4554). With --update the script lowers
+# each count to what it finds and removes a file that holds none. It never
+# raises a count and never adds a file: a rise that has to stay is a hand
+# edit of the baseline in a change that says why.
 #
 # Usage:
 #   scripts/checks/stray-literals.sh [--update] ROOT...
+#   scripts/checks/stray-literals.sh --self-test   # prove the guard catches
 #
 # The allow file is scripts/checks/stray-literals.allow and the baseline
 # scripts/checks/stray-literals.baseline, both optional.
@@ -48,6 +51,98 @@ set -Eeuo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
+
+# Runs a copy of this guard in a miniature project and asserts its verdicts.
+self_test() {
+  local self work project answer status
+  self="$root/scripts/checks/stray-literals.sh"
+  work="$(mktemp -d)"
+  # shellcheck disable=SC2064 # expand now: the path is fixed and the trap runs after this function returns
+  trap "rm -rf '$work'" EXIT
+  project="$work/project"
+  answer="$work/answer"
+  mkdir -p "$project/scripts/checks" "$project/src"
+  cp "$self" "$project/scripts/checks/stray-literals.sh"
+
+  fail() {
+    echo "stray-literals: SELF-TEST FAILED: $1" >&2
+    exit 1
+  }
+  # Writes a Rust file at src/$1 holding $2 literals a reader sees, beside a
+  # key the guard passes over.
+  literals() {
+    awk -v n="$2" 'BEGIN {
+      print "pub fn level() -> String {"
+      print "    \"fatal\".to_owned()"
+      print "}"
+      for (i = 1; i <= n; i++) printf "pub fn text%d() -> String {\n    let s = \"Words number %d\";\n    s.to_owned()\n}\n", i, i
+    }' >"$project/src/$1"
+  }
+  run() {
+    status=0
+    bash "$project/scripts/checks/stray-literals.sh" "$@" >"$answer" 2>&1 || status=$?
+    printf '%s\n' "$status"
+  }
+  baseline_of() {
+    awk -v f="src/$1" '$2 == f { print $1 }' "$project/scripts/checks/stray-literals.baseline"
+  }
+  write_baseline() {
+    {
+      printf '# The miniature baseline.\n'
+      if [[ -n "$1" ]]; then printf '%s\n' "$1"; fi
+    } >"$project/scripts/checks/stray-literals.baseline"
+  }
+
+  printf 'allow ^Cadasto B\\.V\\.$   # the maker legal name\n' >"$project/scripts/checks/stray-literals.allow"
+  literals held.rs 2
+  literals clean.rs 0
+  printf 'pub fn maker() -> String {\n    let s = "Cadasto B.V.";\n    s.to_owned()\n}\n' >"$project/src/maker.rs"
+  write_baseline "2 src/held.rs"
+
+  [[ "$(run src)" == 0 ]] || fail "a tree within its baseline was refused: $(cat "$answer")"
+  grep -q 'note:' "$answer" && fail "a tree at its baseline was noted as a fall: $(cat "$answer")"
+
+  # A new literal in a file the baseline does not name fails and is named,
+  # and --update never adds the file.
+  literals clean.rs 1
+  [[ "$(run src)" == 1 ]] || fail "a new literal passed"
+  grep -qF 'src/clean.rs:5: "Words number 1"' "$answer" || fail "a new literal was not named: $(cat "$answer")"
+  [[ "$(run --update src)" == 1 ]] || fail "--update passed a new literal"
+  [[ -z "$(baseline_of clean.rs)" ]] || fail "--update added a file to the baseline"
+  literals clean.rs 0
+
+  # A rise in a listed file fails, and --update never raises its count.
+  literals held.rs 3
+  [[ "$(run src)" == 1 ]] || fail "a rise past the baseline passed"
+  grep -qF 'src/held.rs holds 3 stray literal(s), 2 allowed' "$answer" || fail "a rise was not named: $(cat "$answer")"
+  [[ "$(run --update src)" == 1 ]] || fail "--update passed a rise"
+  [[ "$(baseline_of held.rs)" == 2 ]] || fail "--update raised the count to $(baseline_of held.rs)"
+
+  # A fall passes with the note and leaves the baseline, and --update lowers
+  # the count, then removes the file that holds none.
+  literals held.rs 1
+  [[ "$(run src)" == 0 ]] || fail "a fall was refused: $(cat "$answer")"
+  grep -qF 'note: 1 file(s) hold fewer than' "$answer" || fail "a fall was not noted: $(cat "$answer")"
+  [[ "$(baseline_of held.rs)" == 2 ]] || fail "a check changed the baseline"
+  [[ "$(run --update src)" == 0 ]] || fail "--update refused a fall: $(cat "$answer")"
+  [[ "$(baseline_of held.rs)" == 1 ]] || fail "--update did not lower the count to 1"
+  literals held.rs 0
+  [[ "$(run --update src)" == 0 ]] || fail "--update refused a file that holds none: $(cat "$answer")"
+  [[ -z "$(baseline_of held.rs)" ]] || fail "--update kept a file that holds none"
+  [[ "$(run src)" == 0 ]] || fail "the emptied baseline was refused: $(cat "$answer")"
+
+  # The allow line exempts its literal, and without it the literal fails.
+  : >"$project/scripts/checks/stray-literals.allow"
+  [[ "$(run src)" == 1 ]] || fail "the maker literal passed with no allow line"
+  grep -qF 'src/maker.rs:2: "Cadasto B.V."' "$answer" || fail "the literal was not named: $(cat "$answer")"
+
+  echo "stray-literals: self-test OK (a new literal, a rise, a fall with its note, --update lowering and never raising, and an allow line)."
+}
+
+if [[ "${1:-}" = "--self-test" ]]; then
+  self_test
+  exit 0
+fi
 
 update=0
 if [[ "${1:-}" = "--update" ]]; then
@@ -178,15 +273,22 @@ found="$(
 counts="$(printf '%s\n' "$found" | sed -n 's/^\([^:]*\):[0-9]*:.*/\1/p' | LC_ALL=C sort | uniq -c | awk '{print $1, $2}')"
 
 if [[ "$update" -eq 1 ]]; then
+  lowered=""
+  if [[ -f "$baseline" ]]; then
+    lowered="$(printf '%s\n' "$counts" | awk '
+      NR == FNR { if (NF == 2) have[$2] = $1; next }
+      /^[[:space:]]*(#|$)/ { next }
+      NF == 2 && have[$2] + 0 > 0 { print ((have[$2] + 0 < $1 + 0) ? have[$2] : $1), $2 }
+    ' - "$baseline")"
+  fi
   {
     printf '# %s: %s\n' "SPDX-FileCopyrightText" "Cadasto B.V."
     printf '# %s: %s\n' "SPDX-License-Identifier" "BUSL-1.1"
     echo "# The stray literals each file may still hold while its strings move to"
-    echo "# the catalogs; rewritten by scripts/checks/stray-literals.sh --update."
-    if [[ -n "$counts" ]]; then printf '%s\n' "$counts"; fi
+    echo "# the catalogs; lowered by scripts/checks/stray-literals.sh --update."
+    if [[ -n "$lowered" ]]; then printf '%s\n' "$lowered"; fi
   } > "$baseline"
   echo "stray-literals: wrote $baseline"
-  exit 0
 fi
 
 status=0

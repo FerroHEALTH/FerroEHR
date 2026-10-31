@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # The stray literals each file may still hold while its strings move to
-# the catalogs; rewritten by scripts/checks/stray-literals.sh --update.
+# the catalogs; lowered by scripts/checks/stray-literals.sh --update.
 2 app/ferroehr-viewer/src/auth.rs
 1 app/ferroehr-viewer/src/bff/audit.rs
 1 app/ferroehr-viewer/src/bff/composition.rs
