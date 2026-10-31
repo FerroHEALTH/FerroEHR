@@ -90,6 +90,7 @@ impl PBmmGenericType {
         parameters.extend(
             self.generic_parameter_defs
                 .iter()
+                .flat_map(indexmap::IndexMap::values)
                 .map(PBmmType::as_type_string),
         );
         if parameters.is_empty() {
@@ -180,7 +181,12 @@ impl PBmmGenericType {
                 })
             })
             .collect();
-        refs.extend(self.generic_parameter_defs.iter().cloned());
+        refs.extend(
+            self.generic_parameter_defs
+                .iter()
+                .flat_map(indexmap::IndexMap::values)
+                .cloned(),
+        );
         refs
     }
 }
@@ -205,6 +211,19 @@ impl PBmmBaseType {
             Self::PBmmGenericType(generic) => generic.as_type_string(),
             Self::PBmmOpenType(open) => open.as_type_string(),
             Self::PBmmSimpleType(simple) => simple.as_type_string(),
+        }
+    }
+
+    /// The class name this base type is formed from: the `root_type` of a
+    /// generic type, the `type` of a simple one, and the parameter name of an
+    /// open one (`…p_bmm_generic_type.adoc`, `…p_bmm_simple_type.adoc`,
+    /// `…p_bmm_open_type.adoc` §Attributes).
+    #[must_use]
+    pub fn base_name(&self) -> &str {
+        match self {
+            Self::PBmmGenericType(generic) => &generic.root_type,
+            Self::PBmmOpenType(open) => &open.r#type,
+            Self::PBmmSimpleType(simple) => &simple.r#type,
         }
     }
 }
@@ -293,7 +312,7 @@ mod tests {
             bmm_type: None,
             value_constraint: None,
             root_type: root.to_owned(),
-            generic_parameter_defs: Vec::new(),
+            generic_parameter_defs: None,
             generic_parameters: openehr_base::containers::present(
                 parameters.iter().map(|p| (*p).to_owned()).collect(),
             ),
@@ -391,10 +410,10 @@ mod tests {
     #[test]
     fn generic_parameter_refs_follow_the_rendered_order() {
         let mut root = generic("REFERENCE_RANGE", &["Integer"]);
-        root.generic_parameter_defs = vec![PBmmType::PBmmGenericType(generic(
-            "DV_INTERVAL",
-            &["DV_QUANTITY"],
-        ))];
+        root.generic_parameter_defs = Some(indexmap::IndexMap::from([(
+            "T".to_owned(),
+            PBmmType::PBmmGenericType(generic("DV_INTERVAL", &["DV_QUANTITY"])),
+        )]));
         assert_eq!(
             root.generic_parameter_refs()
                 .iter()
@@ -468,10 +487,10 @@ mod tests {
         // master04-syntax.adoc §Generic Classes CRAZY_TYPE shape, reduced: a
         // structural parameter beside a string one.
         let mut root = generic("REFERENCE_RANGE", &["Integer"]);
-        root.generic_parameter_defs = vec![PBmmType::PBmmGenericType(generic(
-            "DV_INTERVAL",
-            &["DV_QUANTITY"],
-        ))];
+        root.generic_parameter_defs = Some(indexmap::IndexMap::from([(
+            "T".to_owned(),
+            PBmmType::PBmmGenericType(generic("DV_INTERVAL", &["DV_QUANTITY"])),
+        )]));
         assert_eq!(
             root.as_type_string(),
             "REFERENCE_RANGE<Integer,DV_INTERVAL<DV_QUANTITY>>"

@@ -97,8 +97,8 @@ mod tests {
             archetype_visualise_descendants_of: None,
             bmm_version: "2.4".to_owned(),
             includes: None,
-            primitive_types: openehr_base::containers::present(Vec::new()),
-            class_definitions: openehr_base::containers::present(Vec::new()),
+            primitive_types: None,
+            class_definitions: None,
         }
     }
 

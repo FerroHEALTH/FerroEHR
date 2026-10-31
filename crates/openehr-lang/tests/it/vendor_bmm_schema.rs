@@ -285,8 +285,8 @@ fn cases() -> Vec<Case> {
         },
         Case {
             path: "bmm/org/openehr/bmm/v2/persistence/validation/ancestor_def_doesnt_exist.bmm",
-            outcome: Outcome::Refused(Stage::Read, Kind::UnexpectedTypeMarker, "P_BMM_SIMPLE_TYPE"),
-            adjudication: "ancestor_defs holds a (P_BMM_SIMPLE_TYPE) entry; P_BMM_CLASS.ancestor_defs is List<P_BMM_GENERIC_TYPE> (class doc §Attributes) and master04 §Inheritance uses it only for generic ancestors, and a simple type states no root_type",
+            outcome: Outcome::Refused(Stage::Model, Kind::UnknownAncestor, "ancestor `UNKNOWN`"),
+            adjudication: "ancestor_defs holds a (P_BMM_SIMPLE_TYPE) entry naming a class the schema does not define; P_BMM_CLASS.ancestor_defs is Hash<String, P_BMM_BASE_TYPE> listing a non-generic ancestor as a P_BMM_SIMPLE_TYPE (class doc §Attributes, SPECLANG-16), so the entry reads and the unresolvable parent cannot be materialised",
         },
         Case {
             path: "bmm/org/openehr/bmm/v2/persistence/validation/package_illegal_qualified_name.bmm",
@@ -1039,8 +1039,8 @@ fn the_pinned_openehr_component_schemas_read_their_persisted_interfaces() {
             let class = schema
                 .primitive_types
                 .iter()
-                .flatten()
-                .chain(schema.class_definitions.iter().flatten())
+                .flat_map(BTreeMap::values)
+                .chain(schema.class_definitions.iter().flat_map(BTreeMap::values))
                 .find(|class| class.name() == *name)
                 .unwrap_or_else(|| panic!("{file}: {name} is not in the class list"));
             assert!(

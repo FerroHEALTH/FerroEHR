@@ -15,6 +15,7 @@
 
 pub(crate) mod composition;
 pub(crate) mod construction;
+pub(crate) mod ordered_hashes;
 pub(crate) mod overrides;
 
 use crate::analyze::Model;

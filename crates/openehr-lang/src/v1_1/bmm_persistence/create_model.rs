@@ -47,6 +47,8 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
+use indexmap::IndexMap;
+
 use openehr_base::v1_3::prelude::Interval;
 use openehr_base::v1_3::prelude::MultiplicityInterval;
 use openehr_base::v1_3::prelude::PointInterval;
@@ -73,6 +75,7 @@ use crate::v1_1::bmm::core::bmm_property::BmmPropertyData;
 use crate::v1_1::bmm::core::bmm_simple_type::BmmSimpleType;
 use crate::v1_1::bmm::core::bmm_type::BmmType;
 use crate::v1_1::bmm_persistence::error::PBmmReadError;
+use crate::v1_1::bmm_persistence::generic_binding::ActualParameter;
 use crate::v1_1::bmm_persistence::p_bmm_base_type::PBmmBaseType;
 use crate::v1_1::bmm_persistence::p_bmm_class::PBmmClass;
 use crate::v1_1::bmm_persistence::p_bmm_container_property::PBmmContainerProperty;
@@ -222,13 +225,13 @@ impl<'a> Builder<'a> {
         for (class, is_primitive_type) in schema
             .primitive_types
             .iter()
-            .flatten()
+            .flat_map(BTreeMap::values)
             .map(|class| (class, true))
             .chain(
                 schema
                     .class_definitions
                     .iter()
-                    .flatten()
+                    .flat_map(BTreeMap::values)
                     .map(|class| (class, false)),
             )
         {
@@ -245,7 +248,7 @@ impl<'a> Builder<'a> {
 
         let mut descendants: BTreeMap<String, Vec<String>> = BTreeMap::new();
         for entry in classes.values() {
-            for parent in ancestor_names(entry.class) {
+            for parent in entry.class.ancestor_names() {
                 let key = parent.to_uppercase();
                 if classes.contains_key(&key) {
                     descendants
@@ -399,7 +402,7 @@ impl<'a> Builder<'a> {
             EmbedDepth::Ancestor => EmbedDepth::Stub,
         };
         let mut out: BTreeMap<String, BmmClass> = BTreeMap::new();
-        for parent in ancestor_names(persisted) {
+        for parent in persisted.ancestor_names() {
             let entry = self.classes.get(&parent.to_uppercase()).ok_or_else(|| {
                 PBmmReadError::UnknownAncestor {
                     class: persisted.name().to_owned(),
@@ -428,11 +431,11 @@ impl<'a> Builder<'a> {
         &self,
         persisted: &PBmmClass,
         depth: EmbedDepth,
-    ) -> Result<BTreeMap<String, BmmGenericParameter>, PBmmReadError> {
+    ) -> Result<IndexMap<String, BmmGenericParameter>, PBmmReadError> {
         if depth == EmbedDepth::Bare {
-            return Ok(BTreeMap::new());
+            return Ok(IndexMap::new());
         }
-        let mut out = BTreeMap::new();
+        let mut out = IndexMap::new();
         for (key, parameter) in persisted.generic_parameter_defs().into_iter().flatten() {
             out.insert(
                 key.clone(),
@@ -735,7 +738,7 @@ impl<'a> Builder<'a> {
             {
                 return Some(found);
             }
-            for parent in ancestor_names(entry.class) {
+            for parent in entry.class.ancestor_names() {
                 queue.push(parent.to_uppercase());
             }
         }
@@ -747,10 +750,8 @@ impl<'a> Builder<'a> {
     /// `BMM_GENERIC_TYPE.base_class` is a `BMM_GENERIC_CLASS`
     /// (`org.openehr.lang.bmm.bmm_generic_type.adoc` §Attributes), so a
     /// `root_type` naming a non-generic class is refused. The actual parameters
-    /// are the string list followed by the structural list, in that order —
-    /// "use `_generic_parameters_` for a list of string types; use
-    /// `_generic_parameter_defs_` for a list of complex type references"
-    /// (`master04-syntax.adoc` §Generic Classes).
+    /// bind to the root class's formal parameters by name, in their declaration
+    /// order ([`PBmmGenericType::bind_parameters`]).
     fn build_generic_type(
         &self,
         context: &str,
@@ -765,12 +766,19 @@ impl<'a> Builder<'a> {
                 type_name: generic.root_type.clone(),
             });
         };
+        let formals: Vec<&str> = base_class
+            .generic_parameters
+            .keys()
+            .map(String::as_str)
+            .collect();
         let mut generic_parameters: Vec<BmmType> = Vec::new();
-        for name in generic.generic_parameters.iter().flatten() {
-            generic_parameters.push(self.build_named_type(context, name, owner)?);
-        }
-        for parameter in &generic.generic_parameter_defs {
-            generic_parameters.push(self.build_type(context, parameter, owner)?);
+        for actual in generic.bind_parameters(context, &formals)? {
+            generic_parameters.push(match actual {
+                ActualParameter::Named(name) => self.build_named_type(context, name, owner)?,
+                ActualParameter::Structured(parameter) => {
+                    self.build_type(context, parameter, owner)?
+                }
+            });
         }
         Ok(BmmGenericType {
             documentation: None,
@@ -1067,27 +1075,6 @@ pub(super) fn qualify(prefix: &str, name: &str) -> String {
             crate::v1_1::bmm::core::bmm_definitions::BmmDefinitionsData::PACKAGE_NAME_DELIMITER
         )
     }
-}
-
-/// Every inheritance parent a persisted class names, from `ancestors` and from
-/// the `root_type` of each `ancestor_defs` entry.
-///
-/// NOTE: the v2 `BMM_CLASS.ancestors` is a map of CLASSES
-/// (`org.openehr.lang.bmm.bmm_class.adoc` §Attributes), so a generic
-/// ancestor's parameter binding has nowhere to land here — only the root
-/// class is carried, the binding staying readable in `P_BMM_CLASS.
-/// ancestor_defs`; the v3 generation types `ancestors` as TYPES
-/// (`…bmm3.bmm_class.adoc`) and `create_bmm3_model` carries the binding into
-/// it — a boundary of this transform's target generation, not the pipeline.
-pub(super) fn ancestor_names(class: &PBmmClass) -> Vec<String> {
-    let mut out: Vec<String> = class.ancestors().to_vec();
-    out.extend(
-        class
-            .ancestor_defs()
-            .iter()
-            .map(|def| def.root_type.clone()),
-    );
-    out
 }
 
 /// The error context naming one class property.

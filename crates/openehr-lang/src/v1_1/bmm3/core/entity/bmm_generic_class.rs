@@ -81,5 +81,5 @@ pub struct BmmGenericClass {
     /// Subset of `_creators_` that create a new instance from a single argument of another type.
     pub converters: Option<std::collections::BTreeMap<String, BmmProcedure>>,
     /// List of formal generic parameters, keyed by name. These are defined either directly on this class or by the inclusion of an ancestor class which is generic.
-    pub generic_parameters: std::collections::BTreeMap<String, BmmParameterType>,
+    pub generic_parameters: indexmap::IndexMap<String, BmmParameterType>,
 }

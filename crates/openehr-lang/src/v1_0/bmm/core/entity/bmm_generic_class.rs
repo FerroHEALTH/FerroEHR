@@ -75,5 +75,5 @@ pub struct BmmGenericClass {
     /// List of feature groups in this class.
     pub feature_groups: Option<Vec<BmmFeatureGroup>>,
     /// List of formal generic parameters, keyed by name. These are defined either directly on this class or by the inclusion of an ancestor class which is generic.
-    pub generic_parameters: std::collections::BTreeMap<String, BmmParameterType>,
+    pub generic_parameters: indexmap::IndexMap<String, BmmParameterType>,
 }

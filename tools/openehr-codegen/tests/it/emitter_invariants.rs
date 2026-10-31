@@ -375,10 +375,22 @@ fn decision_map_integrity_entries_are_cited_and_reference_real_classes() {
 /// of leaving a citation that describes a contradiction no longer there.
 #[test]
 fn existence_contradictions_name_a_still_mandatory_hash() {
-    let stale = testsupport::stale_existence_contradictions().unwrap();
+    let stale = testsupport::decision_checks::stale_existence_contradictions().unwrap();
     assert!(
         stale.is_empty(),
         "stale existence-contradiction entries:\n{}",
+        stale.join("\n")
+    );
+}
+
+/// Every ordered-hash entry still names a `Hash` its owner declares, so a
+/// retyped attribute fails here instead of leaving a dead entry.
+#[test]
+fn ordered_hashes_name_a_declared_hash() {
+    let stale = testsupport::decision_checks::stale_ordered_hashes().unwrap();
+    assert!(
+        stale.is_empty(),
+        "stale ordered-hash entries:\n{}",
         stale.join("\n")
     );
 }

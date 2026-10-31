@@ -960,29 +960,11 @@ pub(crate) struct SpecContradiction {
 
 /// Every adjudicated cardinality or existence contradiction in the vendored
 /// inputs.
-pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[
-    SpecContradiction {
-        owner: "P_BMM_GENERIC_TYPE",
-        field: "generic_parameter_defs",
-        kind: ContradictionKind::LowerBound,
-        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Generic \
-                   Classes: \"within `P_BMM_GENERIC_TYPE`, use `_generic_parameters_` for a list of \
-                   string types; use `_generic_parameter_defs_` for a list of complex type \
-                   references\" \u{2014} the two are ALTERNATIVES, and the chapter\u{2019}s own \
-                   example writes `root_type = <\"DV_INTERVAL\"> generic_parameters = \
-                   <\"DV_QUANTITY\">` with no `generic_parameter_defs` at all. The UML class table \
-                   (docs/specs/openehr/LANG/docs/UML/classes/org.openehr.lang.bmm_persistence.p_bmm_generic_type.adoc) \
-                   states 1..1 for the same attribute, which would make that example \u{2014} and \
-                   every string-parameterised generic type in a real .bmm schema \u{2014} invalid, \
-                   and would leave the 0..1 `generic_parameters` attribute dead. The syntax \
-                   chapter governs.",
-        reason: "Reported upstream as a spec defect (tracker issue #1717); the syntax chapter's reading is emitted.",
-    },
-    SpecContradiction {
-        owner: "P_BMM_PACKAGE_CONTAINER",
-        field: "packages",
-        kind: ContradictionKind::Existence,
-        citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Package \
+pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[SpecContradiction {
+    owner: "P_BMM_PACKAGE_CONTAINER",
+    field: "packages",
+    kind: ContradictionKind::Existence,
+    citation: "docs/specs/openehr/LANG/docs/bmm_persistence/master04-syntax.adoc \u{a7}Package \
                    Definition: \"just name the classes and packages in a recursive fashion\", and \
                    the chapter\u{2019}s only package example (`org.openehr.test_pkg`, carrying \
                    `name` and `classes`) has no `packages` attribute; \u{a7}Serialisation Formats \
@@ -994,9 +976,8 @@ pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[
                    \u{a7}Attributes) states 0..1. The syntax chapter governs; no text defines \
                    absent as empty, so reading absence as the empty package map is our own \
                    design, matching the ODIN reader.",
-        reason: "Reported upstream as a spec defect (tracker issue #3770); a leaf package or schema without `packages` reads as the empty map, which is omitted on write.",
-    },
-];
+    reason: "Reported upstream as a spec defect (tracker issue #3770); a leaf package or schema without `packages` reads as the empty map, which is omitted on write.",
+}];
 
 /// Whether `(owner, field)` carries an adjudicated contradiction of `kind`.
 fn contradicted(owner: &str, field: &str, kind: ContradictionKind) -> bool {

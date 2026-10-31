@@ -11,9 +11,9 @@
     reason = "adjudicated free-form JSON slots: serde_json::Value is workspace-banned (#1694); a generated carrier exists only where the spec leaves the slot open, and each adjudicated field's NOTE names its citation"
 )]
 use crate::v2_4::bmm::core::bmm_enumeration_string::BmmEnumerationString;
+use crate::v2_4::bmm_persistence::p_bmm_base_type::PBmmBaseType;
 use crate::v2_4::bmm_persistence::p_bmm_function::PBmmFunction;
 use crate::v2_4::bmm_persistence::p_bmm_generic_parameter::PBmmGenericParameter;
-use crate::v2_4::bmm_persistence::p_bmm_generic_type::PBmmGenericType;
 use crate::v2_4::bmm_persistence::p_bmm_property::PBmmProperty;
 use openehr_lang::v1_1::bmm_persistence::p_bmm_constant::PBmmConstant;
 
@@ -32,9 +32,9 @@ pub struct PBmmEnumerationString {
     pub ancestors: Option<Vec<String>>,
     /// Constants defined in this class, keyed by name. Persistent attribute.
     pub constants: Option<std::collections::BTreeMap<String, PBmmConstant>>,
-    /// List of attributes defined in this class. Persistent attribute.
+    /// Properties defined in this class, keyed by name. Persisted attribute.
     pub properties: Option<std::collections::BTreeMap<String, PBmmProperty>>,
-    /// List of functions (routines) defined in this class, keyed by name. Persistent attribute.
+    /// Functions (routines) defined in this class, keyed by name. Persisted attribute.
     pub functions: Option<std::collections::BTreeMap<String, PBmmFunction>>,
     /// Invariants defined on this class, as a Hash of assertion expressions keyed by tag. Persisted attribute.
     pub invariants: Option<std::collections::BTreeMap<String, String>>,
@@ -42,8 +42,8 @@ pub struct PBmmEnumerationString {
     pub is_abstract: Option<bool>,
     /// True if this class definition overrides one found in an included schema.
     pub is_override: Option<bool>,
-    /// List of generic parameter definitions. Persisted attribute.
-    pub generic_parameter_defs: Option<std::collections::BTreeMap<String, PBmmGenericParameter>>,
+    /// Generic parameter definitions, keyed by parameter name. Persisted attribute.
+    pub generic_parameter_defs: Option<indexmap::IndexMap<String, PBmmGenericParameter>>,
     /// Reference to original source schema defining this class.
     ///
     /// Set during `BMM_SCHEMA` materialise. Useful for GUI tools to enable user to edit the schema file containing a given class (i.e. taking into account that a class may be in any of the schemas in a schema inclusion hierarchy).
@@ -54,8 +54,10 @@ pub struct PBmmEnumerationString {
     // inherited: P_BMM_CLASS
     /// Unique id generated for later comparison during merging, in order to detect if two classes are the same. Assigned in post-load processing.
     pub uid: i32,
-    /// List of structured inheritance ancestors, used only in the case of generic inheritance. Persisted attribute.
-    pub ancestor_defs: Option<Vec<PBmmGenericType>>,
+    /// Structured inheritance ancestors, keyed by type signature, e.g. `GENERIC_PARENT<T,SUPPLIER_B>`.
+    ///
+    /// Used instead of `_ancestors_` when the class has a generic ancestor; any non-generic ancestor of the same class is then also listed here, as a `P_BMM_SIMPLE_TYPE`. Persisted attribute.
+    pub ancestor_defs: Option<std::collections::BTreeMap<String, PBmmBaseType>>,
 
     // inherited: P_BMM_ENUMERATION
     /// The `item_names` attribute of openEHR `P_BMM_ENUMERATION` (the vendored BMM carries no documentation for it).
