@@ -32,7 +32,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::storage::version_repo::tier;
 
 impl FerroEhrService {
@@ -45,7 +45,7 @@ impl FerroEhrService {
     /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown
     ///   (`ehr_id_does_not_exist`); nothing is archived.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn archive_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), SmError> {
+    pub async fn archive_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), StatusError> {
         let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
             .into_iter()
             .map(EhrId)
@@ -68,7 +68,7 @@ impl FerroEhrService {
     ///   demographic PARTY root (`party_id_does_not_exist`); nothing is
     ///   archived.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn archive_parties(&self, party_ids: Vec<String>) -> Result<(), SmError> {
+    pub async fn archive_parties(&self, party_ids: Vec<String>) -> Result<(), StatusError> {
         let ids = super::parse_uuid_list(&party_ids, "party")?;
         Ok(self.archive_party_vos(&ids).await?)
     }
@@ -85,7 +85,7 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — any id is not a well-formed UUID.
     /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn restore_archived_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), SmError> {
+    pub async fn restore_archived_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), StatusError> {
         let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
             .into_iter()
             .map(EhrId)
@@ -106,7 +106,10 @@ impl FerroEhrService {
     /// - `versioned_object_does_not_exist` (`404`) — any id names no
     ///   demographic PARTY root.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn restore_archived_parties(&self, party_ids: Vec<String>) -> Result<(), SmError> {
+    pub async fn restore_archived_parties(
+        &self,
+        party_ids: Vec<String>,
+    ) -> Result<(), StatusError> {
         let ids = super::parse_uuid_list(&party_ids, "party")?;
         Ok(self.restore_party_vos(&ids).await?)
     }
@@ -143,8 +146,8 @@ impl FerroEhrService {
         for &party_id in party_ids {
             let kind = party_kind_any_tier(&mut tx, party_id).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
-                return Err(ServiceError::sm(
-                    CallStatusType::PartyIdDoesNotExist,
+                return Err(ServiceError::new(
+                    ServiceStatus::PartyIdDoesNotExist,
                     format!("party {party_id}"),
                 ));
             }
@@ -180,8 +183,8 @@ impl FerroEhrService {
         for &party_id in party_ids {
             let kind = party_kind_any_tier(&mut tx, party_id).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
-                return Err(ServiceError::sm(
-                    CallStatusType::PartyIdDoesNotExist,
+                return Err(ServiceError::new(
+                    ServiceStatus::PartyIdDoesNotExist,
                     format!("party {party_id}"),
                 ));
             }
@@ -223,8 +226,8 @@ async fn require_ehrs_exist(
             .fetch_one(&mut *tx)
             .await?;
         if !exists {
-            return Err(ServiceError::sm(
-                CallStatusType::EhrIdDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::EhrIdDoesNotExist,
                 format!("EHR {ehr_id}"),
             ));
         }

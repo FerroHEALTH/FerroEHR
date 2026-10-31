@@ -34,7 +34,7 @@ use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
 use ferroehr::service::admin::access_delay::config::AccessDelayPolicy;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
-use ferroehr::service::status::SmError;
+use ferroehr::service::status::StatusError;
 use ferroehr::storage::ehr_repo::ehr_subject_columns;
 use ferroehr::support::{SupportPeriod, today_utc};
 use ferroehr::system_log::config::AuditConfig;
@@ -1358,7 +1358,7 @@ pub fn authz_resolvers(
                     .map_err(|e| ResolveError::new(format!("ehr id {ehr_id}"), e))?;
                 ehr_subject(&pool, EhrId(id))
                     .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", SmError::from(e)))
+                    .map_err(|e| ResolveError::new("ehr subject lookup", StatusError::from(e)))
             })
         }),
         content_of_version: Arc::new(move |vo: String, version: Option<String>| {

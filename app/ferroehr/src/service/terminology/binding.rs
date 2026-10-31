@@ -49,7 +49,7 @@ use openehr_sdt::rm_instance::{ValidationKind, ValidationMessage};
 use serde_json::Value;
 
 use crate::service::FerroEhrService;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::service::terminology::fhir::FhirTerminologyProvider;
 
 impl FerroEhrService {
@@ -121,7 +121,7 @@ impl FerroEhrService {
 async fn resolve_binding(
     server: &FhirTerminologyProvider,
     check: &ConstraintBindingCheck,
-) -> Result<bool, SmError> {
+) -> Result<bool, StatusError> {
     server
         .value_set_validate(
             &check.instance_terminology,

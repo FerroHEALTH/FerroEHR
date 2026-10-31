@@ -23,7 +23,7 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::versioning::signature::config::{Mode, SigningConfig, VerifyOnRead};
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr::versioning::signature::verify::Verdict;
@@ -328,13 +328,13 @@ async fn strict_verify_on_read_rejects_a_tampered_row() {
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await;
     // NOTE: a signing/integrity failure surfaces at the service boundary
-    // as `SmError { status: Exception }` (the adapter maps it to the same wire 5xx
+    // as `StatusError { status: Exception }` (the adapter maps it to the same wire 5xx
     // the old `ApiError::Internal` produced).
     assert!(
         matches!(
             tampered,
-            Err(SmError {
-                status: CallStatusType::Exception,
+            Err(StatusError {
+                status: ServiceStatus::Exception,
                 ..
             })
         ),
@@ -377,8 +377,8 @@ async fn default_verify_on_read_is_strict_and_rejects_a_tampered_row() {
     assert!(
         matches!(
             tampered,
-            Err(SmError {
-                status: CallStatusType::Exception,
+            Err(StatusError {
+                status: ServiceStatus::Exception,
                 ..
             })
         ),
@@ -759,8 +759,8 @@ async fn at_committal_attestation_is_signed_and_a_tamper_is_caught() {
     assert!(
         matches!(
             tampered,
-            Err(SmError {
-                status: CallStatusType::Exception,
+            Err(StatusError {
+                status: ServiceStatus::Exception,
                 ..
             })
         ),

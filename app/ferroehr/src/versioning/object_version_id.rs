@@ -190,7 +190,7 @@ pub(crate) fn version_id(
 ///
 /// Converts into [`ApiError`] (`400`, path/header parameters),
 /// [`ServiceError`] (`422`, payload fields) and
-/// [`crate::service::status::SmError`] (`400`, SM catalog arguments) at each
+/// [`crate::service::status::StatusError`] (`400`, SM catalog arguments) at each
 /// call site's natural severity.
 #[derive(Debug, thiserror::Error)]
 pub enum VersionIdError {
@@ -236,12 +236,12 @@ impl From<VersionIdError> for ServiceError {
     }
 }
 
-impl From<VersionIdError> for crate::service::status::SmError {
+impl From<VersionIdError> for crate::service::status::StatusError {
     /// A malformed version id in an SM catalog argument is an argument-validity
     /// precondition failure (→ `400` at the wire, matching the
     /// [`From<VersionIdError> for ApiError`] `BadRequest` row).
     fn from(e: VersionIdError) -> Self {
-        crate::service::status::SmError::precondition(e.wire_message())
+        crate::service::status::StatusError::precondition(e.wire_message())
     }
 }
 

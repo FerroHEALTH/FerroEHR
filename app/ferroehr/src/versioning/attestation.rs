@@ -40,7 +40,7 @@ use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::Kind;
 use crate::versioning::audit::{
     change_type, change_type_rubric, decode_description, dv_date_time, dv_text, openehr_coded_text,
@@ -98,8 +98,8 @@ pub(crate) async fn attest(
     )
     .await?;
     let Some(target) = target.filter(|t| t.ehr_id == ehr_id) else {
-        return Err(ServiceError::sm(
-            CallStatusType::ObjectVersionDoesNotExist,
+        return Err(ServiceError::new(
+            ServiceStatus::ObjectVersionDoesNotExist,
             format!("{} version {vo_id}::{expected}", kind.as_str()),
         ));
     };

@@ -23,7 +23,7 @@
 use crate::ids::EhrId;
 use crate::service::list::Page;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
 use openehr_its::rest::generated::ehr::Versionable;
 use serde_json::{Value, json};
@@ -47,13 +47,13 @@ impl FerroEhrService {
     /// `change_control` semantics stay.
     ///
     /// # Errors
-    /// [`SmError`] if the CONTRIBUTION fails classification, content
+    /// [`StatusError`] if the CONTRIBUTION fails classification, content
     /// validation, the optimistic lock, or its storage commit.
     pub async fn create_ehr_contribution(
         &self,
         ehr_id: EhrId,
         body: Value,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         // TODO(#3595): decode the body through the generated `NewContribution`;
         // the raw read still accepts the SM `Terminology_code` and plain-string
         // spellings, an omitted member `change_type` and an `ATTESTATION` member
@@ -100,13 +100,13 @@ impl FerroEhrService {
     /// exists in the EHR.
     ///
     /// # Errors
-    /// [`SmError`] if the retrieval fails (a missing CONTRIBUTION is
+    /// [`StatusError`] if the retrieval fails (a missing CONTRIBUTION is
     /// `Ok(false)`).
     pub async fn has_contribution(
         &self,
         an_ehr_id: EhrId,
         a_contrib_id: Uuid,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         match self.ehr_contribution(an_ehr_id, a_contrib_id, false).await {
             Ok(_) => Ok(true),
             Err(ServiceError::NotFound(_)) => Ok(false),
@@ -118,13 +118,13 @@ impl FerroEhrService {
     /// (its `versions` as `OBJECT_REF`s).
     ///
     /// # Errors
-    /// [`SmError`] when the CONTRIBUTION does not exist in this EHR
+    /// [`StatusError`] when the CONTRIBUTION does not exist in this EHR
     /// (404-equivalent) or a read fails.
     pub async fn get_contribution(
         &self,
         an_ehr_id: EhrId,
         a_contrib_id: Uuid,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         Ok(self
             .ehr_contribution(an_ehr_id, a_contrib_id, false)
             .await?)
@@ -135,13 +135,13 @@ impl FerroEhrService {
     /// version received from another system (ITS-REST `Prefer: resolve_refs`).
     ///
     /// # Errors
-    /// [`SmError`] when the CONTRIBUTION does not exist in this EHR
+    /// [`StatusError`] when the CONTRIBUTION does not exist in this EHR
     /// (404-equivalent) or a read fails.
     pub async fn get_contribution_resolved(
         &self,
         an_ehr_id: EhrId,
         a_contrib_id: Uuid,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         Ok(self.ehr_contribution(an_ehr_id, a_contrib_id, true).await?)
     }
 
@@ -149,7 +149,7 @@ impl FerroEhrService {
     /// set atomically, returning the new CONTRIBUTION uid.
     ///
     /// # Errors
-    /// [`SmError`] when the typed shapes fail to serialize, or the commit
+    /// [`StatusError`] when the typed shapes fail to serialize, or the commit
     /// fails classification, content validation, the optimistic lock, or its
     /// storage write.
     pub async fn commit_contribution(
@@ -157,7 +157,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         versions: Vec<UpdateVersion<Versionable>>,
         an_audit: UpdateAudit,
-    ) -> Result<String, SmError> {
+    ) -> Result<String, StatusError> {
         // Reassemble the wire CONTRIBUTION body `commit_version_set` parses:
         // `{ versions: [ { commit_audit, data, preceding_version_uid,
         // lifecycle_state, attestations, signature } … ], audit }`. The typed
@@ -177,7 +177,7 @@ impl FerroEhrService {
     /// uids, optionally bounded by `time_range`, paged.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `time_range` bound (400-equivalent), a
+    /// [`StatusError`] for a malformed `time_range` bound (400-equivalent), a
     /// missing EHR (`Pre_has_ehr`, enforced inside the versioning read), or a
     /// read failure.
     pub async fn list_contributions(
@@ -185,7 +185,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         time_range: crate::service::ehr::handle::TimeRange,
         page: Page,
-    ) -> Result<Vec<String>, SmError> {
+    ) -> Result<Vec<String>, StatusError> {
         let time_range = parse_time_range(time_range)?;
         // `Pre_has_ehr` (`i_ehr_contribution.adoc` §list_contributions —
         // `ehr_does_not_exist`) is enforced inside the versioning read.
@@ -211,13 +211,13 @@ impl FerroEhrService {
     /// already clamped by the protocol adapter.
     ///
     /// # Errors
-    /// [`SmError`] — `Pre_has_ehr` fails (unknown EHR → 404), or a read fails.
+    /// [`StatusError`] — `Pre_has_ehr` fails (unknown EHR → 404), or a read fails.
     pub async fn ehr_contribution_list_page(
         &self,
         an_ehr_id: EhrId,
         offset: i64,
         fetch: i64,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         // Existence (`Pre_has_ehr` → 404) + the unwindowed total in one call.
         let total = count_contributions(&self.pool, an_ehr_id, None).await?;
         let rows = crate::storage::version_repo::contribution::list_contribution_summaries(
@@ -245,13 +245,13 @@ impl FerroEhrService {
     /// CONTRIBUTIONs in the EHR, optionally bounded by `time_range`.
     ///
     /// # Errors
-    /// [`SmError`] for a malformed `time_range` bound (400-equivalent) or a
+    /// [`StatusError`] for a malformed `time_range` bound (400-equivalent) or a
     /// read failure.
     pub async fn contribution_count(
         &self,
         an_ehr_id: EhrId,
         time_range: crate::service::ehr::handle::TimeRange,
-    ) -> Result<i64, SmError> {
+    ) -> Result<i64, StatusError> {
         let time_range = parse_time_range(time_range)?;
         Ok(count_contributions(&self.pool, an_ehr_id, time_range).await?)
     }
@@ -261,7 +261,7 @@ impl FerroEhrService {
     /// `return=minimal` commits and returns just the metadata.
     ///
     /// # Errors
-    /// [`SmError`] if the CONTRIBUTION fails classification, content
+    /// [`StatusError`] if the CONTRIBUTION fails classification, content
     /// validation, the optimistic lock, or its storage commit.
     ///
     /// Both branches carry `Last-Modified` beside the `ETag` and `Location` uid,
@@ -274,7 +274,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         a_contribution: Value,
         representation: bool,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         if representation {
             // `return=representation`: assemble the stored CONTRIBUTION body
             // (audit + version OBJECT_REFs) for the response.

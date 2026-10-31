@@ -56,7 +56,7 @@ pub mod types;
 use regex::Regex;
 
 use crate::service::list::Page;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 use crate::service::error::ServiceError;
 
@@ -91,7 +91,7 @@ pub(super) fn compile_pattern(pattern: &str) -> Result<Regex, ServiceError> {
     Regex::new(pattern).map_err(|e| {
         let message = format!("invalid id pattern: {e}");
         ServiceError::BadRequest(
-            SmError::new(CallStatusType::InvalidIdPattern, message).with_source(e),
+            StatusError::new(ServiceStatus::InvalidIdPattern, message).with_source(e),
         )
     })
 }
@@ -100,7 +100,7 @@ pub(super) fn compile_pattern(pattern: &str) -> Result<Regex, ServiceError> {
 mod tests {
     use super::compile_pattern;
     use crate::service::error::ServiceError;
-    use crate::service::status::CallStatusType;
+    use crate::service::status::ServiceStatus;
 
     /// An uncompilable id pattern reports the SM status
     /// `i_definition_adl14.adoc` §`list_matching_archetypes` declares
@@ -112,11 +112,11 @@ mod tests {
         use std::error::Error;
 
         let err = compile_pattern("(").expect_err("an unbalanced group must not compile");
-        let ServiceError::BadRequest(sm) = &err else {
+        let ServiceError::BadRequest(err) = &err else {
             panic!("an unusable pattern is a 400, got {err:?}");
         };
-        assert_eq!(sm.status, CallStatusType::InvalidIdPattern);
-        // `BadRequest` is transparent, so the first hop is the `SmError`'s own
+        assert_eq!(err.status, ServiceStatus::InvalidIdPattern);
+        // `BadRequest` is transparent, so the first hop is the `StatusError`'s own
         // source: the concrete compile failure.
         let hops = std::iter::successors(Error::source(&err), |e| Error::source(*e))
             .map(|e| e.downcast_ref::<regex::Error>().is_some())

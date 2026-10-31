@@ -29,7 +29,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::attestation::{AttestationParts, PendingAttest};
 use crate::versioning::audit::{
     AuditInput, change_type, change_type_code, decode_description, dv_text, party_proxy,
@@ -1579,8 +1579,8 @@ pub(crate) async fn get_contribution(
     )
     .await?
     .ok_or_else(|| {
-        ServiceError::sm(
-            CallStatusType::ContributionDoesNotExist,
+        ServiceError::new(
+            ServiceStatus::ContributionDoesNotExist,
             format!("CONTRIBUTION {contribution_id}"),
         )
     })?;
@@ -1614,8 +1614,8 @@ pub(crate) async fn get_contribution(
         let tree = TreeId::from_columns(t, b, v);
         if resolve_refs {
             let loaded = resolved.remove(&(vo_id, tree)).ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::ObjectVersionDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::ObjectVersionDoesNotExist,
                     format!("VERSION {vo_id}::{tree}"),
                 )
             })?;
@@ -1719,8 +1719,8 @@ async fn ensure_ehr_exists(pool: &sqlx::PgPool, ehr_id: EhrId) -> Result<(), Ser
     if crate::storage::version_repo::meta::ehr_exists(pool, ehr_id).await? {
         Ok(())
     } else {
-        Err(ServiceError::sm(
-            CallStatusType::EhrIdDoesNotExist,
+        Err(ServiceError::new(
+            ServiceStatus::EhrIdDoesNotExist,
             format!("EHR {ehr_id}"),
         ))
     }

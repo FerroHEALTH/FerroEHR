@@ -98,7 +98,7 @@ impl FerroEhrService {
         // semantically invalid operational template.
         if template_id.trim().is_empty() {
             return Err(ServiceError::Unprocessable {
-                status: crate::service::status::CallStatusType::InvalidTemplate,
+                status: crate::service::status::ServiceStatus::InvalidTemplate,
                 violation: Violation::new("is missing from the operational template")
                     .with_path("template_id"),
             });
@@ -107,7 +107,7 @@ impl FerroEhrService {
         // is a malformed OPT (CNF `removed_mandatory_elements/…removed_concept_value`).
         if opt.concept.trim().is_empty() {
             return Err(ServiceError::Unprocessable {
-                status: crate::service::status::CallStatusType::InvalidTemplate,
+                status: crate::service::status::ServiceStatus::InvalidTemplate,
                 violation: Violation::new("of the operational template is empty")
                     .with_path("concept"),
             });
@@ -177,8 +177,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                crate::service::status::CallStatusType::TemplateDoesNotExist,
+            ServiceError::new(
+                crate::service::status::ServiceStatus::TemplateDoesNotExist,
                 format!("template {template_id}"),
             )
         })

@@ -27,7 +27,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::party_invariants;
 use crate::service::error::ServiceError;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::service::version_update::Committal;
 use crate::versioning::CommitEnv;
 use crate::versioning::audit::change_type;
@@ -83,11 +83,11 @@ impl FerroEhrService {
         // `versioned_object_does_not_exist` (`i_party.adoc` declares exactly
         // these per call).
         let miss = || {
-            ServiceError::sm(
+            ServiceError::new(
                 if version.is_some() || at.is_some() {
-                    CallStatusType::ObjectVersionDoesNotExist
+                    ServiceStatus::ObjectVersionDoesNotExist
                 } else {
-                    CallStatusType::VersionedObjectDoesNotExist
+                    ServiceStatus::VersionedObjectDoesNotExist
                 },
                 format!("{} {vo_id}", kind.rm_type()),
             )
@@ -117,8 +117,8 @@ impl FerroEhrService {
             .await?
             .and_then(support::party_kind_of)
             .ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::VersionedObjectDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::VersionedObjectDoesNotExist,
                     format!("versioned party {vo_id}"),
                 )
             })
@@ -133,11 +133,11 @@ impl FerroEhrService {
     pub(super) async fn ensure_any_party(
         &self,
         vo_id: VoId,
-        miss: CallStatusType,
+        miss: ServiceStatus,
     ) -> Result<(), ServiceError> {
         match object_kind(&self.demographic_pool, vo_id).await? {
             Some(k) if k.is_party() => Ok(()),
-            _ => Err(ServiceError::sm(miss, format!("versioned party {vo_id}"))),
+            _ => Err(ServiceError::new(miss, format!("versioned party {vo_id}"))),
         }
     }
 
@@ -267,8 +267,8 @@ impl FerroEhrService {
         committal: Option<&Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("{} {vo_id}", kind.rm_type()),
             )
         })?;
@@ -290,8 +290,8 @@ impl FerroEhrService {
     ) -> Result<ServiceResponse, ServiceError> {
         let kind = current.kind;
         if current.deleted {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("{} {} is deleted", kind.rm_type(), current.vo_id),
             ));
         }
@@ -351,8 +351,8 @@ impl FerroEhrService {
         update_audit: Option<&UpdateAudit>,
     ) -> Result<ServiceResponse, ServiceError> {
         let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("{} {vo_id}", kind.rm_type()),
             )
         })?;

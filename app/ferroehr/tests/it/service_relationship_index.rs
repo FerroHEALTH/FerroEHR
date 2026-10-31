@@ -28,7 +28,7 @@ use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::{
     LocationDesc, ResourceInstanceType, ResourceStatus, SubjectRef,
 };
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 /// The bare versioned-object UUID of a versioned-object body.
 fn vo_uuid(v: &Value) -> String {
@@ -151,8 +151,8 @@ async fn relationship_sm_calls_round_trip() {
     assert!(
         matches!(
             after,
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ),
@@ -243,8 +243,8 @@ async fn relationship_lifecycle_end_to_end() {
     assert!(
         matches!(
             stale,
-            Err(SmError {
-                status: CallStatusType::VersionMismatch,
+            Err(StatusError {
+                status: ServiceStatus::VersionMismatch,
                 ..
             })
         ),
@@ -301,8 +301,8 @@ async fn relationship_error_cases() {
     assert!(
         matches!(
             unknown,
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ),
@@ -341,8 +341,8 @@ async fn relationship_error_cases() {
         .await;
     assert!(matches!(
         vp_unknown,
-        Err(SmError {
-            status: CallStatusType::VersionedObjectDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::VersionedObjectDoesNotExist,
             ..
         })
     ));
@@ -451,7 +451,7 @@ async fn ehr_index_local_map_holds_an_ehr_created_for_a_subject() {
         .create_ehr_for_subject(subject.clone(), None)
         .await
         .expect_err("the subject already owns an EHR");
-    assert_eq!(refused.status, CallStatusType::EhrForSubjectAlreadyExists);
+    assert_eq!(refused.status, ServiceStatus::EhrForSubjectAlreadyExists);
     let ehrs = svc.subject_ehrs(subject).await.expect("subject ehrs");
     assert_eq!(ehrs.len(), 1, "a refused create enters nothing");
 }
@@ -567,8 +567,8 @@ async fn ehr_index_update_status_loc_and_remove() {
     let again = svc.remove_ehr_subject(ehr.to_string(), subject).await;
     assert!(matches!(
         again,
-        Err(SmError {
-            status: CallStatusType::SubjectIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::SubjectIdDoesNotExist,
             ..
         })
     ));
@@ -607,8 +607,8 @@ async fn ehr_index_remove_subject_wide_and_unknown_ehr() {
     assert!(
         matches!(
             unknown,
-            Err(SmError {
-                status: CallStatusType::EhrIdDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::EhrIdDoesNotExist,
                 ..
             })
         ),
@@ -620,8 +620,8 @@ async fn ehr_index_remove_subject_wide_and_unknown_ehr() {
     let no_subject = svc.remove_subject(SubjectRef::person("nope", "mpi")).await;
     assert!(matches!(
         no_subject,
-        Err(SmError {
-            status: CallStatusType::SubjectIdDoesNotExist,
+        Err(StatusError {
+            status: ServiceStatus::SubjectIdDoesNotExist,
             ..
         })
     ));

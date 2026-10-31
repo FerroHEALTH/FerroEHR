@@ -20,7 +20,7 @@ use serde_json::Value;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::types::TemplateListFilter;
 use ferroehr::service::list::Page;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 /// Fixed `ctx/time` default for the FLAT rebuild directions (ITS-REST
 /// `simplified_formats` master04 §Context) so round-trips stay deterministic.
@@ -94,8 +94,8 @@ async fn template_upload_list_get_roundtrip() {
     assert!(
         matches!(
             conflict,
-            SmError {
-                status: CallStatusType::Conflict,
+            StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             }
         ),
@@ -138,8 +138,8 @@ async fn get_unknown_template_is_not_found() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::TemplateDoesNotExist,
+            StatusError {
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),
@@ -158,8 +158,8 @@ async fn invalid_opt_xml_is_rejected() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::InvalidTemplate,
+            StatusError {
+                status: ServiceStatus::InvalidTemplate,
                 ..
             }
         ),
@@ -277,8 +277,8 @@ async fn example_for_unknown_template_is_not_found() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::TemplateDoesNotExist,
+            StatusError {
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),
@@ -300,8 +300,8 @@ async fn example_with_invalid_detail_level_is_bad_request() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -356,8 +356,8 @@ async fn opt_converts_to_adl2_sources() {
     assert!(
         matches!(
             missing,
-            SmError {
-                status: CallStatusType::TemplateDoesNotExist,
+            StatusError {
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),

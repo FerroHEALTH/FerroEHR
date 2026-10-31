@@ -37,7 +37,7 @@ use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
@@ -413,8 +413,8 @@ async fn incomplete_lifecycle_relaxes_lower_bounds_but_not_wrongness() {
     assert!(
         matches!(
             wrong,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -725,8 +725,8 @@ async fn direct_route_commit_against_an_adl2_template_stamps_and_guards() {
     assert!(
         matches!(
             &in_use,
-            SmError {
-                status: CallStatusType::Conflict,
+            StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             }
         ) && in_use

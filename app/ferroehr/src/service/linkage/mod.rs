@@ -58,7 +58,7 @@ pub(crate) mod store;
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -95,7 +95,7 @@ pub enum LinkageError {
     /// `[audit] fail_mode = "closed"` an unrecorded crossing is refused rather
     /// than served.
     #[error("the access record could not be taken and the deployment fails closed")]
-    Unrecorded(#[source] SmError),
+    Unrecorded(#[source] StatusError),
 }
 
 impl FerroEhrService {

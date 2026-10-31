@@ -29,7 +29,7 @@
 //!
 //! NOTE: no openEHR spec governs the internal layering: our own design; each
 //! one-expression `Ok(self.inner(...).await?)` method is where a `ServiceError`
-//! becomes the `SmError` callers consume.
+//! becomes the `StatusError` callers consume.
 
 #![expect(
     clippy::disallowed_types,
@@ -78,7 +78,7 @@ use crate::versioning::SigningCtx;
 use crate::versioning::signature::signer::Signer;
 use openehr_sdt::flat::cache::WebTemplateCache;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
-use status::SmError;
+use status::StatusError;
 
 /// The default openEHR system identifier stamped into `EHR.system_id`,
 /// `AUDIT_DETAILS.system_id`, and every `OBJECT_VERSION_ID.creating_system_id`.
@@ -571,7 +571,7 @@ impl FerroEhrService {
     /// the stored OPT fails to parse/build into a `WebTemplate`; a
     /// storage-classified status (`exception`, `conflict`, or
     /// `service_overloaded`) on a database failure while loading it.
-    pub async fn web_template(&self, template_id: &str) -> Result<Arc<WebTemplate>, SmError> {
+    pub async fn web_template(&self, template_id: &str) -> Result<Arc<WebTemplate>, StatusError> {
         Ok(self.web_template_for(template_id).await?)
     }
 

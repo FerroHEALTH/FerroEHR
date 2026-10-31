@@ -273,7 +273,7 @@ async fn export_ehrs_unknown_ehr_is_ehr_id_does_not_exist() {
         .expect_err("unknown EHR must fail");
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::EhrIdDoesNotExist
+        ferroehr::service::status::ServiceStatus::EhrIdDoesNotExist
     );
 }
 
@@ -481,7 +481,7 @@ async fn criteria_in_a_foreign_formalism_are_refused() {
         .expect_err("a non-AQL criteria formalism must be refused");
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::PreconditionViolation
+        ferroehr::service::status::ServiceStatus::PreconditionViolation
     );
     assert!(
         err.message.contains("formalism"),
@@ -508,7 +508,7 @@ async fn criteria_that_do_not_parse_as_aql_are_refused() {
         .expect_err("an unparseable AQL criterion must be refused");
     assert_eq!(
         err.status,
-        ferroehr::service::status::CallStatusType::PreconditionViolation
+        ferroehr::service::status::ServiceStatus::PreconditionViolation
     );
     assert!(
         err.message.contains("criteria[0]"),

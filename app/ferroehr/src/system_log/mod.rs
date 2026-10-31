@@ -102,7 +102,7 @@ use event::{AuditEvent, EmitOutcome};
 // `ferroehr::system_log::{AuditConfig, AuditHandle, AuditSender, SubjectResolver}`).
 
 use crate::service::FerroEhrService;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 /// Errors raised while rendering or shipping an audit record.
 ///
@@ -238,9 +238,9 @@ impl FerroEhrService {
     /// `Enqueued`, and `Dropped` under `fail_mode = "open"`, complete.
     ///
     /// # Errors
-    /// [`SmError`] with the `service_overloaded` status (the wire's `503`)
+    /// [`StatusError`] with the `service_overloaded` status (the wire's `503`)
     /// when the sender rejected the record.
-    pub fn record_access(&self, mut event: AuditEvent) -> Result<(), SmError> {
+    pub fn record_access(&self, mut event: AuditEvent) -> Result<(), StatusError> {
         // A service-layer record is built where the request's principal is
         // gone; the roles the authentication layer published for the scope
         // are stamped here so every emitter carries them (#3239).
@@ -256,8 +256,8 @@ impl FerroEhrService {
         }
         match self.emit(event) {
             EmitOutcome::Enqueued | EmitOutcome::Dropped => Ok(()),
-            EmitOutcome::Rejected => Err(SmError::new(
-                CallStatusType::ServiceOverloaded,
+            EmitOutcome::Rejected => Err(StatusError::new(
+                ServiceStatus::ServiceOverloaded,
                 "audit trail unavailable (fail-closed)",
             )),
         }
@@ -348,11 +348,11 @@ impl FerroEhrService {
     /// carry it.
     ///
     /// # Errors
-    /// [`SmError`] when the read fails.
+    /// [`StatusError`] when the read fails.
     pub async fn audit_content_of_objects(
         &self,
         vo_ids: &[crate::ids::VoId],
-    ) -> Result<Vec<categories::ContentIds>, SmError> {
+    ) -> Result<Vec<categories::ContentIds>, StatusError> {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
@@ -369,11 +369,11 @@ impl FerroEhrService {
     /// Empty without a reading when auditing is off.
     ///
     /// # Errors
-    /// [`SmError`] when the read fails.
+    /// [`StatusError`] when the read fails.
     pub async fn audit_content_of_contribution(
         &self,
         contribution_id: uuid::Uuid,
-    ) -> Result<Vec<categories::ContentIds>, SmError> {
+    ) -> Result<Vec<categories::ContentIds>, StatusError> {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
@@ -401,15 +401,15 @@ impl FerroEhrService {
     /// supplement's ITI-81 FHIR search on `AuditEvent`).
     ///
     /// # Errors
-    /// [`SmError`] `precondition_violation` when no local store is wired, or
+    /// [`StatusError`] `precondition_violation` when no local store is wired, or
     /// `exception` when the store query fails.
     #[cfg(feature = "fhir")]
     pub async fn audit_event_search(
         &self,
         filter: &store::AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), SmError> {
+    ) -> Result<(i64, Vec<serde_json::Value>), StatusError> {
         let Some(audit_store) = &self.audit_store else {
-            return Err(SmError::precondition(
+            return Err(StatusError::precondition(
                 "the local audit record repository is not enabled ([audit.store])",
             ));
         };

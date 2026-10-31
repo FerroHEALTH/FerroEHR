@@ -23,7 +23,7 @@
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::types::TemplateListFilter;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::list::Page;
 
@@ -162,8 +162,8 @@ async fn archetype_errors() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::InvalidArchetype,
+            StatusError {
+                status: ServiceStatus::InvalidArchetype,
                 ..
             }
         ),
@@ -178,8 +178,8 @@ async fn archetype_errors() {
     assert!(
         matches!(
             missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -192,8 +192,8 @@ async fn archetype_errors() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -211,8 +211,8 @@ async fn archetype_errors() {
     assert!(
         matches!(
             bad_re,
-            SmError {
-                status: CallStatusType::InvalidIdPattern,
+            StatusError {
+                status: ServiceStatus::InvalidIdPattern,
                 ..
             }
         ),
@@ -245,8 +245,8 @@ async fn archetype_semantic_validity_runs_the_14_engine() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::InvalidArchetype,
+            StatusError {
+                status: ServiceStatus::InvalidArchetype,
                 ..
             }
         ),
@@ -300,8 +300,8 @@ async fn adl14_convert_to_adl2_migration_round_trip() {
     assert!(
         matches!(
             missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -354,8 +354,8 @@ async fn opt_upload_has_get_list_match_delete() {
     assert!(
         matches!(
             conflict,
-            SmError {
-                status: CallStatusType::Conflict,
+            StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             }
         ),
@@ -404,8 +404,8 @@ async fn opt_delete_refuses_while_referenced() {
     // Referenced → refused with the friendly 409 naming the count.
     let res = svc.delete_opt(uuid.clone()).await;
     match res {
-        Err(SmError {
-            status: CallStatusType::Conflict,
+        Err(StatusError {
+            status: ServiceStatus::Conflict,
             ref message,
             ..
         }) => {
@@ -614,8 +614,8 @@ async fn query_store_rejects_non_aql_formalism() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -676,8 +676,8 @@ async fn query_store_name_grammar_and_reserved_name() {
         assert!(
             matches!(
                 err,
-                SmError {
-                    status: CallStatusType::PreconditionViolation,
+                StatusError {
+                    status: ServiceStatus::PreconditionViolation,
                     ..
                 }
             ),
@@ -711,8 +711,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::InvalidTemplate,
+            StatusError {
+                status: ServiceStatus::InvalidTemplate,
                 ..
             }
         ),
@@ -727,8 +727,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             bad_uuid,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -741,8 +741,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             get_missing,
-            SmError {
-                status: CallStatusType::TemplateDoesNotExist,
+            StatusError {
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),
@@ -752,8 +752,8 @@ async fn opt_errors() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::TemplateDoesNotExist,
+            StatusError {
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),
@@ -878,8 +878,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -894,8 +894,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             bad_hrid,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -910,8 +910,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -924,8 +924,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -941,8 +941,8 @@ async fn adl2_errors() {
     assert!(
         matches!(
             bad_re,
-            SmError {
-                status: CallStatusType::InvalidIdPattern,
+            StatusError {
+                status: ServiceStatus::InvalidIdPattern,
                 ..
             }
         ),
@@ -1091,8 +1091,8 @@ async fn query_valid_store_list_match_delete() {
     assert!(
         matches!(
             del_missing,
-            SmError {
-                status: CallStatusType::ArtefactDoesNotExist,
+            StatusError {
+                status: ServiceStatus::ArtefactDoesNotExist,
                 ..
             }
         ),
@@ -1107,8 +1107,8 @@ async fn query_valid_store_list_match_delete() {
     assert!(
         matches!(
             bad,
-            SmError {
-                status: CallStatusType::InvalidQuery,
+            StatusError {
+                status: ServiceStatus::InvalidQuery,
                 ..
             }
         ),
@@ -1124,8 +1124,8 @@ async fn query_valid_store_list_match_delete() {
     assert!(
         matches!(
             bad_re,
-            SmError {
-                status: CallStatusType::InvalidIdPattern,
+            StatusError {
+                status: ServiceStatus::InvalidIdPattern,
                 ..
             }
         ),
@@ -1142,8 +1142,8 @@ async fn query_store_set_not_implemented() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::NotImplemented,
+            StatusError {
+                status: ServiceStatus::NotImplemented,
                 ..
             }
         ),

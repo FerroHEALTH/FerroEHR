@@ -33,7 +33,7 @@ use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
 use ferroehr::service::linkage::cohort::{CohortError, CohortPredicate, CohortQueryRequest};
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use crate::ehr_index_ihe::{
     CLINICAL, OPERATION, RED_ID, answer, red_subject, red_to_blue, service,
@@ -221,8 +221,8 @@ async fn a_predicate_is_refused_under_an_identity_source() {
         "{refused:?}"
     );
     assert_eq!(
-        SmError::from(refused).status,
-        CallStatusType::PreconditionViolation
+        StatusError::from(refused).status,
+        ServiceStatus::PreconditionViolation
     );
     assert!(
         pix.received_requests().await.expect("recorded").is_empty(),
@@ -251,7 +251,7 @@ async fn a_failing_resolution_fails_the_cohort() {
         matches!(refused, CohortError::Subject(IndexError::IdentitySource(_))),
         "{refused:?}"
     );
-    assert_eq!(SmError::from(refused).status, CallStatusType::Exception);
+    assert_eq!(StatusError::from(refused).status, ServiceStatus::Exception);
 
     let bare = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_cohort(cohort_config());

@@ -31,7 +31,7 @@ use uuid::Uuid;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::contribution::commit_version_set;
@@ -67,8 +67,8 @@ impl FerroEhrService {
         )
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ContributionDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ContributionDoesNotExist,
                 format!("demographic CONTRIBUTION {contribution_id}"),
             )
         })?;

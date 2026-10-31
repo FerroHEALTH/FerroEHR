@@ -38,7 +38,7 @@ use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use crate::fixtures::{composition, uv};
 
@@ -97,10 +97,10 @@ fn typed_status(value: &Value) -> openehr_rm::prelude::EhrStatus {
     openehr_its::json::from_canonical_value(value).expect("the fixture EHR_STATUS decodes")
 }
 
-fn assert_refused(error: &SmError, expected_path: &str) {
+fn assert_refused(error: &StatusError, expected_path: &str) {
     assert_eq!(
         error.status,
-        CallStatusType::ContentInvalid,
+        ServiceStatus::ContentInvalid,
         "a privacy refusal is the 422-class content_invalid status, got {error:?}"
     );
     assert!(

@@ -22,7 +22,7 @@ use serde_json::Value;
 
 use crate::config::profile::SpecProfile;
 use crate::service::error::ServiceError;
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::versioning::Kind;
 
 /// Reads `canonical` with the RELEASED (`stable` profile) generation's strict
@@ -102,8 +102,8 @@ fn refuse(
         error = %refusal,
         "refusing to serve a stored version the active spec_profile cannot express"
     );
-    ServiceError::sm(
-        CallStatusType::Conflict,
+    ServiceError::new(
+        ServiceStatus::Conflict,
         format!(
             "version {version_uid} ({kind}) was stored using openEHR specification surface the \
              active spec_profile `{profile}` does not define, and this server never \
@@ -406,13 +406,13 @@ mod tests {
             &|| "1e2::sys::1".to_owned(),
         )
         .expect_err("a development-only body is refused under the stable profile");
-        let ServiceError::Conflict(sm) = &err else {
+        let ServiceError::Conflict(err) = &err else {
             panic!("expected the 409-class conflict, got {err:?}");
         };
-        assert_eq!(sm.status, CallStatusType::Conflict);
-        assert!(sm.message.contains("1e2::sys::1"), "{}", sm.message);
-        assert!(sm.message.contains("stable"), "{}", sm.message);
-        assert!(sm.message.contains("development"), "{}", sm.message);
+        assert_eq!(err.status, ServiceStatus::Conflict);
+        assert!(err.message.contains("1e2::sys::1"), "{}", err.message);
+        assert!(err.message.contains("stable"), "{}", err.message);
+        assert!(err.message.contains("development"), "{}", err.message);
     }
 
     /// An unstamped (`NULL`) legacy row is assessed on the fly, in both

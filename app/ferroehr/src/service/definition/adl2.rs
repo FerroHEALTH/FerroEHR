@@ -50,7 +50,7 @@ use sqlx::Row;
 use crate::service::FerroEhrService;
 use crate::service::error::{ErrorChain, ServiceError, Violation};
 use crate::service::list::Page;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 use super::{compile_pattern, page_bounds, paginate};
 
@@ -103,7 +103,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn has_artefact(&self, an_id: String) -> Result<bool, SmError> {
+    pub async fn has_artefact(&self, an_id: String) -> Result<bool, StatusError> {
         Ok(self.adl2_exists(&an_id).await?)
     }
 
@@ -123,7 +123,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn valid_artefact(&self, adl2: &str) -> Result<bool, SmError> {
+    pub fn valid_artefact(&self, adl2: &str) -> Result<bool, StatusError> {
         Ok(matches!(
             validate_source_integrity(adl2, Dialect::Adl2, None),
             Ok(issues) if issues.iter().all(|i| i.severity != Severity::Error)
@@ -145,7 +145,7 @@ impl FerroEhrService {
     ///   invalid content — `responses/400.yaml`); source that fails an AOM2
     ///   validation phase → `invalid_artefact` (`422`, via [`ServiceError`]).
     /// - A database failure (`exception` → `500`).
-    pub async fn upload_artefact(&self, adl2: String) -> Result<(), SmError> {
+    pub async fn upload_artefact(&self, adl2: String) -> Result<(), StatusError> {
         let summary = self.adl2_validate(&adl2).await?;
         self.adl2_persist(&summary, &adl2, true).await?;
         Ok(())
@@ -158,7 +158,7 @@ impl FerroEhrService {
     ///
     /// - No artefact with that HRID → `artefact_does_not_exist` (`404`).
     /// - A database failure (`exception` → `500`).
-    pub async fn get_artefact(&self, an_id: String) -> Result<String, SmError> {
+    pub async fn get_artefact(&self, an_id: String) -> Result<String, StatusError> {
         Ok(self.adl2_get(&an_id).await?)
     }
 
@@ -168,7 +168,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_artefacts(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_artefacts(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list(page).await?)
     }
 
@@ -178,7 +178,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_archetypes_adl2(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_archetypes_adl2(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_by_kind("archetype", page).await?)
     }
 
@@ -188,7 +188,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_templates_adl2(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_templates_adl2(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_by_kind("template", page).await?)
     }
 
@@ -198,7 +198,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn list_opts_adl2(&self, page: Page) -> Result<Vec<String>, SmError> {
+    pub async fn list_opts_adl2(&self, page: Page) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_by_kind("operational_template", page).await?)
     }
 
@@ -213,7 +213,7 @@ impl FerroEhrService {
         &self,
         id_pattern: String,
         page: Page,
-    ) -> Result<Vec<String>, SmError> {
+    ) -> Result<Vec<String>, StatusError> {
         Ok(self.adl2_list_matching(&id_pattern, page).await?)
     }
 
@@ -224,7 +224,7 @@ impl FerroEhrService {
     ///
     /// - No artefact with that HRID → `artefact_does_not_exist` (`404`).
     /// - A database failure (`exception` → `500`).
-    pub async fn delete_artefact(&self, an_id: String) -> Result<(), SmError> {
+    pub async fn delete_artefact(&self, an_id: String) -> Result<(), StatusError> {
         Ok(self.adl2_delete(&an_id).await?)
     }
 
@@ -233,7 +233,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn artefacts_count(&self) -> Result<i64, SmError> {
+    pub async fn artefacts_count(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count().await?)
     }
 
@@ -242,7 +242,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn archetypes_count_adl2(&self) -> Result<i64, SmError> {
+    pub async fn archetypes_count_adl2(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count_by_kind("archetype").await?)
     }
 
@@ -251,7 +251,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn templates_count(&self) -> Result<i64, SmError> {
+    pub async fn templates_count(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count_by_kind("template").await?)
     }
 
@@ -261,7 +261,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn opts_count_adl2(&self) -> Result<i64, SmError> {
+    pub async fn opts_count_adl2(&self) -> Result<i64, StatusError> {
         Ok(self.adl2_count_by_kind("operational_template").await?)
     }
 }
@@ -546,8 +546,8 @@ impl FerroEhrService {
             })
             .max_by(|a, b| cmp_version(raw_id_version(a), raw_id_version(b)))
             .ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::TemplateDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::TemplateDoesNotExist,
                     format!(
                         "ADL2 template {template_id}{}",
                         version
@@ -777,8 +777,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("ADL2 artefact {an_id}"),
             )
         })
@@ -843,8 +843,8 @@ impl FerroEhrService {
                 .fetch_optional(&mut *tx)
                 .await?;
         let Some((hrid, kind)) = stored else {
-            return Err(ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("ADL2 artefact {an_id}"),
             ));
         };

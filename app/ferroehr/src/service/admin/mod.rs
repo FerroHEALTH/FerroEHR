@@ -48,7 +48,7 @@ pub mod types;
 
 use uuid::Uuid;
 
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 
 /// Whether a `version.kind` string names a demographic PARTY root (the five
 /// concrete `ACTOR`/`PARTY` leaves — RM demographic) — as opposed to a
@@ -66,13 +66,14 @@ pub(super) fn is_party_kind(kind: &str) -> bool {
               rejected token; the discarded `uuid::Error` adds only its own \
               wording, which is not part of the wire contract"
 )]
-fn parse_uuid(raw: &str, label: &str) -> Result<Uuid, SmError> {
-    Uuid::parse_str(raw).map_err(|_| SmError::precondition(format!("invalid {label} id: {raw}")))
+fn parse_uuid(raw: &str, label: &str) -> Result<Uuid, StatusError> {
+    Uuid::parse_str(raw)
+        .map_err(|_| StatusError::precondition(format!("invalid {label} id: {raw}")))
 }
 
 /// Parse a whole id list, rejecting the entire request on the first malformed
 /// id (a bulk call is validated before any work runs).
-fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, SmError> {
+fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, StatusError> {
     raw.iter().map(|s| parse_uuid(s, label)).collect()
 }
 
@@ -93,7 +94,9 @@ fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, SmError> {
 /// is not an `Interval` at all, so the parameter value violates its own type
 /// and the call is refused (`precondition_violation`) rather than silently
 /// answered with the empty result an inverted range would select.
-fn parse_range(range: types::StatTimeRange) -> Result<(Option<String>, Option<String>), SmError> {
+fn parse_range(
+    range: types::StatTimeRange,
+) -> Result<(Option<String>, Option<String>), StatusError> {
     let Some((lo, hi)) = range else {
         return Ok((None, None));
     };
@@ -102,7 +105,7 @@ fn parse_range(range: types::StatTimeRange) -> Result<(Option<String>, Option<St
     if let (Some(lower), Some(upper)) = (lower, upper)
         && lower > upper
     {
-        return Err(SmError::precondition(format!(
+        return Err(StatusError::precondition(format!(
             "time_interval lower bound {lower} is after its upper bound {upper} — an \
              Interval requires lower <= upper (BASE Interval invariant Limits_consistent)"
         )));
@@ -121,12 +124,12 @@ fn parse_range(range: types::StatTimeRange) -> Result<(Option<String>, Option<St
               parse error adds only its own wording, which is not part of the \
               wire contract"
 )]
-fn parse_bound(bound: Option<String>) -> Result<Option<jiff::Timestamp>, SmError> {
+fn parse_bound(bound: Option<String>) -> Result<Option<jiff::Timestamp>, StatusError> {
     match bound {
         None => Ok(None),
         Some(raw) => raw
             .parse::<jiff::Timestamp>()
             .map(Some)
-            .map_err(|_| SmError::precondition(format!("invalid ISO 8601 date-time: {raw}"))),
+            .map_err(|_| StatusError::precondition(format!("invalid ISO 8601 date-time: {raw}"))),
     }
 }

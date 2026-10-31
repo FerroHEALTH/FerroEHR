@@ -36,7 +36,7 @@ mod import;
 
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 
@@ -63,14 +63,14 @@ impl FerroEhrService {
     /// categories (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
     ///
     /// # Errors
-    /// The `service_overloaded` [`SmError`] when the sender rejected the record
+    /// The `service_overloaded` [`StatusError`] when the sender rejected the record
     /// under `fail_mode = "closed"`.
     pub(super) fn emit_extract_audit(
         &self,
         ehr_id: EhrId,
         action: EventActionCode,
         content: Option<AccessedContent>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         if !self.audit_enabled() {
             return Ok(());
         }

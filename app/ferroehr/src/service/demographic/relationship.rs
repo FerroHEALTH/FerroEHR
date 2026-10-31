@@ -40,7 +40,7 @@ use crate::service::demographic::support;
 use crate::service::demographic::validate::relationship_check;
 use crate::service::error::ServiceError;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::CallStatusType;
+use crate::service::status::ServiceStatus;
 use crate::service::version_update::Committal;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::WriteEnvelope;
@@ -92,11 +92,11 @@ impl FerroEhrService {
         // `versioned_object_does_not_exist` (`i_party_relationship.adoc`
         // mirrors `i_party.adoc` here).
         let miss = || {
-            ServiceError::sm(
+            ServiceError::new(
                 if version.is_some() || at.is_some() {
-                    CallStatusType::ObjectVersionDoesNotExist
+                    ServiceStatus::ObjectVersionDoesNotExist
                 } else {
-                    CallStatusType::VersionedObjectDoesNotExist
+                    ServiceStatus::VersionedObjectDoesNotExist
                 },
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
@@ -124,11 +124,11 @@ impl FerroEhrService {
     async fn ensure_any_relationship(
         &self,
         vo_id: VoId,
-        miss: CallStatusType,
+        miss: ServiceStatus,
     ) -> Result<(), ServiceError> {
         match object_kind(&self.demographic_pool, vo_id).await? {
             Some(Kind::PartyRelationship) => Ok(()),
-            _ => Err(ServiceError::sm(
+            _ => Err(ServiceError::new(
                 miss,
                 format!("versioned party relationship {vo_id}"),
             )),
@@ -259,8 +259,8 @@ impl FerroEhrService {
         committal: Option<&Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         })?;
@@ -282,8 +282,8 @@ impl FerroEhrService {
         committal: Option<&Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         if current.deleted {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("PARTY_RELATIONSHIP {} is deleted", current.vo_id),
             ));
         }
@@ -398,7 +398,7 @@ impl FerroEhrService {
     /// analogy with the EHR group (assembly + owner NOTE in
     /// `support::versioned_wrapper`).
     pub(super) async fn versioned_relationship(&self, vo_id: VoId) -> Result<Value, ServiceError> {
-        self.ensure_any_relationship(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.versioned_wrapper(vo_id, "VERSIONED_OBJECT", "versioned party relationship")
             .await
@@ -411,7 +411,7 @@ impl FerroEhrService {
         &self,
         vo_id: VoId,
     ) -> Result<Value, ServiceError> {
-        self.ensure_any_relationship(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.demographic_revision_history(vo_id).await
     }
@@ -425,7 +425,7 @@ impl FerroEhrService {
     ) -> Result<Value, ServiceError> {
         // Version-addressed: `object_version_does_not_exist` is the declared
         // does-not-exist code (`i_party_relationship.adoc`, as `i_party.adoc`).
-        self.ensure_any_relationship(vo_id, CallStatusType::ObjectVersionDoesNotExist)
+        self.ensure_any_relationship(vo_id, ServiceStatus::ObjectVersionDoesNotExist)
             .await?;
         self.demographic_version_envelope(vo_id, version, "party relationship")
             .await
@@ -438,7 +438,7 @@ impl FerroEhrService {
         vo_id: VoId,
         at: Option<jiff::Timestamp>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.ensure_any_relationship(vo_id, CallStatusType::VersionedObjectDoesNotExist)
+        self.ensure_any_relationship(vo_id, ServiceStatus::VersionedObjectDoesNotExist)
             .await?;
         self.demographic_version_envelope_at(vo_id, at, "party relationship")
             .await

@@ -35,7 +35,7 @@ use ferroehr::service::ehr_index::config::EhrIndexConfig;
 use ferroehr::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::tls_client::TlsClientSection;
 
@@ -188,7 +188,7 @@ async fn an_unknown_subject_has_no_ehr_and_gets_none() {
         .create_ehr_for_subject(red_subject(), None)
         .await
         .expect_err("no clinical identifier, no EHR");
-    assert_eq!(refused.status, CallStatusType::SubjectIdDoesNotExist);
+    assert_eq!(refused.status, ServiceStatus::SubjectIdDoesNotExist);
 }
 
 /// The IG's example identifier is no pseudonym, so the source answering it
@@ -211,7 +211,7 @@ async fn a_clinical_identifier_that_is_no_pseudonym_is_refused() {
         .has_ehr_for_subject(red_subject())
         .await
         .expect_err("IHEBLUE-994 is no pseudonym");
-    assert_eq!(refused.status, CallStatusType::Exception);
+    assert_eq!(refused.status, ServiceStatus::Exception);
     assert!(refused.message.contains("no pseudonym"), "{refused}");
 }
 
@@ -240,12 +240,12 @@ async fn a_failing_source_never_falls_back_to_the_local_map() {
         .has_ehr_for_subject(red_subject())
         .await
         .expect_err("the source failed");
-    assert_eq!(refused.status, CallStatusType::Exception);
+    assert_eq!(refused.status, ServiceStatus::Exception);
     let refused = svc
         .subject_ehrs(red_subject())
         .await
         .expect_err("the source failed");
-    assert_eq!(refused.status, CallStatusType::Exception);
+    assert_eq!(refused.status, ServiceStatus::Exception);
 }
 
 /// The identity source holds the cross-reference, so the `I_EHR_INDEX` writes
@@ -262,12 +262,12 @@ async fn the_local_map_is_not_written_under_an_identity_source() {
         .add_ehr_subject(ehr.clone(), red_subject(), None, None)
         .await
         .expect_err("held by the source");
-    assert_eq!(refused.status, CallStatusType::NotImplemented);
+    assert_eq!(refused.status, ServiceStatus::NotImplemented);
     let refused = svc
         .remove_subject(red_subject())
         .await
         .expect_err("held by the source");
-    assert_eq!(refused.status, CallStatusType::NotImplemented);
+    assert_eq!(refused.status, ServiceStatus::NotImplemented);
     assert!(svc.index_conflicts().await.is_err());
     assert!(
         pix.received_requests().await.expect("recorded").is_empty(),

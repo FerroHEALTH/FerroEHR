@@ -30,7 +30,7 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
@@ -151,7 +151,7 @@ async fn assert_vetdf_refusal(svc: &FerroEhrService) {
         .expect_err("a term the served code system does not contain must be refused");
     assert_eq!(
         err.status,
-        CallStatusType::ContentInvalid,
+        ServiceStatus::ContentInvalid,
         "VETDF is a content-invalid (422) failure"
     );
     assert!(

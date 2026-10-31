@@ -35,7 +35,7 @@ use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::LinkageError;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
@@ -143,7 +143,7 @@ async fn a_subject_lookup_is_withheld_when_its_record_is_rejected() {
         })
         .await;
     let error = refused.expect_err("a miss is still a lookup, and its record was rejected");
-    assert_eq!(error.status, CallStatusType::ServiceOverloaded, "{error}");
+    assert_eq!(error.status, ServiceStatus::ServiceOverloaded, "{error}");
 }
 
 /// The national-identifier resolution is withheld when its record is rejected.
@@ -172,7 +172,7 @@ async fn an_identifier_resolution_is_withheld_when_its_record_is_rejected() {
         .resolve_party_by_identifier("nl-bsn", SYNTHETIC_BSN)
         .await;
     let error = refused.expect_err("the resolution ran, and its record was rejected");
-    assert_eq!(error.status, CallStatusType::ServiceOverloaded, "{error}");
+    assert_eq!(error.status, ServiceStatus::ServiceOverloaded, "{error}");
 }
 
 /// An EHR-Extract export is withheld when its non-repudiation record is
@@ -190,5 +190,5 @@ async fn an_extract_export_is_withheld_when_its_record_is_rejected() {
 
     let refused = closed.extract_ehrs(ehr).await;
     let error = refused.expect_err("the export ran, and its record was rejected");
-    assert_eq!(error.status, CallStatusType::ServiceOverloaded, "{error}");
+    assert_eq!(error.status, ServiceStatus::ServiceOverloaded, "{error}");
 }

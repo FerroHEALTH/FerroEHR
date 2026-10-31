@@ -42,7 +42,7 @@ use openehr_rm::prelude::PartyRelationship;
 
 use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
-use crate::overview::error::{RestError, sm_api_error};
+use crate::overview::error::{RestError, status_api_error};
 use crate::state::AppState;
 use ferroehr::service::response::ServiceResponse;
 
@@ -1113,7 +1113,7 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(super::error_with_meta(sm_api_error(e), meta.as_ref()))
+                    Ok(super::error_with_meta(status_api_error(e), meta.as_ref()))
                 }
                 Err(e) => Err(RestError::from(e)),
             }

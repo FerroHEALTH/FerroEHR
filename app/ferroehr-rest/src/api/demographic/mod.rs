@@ -38,7 +38,7 @@ use openehr_its::rest::runtime::ApiError;
 use crate::overview::error::RestError;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 mod contribution;
 pub(crate) mod dispatch;
@@ -77,8 +77,8 @@ fn parse_party_op(op: &str) -> Option<(PartyKind, &str)> {
 /// Whether an error is the optimistic-concurrency precondition failure
 /// (`If-Match` mismatch → `412` on update; a stale `uid_based_id` → `409` on
 /// delete, per `person_delete.yaml` `409_PERSON_with_uid_based_id`).
-fn is_precondition(e: &SmError) -> bool {
-    e.status == CallStatusType::VersionMismatch
+fn is_precondition(e: &StatusError) -> bool {
+    e.status == ServiceStatus::VersionMismatch
 }
 
 /// Normalize an `If-Match` wire value to the bare `OBJECT_VERSION_ID` the

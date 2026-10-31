@@ -35,7 +35,7 @@ use crate::service::FerroEhrService;
 use crate::service::definition::types::QueryDescriptor;
 use crate::service::error::ServiceError;
 use crate::service::list::Page;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 use super::{compile_pattern, page_bounds, paginate};
 
@@ -102,7 +102,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn has_query(&self, a_query_name: String) -> Result<bool, SmError> {
+    pub async fn has_query(&self, a_query_name: String) -> Result<bool, StatusError> {
         Ok(self.query_exists(&a_query_name).await?)
     }
 
@@ -121,7 +121,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn valid_query(&self, a_query_text: &str, a_type: &str) -> Result<bool, SmError> {
+    pub fn valid_query(&self, a_query_text: &str, a_type: &str) -> Result<bool, StatusError> {
         Ok(valid_query_text(a_query_text, a_type))
     }
 
@@ -141,7 +141,7 @@ impl FerroEhrService {
         a_query_text: String,
         a_type: String,
         a_query_name: Option<String>,
-    ) -> Result<QueryDescriptor, SmError> {
+    ) -> Result<QueryDescriptor, StatusError> {
         Ok(self
             .register_query(a_query_text, &a_type, a_query_name)
             .await?)
@@ -163,9 +163,12 @@ impl FerroEhrService {
                   adapter invokes uniformly, so the receiver stays even where this \
                   implementation ignores it"
     )]
-    pub fn store_query_set(&self, _a_query_set_name: Option<String>) -> Result<String, SmError> {
-        Err(SmError::new(
-            CallStatusType::NotImplemented,
+    pub fn store_query_set(
+        &self,
+        _a_query_set_name: Option<String>,
+    ) -> Result<String, StatusError> {
+        Err(StatusError::new(
+            ServiceStatus::NotImplemented,
             "store_query_set is an SM TODO (i_definition_query.adoc): not implemented",
         ))
     }
@@ -178,7 +181,7 @@ impl FerroEhrService {
     /// - A row-decode failure on a `NOT NULL` column (a genuine server fault)
     ///   → `exception` (`500`).
     /// - A database failure (`exception` → `500`).
-    pub async fn list_queries(&self, page: Page) -> Result<Vec<QueryDescriptor>, SmError> {
+    pub async fn list_queries(&self, page: Page) -> Result<Vec<QueryDescriptor>, StatusError> {
         Ok(self.stored_query_descriptors(page).await?)
     }
 
@@ -197,7 +200,7 @@ impl FerroEhrService {
         id_pattern: String,
         artefact_id_pattern: Option<String>,
         page: Page,
-    ) -> Result<Vec<QueryDescriptor>, SmError> {
+    ) -> Result<Vec<QueryDescriptor>, StatusError> {
         Ok(self
             .query_list_matching(&id_pattern, artefact_id_pattern.as_deref(), page)
             .await?)
@@ -212,7 +215,7 @@ impl FerroEhrService {
     /// - No registered query with that name → `artefact_does_not_exist`
     ///   (`404`).
     /// - A database failure (`exception` → `500`).
-    pub async fn delete_query(&self, a_query_name: String) -> Result<(), SmError> {
+    pub async fn delete_query(&self, a_query_name: String) -> Result<(), StatusError> {
         Ok(self.query_delete(&a_query_name).await?)
     }
 
@@ -224,7 +227,7 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// A database failure (`exception` → `500`).
-    pub async fn queries_count(&self) -> Result<i64, SmError> {
+    pub async fn queries_count(&self) -> Result<i64, StatusError> {
         Ok(self.query_count().await?)
     }
 }
@@ -276,8 +279,8 @@ impl FerroEhrService {
         // supplied it, else the `a_type` parameter.
         let effective = formalism.as_deref().unwrap_or(a_type);
         if !valid_query_text(&text, effective) {
-            return Err(ServiceError::sm(
-                CallStatusType::InvalidQuery,
+            return Err(ServiceError::new(
+                ServiceStatus::InvalidQuery,
                 "query text is not a valid instance of its formalism",
             ));
         }
@@ -304,8 +307,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("stored query {qualified}"),
             )
         })?;
@@ -400,8 +403,8 @@ impl FerroEhrService {
         .await?
         .rows_affected();
         if deleted == 0 {
-            return Err(ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("stored query {qualified_name} at version {version}"),
             ));
         }
@@ -423,8 +426,8 @@ impl FerroEhrService {
         .await?
         .rows_affected();
         if deleted == 0 {
-            return Err(ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("stored query {a_query_name}"),
             ));
         }
@@ -688,8 +691,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::ArtefactDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::ArtefactDoesNotExist,
                 format!("stored query {qualified_name}"),
             )
         })?;

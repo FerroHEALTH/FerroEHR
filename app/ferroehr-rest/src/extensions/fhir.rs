@@ -28,7 +28,7 @@ use ihe_atna::retrieve::date::Bound;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use ferroehr::service::status::SmError;
+use ferroehr::service::status::StatusError;
 use ferroehr::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
@@ -205,7 +205,7 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
                 });
             resp
         }
-        Err(e) => sm_error_outcome(e),
+        Err(e) => status_error_outcome(e),
     }
 }
 
@@ -220,7 +220,7 @@ async fn searched(
     state: &AppState,
     subject_scoped: bool,
     filter: &ferroehr::system_log::store::AuditSearchFilter,
-) -> Result<(i64, Vec<serde_json::Value>), SmError> {
+) -> Result<(i64, Vec<serde_json::Value>), StatusError> {
     // NOTE: EHDS Art. 9 and Art. 3(3), the subject-scoped read is the person's own trail, which
     // leaves out the records about data held from them until it is released or expires.
     if subject_scoped {
@@ -486,10 +486,10 @@ fn operation_outcome(status: StatusCode, code: IssueType, diagnostics: &str) -> 
     fhir_json(status, &refusal(code, diagnostics))
 }
 
-/// Map an [`SmError`] to a FHIR `OperationOutcome`, reusing the maintained SM →
+/// Map an [`StatusError`] to a FHIR `OperationOutcome`, reusing the maintained SM →
 /// HTTP table ([`RestError`]) for the status and surfacing the message in
 /// `diagnostics`.
-fn sm_error_outcome(e: SmError) -> Response {
+fn status_error_outcome(e: StatusError) -> Response {
     let message = e.message.clone();
     let status = RestError::from(e).status();
     operation_outcome(status, issue_type(status), &message)

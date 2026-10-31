@@ -30,7 +30,7 @@ use serde_json::Value;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::versioning::Kind;
 
 impl FerroEhrService {
@@ -56,8 +56,8 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// An unknown identifier answers `Ok(false)`, never an error; a database
-    /// or template-store fault propagates as its [`SmError`] mapping.
-    pub async fn definitions_valid(&self, a_content: &Value) -> Result<bool, SmError> {
+    /// or template-store fault propagates as its [`StatusError`] mapping.
+    pub async fn definitions_valid(&self, a_content: &Value) -> Result<bool, StatusError> {
         let mut archetype_ids = std::collections::BTreeSet::new();
         let mut template_ids = std::collections::BTreeSet::new();
         collect_definition_ids(a_content, &mut archetype_ids, &mut template_ids);
@@ -96,8 +96,8 @@ impl FerroEhrService {
     /// A validation verdict is never an error (`ValidationFailed` /
     /// `Unprocessable` answer `Ok(false)`); any other service failure from
     /// the validation path (e.g. a template-store/database fault) propagates
-    /// as its [`SmError`] mapping.
-    pub async fn content_valid(&self, a_content: &Value) -> Result<bool, SmError> {
+    /// as its [`StatusError`] mapping.
+    pub async fn content_valid(&self, a_content: &Value) -> Result<bool, StatusError> {
         let rm_type = a_content.get("_type").and_then(Value::as_str).unwrap_or("");
         let Some(kind) = Kind::from_type(rm_type) else {
             return Ok(false);
@@ -114,12 +114,12 @@ impl FerroEhrService {
     /// # Errors
     /// A validation verdict is never an error; any other service failure from
     /// the validation path (e.g. a template-store/database fault) propagates
-    /// as its [`SmError`] mapping.
+    /// as its [`StatusError`] mapping.
     pub(crate) async fn commit_rejection(
         &self,
         a_kind: Kind,
         a_content: &Value,
-    ) -> Result<Option<String>, SmError> {
+    ) -> Result<Option<String>, StatusError> {
         match self.validate_for_commit(a_kind, a_content, false).await {
             Ok(()) => Ok(None),
             // Rendered through the SM bridge — where the per-path violation
@@ -128,7 +128,7 @@ impl FerroEhrService {
             Err(
                 rejection
                 @ (ServiceError::ValidationFailed(_) | ServiceError::Unprocessable { .. }),
-            ) => Ok(Some(SmError::from(rejection).message)),
+            ) => Ok(Some(StatusError::from(rejection).message)),
             Err(other) => Err(other.into()),
         }
     }

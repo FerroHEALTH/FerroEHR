@@ -47,7 +47,7 @@ use uuid::Uuid;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::config::QueryConfig;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
@@ -372,8 +372,8 @@ async fn aql_acceptance_set() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -1135,8 +1135,8 @@ async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::EhrIdDoesNotExist,
+            StatusError {
+                status: ServiceStatus::EhrIdDoesNotExist,
                 ..
             }
         ),
@@ -1154,8 +1154,8 @@ async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     assert!(
         matches!(
             err,
-            SmError {
-                status: CallStatusType::PreconditionViolation,
+            StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             }
         ),
@@ -2453,7 +2453,7 @@ async fn an_uncoercible_temporal_binding_is_the_callers_400() {
         .expect_err("an uncoercible binding is refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "the caller's defect classifies 400, got {err:?}"
     );
     assert!(
@@ -2871,8 +2871,8 @@ async fn an_explicit_page_above_the_result_ceiling_is_refused() {
             assert!(
                 matches!(
                     &err,
-                    SmError {
-                        status: CallStatusType::PreconditionViolation,
+                    StatusError {
+                        status: ServiceStatus::PreconditionViolation,
                         message,
                         ..
                     } if message.contains("exceeds the largest page") && message.contains("2 rows")

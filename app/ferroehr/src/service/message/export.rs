@@ -42,7 +42,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use crate::system_log::event::EventActionCode;
 use crate::versioning::read::{read_currents, read_version_by_ordinal};
@@ -134,9 +134,9 @@ impl FerroEhrService {
     /// # Errors
     /// - `ehr_id_does_not_exist` — no EHR with `an_ehr_id` (`has_ehr` false).
     /// - `exception` — a database/codec fault while building the extract.
-    pub async fn extract_ehrs(&self, an_ehr_id: EhrId) -> Result<Vec<Value>, SmError> {
+    pub async fn extract_ehrs(&self, an_ehr_id: EhrId) -> Result<Vec<Value>, StatusError> {
         if !self.extract_ehr_exists(an_ehr_id).await? {
-            return Err(SmError::ehr_not_found(format!(
+            return Err(StatusError::ehr_not_found(format!(
                 "no EHR with id {an_ehr_id}"
             )));
         }
@@ -172,7 +172,7 @@ impl FerroEhrService {
     pub async fn export_ehr_extracts(
         &self,
         extract_spec: ExtractSpec,
-    ) -> Result<Vec<Value>, SmError> {
+    ) -> Result<Vec<Value>, StatusError> {
         let sel = version_selection(&extract_spec)?;
         validate_extract_type(&extract_spec)?;
         let link_depth = extract_spec.link_depth;
@@ -239,7 +239,7 @@ impl FerroEhrService {
         sel: VersionSelection,
         link_depth: i32,
         served: &mut Vec<ContentIds>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let mut depth = link_depth;
         while depth > 0 {
             let mut added = false;
@@ -299,7 +299,7 @@ impl FerroEhrService {
         entity: &openehr_rm::v1_2::ehr_extract::common::extract_entity_manifest::ExtractEntityManifest,
         criteria_present: bool,
         extract_spec: &ExtractSpec,
-    ) -> Result<Vec<(VoId, String)>, SmError> {
+    ) -> Result<Vec<(VoId, String)>, StatusError> {
         if entity.item_list.as_ref().is_none_or(Vec::is_empty) {
             if criteria_present {
                 return self
@@ -317,7 +317,7 @@ impl FerroEhrService {
             let raw = value
                 .pointer("/id/value")
                 .and_then(Value::as_str)
-                .ok_or_else(|| SmError::precondition("item_list OBJECT_REF has no id.value"))?;
+                .ok_or_else(|| StatusError::precondition("item_list OBJECT_REF has no id.value"))?;
             #[expect(
                 clippy::map_err_ignore,
                 reason = "the mapped error already echoes the rejected \
@@ -326,13 +326,13 @@ impl FerroEhrService {
                       contract"
             )]
             let vo_id: VoId = raw.parse().map_err(|_| {
-                SmError::precondition(format!(
+                StatusError::precondition(format!(
                     "item_list id {raw:?} is not a version-container UUID"
                 ))
             })?;
             let kind = self.ehr_vo_kind(ehr_id, vo_id).await?.ok_or_else(|| {
-                SmError::new(
-                    CallStatusType::VersionedObjectDoesNotExist,
+                StatusError::new(
+                    ServiceStatus::VersionedObjectDoesNotExist,
                     format!("version container {vo_id} not found in EHR {ehr_id}"),
                 )
             })?;
@@ -374,11 +374,11 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
         criteria: &[openehr_rm::v1_2::data_types::encapsulated::dv_parsable::DvParsable],
-    ) -> Result<Vec<(VoId, String)>, SmError> {
+    ) -> Result<Vec<(VoId, String)>, StatusError> {
         let mut out: Vec<(VoId, String)> = Vec::new();
         for (idx, criterion) in criteria.iter().enumerate() {
             if !criterion.formalism.eq_ignore_ascii_case("aql") {
-                return Err(SmError::precondition(format!(
+                return Err(StatusError::precondition(format!(
                     "EXTRACT_SPEC.criteria[{idx}] formalism {:?} is not supported: this \
                      service evaluates AQL criteria (master04-common_package.adoc \
                      names AQL as the openEHR query formalism)",
@@ -395,7 +395,7 @@ impl FerroEhrService {
                 .execute_ad_hoc_query(criterion.value.clone(), request)
                 .await
                 .map_err(|e| {
-                    SmError::precondition(format!(
+                    StatusError::precondition(format!(
                         "EXTRACT_SPEC.criteria[{idx}] did not evaluate as AQL: {}",
                         e.message
                     ))
@@ -585,8 +585,8 @@ impl FerroEhrService {
             let read = read_version_by_ordinal(&self.pool, self.spec_profile, vo_id, *sv)
                 .await?
                 .ok_or_else(|| {
-                    ServiceError::sm(
-                        CallStatusType::ObjectVersionDoesNotExist,
+                    ServiceError::new(
+                        ServiceStatus::ObjectVersionDoesNotExist,
                         format!("version {vo_id}::{sv} for extract"),
                     )
                 })?;
@@ -604,8 +604,8 @@ impl FerroEhrService {
         let (vo, _) = versioned_object(&self.pool, vo_id, ehr_id, versioned_rm_type(kind))
             .await?
             .ok_or_else(|| {
-                ServiceError::sm(
-                    CallStatusType::VersionedObjectDoesNotExist,
+                ServiceError::new(
+                    ServiceStatus::VersionedObjectDoesNotExist,
                     format!("versioned object {vo_id}"),
                 )
             })?;
@@ -857,7 +857,7 @@ fn served_content(mut served: Vec<ContentIds>, revision_history: bool) -> Access
 /// rejecting the not-yet-supported `commit_time_interval` selector and enforcing
 /// the invariant that excluding data requires including revision history
 /// (`extract_version_spec.adoc` `Includes_revision_history_valid`).
-fn version_selection(spec: &ExtractSpec) -> Result<VersionSelection, SmError> {
+fn version_selection(spec: &ExtractSpec) -> Result<VersionSelection, StatusError> {
     let Some(vs) = spec.version_spec.as_ref() else {
         return Ok(VersionSelection::latest_only());
     };
@@ -865,14 +865,14 @@ fn version_selection(spec: &ExtractSpec) -> Result<VersionSelection, SmError> {
     // (`extract_version_spec.adoc` `EXTRACT_VERSION_SPEC.commit_time_interval`)
     // is a typed reject, never a silent full export.
     if vs.commit_time_interval.is_some() {
-        return Err(SmError::precondition(
+        return Err(StatusError::precondition(
             "EXTRACT_VERSION_SPEC.commit_time_interval is not supported in this stage",
         ));
     }
     // include_data = false ⇒ revision-history-only; the spec requires the
     // revision history to then be present.
     if !vs.include_data && !vs.include_revision_history {
-        return Err(SmError::precondition(
+        return Err(StatusError::precondition(
             "include_data = false requires include_revision_history = true \
              (EXTRACT_VERSION_SPEC.Includes_revision_history_valid: data \
              excluded ⇒ revision-history-only)",
@@ -1066,7 +1066,7 @@ const EXTRACT_CONTENT_TYPES: [&str; 6] = [
 /// `extract_content_type` vocabulary (openEHR terminology, concepts 803–808 —
 /// TERM `SupportTerminology/master03-terminology.adoc` §Vocabularies) or from
 /// the RM-named tokens in [`EXTRACT_CONTENT_TYPES`].
-fn validate_extract_type(spec: &ExtractSpec) -> Result<(), SmError> {
+fn validate_extract_type(spec: &ExtractSpec) -> Result<(), StatusError> {
     let value = openehr_its::json::to_canonical_value(&spec.extract_type);
     let code = value
         .pointer("/defining_code/code_string")
@@ -1084,7 +1084,7 @@ fn validate_extract_type(spec: &ExtractSpec) -> Result<(), SmError> {
     if EXTRACT_CONTENT_TYPES.contains(&code) {
         return Ok(());
     }
-    Err(SmError::precondition(format!(
+    Err(StatusError::precondition(format!(
         "EXTRACT_SPEC.extract_type {code:?} is neither a member of the openEHR \
          extract_content_type vocabulary nor an RM-named extract content type \
          ({})",
@@ -1105,17 +1105,17 @@ async fn resolve_entity_ehr(
     svc: &FerroEhrService,
     ehr_id: Option<&str>,
     subject_id: Option<&str>,
-) -> Result<EhrId, SmError> {
+) -> Result<EhrId, StatusError> {
     if let Some(raw) = ehr_id {
         let id: EhrId = raw.parse().map_err(|_| {
-            SmError::precondition(format!(
+            StatusError::precondition(format!(
                 "EXTRACT_ENTITY_MANIFEST.ehr_id {raw:?} is not a UUID"
             ))
         })?;
         if svc.extract_ehr_exists(id).await? {
             return Ok(id);
         }
-        return Err(SmError::ehr_not_found(format!("no EHR with id {id}")));
+        return Err(StatusError::ehr_not_found(format!("no EHR with id {id}")));
     }
     if let Some(subject) = subject_id {
         let id: Option<EhrId> = sqlx::query_scalar(
@@ -1127,9 +1127,10 @@ async fn resolve_entity_ehr(
         .fetch_optional(&mut *acquire(&svc.pool).await?)
         .await
         .map_err(ServiceError::from)?;
-        return id.ok_or_else(|| SmError::ehr_not_found("no EHR names the requested subject_id"));
+        return id
+            .ok_or_else(|| StatusError::ehr_not_found("no EHR names the requested subject_id"));
     }
-    Err(SmError::precondition(
+    Err(StatusError::precondition(
         "EXTRACT_ENTITY_MANIFEST identifies no entity (neither ehr_id nor subject_id)",
     ))
 }

@@ -23,7 +23,7 @@
 
 use axum::response::{IntoResponse, Response};
 use ferroehr::ids::{EhrId, VoId};
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use uuid::Uuid;
 
 use crate::api::RequestParts;
@@ -96,7 +96,7 @@ pub(crate) async fn refuse_restricted(
             } else {
                 format!("EHR {ehr_id}")
             };
-            return Ok(Some(not_found(CallStatusType::EhrIdDoesNotExist, message)));
+            return Ok(Some(not_found(ServiceStatus::EhrIdDoesNotExist, message)));
         }
     }
     for (raw, vo_id) in named_objects(parts) {
@@ -131,22 +131,22 @@ pub(super) fn named_objects(parts: &RequestParts) -> Vec<(&str, VoId)> {
 pub(super) fn object_not_found(op: &str, raw: &str) -> Response {
     if op.contains("composition") {
         not_found(
-            CallStatusType::CompositionDoesNotExist,
+            ServiceStatus::CompositionDoesNotExist,
             format!("COMPOSITION {raw}"),
         )
     } else if op.contains("ehr_status") {
         not_found(
-            CallStatusType::VersionedObjectDoesNotExist,
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("EHR_STATUS {raw}"),
         )
     } else if op.contains("directory") || op.contains("folder") {
         not_found(
-            CallStatusType::VersionedObjectDoesNotExist,
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("DIRECTORY {raw}"),
         )
     } else {
         not_found(
-            CallStatusType::VersionedObjectDoesNotExist,
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("versioned object {raw}"),
         )
     }
@@ -154,6 +154,6 @@ pub(super) fn object_not_found(op: &str, raw: &str) -> Response {
 
 /// A `404` carrying `status` and `message`, built the way the dispatchers
 /// build theirs.
-fn not_found(status: CallStatusType, message: String) -> Response {
-    RestError::from(SmError::new(status, message)).into_response()
+fn not_found(status: ServiceStatus, message: String) -> Response {
+    RestError::from(StatusError::new(status, message)).into_response()
 }

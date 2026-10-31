@@ -23,7 +23,7 @@ use sqlx::PgPool;
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use openehr_its::rest::generated::common::UpdateVersion;
 
 /// The `uid.value` (`OBJECT_VERSION_ID`) of a versioned-object body.
@@ -210,8 +210,8 @@ async fn party_sm_calls_round_trip() {
     assert!(
         matches!(
             miss,
-            Err(SmError {
-                status: CallStatusType::ObjectVersionDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::ObjectVersionDoesNotExist,
                 ..
             })
         ),
@@ -238,8 +238,8 @@ async fn party_sm_calls_round_trip() {
     assert!(
         matches!(
             after,
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ),
@@ -331,8 +331,8 @@ async fn person_lifecycle_end_to_end() {
     assert!(
         matches!(
             stale,
-            Err(SmError {
-                status: CallStatusType::VersionMismatch,
+            Err(StatusError {
+                status: ServiceStatus::VersionMismatch,
                 ..
             })
         ),
@@ -344,8 +344,8 @@ async fn person_lifecycle_end_to_end() {
     assert!(
         matches!(
             wrong,
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ),
@@ -480,8 +480,8 @@ async fn person_delete_by_versioned_uid_is_refused() {
     assert!(
         matches!(
             refused,
-            Err(SmError {
-                status: CallStatusType::PreconditionViolation,
+            Err(StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             })
         ),
@@ -539,8 +539,8 @@ async fn update_without_uid_refuses_a_foreign_relationship_source() {
     assert!(
         matches!(
             refused,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -608,7 +608,7 @@ async fn demographic_contribution_member_without_committer_is_refused() {
         .expect_err("a demographic member without a committer is refused");
     assert_eq!(
         err.status,
-        CallStatusType::PreconditionViolation,
+        ServiceStatus::PreconditionViolation,
         "got {err:?}"
     );
     assert!(
@@ -800,8 +800,8 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
     assert!(
         matches!(
             stale,
-            Err(SmError {
-                status: CallStatusType::VersionMismatch,
+            Err(StatusError {
+                status: ServiceStatus::VersionMismatch,
                 ..
             })
         ),
@@ -875,8 +875,8 @@ async fn inline_relationships_are_stored_and_served_verbatim() {
     assert!(
         matches!(
             not_a_relationship,
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ),
@@ -972,8 +972,8 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
     assert!(
         matches!(
             refused,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),

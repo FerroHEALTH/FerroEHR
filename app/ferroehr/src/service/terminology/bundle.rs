@@ -49,7 +49,7 @@
 use openehr_term::bundle::openehr;
 use openehr_term::v3_1::terminology::code_set::CodeSet;
 
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::service::terminology::types::{
     DefinedTerm, TermCode, TermEntry, TerminologyDescription, TerminologyExtract,
 };
@@ -63,9 +63,9 @@ const CANONICAL_LANG: &str = "en";
 /// A `Pre_has_terminology` failure → `NotFound` (the abstract SM error has no
 /// ITS-REST wire binding — the terminology surface is native-API-only;
 /// `NotFound` is the natural HTTP reading of an unknown terminology).
-fn unknown_terminology(id: &str) -> SmError {
-    SmError::new(
-        CallStatusType::VersionedObjectDoesNotExist,
+fn unknown_terminology(id: &str) -> StatusError {
+    StatusError::new(
+        ServiceStatus::VersionedObjectDoesNotExist,
         format!("terminology `{id}`"),
     )
 }
@@ -184,7 +184,7 @@ pub(super) fn has_terminology(terminology_id: &str) -> bool {
 /// `get_terminology_description`. `Pre_has_terminology`.
 pub(super) fn terminology_description(
     terminology_id: &str,
-) -> Result<TerminologyDescription, SmError> {
+) -> Result<TerminologyDescription, StatusError> {
     if terminology_id == OPENEHR {
         return Ok(TerminologyDescription {
             publisher: "openEHR Foundation".to_owned(),
@@ -210,7 +210,7 @@ pub(super) fn terminology_description(
 }
 
 /// `has_term`. `Pre_has_terminology` → `NotFound` on an unknown terminology.
-pub(super) fn has_term(terminology_id: &str, code: &str) -> Result<bool, SmError> {
+pub(super) fn has_term(terminology_id: &str, code: &str) -> Result<bool, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
@@ -230,13 +230,16 @@ pub(super) fn has_term(terminology_id: &str, code: &str) -> Result<bool, SmError
 }
 
 /// `get_term`. `Pre_has_terminology` + `Pre_has_term` (both → `NotFound`).
-pub(super) fn get_term(terminology_id: &str, code: &str) -> Result<TerminologyExtract, SmError> {
+pub(super) fn get_term(
+    terminology_id: &str,
+    code: &str,
+) -> Result<TerminologyExtract, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
     if !has_term(terminology_id, code)? {
-        return Err(SmError::new(
-            CallStatusType::VersionedObjectDoesNotExist,
+        return Err(StatusError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("term `{code}` in terminology `{terminology_id}`"),
         ));
     }
@@ -270,7 +273,7 @@ pub(super) fn subsumes(
     terminology_id: &str,
     _ref_code: &str,
     _candidate_child_code: &str,
-) -> Result<bool, SmError> {
+) -> Result<bool, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
@@ -287,7 +290,7 @@ pub(super) fn value_set_validate(
     terminology_id: &str,
     value_set_id: &str,
     candidate_code: &str,
-) -> Result<bool, SmError> {
+) -> Result<bool, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
@@ -300,14 +303,14 @@ pub(super) fn value_set_validate(
 pub(super) fn get_value_set(
     terminology_id: &str,
     value_set_code: &str,
-) -> Result<TerminologyExtract, SmError> {
+) -> Result<TerminologyExtract, StatusError> {
     if !has_terminology(terminology_id) {
         return Err(unknown_terminology(terminology_id));
     }
     match resolve_value_set(terminology_id, value_set_code) {
         Some(members) => Ok(extract_from_members(terminology_id, members)),
-        None => Err(SmError::new(
-            CallStatusType::VersionedObjectDoesNotExist,
+        None => Err(StatusError::new(
+            ServiceStatus::VersionedObjectDoesNotExist,
             format!("value set `{value_set_code}` in terminology `{terminology_id}`"),
         )),
     }
@@ -344,8 +347,8 @@ mod tests {
 
         assert!(matches!(
             terminology_description("bogus"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
@@ -374,16 +377,16 @@ mod tests {
     fn get_term_unknown_code_is_not_found() {
         assert!(matches!(
             get_term("openehr", "not-a-code"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
         // Unknown terminology → NotFound (Pre_has_terminology) on has_term too.
         assert!(matches!(
             has_term("bogus", "249"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
@@ -407,8 +410,8 @@ mod tests {
         assert!(!subsumes("openehr", "249", "250").unwrap());
         assert!(matches!(
             subsumes("bogus", "a", "a"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));
@@ -430,8 +433,8 @@ mod tests {
         assert!(!has_value_set("openehr", "no_such_group"));
         assert!(matches!(
             get_value_set("openehr", "no_such_group"),
-            Err(SmError {
-                status: CallStatusType::VersionedObjectDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::VersionedObjectDoesNotExist,
                 ..
             })
         ));

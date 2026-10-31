@@ -55,7 +55,7 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 
 use crate::fixtures::{composition, uv};
 use crate::typed_body::typed;
@@ -393,8 +393,8 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     assert!(
         matches!(
             dup,
-            Err(ferroehr::service::status::SmError {
-                status: CallStatusType::EhrForSubjectAlreadyExists,
+            Err(ferroehr::service::status::StatusError {
+                status: ServiceStatus::EhrForSubjectAlreadyExists,
                 ..
             })
         ),
@@ -437,7 +437,7 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
         .import_ehr(None, extract)
         .await
         .expect_err("importing a subject the target already holds must be rejected");
-    assert_eq!(err.status, CallStatusType::EhrForSubjectAlreadyExists);
+    assert_eq!(err.status, ServiceStatus::EhrForSubjectAlreadyExists);
     assert!(
         err.message.contains("patient-import-2") && err.message.contains(&owner.to_string()),
         "the error must name the subject and the EHR that holds it, got: {}",
@@ -490,7 +490,7 @@ async fn import_ehr_into_fixed_fresh_id() {
             .await
             .expect_err("source id absent in target")
             .status,
-        CallStatusType::EhrIdDoesNotExist
+        ServiceStatus::EhrIdDoesNotExist
     );
     let mut target_status = target
         .get_ehr_status_at_time(fixed, None)
@@ -518,7 +518,7 @@ async fn import_ehr_duplicate_target_is_rejected() {
         .import_ehr(Some(ehr), extract)
         .await
         .expect_err("duplicate target EHR id must be rejected");
-    assert_eq!(err.status, CallStatusType::EhrCreateFailDuplicateId);
+    assert_eq!(err.status, ServiceStatus::EhrCreateFailDuplicateId);
 }
 
 #[tokio::test]
@@ -613,7 +613,7 @@ async fn import_ehr_extract_adds_a_versioned_object_and_rejects_re_import() {
         .import_ehr_extract(tgt_ehr, folder_extract)
         .await
         .expect_err("re-import of the same version must be rejected");
-    assert_eq!(err.status, CallStatusType::Conflict);
+    assert_eq!(err.status, ServiceStatus::Conflict);
 }
 
 /// The `IMPORTED_VERSION` semantics of RM common master06 §Committal and Audits:
@@ -1232,7 +1232,7 @@ async fn attesting_an_imported_version_is_refused() {
     // #1729); the status class and both violation facts must survive.
     assert_eq!(
         err.status,
-        CallStatusType::ContentInvalid,
+        ServiceStatus::ContentInvalid,
         "the refusal is the semantic 422 class, got {err:?}"
     );
     assert!(
@@ -1297,7 +1297,7 @@ async fn import_refuses_a_branch_version_without_its_fork_point_trunk() {
         .import_ehr(None, mutated)
         .await
         .expect_err("a branch version without its fork-point trunk must be refused");
-    assert_eq!(err.status, CallStatusType::PreconditionViolation);
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
     assert!(
         err.message.contains("fork-point trunk"),
         "the refusal names the missing trunk, got: {}",
@@ -1334,7 +1334,7 @@ async fn import_refuses_a_branch_version_without_its_branch_predecessor() {
         .import_ehr_extract(ehr_id, retree_status_version(&exported[0], "2", "2.1.2"))
         .await
         .expect_err("a branch version without its same-branch predecessor must be refused");
-    assert_eq!(err.status, CallStatusType::PreconditionViolation);
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
     assert!(
         err.message.contains("same-branch"),
         "the refusal names the missing predecessor, got: {}",
@@ -1453,7 +1453,7 @@ async fn import_advances_an_open_branch_lineage_and_rejects_a_stale_branch_versi
         .import_ehr_extract(ehr_id, retree_status_version(&exported[0], "2", "2.1.1"))
         .await
         .expect_err("a stale branch version must be refused");
-    assert_eq!(err.status, CallStatusType::Conflict);
+    assert_eq!(err.status, ServiceStatus::Conflict);
     assert!(
         err.message.contains("already has branch version"),
         "the refusal names the stored tip, got: {}",

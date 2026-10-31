@@ -18,7 +18,7 @@ use http::StatusCode;
 use http_body_util::BodyExt;
 
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr_rest::overview::error::RestError;
 
 use crate::common;
@@ -136,48 +136,48 @@ async fn a_carried_cause_leaves_a_4xx_body_byte_identical() {
 }
 
 /// Every granular SM status renders the SAME wire response whether it reaches
-/// the adapter as a bare `SmError` (the SM bridge, `sm_api_error`) or through
+/// the adapter as a bare `StatusError` (the SM bridge, `status_api_error`) or through
 /// `ServiceError` (the service bridge) — so restoring the granular statuses
 /// changed nothing a client can observe.
 ///
 /// The `500`-class statuses are deliberately excluded: the `ServiceError` route
-/// curates their body to a fixed message where the bare-`SmError` route renders
+/// curates their body to a fixed message where the bare-`StatusError` route renders
 /// what the fault site wrote, and that difference is the point of both bridges.
 #[tokio::test]
 async fn a_granular_status_renders_identically_on_both_bridges() {
     let statuses = [
-        CallStatusType::PreconditionViolation,
-        CallStatusType::InvalidIdPattern,
-        CallStatusType::EhrCreateFailDuplicateId,
-        CallStatusType::CompositionAlreadyExists,
-        CallStatusType::EhrForSubjectAlreadyExists,
-        CallStatusType::Conflict,
-        CallStatusType::VersionMismatch,
-        CallStatusType::CompositionArchetypeInvalid,
-        CallStatusType::InvalidArchetype,
-        CallStatusType::InvalidTemplate,
-        CallStatusType::InvalidArtefact,
-        CallStatusType::InvalidQuery,
-        CallStatusType::DefinitionUnknown,
-        CallStatusType::ContentInvalid,
-        CallStatusType::EhrIdDoesNotExist,
-        CallStatusType::TemplateDoesNotExist,
+        ServiceStatus::PreconditionViolation,
+        ServiceStatus::InvalidIdPattern,
+        ServiceStatus::EhrCreateFailDuplicateId,
+        ServiceStatus::CompositionAlreadyExists,
+        ServiceStatus::EhrForSubjectAlreadyExists,
+        ServiceStatus::Conflict,
+        ServiceStatus::VersionMismatch,
+        ServiceStatus::CompositionArchetypeInvalid,
+        ServiceStatus::InvalidArchetype,
+        ServiceStatus::InvalidTemplate,
+        ServiceStatus::InvalidArtefact,
+        ServiceStatus::InvalidQuery,
+        ServiceStatus::DefinitionUnknown,
+        ServiceStatus::ContentInvalid,
+        ServiceStatus::EhrIdDoesNotExist,
+        ServiceStatus::TemplateDoesNotExist,
     ];
     for status in statuses {
         let detail = "the refusal detail";
-        let direct = RestError::from(SmError::new(status, detail)).into_response();
+        let direct = RestError::from(StatusError::new(status, detail)).into_response();
         let direct_status = direct.status();
-        let via_service = rendered(ServiceError::sm(status, detail)).await;
+        let via_service = rendered(ServiceError::new(status, detail)).await;
         assert_eq!(
             via_service.0,
             direct_status,
             "{} diverged on the wire status",
-            status.sm_name()
+            status.as_str()
         );
         assert!(
             via_service.1.contains(detail),
             "{} must keep its client-facing detail, got {}",
-            status.sm_name(),
+            status.as_str(),
             via_service.1
         );
     }
@@ -191,17 +191,17 @@ async fn a_granular_status_survives_the_service_round_trip_at_the_wire_seam() {
     let parse_failure = serde_json::from_str::<u32>("\"not a number\"")
         .expect_err("the fixture must fail to deserialize");
     let caused = ServiceError::from(
-        SmError::new(CallStatusType::InvalidIdPattern, "invalid id pattern")
+        StatusError::new(ServiceStatus::InvalidIdPattern, "invalid id pattern")
             .with_source(parse_failure),
     );
 
     // The status the caller reads back is the granular one, not a generic
     // `precondition_violation`.
-    let restored = SmError::from(ServiceError::from(SmError::new(
-        CallStatusType::InvalidIdPattern,
+    let restored = StatusError::from(ServiceError::from(StatusError::new(
+        ServiceStatus::InvalidIdPattern,
         "invalid id pattern",
     )));
-    assert_eq!(restored.status, CallStatusType::InvalidIdPattern);
+    assert_eq!(restored.status, ServiceStatus::InvalidIdPattern);
 
     // And the CONCRETE cause is reachable — `source().is_some()` would also
     // pass on a smart-pointer hop, which is exactly the defect that hides a
@@ -212,8 +212,8 @@ async fn a_granular_status_survives_the_service_round_trip_at_the_wire_seam() {
         reached_concrete,
         "walking the chain must reach the concrete serde_json::Error, got {caused:?}"
     );
-    let flat = rendered(ServiceError::sm(
-        CallStatusType::InvalidIdPattern,
+    let flat = rendered(ServiceError::new(
+        ServiceStatus::InvalidIdPattern,
         "invalid id pattern",
     ))
     .await;

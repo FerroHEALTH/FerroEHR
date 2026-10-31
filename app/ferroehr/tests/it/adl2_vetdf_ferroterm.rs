@@ -34,7 +34,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::CallStatusType;
+use ferroehr::service::status::ServiceStatus;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use testcontainers::core::{ContainerPort, Mount};
@@ -198,7 +198,7 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
         ))
         .await
         .expect_err("a concept absent from a served system is refused");
-    assert_eq!(err.status, CallStatusType::ContentInvalid);
+    assert_eq!(err.status, ServiceStatus::ContentInvalid);
     assert!(
         err.message.contains("VETDF") && err.message.contains(SHAPED_ABSENT),
         "the rejection names the rule and the code: {}",

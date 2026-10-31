@@ -34,7 +34,7 @@ use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use crate::fixtures::uv;
 
@@ -161,8 +161,8 @@ async fn a_development_only_composition_stamps_false_and_is_refused_under_stable
     let refused = stable_service(&db.pool())
         .get_composition_latest(ehr_id, vo_id)
         .await;
-    let Err(SmError {
-        status: CallStatusType::Conflict,
+    let Err(StatusError {
+        status: ServiceStatus::Conflict,
         message,
         ..
     }) = refused
@@ -202,8 +202,8 @@ async fn an_unstamped_row_is_assessed_on_the_fly() {
     assert!(
         matches!(
             refused,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -245,8 +245,8 @@ async fn archive_and_restore_preserve_the_stamp() {
     assert!(
         matches!(
             refused,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -338,8 +338,8 @@ async fn dump_and_load_into_a_fresh_repository_preserve_the_stamp() {
     let refused = stable_service(&target_db.pool())
         .get_composition_latest(ehr_id, vo_id)
         .await;
-    let Err(SmError {
-        status: CallStatusType::Conflict,
+    let Err(StatusError {
+        status: ServiceStatus::Conflict,
         message,
         ..
     }) = refused
@@ -423,8 +423,8 @@ async fn query_conflict(svc: &FerroEhrService, aql: &str, ehr_id: EhrId) -> Stri
     let refused = svc
         .execute_ad_hoc_query(aql.to_owned(), ehr_scope(ehr_id))
         .await;
-    let Err(SmError {
-        status: CallStatusType::Conflict,
+    let Err(StatusError {
+        status: ServiceStatus::Conflict,
         message,
         ..
     }) = refused

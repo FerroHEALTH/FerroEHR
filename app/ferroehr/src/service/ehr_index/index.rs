@@ -11,8 +11,8 @@
 //! names.
 //!
 //! Every domain failure is an [`IndexError`], whose `From<IndexError> for
-//! SmError` maps `ehr_id_does_not_exist` / `subject_id_does_not_exist` onto
-//! their dedicated `CallStatusType` variants — never the generic
+//! StatusError` maps `ehr_id_does_not_exist` / `subject_id_does_not_exist` onto
+//! their dedicated `ServiceStatus` variants — never the generic
 //! `versioned_object_does_not_exist` (`i_ehr_index.adoc §Errors`).
 
 use sqlx::{Connection as _, PgConnection, Postgres, Transaction};
@@ -23,7 +23,7 @@ use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::types::{EhrIndexEntry, LocationDesc, ResourceStatus, SubjectRef};
 use crate::service::linkage::store;
-use crate::service::status::SmError;
+use crate::service::status::StatusError;
 use crate::system_log::event::EventActionCode;
 
 use super::{IndexError, require_association, row_to_entry, validate_status};
@@ -37,10 +37,10 @@ use super::{IndexError, require_association, row_to_entry, validate_status};
               rejected token; the discarded `uuid::Error` adds only its own \
               wording, which is not part of the wire contract"
 )]
-fn parse_ehr_id(raw: &str) -> Result<EhrId, SmError> {
+fn parse_ehr_id(raw: &str) -> Result<EhrId, StatusError> {
     Uuid::parse_str(raw)
         .map(EhrId)
-        .map_err(|_| SmError::precondition(format!("invalid ehr id: {raw}")))
+        .map_err(|_| StatusError::precondition(format!("invalid ehr id: {raw}")))
 }
 
 /// How many entries a read served, as the access record's count.
@@ -81,7 +81,7 @@ impl FerroEhrService {
     /// record it as the index write [`Self::add_ehr_subject`] records.
     ///
     /// # Errors
-    /// [`SmError`] when the commit fails, which leaves the created EHR outside
+    /// [`StatusError`] when the commit fails, which leaves the created EHR outside
     /// the map until [`Self::add_ehr_subject`] enters it, or when the access
     /// record is refused under `fail_mode = "closed"`.
     pub(in crate::service) async fn finish_created_association(
@@ -89,7 +89,7 @@ impl FerroEhrService {
         tx: Transaction<'_, Postgres>,
         ehr_id: EhrId,
         subject: &SubjectRef,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         let outcome = tx.commit().await.map_err(IndexError::from);
         self.record_index_access(EventActionCode::Create, ehr_id, subject, 1, outcome.is_ok())?;
         Ok(outcome?)
@@ -117,7 +117,7 @@ impl FerroEhrService {
         subject: SubjectRef,
         status: Option<ResourceStatus>,
         loc: Option<LocationDesc>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         self.local_index("add_ehr_subject")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
@@ -155,7 +155,7 @@ impl FerroEhrService {
         ehr_id: String,
         subject: SubjectRef,
         status: ResourceStatus,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         self.local_index("update_ehr_subject_status")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
@@ -190,7 +190,7 @@ impl FerroEhrService {
         ehr_id: String,
         subject: SubjectRef,
         loc: Option<LocationDesc>,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         self.local_index("update_ehr_subject_loc_desc")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
@@ -228,7 +228,7 @@ impl FerroEhrService {
         &self,
         ehr_id: String,
         subject: SubjectRef,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         self.local_index("remove_ehr_subject")?;
         let ehr_id = parse_ehr_id(&ehr_id)?;
         self.index_ehr_exists(ehr_id).await?;
@@ -254,7 +254,7 @@ impl FerroEhrService {
     ///   cross-reference, so the local map is not written.
     /// - `exception` — no provider is installed, or a database fault while
     ///   writing.
-    pub async fn remove_subject(&self, subject: SubjectRef) -> Result<(), SmError> {
+    pub async fn remove_subject(&self, subject: SubjectRef) -> Result<(), StatusError> {
         self.local_index("remove_subject")?;
         let closed = store::close_subject_associations(&self.linkage_pool, &subject)
             .await
@@ -271,7 +271,7 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — `ehr_id` is not a well-formed UUID.
     /// - `exception` — no provider is installed, the identity source failed, or
     ///   a database fault while reading.
-    pub async fn ehr_subjects(&self, ehr_id: String) -> Result<Vec<EhrIndexEntry>, SmError> {
+    pub async fn ehr_subjects(&self, ehr_id: String) -> Result<Vec<EhrIndexEntry>, StatusError> {
         let ehr_id = parse_ehr_id(&ehr_id)?;
         let entries = self.provider_ehr_subjects(ehr_id).await;
         let count = entries.as_ref().map_or(0, |found| entry_count(found));
@@ -286,7 +286,10 @@ impl FerroEhrService {
     /// # Errors
     /// - `exception` — no provider is installed, the identity source failed or
     ///   answered no pseudonym, or a database fault while reading.
-    pub async fn subject_ehrs(&self, subject: SubjectRef) -> Result<Vec<EhrIndexEntry>, SmError> {
+    pub async fn subject_ehrs(
+        &self,
+        subject: SubjectRef,
+    ) -> Result<Vec<EhrIndexEntry>, StatusError> {
         let entries = self.provider_subject_ehrs(&subject).await;
         let count = entries.as_ref().map_or(0, |found| entry_count(found));
         self.record_subject_access(EventActionCode::Read, &subject, count, entries.is_ok())?;

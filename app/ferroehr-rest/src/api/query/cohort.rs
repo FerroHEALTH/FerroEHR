@@ -147,5 +147,5 @@ pub(super) async fn execute(
         .backend()
         .execute_cohort_query(request)
         .await
-        .map_err(|error| RestError::from(ferroehr::service::status::SmError::from(error)))
+        .map_err(|error| RestError::from(ferroehr::service::status::StatusError::from(error)))
 }

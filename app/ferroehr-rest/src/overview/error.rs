@@ -28,7 +28,7 @@ use http::{HeaderValue, StatusCode, header};
 
 use ferroehr::aql::error::AqlError;
 use ferroehr::service::error::{ErrorChain, ServiceError};
-use ferroehr::service::status::{CallStatusType, QUERY_TIMEOUT_TAG, SmError};
+use ferroehr::service::status::{QUERY_TIMEOUT_TAG, ServiceStatus, StatusError};
 use ferroehr::versioning::object_version_id::VersionIdError;
 use openehr_its::rest::runtime::ApiError;
 use openehr_query::lexer::LexError;
@@ -181,15 +181,15 @@ impl From<VersionIdError> for RestError {
     }
 }
 
-/// Maps an [`SmError`]'s `CALL_STATUS_TYPE` onto its ITS-REST 1.1.0 status code.
+/// Maps an [`StatusError`]'s `CALL_STATUS_TYPE` onto its ITS-REST 1.1.0 status code.
 ///
 /// The wire oracle decides each row: where the SM name and the wire disagree,
 /// the wire's status wins. A free function rather than
-/// `impl From<SmError> for ApiError`, because both types are foreign to this
+/// `impl From<StatusError> for ApiError`, because both types are foreign to this
 /// crate and the orphan rule forbids that impl.
 #[must_use]
-pub(crate) fn sm_api_error(e: SmError) -> ApiError {
-    use CallStatusType as S;
+pub(crate) fn status_api_error(e: StatusError) -> ApiError {
+    use ServiceStatus as S;
     let message = e.message;
     match e.status {
         // Two different refusals, one status. AuthFailure is the access
@@ -232,11 +232,11 @@ pub(crate) fn sm_api_error(e: SmError) -> ApiError {
     }
 }
 
-impl From<SmError> for RestError {
-    fn from(e: SmError) -> Self {
-        let restricted = e.status == CallStatusType::ProcessingRestricted;
+impl From<StatusError> for RestError {
+    fn from(e: StatusError) -> Self {
+        let restricted = e.status == ServiceStatus::ProcessingRestricted;
         let cause = e.clone();
-        let refused = Self::from(sm_api_error(e)).with_aql_cause(&cause);
+        let refused = Self::from(status_api_error(e)).with_aql_cause(&cause);
         if restricted {
             refused.of_kind(Kind::ProcessingRestricted)
         } else {
@@ -248,15 +248,15 @@ impl From<SmError> for RestError {
 impl From<ServiceError> for RestError {
     /// Maps a service failure straight onto the wire error, preserving the
     /// per-path violations of [`ServiceError::ValidationFailed`] that the
-    /// `SmError` bridge collapses into a flat message.
+    /// `StatusError` bridge collapses into a flat message.
     fn from(e: ServiceError) -> Self {
         let restricted = matches!(
             &e,
-            ServiceError::NotFound(sm) | ServiceError::BadRequest(sm) | ServiceError::Conflict(sm)
-                if sm.status == CallStatusType::ProcessingRestricted
+            ServiceError::NotFound(err) | ServiceError::BadRequest(err) | ServiceError::Conflict(err)
+                if err.status == ServiceStatus::ProcessingRestricted
         );
         let aql = match &e {
-            ServiceError::BadRequest(sm) => Some(sm.clone()),
+            ServiceError::BadRequest(err) => Some(err.clone()),
             _ => None,
         };
         let refused = Self::from(ApiError::from(e));
@@ -369,7 +369,7 @@ fn kind_of(error: &ApiError) -> Option<Kind> {
 
 impl IntoResponse for RestError {
     fn into_response(self) -> Response {
-        // A query-execution timeout arrives as an `exception` `SmError` whose
+        // A query-execution timeout arrives as an `exception` `StatusError` whose
         // message carries [`QUERY_TIMEOUT_TAG`], and is rendered as the `408` of
         // `Requests_and_responses.md` §HTTP status codes with the sentinel
         // stripped.
@@ -562,8 +562,9 @@ mod tests {
     #[test]
     fn an_aql_parse_refusal_is_aql_invalid_with_its_position() {
         let err = openehr_query::parser::parse_str("SELECT e FROM EHR e WHERE").unwrap_err();
-        let sm = ferroehr::service::status::SmError::precondition("invalid AQL").with_source(err);
-        let full = full_problem_of(RestError::from(sm));
+        let err =
+            ferroehr::service::status::StatusError::precondition("invalid AQL").with_source(err);
+        let full = full_problem_of(RestError::from(err));
         assert_eq!(full["type"], format!("{BASE}aql-invalid"));
         assert_eq!(full["status"], 400);
         assert!(full["position"]["start"].is_u64(), "{full}");
@@ -572,9 +573,9 @@ mod tests {
 
     #[test]
     fn a_processing_restriction_is_its_own_type() {
-        use ferroehr::service::status::{CallStatusType, SmError};
-        let sm = SmError::new(CallStatusType::ProcessingRestricted, "restricted");
-        let full = full_problem_of(RestError::from(sm));
+        use ferroehr::service::status::{ServiceStatus, StatusError};
+        let err = StatusError::new(ServiceStatus::ProcessingRestricted, "restricted");
+        let full = full_problem_of(RestError::from(err));
         assert_eq!(full["type"], format!("{BASE}processing-restricted"));
         assert_eq!(full["status"], 403);
     }
@@ -600,9 +601,9 @@ mod tests {
         // A storage-classified pool exhaustion (`ServiceOverloaded`)
         // surfaces as 503 + Retry-After (our overload contract; RFC 9110
         // §15.6.4).
-        use ferroehr::service::status::{CallStatusType, SmError};
-        let sm = SmError::new(CallStatusType::ServiceOverloaded, "overloaded");
-        let resp = RestError::from(sm).into_response();
+        use ferroehr::service::status::{ServiceStatus, StatusError};
+        let err = StatusError::new(ServiceStatus::ServiceOverloaded, "overloaded");
+        let resp = RestError::from(err).into_response();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(
             resp.headers()
@@ -616,9 +617,9 @@ mod tests {
     async fn storage_conflict_maps_to_409() {
         // A storage-classified integrity/serialization conflict
         // (`Conflict`) surfaces as 409 (ITS-REST overview §HTTP status codes).
-        use ferroehr::service::status::{CallStatusType, SmError};
-        let sm = SmError::new(CallStatusType::Conflict, "duplicate key");
-        let resp = RestError::from(sm).into_response();
+        use ferroehr::service::status::{ServiceStatus, StatusError};
+        let err = StatusError::new(ServiceStatus::Conflict, "duplicate key");
+        let resp = RestError::from(err).into_response();
         assert_eq!(resp.status(), StatusCode::CONFLICT);
     }
 }

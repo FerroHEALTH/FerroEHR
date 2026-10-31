@@ -31,7 +31,7 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::demographic::identifier::store::IdentifierStore;
 use crate::service::error::ServiceError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 impl FerroEhrService {
     /// SM `physical_ehr_delete`: physically delete one EHR and every trace of
@@ -42,7 +42,7 @@ impl FerroEhrService {
     /// - `versioned_object_does_not_exist` (`404`) — no EHR with that id
     ///   (`has_ehr` false → `ehr_id_does_not_exist`).
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn admin_ehr_delete(&self, ehr_id: String) -> Result<(), SmError> {
+    pub async fn admin_ehr_delete(&self, ehr_id: String) -> Result<(), StatusError> {
         Ok(self
             .delete_ehr(EhrId(super::parse_uuid(&ehr_id, "EHR")?))
             .await?)
@@ -58,7 +58,7 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — any id in the list is malformed
     ///   (the whole bulk request is rejected before any deletion runs).
     /// - `exception` — a database fault while deleting.
-    pub async fn admin_ehr_delete_all(&self, ehr_ids: Vec<String>) -> Result<u64, SmError> {
+    pub async fn admin_ehr_delete_all(&self, ehr_ids: Vec<String>) -> Result<u64, StatusError> {
         let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
             .into_iter()
             .map(EhrId)
@@ -80,7 +80,7 @@ impl FerroEhrService {
     ///   the template (`version.template_id` FK, `clinical/0006_definitions.sql`);
     ///   a physical delete must never orphan the compositions built on it.
     /// - `exception` — a database fault.
-    pub async fn admin_template_delete(&self, template_id: String) -> Result<(), SmError> {
+    pub async fn admin_template_delete(&self, template_id: String) -> Result<(), StatusError> {
         Ok(self.delete_template_by_id(&template_id).await?)
     }
 
@@ -102,7 +102,7 @@ impl FerroEhrService {
         &self,
         qualified_name: String,
         version: String,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         Ok(self
             .delete_stored_query_version(&qualified_name, &version)
             .await?)
@@ -126,8 +126,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *tx)
         .await?;
         let Some(stored) = stored else {
-            return Err(ServiceError::sm(
-                CallStatusType::TemplateDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::TemplateDoesNotExist,
                 format!("template {template_id}"),
             ));
         };
@@ -179,7 +179,7 @@ impl FerroEhrService {
     ///   demographic PARTY root (`party_id_does_not_exist`; a
     ///   `PARTY_RELATIONSHIP` or unknown id is also this failure).
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn physical_party_delete(&self, a_party_id: String) -> Result<(), SmError> {
+    pub async fn physical_party_delete(&self, a_party_id: String) -> Result<(), StatusError> {
         Ok(self
             .physical_delete_party(VoId(super::parse_uuid(&a_party_id, "party")?))
             .await?)
@@ -252,8 +252,8 @@ impl FerroEhrService {
         if deleted.rows_affected() == 0 {
             // `has_ehr(ehr_id)` is false → `ehr_id_does_not_exist`. Rolls back
             // (nothing was written), so the audit capture above is discarded.
-            return Err(ServiceError::sm(
-                CallStatusType::EhrIdDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::EhrIdDoesNotExist,
                 format!("EHR {ehr_id}"),
             ));
         }
@@ -523,8 +523,8 @@ impl FerroEhrService {
         .await?;
         if !kind.as_deref().is_some_and(super::is_party_kind) {
             // `party_id_does_not_exist` → NotFound (→ 404). Rolls back cleanly.
-            return Err(ServiceError::sm(
-                CallStatusType::PartyIdDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::PartyIdDoesNotExist,
                 format!("party {party_id}"),
             ));
         }

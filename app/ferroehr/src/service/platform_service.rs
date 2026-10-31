@@ -1,25 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `PLATFORM_SERVICE` (`master03-common_package.adoc` §Overview: "an
-//! enumeration of the available services, used in various interfaces";
-//! `platform_service.adoc`).
+//! The platform services whose activity the ADMIN report counts.
 
-/// `PLATFORM_SERVICE` — "Enumeration of platform service names"
-/// (`platform_service.adoc`).
+/// A versioned-content service of the platform, by name.
 ///
-/// The ADMIN statistics calls (`i_admin_service.adoc` `list_contributions` /
-/// `contribution_count` / `versioned_composition_count` /
-/// `composition_version_count`) each take a `PLATFORM_SERVICE` naming the
-/// versioned-content service whose contributions/versions to count.
-///
-/// NOTE (spec defect): `platform_service.adoc` is named by the master03
-/// §Overview but **not** `include::`d in its §Class Definitions, and its
-/// enumeration lists exactly these eight members, omitting `Terminology` and
-/// `Subject_proxy` (the SM defines both interfaces but the enum forgot their
-/// members). This type carries the eight vendored members verbatim; the two
-/// missing services are not versioned-content services and would count zero
-/// regardless.
+/// The activity-report extension (`list_contributions`, `contribution_count`,
+/// `versioned_composition_count`, `composition_version_count`) takes one to
+/// name the service whose contributions or versions it counts. No openEHR spec
+/// governs the report: our own design/extension.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlatformService {
     /// `Admin` — the administrative service.
@@ -41,10 +30,9 @@ pub enum PlatformService {
 }
 
 impl PlatformService {
-    /// The SM enumeration literal, exactly as `platform_service.adoc` spells
-    /// it.
+    /// The name of this service as the activity-report extension spells it.
     #[must_use]
-    pub fn sm_name(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::Admin => "Admin",
             Self::Definitions => "Definitions",
@@ -57,7 +45,7 @@ impl PlatformService {
         }
     }
 
-    /// All eight vendored members, in `platform_service.adoc` order.
+    /// All eight members, in declaration order.
     pub const ALL: &[PlatformService] = &[
         Self::Admin,
         Self::Definitions,
@@ -73,24 +61,20 @@ impl PlatformService {
 impl std::str::FromStr for PlatformService {
     type Err = ();
 
-    /// Parse an SM enumeration literal ASCII-case-insensitively.
+    /// Parse a service name ASCII-case-insensitively.
     ///
-    /// NOTE (`platform_service.adoc` fixes the literals but no openEHR spec
-    /// governs how a member is spelled on a REST wire — the statistics calls
-    /// have no released endpoint at all, so the transport is our own
-    /// design/extension): the accepted spelling is the vendored literal, and
-    /// the comparison is ASCII-case-insensitive for the same reason BASE
-    /// `master05` §"Composite Identifiers and Case" gives for identifiers —
-    /// case alone must not make two spellings name different things.
+    /// NOTE: no openEHR spec governs the activity-report extension, so the
+    /// spelling is our own; BASE `master05` §"Composite Identifiers and Case"
+    /// is why case alone never makes two spellings name different things.
     ///
     /// # Errors
-    /// `Err(())` when the text is not one of the eight vendored members; the
+    /// `Err(())` when the text is not one of the eight members; the
     /// caller decides the wire status.
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         Self::ALL
             .iter()
             .copied()
-            .find(|member| member.sm_name().eq_ignore_ascii_case(raw))
+            .find(|member| member.as_str().eq_ignore_ascii_case(raw))
             .ok_or(())
     }
 }
@@ -101,18 +85,18 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn sm_names_match_the_vendored_literals() {
-        assert_eq!(PlatformService::EhrIndex.sm_name(), "Ehr_index");
-        assert_eq!(PlatformService::SystemLog.sm_name(), "System_log");
+    fn names_keep_their_wire_spelling() {
+        assert_eq!(PlatformService::EhrIndex.as_str(), "Ehr_index");
+        assert_eq!(PlatformService::SystemLog.as_str(), "System_log");
         assert_eq!(PlatformService::ALL.len(), 8);
     }
 
     #[test]
     fn parses_every_member_case_insensitively() {
         for member in PlatformService::ALL {
-            assert_eq!(PlatformService::from_str(member.sm_name()), Ok(*member));
+            assert_eq!(PlatformService::from_str(member.as_str()), Ok(*member));
             assert_eq!(
-                PlatformService::from_str(&member.sm_name().to_lowercase()),
+                PlatformService::from_str(&member.as_str().to_lowercase()),
                 Ok(*member)
             );
         }

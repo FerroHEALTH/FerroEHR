@@ -28,7 +28,7 @@ use openehr_rm::prelude::{ItemTag, PartyProxy};
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{CallStatusType, SmError};
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::versioning::change::Committed;
 
 use crate::fixtures::{change_type, composition, folder, uid, uv};
@@ -109,8 +109,8 @@ async fn ehr_composition_lifecycle_end_to_end() {
     assert!(
         matches!(
             stale,
-            Err(SmError {
-                status: CallStatusType::VersionMismatch,
+            Err(StatusError {
+                status: ServiceStatus::VersionMismatch,
                 ..
             })
         ),
@@ -431,14 +431,14 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
 
     // A blocked EHR-content write is 409 Conflict (the generic SM `conflict`
     // → `ServiceError::Conflict` on the composition write path; the directory
-    // write path still surfaces the raw `SmError`).
+    // write path still surfaces the raw `StatusError`).
     let comp_blocked =
         |r: &Result<Committed, ServiceError>| matches!(r, Err(ServiceError::Conflict(_)));
-    let dir_blocked = |r: &Result<ferroehr::service::response::ResourceMeta, SmError>| {
+    let dir_blocked = |r: &Result<ferroehr::service::response::ResourceMeta, StatusError>| {
         matches!(
             r,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         )
@@ -501,8 +501,8 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     assert!(
         matches!(
             content_contrib,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -896,8 +896,8 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     assert!(
         matches!(
             bad_creation,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -924,8 +924,8 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     assert!(
         matches!(
             bad_code,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -982,8 +982,8 @@ async fn contribution_rejects_an_invalid_composition() {
     assert!(
         matches!(
             res,
-            Err(SmError {
-                status: CallStatusType::ContentInvalid,
+            Err(StatusError {
+                status: ServiceStatus::ContentInvalid,
                 ..
             })
         ),
@@ -1611,8 +1611,8 @@ async fn item_tag_put_replaces_the_whole_collection() {
         assert!(
             matches!(
                 res,
-                Err(SmError {
-                    status: CallStatusType::ContentInvalid,
+                Err(StatusError {
+                    status: ServiceStatus::ContentInvalid,
                     ..
                 })
             ),
@@ -1707,8 +1707,8 @@ async fn duplicate_subject_ehr_creation_conflicts() {
     assert!(
         matches!(
             dup,
-            Err(SmError {
-                status: CallStatusType::EhrForSubjectAlreadyExists,
+            Err(StatusError {
+                status: ServiceStatus::EhrForSubjectAlreadyExists,
                 ..
             })
         ),
@@ -1762,8 +1762,8 @@ async fn version_get_at_time_returns_the_original_version() {
     assert!(
         matches!(
             too_early,
-            Err(SmError {
-                status: CallStatusType::ObjectVersionDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::ObjectVersionDoesNotExist,
                 ..
             })
         ),
@@ -1776,8 +1776,8 @@ async fn version_get_at_time_returns_the_original_version() {
     assert!(
         matches!(
             bad_time,
-            Err(SmError {
-                status: CallStatusType::PreconditionViolation,
+            Err(StatusError {
+                status: ServiceStatus::PreconditionViolation,
                 ..
             })
         ),
@@ -2059,8 +2059,8 @@ async fn directory_endpoint_rejects_a_second_directory_create() {
     assert!(
         matches!(
             second,
-            Err(SmError {
-                status: CallStatusType::Conflict,
+            Err(StatusError {
+                status: ServiceStatus::Conflict,
                 ..
             })
         ),
@@ -2604,8 +2604,8 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
     assert!(
         matches!(
             dup,
-            Err(SmError {
-                status: CallStatusType::EhrForSubjectAlreadyExists,
+            Err(StatusError {
+                status: ServiceStatus::EhrForSubjectAlreadyExists,
                 ..
             })
         ),
@@ -2711,8 +2711,8 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
     assert!(
         matches!(
             &cross,
-            Err(SmError {
-                status: CallStatusType::CompositionDoesNotExist,
+            Err(StatusError {
+                status: ServiceStatus::CompositionDoesNotExist,
                 ..
             })
         ),

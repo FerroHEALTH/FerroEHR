@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Shared fixtures for the service suites that drive a whole repository
-//! (`service_admin`, `service_dump_load`, `service_sm3`,
+//! (`service_admin`, `service_dump_load`, `service_relationship_index`,
 //! `service_ehr_index_conflicts`, `service_message_audit`).
 //!
 //! They all start from the same shape — a fresh migrated database from the

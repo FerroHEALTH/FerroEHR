@@ -32,7 +32,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::tag_target_tail;
 use crate::service::error::ServiceError;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 use crate::service::version_update::Committal;
 use crate::versioning::object_version_id::{
     components, expected_from_if_match, if_match_token, parse_uid_based_id, parse_version_uid,
@@ -48,8 +48,8 @@ fn version_uid(resp: ServiceResponse) -> String {
 
 /// The refusal of a create or update whose version carries no data: only a
 /// logical deletion has none (RM common master06 §Logical Deletion).
-fn no_party_data() -> SmError {
-    SmError::precondition("the version carries no data, and this operation writes content")
+fn no_party_data() -> StatusError {
+    StatusError::precondition("the version carries no data, and this operation writes content")
 }
 
 /// The [`PartyKind`] a commit envelope routes to, read off the RM `PARTY`
@@ -93,7 +93,7 @@ fn party_kind_of(body: &Party) -> PartyKind {
 fn ensure_full_ovid_if_match(
     if_match: Option<&str>,
     current: Option<&ResourceMeta>,
-) -> Result<(), SmError> {
+) -> Result<(), StatusError> {
     let Some(raw) = if_match else { return Ok(()) };
     let token = if_match_token(raw);
     if <openehr_base::prelude::ObjectVersionId as std::str::FromStr>::from_str(token).is_err() {
@@ -101,7 +101,7 @@ fn ensure_full_ovid_if_match(
     }
     match current {
         Some(meta) if composite_ids_equal(&meta.uid, token) => Ok(()),
-        Some(meta) => Err(SmError::version_mismatch(format!(
+        Some(meta) => Err(StatusError::version_mismatch(format!(
             "If-Match {token:?} does not match the current latest version {:?}",
             meta.uid
         ))),
@@ -133,12 +133,12 @@ impl FerroEhrService {
     /// serves, so the header and the tags sub-resource agree.
     ///
     /// # Errors
-    /// [`SmError`] on a storage/database fault reading the tag store.
+    /// [`StatusError`] on a storage/database fault reading the tag store.
     async fn attach_party_item_tags(
         &self,
         vo_id: VoId,
         resp: &mut ServiceResponse,
-    ) -> Result<(), SmError> {
+    ) -> Result<(), StatusError> {
         if resp.meta.is_none() {
             return Ok(());
         }
@@ -169,17 +169,17 @@ impl FerroEhrService {
     /// of a new PARTY.
     ///
     /// # Errors
-    /// - [`SmError`] `content_invalid` — the payload `_type` is absent or not a
+    /// - [`StatusError`] `content_invalid` — the payload `_type` is absent or not a
     ///   demographic party type (AGENT/GROUP/ORGANISATION/PERSON/ROLE),
     ///   `i_party.adoc`.
-    /// - [`SmError`] `content_invalid` — the body fails RM validation for the
+    /// - [`StatusError`] `content_invalid` — the body fails RM validation for the
     ///   resolved party kind (`validate::party_check`).
-    /// - [`SmError`] `conflict` / `service_overloaded` / `exception` — the
+    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — the
     ///   versioned-create transaction fails (integrity conflict, pool
     ///   exhaustion, or a storage/database fault).
-    /// - [`SmError`] `precondition_violation` — the committed version uid does
+    /// - [`StatusError`] `precondition_violation` — the committed version uid does
     ///   not parse (defensive; the uid is server-generated).
-    pub async fn create_party(&self, a_version: UpdateVersion<Party>) -> Result<VoId, SmError> {
+    pub async fn create_party(&self, a_version: UpdateVersion<Party>) -> Result<VoId, StatusError> {
         let kind = party_kind_of(a_version.data.as_ref().ok_or_else(no_party_data)?);
         let a_version = crate::service::ehr::canonicalize(a_version);
         let committal = envelope_committal(&a_version);
@@ -198,11 +198,11 @@ impl FerroEhrService {
     /// id (a logically deleted party reads `Null` → `false`).
     ///
     /// # Errors
-    /// - [`SmError`] `conflict` / `service_overloaded` / `exception` — a
+    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — a
     ///   storage/database fault while resolving the party kind or reading its
     ///   current version. A *not-found* on either resolves to `Ok(false)`, not
     ///   an error.
-    pub async fn has_party(&self, a_versioned_party_id: VoId) -> Result<bool, SmError> {
+    pub async fn has_party(&self, a_versioned_party_id: VoId) -> Result<bool, StatusError> {
         // True iff a *live* party of some kind exists (a logically deleted party
         // reads `Null`, satisfying the delete post-condition `not has_party`).
         match self.party_kind_at(a_versioned_party_id).await {
@@ -223,10 +223,13 @@ impl FerroEhrService {
     /// or a missing version resolve to `false`.
     ///
     /// # Errors
-    /// - [`SmError`] `conflict` / `service_overloaded` / `exception` — a
+    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — a
     ///   storage/database fault while reading the version. A malformed id or a
     ///   *not-found* version resolves to `Ok(false)`, not an error.
-    pub async fn has_party_version_id(&self, a_party_version_id: String) -> Result<bool, SmError> {
+    pub async fn has_party_version_id(
+        &self,
+        a_party_version_id: String,
+    ) -> Result<bool, StatusError> {
         let Ok((vo_id, tree)) = parse_version_uid(&a_party_version_id) else {
             return Ok(false);
         };
@@ -240,20 +243,20 @@ impl FerroEhrService {
     /// `get_party` (`i_party.adoc`): the current version's body.
     ///
     /// # Errors
-    /// - [`SmError`] `versioned_object_does_not_exist` — no versioned party with
+    /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party with
     ///   this id exists (`party_kind_at`), or its current version is logically
     ///   deleted / absent (the read is empty).
-    /// - [`SmError`] `conflict` / `service_overloaded` / `exception` — a
+    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — a
     ///   storage/database fault during kind resolution or read.
-    pub async fn get_party(&self, a_versioned_party_id: VoId) -> Result<Value, SmError> {
+    pub async fn get_party(&self, a_versioned_party_id: VoId) -> Result<Value, StatusError> {
         let kind = self.party_kind_at(a_versioned_party_id).await?;
         let resp = self
             .read_party(kind, a_versioned_party_id, None, None)
             .await?;
         if resp.is_empty() {
             // Pre `has_party` failed (deleted / no current version).
-            return Err(SmError::new(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(StatusError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("party {a_versioned_party_id} has no current version"),
             ));
         }
@@ -266,16 +269,16 @@ impl FerroEhrService {
     /// A deleted version at that instant reads `Null`.
     ///
     /// # Errors
-    /// - [`SmError`] `versioned_object_does_not_exist` — no versioned party
+    /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party
     ///   with this id exists, or no version existed at `a_time`.
-    /// - [`SmError`] `precondition_violation` — `a_time` does not parse as an
+    /// - [`StatusError`] `precondition_violation` — `a_time` does not parse as an
     ///   ISO-8601 timestamp.
-    /// - [`SmError`] on a storage/database fault during kind resolution or read.
+    /// - [`StatusError`] on a storage/database fault during kind resolution or read.
     pub async fn get_party_at_time(
         &self,
         a_versioned_party_id: VoId,
         a_time: String,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         let kind = self.party_kind_at(a_versioned_party_id).await?;
         let at = parse_at_time(&a_time)?;
         let resp = self
@@ -288,13 +291,16 @@ impl FerroEhrService {
     /// a full party `OBJECT_VERSION_ID`.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse as an
+    /// - [`StatusError`] `precondition_violation` — the id does not parse as an
     ///   `OBJECT_VERSION_ID`.
-    /// - [`SmError`] `object_version_does_not_exist` — the object is not a
+    /// - [`StatusError`] `object_version_does_not_exist` — the object is not a
     ///   party or holds no such version.
-    /// - [`SmError`] on a storage/database fault or a signing failure while
+    /// - [`StatusError`] on a storage/database fault or a signing failure while
     ///   assembling the `ORIGINAL_VERSION`.
-    pub async fn get_party_at_version(&self, a_party_version_id: String) -> Result<Value, SmError> {
+    pub async fn get_party_at_version(
+        &self,
+        a_party_version_id: String,
+    ) -> Result<Value, StatusError> {
         let (vo_id, tree) = parse_version_uid(&a_party_version_id)?;
         // The version-addressed read carries `object_version_does_not_exist`
         // itself (`ServiceError` round-trips the granular status losslessly).
@@ -305,19 +311,19 @@ impl FerroEhrService {
     /// party; returns the new version's `OBJECT_VERSION_ID`.
     ///
     /// # Errors
-    /// - [`SmError`] `content_invalid` — the payload `_type` is absent / not a
+    /// - [`StatusError`] `content_invalid` — the payload `_type` is absent / not a
     ///   party type, or the body fails RM validation for that kind.
-    /// - [`SmError`] `precondition_violation` — `preceding_version_uid` does
+    /// - [`StatusError`] `precondition_violation` — `preceding_version_uid` does
     ///   not parse as an `OBJECT_VERSION_ID`.
-    /// - [`SmError`] `versioned_object_does_not_exist` — no live party of the
+    /// - [`StatusError`] `versioned_object_does_not_exist` — no live party of the
     ///   payload's kind exists under this id (unknown, wrong-kind, or deleted).
-    /// - [`SmError`] `conflict` — the preceding version is stale (optimistic
+    /// - [`StatusError`] `conflict` — the preceding version is stale (optimistic
     ///   concurrency), or the write transaction fails.
     pub async fn update_party(
         &self,
         a_versioned_party_id: VoId,
         a_version: UpdateVersion<Party>,
-    ) -> Result<String, SmError> {
+    ) -> Result<String, StatusError> {
         let kind = party_kind_of(a_version.data.as_ref().ok_or_else(no_party_data)?);
         let a_version = crate::service::ehr::canonicalize(a_version);
         let expected = match &a_version.preceding_version_uid {
@@ -343,11 +349,11 @@ impl FerroEhrService {
     /// the current version is deleted unconditionally.
     ///
     /// # Errors
-    /// - [`SmError`] `versioned_object_does_not_exist` — no versioned party
+    /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party
     ///   with this id exists.
-    /// - [`SmError`] mapped from `400` — the party is already deleted.
-    /// - [`SmError`] on a storage/database fault during the delete transaction.
-    pub async fn delete_party(&self, a_versioned_party_id: VoId) -> Result<String, SmError> {
+    /// - [`StatusError`] mapped from `400` — the party is already deleted.
+    /// - [`StatusError`] on a storage/database fault during the delete transaction.
+    pub async fn delete_party(&self, a_versioned_party_id: VoId) -> Result<String, StatusError> {
         // The SM `delete_party` has no version argument — delete the current
         // version unconditionally.
         let kind = self.party_kind_at(a_versioned_party_id).await?;
@@ -366,18 +372,18 @@ impl FerroEhrService {
     /// re-populates the seam afterwards).
     ///
     /// # Errors
-    /// - [`SmError`] mapped from `422` — the body's `_type` mismatches the
+    /// - [`StatusError`] mapped from `422` — the body's `_type` mismatches the
     ///   route or fails RM validation.
-    /// - [`SmError`] `precondition_violation` — the committed version uid does
+    /// - [`StatusError`] `precondition_violation` — the committed version uid does
     ///   not parse (defensive; server-generated).
-    /// - [`SmError`] on a storage/database fault during the create transaction
+    /// - [`StatusError`] on a storage/database fault during the create transaction
     ///   or the tag read.
     pub async fn party_create(
         &self,
         kind: PartyKind,
         body: Party,
         committal: Option<Committal>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let body = openehr_its::json::to_canonical_value(&body);
         // A freshly created party has no stored ITEM_TAGs by construction, so
         // the response seam needs no tag read here; when the request carried
@@ -394,17 +400,17 @@ impl FerroEhrService {
     /// deleted current version reads `Null` (→ `204`).
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id or `version_at_time`
+    /// - [`StatusError`] `precondition_violation` — the id or `version_at_time`
     ///   does not parse.
-    /// - [`SmError`] mapped from `404` — unknown id, wrong kind for the route,
+    /// - [`StatusError`] mapped from `404` — unknown id, wrong kind for the route,
     ///   or no version at the requested version/instant.
-    /// - [`SmError`] on a storage/database fault during the read.
+    /// - [`StatusError`] on a storage/database fault during the read.
     pub async fn party_get(
         &self,
         kind: PartyKind,
         uid_based_id: String,
         version_at_time: Option<String>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let decoded = parse_uid_based_id(&uid_based_id)?;
         let (vo_id, version) = (decoded.vo_id, decoded.tree());
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
@@ -422,14 +428,14 @@ impl FerroEhrService {
     /// here and the service write gate.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id or the `If-Match` token
+    /// - [`StatusError`] `precondition_violation` — the id or the `If-Match` token
     ///   does not parse.
-    /// - [`SmError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
+    /// - [`StatusError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
     ///   a version other than the current latest.
-    /// - [`SmError`] mapped from `404` — unknown id, wrong kind, or a deleted
+    /// - [`StatusError`] mapped from `404` — unknown id, wrong kind, or a deleted
     ///   current version.
-    /// - [`SmError`] mapped from `422` — the body fails RM validation.
-    /// - [`SmError`] mapped from `409` — the expected version is stale, or the
+    /// - [`StatusError`] mapped from `422` — the body fails RM validation.
+    /// - [`StatusError`] mapped from `409` — the expected version is stale, or the
     ///   write transaction fails.
     pub async fn party_update(
         &self,
@@ -438,7 +444,7 @@ impl FerroEhrService {
         if_match: String,
         body: Party,
         committal: Option<Committal>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let body = openehr_its::json::to_canonical_value(&body);
         let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
         // Resolve the current version ONCE (lean, kind-checked): the same handle
@@ -449,8 +455,8 @@ impl FerroEhrService {
         ensure_full_ovid_if_match(Some(&if_match), meta.as_ref())?;
         let expected = expected_from_if_match(&if_match)?;
         let current = current.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("{} {vo_id}", kind.rm_type()),
             )
         })?;
@@ -468,22 +474,22 @@ impl FerroEhrService {
     /// `If-Match` when supplied, else the path OVID.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse, names
+    /// - [`StatusError`] `precondition_violation` — the id does not parse, names
     ///   the versioned object rather than one of its versions, or a supplied
     ///   `If-Match` is malformed (a malformed header is rejected, never
     ///   silently ignored).
-    /// - [`SmError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
+    /// - [`StatusError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
     ///   a version other than the current latest.
-    /// - [`SmError`] mapped from `404` — unknown id or wrong kind for the route.
-    /// - [`SmError`] mapped from `400` — the party is already deleted.
-    /// - [`SmError`] mapped from `409` — the expected version is stale.
+    /// - [`StatusError`] mapped from `404` — unknown id or wrong kind for the route.
+    /// - [`StatusError`] mapped from `400` — the party is already deleted.
+    /// - [`StatusError`] mapped from `409` — the expected version is stale.
     pub async fn party_delete(
         &self,
         kind: PartyKind,
         uid_based_id: String,
         if_match: Option<String>,
         update_audit: Option<UpdateAudit>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let decoded = parse_uid_based_id(&uid_based_id)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
         // NOTE: ITS-REST `parameters/path/uid_based_id_as_version_uid.yaml` types the
@@ -507,8 +513,8 @@ impl FerroEhrService {
             None => path_version,
         };
         let current = current.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("{} {vo_id}", kind.rm_type()),
             )
         })?;
@@ -522,14 +528,14 @@ impl FerroEhrService {
     /// The `VERSIONED_PARTY` wrapper for a party (any of the five kinds).
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a party or holds no
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] mapped from `404` — the id is not a party or holds no
     ///   versions.
-    /// - [`SmError`] on a storage/database fault reading the version spine.
+    /// - [`StatusError`] on a storage/database fault reading the version spine.
     pub async fn versioned_party_get(
         &self,
         versioned_object_uid: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         let body = self.versioned_party(vo_id).await?;
         // ITS-REST overview §"ETag and Last-Modified" derives `Last-Modified`
@@ -554,13 +560,13 @@ impl FerroEhrService {
     /// History).
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a party.
-    /// - [`SmError`] on a storage/database fault reading the version spine.
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] mapped from `404` — the id is not a party.
+    /// - [`StatusError`] on a storage/database fault reading the version spine.
     pub async fn versioned_party_revision_history(
         &self,
         versioned_object_uid: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         Ok(ServiceResponse::plain(
             self.party_revision_history(vo_id).await?,
@@ -571,16 +577,16 @@ impl FerroEhrService {
     /// when absent), with `ETag`/`Location` metadata.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id or `version_at_time`
+    /// - [`StatusError`] `precondition_violation` — the id or `version_at_time`
     ///   does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a party or no version
+    /// - [`StatusError`] mapped from `404` — the id is not a party or no version
     ///   existed at the instant.
-    /// - [`SmError`] on a storage/database fault or a signing failure.
+    /// - [`StatusError`] on a storage/database fault or a signing failure.
     pub async fn versioned_party_version_get_at_time(
         &self,
         versioned_object_uid: String,
         version_at_time: Option<String>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         Ok(self.party_version_at_time(vo_id, at).await?)
@@ -589,15 +595,15 @@ impl FerroEhrService {
     /// The party `ORIGINAL_VERSION` named by `version_uid`.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — either id does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a party or holds no
+    /// - [`StatusError`] `precondition_violation` — either id does not parse.
+    /// - [`StatusError`] mapped from `404` — the id is not a party or holds no
     ///   such version.
-    /// - [`SmError`] on a storage/database fault or a signing failure.
+    /// - [`StatusError`] on a storage/database fault or a signing failure.
     pub async fn versioned_party_version_get_by_id(
         &self,
         versioned_object_uid: String,
         version_uid: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         let (_, version) = parse_version_uid(&version_uid)?;
         Ok(ServiceResponse::plain(
@@ -611,26 +617,26 @@ impl FerroEhrService {
     /// relationship versions (RM common master06 §Contributions).
     ///
     /// # Errors
-    /// - [`SmError`] mapped from `422` — the change-set is malformed, contains
+    /// - [`StatusError`] mapped from `422` — the change-set is malformed, contains
     ///   an EHR-kind version (the engine's scope check), or a version fails
     ///   validation.
-    /// - [`SmError`] mapped from `409` — a preceding version is stale.
-    /// - [`SmError`] on a storage/database fault during the commit or the
+    /// - [`StatusError`] mapped from `409` — a preceding version is stale.
+    /// - [`StatusError`] on a storage/database fault during the commit or the
     ///   read-back.
     pub async fn demographic_contribution_create(
         &self,
         body: Value,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         Ok(self.create_demographic_contribution(body).await?)
     }
 
     /// Retrieve a demographic (ehr-less) CONTRIBUTION by uid.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the uid is not a UUID.
-    /// - [`SmError`] mapped from `404` — unknown uid, or an EHR-scoped
+    /// - [`StatusError`] `precondition_violation` — the uid is not a UUID.
+    /// - [`StatusError`] mapped from `404` — unknown uid, or an EHR-scoped
     ///   contribution (the demographic surface only sees `ehr_id IS NULL`).
-    /// - [`SmError`] on a storage/database fault during the read.
+    /// - [`StatusError`] on a storage/database fault during the read.
     #[expect(
         clippy::map_err_ignore,
         reason = "the mapped error already names the resource and echoes the \
@@ -640,9 +646,9 @@ impl FerroEhrService {
     pub async fn demographic_contribution_get(
         &self,
         contribution_uid: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let id = Uuid::parse_str(&contribution_uid).map_err(|_| {
-            SmError::precondition(format!("invalid contribution id: {contribution_uid}"))
+            StatusError::precondition(format!("invalid contribution id: {contribution_uid}"))
         })?;
         Ok(ServiceResponse::plain(
             self.demographic_contribution(id).await?,
@@ -655,13 +661,13 @@ impl FerroEhrService {
     /// key/value/target path.
     ///
     /// # Errors
-    /// [`SmError`] on a storage/database fault reading the tag store.
+    /// [`StatusError`] on a storage/database fault reading the tag store.
     pub async fn demographic_tags_get(
         &self,
         tag_key: Option<String>,
         tag_value: Option<String>,
         tag_target_path: Option<String>,
-    ) -> Result<Vec<ItemTag>, SmError> {
+    ) -> Result<Vec<ItemTag>, StatusError> {
         Ok(self
             .demographic_tags(
                 tag_key.as_deref(),
@@ -674,13 +680,13 @@ impl FerroEhrService {
     /// The `ITEM_TAG`s on one party.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] on a storage/database fault reading the tag store.
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] on a storage/database fault reading the tag store.
     pub async fn party_tags_get(
         &self,
         kind: PartyKind,
         uid_based_id: String,
-    ) -> Result<Vec<ItemTag>, SmError> {
+    ) -> Result<Vec<ItemTag>, StatusError> {
         let (vo_id, version) = crate::service::ehr::tags::parse_tag_target(&uid_based_id)?;
         // The released 404 trigger ("when the `uid_based_id` does not exist")
         // plus the kind-checked-routes law: the guard runs on the GET too; an
@@ -696,17 +702,17 @@ impl FerroEhrService {
     /// semantics; an empty list clears all; duplicate keys are last-wins).
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] mapped from `404` — no live party of the routed kind.
-    /// - [`SmError`] mapped from `422` — a tag misses its key or violates
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] mapped from `404` — no live party of the routed kind.
+    /// - [`StatusError`] mapped from `422` — a tag misses its key or violates
     ///   `Inv_key_valid`/`Inv_value_valid` (RM `common.item_tag`).
-    /// - [`SmError`] on a storage/database fault during the replace.
+    /// - [`StatusError`] on a storage/database fault during the replace.
     pub async fn party_tags_update(
         &self,
         kind: PartyKind,
         uid_based_id: String,
         body: Vec<openehr_its::rest::generated::common::UpdateItemTag>,
-    ) -> Result<Vec<ItemTag>, SmError> {
+    ) -> Result<Vec<ItemTag>, StatusError> {
         let (vo_id, version) = crate::service::ehr::tags::parse_tag_target(&uid_based_id)?;
         Ok(self
             .replace_party_tags(kind, vo_id, version.as_ref(), &body)
@@ -716,15 +722,15 @@ impl FerroEhrService {
     /// Delete one `ITEM_TAG` by key from a party.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] mapped from `404` — no tag with this key exists.
-    /// - [`SmError`] on a storage/database fault during the delete.
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] mapped from `404` — no tag with this key exists.
+    /// - [`StatusError`] on a storage/database fault during the delete.
     pub async fn party_tags_delete(
         &self,
         kind: PartyKind,
         uid_based_id: String,
         key: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let (vo_id, version) = crate::service::ehr::tags::parse_tag_target(&uid_based_id)?;
         self.delete_party_tag(kind, vo_id, version.as_ref(), &key)
             .await?;
@@ -736,13 +742,13 @@ impl FerroEhrService {
     /// lean resolve, no node reassembly.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] on a storage/database fault during the lean read.
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] on a storage/database fault during the lean read.
     pub async fn demographic_latest_meta(
         &self,
         kind: PartyKind,
         uid_based_id: String,
-    ) -> Result<Option<ResourceMeta>, SmError> {
+    ) -> Result<Option<ResourceMeta>, StatusError> {
         let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
         Ok(self.party_current_meta(kind, vo_id).await?)
     }
@@ -755,16 +761,16 @@ impl FerroEhrService {
     /// first version of a new `PARTY_RELATIONSHIP`.
     ///
     /// # Errors
-    /// - [`SmError`] mapped from `422` — the body is not a valid
+    /// - [`StatusError`] mapped from `422` — the body is not a valid
     ///   `PARTY_RELATIONSHIP` (missing/invalid `source`/`target` `PARTY_REF`s,
     ///   `validate::relationship_check`).
-    /// - [`SmError`] `precondition_violation` — the committed version uid does
+    /// - [`StatusError`] `precondition_violation` — the committed version uid does
     ///   not parse (defensive; server-generated).
-    /// - [`SmError`] on a storage/database fault during the create transaction.
+    /// - [`StatusError`] on a storage/database fault during the create transaction.
     pub async fn create_party_relationship(
         &self,
         a_version: UpdateVersion<PartyRelationship>,
-    ) -> Result<VoId, SmError> {
+    ) -> Result<VoId, StatusError> {
         let a_version = crate::service::ehr::canonicalize(a_version);
         let committal = envelope_committal(&a_version);
         let resp = self
@@ -779,12 +785,12 @@ impl FerroEhrService {
     /// post-condition).
     ///
     /// # Errors
-    /// [`SmError`] on a storage/database fault while reading the current
+    /// [`StatusError`] on a storage/database fault while reading the current
     /// version. A *not-found* resolves to `Ok(false)`, not an error.
     pub async fn has_party_relationship(
         &self,
         a_versioned_party_rel_id: VoId,
-    ) -> Result<bool, SmError> {
+    ) -> Result<bool, StatusError> {
         // True iff a *live* relationship exists (a logically deleted one reads
         // `Null`, satisfying the delete post-condition).
         match self
@@ -801,20 +807,20 @@ impl FerroEhrService {
     /// version's body.
     ///
     /// # Errors
-    /// - [`SmError`] `versioned_object_does_not_exist` — no relationship with
+    /// - [`StatusError`] `versioned_object_does_not_exist` — no relationship with
     ///   this id exists, or its current version is logically deleted / absent
     ///   (the read is empty).
-    /// - [`SmError`] on a storage/database fault during the read.
+    /// - [`StatusError`] on a storage/database fault during the read.
     pub async fn get_party_relationship(
         &self,
         a_versioned_party_rel_id: VoId,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         let resp = self
             .read_relationship(a_versioned_party_rel_id, None, None)
             .await?;
         if resp.is_empty() {
-            return Err(SmError::new(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(StatusError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("party relationship {a_versioned_party_rel_id} has no current version"),
             ));
         }
@@ -826,16 +832,16 @@ impl FerroEhrService {
     /// `Null`.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — `a_time` does not parse as an
+    /// - [`StatusError`] `precondition_violation` — `a_time` does not parse as an
     ///   ISO-8601 timestamp.
-    /// - [`SmError`] `versioned_object_does_not_exist` — no relationship with
+    /// - [`StatusError`] `versioned_object_does_not_exist` — no relationship with
     ///   this id, or no version existed at `a_time`.
-    /// - [`SmError`] on a storage/database fault during the read.
+    /// - [`StatusError`] on a storage/database fault during the read.
     pub async fn get_party_relationship_at_time(
         &self,
         a_versioned_party_rel_id: VoId,
         a_time: String,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         let at = parse_at_time(&a_time)?;
         let resp = self
             .read_relationship(a_versioned_party_rel_id, None, Some(at))
@@ -847,14 +853,14 @@ impl FerroEhrService {
     /// `ORIGINAL_VERSION` named by a full relationship `OBJECT_VERSION_ID`.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] `object_version_does_not_exist` — the object is not a
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] `object_version_does_not_exist` — the object is not a
     ///   relationship or holds no such version.
-    /// - [`SmError`] on a storage/database fault or a signing failure.
+    /// - [`StatusError`] on a storage/database fault or a signing failure.
     pub async fn get_party_relationship_at_version(
         &self,
         a_party_rel_version_id: String,
-    ) -> Result<Value, SmError> {
+    ) -> Result<Value, StatusError> {
         let (vo_id, tree) = parse_version_uid(&a_party_rel_version_id)?;
         // The version-addressed read carries `object_version_does_not_exist`
         // itself (`ServiceError` round-trips the granular status losslessly).
@@ -865,17 +871,17 @@ impl FerroEhrService {
     /// relationship version; returns the new version's `OBJECT_VERSION_ID`.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — `preceding_version_uid` does
+    /// - [`StatusError`] `precondition_violation` — `preceding_version_uid` does
     ///   not parse as an `OBJECT_VERSION_ID`.
-    /// - [`SmError`] mapped from `404` — no live relationship under this id
+    /// - [`StatusError`] mapped from `404` — no live relationship under this id
     ///   (unknown, wrong-kind, or deleted).
-    /// - [`SmError`] mapped from `422` — the body fails RM validation.
-    /// - [`SmError`] mapped from `409` — the preceding version is stale.
+    /// - [`StatusError`] mapped from `422` — the body fails RM validation.
+    /// - [`StatusError`] mapped from `409` — the preceding version is stale.
     pub async fn update_party_relationship(
         &self,
         a_versioned_party_rel_id: VoId,
         a_version: UpdateVersion<PartyRelationship>,
-    ) -> Result<String, SmError> {
+    ) -> Result<String, StatusError> {
         let a_version = crate::service::ehr::canonicalize(a_version);
         let expected = match &a_version.preceding_version_uid {
             Some(ovid) => Some(components(ovid)?.1),
@@ -899,22 +905,22 @@ impl FerroEhrService {
     /// argument — the current version is deleted unconditionally.
     ///
     /// # Errors
-    /// - [`SmError`] `versioned_object_does_not_exist` — no relationship with
+    /// - [`StatusError`] `versioned_object_does_not_exist` — no relationship with
     ///   this id has a current version.
-    /// - [`SmError`] mapped from `400` — the relationship is already deleted.
-    /// - [`SmError`] on a storage/database fault during the delete transaction.
+    /// - [`StatusError`] mapped from `400` — the relationship is already deleted.
+    /// - [`StatusError`] on a storage/database fault during the delete transaction.
     pub async fn delete_party_relationship(
         &self,
         a_versioned_party_rel_id: VoId,
-    ) -> Result<String, SmError> {
+    ) -> Result<String, StatusError> {
         // The SM `delete_party_relationship` has no version argument — resolve
         // the current version once and delete it unconditionally.
         let current = self
             .relationship_current(a_versioned_party_rel_id)
             .await?
             .ok_or_else(|| {
-                SmError::new(
-                    CallStatusType::VersionedObjectDoesNotExist,
+                StatusError::new(
+                    ServiceStatus::VersionedObjectDoesNotExist,
                     format!("party relationship {a_versioned_party_rel_id}"),
                 )
             })?;
@@ -928,14 +934,14 @@ impl FerroEhrService {
     /// `create_party_relationship`).
     ///
     /// # Errors
-    /// - [`SmError`] mapped from `422` — the body's `_type` is not
+    /// - [`StatusError`] mapped from `422` — the body's `_type` is not
     ///   `PARTY_RELATIONSHIP` or fails RM validation.
-    /// - [`SmError`] on a storage/database fault during the create transaction.
+    /// - [`StatusError`] on a storage/database fault during the create transaction.
     pub async fn party_relationship_create(
         &self,
         body: PartyRelationship,
         committal: Option<Committal>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let body = openehr_its::json::to_canonical_value(&body);
         Ok(self.create_relationship(body, committal.as_ref()).await?)
     }
@@ -944,16 +950,16 @@ impl FerroEhrService {
     /// `version_at_time`. A deleted current version reads `Null` (→ `204`).
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id or `version_at_time`
+    /// - [`StatusError`] `precondition_violation` — the id or `version_at_time`
     ///   does not parse.
-    /// - [`SmError`] mapped from `404` — unknown id, wrong kind, or no version
+    /// - [`StatusError`] mapped from `404` — unknown id, wrong kind, or no version
     ///   at the requested version/instant.
-    /// - [`SmError`] on a storage/database fault during the read.
+    /// - [`StatusError`] on a storage/database fault during the read.
     pub async fn party_relationship_get(
         &self,
         uid_based_id: String,
         version_at_time: Option<String>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let decoded = parse_uid_based_id(&uid_based_id)?;
         let (vo_id, version) = (decoded.vo_id, decoded.tree());
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
@@ -966,21 +972,21 @@ impl FerroEhrService {
     /// compare and the service write gate.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id or the `If-Match` token
+    /// - [`StatusError`] `precondition_violation` — the id or the `If-Match` token
     ///   does not parse.
-    /// - [`SmError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
+    /// - [`StatusError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
     ///   a version other than the current latest.
-    /// - [`SmError`] mapped from `404` — unknown id, wrong kind, or a deleted
+    /// - [`StatusError`] mapped from `404` — unknown id, wrong kind, or a deleted
     ///   current version.
-    /// - [`SmError`] mapped from `422` — the body fails RM validation.
-    /// - [`SmError`] mapped from `409` — the expected version is stale.
+    /// - [`StatusError`] mapped from `422` — the body fails RM validation.
+    /// - [`StatusError`] mapped from `409` — the expected version is stale.
     pub async fn party_relationship_update(
         &self,
         uid_based_id: String,
         if_match: String,
         body: PartyRelationship,
         committal: Option<Committal>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let body = openehr_its::json::to_canonical_value(&body);
         let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
         let current = self.relationship_current(vo_id).await?;
@@ -988,8 +994,8 @@ impl FerroEhrService {
         ensure_full_ovid_if_match(Some(&if_match), meta.as_ref())?;
         let expected = expected_from_if_match(&if_match)?;
         let current = current.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         })?;
@@ -1004,20 +1010,20 @@ impl FerroEhrService {
     /// path OVID.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse, names
+    /// - [`StatusError`] `precondition_violation` — the id does not parse, names
     ///   the versioned object rather than one of its versions, or a supplied
     ///   `If-Match` is malformed (rejected, never silently ignored).
-    /// - [`SmError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
+    /// - [`StatusError`] `version_mismatch` (`412`) — a full-OVID `If-Match` names
     ///   a version other than the current latest.
-    /// - [`SmError`] mapped from `404` — unknown id or wrong kind.
-    /// - [`SmError`] mapped from `400` — the relationship is already deleted.
-    /// - [`SmError`] mapped from `409` — the expected version is stale.
+    /// - [`StatusError`] mapped from `404` — unknown id or wrong kind.
+    /// - [`StatusError`] mapped from `400` — the relationship is already deleted.
+    /// - [`StatusError`] mapped from `409` — the expected version is stale.
     pub async fn party_relationship_delete(
         &self,
         uid_based_id: String,
         if_match: Option<String>,
         update_audit: Option<UpdateAudit>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let decoded = parse_uid_based_id(&uid_based_id)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
         // NOTE: no openEHR spec defines this route (our own extension); it takes the
@@ -1040,8 +1046,8 @@ impl FerroEhrService {
             None => path_version,
         };
         let current = current.ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         })?;
@@ -1053,14 +1059,14 @@ impl FerroEhrService {
     /// The `VERSIONED_OBJECT` wrapper for a relationship.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a relationship or holds
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] mapped from `404` — the id is not a relationship or holds
     ///   no versions.
-    /// - [`SmError`] on a storage/database fault reading the version spine.
+    /// - [`StatusError`] on a storage/database fault reading the version spine.
     pub async fn versioned_party_relationship_get(
         &self,
         versioned_object_uid: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         Ok(ServiceResponse::plain(
             self.versioned_relationship(vo_id).await?,
@@ -1071,13 +1077,13 @@ impl FerroEhrService {
     /// History).
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a relationship.
-    /// - [`SmError`] on a storage/database fault reading the version spine.
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] mapped from `404` — the id is not a relationship.
+    /// - [`StatusError`] on a storage/database fault reading the version spine.
     pub async fn party_relationship_revision_history(
         &self,
         versioned_object_uid: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         Ok(ServiceResponse::plain(
             self.relationship_revision_history(vo_id).await?,
@@ -1088,16 +1094,16 @@ impl FerroEhrService {
     /// latest when absent), with `ETag`/`Location` metadata.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id or `version_at_time`
+    /// - [`StatusError`] `precondition_violation` — the id or `version_at_time`
     ///   does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a relationship or no
+    /// - [`StatusError`] mapped from `404` — the id is not a relationship or no
     ///   version existed at the instant.
-    /// - [`SmError`] on a storage/database fault or a signing failure.
+    /// - [`StatusError`] on a storage/database fault or a signing failure.
     pub async fn party_relationship_version_get_at_time(
         &self,
         versioned_object_uid: String,
         version_at_time: Option<String>,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         Ok(self.relationship_version_at_time(vo_id, at).await?)
@@ -1106,15 +1112,15 @@ impl FerroEhrService {
     /// The relationship `ORIGINAL_VERSION` named by `version_uid`.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — either id does not parse.
-    /// - [`SmError`] mapped from `404` — the id is not a relationship or holds
+    /// - [`StatusError`] `precondition_violation` — either id does not parse.
+    /// - [`StatusError`] mapped from `404` — the id is not a relationship or holds
     ///   no such version.
-    /// - [`SmError`] on a storage/database fault or a signing failure.
+    /// - [`StatusError`] on a storage/database fault or a signing failure.
     pub async fn party_relationship_version_get_by_id(
         &self,
         versioned_object_uid: String,
         version_uid: String,
-    ) -> Result<ServiceResponse, SmError> {
+    ) -> Result<ServiceResponse, StatusError> {
         let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
         let (_, version) = parse_version_uid(&version_uid)?;
         Ok(ServiceResponse::plain(
@@ -1127,12 +1133,12 @@ impl FerroEhrService {
     /// lean resolve, no node reassembly.
     ///
     /// # Errors
-    /// - [`SmError`] `precondition_violation` — the id does not parse.
-    /// - [`SmError`] on a storage/database fault during the lean read.
+    /// - [`StatusError`] `precondition_violation` — the id does not parse.
+    /// - [`StatusError`] on a storage/database fault during the lean read.
     pub async fn party_relationship_latest_meta(
         &self,
         uid_based_id: String,
-    ) -> Result<Option<ResourceMeta>, SmError> {
+    ) -> Result<Option<ResourceMeta>, StatusError> {
         let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
         Ok(self.relationship_current_meta(vo_id).await?)
     }
@@ -1195,7 +1201,7 @@ mod tests {
                 .expect_err("stale precondition");
             assert_eq!(
                 err.status,
-                CallStatusType::VersionMismatch,
+                ServiceStatus::VersionMismatch,
                 "{stale:?} must fail the precondition, got {err:?}"
             );
         }

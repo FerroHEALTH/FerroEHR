@@ -26,7 +26,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::{CallStatusType, SmError};
+use crate::service::status::{ServiceStatus, StatusError};
 
 /// A stored event-subscription record (the subscription admin API's response
 /// row).
@@ -150,8 +150,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("event subscription {id}"),
             )
         })?;
@@ -212,8 +212,8 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("event subscription {id}"),
             )
         })?;
@@ -233,8 +233,8 @@ impl FerroEhrService {
             .await?
             .rows_affected();
         if deleted == 0 {
-            return Err(ServiceError::sm(
-                CallStatusType::VersionedObjectDoesNotExist,
+            return Err(ServiceError::new(
+                ServiceStatus::VersionedObjectDoesNotExist,
                 format!("event subscription {id}"),
             ));
         }
@@ -288,8 +288,8 @@ impl FerroEhrService {
     /// records.
     ///
     /// # Errors
-    /// [`SmError`] wrapping a database failure.
-    pub async fn event_subscription_list(&self) -> Result<Vec<SubscriptionRecord>, SmError> {
+    /// [`StatusError`] wrapping a database failure.
+    pub async fn event_subscription_list(&self) -> Result<Vec<SubscriptionRecord>, StatusError> {
         Ok(self.list_subscriptions().await?)
     }
 
@@ -301,7 +301,7 @@ impl FerroEhrService {
     pub async fn event_subscription_create(
         &self,
         a_subscription: SubscriptionDefinition,
-    ) -> Result<SubscriptionRecord, SmError> {
+    ) -> Result<SubscriptionRecord, StatusError> {
         Ok(self.create_subscription(&a_subscription).await?)
     }
 
@@ -312,7 +312,7 @@ impl FerroEhrService {
     pub async fn event_subscription_get(
         &self,
         a_subscription_id: Uuid,
-    ) -> Result<SubscriptionRecord, SmError> {
+    ) -> Result<SubscriptionRecord, StatusError> {
         Ok(self.get_subscription(a_subscription_id).await?)
     }
 
@@ -325,7 +325,7 @@ impl FerroEhrService {
         &self,
         a_subscription_id: Uuid,
         a_subscription: SubscriptionUpdate,
-    ) -> Result<SubscriptionRecord, SmError> {
+    ) -> Result<SubscriptionRecord, StatusError> {
         Ok(self
             .update_subscription(a_subscription_id, &a_subscription)
             .await?)
@@ -336,7 +336,10 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `NotFound` when the id is unknown; otherwise a database failure.
-    pub async fn event_subscription_delete(&self, a_subscription_id: Uuid) -> Result<(), SmError> {
+    pub async fn event_subscription_delete(
+        &self,
+        a_subscription_id: Uuid,
+    ) -> Result<(), StatusError> {
         Ok(self.delete_subscription(a_subscription_id).await?)
     }
 }
