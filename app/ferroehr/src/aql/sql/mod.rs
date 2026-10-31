@@ -19,7 +19,7 @@
 //! No openEHR spec governs the execution: openEHR defines the language, not its
 //! lowering, so the SQL shapes are our own design. The construct-by-construct
 //! mapping to QUERY master03 lives in each submodule: `from` (FROM, containment
-//! and scope gates), `select` (SELECT and aggregates), `predicate` (WHERE and
+//! and scope gates), `stream` (the LIMIT-streaming FROM shape), `select` (SELECT and aggregates), `predicate` (WHERE and
 //! functions), `value` (the path split and coercions), and `expr` (the typed
 //! building blocks and the `LIKE`/archetype translations).
 //!
@@ -53,6 +53,7 @@ mod expr;
 mod from;
 mod predicate;
 mod select;
+mod stream;
 pub mod subject;
 mod value;
 
@@ -451,7 +452,7 @@ impl<'a> Builder<'a> {
 /// is needed anyway; an EHR-scoped query (`ehr_ids`) is already bounded by
 /// the `ehr_id` indexes and keeps the flat shape. A population query that only
 /// counts its root objects takes the streaming shape too, for its version
-/// spine ([`from::StreamPlan::counts_roots`]).
+/// spine ([`stream::StreamPlan::counts_roots`]).
 fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
     ctx.limit.is_some()
         && ctx.ehr_ids.is_empty()
@@ -473,7 +474,7 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
     from::refuse_negated_reads(ir)?;
     let mut b = Builder::new(ir, params, ctx);
-    let plan = from::streaming_plan(ir).filter(|plan| {
+    let plan = stream::streaming_plan(ir).filter(|plan| {
         streaming_eligible(ir, ctx) || (ctx.ehr_ids.is_empty() && plan.counts_roots(ir))
     });
     match plan {
