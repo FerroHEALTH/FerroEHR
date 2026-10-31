@@ -4,13 +4,16 @@
 //! The archetype roots an instance records by the complete identifier an OPT2
 //! inlined (BASE `artefact_identification` `master07-referencing.adoc`
 //! §Reconstitutability), read under the interface id their Web Template node
-//! carries ([`WebTemplate::archetype_refs`]).
+//! carries ([`WebTemplate::archetype_refs`]). The archetype-conformance walk
+//! and the FLAT and STRUCTURED read ([`crate::flat::flatten`]) both match an
+//! instance to the template through [`as_template_node_ids`].
 
 #![expect(
     clippy::disallowed_types,
     reason = "canonical JSON is the instance the archetype-conformance walk reads (#1694)"
 )]
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use serde_json::Value;
@@ -25,15 +28,22 @@ use crate::flat::webtemplate::model::WebTemplate;
 /// ([`WebTemplate::archetype_refs`]), so the walk matches it to its node.
 pub(super) fn run(mut v: Validator, composition: &Value, wt: &WebTemplate) -> Validator {
     v.slot_fills_enumerated = wt.archetype_refs.is_some();
+    v.walk(&as_template_node_ids(composition, wt), &wt.tree);
+    v
+}
+
+/// `composition` with every archetype root it records by a full reference in
+/// [`WebTemplate::archetype_refs`] read under the interface id of its template
+/// node; borrowed unchanged when it records none.
+pub(crate) fn as_template_node_ids<'a>(composition: &'a Value, wt: &WebTemplate) -> Cow<'a, Value> {
     match &wt.archetype_refs {
         Some(refs) if records_any_ref(composition, refs) => {
             let mut instance = composition.clone();
             to_template_node_ids(&mut instance, refs);
-            v.walk(&instance, &wt.tree);
+            Cow::Owned(instance)
         }
-        _ => v.walk(composition, &wt.tree),
+        _ => Cow::Borrowed(composition),
     }
-    v
 }
 
 /// Whether any LOCATABLE in `value` records one of `refs` as its

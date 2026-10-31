@@ -73,7 +73,8 @@ pub struct WebTemplate {
     /// §Reconstitutability) matches its node; an OPT2 inlines every slot
     /// filler (AM OPT2 `master03-opt_raw.adoc` §Flattening), so an unmatched
     /// archetype root is a node the template does not define. `None` for an
-    /// OPT 1.4. Validation-only; `#[serde(skip)]`.
+    /// OPT 1.4. Read by the archetype-conformance pass and the FLAT and
+    /// STRUCTURED read; `#[serde(skip)]`.
     #[serde(skip)]
     pub archetype_refs: Option<BTreeMap<String, String>>,
 }
