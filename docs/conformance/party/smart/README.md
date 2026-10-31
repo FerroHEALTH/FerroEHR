@@ -37,21 +37,18 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
    enforces its SMART on openEHR requirement with no switch; the discovery
    document is on, built from `issuer-metadata.json`, because a key-set file
    carries no metadata of its own.
-2. `docs/conformance/party/ferroehr/ixit-smart.json` declares the issuer the
-   instrument mints with: `smart` names the Platform instance and this key
-   file, and `scoped_tokens.mint` the issuer, audience, subject and `kid` of
-   the RS256 token Veredictum signs for each scope set a `smart_scopes` row
-   presents. It names no token: each one is minted in memory for the run.
-3. `scripts/conformance.sh` composes the overlay on every FerroEHR run. Its
-   `smart` stage (run by `run` after the catalogue, and by the conformance
-   workflow after the Veredictum Action, which forwards neither the Platform
-   base URL nor scoped tokens) drives the `smart_discovery` and
-   `smart_scopes` documents in the pinned image with
-   `--platform-url`, that IXIT and `VEREDICTUM_SCOPED_TOKEN_KEY_FILE` pointing
-   at this key, and writes its views beside the catalogue's (#4450).
-
-The catalogue run skips both documents as `not-declared`: it gets no Platform
-base URL and no scoped tokens.
+2. `docs/conformance/party/ferroehr/ixit.json` declares the issuer the
+   instrument mints with: `scoped_tokens.mint` names the issuer, audience,
+   subject and `kid` of the RS256 token Veredictum signs for each scope set a
+   `smart_scopes` row presents. It names no token and no key: each token is
+   minted in memory for the run, with the key handed over as
+   `VEREDICTUM_SCOPED_TOKEN_KEY_FILE`.
+3. `scripts/conformance.sh` composes the overlay on every FerroEHR run and
+   drives the `smart_discovery` and `smart_scopes` documents in the same
+   `veredictum test` as the rest of the catalogue, with `--platform-url` and
+   that variable pointing at this key. The conformance workflow does the same
+   through the Veredictum Action's `platform-url` input and the
+   `VEREDICTUM_SCOPED_TOKEN_KEY_FILE` variable on the step (#4503).
 
 Spec: `docs/specs/openehr/ITS-REST/docs/smart_app_launch/` —
 `master04-service_discovery.adoc` (the discovery document),
