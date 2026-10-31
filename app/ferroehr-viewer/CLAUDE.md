@@ -12,7 +12,8 @@ spec-bound (`docs/specs/openehr/ITS-REST/` and the served `openapi.json`).
    loader and its modules, served by the viewer; the stylesheet is FerroUI's;
    there is no Node, no WebAssembly and no Tailwind. No page writes a
    `style` attribute or a `<style>` element, so the policy is
-   `script-src 'self'; style-src 'self'` (`server::POLICY`).
+   `script-src 'self'; style-src 'self'`
+   (`ConsoleHeaders::server_rendered`).
 2. **The CDR is reached only over ITS-REST.** Never depend on `app/ferroehr`
    or `app/ferroehr-rest`; allowed deps: `crates/openehr-*` and the network.
    The two source files shared with `app/ferroehr` are compiled here through
@@ -28,8 +29,8 @@ spec-bound (`docs/specs/openehr/ITS-REST/` and the served `openapi.json`).
 ## The server half is the family's
 
 `ferrohealth-server` (`console`, `reqwest`) carries the process plumbing: the
-console headers (`console::headers`, with the viewer's own `POLICY` set over
-the policy it writes until it writes one for a server-rendered console),
+console headers (`console::headers` in the server-rendered mode, which
+writes the policy),
 `same_origin`, the stack with the health routes (`server::app`),
 `cli::Common` and the healthcheck (`src/cli.rs`), the bounded drain
 (`serve::run` over `[server]`), and the outbound TLS of the CDR and issuer
