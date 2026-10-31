@@ -22,9 +22,9 @@
 //! `text/plain` source upload with the openEHR-ADL engine's diagnostics
 //! surfaced as the CDR sent them, the listing, the stored source and
 //! `OperationalTemplateV2` JSON representations, the path tree the viewer
-//! builds from that JSON, the CDR-generated example composition, the release
-//! picker over the versioned get, and the per-row delete over the artefact
-//! resource.
+//! builds from that JSON, the CDR-generated example composition, the
+//! releases grouped in the listing and named in the header over the
+//! versioned get, and the per-row delete over the artefact resource.
 //!
 //! Fixtures are the repository's own authored ADL2 corpus
 //! (`corpus/fixtures/adl2/opt`), read repo-relative
@@ -186,8 +186,9 @@ async fn adl2_upload_lists_and_serves_source_and_json() {
     h.finish().await;
 }
 
-/// Both releases of one HRID family are listed, the latest's page picks
-/// either release, and an older release names the latest to go back to.
+/// Both releases of one HRID family are listed as one group, the newest
+/// first; the latest's header names its release and opens either release,
+/// and an older release names the latest to go back to.
 #[tokio::test]
 async fn adl2_versioned_get_reaches_both_stored_versions() {
     let Some(h) = Harness::start("adl2-versions").await else {
@@ -198,21 +199,33 @@ async fn adl2_versioned_get_reaches_both_stored_versions() {
     ensure_adl2_template_present(&h, "versioned.v1_0_0.adls", VERSIONED_V100).await;
     ensure_adl2_template_present(&h, "versioned.v1_1_0.adls", VERSIONED_V110).await;
     h.goto(LIST_URL).await;
-    h.wait_css(&row_link(VERSIONED_V100)).await;
-    h.wait_css(&row_link(VERSIONED_V110)).await;
+    h.wait_css(&format!(
+        "main tbody:has({}) {}",
+        row_link(VERSIONED_V110),
+        row_link(VERSIONED_V100)
+    ))
+    .await;
+    wait_main_contains(&h, "Earlier release").await;
     h.shot(1, "adl2-both-versions-listed").await;
 
     let page = format!("/templates/adl2/{}", stem(VERSIONED_V100));
     h.goto(&page).await;
     wait_main_contains(&h, VERSIONED_V110).await;
-    h.wait_css("#ver").await.select_by_value("1.0.0").await;
-    common::submit(&h, "form.fui-title-select button[type=submit]").await;
+    h.wait_scripts().await;
+    h.wait_css("header summary[aria-controls='template-releases']")
+        .await
+        .click()
+        .await;
+    h.wait_css(&format!("#template-releases a[href='{page}/1.0.0']"))
+        .await
+        .click()
+        .await;
     h.wait_url_contains("1.0.0").await;
     wait_main_contains(&h, "You are reading release 1.0.0").await;
     wait_main_contains(&h, VERSIONED_V100).await;
     h.shot(2, "adl2-release-1-0-0").await;
 
-    h.wait_css(&format!("main a[href='{page}']"))
+    h.wait_css(&format!("main .fui-stack a[href='{page}']"))
         .await
         .click()
         .await;
