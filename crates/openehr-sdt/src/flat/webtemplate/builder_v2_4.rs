@@ -59,7 +59,7 @@ use super::implicit;
 use super::inputs::{assumed_code, default_string};
 use super::interval_v2_4::{
     admits, int_range, integer_default, occ, occurrences, point_f64, point_i32, point_list,
-    real_default, real_range, sole_interval,
+    range_union, real_default, real_range, sole_interval,
 };
 use super::model::{
     WebTemplate, WebTemplateArchetypeSlot, WebTemplateBindingCodedValue, WebTemplateCardinality,
@@ -1694,26 +1694,34 @@ fn build_path(
 
 /// Capture the numeric leaf constraints the `inputs` do not carry onto the
 /// node's validation-only fields: a `C_INTEGER`/`C_REAL` value list on a
-/// numeric datum ([`WebTemplateNode::numeric_lists`]) and the interval on
-/// `DV_MULTIMEDIA.size` ([`WebTemplateNode::numeric_ranges`]), per AOM2
+/// numeric datum ([`WebTemplateNode::numeric_lists`]), and the interval on
+/// `DV_MULTIMEDIA.size` and a union of ranges on any of them
+/// ([`WebTemplateNode::numeric_ranges`]), per AOM2
 /// `master04.5-constraint_model-class_definitions.adoc` §"Conformance
 /// semantics: C_ORDERED". The twin of the OPT 1.4 builder's capture.
 fn capture_leaf_constraints(co: &CObject, node: &mut WebTemplateNode) {
     for datum in ["magnitude", "value", "numerator", "denominator", "size"] {
-        if let Some(ci) = cinteger_under(co, datum) {
+        let ranges = if let Some(ci) = cinteger_under(co, datum) {
             if let Some(list) = point_list(ci.constraint.as_ref()) {
                 node.numeric_lists
                     .push((datum.to_owned(), list.into_iter().map(f64::from).collect()));
-            } else if datum == "size"
-                && let Some(range) = sole_interval(ci.constraint.as_ref()).and_then(int_range)
-            {
-                node.numeric_ranges.push((datum.to_owned(), range));
             }
-        } else if let Some(cr) = creal_under(co, datum)
-            && let Some(list) = point_list(cr.constraint.as_ref())
-        {
-            node.numeric_lists.push((datum.to_owned(), list));
-        }
+            // NOTE: ITS-REST simplified_formats master04 §"Web Template Metadata" gives an input
+            // one `validation.range`, so a union of ranges is carried validation-only.
+            let sole = sole_interval(ci.constraint.as_ref()).and_then(int_range);
+            range_union(ci.constraint.as_ref(), int_range)
+                .or_else(|| sole.filter(|_| datum == "size").map(|range| vec![range]))
+        } else if let Some(cr) = creal_under(co, datum) {
+            if let Some(list) = point_list(cr.constraint.as_ref()) {
+                node.numeric_lists.push((datum.to_owned(), list));
+            }
+            range_union(cr.constraint.as_ref(), real_range)
+        } else {
+            None
+        };
+        let ranges = ranges.into_iter().flatten();
+        node.numeric_ranges
+            .extend(ranges.map(|range| (datum.to_owned(), range)));
     }
 }
 

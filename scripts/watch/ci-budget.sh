@@ -22,6 +22,7 @@
 #
 # Usage:
 #   scripts/watch/ci-budget.sh --repo OWNER/NAME [--out details.md]
+#   scripts/watch/ci-budget.sh --self-test
 # Prints one line per lane. With --out, writes one markdown bullet per lane
 # over its budget (an empty file when none is). Requires gh (authenticated)
 # and jq. Exits non-zero only when the PROBE cannot answer — the API
@@ -31,8 +32,13 @@ set -euo pipefail
 
 REPO=""
 OUT=""
+SELF_TEST=false
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
+  --self-test)
+    SELF_TEST=true
+    shift
+    ;;
   --repo)
     REPO="${2:?--repo needs OWNER/NAME}"
     shift 2
@@ -42,13 +48,13 @@ while [[ "$#" -gt 0 ]]; do
     shift 2
     ;;
   *)
-    echo "usage: $0 --repo OWNER/NAME [--out details.md]" >&2
+    echo "usage: $0 --repo OWNER/NAME [--out details.md] | --self-test" >&2
     exit 2
     ;;
   esac
 done
-[[ -n "$REPO" ]] || {
-  echo "usage: $0 --repo OWNER/NAME [--out details.md]" >&2
+[[ -n "$REPO" || "$SELF_TEST" == true ]] || {
+  echo "usage: $0 --repo OWNER/NAME [--out details.md] | --self-test" >&2
   exit 2
 }
 
@@ -60,9 +66,11 @@ for tool in gh jq; do
 done
 
 # Label | workflow file | job-name regex (jq `test`) | budget in seconds | remedy.
+# A regex cannot hold `|`, the field separator: ui-e2e names its viewport
+# (`desktop`, `phone`) with `[a-z]+`.
 readonly LANES=(
   'CI test shards|ci.yml|^build & test \(pg18\) [0-9]+/[0-9]+$|900|Raise TEST_SHARDS in .github/workflows/ci.yml.'
-  'CI ui-e2e shards|ci.yml|^ui-e2e [0-9]+/[0-9]+$|900|Raise UI_E2E_SHARDS in .github/workflows/ci.yml.'
+  'CI ui-e2e shards|ci.yml|^ui-e2e [a-z]+ [0-9]+/[0-9]+$|900|Raise UI_E2E_SHARDS in .github/workflows/ci.yml.'
   "CI ui-e2e server binary|ci.yml|^ui-e2e server binary$|900|Not shardable: look at [profile.e2e] in Cargo.toml and the job's sccache hit rate."
   'SonarQube Cloud coverage shards|sonar.yml|^coverage [0-9]+/[0-9]+$|900|Raise COVERAGE_SHARDS in .github/workflows/sonar.yml.'
 )
@@ -71,6 +79,46 @@ readonly LANES=(
 # cold-cache outlier cannot raise an alarm and one warm run cannot silence it.
 readonly SCANNED=20
 readonly SAMPLE=5
+
+# Label | job name | whether the lane's pattern matches it. A job renamed in
+# ci.yml or sonar.yml leaves its lane unbudgeted with no error (#4601), so each
+# form a lane's jobs take today is a case here, beside names it must refuse.
+readonly CASES=(
+  'CI test shards|build & test (pg18) 1/3|yes'
+  'CI test shards|build & test (viewer)|no'
+  'CI ui-e2e shards|ui-e2e desktop 1/3|yes'
+  'CI ui-e2e shards|ui-e2e phone 3/3|yes'
+  'CI ui-e2e shards|ui-e2e server binary|no'
+  'CI ui-e2e shards|ui-e2e viewer + test binaries|no'
+  'CI ui-e2e server binary|ui-e2e server binary|yes'
+  'CI ui-e2e server binary|ui-e2e desktop 1/3|no'
+  'SonarQube Cloud coverage shards|coverage 2/4|yes'
+)
+
+if [[ "$SELF_TEST" == true ]]; then
+  failed=0
+  for case in "${CASES[@]}"; do
+    IFS='|' read -r case_label name want <<<"$case"
+    pattern=""
+    for lane in "${LANES[@]}"; do
+      IFS='|' read -r label _ lane_pattern _ _ <<<"$lane"
+      [[ "$label" == "$case_label" ]] && pattern="$lane_pattern"
+    done
+    if [[ -z "$pattern" ]]; then
+      echo "ci-budget self-test: no lane is labelled '$case_label'" >&2
+      failed=1
+      continue
+    fi
+    got="$(jq -nr --arg re "$pattern" --arg name "$name" 'if ($name | test($re)) then "yes" else "no" end')"
+    if [[ "$got" != "$want" ]]; then
+      echo "ci-budget self-test: '$case_label' matches '$name': $got, expected $want" >&2
+      failed=1
+    fi
+  done
+  [[ "$failed" -eq 0 ]] || exit 1
+  echo "ci-budget: self-test OK (${#CASES[@]} job names against ${#LANES[@]} lanes)"
+  exit 0
+fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

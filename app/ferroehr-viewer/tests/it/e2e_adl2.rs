@@ -371,7 +371,8 @@ async fn an_adl2_artefact_is_deleted_from_the_listing() {
 /// so on every tab, names the archetype and offers its upload, and never
 /// draws the CDR's raw refusal.
 ///
-/// The upload of such a template is refused (AOM2 VARXR), and the CDR refuses
+/// The upload of such a template is refused, naming the rule (AOM2 VARXR)
+/// and the archetype on the upload page, and the CDR refuses
 /// to delete an archetype a stored template needs, so the scene stores the
 /// archetype and the template and then removes the archetype's row in SQL,
 /// standing for a store written before that guard.
@@ -386,7 +387,13 @@ async fn a_template_missing_a_constituent_says_so_on_every_tab() {
 
     common::upload_template(&h, "adl2", &fixture_adl2_path("needs_constituent.adls")).await;
     h.wait_url_contains("/templates/upload").await;
-    wait_main_contains(&h, "fails validation").await;
+    wait_main_contains(&h, "VARXR").await;
+    wait_main_contains(&h, CONSTITUENT).await;
+    let text = common::main_text(&h).await;
+    assert!(
+        !text.contains("\"errors\"") && !text.contains("return=representation"),
+        "the refusal names each violation and draws no raw problem: {text}"
+    );
     h.goto(LIST_URL).await;
     assert!(
         !is_present(&h, &row_link(NEEDS_CONSTITUENT)).await,
