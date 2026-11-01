@@ -1157,18 +1157,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A merge group reads its pull requests from the commits between
+          # its base and head.
+          fetch-depth: 0
       - name: No book page says planned about a closed issue, or shipped about an open one
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           # The issues this PR closes count as closed. `--closing` reads the
           # body through the API, so a re-run by pr-guards.yml sees the
-          # description as it is then (#3948); a merge group has no body.
+          # description as it is then (#3948). A merge group has no body of
+          # its own: the issues every pull request in the group closes count
+          # as closed, read from the squash commits' `(#N)` between its base
+          # and head, so a "shipped, #N" row the group lands passes there too.
           PR: ${{ github.event.pull_request.number }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          GROUP_HEAD: ${{ github.event.merge_group.head_sha }}
         run: |
           set -euo pipefail
           if [ -n "${PR}" ]; then
             bash scripts/checks/tracker-status.sh --closing "${PR}"
+          elif [ -n "${GROUP_BASE}" ] && [ -n "${GROUP_HEAD}" ]; then
+            prs="$(git log --format=%s "${GROUP_BASE}..${GROUP_HEAD}" | grep -oE '[(]#[0-9]+[)]$' | grep -oE '[0-9]+' | sort -u || true)"
+            PR_BODY=""
+            for n in $prs; do
+              PR_BODY+="$(gh pr view "$n" --json body --jq .body)"$'\n'
+            done
+            echo "tracker-status: the merge group lands $(printf '%s' "${prs}" | tr '\n' ',')"
+            PR_BODY="$PR_BODY" bash scripts/checks/tracker-status.sh
           else
             bash scripts/checks/tracker-status.sh
           fi
