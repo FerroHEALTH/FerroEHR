@@ -111,3 +111,33 @@ async fn a_reference_to_an_absent_major_version_is_refused() {
         "got {refused:?}"
     );
 }
+
+/// A release stored beside its release candidate answers every read that
+/// does not name the candidate in full, in either upload order; the full
+/// candidate version reads the candidate (BASE `master07-referencing.adoc`
+/// §Referencing: "a pre-release version is referenced by its full
+/// identifier").
+#[tokio::test]
+async fn a_release_outranks_its_release_candidate_in_either_upload_order() {
+    let release_id = format!("{FAMILY}.v1.0.0");
+    let candidate_id = format!("{FAMILY}.v1.0.0-rc.1");
+    for order in [["1.0.0", "1.0.0-rc.1"], ["1.0.0-rc.1", "1.0.0"]] {
+        let (_db, svc) = store(&order).await;
+        let reads: [(String, Option<&str>, &str); 7] = [
+            (format!("{FAMILY}.v1"), None, &release_id),
+            (format!("{FAMILY}.v1.0"), None, &release_id),
+            (FAMILY.to_owned(), None, &release_id),
+            (FAMILY.to_owned(), Some("1"), &release_id),
+            (FAMILY.to_owned(), Some("1.0"), &release_id),
+            (FAMILY.to_owned(), Some("1.0.0"), &release_id),
+            (FAMILY.to_owned(), Some("1.0.0-rc.1"), &candidate_id),
+        ];
+        for (template_id, version, want) in reads {
+            let read = svc
+                .template_adl2_source(template_id.clone(), version.map(str::to_owned))
+                .await
+                .unwrap_or_else(|e| panic!("{order:?}: read {template_id} at {version:?}: {e:?}"));
+            assert_eq!(read.hrid, want, "{order:?}: {template_id} at {version:?}");
+        }
+    }
+}

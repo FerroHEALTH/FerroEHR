@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The ITS-REST `version` path parameter: its grammar, judged before any
-//! lookup, and its matching against stored release versions.
+//! lookup. An ADL2 read then resolves the version by the engine's reference
+//! rule (`adl2_resolution`).
 //!
 //! `parameters/path/version.yaml` defines it as "A SEMVER version number. This
 //! can be an exact version (e.g. `1.7.1`), or a pattern as partial prefix, in a
@@ -60,23 +61,6 @@ pub(super) fn check_version_selector(version: &str) -> Result<(), ServiceError> 
     )))
 }
 
-/// Whether `full` (a `major.minor.patch` release) matches the SEMVER `prefix`
-/// (`1`, `1.2`, or `1.2.3` — `version.yaml`: "an exact version … or a pattern
-/// as partial prefix"). Each supplied prefix component must equal the
-/// corresponding `full` component.
-pub(super) fn version_prefix_matches(full: &str, prefix: &str) -> bool {
-    let mut want = prefix.split('.').filter(|p| !p.is_empty() && *p != "*");
-    let mut have = full.split('.');
-    want.all(|w| have.next() == Some(w))
-}
-
-/// Compare two numeric release versions (`major.minor.patch`) component-wise so
-/// the highest matching version can be selected (`Ordering::Equal` on ties).
-pub(super) fn cmp_version(a: &str, b: &str) -> std::cmp::Ordering {
-    let parse = |v: &str| -> Vec<u64> { v.split('.').map(|p| p.parse().unwrap_or(0)).collect() };
-    parse(a).cmp(&parse(b))
-}
-
 /// Whether a `version` path parameter is a SEMVER *prefix* (`{major}` or
 /// `{major}.{minor}`) rather than an exact `{major}.{minor}.{patch}` triple
 /// (`parameters/path/version.yaml`).
@@ -124,24 +108,6 @@ mod tests {
             assert!(!is_version_selector(bad), "{bad:?} should be refused");
             assert!(check_version_selector(bad).is_err());
         }
-    }
-
-    #[test]
-    fn version_prefix_matches_semver_prefix() {
-        assert!(version_prefix_matches("1.2.3", "1"));
-        assert!(version_prefix_matches("1.2.3", "1.2"));
-        assert!(version_prefix_matches("1.2.3", "1.2.3"));
-        assert!(version_prefix_matches("1.2.3", "*"));
-        assert!(!version_prefix_matches("1.2.3", "2"));
-        assert!(!version_prefix_matches("1.2.3", "1.3"));
-    }
-
-    #[test]
-    fn cmp_version_orders_numerically() {
-        use std::cmp::Ordering;
-        assert_eq!(cmp_version("1.2.10", "1.2.9"), Ordering::Greater);
-        assert_eq!(cmp_version("2.0.0", "1.9.9"), Ordering::Greater);
-        assert_eq!(cmp_version("1.0.0", "1.0.0"), Ordering::Equal);
     }
 
     #[test]

@@ -116,33 +116,92 @@ impl ArchetypeRepository {
     /// candidate. An alpha or beta version matches only its full identifier.
     #[must_use]
     pub fn resolve(&self, reference: &str, referrer_namespace: Option<&str>) -> Option<&Archetype> {
-        let (namespace, _) = split_namespace(reference);
-        let namespace = namespace.or(referrer_namespace).map(str::to_owned);
-        let family = raw_id_lookup_key(reference);
-        let wanted = Wanted::of(reference)?;
-        let held: Vec<&Archetype> = match wanted.major() {
-            Some(major) => {
-                let key = ArtefactKey {
-                    namespace,
-                    family,
-                    major,
-                };
-                self.by_key.get(&key).into_iter().flatten().collect()
-            }
-            // NOTE: no openEHR spec governs a reference without a version
-            // (`master07-referencing.adoc` §Referencing gives every `hrid_ref` a
-            // major version); our own design reads it across every major version.
+        let query = Query::of(reference, referrer_namespace)?;
+        let held: Vec<&Archetype> = match query.key() {
+            Some(key) => self.by_key.get(&key).into_iter().flatten().collect(),
             None => self
                 .by_key
                 .iter()
-                .filter(|(key, _)| key.namespace == namespace && key.family == family)
+                .filter(|(key, _)| query.admits(key))
                 .flat_map(|(_, held)| held)
                 .collect(),
         };
+        query.best(held, |a| view(a).archetype_id)
+    }
+}
+
+/// The identifier among `held` that `reference`, made from an artefact in
+/// `referrer_namespace`, resolves to, by the rule of
+/// [`ArchetypeRepository::resolve`].
+///
+/// This is that rule over bare identifiers, for a caller that holds the
+/// identifiers of stored artefacts without their parsed content.
+#[must_use]
+pub fn resolve_hrid<'a>(
+    reference: &str,
+    referrer_namespace: Option<&str>,
+    held: impl IntoIterator<Item = &'a ArchetypeHrid>,
+) -> Option<&'a ArchetypeHrid> {
+    let query = Query::of(reference, referrer_namespace)?;
+    let held = held
+        .into_iter()
+        .filter(|h| query.admits(&ArtefactKey::of(h)));
+    query.best(held, |h| h)
+}
+
+/// One reference, read once: the namespace it resolves in, its family and the
+/// version it asks for.
+struct Query {
+    /// The reference's namespace, else the referrer's.
+    namespace: Option<String>,
+    /// The case-folded family ([`raw_id_lookup_key`]).
+    family: String,
+    /// The version asked for.
+    wanted: Wanted,
+}
+
+impl Query {
+    /// The query of `reference`, or `None` when its version is not numeric.
+    fn of(reference: &str, referrer_namespace: Option<&str>) -> Option<Self> {
+        let (namespace, _) = split_namespace(reference);
+        Some(Self {
+            namespace: namespace.or(referrer_namespace).map(str::to_owned),
+            family: raw_id_lookup_key(reference),
+            wanted: Wanted::of(reference)?,
+        })
+    }
+
+    /// The one key this query reads, `None` for a versionless reference.
+    fn key(&self) -> Option<ArtefactKey> {
+        self.wanted.major().map(|major| ArtefactKey {
+            namespace: self.namespace.clone(),
+            family: self.family.clone(),
+            major,
+        })
+    }
+
+    /// Whether artefacts held under `key` are candidates for this query.
+    ///
+    /// NOTE: no openEHR spec governs a reference without a version
+    /// (`master07-referencing.adoc` §Referencing gives every `hrid_ref` a
+    /// major version); our own design reads it across every major version.
+    fn admits(&self, key: &ArtefactKey) -> bool {
+        key.namespace == self.namespace
+            && key.family == self.family
+            && self.wanted.major().is_none_or(|major| key.major == major)
+    }
+
+    /// The candidate of highest precedence among `held` that the wanted
+    /// version admits.
+    fn best<T>(
+        &self,
+        held: impl IntoIterator<Item = T>,
+        hrid: impl Fn(&T) -> &ArchetypeHrid,
+    ) -> Option<T> {
         held.into_iter()
-            .filter_map(|a| wanted.rank(view(a).archetype_id).map(|rank| (a, rank)))
+            .filter_map(|t| self.wanted.rank(hrid(&t)).map(|rank| (t, rank)))
             .max_by_key(|(_, rank)| *rank)
-            .map(|(a, _)| a)
+            .map(|(t, _)| t)
     }
 }
 
