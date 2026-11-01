@@ -441,7 +441,7 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: zizmor@1.29.0
+          tool: zizmor@1.31.1
       - name: Audit .github/workflows + .github/actions
         # GH_TOKEN enables the ONLINE audits, which is the point of running this
         # beside SHA pinning: impostor-commit verifies that a pinned commit
@@ -569,6 +569,8 @@ jobs:
         run: bash scripts/release/accompanying-documents.sh --self-test
       - name: The release milestone check refuses open items and closes only after every leg
         run: bash scripts/release/milestone.sh --self-test
+      - name: The crate stamp writes one version into the nine manifests, their internal requirements and both locks, with or without git, and refuses an unknown crate set
+        run: bash scripts/release/publish-crates.sh --self-test
       - name: The release plan orders tags by version and counts the support period as GNU date does
         run: bash scripts/release/plan.sh --self-test
       - name: The chart comparison matches a repackaged chart and refuses a changed, added or removed file
@@ -1708,7 +1710,7 @@ jobs:
       # The pinned helm, read from deploy/helm/.tool-versions and installed by the
       # composite (#2775) — which is also where the `version` vs `version-file`
       # trap that silently installed the latest helm is recorded.
-      - uses: ./.github/actions/helm-pinned
+      - uses: ./.github/actions/helm-pinned # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
       - name: helm lint (default + all-features value sets)
         run: |
           helm dependency build deploy/helm/ferroehr
@@ -1785,7 +1787,7 @@ jobs:
         with:
           persist-credentials: false
       # The same pin as the goldens, from the same file and the same composite.
-      - uses: ./.github/actions/helm-pinned
+      - uses: ./.github/actions/helm-pinned # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
       # The artifact download loses the executable bit; the Dockerfile COPYs the
       # binary with `--chmod=0755`, which is why that does not matter here.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -2929,7 +2931,7 @@ jobs:
     permissions:
       contents: write # the reusable job's badge push, which never happens off main
       packages: read # the reusable job's GHCR pulls, unused beside an artifact
-    uses: ./.github/workflows/conformance.yml
+    uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       server-binary-artifact: ui-e2e-server-binary
 

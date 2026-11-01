@@ -133,7 +133,7 @@ jobs:
       # The deployed site is rebuilt in the deploy job, which restores no build
       # cache; this job publishes only a pull-request diagnostic artifact.
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0 # zizmor: ignore[cache-poisoning]
-      - uses: ./.github/actions/docs-toolchain
+      - uses: ./.github/actions/docs-toolchain # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
       - name: Stale-numbers gate (no hand-typed conformance claims in site sources)
         run: bash scripts/checks/conformance-numbers.sh
       - name: Render conformance stats + perf assets (the generated includes must exist before lint)
@@ -209,7 +209,7 @@ jobs:
       - name: Fetch docs-dist (frozen versions)
         run: git fetch origin docs-dist && git worktree add docs-dist origin/docs-dist || true
       # Assembly only: the lint and link-check gates ran in `build`.
-      - uses: ./.github/actions/docs-toolchain
+      - uses: ./.github/actions/docs-toolchain # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           lint: "false"
           link-check: "false"

@@ -60,7 +60,7 @@ jobs:
       # No expected version: a manual redeploy changes no image, so the action
       # derives what the sandbox must serve from `:latest`'s version label.
       - name: Deploy the hosted sandbox
-        uses: ./.github/actions/hosted-deploy
+        uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
