@@ -28,6 +28,8 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{Malformed, Missing};
 use serde_json::{Value, json};
 
 use openehr_rm::prelude::PartyProxy;
@@ -279,10 +281,7 @@ async fn export_ehrs_unknown_ehr_is_ehr_id_does_not_exist() {
         .extract_ehrs(ferroehr::ids::EhrId(uuid::Uuid::now_v7()))
         .await
         .expect_err("unknown EHR must fail");
-    assert_eq!(
-        err.status,
-        ferroehr::service::status::ServiceStatus::EhrIdDoesNotExist
-    );
+    assert!(matches!(&err, ServiceError::NotFound(r) if r.kind == Missing::Ehr));
 }
 
 /// A1 rm-ehr-extract: `EXTRACT_SPEC.extract_type` must come from the extract
@@ -316,9 +315,9 @@ async fn extract_spec_flags_are_honoured() {
         .await
         .expect_err("an extract_type outside the group must be rejected");
     assert!(
-        err.message.contains("extract content type"),
+        err.message().contains("extract content type"),
         "{}",
-        err.message
+        err.message()
     );
 
     // …but the accepted set may not be NARROWER than the codes the RM itself
@@ -337,7 +336,7 @@ async fn extract_spec_flags_are_honoured() {
         spec["extract_type"]["defining_code"]["code_string"] = json!(named);
         svc.export_ehr_extracts(openehr_its::json::from_canonical_value(&spec).expect("spec"))
             .await
-            .unwrap_or_else(|e| panic!("extract_type {named:?} must be accepted: {}", e.message));
+            .unwrap_or_else(|e| panic!("extract_type {named:?} must be accepted: {}", e.message()));
     }
 
     // TERM `SupportTerminology/master03-terminology.adoc` §Vocabularies binds
@@ -351,7 +350,7 @@ async fn extract_spec_flags_are_honoured() {
             .unwrap_or_else(|e| {
                 panic!(
                     "TERM-coded extract_type {term_coded:?} must be accepted: {}",
-                    e.message
+                    e.message()
                 )
             });
     }
@@ -390,7 +389,7 @@ async fn extract_spec_flags_are_honoured() {
         )
         .await
         .expect_err("masked item carrying content must be rejected");
-    assert!(err.message.contains("Item_validity"), "{}", err.message);
+    assert!(err.message().contains("Item_validity"), "{}", err.message());
 }
 
 /// The `EXTRACT_SPEC` skeleton the criteria tests share: one entity, no
@@ -487,14 +486,11 @@ async fn criteria_in_a_foreign_formalism_are_refused() {
         .export_ehr_extracts(spec)
         .await
         .expect_err("a non-AQL criteria formalism must be refused");
-    assert_eq!(
-        err.status,
-        ferroehr::service::status::ServiceStatus::PreconditionViolation
-    );
+    assert!(matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
     assert!(
-        err.message.contains("formalism"),
+        err.message().contains("formalism"),
         "the refusal names the formalism: {}",
-        err.message
+        err.message()
     );
 }
 
@@ -514,14 +510,11 @@ async fn criteria_that_do_not_parse_as_aql_are_refused() {
         .export_ehr_extracts(spec)
         .await
         .expect_err("an unparseable AQL criterion must be refused");
-    assert_eq!(
-        err.status,
-        ferroehr::service::status::ServiceStatus::PreconditionViolation
-    );
+    assert!(matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
     assert!(
-        err.message.contains("criteria[0]"),
+        err.message().contains("criteria[0]"),
         "the refusal names the criterion: {}",
-        err.message
+        err.message()
     );
 }
 

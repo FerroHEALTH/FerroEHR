@@ -384,6 +384,38 @@ async fn import_ehr_with_a_malformed_merge_input_is_refused_and_stores_nothing()
     assert_eq!(status, StatusCode::CREATED, "valid merge input: {body}");
 }
 
+/// An imported `ORIGINAL_VERSION.uid` whose version tree id does not fit
+/// storage is a `400` naming the version, and the import stores nothing.
+#[tokio::test]
+async fn import_ehr_with_an_unstorable_version_uid_is_bad_request() {
+    let (_pg, app) = common::test_router().await;
+    let mut extract: Value =
+        serde_json::from_str(&corpus("ehr_extract.v1.json")).expect("extract json");
+    extract["chapters"][0]["items"][0]["item"]["versions"][0]["uid"]["value"] =
+        Value::from("5f0c2a1e-7b3d-4e9a-8c21-6d4b2f1a0e77::cnf.source.openehr.org::99999999999");
+    let refused = "4c7d9e1f-2a3b-4c5d-8e9f-0a1b2c3d4e5f";
+    let (status, body) = send(
+        &app,
+        post(
+            &format!("/message/import?ehr_id={refused}"),
+            "application/json",
+            extract.to_string(),
+        ),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "unstorable version uid: {body}"
+    );
+    let (status, _body) = send(&app, get(&format!("/ehr/{refused}"))).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "a refused import stores nothing"
+    );
+}
+
 // ── Removed routes ───────────────────────────────────────────────────────────
 
 /// The Template Data Document import routes were removed (#4199), so each
