@@ -103,7 +103,10 @@ async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
         .await
         .expect("`apply` prepares the linkage domain in its own database");
     let relocated = second.pool();
-    assert!(exists(&relocated, "linkage.subject_ehr").await);
+    assert!(
+        !exists(&relocated, "linkage.subject_ehr").await,
+        "the linkage set ends with the cross-reference dropped"
+    );
     assert!(exists(&relocated, "linkage._sqlx_migrations").await);
     assert!(
         exists(&relocated, "party._sqlx_migrations").await,

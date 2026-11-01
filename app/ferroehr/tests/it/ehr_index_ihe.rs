@@ -111,8 +111,9 @@ pub(crate) fn red_subject() -> SubjectRef {
     SubjectRef::person(RED_ID, RED)
 }
 
-/// The EHRs a cohort naming `subject` resolves to, through the cohort query
-/// the `POST /query/cohort` route makes; a refused resolution is the refusal.
+/// The EHR ids a cohort naming `subject` resolves to, as its AQL projects
+/// them, through the cohort query the `POST /query/cohort` route makes; a
+/// refused resolution is the refusal.
 async fn resolved(svc: &FerroEhrService, subject: SubjectRef) -> Result<Vec<String>, StatusError> {
     let outcome = svc
         .execute_cohort_query(CohortQueryRequest {
@@ -124,10 +125,15 @@ async fn resolved(svc: &FerroEhrService, subject: SubjectRef) -> Result<Vec<Stri
         .map_err(StatusError::from)?;
     Ok(outcome
         .query
-        .served_ehrs
-        .iter()
-        .map(|(ehr, _rows)| ehr.clone())
-        .collect())
+        .result_set
+        .get("rows")
+        .and_then(Value::as_array)
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| row.get(0).and_then(Value::as_str).map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default())
 }
 
 /// Subject cohorts on, nothing suppressed.
