@@ -33,7 +33,7 @@ use openehr_base::prelude::{Cardinality, MultiplicityInterval};
 
 use crate::aom::access::common_mut;
 use crate::aom::build::{
-    PrimitiveNode, cobject_to_primitive, complex_object, into_archetype_root, mult, tuple_member,
+    cobject_to_primitive, complex_object, into_archetype_root, mult, tuple_member,
 };
 use crate::error::SyntaxErrorCode;
 use crate::odin::{is_interval, odin_to_json};
@@ -417,10 +417,7 @@ impl Parser<'_> {
                 // `attr matches {/re/}` — a C_STRING regex shortcut (`cadl2.g4`).
                 self.pos += 1;
                 let span = self.span_at(self.pos - 1);
-                let (regex, assumed) = self.contained_regexp_parts(&raw, span)?;
-                vec![CObject::CString(
-                    PrimitiveNode::inline("String").c_string(vec![regex], assumed),
-                )]
+                vec![CObject::CString(self.contained_regexp(&raw, span)?)]
             } else {
                 self.expect(
                     |t| matches!(t, Token::LCurly),
@@ -734,9 +731,8 @@ impl Parser<'_> {
             if let Some(Token::ContainedRegexp(raw)) = self.peek().cloned() {
                 self.pos += 1;
                 let span = self.span_at(self.pos - 1);
-                let (regex, assumed) = self.contained_regexp_parts(&raw, span)?;
                 items.push(CPrimitiveObject::CString(
-                    PrimitiveNode::inline("String").c_string(vec![regex], assumed),
+                    self.contained_regexp(&raw, span)?,
                 ));
             } else {
                 self.expect(

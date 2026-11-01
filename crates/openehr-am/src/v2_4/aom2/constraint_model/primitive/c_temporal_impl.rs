@@ -9,9 +9,17 @@
 //! `AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
 //! §Conformance semantics: C_TEMPORAL.
 
+use crate::v2_4::aom2::constraint_model::primitive::c_date::CDate;
+use crate::v2_4::aom2::constraint_model::primitive::c_date_time::CDateTime;
+use crate::v2_4::aom2::constraint_model::primitive::c_duration::CDuration;
 use crate::v2_4::aom2::constraint_model::primitive::c_ordered_impl::intervals_conform;
 use crate::v2_4::aom2::constraint_model::primitive::c_temporal::CTemporal;
+use crate::v2_4::aom2::constraint_model::primitive::c_time::CTime;
 use openehr_base::v1_3::foundation_types::interval::interval::Interval;
+use openehr_base::v1_3::foundation_types::time::iso8601_date::Iso8601Date;
+use openehr_base::v1_3::foundation_types::time::iso8601_date_time::Iso8601DateTime;
+use openehr_base::v1_3::foundation_types::time::iso8601_duration::Iso8601Duration;
+use openehr_base::v1_3::foundation_types::time::iso8601_time::Iso8601Time;
 
 impl CTemporal {
     /// Returns true if any value of the constrained temporal type would be
@@ -23,25 +31,12 @@ impl CTemporal {
     /// constraint.is_empty` (`org.openehr.am.aom2.c_ordered.adoc` §Functions).
     #[must_use]
     pub fn any_allowed(&self) -> bool {
-        let (range_empty, pattern) = match self {
-            Self::CDate(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                &c.pattern_constraint,
-            ),
-            Self::CDateTime(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                &c.pattern_constraint,
-            ),
-            Self::CDuration(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                &c.pattern_constraint,
-            ),
-            Self::CTime(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                &c.pattern_constraint,
-            ),
-        };
-        range_empty && pattern.as_ref().is_none_or(String::is_empty)
+        match self {
+            Self::CDate(c) => temporal_any_allowed(c),
+            Self::CDateTime(c) => temporal_any_allowed(c),
+            Self::CDuration(c) => temporal_any_allowed(c),
+            Self::CTime(c) => temporal_any_allowed(c),
+        }
     }
 
     /// Returns true if `a_pattern` is a valid constraint pattern for this
@@ -99,34 +94,10 @@ impl CTemporal {
     #[must_use]
     pub fn c_value_conforms_to(&self, other: &CTemporal) -> bool {
         match (self, other) {
-            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_conforms(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
-            ),
-            (Self::CDateTime(own), Self::CDateTime(theirs)) => temporal_value_conforms(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
-            ),
-            (Self::CDuration(own), Self::CDuration(theirs)) => temporal_value_conforms(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
-            ),
-            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_conforms(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
-            ),
+            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_conforms(own, theirs),
+            (Self::CDateTime(own), Self::CDateTime(theirs)) => temporal_value_conforms(own, theirs),
+            (Self::CDuration(own), Self::CDuration(theirs)) => temporal_value_conforms(own, theirs),
+            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_conforms(own, theirs),
             _ => false,
         }
     }
@@ -138,69 +109,87 @@ impl CTemporal {
     #[must_use]
     pub fn c_value_congruent_to(&self, other: &CTemporal) -> bool {
         match (self, other) {
-            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
-            (Self::CDateTime(own), Self::CDateTime(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
-            (Self::CDuration(own), Self::CDuration(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
-            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
+            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_congruent(own, theirs),
+            (Self::CDateTime(own), Self::CDateTime(theirs)) => {
+                temporal_value_congruent(own, theirs)
+            }
+            (Self::CDuration(own), Self::CDuration(theirs)) => {
+                temporal_value_congruent(own, theirs)
+            }
+            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_congruent(own, theirs),
             _ => false,
         }
     }
 }
 
-/// The `C_TEMPORAL` value-conformance body over one leaf type's constraint and
-/// pattern (`master04.5` §Conformance semantics: C_TEMPORAL).
-///
-/// `valid_replacement` is the leaf's own
-/// `valid_pattern_constraint_replacement`, whose table is per temporal type.
-pub(crate) fn temporal_value_conforms<T: PartialOrd>(
-    child_constraint: &[Interval<T>],
-    child_pattern: Option<&str>,
-    other_constraint: &[Interval<T>],
-    other_pattern: Option<&str>,
-    valid_replacement: &dyn Fn(&str, &str) -> bool,
-) -> bool {
-    let other_any_allowed = other_constraint.is_empty() && other_pattern.is_none_or(str::is_empty);
-    if !other_any_allowed && !intervals_conform(child_constraint, other_constraint) {
-        return false;
-    }
-    let Some(parent_pattern) = other_pattern.filter(|p| !p.is_empty()) else {
-        return true;
-    };
-    child_pattern
-        .filter(|p| !p.is_empty())
-        .is_some_and(|own| valid_replacement(own, parent_pattern))
+/// The `C_TEMPORAL` features one concrete descendant (`C_DATE`, `C_TIME`,
+/// `C_DATE_TIME`, `C_DURATION`) carries, which the conformance bodies below
+/// read (`master04.5` §Conformance semantics: C_TEMPORAL). The generated
+/// descendants hold them as fields of their own and share no Rust type.
+pub(crate) trait TemporalLeaf {
+    /// The ISO 8601 value type the interval constraint ranges over.
+    type Value: PartialOrd;
+    /// The interval constraint, empty when absent.
+    fn interval_constraint(&self) -> &[Interval<Self::Value>];
+    /// The pattern constraint, if any.
+    fn pattern(&self) -> Option<&str>;
+    /// The descendant's own `valid_pattern_constraint_replacement`, whose
+    /// table is per temporal type.
+    fn replaces(&self, a_pattern: &str, an_other_pattern: &str) -> bool;
 }
 
-/// The `C_TEMPORAL` value-congruence body over one leaf type's constraint and
-/// pattern (`master04.5` §Conformance semantics: C_TEMPORAL).
-pub(crate) fn temporal_value_congruent<T: PartialEq>(
-    child_constraint: &[Interval<T>],
-    child_pattern: Option<&str>,
-    other_constraint: &[Interval<T>],
-    other_pattern: Option<&str>,
-) -> bool {
-    child_constraint == other_constraint
-        && child_pattern.unwrap_or_default() == other_pattern.unwrap_or_default()
+/// Implements [`TemporalLeaf`] for each descendant over its value type.
+macro_rules! temporal_leaf {
+    ($($leaf:ty => $value:ty),* $(,)?) => {$(
+        impl TemporalLeaf for $leaf {
+            type Value = $value;
+            fn interval_constraint(&self) -> &[Interval<$value>] {
+                self.constraint.as_deref().unwrap_or_default()
+            }
+            fn pattern(&self) -> Option<&str> {
+                self.pattern_constraint.as_deref()
+            }
+            fn replaces(&self, a_pattern: &str, an_other_pattern: &str) -> bool {
+                self.valid_pattern_constraint_replacement(a_pattern, an_other_pattern)
+            }
+        }
+    )*};
+}
+
+temporal_leaf!(
+    CDate => Iso8601Date,
+    CDateTime => Iso8601DateTime,
+    CDuration => Iso8601Duration,
+    CTime => Iso8601Time,
+);
+
+/// The `C_TEMPORAL` `any_allowed` of one descendant: no interval constraint
+/// and no pattern (`org.openehr.am.aom2.c_temporal.adoc` §Functions).
+pub(crate) fn temporal_any_allowed<L: TemporalLeaf>(leaf: &L) -> bool {
+    leaf.interval_constraint().is_empty() && leaf.pattern().is_none_or(str::is_empty)
+}
+
+/// The `C_TEMPORAL` value-conformance body of one descendant
+/// (`master04.5` §Conformance semantics: C_TEMPORAL).
+pub(crate) fn temporal_value_conforms<L: TemporalLeaf>(own: &L, other: &L) -> bool {
+    if !temporal_any_allowed(other)
+        && !intervals_conform(own.interval_constraint(), other.interval_constraint())
+    {
+        return false;
+    }
+    let Some(parent_pattern) = other.pattern().filter(|p| !p.is_empty()) else {
+        return true;
+    };
+    own.pattern()
+        .filter(|p| !p.is_empty())
+        .is_some_and(|child| own.replaces(child, parent_pattern))
+}
+
+/// The `C_TEMPORAL` value-congruence body of one descendant
+/// (`master04.5` §Conformance semantics: C_TEMPORAL).
+pub(crate) fn temporal_value_congruent<L: TemporalLeaf>(own: &L, other: &L) -> bool {
+    own.interval_constraint() == other.interval_constraint()
+        && own.pattern().unwrap_or_default() == other.pattern().unwrap_or_default()
 }
 
 #[cfg(test)]
