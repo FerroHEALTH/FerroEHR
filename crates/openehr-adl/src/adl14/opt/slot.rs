@@ -69,7 +69,7 @@ pub(super) fn map_code_reference(c: &opt14::types::CCodeReference, cx: &mut Root
 /// (`org.openehr.am.aom2.archetype_slot.adoc`), built through the BEL slot
 /// parser so the tree matches what parsing the printed ADL2 would yield.
 /// A parse failure (unreachable for a valid `ARCHETYPE_HRID`) degrades to an
-/// open slot, reported — the fill edge in [`OptConversion::structure`] still
+/// open slot, reported — the fill edge in [`super::OptConversion::structure`] still
 /// carries the identity.
 pub(super) fn archetype_id_include(
     child_archetype_id: &str,
