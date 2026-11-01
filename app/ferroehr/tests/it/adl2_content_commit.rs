@@ -297,6 +297,50 @@ async fn a_structured_body_breaking_an_adl2_constraint_is_refused() {
     }
 }
 
+/// A `C_INTEGER` made of several non-point intervals admits a value inside any
+/// one of them (AOM2 `master04.5` §"Conformance semantics: `C_ORDERED`"): with
+/// the `DV_COUNT` magnitude constrained to `{|0..5|, |10..15|}`, a value inside
+/// one range is created, and one between the ranges or outside them all is
+/// refused with the violations a `422` carries (ITS-REST `responses/422.yaml`).
+#[tokio::test]
+async fn a_value_outside_every_range_of_a_union_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let all = cases();
+    let accepted = all
+        .iter()
+        .find(|c| c.workflow == "adl2-dv_count-validate_range-accepted")
+        .expect("the DV_COUNT range control case");
+    let (from, to) = (
+        "magnitude matches {|10..20|}",
+        "magnitude matches {|0..5|, |10..15|}",
+    );
+    let source = templates()
+        .remove(&accepted.template)
+        .expect("the DV_COUNT range template");
+    assert_eq!(source.matches(from).count(), 1, "the one magnitude range");
+    svc.upload_artefact(source.replace(from, to))
+        .await
+        .expect("the union template uploads");
+    let ehr = new_ehr(&svc).await;
+    for (magnitude, admitted) in [(3, true), (12, true), (7, false), (20, false), (-1, false)] {
+        let mut body = accepted.body.clone();
+        *body
+            .pointer_mut("/content/0/data/events/0/data/items/0/value/magnitude")
+            .expect("the DV_COUNT magnitude") = Value::from(magnitude);
+        match svc.create_composition(ehr, creation(&body)).await {
+            Ok(_) if admitted => {}
+            Err(ServiceError::ValidationFailed(violations)) if !admitted => {
+                assert!(
+                    !violations.is_empty(),
+                    "{magnitude}: refused without a violation"
+                );
+            }
+            outcome => panic!("magnitude {magnitude} (admitted: {admitted}): {outcome:?}"),
+        }
+    }
+}
+
 /// `body` with every archetype root it records by a full reference retargeted
 /// to the interface id the Web Template names it by.
 fn under_interface_ids(

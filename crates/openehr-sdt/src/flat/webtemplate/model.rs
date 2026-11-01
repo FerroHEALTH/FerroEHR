@@ -239,11 +239,10 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub numeric_lists: Vec<(String, Vec<f64>)>,
 
-    /// `C_INTEGER.range`/`C_REAL.range` constraints on a leaf's numeric datum
-    /// the `inputs` builders do not otherwise carry (e.g. `DV_MULTIMEDIA.size` —
-    /// RM `data_types` §`DV_MULTIMEDIA`, `size: Integer`; AOM 1.4
-    /// `master04-constraint_model_package.adoc` §`C_INTEGER`), keyed by RM
-    /// attribute name. Validation-only; `#[serde(skip)]`.
+    /// `C_INTEGER`/`C_REAL` ranges on a leaf's numeric datum the `inputs` do not
+    /// carry, keyed by RM attribute name: `DV_MULTIMEDIA.size` (RM `data_types`)
+    /// and an ADL 2 union of ranges (AOM2 `master04.5` §C_ORDERED), the datum
+    /// lying in one of the ranges given for it. Validation-only.
     #[serde(skip)]
     pub numeric_ranges: Vec<(String, WebTemplateRange)>,
 
