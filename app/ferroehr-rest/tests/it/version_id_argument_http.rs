@@ -10,10 +10,9 @@
 //! submitted content is a `422` and is pinned beside its commit tests.
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode};
+use http::StatusCode;
 
-use crate::common::{self, BASE};
+use crate::common;
 
 /// A well-formed `OBJECT_VERSION_ID` whose trunk version does not fit storage.
 fn out_of_range(vo: &str) -> String {
@@ -31,7 +30,9 @@ async fn app() -> (testkit::TestDb, Router) {
     )
 }
 
-async fn assert_400(app: &Router, req: Request<Body>, what: &str) {
+/// `GET` `relative` under its own namespace and expect a `400`.
+async fn assert_400(app: &Router, relative: &str, what: &str) {
+    let req = common::get(&common::full(relative));
     let (status, body) = common::send_body(app, req).await;
     assert_eq!(
         status,
@@ -44,13 +45,13 @@ async fn assert_400(app: &Router, req: Request<Body>, what: &str) {
 async fn an_ehr_status_version_argument_out_of_range_is_400() {
     let (_db, app) = app().await;
     let ehr = common::create_ehr(&app).await;
-    let uri = format!("{BASE}/ehr/{ehr}/ehr_status/{}", out_of_range(VO));
-    assert_400(&app, common::get(&uri), "EHR_STATUS by version").await;
+    let uri = format!("/ehr/{ehr}/ehr_status/{}", out_of_range(VO));
+    assert_400(&app, &uri, "EHR_STATUS by version").await;
     let uri = format!(
-        "{BASE}/ehr/{ehr}/versioned_ehr_status/version/{}",
+        "/ehr/{ehr}/versioned_ehr_status/version/{}",
         out_of_range(VO)
     );
-    assert_400(&app, common::get(&uri), "VERSIONED_EHR_STATUS version").await;
+    assert_400(&app, &uri, "VERSIONED_EHR_STATUS version").await;
 }
 
 #[tokio::test]
@@ -58,44 +59,51 @@ async fn a_composition_version_argument_out_of_range_is_400() {
     let (_db, app) = app().await;
     let ehr = common::create_ehr(&app).await;
     let uri = format!(
-        "{BASE}/ehr/{ehr}/versioned_composition/{VO}/version/{}",
+        "/ehr/{ehr}/versioned_composition/{VO}/version/{}",
         out_of_range(VO)
     );
-    assert_400(&app, common::get(&uri), "VERSIONED_COMPOSITION version").await;
+    assert_400(&app, &uri, "VERSIONED_COMPOSITION version").await;
 }
 
 #[tokio::test]
 async fn a_directory_version_argument_out_of_range_is_400() {
     let (_db, app) = app().await;
     let ehr = common::create_ehr(&app).await;
-    let uri = format!("{BASE}/ehr/{ehr}/directory/{}", out_of_range(VO));
-    assert_400(&app, common::get(&uri), "DIRECTORY by version").await;
+    let uri = format!("/ehr/{ehr}/directory/{}", out_of_range(VO));
+    assert_400(&app, &uri, "DIRECTORY by version").await;
 }
 
 #[tokio::test]
 async fn a_malformed_contribution_uid_is_400() {
     let (_db, app) = app().await;
     let ehr = common::create_ehr(&app).await;
-    let uri = format!("{BASE}/ehr/{ehr}/contribution/not-a-uuid");
-    assert_400(&app, common::get(&uri), "EHR CONTRIBUTION").await;
-    let uri = format!("{BASE}/demographic/contribution/not-a-uuid");
-    assert_400(&app, common::get(&uri), "demographic CONTRIBUTION").await;
+    let uri = format!("/ehr/{ehr}/contribution/not-a-uuid");
+    assert_400(&app, &uri, "EHR CONTRIBUTION").await;
+    assert_400(
+        &app,
+        "/demographic/contribution/not-a-uuid",
+        "demographic CONTRIBUTION",
+    )
+    .await;
 }
 
 #[tokio::test]
 async fn a_party_version_argument_out_of_range_is_400() {
     let (_db, app) = app().await;
-    let uri = format!("{BASE}/demographic/person/{}", out_of_range(VO));
-    assert_400(&app, common::get(&uri), "PERSON by version").await;
-    let uri = format!("{BASE}/demographic/person/not-a-uuid");
-    assert_400(&app, common::get(&uri), "PERSON by uid").await;
+    let uri = format!("/demographic/person/{}", out_of_range(VO));
+    assert_400(&app, &uri, "PERSON by version").await;
+    assert_400(&app, "/demographic/person/not-a-uuid", "PERSON by uid").await;
 }
 
 #[tokio::test]
 async fn a_relationship_version_argument_out_of_range_is_400() {
     let (_db, app) = app().await;
-    let uri = format!("{BASE}/demographic/party_relationship/{}", out_of_range(VO));
-    assert_400(&app, common::get(&uri), "PARTY_RELATIONSHIP by version").await;
-    let uri = format!("{BASE}/demographic/party_relationship/not-a-uuid");
-    assert_400(&app, common::get(&uri), "PARTY_RELATIONSHIP by uid").await;
+    let uri = format!("/demographic/party_relationship/{}", out_of_range(VO));
+    assert_400(&app, &uri, "PARTY_RELATIONSHIP by version").await;
+    assert_400(
+        &app,
+        "/demographic/party_relationship/not-a-uuid",
+        "PARTY_RELATIONSHIP by uid",
+    )
+    .await;
 }
