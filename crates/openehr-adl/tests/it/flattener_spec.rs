@@ -46,7 +46,7 @@ fn read(dir: &str, file: &str) -> Archetype {
 /// A repository over an entire flattener subdirectory, so multi-level lineage
 /// resolves.
 fn repo_of(dir: &str) -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     let base = PathBuf::from(format!("{FLATTENER}/{dir}"));
     for entry in std::fs::read_dir(&base).unwrap().flatten() {
         let p = entry.path();
@@ -673,7 +673,7 @@ terminology
 
 /// Flatten `child_src` against `parent_src` alone.
 fn flatten_pair(parent_src: &str, child_src: &str) -> Archetype {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse_artefact(parent_src, Dialect::Adl2).expect("parent parses"));
     let child = parse_artefact(child_src, Dialect::Adl2).expect("child parses");
     flat_form(&child, &repo).expect("flatten")

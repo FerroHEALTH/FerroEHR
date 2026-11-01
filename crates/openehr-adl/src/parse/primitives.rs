@@ -27,7 +27,7 @@ use openehr_base::prelude::{Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso86
 
 use crate::aom::build::local_term_code;
 use crate::error::SyntaxErrorCode;
-use crate::odin::{decode_character, decode_string, escape_regex_delimiter, regex_inner};
+use crate::odin::{decode_string, escape_regex_delimiter, regex_inner};
 use crate::parse::values::PrimKind;
 use crate::parse::{Dialect, PResult, Parser};
 use openehr_lang::v1_1::lexer::Token;
@@ -212,7 +212,7 @@ impl Parser<'_> {
                 Some(Token::Character(c)) => {
                     let span = self.cur_span();
                     self.pos += 1;
-                    let decoded = decode_character(&c);
+                    let decoded = openehr_lang::v1_1::escape::decode_character_literal(&c);
                     constraint.push(self.decoded_literal(decoded, span)?);
                 }
                 _ => return self.err(SyntaxErrorCode::Scsav, "expecting a character value"),
@@ -226,7 +226,7 @@ impl Parser<'_> {
                 Some(Token::Character(c)) => {
                     let span = self.cur_span();
                     self.pos += 1;
-                    let decoded = decode_character(&c);
+                    let decoded = openehr_lang::v1_1::escape::decode_character_literal(&c);
                     Some(self.decoded_literal(decoded, span)?)
                 }
                 _ => {

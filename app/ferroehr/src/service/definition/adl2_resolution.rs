@@ -27,7 +27,7 @@ pub(super) fn parse_stored(adl: &str) -> Option<Archetype> {
 
 /// The repository holding every one of `stored`.
 pub(super) fn repository_of(stored: impl IntoIterator<Item = Archetype>) -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     for artefact in stored {
         repo.insert(artefact);
     }

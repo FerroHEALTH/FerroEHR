@@ -227,7 +227,7 @@ fn parse(src: &str) -> Archetype {
 /// The repository holding the base archetypes the template + overlay reference
 /// (the local overlay itself is registered by `create_opt`).
 fn base_repo() -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse(SECTION_EVENT_INFO));
     repo.insert(parse(COMPOSITION_DISCHARGE));
     repo
@@ -512,7 +512,7 @@ fn profile_rejects_node_level_substitution() {
 fn create_opt_reports_an_unresolved_reference() {
     // A template whose filler references an archetype absent from the repo.
     let template = parse(TEMPLATE_T_DISCHARGE);
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse(COMPOSITION_DISCHARGE));
     // `event_info` (the overlay's parent) is absent, so flattening the overlay
     // filler cannot proceed — surfaced as a flatten error.

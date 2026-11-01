@@ -326,22 +326,6 @@ pub fn reject_undeclared_keys(value: &serde_json::Value) -> Result<(), JsonParse
     }
 }
 
-/// Validate a canonical-JSON value against the vendored ITS-JSON RM schema
-/// (`openehr_rm_1.1.0_all.json`).
-///
-/// The published root dispatches on the top-level `_type` (draft-07
-/// `if`/`then`) to the matching definition for the classes it lists; a value
-/// of any other class passes the root unjudged ([`validate_canonical_class`]
-/// judges every class).
-///
-/// # Errors
-/// Returns every schema violation (path + message), or a single-element error if
-/// the schema itself failed to compile.
-#[cfg(feature = "schema-validation")]
-pub fn validate_canonical(value: &serde_json::Value) -> Result<(), Vec<String>> {
-    collect_errors(&RM_VALIDATOR, value)
-}
-
 /// The ITS-JSON validator whose root dispatches on the top-level `_type` to
 /// EVERY class definition of [`RM_SCHEMA_JSON`], the published root listing
 /// only some of them.
@@ -373,15 +357,33 @@ static RM_CLASS_VALIDATOR: std::sync::LazyLock<Result<jsonschema::Validator, Str
         jsonschema::validator_for(&schema).map_err(|e| format!("compile RM schema: {e}"))
     });
 
-/// Validate a canonical-JSON value against the ITS-JSON definition its
-/// top-level `_type` names, for every class the vendored schema defines.
+/// Which root of the vendored ITS-JSON RM schema (`openehr_rm_1.1.0_all.json`)
+/// judges a value.
+#[cfg(feature = "schema-validation")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SchemaRoot {
+    /// The published root: it dispatches on the top-level `_type` (draft-07
+    /// `if`/`then`) to the matching definition for the classes it lists, and a
+    /// value of any other class passes it unjudged.
+    Published,
+    /// A root that dispatches on the top-level `_type` to every class
+    /// definition the schema holds.
+    EveryClass,
+}
+
+/// Validate a canonical-JSON value against the vendored ITS-JSON RM schema,
+/// under the given `root`.
 ///
 /// # Errors
 /// Returns every schema violation (path + message), or a single-element error if
 /// the schema itself failed to compile.
 #[cfg(feature = "schema-validation")]
-pub fn validate_canonical_class(value: &serde_json::Value) -> Result<(), Vec<String>> {
-    collect_errors(&RM_CLASS_VALIDATOR, value)
+pub fn validate_canonical(value: &serde_json::Value, root: SchemaRoot) -> Result<(), Vec<String>> {
+    let validator = match root {
+        SchemaRoot::Published => &RM_VALIDATOR,
+        SchemaRoot::EveryClass => &RM_CLASS_VALIDATOR,
+    };
+    collect_errors(validator, value)
 }
 
 #[cfg(feature = "schema-validation")]

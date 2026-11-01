@@ -32,10 +32,7 @@
     reason = "integration-test assertions and fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
 )]
 
-use openehr_lang::v1_1::lexer::{LexError, Spanned, lex_adl, lex_bel, lex_odin};
-
-/// One per-language entry point of the shared lexer.
-type Reading = fn(&str) -> Result<Vec<Spanned>, LexError>;
+use openehr_lang::v1_1::lexer::{Language, LexError, Spanned, lex};
 
 /// Render one lexing outcome in the fixture's canonical form.
 fn render(outcome: Result<Vec<Spanned>, LexError>) -> String {
@@ -85,14 +82,18 @@ fn expectations(language: &str) -> Vec<(usize, String)> {
 fn every_reading_reproduces_its_pre_unification_surface() {
     let inputs = battery();
     let mut divergences = Vec::new();
-    let readings: [(&str, Reading); 3] = [("adl", lex_adl), ("odin", lex_odin), ("bel", lex_bel)];
+    let readings: [(&str, Language); 3] = [
+        ("adl", Language::Adl),
+        ("odin", Language::Odin),
+        ("bel", Language::Bel),
+    ];
     let mut compared = 0usize;
-    for (language, lex) in readings {
+    for (language, reading) in readings {
         for (index, expected) in expectations(language) {
             let input = inputs
                 .get(index)
                 .unwrap_or_else(|| panic!("expectation #{index} has no battery record"));
-            let produced = render(lex(input));
+            let produced = render(lex(reading, input));
             compared += 1;
             if produced != expected {
                 divergences.push(format!(

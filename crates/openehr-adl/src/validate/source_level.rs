@@ -162,10 +162,12 @@ pub(super) fn check_deprecated_domain_spelling_adl14(
     text: &str,
     issues: &mut Vec<ValidationIssue>,
 ) {
-    use openehr_lang::v1_1::lexer::{Token, lex_adl};
+    use openehr_lang::v1_1::lexer::{Language, Token, lex};
     // A lex failure never reaches here on the validation path (the artefact
     // already parsed), so an Err simply yields no warnings.
-    let Ok(tokens) = lex_adl(text) else { return };
+    let Ok(tokens) = lex(Language::Adl, text) else {
+        return;
+    };
     for (i, spanned) in tokens.iter().enumerate() {
         let Token::AlphaUcId(name) = &spanned.token else {
             continue;

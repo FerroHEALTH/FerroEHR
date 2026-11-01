@@ -134,7 +134,7 @@ pub fn validate_composition(composition: &Value, wt: &WebTemplate) -> Vec<Valida
     // declared type is COMPOSITION — an untagged root is legal canonical JSON
     // (the ITS-JSON schema requires `_type` only on polymorphic slots, and the
     // resource root is concretely COMPOSITION).
-    let mut out = validate_rm_and_terminology(composition);
+    let mut out = validate_rm_and_terminology(composition, "COMPOSITION");
     // Pass 3: archetype conformance guided by the WebTemplate tree.
     out.extend(crate::flat::validation::validate_archetype_conformance(
         composition,
@@ -178,7 +178,7 @@ pub fn validate_party(party: &Value, wt: &WebTemplate) -> Vec<ValidationMessage>
         );
         return out;
     }
-    let mut out = validate_rm_and_terminology_as(party, root);
+    let mut out = validate_rm_and_terminology(party, root);
     out.extend(crate::flat::validation::validate_archetype_conformance(
         party, wt,
     ));
@@ -192,17 +192,8 @@ pub fn validate_party(party: &Value, wt: &WebTemplate) -> Vec<ValidationMessage>
 /// referenced, so a COMPOSITION committed without a `template_id` still passes
 /// them.
 ///
-/// The COMPOSITION-rooted wrapper over [`validate_rm_and_terminology_as`],
-/// where a caller committing another resource kind names its own root type.
-#[must_use]
-pub fn validate_rm_and_terminology(composition: &Value) -> Vec<ValidationMessage> {
-    validate_rm_and_terminology_as(composition, "COMPOSITION")
-}
-
-/// [`validate_rm_and_terminology`] with the root node's declared RM type given.
-///
-/// The entry point for every non-COMPOSITION commit kind (`EHR_STATUS`,
-/// `EHR_ACCESS`, `FOLDER`, the demographic PARTY types, …).
+/// One entry point for every commit kind: `COMPOSITION`, `EHR_STATUS`,
+/// `EHR_ACCESS`, `FOLDER`, the demographic PARTY types, …
 ///
 /// The invariants these passes run — `ARCHETYPED.Rm_version_valid`,
 /// `LOCATABLE.Links_valid` / `Archetype_node_id_valid`, the `LINK` 1..1
@@ -216,11 +207,11 @@ pub fn validate_rm_and_terminology(composition: &Value) -> Vec<ValidationMessage
 /// attribute's concretely-declared type, and a tagged root overrides
 /// `declared`.
 #[must_use]
-pub fn validate_rm_and_terminology_as(root: &Value, declared: &str) -> Vec<ValidationMessage> {
+pub fn validate_rm_and_terminology(root: &Value, declared: &str) -> Vec<ValidationMessage> {
     validate_with(root, declared, LowerBounds::Enforced)
 }
 
-/// [`validate_rm_and_terminology_as`] for a `553|incomplete|` commit: the
+/// [`validate_rm_and_terminology`] for a `553|incomplete|` commit: the
 /// mandatory-presence and cardinality-lower-bound layers are relaxed to zero,
 /// every other layer runs at full strength.
 ///
@@ -728,7 +719,7 @@ mod tests {
 
         // Warm up (allocator, branch predictors, the lazily-initialized bundle).
         for _ in 0..5 {
-            std::hint::black_box(validate_rm_and_terminology(&comp).len());
+            std::hint::black_box(validate_rm_and_terminology(&comp, "COMPOSITION").len());
         }
 
         let iters = 50;
@@ -748,7 +739,9 @@ mod tests {
             terminology::terminology_pass(&mut out, &comp, &mut String::new(), Some("COMPOSITION"));
             out.len()
         });
-        let t_both = time_pass(iters, || validate_rm_and_terminology(&comp).len());
+        let t_both = time_pass(iters, || {
+            validate_rm_and_terminology(&comp, "COMPOSITION").len()
+        });
 
         eprintln!("IPS validation walk cost ({node_count} _type nodes, {iters} iters):");
         eprintln!("  pass 1 rm_invariant_pass : {t_rm:>8.1} us/op");
@@ -785,7 +778,9 @@ mod tests {
 
         // Public entry points only, so this harness compiles unchanged.
         let iters = 50;
-        let t_rmterm = time_pass(iters, || validate_rm_and_terminology(&comp).len());
+        let t_rmterm = time_pass(iters, || {
+            validate_rm_and_terminology(&comp, "COMPOSITION").len()
+        });
         let t_walk = time_pass(iters, || {
             crate::flat::validation::validate_archetype_conformance(&comp, &wt).len()
         });

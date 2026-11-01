@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The ONE openEHR lexical layer: a single `logos` token superset plus four
-//! thin per-language entry points.
+//! The ONE openEHR lexical layer: a single `logos` token superset read by one
+//! entry point, [`lex`], under the [`Language`] it is given.
 //!
 //! ADL2/cADL, ODIN, BEL and EL are four readings of one family of lexical
 //! rules — the vendored `.g4` grammars all build on the same base id/symbol
@@ -33,7 +33,7 @@
 //!
 //! The pass is therefore a total function from the union reading to each member
 //! reading, not a filter, and the `lexer_equivalence` battery in `tests/it/`
-//! pins each entry point token-for-token and span-for-span.
+//! pins each reading token-for-token and span-for-span.
 //!
 //! # Per-language adjudications
 //!
@@ -74,8 +74,27 @@ fn span_text(src: &str, span: core::ops::Range<usize>) -> &str {
         .expect("a span produced by lexing this source should slice it")
 }
 
-use crate::v1_1::lexer::reclassify::{Language, reclassify};
+use crate::v1_1::lexer::reclassify::reclassify;
 pub use crate::v1_1::lexer::token::Token;
+
+/// Which language's lexical layer a token stream is being read under.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Language {
+    /// The ADL2 outer + cADL reading (`AM/docs/ADL2/`, `adl2.g4`/`cadl2.g4`).
+    Adl,
+    /// The ODIN reading (`LANG/docs/odin/`, `odin.g4`/`odin_values.g4`).
+    Odin,
+    /// The BEL reading (`LANG/docs/BEL/`, `base_expressions.g4`).
+    Bel,
+    /// The Expression Language reading (`LANG/docs/EL/`, `ElLexer.g4`).
+    ///
+    /// `ElLexer.g4` is an `import Cadl2Lexer, SymbolsLexer, GeneralIdsLexer`
+    /// with its own rules layered on top, and ANTLR gives the importing
+    /// grammar's rule precedence — so this reading is the cADL one wherever
+    /// `ElLexer.g4` declares nothing, and `ElLexer.g4`'s own (case-SENSITIVE)
+    /// spelling wherever it does.
+    El,
+}
 
 /// A lexed token together with its byte span in the original source.
 #[derive(Debug, Clone, PartialEq)]
@@ -94,39 +113,6 @@ pub struct LexError {
     pub span: std::ops::Range<usize>,
     /// The offending slice, verbatim.
     pub text: String,
-}
-
-/// Lex `src` under the ADL2 / cADL reading (`AM/docs/ADL2/`; `adl2.g4`,
-/// `cadl2.g4`, `adl_keywords.g4` over `base_lexer.g4`).
-///
-/// A whole ADL2 source file is lexed once as a single stream, so this reading
-/// is the union of the outer artefact grammar, cADL, the ODIN sections and the
-/// rules sub-syntax — the outer parser only *parses* the identification header
-/// and the ODIN sections, capturing the cADL definition and rules bodies as
-/// raw spans, so their tokens only need to lex here, not classify perfectly.
-///
-/// # Errors
-/// Returns a [`LexError`] at the byte span of the first input that is not a
-/// cADL token (an unrecognised character or an illegal string escape).
-pub fn lex_adl(src: &str) -> Result<Vec<Spanned>, LexError> {
-    lex_with(Language::Adl, src)
-}
-
-/// Lex `src` under the ODIN reading (`LANG/docs/odin/`; `odin.g4`,
-/// `odin_values.g4` over `base_lexer.g4`).
-///
-/// ODIN is a standalone leaf-data notation — it backs BMM `.bmm`/`.idx` files
-/// and the ADL description/terminology/annotation sections alike — and
-/// reserves no keywords, so this reading covers only the ODIN value +
-/// structure subset.
-///
-/// # Errors
-/// Returns a [`LexError`] at the byte span of the first input that is not an
-/// ODIN token.
-pub fn lex_odin(src: &str) -> Result<Vec<Spanned>, LexError> {
-    let mut spanned = lex_with(Language::Odin, src)?;
-    retag_odin_value_words_in_key_position(src, &mut spanned);
-    Ok(spanned)
 }
 
 /// Re-tag `true`/`false`/`infinity` to identifiers where they stand as ODIN
@@ -166,43 +152,21 @@ fn retag_odin_value_words_in_key_position(src: &str, spanned: &mut [Spanned]) {
     }
 }
 
-/// Lex `src` under the BEL reading (`LANG/docs/BEL/`; `base_expressions.g4`).
+/// Lex `src` under `language`'s reading: run the shared DFA over it and
+/// reclassify every token into that language's own lexer.
 ///
-/// The Basic Expression Language surface: statements, assertions, assignments,
-/// operators (text + symbol forms), literals, variables, paths and the
-/// `matches { … }` constraint delimiters.
+/// [`Language::Adl`] lexes a whole ADL2 source file as one stream, so its
+/// reading is the union of the outer artefact grammar, cADL, the ODIN sections
+/// and the rules sub-syntax; the outer parser captures the cADL definition and
+/// rules bodies as raw spans, so their tokens only need to lex here, not
+/// classify perfectly. [`Language::Odin`] reserves no keywords, and a value
+/// word in attribute-name position is re-tagged to an identifier.
 ///
 /// # Errors
 /// Returns a [`LexError`] at the byte span of the first input that is not a
-/// BEL token.
-pub fn lex_bel(src: &str) -> Result<Vec<Spanned>, LexError> {
-    lex_with(Language::Bel, src)
-}
-
-/// Lex `src` under the Expression Language reading (`LANG/docs/EL/`;
-/// `vendor/grammar/v1_1/ElLexer.g4`, which the EL syntax appendix
-/// `masterAppA-syntax.adoc` includes verbatim).
-///
-/// `ElLexer.g4` imports `Cadl2Lexer`, `SymbolsLexer` and `GeneralIdsLexer`
-/// (none of which upstream publishes in the same repository), so this reading
-/// is the cADL one for the inherited layer plus `ElLexer.g4`'s own rules,
-/// which ANTLR gives precedence.
-///
-/// Two `ElLexer.g4` symbols have no union production and are therefore not
-/// lexable here: `?` (`SYM_INTERROGATION`) and the guillemets `«`/`»`. `?`
-/// reaches only `dlBinaryChoice` and the guillemets reach no `ElParser.g4`
-/// production at all.
-///
-/// # Errors
-/// Returns a [`LexError`] at the byte span of the first input that is not an
-/// EL token.
-pub fn lex_el(src: &str) -> Result<Vec<Spanned>, LexError> {
-    lex_with(Language::El, src)
-}
-
-/// Run the shared DFA over `src` and reclassify every token into `language`'s
-/// own reading.
-fn lex_with(language: Language, src: &str) -> Result<Vec<Spanned>, LexError> {
+/// token of `language` (an unrecognised character or an illegal string
+/// escape).
+pub fn lex(language: Language, src: &str) -> Result<Vec<Spanned>, LexError> {
     let mut out = Vec::new();
     let mut lexer = Token::lexer(src);
     while let Some(result) = lexer.next() {
@@ -225,6 +189,9 @@ fn lex_with(language: Language, src: &str) -> Result<Vec<Spanned>, LexError> {
                 lexer.bump(resumed);
             }
         }
+    }
+    if language == Language::Odin {
+        retag_odin_value_words_in_key_position(src, &mut out);
     }
     Ok(out)
 }
@@ -323,10 +290,10 @@ fn next_boundary(src: &str, at: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{Token, lex_adl, lex_bel, lex_odin};
+    use super::{Language, Token, lex};
 
     fn adl(src: &str) -> Vec<Token> {
-        lex_adl(src)
+        lex(Language::Adl, src)
             .unwrap_or_else(|e| panic!("lex failed: {e}"))
             .into_iter()
             .map(|s| s.token)
@@ -334,7 +301,7 @@ mod tests {
     }
 
     fn odin(src: &str) -> Vec<Token> {
-        lex_odin(src)
+        lex(Language::Odin, src)
             .unwrap_or_else(|e| panic!("lex failed: {e}"))
             .into_iter()
             .map(|s| s.token)
@@ -342,7 +309,7 @@ mod tests {
     }
 
     fn bel(src: &str) -> Vec<Token> {
-        lex_bel(src)
+        lex(Language::Bel, src)
             .unwrap_or_else(|e| panic!("lex failed: {e}"))
             .into_iter()
             .map(|s| s.token)
@@ -544,7 +511,7 @@ mod tests {
             vec![Token::String("\"line1\nline2\"".into())]
         );
         // illegal escape (`\d`) is a lex error per master03.
-        assert!(lex_adl(r#""bad \d escape""#).is_err());
+        assert!(lex(Language::Adl, r#""bad \d escape""#).is_err());
         // BOM is skipped, not an error.
         assert_eq!(
             adl("\u{feff}archetype"),
@@ -559,12 +526,15 @@ mod tests {
         for ok in [
             r"'\n'", r"'\t'", r"'\r'", r"'\\'", r#"'\"'"#, r"'\''", "'x'", "'ü'",
         ] {
-            assert!(lex_adl(ok).is_ok(), "legal character must lex: {ok}");
+            assert!(
+                lex(Language::Adl, ok).is_ok(),
+                "legal character must lex: {ok}"
+            );
         }
         // "Any other character combination starting with a backslash is
         // illegal" — an unknown escape fails the lex.
-        assert!(lex_adl(r"'\q'").is_err());
-        assert!(lex_adl(r"'\d'").is_err());
+        assert!(lex(Language::Adl, r"'\q'").is_err());
+        assert!(lex(Language::Adl, r"'\d'").is_err());
     }
 
     #[test]
@@ -758,7 +728,10 @@ mod tests {
         );
         // `$variable`, `{`, `:` and `%` have no ODIN production at all.
         for refused in ["$v", "{", ":", "%", "^", "!="] {
-            assert!(lex_odin(refused).is_err(), "ODIN must refuse {refused:?}");
+            assert!(
+                lex(Language::Odin, refused).is_err(),
+                "ODIN must refuse {refused:?}"
+            );
         }
         // `@` IS an ODIN token: it opens the document prefix
         // `schema_identifier ::= '@' schema '=' URI`
@@ -840,7 +813,7 @@ mod tests {
         assert_eq!(adl("29e6"), vec![Token::Integer("29e6".into())]);
         assert_eq!(bel("TRUE"), vec![Token::AlphaUcId("TRUE".into())]);
         assert_eq!(adl("TRUE"), vec![Token::SymTrue]);
-        assert!(lex_bel("_default").is_err());
+        assert!(lex(Language::Bel, "_default").is_err());
         // the movable-path leader and the single-segment predicate form.
         assert_eq!(bel("//foo/bar"), vec![Token::AdlPath("//foo/bar".into())]);
         assert_eq!(
@@ -885,7 +858,7 @@ mod tests {
             odin("\u{feff}archetype"),
             vec![Token::AlphaLcId("archetype".into())]
         );
-        let error = lex_bel("\u{feff}archetype").expect_err("BEL refuses a BOM");
+        let error = lex(Language::Bel, "\u{feff}archetype").expect_err("BEL refuses a BOM");
         assert_eq!(error.span, 0..3);
     }
 }

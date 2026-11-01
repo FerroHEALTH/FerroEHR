@@ -4,7 +4,7 @@
 
 //! ODIN parser — a `chumsky` parser over the shared
 //! [`crate::v1_1::lexer`] token stream under its ODIN reading
-//! ([`crate::v1_1::lexer::lex_odin`]), transcribed from `odin.g4` /
+//! ([`crate::v1_1::lexer::lex`]), transcribed from `odin.g4` /
 //! `odin_values.g4`. Produces an [`OdinValue`] tree.
 
 use chumsky::DefaultExpected;

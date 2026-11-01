@@ -460,7 +460,7 @@ async fn warn_and_off_verify_on_read_serve_a_tampered_row() {
 
 #[tokio::test]
 async fn canonical_xml_carries_the_signature() {
-    // The generated canonical-XML serialization (the same `to_canonical_xml` the
+    // The generated canonical-XML serialization (the same `runtime::to_xml` the
     // REST negotiate path uses) emits the `signature` element.
     use openehr_rm::v1_2::common::change_control::original_version::OriginalVersion;
     use openehr_rm::v1_2::composition::composition::Composition;
@@ -498,13 +498,13 @@ async fn canonical_xml_carries_the_signature() {
     }))
     .expect("typed ORIGINAL_VERSION");
 
-    let xml = openehr_its::xml::to_canonical_xml_declared(
+    let xml = openehr_its::xml::runtime::to_xml_declared(
         &ov,
         "version",
         "VERSION",
         openehr_its::xml::runtime::Namespace::V1,
     )
-    .expect("to_canonical_xml_declared");
+    .expect("to_xml_declared");
     assert!(
         xml.contains("sha256:jtWX/CULavvzX0ehjowv2XZPICTQhN1t0+AXHfbEaNc="),
         "canonical XML must carry the signature; got:\n{xml}"

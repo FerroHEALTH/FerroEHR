@@ -28,7 +28,7 @@ else; each helper has exactly ONE home.
 
 | module | role |
 |---|---|
-| `source` | the outer artefact parser: sections, kind, meta, spans (`parse_source(src, dialect)`) — over `openehr_lang::lexer::lex_adl` |
+| `source` | the outer artefact parser: sections, kind, meta, spans (`parse_source(src, dialect)`) — over `openehr_lang::v1_1::lexer::lex(Language::Adl, ..)` |
 | `parse/mod` | the **public `Dialect` seam**, the `Parser` state, `parse_definition_body(body, dialect)`, the re-entrant sub-parsers `rules` drives, cursor/error helpers |
 | `parse/parser` | the cADL structure / attribute / tuple productions |
 | `parse/refs` | archetype slots, `use_archetype` roots, `use_node` proxies |
@@ -83,7 +83,7 @@ else; each helper has exactly ONE home.
 
 - **This crate has NO lexer.** The cADL token stream is the one workspace
   lexical layer, `openehr_lang::lexer` (`Token`/`Spanned`), read under its ADL
-  reading `lex_adl`; the ODIN and BEL readings of the same superset back
+  reading `lex(Language::Adl, ..)`; the ODIN and BEL readings of the same superset back
   `openehr_lang::odin` and the `rules` BEL parse. Never add a token type or a
   `logos` enum here — a lexical difference is a rule in
   `openehr-lang`'s `lexer/reclassify.rs`, adjudicated against the vendored

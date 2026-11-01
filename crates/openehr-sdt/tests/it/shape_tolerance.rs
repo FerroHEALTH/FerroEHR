@@ -31,7 +31,7 @@ use serde_json::{Number, Value};
 use crate::common::corpus_files;
 
 fn verdicts(doc: &Value) -> Vec<String> {
-    let mut out: Vec<String> = validate_rm_and_terminology(doc)
+    let mut out: Vec<String> = validate_rm_and_terminology(doc, "COMPOSITION")
         .into_iter()
         .map(|m| format!("{}|{:?}|{}", m.path, m.kind, m.message))
         .collect();

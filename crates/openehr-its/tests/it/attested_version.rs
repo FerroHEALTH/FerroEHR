@@ -26,8 +26,9 @@
 
 use std::path::{Path, PathBuf};
 
+use openehr_its::xml::from_canonical_xml;
 use openehr_its::xml::runtime::Namespace;
-use openehr_its::xml::{from_canonical_xml, to_canonical_xml, to_canonical_xml_declared};
+use openehr_its::xml::runtime::to_xml;
 use openehr_rm::v1_2::common::change_control::original_version::OriginalVersion;
 use openehr_rm::v1_2::composition::composition::Composition;
 
@@ -102,8 +103,9 @@ fn the_attested_version_round_trips_through_canonical_json() {
 #[test]
 fn the_attested_version_round_trips_through_canonical_xml() {
     let typed = attested_version();
-    let xml = to_canonical_xml_declared(&typed, "version", "VERSION", Namespace::V1)
-        .expect("serialize under the published <version> root");
+    let xml =
+        openehr_its::xml::runtime::to_xml_declared(&typed, "version", "VERSION", Namespace::V1)
+            .expect("serialize under the published <version> root");
     assert!(
         xml.contains("<attestations>"),
         "the attestations reach the XML wire: {xml}"
@@ -111,8 +113,8 @@ fn the_attested_version_round_trips_through_canonical_xml() {
 
     let back: OriginalVersion<Composition> = from_canonical_xml(&xml).expect("re-read");
     assert_eq!(
-        to_canonical_xml(&back, "original_version").expect("re-serialize"),
-        to_canonical_xml(&typed, "original_version").expect("serialize"),
+        to_xml(&back, "original_version", Namespace::V2).expect("re-serialize"),
+        to_xml(&typed, "original_version", Namespace::V2).expect("serialize"),
         "the XML round trip must carry the whole ORIGINAL_VERSION, attestations included"
     );
 

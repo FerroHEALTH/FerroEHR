@@ -80,12 +80,12 @@ fn emit_quantified_extras(dv: &Value, out: &mut SimNode, with_accuracy: bool) {
     }
 }
 
-/// RM leaf value → datum attrs on `out` (see [`super::emit_leaf`]).
+/// RM leaf value → datum attrs on `out` (the [`super`] module docs, `emit_leaf`).
 #[expect(
     clippy::match_same_arms,
     reason = "the arms are kept explicit per RM type so each mapping stays readable next to its type name"
 )]
-pub(super) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out: &mut SimNode) {
+pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out: &mut SimNode) {
     let ty = rm
         .get("_type")
         .and_then(Value::as_str)

@@ -91,7 +91,7 @@ fn id_of(archetype: &Archetype) -> String {
 
 /// A repository holding `ids`, inserted in that order.
 fn holding(ids: &[String]) -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     for id in ids {
         repo.insert(archetype(id));
     }
@@ -104,7 +104,7 @@ fn id(version: &str) -> String {
 
 /// The physical id `reference` resolves to in `repo`.
 fn resolved(repo: &ArchetypeRepository, reference: &str) -> Option<String> {
-    repo.get(reference).map(id_of)
+    repo.resolve(reference, None).map(id_of)
 }
 
 #[test]

@@ -525,7 +525,7 @@ fn both_custom_forms_convert_to_adl2_and_print() {
 \t\t\t\t\t>",
         "\t\t\t\t\t0|[local::at0039],\n\t\t\t\t\t1|[local::at0040]",
     ] {
-        let mut log = ConversionLog::new();
+        let mut log = ConversionLog::default();
         let converted = parse_and_convert(
             &archetype_with(constraint),
             &ConvertConfig::default(),

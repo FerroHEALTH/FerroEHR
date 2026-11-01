@@ -52,7 +52,7 @@ fn composition_with_untagged_context(setting_code: &str) -> Value {
 #[test]
 fn untagged_context_setting_is_enforced() {
     let bad = composition_with_untagged_context("999");
-    let violations = validate_rm_and_terminology(&bad);
+    let violations = validate_rm_and_terminology(&bad, "COMPOSITION");
     assert!(
         violations
             .iter()
@@ -62,7 +62,7 @@ fn untagged_context_setting_is_enforced() {
     );
 
     let good = composition_with_untagged_context("228");
-    let violations = validate_rm_and_terminology(&good);
+    let violations = validate_rm_and_terminology(&good, "COMPOSITION");
     assert!(
         !violations
             .iter()
@@ -79,7 +79,7 @@ fn untagged_context_setting_is_enforced() {
 fn untagged_context_runs_core_invariants() {
     let mut comp = composition_with_untagged_context("228");
     comp["context"]["location"] = json!("");
-    let violations = validate_rm_and_terminology(&comp);
+    let violations = validate_rm_and_terminology(&comp, "COMPOSITION");
     assert!(
         violations
             .iter()
@@ -147,13 +147,13 @@ fn corpus_verdicts_are_tag_presence_independent() {
         if doc.get("_type").and_then(Value::as_str) != Some("COMPOSITION") {
             continue;
         }
-        let tagged: Vec<String> = validate_rm_and_terminology(&doc)
+        let tagged: Vec<String> = validate_rm_and_terminology(&doc, "COMPOSITION")
             .into_iter()
             .map(|m| format!("{}|{:?}|{}", m.path, m.kind, m.message))
             .collect();
         let mut stripped = doc.clone();
         strip_omittable_tags(&mut stripped, Some("COMPOSITION"));
-        let untagged: Vec<String> = validate_rm_and_terminology(&stripped)
+        let untagged: Vec<String> = validate_rm_and_terminology(&stripped, "COMPOSITION")
             .into_iter()
             .map(|m| format!("{}|{:?}|{}", m.path, m.kind, m.message))
             .collect();

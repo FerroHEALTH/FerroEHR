@@ -45,7 +45,7 @@ use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::sibling_order::SiblingOrder;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 use openehr_base::prelude::MultiplicityInterval;
-use openehr_lang::nesting::MAX_NESTING_DEPTH;
+use openehr_lang::nesting::{MAX_NESTING_DEPTH, Nesting};
 
 use crate::aom::access::{
     child_occurrences, complex_attributes, complex_node_id, object_node_id, sibling_order,
@@ -115,7 +115,7 @@ pub fn flatten(
     let mut flat_def = pv.definition.clone();
     set_complex_node_id(&mut flat_def, complex_node_id(cv.definition).to_owned());
     overlay_root(&mut flat_def, cv.definition, child_level)?;
-    check_definition_nesting(&flat_def)
+    check_definition_nesting(&flat_def, Nesting::ROOT)
         .map_err(|e| FlattenError::NestingTooDeep { limit: e.limit })?;
 
     // Terminology (master09.09 term_definitions accumulate / value_sets replace;

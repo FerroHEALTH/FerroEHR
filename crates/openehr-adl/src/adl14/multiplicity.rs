@@ -93,17 +93,13 @@ fn set_occurrences(obj: &mut CObject, occ: openehr_base::prelude::MultiplicityIn
 }
 
 /// Drop the RM-default cardinality / occurrences the ADL 2 output leaves unstated.
-pub(super) fn elide_multiplicity(def: &mut CComplexObject) {
-    elide_cco(def);
-}
-
-fn elide_cco(cco: &mut CComplexObject) {
+pub(super) fn elide_multiplicity(cco: &mut CComplexObject) {
     let Some(d) = cco_data_mut(cco) else { return };
     for attr in d.attributes.iter_mut().flatten() {
         elide_attr(attr);
         for child in attr.children.iter_mut().flatten() {
             if let CObject::CComplexObject(c) = child {
-                elide_cco(c);
+                elide_multiplicity(c);
             }
         }
     }

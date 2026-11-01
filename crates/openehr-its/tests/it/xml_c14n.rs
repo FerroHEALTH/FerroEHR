@@ -19,7 +19,7 @@
 //! compositions/CANONICAL_XML/*.xml` — canonical COMPOSITION documents with
 //! `archetype_node_id` as an attribute, `xsi:type` dispatch, and canonical
 //! element order. Method: parse the fixture via `FromXml`, re-serialize via
-//! `to_canonical_xml`, canonicalize both the fixture and our output with
+//! `openehr_its::xml::runtime::to_xml`, canonicalize both the fixture and our output with
 //! `xmllint --noblanks --c14n`, and byte-compare.
 //!
 //! ## The one documented convention difference: `xsi:type` verbosity
@@ -46,7 +46,7 @@
 //! `xml_ehrbase`/`xml_roundtrip`.
 
 use openehr_its::xml::runtime::from_xml;
-use openehr_its::xml::to_canonical_xml_ns;
+use openehr_its::xml::runtime::to_xml;
 use openehr_rm::prelude::Composition;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -183,7 +183,7 @@ fn composition_c14n_matches_cnf_canonical_fixtures() {
         };
         // The CNF reference corpus is v1-era, so parity is judged in the
         // fixtures' own lineage (the crate default is v2, #2453).
-        let ours = to_canonical_xml_ns(
+        let ours = to_xml(
             &compo,
             "composition",
             openehr_its::xml::runtime::Namespace::V1,

@@ -94,11 +94,11 @@ fn value_sets(t: &ArchetypeTerminology) -> BTreeMap<String, Vec<String>> {
 /// specialised source), returning the converted archetype.
 fn convert_pair(adl: &str, parent: Option<&str>) -> Archetype {
     let cfg = ConvertConfig::default();
-    let mut log = ConversionLog::new();
+    let mut log = ConversionLog::default();
     let mut got = parse_and_convert(&read(adl), &cfg, &mut log).expect("convert");
     if let Some(p) = parent {
-        let parent_conv =
-            parse_and_convert(&read(p), &cfg, &mut ConversionLog::new()).expect("convert parent");
+        let parent_conv = parse_and_convert(&read(p), &cfg, &mut ConversionLog::default())
+            .expect("convert parent");
         differentiate(&mut got, &parent_conv);
     }
     got
@@ -141,7 +141,7 @@ fn assert_structural_match(adl: &str, adls: &str, parent: Option<&str>) {
 /// identical definition (the conversion log makes synthesised codes stable).
 fn assert_idempotent(adl: &str, parent: Option<&str>) {
     let cfg = ConvertConfig::default();
-    let mut log = ConversionLog::new();
+    let mut log = ConversionLog::default();
     let first = parse_and_convert(&read(adl), &cfg, &mut log).expect("first convert");
     // Re-run consulting the SAME log (re-parse the source afresh).
     let reparsed = parse_artefact(&read(adl), Dialect::Adl14).expect("reparse");
@@ -353,7 +353,7 @@ ontology
     >
 "#;
     let cfg = ConvertConfig::default();
-    let mut log = ConversionLog::new();
+    let mut log = ConversionLog::default();
     let got = parse_and_convert(src, &cfg, &mut log).expect("convert");
     let issues = openehr_adl::validate::validate_integrity(&got, None);
     let errors: Vec<&str> = issues
@@ -442,7 +442,7 @@ ontology
         collapse_specialised_codes: true,
         ..ConvertConfig::default()
     };
-    let mut log = ConversionLog::new();
+    let mut log = ConversionLog::default();
     let got = parse_and_convert(src, &cfg, &mut log).expect("convert");
     let issues = openehr_adl::validate::validate_integrity(&got, None);
     let errors: Vec<&str> = issues
@@ -520,7 +520,7 @@ ontology
 \t\t>
 \t>
 ";
-    let mut log = ConversionLog::new();
+    let mut log = ConversionLog::default();
     let converted = parse_and_convert(src, &ConvertConfig::default(), &mut log).expect("converts");
     let (definition, _) = data(&converted);
     let items = openehr_adl::aom::access::complex_attributes(definition)
@@ -608,7 +608,7 @@ ontology
 }
 
 fn convert_source(src: &str) -> Archetype {
-    let mut log = ConversionLog::new();
+    let mut log = ConversionLog::default();
     parse_and_convert(src, &ConvertConfig::default(), &mut log).expect("converts")
 }
 

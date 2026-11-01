@@ -155,7 +155,7 @@ pub struct SourceArtefact {
 /// or missing-required-section). ODIN parse failures surface as
 /// [`SyntaxErrorCode::Sdinv`] carrying the section name.
 pub fn parse_source(src: &str, dialect: Dialect) -> Result<SourceArtefact, Vec<SyntaxError>> {
-    let toks = match openehr_lang::v1_1::lexer::lex_adl(src) {
+    let toks = match openehr_lang::v1_1::lexer::lex(openehr_lang::v1_1::lexer::Language::Adl, src) {
         Ok(t) => t,
         Err(failure) => return Err(vec![crate::error::lexical(&failure, src)]),
     };

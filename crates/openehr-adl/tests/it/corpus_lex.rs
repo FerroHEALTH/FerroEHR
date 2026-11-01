@@ -67,7 +67,7 @@ fn every_adl2_source_lexes() {
             continue;
         }
         let src = std::fs::read_to_string(path).expect("read corpus file");
-        match openehr_lang::v1_1::lexer::lex_adl(&src) {
+        match openehr_lang::v1_1::lexer::lex(openehr_lang::v1_1::lexer::Language::Adl, &src) {
             Ok(_) => lexed += 1,
             Err(e) => failures.push(format!("{}: {e}", path.display())),
         }

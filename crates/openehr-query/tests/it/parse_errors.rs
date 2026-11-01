@@ -170,7 +170,7 @@ fn the_spanned_entry_point_is_additive() {
     let spanned = lex_spanned(MISPLACED_KEYWORD).expect("the source lexes cleanly");
     assert_eq!(plain, spanned.tokens(), "the token sequence is unchanged");
 
-    let err = parse(&plain).expect_err("a trailing SELECT ends no query");
+    let err = parse(&plain, None).expect_err("a trailing SELECT ends no query");
     let ParseError::Syntax { faults } = err else {
         panic!("expected a syntax failure, got {err:?}");
     };

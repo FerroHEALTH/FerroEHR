@@ -235,8 +235,12 @@ async fn required_example_validates_and_converts() {
         let typed: openehr_rm::prelude::Composition =
             openehr_its::json::from_canonical_value(&comp)
                 .unwrap_or_else(|e| panic!("{rel}: example deserialises as Composition: {e}"));
-        let xml_out = openehr_its::xml::to_canonical_xml(&typed, "composition")
-            .unwrap_or_else(|e| panic!("{rel}: canonical XML: {e}"));
+        let xml_out = openehr_its::xml::runtime::to_xml(
+            &typed,
+            "composition",
+            openehr_its::xml::runtime::Namespace::V2,
+        )
+        .unwrap_or_else(|e| panic!("{rel}: canonical XML: {e}"));
         assert!(
             xml_out.contains("<composition"),
             "{rel}: XML has a composition root"

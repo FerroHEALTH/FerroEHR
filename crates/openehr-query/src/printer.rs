@@ -19,15 +19,10 @@ use crate::ast::{
     WhereExpr, comp_op_text,
 };
 
-/// Render a whole query as canonical AQL text.
+/// Render a whole query as canonical AQL text, with `from_prefix` written
+/// between `FROM` and the containment expression when given.
 #[must_use]
-pub fn to_aql(query: &SelectQuery) -> String {
-    render(query, None)
-}
-
-/// Renders `query`, with `from_prefix` written between `FROM` and the
-/// containment expression when given.
-pub(crate) fn render(query: &SelectQuery, from_prefix: Option<&str>) -> String {
+pub fn to_aql(query: &SelectQuery, from_prefix: Option<&str>) -> String {
     let mut out = String::new();
     select_clause(&mut out, query);
     out.push_str(" FROM ");
@@ -472,7 +467,7 @@ mod tests {
     /// parse → print → parse must reproduce the same AST.
     fn round_trips(src: &str) {
         let first = parse_str(src).expect("original parses");
-        let printed = to_aql(&first);
+        let printed = to_aql(&first, None);
         let second = parse_str(&printed)
             .unwrap_or_else(|e| panic!("printed AQL failed to parse: {printed}\n  {e}"));
         assert_eq!(first, second, "AST drift through print for: {printed}");

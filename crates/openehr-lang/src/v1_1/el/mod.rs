@@ -342,9 +342,12 @@ pub fn parse_boolean_expression_with<B: ElBuilder>(
     src: &str,
     builder: &mut B,
 ) -> Result<B::Expr, ElError> {
-    let tokens = crate::v1_1::lexer::lex_el(src).map_err(|failure| ElError::Lex {
-        at: failure.span.start,
-        text: failure.text,
-    })?;
+    let tokens =
+        crate::v1_1::lexer::lex(crate::v1_1::lexer::Language::El, src).map_err(|failure| {
+            ElError::Lex {
+                at: failure.span.start,
+                text: failure.text,
+            }
+        })?;
     parser::Parser::new(src, &tokens, builder).parse_whole_boolean_expression()
 }

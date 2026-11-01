@@ -148,15 +148,15 @@ fn walk(node: &WebTemplateNode, rm: &Value, out: &mut SimNode) {
             return;
         }
         let list_open = node.inputs.iter().find_map(|i| i.list_open);
-        map::emit_leaf(rm, &node.rm_type, list_open, out);
+        map::data_values::emit_leaf(rm, &node.rm_type, list_open, out);
         // Value-level `_` RM attributes of the leaf value itself
         // (`master05` per-type tables: `_normal_range`, `_mapping`, …).
-        map::emit_rm_attrs(rm, base_type(&node.rm_type), out);
+        map::structures::emit_rm_attrs(rm, base_type(&node.rm_type), out);
         return;
     }
     // Container-level `_` RM attribute families (`master05` per-class
     // tables: `_uid`, `_link:i`, `_feeder_audit`, `_work_flow_id`, …).
-    map::emit_rm_attrs(rm, base_type(&node.rm_type), out);
+    map::structures::emit_rm_attrs(rm, base_type(&node.rm_type), out);
 
     let names = name_fallback(node);
     for child in &node.children {
@@ -235,7 +235,7 @@ fn walk_child(
         // `_link:i`, `_feeder_audit`); the leaf walk above saw only the DV
         // value, so surface the wrapper's here.
         if let Some(element) = occurrence.element {
-            map::emit_rm_attrs(element, "ELEMENT", slot);
+            map::structures::emit_rm_attrs(element, "ELEMENT", slot);
         }
     }
 }
@@ -441,7 +441,7 @@ fn emit_direct_leaf(
         return;
     }
     if let Some(v) = value.filter(|v| !v.is_null()) {
-        map::emit_leaf(v, rm_type, None, out.occurrence_mut(name, None));
+        map::data_values::emit_leaf(v, rm_type, None, out.occurrence_mut(name, None));
     }
 }
 
@@ -526,10 +526,10 @@ fn emit_interval_event_paths(node: &WebTemplateNode, rm: &Value, out: &mut SimNo
 fn emit_ism_transition(ism: &Value, out: &mut SimNode) {
     for attr in ["current_state", "transition", "careflow_step"] {
         if let Some(cs) = ism.get(attr).filter(|v| !v.is_null()) {
-            map::emit_leaf(cs, "DV_CODED_TEXT", None, out.occurrence_mut(attr, None));
+            map::data_values::emit_leaf(cs, "DV_CODED_TEXT", None, out.occurrence_mut(attr, None));
         }
     }
-    map::emit_rm_attrs(ism, "ISM_TRANSITION", out);
+    map::structures::emit_rm_attrs(ism, "ISM_TRANSITION", out);
 }
 
 /// The base (generic-stripped) RM type name.

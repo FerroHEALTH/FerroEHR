@@ -56,7 +56,7 @@ fn parse(path: &Path) -> Archetype {
 /// A repository over the whole templates directory, so fillers referenced by the
 /// parents (`good_include`/`bad_include`) and by the templates resolve.
 fn templates_repo() -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     for entry in std::fs::read_dir(TEMPLATES).unwrap().flatten() {
         let p = entry.path();
         if p.extension().is_some_and(|e| e == "adls") {

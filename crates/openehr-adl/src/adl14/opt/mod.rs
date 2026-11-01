@@ -225,7 +225,7 @@ fn convert_opt_to_archetypes(
     };
     let mut archetypes = Vec::with_capacity(units.len());
     for unit in units {
-        let mut log = ConversionLog::new();
+        let mut log = ConversionLog::default();
         let hrid = parse_hrid(&unit.archetype_id).map_err(|reason| OptConvertError::Hrid {
             archetype_id: unit.archetype_id.clone(),
             reason,

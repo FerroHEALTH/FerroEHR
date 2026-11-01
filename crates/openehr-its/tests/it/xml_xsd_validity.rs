@@ -53,9 +53,8 @@
 
 use openehr_its::json::from_canonical_value;
 use openehr_its::xml::runtime::Namespace;
-use openehr_its::xml::{
-    LOCATABLE_ROOT, declared_abstract_root_type, to_canonical_xml_declared, to_canonical_xml_ns,
-};
+use openehr_its::xml::runtime::to_xml;
+use openehr_its::xml::{LOCATABLE_ROOT, declared_abstract_root_type};
 use openehr_rm::prelude::{Composition, Folder};
 use openehr_rm::v1_2::model;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
@@ -1008,15 +1007,18 @@ fn validate(bundle: &Bundle, vector: &Vector) -> Outcome {
         "COMPOSITION" => {
             let typed: Composition =
                 from_canonical_value(&vector.value).expect("typed COMPOSITION");
-            to_canonical_xml_ns(&typed, vector.root, bundle.serialize_as)
+            to_xml(&typed, vector.root, bundle.serialize_as)
         }
         "FOLDER" => {
             let typed: Folder = from_canonical_value(&vector.value).expect("typed FOLDER");
             match declared_abstract_root_type(vector.root) {
-                Some(declared) => {
-                    to_canonical_xml_declared(&typed, vector.root, declared, bundle.serialize_as)
-                }
-                None => to_canonical_xml_ns(&typed, vector.root, bundle.serialize_as),
+                Some(declared) => openehr_its::xml::runtime::to_xml_declared(
+                    &typed,
+                    vector.root,
+                    declared,
+                    bundle.serialize_as,
+                ),
+                None => to_xml(&typed, vector.root, bundle.serialize_as),
             }
         }
         other => panic!("vector {}: unhandled RM type {other}", vector.label),

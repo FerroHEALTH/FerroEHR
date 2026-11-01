@@ -199,7 +199,7 @@ fn heterogeneous_rows_partition_into_alternatives() {
             .join("tests/corpus/adl14-cadl/openEHR-EHR-CLUSTER.heterogeneous_quantity_rows.v1.adl"),
     )
     .expect("fixture exists");
-    let mut log = ConversionLog::new();
+    let mut log = ConversionLog::default();
     let converted = parse_and_convert(&src, &ConvertConfig::default(), &mut log)
         .expect("the heterogeneous-rows fixture converts");
     let printed = print(&converted).expect("print the converted artefact");

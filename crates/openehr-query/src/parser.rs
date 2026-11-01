@@ -212,20 +212,6 @@ fn check_bounds(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<(),
     Ok(())
 }
 
-/// Parses a token slice into a [`SelectQuery`].
-///
-/// A bare token slice carries no source positions, so every reported
-/// [`SyntaxFault`] has `bytes: None` and every [`Span`] in the tree is
-/// unknown; use [`parse_spanned`] to keep them.
-///
-/// # Errors
-/// [`ParseError::TooDeep`] for a query nested beyond [`MAX_NESTING`] or
-/// [`MAX_EXPRESSION_DEPTH`], otherwise [`ParseError::Syntax`], carrying every
-/// token position the parser reported.
-pub fn parse(tokens: &[Token]) -> Result<SelectQuery, ParseError> {
-    run(tokens, None)
-}
-
 /// Parses a spanned token stream into a [`SelectQuery`], keeping source
 /// positions: on every [`Span`] in the tree, and on any failure.
 ///
@@ -235,10 +221,21 @@ pub fn parse(tokens: &[Token]) -> Result<SelectQuery, ParseError> {
 /// carrying both the token indices and the byte range of the source they
 /// cover.
 pub fn parse_spanned(tokens: &SpannedTokens) -> Result<SelectQuery, ParseError> {
-    run(tokens.tokens(), Some(tokens))
+    parse(tokens.tokens(), Some(tokens))
 }
 
-fn run(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<SelectQuery, ParseError> {
+/// Parses a token slice into a [`SelectQuery`].
+///
+/// `spanned` is the stream `tokens` was read from, when there is one: its byte
+/// ranges then land on every [`Span`] in the tree and on any failure. With
+/// `None` every reported [`SyntaxFault`] has `bytes: None` and every [`Span`]
+/// is unknown; [`parse_spanned`] passes the stream for you.
+///
+/// # Errors
+/// [`ParseError::TooDeep`] for a query nested beyond [`MAX_NESTING`] or
+/// [`MAX_EXPRESSION_DEPTH`], otherwise [`ParseError::Syntax`], carrying every
+/// token position the parser reported.
+pub fn parse(tokens: &[Token], spanned: Option<&SpannedTokens>) -> Result<SelectQuery, ParseError> {
     check_bounds(tokens, spanned)?;
     let mut parsed = query().parse(tokens).into_result().map_err(|errs| {
         let faults = errs
@@ -269,12 +266,6 @@ impl VisitMut for ResolveSpans<'_> {
             _ => Span::default(),
         };
     }
-}
-
-/// The span of a parsed node while it is still a token-index range;
-/// [`ResolveSpans`] maps it to bytes once the whole query has parsed.
-fn token_span(range: core::ops::Range<usize>) -> Span {
-    Span::new(range)
 }
 
 /// Lexes then parses `src` in one step.
@@ -529,7 +520,7 @@ fn path_parsers<'a>() -> (
             root,
             predicate,
             path,
-            span: token_span(e.span().into_range()),
+            span: Span::new(e.span().into_range()),
         });
 
     (identified, predicate, standard)
@@ -910,7 +901,7 @@ fn query<'a>() -> impl Parser<'a, &'a [Token], SelectQuery, Err<'a>> {
 
     let where_expr = recursive(|where_expr| {
         let atom = identified_expr
-            .map_with(|expr, e| WhereExpr::Identified(expr, token_span(e.span().into_range())))
+            .map_with(|expr, e| WhereExpr::Identified(expr, Span::new(e.span().into_range())))
             .or(where_expr
                 .clone()
                 .delimited_by(just(Token::LeftParen), just(Token::RightParen)));

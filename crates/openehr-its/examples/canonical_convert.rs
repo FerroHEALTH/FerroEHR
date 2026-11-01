@@ -69,13 +69,11 @@ fn emit<T: serde::de::DeserializeOwned + serde::Serialize + ToXml>(
         Form::Xml {
             root_tag,
             declared_type: None,
-        } => openehr_its::xml::to_canonical_xml(&typed, root_tag)?,
+        } => openehr_its::xml::runtime::to_xml(&typed, root_tag, Namespace::V2)?,
         Form::Xml {
             root_tag,
             declared_type: Some(declared),
-        } => {
-            openehr_its::xml::to_canonical_xml_declared(&typed, root_tag, declared, Namespace::V1)?
-        }
+        } => openehr_its::xml::runtime::to_xml_declared(&typed, root_tag, declared, Namespace::V1)?,
         Form::Json => pretty(&openehr_its::json::to_canonical_value(&typed))?,
     })
 }

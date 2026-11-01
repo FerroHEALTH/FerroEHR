@@ -266,10 +266,13 @@ pub fn parse_statements_with<B: BelBuilder>(
     src: &str,
     builder: &mut B,
 ) -> Result<Vec<B::Stmt>, BelError> {
-    let tokens = crate::v1_1::lexer::lex_bel(src).map_err(|failure| BelError::Lex {
-        at: failure.span.start,
-        text: failure.text,
-    })?;
+    let tokens =
+        crate::v1_1::lexer::lex(crate::v1_1::lexer::Language::Bel, src).map_err(|failure| {
+            BelError::Lex {
+                at: failure.span.start,
+                text: failure.text,
+            }
+        })?;
     parser::Parser::new(src, &tokens, builder).parse_statement_block()
 }
 
@@ -284,12 +287,6 @@ pub struct BeomBuilder {
 }
 
 impl BeomBuilder {
-    /// A fresh builder.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// The [`ExprTypeDef`] recorded for `name` (or an object-reference default).
     fn type_of(&self, name: &str) -> ExprTypeDef {
         self.vars

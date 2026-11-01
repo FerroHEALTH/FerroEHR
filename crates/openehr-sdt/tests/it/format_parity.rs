@@ -23,7 +23,7 @@ use crate::common::corpus_files;
 
 /// The rendered verdict set for direct canonical-JSON arrival.
 fn json_route(doc: &Value) -> Vec<String> {
-    render(validate_rm_and_terminology(doc))
+    render(validate_rm_and_terminology(doc, "COMPOSITION"))
 }
 
 /// The rendered verdict set for canonical-XML arrival: the document is decoded
@@ -35,12 +35,16 @@ fn json_route(doc: &Value) -> Vec<String> {
 /// skips silently.
 fn xml_route(doc: &Value) -> Option<Vec<String>> {
     let typed: Composition = openehr_its::json::from_canonical_value(doc).ok()?;
-    let xml = openehr_its::xml::to_canonical_xml(&typed, "composition")
-        .expect("gate-proven ToXml serializes a decoded COMPOSITION");
+    let xml = openehr_its::xml::runtime::to_xml(
+        &typed,
+        "composition",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("gate-proven ToXml serializes a decoded COMPOSITION");
     let back: Composition = openehr_its::xml::from_canonical_xml(&xml)
         .expect("gate-proven FromXml parses its own ToXml output");
     let value = openehr_its::json::to_canonical_value(&back);
-    Some(render(validate_rm_and_terminology(&value)))
+    Some(render(validate_rm_and_terminology(&value, "COMPOSITION")))
 }
 
 fn render(msgs: Vec<openehr_sdt::rm_instance::ValidationMessage>) -> Vec<String> {

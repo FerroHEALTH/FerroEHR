@@ -295,7 +295,8 @@ impl Default for XmlWriter {
 /// Serialize a value as an openEHR canonical-XML document.
 ///
 /// `root_tag` is the root element name (e.g. `"composition"`); `ns` selects the
-/// wire lineage. The root carries no `xsi:type`.
+/// wire lineage. The root carries no `xsi:type`. Without a reason to choose,
+/// pass [`Namespace::V2`]: only its schemas describe every RM 1.2.0 class (#2453).
 ///
 /// # Errors
 /// Propagates serialization errors.
@@ -313,10 +314,9 @@ pub fn to_xml<T: ToXml + ?Sized>(
 /// Serializes a value as canonical XML under a statically-declared root type.
 ///
 /// This is the `declared`-aware sibling of [`to_xml`], for a published global
-/// element whose XSD type is abstract.
-///
-/// The value emits `xsi:type` through the same polymorphic-dispatch mechanism
-/// every nested slot uses, i.e. iff its concrete type differs from `declared`.
+/// element whose XSD type is abstract (`ALL/Version.xsd` `VERSION`; XML Schema
+/// Part 1 §3.4.6): the value emits `xsi:type` through the same dispatch every
+/// nested slot uses, iff its concrete type differs from `declared`.
 ///
 /// # Errors
 /// Propagates serialization errors.

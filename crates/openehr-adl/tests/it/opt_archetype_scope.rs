@@ -155,7 +155,7 @@ fn template_term(code: &str) -> String {
 fn an_included_archetype_may_reuse_the_templates_node_ids() {
     assert_eq!(errors(OPT), Vec::new());
     let integrity =
-        validate_source_integrity(OPT, Dialect::Adl2, Some(&ArchetypeRepository::new()))
+        validate_source_integrity(OPT, Dialect::Adl2, Some(&ArchetypeRepository::default()))
             .expect("the fixture must parse");
     assert!(
         integrity.iter().all(|i| i.severity != Severity::Error),
@@ -375,7 +375,7 @@ terminology
 /// archetype root too: the included `ITEM_TREE`'s `id2` is not the parent's.
 #[test]
 fn the_flat_form_walk_restarts_at_an_archetype_root() {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse_artefact(PARENT, Dialect::Adl2).expect("the parent must parse"));
     let vcosu = |src: &str| {
         validate_source(src, Some(&repo), &ProductionRmModel, &NoTerminologyResolver)

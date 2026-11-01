@@ -27,8 +27,8 @@ use crate::flat::sim::SimNode;
 
 // ── RM → sim ──────────────────────────────────────────────────────────────────
 
-/// Emit the `_`-prefixed families present on `rm` (see [`super::emit_rm_attrs`]).
-pub(super) fn emit_rm_attrs(rm: &Value, rm_type: &str, out: &mut SimNode) {
+/// The `_`-prefixed families present on `rm` (the [`super`] module docs, `emit_rm_attrs`).
+pub(crate) fn emit_rm_attrs(rm: &Value, rm_type: &str, out: &mut SimNode) {
     let ty = rm
         .get("_type")
         .and_then(Value::as_str)

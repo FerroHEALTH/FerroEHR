@@ -178,7 +178,7 @@ pub(crate) fn standard_queries() -> Vec<String> {
 /// identical AST; the error is the failure message to record.
 fn round_trip_failure(query: &str) -> Result<(), String> {
     let ast = openehr_query::parser::parse_str(query).map_err(|e| e.to_string())?;
-    let printed = openehr_query::printer::to_aql(&ast);
+    let printed = openehr_query::printer::to_aql(&ast, None);
     match openehr_query::parser::parse_str(&printed) {
         Ok(reparsed) if reparsed == ast => Ok(()),
         Ok(_) => Err(format!("printer round-trip drifted the AST via: {printed}")),

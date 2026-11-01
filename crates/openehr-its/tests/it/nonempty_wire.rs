@@ -485,7 +485,8 @@ fn a_present_but_empty_folder_list_refuses_at_parse() {
             "{label}: {refused}"
         );
         assert!(
-            openehr_its::json::validate_canonical_class(body).is_err(),
+            openehr_its::json::validate_canonical(body, openehr_its::json::SchemaRoot::EveryClass)
+                .is_err(),
             "{label}: the ITS-JSON schema refuses the same body"
         );
     }
@@ -532,7 +533,8 @@ fn a_present_but_empty_events_or_languages_list_refuses_at_parse() {
         let refused = decoded.expect_err("an empty array is refused");
         assert!(refused.to_string().contains(member), "{member}: {refused}");
         assert!(
-            openehr_its::json::validate_canonical_class(body).is_err(),
+            openehr_its::json::validate_canonical(body, openehr_its::json::SchemaRoot::EveryClass)
+                .is_err(),
             "{member}: the ITS-JSON schema refuses the same body"
         );
     }

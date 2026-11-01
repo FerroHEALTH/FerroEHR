@@ -24,11 +24,11 @@
     reason = "integration-test assertions and fixture plumbing"
 )]
 
-/// Every AQL source below must satisfy `parse(to_aql(parse(src))) == parse(src)`.
+/// Every AQL source below must satisfy `parse(to_aql(parse(src), None)) == parse(src)`.
 fn assert_round_trips(src: &str) {
     let parsed = openehr_query::parser::parse_str(src)
         .unwrap_or_else(|e| panic!("fixture must parse: {src}\n  {e}"));
-    let printed = openehr_query::printer::to_aql(&parsed);
+    let printed = openehr_query::printer::to_aql(&parsed, None);
     let reparsed = openehr_query::parser::parse_str(&printed)
         .unwrap_or_else(|e| panic!("printed AQL must reparse: {printed}\n  {e}"));
     assert_eq!(
@@ -207,8 +207,10 @@ fn every_builtin_function_is_classified_and_round_trips_its_spelling() {
                 }
                 other => panic!("{src} must classify as {function:?}, got {other:?}"),
             }
-            let printed =
-                openehr_query::printer::to_aql(&openehr_query::parser::parse_str(&src).unwrap());
+            let printed = openehr_query::printer::to_aql(
+                &openehr_query::parser::parse_str(&src).unwrap(),
+                None,
+            );
             assert!(printed.contains(&format!("{spelled}(")), "{printed}");
             assert_round_trips(&src);
         }

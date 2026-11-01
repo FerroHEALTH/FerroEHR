@@ -93,7 +93,7 @@ fn adls_files(dir: &Path) -> Vec<PathBuf> {
 }
 
 fn build_repository() -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     for path in adls_files(Path::new(CORPUS)) {
         let Ok(src) = std::fs::read_to_string(&path) else {
             continue;

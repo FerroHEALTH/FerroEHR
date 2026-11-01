@@ -33,7 +33,7 @@ fn binds_to(template: &str, parameters: &Parameters, literal: &str) -> TestResul
     let expected = parse_str(literal)?;
     assert_eq!(query, expected, "bound {template}");
     assert_eq!(
-        parse_str(&to_aql(&query))?,
+        parse_str(&to_aql(&query, None))?,
         expected,
         "reprinted {template}"
     );
@@ -42,7 +42,7 @@ fn binds_to(template: &str, parameters: &Parameters, literal: &str) -> TestResul
 
 #[test]
 fn every_parameter_position_binds_to_its_literal() -> TestResult {
-    let mut p = Parameters::new();
+    let mut p = Parameters::default();
     p.insert("ehrUid", string("7d44b88c-4199-4bad-97dc-d78268e01398"));
     p.insert(
         "archetypeId",
@@ -73,7 +73,7 @@ fn every_parameter_position_binds_to_its_literal() -> TestResult {
 
 #[test]
 fn a_version_predicate_and_a_node_predicate_bind() -> TestResult {
-    let mut p = Parameters::new();
+    let mut p = Parameters::default();
     p.insert("since", string("2026-01-01T00:00:00Z"));
     p.insert("node", string("at0001"));
     p.insert("other", string("openEHR-EHR-CLUSTER.device.v1"));
@@ -88,7 +88,7 @@ fn a_version_predicate_and_a_node_predicate_bind() -> TestResult {
 
 #[test]
 fn a_supplied_dollar_prefix_names_the_same_parameter() -> TestResult {
-    let mut p = Parameters::new();
+    let mut p = Parameters::default();
     p.insert("$uid", string("x"));
     binds_to(
         "SELECT c FROM COMPOSITION c WHERE c/uid/value = $uid",
@@ -100,11 +100,11 @@ fn a_supplied_dollar_prefix_names_the_same_parameter() -> TestResult {
 #[test]
 fn a_hostile_value_stays_inside_its_string_literal() -> TestResult {
     let hostile = "x' OR c/uid/value != '";
-    let mut p = Parameters::new();
+    let mut p = Parameters::default();
     p.insert("uid", string(hostile));
     let mut query = parse_str("SELECT c FROM COMPOSITION c WHERE c/uid/value = $uid")?;
     bind(&mut query, &p)?;
-    let reparsed = parse_str(&to_aql(&query))?;
+    let reparsed = parse_str(&to_aql(&query, None))?;
     assert_eq!(reparsed, query);
     let Some(openehr_query::ast::WhereExpr::Identified(
         openehr_query::ast::IdentifiedExpr::Compare {
@@ -127,7 +127,7 @@ fn every_fault_is_reported_by_name_and_the_query_is_left_untouched() -> TestResu
                WHERE o/a/value LIKE $pattern AND o/b/value = $missing AND o/c/value = $nan";
     let original = parse_str(src)?;
     let mut query = original.clone();
-    let mut p = Parameters::new();
+    let mut p = Parameters::default();
     p.insert("ehrUid", string(secret));
     p.insert("$ehrUid", string(secret));
     p.insert("archetype", string(secret));
@@ -169,7 +169,7 @@ fn every_fault_is_reported_by_name_and_the_query_is_left_untouched() -> TestResu
 #[test]
 fn a_value_that_is_no_literal_is_refused_by_name() -> TestResult {
     let mut query = parse_str("SELECT c FROM COMPOSITION c WHERE c/uid/value = $uid")?;
-    let mut p = Parameters::new();
+    let mut p = Parameters::default();
     p.insert_not_a_literal("uid");
     let error = bind(&mut query, &p).err().ok_or("refused")?;
     assert_eq!(
@@ -194,7 +194,7 @@ fn a_node_predicate_refuses_a_value_that_is_not_one_token() -> TestResult {
         "openEHR-EHR-CLUSTER.device.v1]",
     ] {
         let mut query = parse_str("SELECT c FROM COMPOSITION c CONTAINS CLUSTER k[$node and $x]")?;
-        let mut p = Parameters::new();
+        let mut p = Parameters::default();
         p.insert("node", string(value));
         p.insert("x", string("at0002"));
         let error = bind(&mut query, &p).err().ok_or("refused")?;
@@ -214,7 +214,7 @@ fn a_node_predicate_refuses_a_value_that_is_not_one_token() -> TestResult {
 fn a_query_without_parameters_binds_an_empty_set() -> TestResult {
     let mut query = parse_str("SELECT c FROM COMPOSITION c")?;
     let before = query.clone();
-    bind(&mut query, &Parameters::new())?;
+    bind(&mut query, &Parameters::default())?;
     assert_eq!(query, before);
     Ok(())
 }

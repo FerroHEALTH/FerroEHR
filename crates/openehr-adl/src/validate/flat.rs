@@ -54,7 +54,7 @@ use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use super::catalogue::ValidationCode;
 use super::scope;
 use super::structure::occurrences_lower;
-use super::terminology::{CodeUsage, collect_usage};
+use super::terminology::{CodeUsage, collect_usage_at};
 use super::{ValidationIssue, push_issue};
 use crate::aom::access::{aom_type, child_occurrences, complex_attributes, object_node_id};
 use crate::aom::interval::finite_upper;
@@ -258,7 +258,7 @@ pub(super) fn validate_flat_form(flat: &Archetype) -> Vec<ValidationIssue> {
     // VATDF: value at-codes used in the flattened definition must be defined.
     let mut usage = CodeUsage::default();
     let root = CObject::CComplexObject(v.definition.clone());
-    collect_usage(&root, &mut usage);
+    collect_usage_at(&root, "", &mut usage, None);
     for code in &usage.value_codes {
         if AdlCodeDefinitionsData::is_at_code(code) && !defined.contains(code.as_str()) {
             issues.push(ValidationIssue::new(

@@ -38,7 +38,7 @@ sections (spec-adherence.md; `/spec-lookup`).
   timeout, request-id, sensitive-headers, catch-panic, normalize-path. Auth is a
   `tower`/extractor layer (see `auth.md`).
 - **Content negotiation** (canonical JSON + XML) goes through `openehr-its`
-  (`to_canonical_json`/`from_canonical_json`, `to_canonical_xml`/
+  (`to_canonical_json`/`from_canonical_json`, `xml::runtime::to_xml`/
   `from_canonical_xml`); honour `Accept`/`Content-Type`/`Prefer` exactly as
   the ITS-REST spec requires.
 - **Errors → responses** via `openehr-its::rest::runtime::ApiError` (it carries

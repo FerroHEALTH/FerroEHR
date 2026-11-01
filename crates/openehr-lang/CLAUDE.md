@@ -136,9 +136,8 @@ line, the prelude) and `v1_0` (the released LANG 1.0.0).
 - **`src/v1_1/lexer/` is the ONE lexer in the workspace** for the ADL/ODIN/BEL
   family — one `logos` token superset (`lexer::Token`/`Spanned`, the union of
   `base_lexer.g4` + `adl_keywords.g4` + `odin.g4`/`odin_values.g4` +
-  `base_expressions.g4`) plus three thin entry points `lex_adl` / `lex_odin` /
-  `lex_bel` that apply a per-language **reclassification pass** over the shared
-  stream. Never add a second lexer, here or in a consuming crate; a language's
+  `base_expressions.g4`) read by one entry point, `lex(Language, src)`, which
+  applies a per-language **reclassification pass** over the shared stream. Never add a second lexer, here or in a consuming crate; a language's
   lexical difference is a rule in `lexer/reclassify.rs`, never a new DFA.
   - Keyword variants stay UNIT variants: a language that does not reserve a
     word gets the identifier variant back, re-tagged from the source slice at
@@ -149,7 +148,7 @@ line, the prelude) and `v1_0` (the released LANG 1.0.0).
   - Where a language's longest match is SHORTER than the union's, the pass
     narrows by retrying shorter prefixes — the union always matches at least
     as far as any member, so no member ever needs a merge.
-  - The Expression Language reading (`lex_el`) joined the union when the EL
+  - The Expression Language reading (`Language::El`) joined the union when the EL
     grammars were vendored. It reserves ONLY what `ElLexer.g4` itself declares
     — the cADL constraint keywords (`existence`, `occurrences`, `infinity`, …)
     are ordinary feature names in EL expression position, because they are
@@ -250,7 +249,7 @@ line, the prelude) and `v1_0` (the released LANG 1.0.0).
   with the adjudication at the site — never a synthetic `meta_data` key or a
   shadow field.
 - **`src/v1_1/odin/` is the real ODIN reader** (a `chumsky` parser over
-  `lexer::lex_odin` + an `OdinValue` tree; `openehr_lang::odin::parse`), NOT
+  `lexer::lex(Language::Odin, ..)` + an `OdinValue` tree; `openehr_lang::odin::parse`), NOT
   part of the generated/`bmm*`/`beom` model — never route it through codegen.
   Spec oracle: `docs/specs/openehr/LANG/docs/odin/` + the vendored grammars
   `vendor/grammar/v1_1/{odin.g4,odin_values.g4,base_lexer.g4}`. `openehr-adl`

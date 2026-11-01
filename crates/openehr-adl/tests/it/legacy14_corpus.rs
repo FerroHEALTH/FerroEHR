@@ -102,7 +102,7 @@ fn every_adl_file_is_claimed_with_an_outcome() {
         let r = rel(path);
         if r.contains("upgrade/upgrade_from_14/") {
             // Converts without error (structural compare is in adl14_conversion).
-            let mut log = ConversionLog::new();
+            let mut log = ConversionLog::default();
             parse_and_convert(&src, &ConvertConfig::default(), &mut log)
                 .unwrap_or_else(|e| panic!("{r}: 1.4 conversion failed: {e}"));
             claimed += 1;

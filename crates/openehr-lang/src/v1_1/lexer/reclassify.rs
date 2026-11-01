@@ -17,26 +17,8 @@
 //! own production set does not reach this text, which is precisely what its
 //! stand-alone lexer expressed by not having the rule.
 
+use super::Language;
 use super::token::Token;
-
-/// Which language's lexical layer a token stream is being read under.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Language {
-    /// The ADL2 outer + cADL reading (`AM/docs/ADL2/`, `adl2.g4`/`cadl2.g4`).
-    Adl,
-    /// The ODIN reading (`LANG/docs/odin/`, `odin.g4`/`odin_values.g4`).
-    Odin,
-    /// The BEL reading (`LANG/docs/BEL/`, `base_expressions.g4`).
-    Bel,
-    /// The Expression Language reading (`LANG/docs/EL/`, `ElLexer.g4`).
-    ///
-    /// `ElLexer.g4` is an `import Cadl2Lexer, SymbolsLexer, GeneralIdsLexer`
-    /// with its own rules layered on top, and ANTLR gives the importing
-    /// grammar's rule precedence — so this reading is the cADL one wherever
-    /// `ElLexer.g4` declares nothing, and `ElLexer.g4`'s own (case-SENSITIVE)
-    /// spelling wherever it does.
-    El,
-}
 
 /// What `language`'s own lexer would produce for `slice`, or `None` when it
 /// admits no single token spanning exactly `slice`.

@@ -16,23 +16,22 @@ use openehr_lang::nesting::{Nesting, NestingExceeded};
 
 use crate::aom::access::complex_attributes;
 
-/// Check that no object in the tree under `root` sits deeper than the engine
-/// bound; the root itself is level zero.
+/// Check that no object in the tree under `cco`, which sits at `level`, lies
+/// deeper than the engine bound; a definition root is [`Nesting::ROOT`].
 ///
 /// The walk descends with the same budget it checks, so it cannot itself
 /// exceed the bound.
 ///
 /// # Errors
 /// [`NestingExceeded`] at the first object below the bound.
-pub fn check_definition_nesting(root: &CComplexObject) -> Result<(), NestingExceeded> {
-    check_complex(root, Nesting::ROOT)
-}
-
-fn check_complex(cco: &CComplexObject, level: Nesting) -> Result<(), NestingExceeded> {
+pub fn check_definition_nesting(
+    cco: &CComplexObject,
+    level: Nesting,
+) -> Result<(), NestingExceeded> {
     for attr in complex_attributes(cco) {
         for child in attr.children.iter().flatten() {
             if let CObject::CComplexObject(inner) = child {
-                check_complex(inner, level.descend()?)?;
+                check_definition_nesting(inner, level.descend()?)?;
             }
         }
     }
@@ -83,9 +82,12 @@ mod tests {
 
     #[test]
     fn a_tree_at_the_bound_passes_and_one_level_more_is_refused() {
-        assert_eq!(check_definition_nesting(&chain(MAX_NESTING_DEPTH)), Ok(()));
         assert_eq!(
-            check_definition_nesting(&chain(MAX_NESTING_DEPTH + 1)),
+            check_definition_nesting(&chain(MAX_NESTING_DEPTH), Nesting::ROOT),
+            Ok(())
+        );
+        assert_eq!(
+            check_definition_nesting(&chain(MAX_NESTING_DEPTH + 1), Nesting::ROOT),
             Err(NestingExceeded {
                 limit: MAX_NESTING_DEPTH
             })

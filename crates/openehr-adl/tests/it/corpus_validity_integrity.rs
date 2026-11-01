@@ -144,7 +144,7 @@ fn adls_files(dir: &Path) -> Vec<PathBuf> {
 /// Build a repository over every parseable `.adls` in the corpus (for parent
 /// resolution — VACSD/VASID/VALC).
 fn build_repository() -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     for path in adls_files(Path::new(CORPUS)) {
         let Ok(src) = std::fs::read_to_string(&path) else {
             continue;

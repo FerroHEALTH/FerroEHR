@@ -1087,7 +1087,7 @@ terminology
     fn codes(def: &str, terms: &str) -> Vec<String> {
         let parent = parse_artefact(PARENT, Dialect::Adl2).unwrap();
         let child = parse_artefact(&child(def, terms), Dialect::Adl2).unwrap();
-        let repo = ArchetypeRepository::new();
+        let repo = ArchetypeRepository::default();
         let issues = validate_against_flat_parent(&child, &parent, &ProductionRmModel, &repo);
         issues
             .iter()
@@ -1304,7 +1304,7 @@ terminology
             &child,
             &parent,
             &ProductionRmModel,
-            &ArchetypeRepository::new(),
+            &ArchetypeRepository::default(),
         );
         let raised: Vec<&str> = issues.iter().map(|i| i.code.mnemonic()).collect();
         assert!(raised.contains(&"VSONIF"), "raised {raised:?}");
@@ -1396,7 +1396,7 @@ terminology
             &child,
             &parent,
             &ProductionRmModel,
-            &ArchetypeRepository::new(),
+            &ArchetypeRepository::default(),
         );
         issues
             .iter()

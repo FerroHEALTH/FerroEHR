@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![expect(clippy::expect_used, reason = "test assertions/diagnostics/fixtures")]
-//! The abstract-root serialization path (`to_canonical_xml_declared`).
+//! The abstract-root serialization path (`openehr_its::xml::runtime::to_xml_declared`).
 //!
 //! `ALL/Version.xsd` publishes exactly one global element for the change-control
 //! package — `<xs:element name="version" type="VERSION"/>` — and its type is
@@ -13,11 +13,12 @@
 //! (<https://www.w3.org/TR/xmlschema-1/#xsi_type>, §2.6.1 + §3.4.6). So an
 //! `ORIGINAL_VERSION` written under the published `<version>` root is
 //! schema-valid only with `xsi:type="ORIGINAL_VERSION"`, which the plain
-//! `to_canonical_xml` entry point (declared type `None` at the root) cannot
+//! `openehr_its::xml::runtime::to_xml` entry point (declared type `None` at the root) cannot
 //! emit.
 
+use openehr_its::xml::from_canonical_xml;
 use openehr_its::xml::runtime::Namespace;
-use openehr_its::xml::{from_canonical_xml, to_canonical_xml, to_canonical_xml_declared};
+use openehr_its::xml::runtime::to_xml;
 use openehr_rm::prelude::{Composition, OriginalVersion};
 use serde_json::json;
 
@@ -68,8 +69,9 @@ fn fixture() -> OriginalVersion<Composition> {
 /// document satisfies the abstract-type constraint.
 #[test]
 fn an_abstract_root_names_its_concrete_subtype() {
-    let xml = to_canonical_xml_declared(&fixture(), "version", "VERSION", Namespace::V1)
-        .expect("serialize under the published <version> root");
+    let xml =
+        openehr_its::xml::runtime::to_xml_declared(&fixture(), "version", "VERSION", Namespace::V1)
+            .expect("serialize under the published <version> root");
     assert!(xml.starts_with("<version "), "root element, got:\n{xml}");
     assert!(
         xml.contains(r#"xsi:type="ORIGINAL_VERSION""#),
@@ -91,7 +93,7 @@ fn an_abstract_root_names_its_concrete_subtype() {
 /// `xsi:type` — the attribute is dispatch, never decoration.
 #[test]
 fn a_matching_declared_root_type_emits_no_attribute() {
-    let xml = to_canonical_xml_declared(
+    let xml = openehr_its::xml::runtime::to_xml_declared(
         &fixture(),
         "original_version",
         "ORIGINAL_VERSION",
@@ -109,12 +111,13 @@ fn a_matching_declared_root_type_emits_no_attribute() {
 /// round-trips.
 #[test]
 fn the_abstract_root_document_round_trips() {
-    let xml = to_canonical_xml_declared(&fixture(), "version", "VERSION", Namespace::V1)
-        .expect("serialize");
+    let xml =
+        openehr_its::xml::runtime::to_xml_declared(&fixture(), "version", "VERSION", Namespace::V1)
+            .expect("serialize");
     let back: OriginalVersion<Composition> = from_canonical_xml(&xml).expect("re-read");
     assert_eq!(
-        to_canonical_xml(&back, "original_version").expect("re-serialize"),
-        to_canonical_xml(&fixture(), "original_version").expect("serialize the fixture"),
+        to_xml(&back, "original_version", Namespace::V2).expect("re-serialize"),
+        to_xml(&fixture(), "original_version", Namespace::V2).expect("serialize the fixture"),
         "the abstract-root document must carry the whole ORIGINAL_VERSION"
     );
 }

@@ -127,7 +127,7 @@ fn a_rewrite_that_overrides_nothing_leaves_every_corpus_query_unchanged() -> Res
         let mut rewritten = original.clone();
         Untouched.visit_select_query_mut(&mut rewritten);
         assert_eq!(rewritten, original, "untouched rewrite of: {src}");
-        assert_eq!(to_aql(&rewritten), to_aql(&original));
+        assert_eq!(to_aql(&rewritten, None), to_aql(&original, None));
     }
     Ok(())
 }
@@ -183,6 +183,6 @@ fn a_rewrite_replaces_one_condition_and_removes_another() -> Result<(), ParseErr
          WHERE e/ehr_id/value = '7d44b88c-4199-4bad-97dc-d78268e01398' AND c/name/value = 'Vitals'",
     )?;
     assert_eq!(query, expected);
-    assert!(!to_aql(&query).contains("12345"));
+    assert!(!to_aql(&query, None).contains("12345"));
     Ok(())
 }

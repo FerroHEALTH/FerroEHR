@@ -16,8 +16,8 @@
 //! / the live parity harness (Stage-1 acceptance). Round-trip stability of our
 //! own canonical output is the invariant this gate enforces.
 
+use openehr_its::xml::runtime::to_xml;
 use openehr_its::xml::runtime::{FromXml, ToXml, from_xml};
-use openehr_its::xml::to_canonical_xml;
 use openehr_rm::prelude::{Composition, ItemTree};
 
 /// The EHRbase-derived XML samples in the shared corpus.
@@ -32,9 +32,11 @@ fn read_and_round_trip<T: FromXml + ToXml>(file: &str, tag: &str) -> Result<usiz
     let xml = std::fs::read_to_string(samples_dir().join(file))
         .map_err(|e| format!("read {file}: {e}"))?;
     let value: T = from_xml(&xml).map_err(|e| format!("parse {file}: {e}"))?;
-    let out = to_canonical_xml(&value, tag).map_err(|e| format!("serialize {file}: {e}"))?;
+    let out = to_xml(&value, tag, openehr_its::xml::runtime::Namespace::V2)
+        .map_err(|e| format!("serialize {file}: {e}"))?;
     let reparsed: T = from_xml(&out).map_err(|e| format!("reparse {file}: {e}"))?;
-    let out2 = to_canonical_xml(&reparsed, tag).map_err(|e| format!("serialize2 {file}: {e}"))?;
+    let out2 = to_xml(&reparsed, tag, openehr_its::xml::runtime::Namespace::V2)
+        .map_err(|e| format!("serialize2 {file}: {e}"))?;
     if out == out2 {
         Ok(out.len())
     } else {

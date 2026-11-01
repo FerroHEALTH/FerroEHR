@@ -41,7 +41,7 @@
 //! use openehr_its::opt14_writer::{ArchetypeLibrary, ArchetypeUse, TemplateDefinition};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let library = ArchetypeLibrary::new();
+//! let library = ArchetypeLibrary::default();
 //! let definition = TemplateDefinition {
 //!     template_id: TemplateId { value: "Example".to_owned() },
 //!     concept: "Example".to_owned(),
@@ -91,12 +91,6 @@ pub struct ArchetypeLibrary {
 }
 
 impl ArchetypeLibrary {
-    /// Creates an empty library.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Adds an archetype under its own `archetype_id`, returning the one it
     /// replaces.
     pub fn insert(&mut self, archetype: Archetype) -> Option<Archetype> {
@@ -125,7 +119,7 @@ impl ArchetypeLibrary {
 
 impl FromIterator<Archetype> for ArchetypeLibrary {
     fn from_iter<I: IntoIterator<Item = Archetype>>(iter: I) -> Self {
-        let mut library = Self::new();
+        let mut library = Self::default();
         for archetype in iter {
             library.insert(archetype);
         }
@@ -521,7 +515,36 @@ pub fn build(
     definition: &TemplateDefinition,
     library: &ArchetypeLibrary,
 ) -> Result<OperationalTemplate, WriteError> {
-    assemble::build(definition, library)
+    let mut flattener = assemble::Flattener {
+        library,
+        language: &definition.language,
+        components: Vec::new(),
+    };
+    let mut root = flattener.archetype_root(&definition.root, None)?;
+    // NOTE: Template.xsd declares C_ARCHETYPE_ROOT.template_id with no semantics; no openEHR
+    // spec governs it, and the writer names the template on the definition root (our design).
+    root.template_id = Some(definition.template_id.clone());
+    let component_ontologies = flattener
+        .components
+        .iter()
+        .filter_map(|id| library.get(id))
+        .map(assemble::flat_ontology)
+        .collect();
+    Ok(OperationalTemplate {
+        language: definition.language.clone(),
+        is_controlled: None,
+        description: definition.description.clone(),
+        revision_history: None,
+        uid: definition.uid.clone(),
+        template_id: definition.template_id.clone(),
+        concept: definition.concept.clone(),
+        definition: root,
+        ontology: None,
+        component_ontologies,
+        annotations: Vec::new(),
+        constraints: None,
+        view: None,
+    })
 }
 
 /// Builds the operational template of `definition` and serializes it as OPT
