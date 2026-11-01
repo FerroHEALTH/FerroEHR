@@ -36,8 +36,9 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - Unparseable / structurally invalid OPT XML → `invalid_template`
-    ///   (`422`).
+    /// - Unparseable / structurally invalid OPT XML → `invalid_template`,
+    ///   which the REST upload answers `400`, the only refusal
+    ///   `operations/definition_template_adl1.4_upload.yaml` declares.
     /// - A template with the same `template_id` already stored → conflict
     ///   (`409`).
     /// - A database failure (`exception` → `500`).
@@ -153,8 +154,10 @@ impl FerroEhrService {
     ///
     /// - Unparseable source → `BadRequest` (`400`,
     ///   `definition_template_adl2_upload.yaml` → `responses/400.yaml`).
-    /// - AOM2-invalid source → `ValidationFailed` (`422` with the rule-code
-    ///   mnemonics).
+    /// - AOM2-invalid source, a constituent archetype not held included →
+    ///   `ValidationFailed` with the rule-code mnemonics, which the REST upload
+    ///   answers `400`, the only refusal
+    ///   `operations/definition_template_adl2_upload.yaml` declares.
     /// - An ADL2 artefact with the same HRID already stored → `Conflict`
     ///   (`409`).
     /// - A database failure (`500`).

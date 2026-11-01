@@ -69,9 +69,10 @@ impl FerroEhrService {
     /// - [`ServiceError::BadRequest`] (→ `400`) — the payload is not
     ///   well-formed XML (ITS-REST `responses/400.yaml`: "syntactically
     ///   invalid … content").
-    /// - [`ServiceError::Unprocessable`] (→ `422`) — well-formed XML that does
-    ///   not decode as an OPT 1.4 document, or a decoded OPT with an empty
-    ///   `template_id` or `concept`.
+    /// - [`ServiceError::Unprocessable`] — well-formed XML that does not
+    ///   decode as an OPT 1.4 document, or a decoded OPT with an empty
+    ///   `template_id` or `concept`; the REST upload answers it `400`, the only
+    ///   refusal `operations/definition_template_adl1.4_upload.yaml` declares.
     /// - The structural gate
     ///   (`crate::validation::validate_opt_structure`) and the
     ///   AOM2/08 artefact-validity catalogue

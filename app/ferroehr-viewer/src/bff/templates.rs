@@ -144,10 +144,10 @@ fn template_row(item: &serde_json::Value) -> TemplateRow {
 ///
 /// POST `definition/template/adl1.4` with `Content-Type: application/xml`,
 /// `Accept: application/xml` and `Prefer: return=representation`, as
-/// [`upload_adl2_template`] does: a `422` names each violation
+/// [`upload_adl2_template`] does: a `400` names each violation
 /// ([`TemplateUpload::Invalid`]), and the `201` carries the stored OPT, so
 /// the `template_id` is read from its `ETag`, else from its `Location`. The
-/// other refusals (`400`, `409` duplicate) surface through
+/// other refusals (a `400` without violations, `409` duplicate) surface through
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
 ///
 /// # Errors
@@ -222,7 +222,7 @@ pub async fn list_adl2_templates() -> Result<Vec<TemplateRow>, ViewerError> {
 pub enum TemplateUpload {
     /// Stored, under the id the answer names, when it names one.
     Stored(Option<String>),
-    /// Refused `422`, with every violation the CDR found, in its order.
+    /// Refused `400`, with every violation the CDR found, in its order.
     Invalid(Vec<Violation>),
 }
 
@@ -287,12 +287,12 @@ struct ProblemError {
 /// operation's single declared body type, and
 /// `Prefer: return=representation`: a `4xx` then carries the additional
 /// error details (ITS-REST `Requests_and_responses.md` §HTTP status codes),
-/// so a `422` names each AOM2 rule the source breaks
+/// so a `400` names each AOM2 rule the source breaks
 /// ([`TemplateUpload::Invalid`]). The `201` carries the stored source as its
 /// body, so the stored HRID is read from its `ETag`, else from the last
 /// segment of its `Location` (§Prefer minimal, identifier or full
-/// representation response). The other refusals (`400` unparseable, `409`
-/// duplicate HRID) surface through
+/// representation response). The other refusals (a `400` without violations
+/// for an unparseable source, `409` duplicate HRID) surface through
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
 ///
 /// # Errors
@@ -329,7 +329,9 @@ pub async fn upload_adl2_template(
 /// The [`TemplateUpload`] of the CDR's `response` to an upload of either
 /// family.
 fn upload_answer(response: crate::cdr::CdrResponse) -> Result<TemplateUpload, ViewerError> {
-    if response.is(http::StatusCode::UNPROCESSABLE_ENTITY) {
+    // NOTE: both uploads declare only 201, 400 and 409
+    // (`operations/definition_template_adl1.4_upload.yaml`, `_adl2_upload.yaml`).
+    if response.is(http::StatusCode::BAD_REQUEST) {
         let found = violations(&response.body);
         if !found.is_empty() {
             return Ok(TemplateUpload::Invalid(found));
@@ -525,11 +527,11 @@ mod tests {
     fn a_refused_upload_lists_each_violation_and_other_refusals_stay_errors() {
         use super::Violation;
         use super::{TemplateUpload, upload_answer};
-        let problem = r#"{"type":"validation-failed","status":422,"detail":"fails","errors":[
+        let problem = r#"{"type":"about:blank","status":400,"detail":"fails","errors":[
             {"path":"VARXR","detail":"external reference \"openEHR-EHR-OBSERVATION.cnf_constituent.v1\" does not resolve"}]}"#;
         assert_eq!(
             upload_answer(answer(
-                http::StatusCode::UNPROCESSABLE_ENTITY,
+                http::StatusCode::BAD_REQUEST,
                 None,
                 None,
                 problem
@@ -541,14 +543,14 @@ mod tests {
             }]))
         );
         let bare = upload_answer(answer(
-            http::StatusCode::UNPROCESSABLE_ENTITY,
+            http::StatusCode::BAD_REQUEST,
             None,
             None,
-            r#"{"status":422,"detail":"fails"}"#,
+            r#"{"status":400,"detail":"fails"}"#,
         ));
         assert_eq!(
             bare.map_err(|refused| refused.status_code()),
-            Err(Some(http::StatusCode::UNPROCESSABLE_ENTITY))
+            Err(Some(http::StatusCode::BAD_REQUEST))
         );
         let duplicate = upload_answer(answer(
             http::StatusCode::CONFLICT,
@@ -610,15 +612,10 @@ mod tests {
             upload_answer(by_location),
             Ok(TemplateUpload::Stored(Some("cnf.minimal v1".to_owned())))
         );
-        let problem = r#"{"type":"validation-failed","status":422,"detail":"fails","errors":[
+        let problem = r#"{"type":"about:blank","status":400,"detail":"fails","errors":[
             {"path":"/definition/attributes[1]","detail":"the node id is not in the ontology"}]}"#;
         assert_eq!(
-            upload_answer(answer(
-                http::StatusCode::UNPROCESSABLE_ENTITY,
-                None,
-                None,
-                problem
-            )),
+            upload_answer(answer(http::StatusCode::BAD_REQUEST, None, None, problem)),
             Ok(TemplateUpload::Invalid(vec![Violation {
                 rule: "/definition/attributes[1]".to_owned(),
                 detail: "the node id is not in the ontology".to_owned(),

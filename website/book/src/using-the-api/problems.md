@@ -42,13 +42,18 @@ With `Prefer: return=representation`: `errors`, one
 `{"path": …, "detail": …}` per violation, keyed by the RM path of the
 offending node.
 
+A template upload (`POST /definition/template/adl1.4` and `…/adl2`) declares no
+`422` in ITS-REST 1.1.0, so it answers the same refusal as an `about:blank`
+**400**, with the same `detail` and `errors`.
+
 ## `content-invalid`
 
 **Status:** `422 Unprocessable Content`. **Title:** The content cannot be
 processed.
 
-The payload is well-formed but cannot be processed, such as a template or an
-archetype the server cannot accept. `detail` names the rule.
+The payload is well-formed but cannot be processed, such as an archetype the
+server cannot accept. `detail` names the rule. A template the server cannot
+accept on upload is a **400**, as under `validation-failed`.
 
 ## `conflict`
 

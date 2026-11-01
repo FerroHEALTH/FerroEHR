@@ -1733,3 +1733,29 @@ async fn the_served_document_names_no_service_model_operation() {
         "the served document names the Service Model"
     );
 }
+
+/// Both template uploads declare only 201, 400 and 409 as their outcomes
+/// (`operations/definition_template_adl1.4_upload.yaml`,
+/// `definition_template_adl2_upload.yaml`), so the served document gives an
+/// invalid template the `400` and no `422`.
+#[tokio::test]
+async fn the_template_uploads_document_an_invalid_template_as_400() {
+    let doc = served_document().await;
+    for path in [
+        "/ferroehr/rest/openehr/v1/definition/template/adl1.4",
+        "/ferroehr/rest/openehr/v1/definition/template/adl2",
+    ] {
+        let responses = &doc["paths"][path]["post"]["responses"];
+        assert!(responses.is_object(), "POST {path} must be documented");
+        for declared in ["201", "400", "409"] {
+            assert!(
+                responses.get(declared).is_some(),
+                "POST {path} must document {declared}: {responses}"
+            );
+        }
+        assert!(
+            responses.get("422").is_none(),
+            "POST {path} answers an invalid template 400, never 422: {responses}"
+        );
+    }
+}

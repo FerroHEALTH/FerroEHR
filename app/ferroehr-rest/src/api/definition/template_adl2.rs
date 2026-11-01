@@ -107,10 +107,13 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // nothing to refuse.
     negotiate::require_text_plain(h)?;
     let source = negotiate::text_body(&parts.body)?;
-    // An unparseable source is a `400`, an AOM2-invalid one a `422` carrying the
-    // rule codes, and a duplicate HRID a `409` — all through `ServiceError`, so
-    // the `422` renders the `Error` object with per-code `validationErrors`.
-    let hrid = state.backend().template_adl2_upload(source.clone()).await?;
+    // An unparseable or AOM2-invalid source is a `400`, the invalid one carrying
+    // its rule codes as violations, and a duplicate HRID a `409`.
+    let hrid = state
+        .backend()
+        .template_adl2_upload(source.clone())
+        .await
+        .map_err(|e| RestError::from(e).into_template_upload_refusal())?;
     let hrid = hrid.as_str();
     let location = format!(
         "{}/definition/template/adl2/{hrid}",

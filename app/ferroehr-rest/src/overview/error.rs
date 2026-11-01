@@ -44,6 +44,7 @@ pub struct RestError {
     error: ApiError,
     kind: Option<Kind>,
     details: Vec<Detail>,
+    hint: Option<&'static str>,
 }
 
 impl RestError {
@@ -72,6 +73,41 @@ impl RestError {
     pub fn with_detail(mut self, detail: Detail) -> Self {
         self.details.push(detail);
         self
+    }
+
+    /// This refusal as a template upload answers it: a `422` becomes a `400`
+    /// with the same detail and, for a validation refusal, the same violations
+    /// and hint.
+    // NOTE: `operations/definition_template_adl1.4_upload.yaml` and
+    // `definition_template_adl2_upload.yaml` declare only 201, 400 and 409, so
+    // an invalid template is the `responses/400.yaml` "invalid ... content".
+    #[must_use]
+    pub(crate) fn into_template_upload_refusal(self) -> Self {
+        let detail = detail_of(&self.error);
+        match self.error {
+            ApiError::Unprocessable(_) => Self {
+                error: ApiError::BadRequest(detail),
+                kind: None,
+                ..self
+            },
+            ApiError::ValidationFailed(errors) => {
+                let violations = errors
+                    .into_iter()
+                    .map(|e| Violation {
+                        path: e.path,
+                        detail: e.message,
+                    })
+                    .collect();
+                let refused = Self {
+                    error: ApiError::BadRequest(detail),
+                    kind: None,
+                    details: self.details,
+                    hint: Some(VALIDATION_HINT),
+                };
+                refused.with_detail(Detail::Errors(violations))
+            }
+            error => Self { error, ..self },
+        }
     }
 
     /// The AQL kind and the source position of an AQL refusal in `error`'s
@@ -167,6 +203,7 @@ impl From<ApiError> for RestError {
             error,
             kind: None,
             details: Vec::new(),
+            hint: None,
         }
     }
 }
@@ -386,6 +423,9 @@ impl IntoResponse for RestError {
             Some(kind) if kind.status() == status => Refused::of(kind, detail),
             _ => Refused::blank(status, detail),
         };
+        if let Some(hint) = self.hint {
+            refused = refused.with_hint(hint);
+        }
         if let ApiError::ValidationFailed(errors) = &self.error {
             refused = refused
                 .with_hint(VALIDATION_HINT)
@@ -488,6 +528,52 @@ mod tests {
             errors[1],
             serde_json::json!({"path": "/category", "detail": "code not in group"})
         );
+    }
+
+    /// `operations/definition_template_adl1.4_upload.yaml` and
+    /// `definition_template_adl2_upload.yaml` declare only 201, 400 and 409, so
+    /// a template upload's refusal is a `400` keeping its detail and violations.
+    #[tokio::test]
+    async fn a_template_upload_refusal_is_400_with_the_same_detail_and_violations() {
+        let violations = || {
+            RestError::from(ApiError::ValidationFailed(vec![ValidationError {
+                path: "VCORM".to_owned(),
+                message: "the RM type FOO is not known".to_owned(),
+            }]))
+            .into_template_upload_refusal()
+        };
+        let resp = violations().into_response();
+        let (status, body) = handler_body(resp).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body["status"], 400);
+        assert_eq!(
+            body["detail"],
+            "the content fails validation at 1 path(s); a request with \
+             `Prefer: return=representation` receives each path and its violation"
+        );
+        let full = violations()
+            .into_response()
+            .extensions()
+            .get::<Refused>()
+            .expect("the refusal is marked for the middleware")
+            .render(None, true)
+            .to_json();
+        assert_eq!(full["detail"], "the content fails validation at 1 path(s)");
+        assert_eq!(
+            full["errors"],
+            serde_json::json!([{"path": "VCORM", "detail": "the RM type FOO is not known"}])
+        );
+
+        let unprocessable = RestError::from(ApiError::Unprocessable("not an OPT".to_owned()))
+            .into_template_upload_refusal()
+            .into_response();
+        let (status, body) = handler_body(unprocessable).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body["detail"], "not an OPT");
+
+        let conflict =
+            RestError::from(ApiError::Conflict("stored".to_owned())).into_template_upload_refusal();
+        assert_eq!(conflict.status(), StatusCode::CONFLICT);
     }
 
     #[tokio::test]

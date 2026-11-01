@@ -18,10 +18,9 @@
 //!
 //! - **ADL 2 upload** (`definition_template_adl2_upload.yaml`): the OAS declares
 //!   `201/400/409`; the REST adapter emits the `409` on a duplicate HRID (the
-//!   native `upload_artefact` replaces — this seam does not), and
-//!   additionally returns `422` when the ADL2/AOM2 artefact is invalid on the
-//!   store path (the OAS folds that under `400`). A request DECLARING a media
-//!   type other than the operation's single `text/plain` body type is refused
+//!   native `upload_artefact` replaces — this seam does not), and the `400`
+//!   for an ADL2/AOM2 artefact that is invalid on the store path. A request
+//!   DECLARING a media type other than the operation's single `text/plain` body type is refused
 //!   `415` before parsing — the same cross-cutting rule that grounds the ADL 1.4
 //!   guard (`specifications/docs/overview/Resources.md` §"XML Format"/§"JSON
 //!   Format": a payload the service cannot process as the declared format "MUST
@@ -40,8 +39,8 @@
 //!   example generator walks into an example COMPOSITION, served across the four
 //!   `Accept_LOCATABLE` forms exactly as the ADL 1.4 example endpoint.
 //! - **ADL 1.4 upload** (`definition_template_adl1.4_upload.yaml`): the OAS
-//!   declares `201/400/409`; our wire additionally returns `422` when the OPT
-//!   parses as XML but is structurally invalid (the OAS folds that under `400`).
+//!   declares `201/400/409`; an OPT that parses as XML but is structurally
+//!   invalid is the `400` too.
 //! - **ADL 1.4 get / example** (`_get`, `_example_get`): the OAS `400` on `_get`
 //!   is unreachable (only a path parameter); the reachable statuses are the
 //!   ones documented on each operation below.
@@ -356,14 +355,19 @@ pub(crate) async fn definition_template_adl1_4_list(
                                       syntactically invalid header, parameter or \
                                       content)\" (ITS-REST \
                                       `specifications/responses/400.yaml`). Here: \
-                                      the body is not UTF-8 text, or is not \
+                                      the body is not UTF-8 text, is not \
                                       well-formed XML (mismatched tags, an empty \
-                                      document with no root element) — \
-                                      \"syntactically invalid … content\" is \
-                                      precisely that branch. Everything past XML \
-                                      well-formedness (a document that is not an \
-                                      OPT, an AOM2 rule violation) is the \
-                                      semantic `422` below.",
+                                      document with no root element), or is not \
+                                      a usable operational template: it does not \
+                                      decode as an OPT document, carries a \
+                                      foreign or duplicated top-level element, a \
+                                      blank `template_id` or an empty `concept`, \
+                                      or breaks an AOM2 validity rule. The \
+                                      operation declares only `201`, `400` and \
+                                      `409`, so every refusal of an invalid \
+                                      template is this `400`; a request with \
+                                      `Prefer: return=representation` receives \
+                                      each violation in the problem's `errors`.",
          body = serde_json::Value),
         (status = 409, description = "The released trigger, verbatim: `409 \
                                       Conflict` \"is returned when a template \
@@ -395,29 +399,6 @@ pub(crate) async fn definition_template_adl1_4_list(
                                       `415`; the MUST is cross-cutting \
                                       (`Requests_and_responses.md` §\"HTTP status \
                                       codes\", the `415` row).",
-         body = serde_json::Value),
-        (status = 422, description = "OUR WIRE — the payload is well-formed XML but \
-                                      is not a usable operational template: it \
-                                      does not decode as an OPT document; a \
-                                      foreign or duplicated top-level element; a \
-                                      blank `template_id` or an empty `concept` \
-                                      (both mandatory `OPERATIONAL_TEMPLATE` \
-                                      attributes); or an AOM2 standalone-artefact \
-                                      validity-rule violation, the rule code \
-                                      carried in `validationErrors` \
-                                      (`AM/docs/AOM2/master08-validation.adoc` \
-                                      §Validation; `schemas/others/Error.yaml`). No released \
-                                      response file covers the semantic branch on \
-                                      this operation, so the assignment is the \
-                                      overview status table's own `422` row — \
-                                      \"the request was well-formed but was \
-                                      unable to be followed due to semantic \
-                                      errors\" (`Requests_and_responses.md` \
-                                      §\"HTTP status codes\") — and \"additional \
-                                      status codes MAY be used as long as they do \
-                                      not conflict with the predefined codes\". \
-                                      Syntactically-unparseable content is the \
-                                      `400` above, not this branch.",
          body = serde_json::Value)
     )
 )]
@@ -937,15 +918,20 @@ description
                                       syntactically invalid header, parameter or \
                                       content)\" (ITS-REST \
                                       `specifications/responses/400.yaml`). Here: \
-                                      the body is not UTF-8 text, or the source \
+                                      the body is not UTF-8 text, the source \
                                       fails the ADL2 grammar (S-code syntax \
-                                      errors — unparseable content, an empty \
-                                      body, a missing mandatory section) — \
-                                      \"syntactically invalid … content\" is \
-                                      precisely that branch, the same split as \
-                                      the ADL 1.4 sibling. AOM2 validation-phase \
-                                      failures (V-codes) on a source that parses \
-                                      are the semantic `422` below.",
+                                      errors: unparseable content, an empty \
+                                      body, a missing mandatory section), or the \
+                                      source parses but fails an AOM2 validation \
+                                      phase (V-codes such as VCORM or VCARM, or \
+                                      VARXR for a constituent archetype the CDR \
+                                      does not hold). The operation declares only \
+                                      `201`, `400` and `409`, so every refusal of \
+                                      an invalid template is this `400`; a \
+                                      request with `Prefer: \
+                                      return=representation` receives each rule \
+                                      code and its detail in the problem's \
+                                      `errors`.",
          body = serde_json::Value),
         (status = 409, description = "The released trigger, verbatim: `409 \
                                       Conflict` \"is returned when a template \
@@ -970,24 +956,6 @@ description
                                       cross-cutting \
                                       (`Requests_and_responses.md` §\"HTTP status \
                                       codes\", the `415` row).",
-         body = serde_json::Value),
-        (status = 422, description = "OUR WIRE — the ADL2 source parses but fails \
-                                      an AOM2 validation phase (V-codes, e.g. a \
-                                      missing description block). The `Error` \
-                                      body's `validationErrors` carry the rule-code \
-                                      mnemonics with their detail \
-                                      (`schemas/others/Error.yaml`). Grammar-level \
-                                      S-code failures are the syntactic `400` \
-                                      above. No released \
-                                      response file covers the semantic branch on \
-                                      this operation, so the assignment is the \
-                                      overview status table's own `422` row — \
-                                      \"the request was well-formed but was \
-                                      unable to be followed due to semantic \
-                                      errors\" (`Requests_and_responses.md` \
-                                      §\"HTTP status codes\") — and \"additional \
-                                      status codes MAY be used as long as they do \
-                                      not conflict with the predefined codes\".",
          body = serde_json::Value)
     )
 )]
