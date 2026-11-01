@@ -715,6 +715,167 @@ async fn archetype_lineage_from_the_stored_adl2_family() {
     );
 }
 
+/// The namespace of an archetype id is exact: a query with namespace N finds
+/// only data recorded under N, and a query without one only data without one.
+///
+/// Spec: BASE `artefact_identification` master07 §Referencing: "A namespace is
+/// never a wildcard - an omitted namespace does not mean 'any namespace', which
+/// would make the reference ambiguous and unsafe, notably in an AQL query."
+#[tokio::test]
+async fn archetype_predicate_namespace_is_exact() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let ehr_id = create_ehr(&svc).await;
+    for (name, archetype) in [
+        ("a", "org.a::openEHR-EHR-OBSERVATION.ns_case.v1.0.0"),
+        ("b", "org.b::openEHR-EHR-OBSERVATION.ns_case.v1.0.0"),
+        ("none", "openEHR-EHR-OBSERVATION.ns_case.v1.0.0"),
+    ] {
+        create_comp_arch(&svc, &ehr_id, name, 1.0, archetype).await;
+    }
+    for (query, expected) in [
+        ("org.a::openEHR-EHR-OBSERVATION.ns_case.v1.0.0", 1),
+        ("ORG.A::openEHR-EHR-OBSERVATION.ns_case.v1", 1),
+        ("org.b::openEHR-EHR-OBSERVATION.ns_case.v1", 1),
+        ("org.c::openEHR-EHR-OBSERVATION.ns_case.v1", 0),
+        ("org::openEHR-EHR-OBSERVATION.ns_case.v1", 0),
+        ("openEHR-EHR-OBSERVATION.ns_case.v1.0.0", 1),
+        ("openEHR-EHR-OBSERVATION.ns_case.v1", 1),
+    ] {
+        assert_eq!(
+            count_obs(&svc, &ehr_id, query).await,
+            expected,
+            "{query} (master07 §Referencing: a namespace is never a wildcard)"
+        );
+    }
+}
+
+/// The version a query names selects data created with that release or any
+/// later minor or patch release of the same major: an `ihrid_ref` every
+/// release, an `sihrid_ref` a minor at or after its own, a `phrid_ref` a minor
+/// and patch at or after its own. A legacy major-only data id is found by an
+/// `ihrid_ref` alone, and a version-status suffix in data is compared on its
+/// numbers.
+///
+/// Spec: BASE `artefact_identification` master07 §Supporting Archetype-based
+/// Querying: given archetype X used to create data, X and "any previous minor or
+/// patch variant of X" may query it; §Referencing for the three reference forms.
+#[tokio::test]
+async fn archetype_predicate_version_bounds_the_release() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let ehr_id = create_ehr(&svc).await;
+    for version in ["v1", "v1.0.0", "v1.2.0", "v1.2.3", "v1.3.1-rc.1", "v2.0.0"] {
+        create_comp_arch(
+            &svc,
+            &ehr_id,
+            version,
+            1.0,
+            &format!("openEHR-EHR-OBSERVATION.ver_case.{version}"),
+        )
+        .await;
+    }
+    for (version, expected) in [
+        ("v1", 5),
+        ("v1.0", 4),
+        ("v1.2", 3),
+        ("v1.3", 1),
+        ("v1.4", 0),
+        ("v1.0.0", 4),
+        ("v1.1.9", 3),
+        ("v1.2.0", 3),
+        ("v1.2.3", 2),
+        ("v1.2.4", 1),
+        ("v1.3.1", 1),
+        ("v1.3.2", 0),
+        ("v2", 1),
+        ("v2.0.0", 1),
+        ("v2.1", 0),
+        ("v3", 0),
+    ] {
+        assert_eq!(
+            count_obs(
+                &svc,
+                &ehr_id,
+                &format!("openEHR-EHR-OBSERVATION.ver_case.{version}")
+            )
+            .await,
+            expected,
+            "query .{version} (master07 §Supporting Archetype-based Querying)"
+        );
+    }
+}
+
+/// A specialised archetype's data is found by a query naming its stored
+/// parent at or before the parent release the child declares, and not by a
+/// later one.
+///
+/// Spec: AM `Identification` master07 §Supporting Archetype-based Querying:
+/// "any of the specialisation parents of X" and "any previous minor or patch
+/// variant of any of the specialisation parents of X".
+#[tokio::test]
+async fn archetype_predicate_specialised_child_by_parent_version() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    svc.upload_artefact(adl2_source(
+        "archetype",
+        "openEHR-EHR-OBSERVATION.spec_parent.v1.2.0",
+        None,
+    ))
+    .await
+    .expect("upload the ADL2 parent archetype");
+    svc.upload_artefact(adl2_source(
+        "archetype",
+        "openEHR-EHR-OBSERVATION.spec_child.v1.0.0",
+        Some("openEHR-EHR-OBSERVATION.spec_parent.v1.2.0"),
+    ))
+    .await
+    .expect("upload the specialised ADL2 child archetype");
+    let ehr_id = create_ehr(&svc).await;
+    create_comp_arch(
+        &svc,
+        &ehr_id,
+        "child",
+        1.0,
+        "openEHR-EHR-OBSERVATION.spec_child.v1.0.0",
+    )
+    .await;
+    for (version, expected) in [
+        ("v1", 1),
+        ("v1.1", 1),
+        ("v1.2", 1),
+        ("v1.1.5", 1),
+        ("v1.2.0", 1),
+        ("v1.2.1", 0),
+        ("v1.3", 0),
+        ("v2", 0),
+    ] {
+        assert_eq!(
+            count_obs(
+                &svc,
+                &ehr_id,
+                &format!("openEHR-EHR-OBSERVATION.spec_parent.{version}")
+            )
+            .await,
+            expected,
+            "the parent queried by .{version}"
+        );
+    }
+    assert_eq!(
+        count_obs(
+            &svc,
+            &ehr_id,
+            "org.other::openEHR-EHR-OBSERVATION.spec_parent.v1"
+        )
+        .await,
+        0,
+        "the parent in another namespace is another archetype"
+    );
+}
+
 #[tokio::test]
 async fn all_versions_includes_a_branch_row() {
     use ferroehr::ids::{EhrId, VoId};

@@ -22,9 +22,8 @@ use crate::db::iden::{Ehr, Node};
 use openehr_query::ast::{BuiltinFunction, DateTimeFunction, NumericFunction, StringFunction};
 use openehr_query::lexer::CompOp;
 
-use super::expr::{
-    aql_like_to_sql, archetype_predicate, as_text, binoper, cast, col, fragment_source, jsonb_path,
-};
+use super::archetype::archetype_predicate;
+use super::expr::{aql_like_to_sql, as_text, binoper, cast, col, fragment_source, jsonb_path};
 use super::value::{coerce_rhs, jsonpath};
 use super::{Builder, ValueMode};
 

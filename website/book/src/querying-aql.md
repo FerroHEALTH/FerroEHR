@@ -37,7 +37,13 @@ ORDER BY systolic DESC
   lineage is read from the ADL 2 archetypes and templates you have uploaded, so
   the parent matches every stored specialisation of it whatever its concept is
   named. In both cases the major version is a hard boundary: `.v1` never matches
-  `.v2` data.
+  `.v2` data. Within a major, the version you name is the oldest release you
+  accept: `.v1` matches every `v1` release, `.v1.2` matches data recorded under
+  `v1.2.0` or any later `v1` release, and `.v1.2.3` matches `v1.2.3` and later.
+  Data recorded under an ADL 1.4 id (`.v1` alone) is found only by a `.v1`
+  query. The namespace must match exactly: `org.example::…` finds only data
+  recorded in `org.example`, and an id without a namespace finds only data
+  recorded without one (#4629, #4630).
 - **`CONTAINS`** expresses structural containment: "an EHR that contains a
   composition that contains a blood-pressure observation". Chains can nest
   several deep, and combine with `AND`, `OR`, and `NOT`. Folder containment

@@ -48,6 +48,7 @@
 //! a column spelled as a string here, so a schema rename surfaces as a failing
 //! test rather than a runtime SQL error.
 
+mod archetype;
 mod condition;
 mod expr;
 mod from;
