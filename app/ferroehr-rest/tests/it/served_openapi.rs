@@ -1268,9 +1268,10 @@ async fn admin_operations_are_fully_documented() {
         "DELETE {path} 409 must state the never-orphan-committed-data guard; has: {conflict}"
     );
     assert!(
-        text(&op).contains("delete_opt") && text(&op).contains("case-insensitively"),
+        text(&op).contains("case-insensitively")
+            && text(&op).contains("/definition/template/adl1.4/{template_id}"),
         "DELETE {path} must state that it is addressed by the case-insensitive \
-         `template_id`, unlike the native `delete_opt`"
+         `template_id`, as the released template reads are"
     );
 
     // ── the stored-query-version delete: one version, never the whole query ──
