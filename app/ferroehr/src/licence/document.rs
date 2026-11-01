@@ -81,15 +81,6 @@ impl Licence {
         Ok(format!("{body}\n"))
     }
 
-    /// Parse a signed text back into a licence, strictly.
-    ///
-    /// # Errors
-    /// Any deviation from the schema: an unknown field, a malformed date, a
-    /// use class this module does not know.
-    pub fn from_json(text: &str) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(text)
-    }
-
     /// Classify `today` against the validity window.
     #[must_use]
     pub fn window(&self, today: Date) -> Window {
@@ -127,7 +118,7 @@ mod tests {
         assert!(!text.contains('\t'));
         assert!(text.lines().all(|l| l.trim_end() == l));
         assert!(text.contains("\"use\": \"commercial\""));
-        assert_eq!(Licence::from_json(&text).unwrap(), sample());
+        assert_eq!(serde_json::from_str::<Licence>(&text).unwrap(), sample());
     }
 
     #[test]
@@ -150,7 +141,7 @@ mod tests {
             .to_canonical_json()
             .unwrap()
             .replace("\"licensee\"", "\"seats\": 5,\n  \"licensee\"");
-        assert!(Licence::from_json(&text).is_err());
+        assert!(serde_json::from_str::<Licence>(&text).is_err());
     }
 
     #[test]

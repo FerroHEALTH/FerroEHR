@@ -68,7 +68,7 @@ fn bench_ctx() -> SqlCtx {
 }
 
 fn aql_front_half(c: &mut Criterion) {
-    let params = Params::new();
+    let params = Params::default();
     let ctx = bench_ctx();
     let ast = parser::parse_str(QUERY).expect("the fixture query must parse");
     let ir = ferroehr::aql::plan(

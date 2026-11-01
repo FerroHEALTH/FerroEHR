@@ -214,13 +214,6 @@ fn trunk_at_instant(version_alias: &str, at: Expr) -> Expr {
         .and(Expr::exists(sub).not())
 }
 
-/// The by-value half of the `FOLDER CONTAINS FOLDER` union edge: the
-/// child row is a strict nested-set descendant of the parent row inside the
-/// same versioned folder tree.
-fn folder_by_value_child(parent_node: &str, child_node: &str) -> Expr {
-    strict_descendant(child_node, parent_node)
-}
-
 /// Whether `child` is a STRICT nested-set descendant of `parent` within one
 /// stored version: same `(vo_id, sys_version)`, `parent.num < num <=
 /// parent.num_cap`.
@@ -914,7 +907,7 @@ impl Builder<'_> {
             // by-value child's spine row IS the parent's.
             if let (Some(EdgeKind::FolderChild), Some(parent)) = (edge, vo) {
                 self.q.and_where(
-                    folder_by_value_child(&parent.node, &node)
+                    strict_descendant(&node, &parent.node)
                         .or(folder_items_exists(&parent.node, &node)),
                 );
             }
@@ -1022,8 +1015,7 @@ impl Builder<'_> {
                             }
                         }
                         sub.and_where(
-                            folder_by_value_child(parent, alias)
-                                .or(folder_items_exists(parent, alias)),
+                            strict_descendant(alias, parent).or(folder_items_exists(parent, alias)),
                         );
                     }
                     EdgeKind::FolderItems => {
@@ -1493,14 +1485,6 @@ pub(super) fn is_root_only(types: &crate::aql::ir::TypeSet) -> bool {
             .all(|t| matches!(t.as_str(), "COMPOSITION" | "EHR_STATUS" | "EHR_ACCESS"))
 }
 
-/// The `LATERAL` FROM item of a left binding on a comma-separated FROM list:
-/// a subquery over a one-row left join, so the binding yields one row per node
-/// `on` admits and one all-`NULL` row when it admits none, with the `node`
-/// columns. `inner` is the node alias `on` is written over.
-pub(super) fn left_binding_rows(alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
-    binding_rows(BoundTable::Node, alias, inner, on)
-}
-
 /// The `LATERAL` FROM item of the content node `alias` contained in the node
 /// `parent` on a query scoped to EHRs its caller named: the strict
 /// descendants of `parent`, behind the `OFFSET 0` fence.
@@ -1525,8 +1509,11 @@ fn contained_rows(alias: &str, parent: &str) -> sea_query::FunctionCall {
     sea_query::Func::cust(Alias::new("LATERAL")).arg(Expr::from(rows))
 }
 
-/// The `LATERAL` FROM item of a left binding over `table`, in the shape
-/// [`left_binding_rows`] describes; `node` rows come in document order.
+/// The `LATERAL` FROM item of a left binding over `table` on a comma-separated
+/// FROM list: a subquery over a one-row left join, so the binding yields one
+/// row per row `on` admits and one all-`NULL` row when it admits none.
+/// `inner` is the alias `on` is written over; `node` rows come in document
+/// order.
 ///
 /// The planner estimates the rows of a subquery from its own plan, about one
 /// per probe of a node's children, where a set-returning function over an
@@ -1537,7 +1524,12 @@ fn contained_rows(alias: &str, parent: &str) -> sea_query::FunctionCall {
 /// `LATERAL` subquery only as a join, which a comma-separated item cannot be,
 /// so the item is written as a call of `LATERAL` on the parenthesized
 /// subquery, which PostgreSQL's grammar reads as `LATERAL select_with_parens`.
-fn binding_rows(table: BoundTable, alias: &str, inner: &str, on: Expr) -> sea_query::FunctionCall {
+pub(super) fn binding_rows(
+    table: BoundTable,
+    alias: &str,
+    inner: &str,
+    on: Expr,
+) -> sea_query::FunctionCall {
     let mut one = Query::select();
     one.expr(Expr::val(1));
     let mut rows = Query::select();

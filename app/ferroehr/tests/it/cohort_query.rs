@@ -630,7 +630,7 @@ fn the_two_statements_never_cross_the_boundary() {
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
     let ast = openehr_query::parser::parse_str(COHORT_AQL).expect("the AQL parses");
-    let params = Params::new();
+    let params = Params::default();
     let ir = ferroehr::aql::plan(
         &ast,
         &params,

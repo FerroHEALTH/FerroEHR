@@ -181,7 +181,7 @@ fn quoted_body(chars: &[char], mut cursor: usize, line: &mut usize) -> (String, 
 fn qualified_domains(text: &str) -> Vec<Domain> {
     let mut found = Vec::new();
     for domain in Domain::ALL {
-        let prefix = format!("{}.", domain.schema());
+        let prefix = format!("{}.", domain.as_str());
         // A qualifier is followed by an identifier character; `party.` at the
         // end of a sentence or before a space is prose, not a relation.
         let mut rest = text;

@@ -26,7 +26,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::{ServiceStatus, StatusError};
+use crate::service::status::ServiceStatus;
 
 /// A stored event-subscription record (the subscription admin API's response
 /// row).
@@ -129,8 +129,11 @@ impl FerroEhrService {
         })
     }
 
-    /// List every stored subscription (newest first).
-    async fn list_subscriptions(&self) -> Result<Vec<SubscriptionRecord>, ServiceError> {
+    /// List every stored subscription (newest first) as PHI-free typed records.
+    ///
+    /// # Errors
+    /// A database failure.
+    pub async fn event_subscription_list(&self) -> Result<Vec<SubscriptionRecord>, ServiceError> {
         let rows = sqlx::query(
             "SELECT id, name, kind, change_type, template_id, enabled, created_at \
              FROM event_subscription ORDER BY created_at DESC, id",
@@ -140,8 +143,14 @@ impl FerroEhrService {
         rows.iter().map(Self::subscription_row).collect()
     }
 
-    /// Fetch one subscription by id, or `NotFound`.
-    async fn get_subscription(&self, id: Uuid) -> Result<SubscriptionRecord, ServiceError> {
+    /// Fetch one subscription by id.
+    ///
+    /// # Errors
+    /// `NotFound` when the id is unknown; otherwise a database failure.
+    pub async fn event_subscription_get(
+        &self,
+        id: Uuid,
+    ) -> Result<SubscriptionRecord, ServiceError> {
         let row = sqlx::query(
             "SELECT id, name, kind, change_type, template_id, enabled, created_at \
              FROM event_subscription WHERE id = $1",
@@ -161,7 +170,11 @@ impl FerroEhrService {
     /// Create a subscription from a [`SubscriptionDefinition`]. The `name` is
     /// validated; the predicates normalize to `None` (wildcard) when empty. A
     /// duplicate name is a `Conflict`.
-    async fn create_subscription(
+    ///
+    /// # Errors
+    /// `BadRequest` when `name` is empty or not `[A-Za-z0-9_.-]`; `Conflict`
+    /// on a duplicate name; otherwise a database failure.
+    pub async fn event_subscription_create(
         &self,
         body: &SubscriptionDefinition,
     ) -> Result<SubscriptionRecord, ServiceError> {
@@ -185,7 +198,11 @@ impl FerroEhrService {
 
     /// Replace a subscription's predicates + `enabled` (its `name` is immutable —
     /// it is the queue key). `NotFound` if the id is unknown.
-    async fn update_subscription(
+    ///
+    /// # Errors
+    /// `BadRequest` when `enabled` is not stated, `NotFound` when the id is
+    /// unknown; otherwise a database failure.
+    pub async fn event_subscription_update(
         &self,
         id: Uuid,
         body: &SubscriptionUpdate,
@@ -226,7 +243,10 @@ impl FerroEhrService {
     /// down here — the service is broker-free. A durable queue simply stops
     /// being (re)bound; operators reap orphaned queues out of band. Re-binding
     /// of the *remaining* subscriptions is the drainer's job.
-    async fn delete_subscription(&self, id: Uuid) -> Result<(), ServiceError> {
+    ///
+    /// # Errors
+    /// `NotFound` when the id is unknown; otherwise a database failure.
+    pub async fn event_subscription_delete(&self, id: Uuid) -> Result<(), ServiceError> {
         let deleted = sqlx::query("DELETE FROM event_subscription WHERE id = $1")
             .bind(id)
             .execute(&mut *acquire(&self.pool).await?)
@@ -281,65 +301,4 @@ fn map_insert_error(e: sqlx::Error) -> ServiceError {
         return ServiceError::conflict("an event subscription with that name exists".to_owned());
     }
     ServiceError::Database(e)
-}
-
-impl FerroEhrService {
-    /// List every stored event subscription (newest first) as PHI-free typed
-    /// records.
-    ///
-    /// # Errors
-    /// [`StatusError`] wrapping a database failure.
-    pub async fn event_subscription_list(&self) -> Result<Vec<SubscriptionRecord>, StatusError> {
-        Ok(self.list_subscriptions().await?)
-    }
-
-    /// Create an event subscription from a [`SubscriptionDefinition`].
-    ///
-    /// # Errors
-    /// `BadRequest` when `name` is empty or not `[A-Za-z0-9_.-]`; `Conflict`
-    /// on a duplicate name; otherwise a database failure.
-    pub async fn event_subscription_create(
-        &self,
-        a_subscription: SubscriptionDefinition,
-    ) -> Result<SubscriptionRecord, StatusError> {
-        Ok(self.create_subscription(&a_subscription).await?)
-    }
-
-    /// Fetch one event subscription by id.
-    ///
-    /// # Errors
-    /// `NotFound` when the id is unknown; otherwise a database failure.
-    pub async fn event_subscription_get(
-        &self,
-        a_subscription_id: Uuid,
-    ) -> Result<SubscriptionRecord, StatusError> {
-        Ok(self.get_subscription(a_subscription_id).await?)
-    }
-
-    /// Replace a subscription's predicates + `enabled` (the `name` is
-    /// immutable — it is the queue key).
-    ///
-    /// # Errors
-    /// `NotFound` when the id is unknown; otherwise a database failure.
-    pub async fn event_subscription_update(
-        &self,
-        a_subscription_id: Uuid,
-        a_subscription: SubscriptionUpdate,
-    ) -> Result<SubscriptionRecord, StatusError> {
-        Ok(self
-            .update_subscription(a_subscription_id, &a_subscription)
-            .await?)
-    }
-
-    /// Delete an event subscription by id (the broker queue is not torn down —
-    /// see the NOTE on the private helper).
-    ///
-    /// # Errors
-    /// `NotFound` when the id is unknown; otherwise a database failure.
-    pub async fn event_subscription_delete(
-        &self,
-        a_subscription_id: Uuid,
-    ) -> Result<(), StatusError> {
-        Ok(self.delete_subscription(a_subscription_id).await?)
-    }
 }

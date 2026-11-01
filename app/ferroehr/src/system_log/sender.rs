@@ -660,7 +660,7 @@ fn spawn_store_upkeep(
     if config.verify_interval_seconds == 0 {
         return None;
     }
-    let check = ChainCheck::new();
+    let check = ChainCheck::default();
     workers.push(tokio::spawn(crate::system_log::chain_check::scheduled(
         store.clone(),
         check.clone(),

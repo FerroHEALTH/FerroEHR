@@ -826,7 +826,7 @@ fn aql_sql_limited(
     ehr_ids: Vec<EhrId>,
     limit: Option<i64>,
 ) -> ferroehr::aql::sql::PreparedQuery {
-    aql_sql_with(aql, &Params::new(), ehr_ids, limit)
+    aql_sql_with(aql, &Params::default(), ehr_ids, limit)
 }
 
 /// [`aql_sql_limited`] with the query parameters bound.
@@ -1746,7 +1746,7 @@ async fn a_lookup_by_a_person_identifier_reads_the_one_person() {
         .await
         .expect("give the planner statistics over the seeded parties");
 
-    let params = Params::new().with(
+    let params = Params::default().with(
         "v",
         ParamValue::Str(person_identifier(PERSONS.div_euclid(2))),
     );
@@ -1786,7 +1786,7 @@ async fn a_lookup_by_an_element_text_reads_the_one_composition() {
         "SELECT c/uid/value, {text} FROM EHR e CONTAINS COMPOSITION c \
          CONTAINS OBSERVATION o[{WIDE_ARCHETYPE}] WHERE {text} = $needle"
     );
-    let params = Params::new().with(
+    let params = Params::default().with(
         "needle",
         ParamValue::Str(format!("needle {}", COMPOSITIONS.div_euclid(2))),
     );
@@ -1850,7 +1850,7 @@ async fn an_ehr_lookup_by_subject_enters_through_the_subject_index() {
         .await
         .expect("give the planner statistics over the seeded EHRs");
 
-    let params = Params::new()
+    let params = Params::default()
         .with("u", ParamValue::Str(subject_uid(EHRS.div_euclid(2))))
         .with("n", ParamValue::Str("local".to_owned()));
     let prepared = aql_sql_with(

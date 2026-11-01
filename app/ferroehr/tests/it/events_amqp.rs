@@ -428,10 +428,10 @@ async fn subscriptions_route_by_predicate_and_wildcard_receives_all() {
     // key *.*.* → every event) and a kind filter (kind=COMPOSITION → binding key
     // COMPOSITION.*.* → composition events only). The publisher declares + binds
     // a durable per-subscription queue `ferroehr.events.<name>` for each.
-    svc.event_subscription_create(subscription_definition(json!({ "name": "everything" })))
+    svc.event_subscription_create(&subscription_definition(json!({ "name": "everything" })))
         .await
         .expect("wildcard subscription");
-    svc.event_subscription_create(subscription_definition(
+    svc.event_subscription_create(&subscription_definition(
         json!({ "name": "compositions", "kind": "COMPOSITION" }),
     ))
     .await

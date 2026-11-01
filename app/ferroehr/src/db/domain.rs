@@ -60,7 +60,9 @@ impl Domain {
     /// Every domain, in the order their migration sets apply.
     pub const ALL: [Self; 4] = [Self::Clinical, Self::Party, Self::Linkage, Self::Audit];
 
-    /// The configuration token and `[storage.<domain>]` table name.
+    /// The configuration token, the `[storage.<domain>]` table name, and the
+    /// `PostgreSQL` schema this domain owns, which the migration set and the
+    /// `search_path` are built from.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -69,14 +71,6 @@ impl Domain {
             Self::Linkage => "linkage",
             Self::Audit => "audit",
         }
-    }
-
-    /// The `PostgreSQL` schema this domain owns. Equal to [`Self::as_str`] —
-    /// the two are separate concepts that happen to coincide, and the schema
-    /// name is what the migration set and the `search_path` are built from.
-    #[must_use]
-    pub const fn schema(self) -> &'static str {
-        self.as_str()
     }
 
     /// The `search_path` every pooled connection serving this domain carries.
@@ -561,11 +555,11 @@ mod tests {
     fn every_domain_has_its_own_search_path_and_names_no_other_schema() {
         for domain in Domain::ALL {
             let path = domain.search_path();
-            assert!(path.contains(domain.schema()), "{domain}: {path}");
+            assert!(path.contains(domain.as_str()), "{domain}: {path}");
             for other in Domain::ALL {
                 if other != domain {
                     assert!(
-                        !path.contains(&format!(" {}", other.schema())),
+                        !path.contains(&format!(" {}", other.as_str())),
                         "{domain}'s search path names {other}: {path}"
                     );
                 }

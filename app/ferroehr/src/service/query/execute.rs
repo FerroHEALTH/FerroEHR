@@ -766,7 +766,7 @@ mod tests {
     #[tokio::test]
     async fn an_acquire_failure_on_execution_answers_503() {
         let ast = super::parse_str("SELECT e/ehr_id/value FROM EHR e").expect("the query parses");
-        let params = crate::aql::ir::Params::new();
+        let params = crate::aql::ir::Params::default();
         let profile = crate::config::profile::SpecProfile::default();
         let ir = crate::aql::plan(&ast, &params, profile).expect("the query plans");
         let ctx = crate::aql::sql::SqlCtx {

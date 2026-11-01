@@ -298,7 +298,7 @@ impl FerroEhrService {
             .await
             .map_err(refused)?;
         let ir = crate::aql::lower_query(&ast, self.spec_profile).map_err(refused)?;
-        let params = ir.params.iter().fold(Params::new(), |params, name| {
+        let params = ir.params.iter().fold(Params::default(), |params, name| {
             params.with(
                 name.clone(),
                 ParamValue::Str(STORE_TIME_PARAMETER.to_owned()),

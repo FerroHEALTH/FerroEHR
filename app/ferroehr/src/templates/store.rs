@@ -89,7 +89,7 @@ impl FerroEhrService {
         let opt = ingest::parse_opt(xml)?;
         // Structural well-formedness the tolerant codec would otherwise accept
         // (foreign / duplicated top-level elements).
-        crate::validation::validate_opt_structure(xml)?;
+        crate::validation::structure::validate_opt_structure(xml)?;
 
         // The AOM2/08 standalone-artefact validity catalogue (VCOC/VACMCO,
         // VATID/VTLC, VTTBK/VTCBK, VCORM/VCARM/VCAEX/VCACA/VCAM → `422` carrying

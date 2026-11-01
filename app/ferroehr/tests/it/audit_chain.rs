@@ -474,13 +474,13 @@ async fn the_chain_check_reports_a_tampered_record_on_the_health_surface() {
     let store = AuditStore::new(pool.clone());
     seed(&store, 3).await;
 
-    let check = ChainCheck::new();
+    let check = ChainCheck::default();
     let indicator = AuditChainHealth::new(check.clone());
     assert!(matches!(check.state(), ChainCheckState::Pending));
     assert_eq!(indicator.check().await.state(), State::Up);
 
     assert!(matches!(
-        check.run(&store).await,
+        check.run_scope(&store, VerifyScope::Full).await,
         ChainCheckState::Intact { .. }
     ));
     assert_eq!(indicator.check().await.state(), State::Up);
@@ -491,7 +491,7 @@ async fn the_chain_check_reports_a_tampered_record_on_the_health_surface() {
     )
     .await;
 
-    let damaged = check.run(&store).await;
+    let damaged = check.run_scope(&store, VerifyScope::Full).await;
     assert!(
         matches!(
             &damaged,

@@ -145,7 +145,7 @@ fn plan_ok(q: &str) -> QueryIr {
     let ast = parse_str(q).unwrap_or_else(|e| panic!("parse failed for {q:?}: {e}"));
     plan(
         &ast,
-        &Params::new(),
+        &Params::default(),
         ferroehr::config::profile::SpecProfile::default(),
     )
     .unwrap_or_else(|e| panic!("plan failed for {q:?}: {e}"))
@@ -171,7 +171,7 @@ fn build(q: &str, params: &Params) -> PreparedQuery {
 
 /// One string parameter.
 fn one_param(name: &str, value: &str) -> Params {
-    let mut p = Params::new();
+    let mut p = Params::default();
     p.insert(name.to_owned(), ParamValue::Str(value.to_owned()));
     p
 }
@@ -206,7 +206,7 @@ fn plan_err(q: &str) -> AqlError {
     let ast = parse_str(q).unwrap_or_else(|e| panic!("parse failed for {q:?}: {e}"));
     plan(
         &ast,
-        &Params::new(),
+        &Params::default(),
         ferroehr::config::profile::SpecProfile::default(),
     )
     .expect_err(&format!("expected {q:?} to be refused"))
@@ -337,11 +337,11 @@ fn hostile_string_literals_bind_and_never_reach_the_sql_text() {
         };
         let ir = plan(
             &ast,
-            &Params::new(),
+            &Params::default(),
             ferroehr::config::profile::SpecProfile::default(),
         )
         .unwrap_or_else(|e| panic!("plan failed for {query:?}: {e}"));
-        let prepared = ferroehr::aql::sql::build(&ir, &Params::new(), &ctx())
+        let prepared = ferroehr::aql::sql::build(&ir, &Params::default(), &ctx())
             .unwrap_or_else(|e| panic!("SQL build failed for {query:?}: {e}"));
         assert!(
             !prepared.sql.contains(MARKER),
@@ -358,7 +358,7 @@ fn hostile_string_literals_bind_and_never_reach_the_sql_text() {
         // The structure is the benign one, byte for byte.
         let benign = build(
             "SELECT c/name/value FROM COMPOSITION c WHERE c/name/value = 'benign'",
-            &Params::new(),
+            &Params::default(),
         );
         assert_eq!(
             benign.sql, prepared.sql,
@@ -375,7 +375,7 @@ fn hostile_string_literals_bind_and_never_reach_the_sql_text() {
 fn the_select_as_label_never_becomes_a_sql_identifier() {
     let prepared = build(
         "SELECT DISTINCT c/name/value AS ZqInJeCtIoN FROM COMPOSITION c ORDER BY c/name/value DESC",
-        &Params::new(),
+        &Params::default(),
     );
     assert!(
         !prepared.sql.contains(MARKER),
@@ -400,7 +400,10 @@ fn the_select_as_label_never_becomes_a_sql_identifier() {
         "the label belongs on the RESULT_SET column, not the SQL"
     );
     // A whole-object column keeps the same rule across its four locator columns.
-    let whole = build("SELECT c AS ZqInJeCtIoN FROM COMPOSITION c", &Params::new());
+    let whole = build(
+        "SELECT c AS ZqInJeCtIoN FROM COMPOSITION c",
+        &Params::default(),
+    );
     assert!(
         !whole.sql.contains(MARKER),
         "the AS label became a SQL identifier on a whole-object column: {}",
@@ -655,11 +658,11 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
     // shapes an attacker can actually reach.
     let mut statements: Vec<(String, String)> = Vec::new();
     for query in CORPUS {
-        let prepared = build(query, &Params::new());
+        let prepared = build(query, &Params::default());
         statements.push(((*query).to_owned(), prepared.sql));
         // The scope query (the ABAC post-check) is a second emitted statement.
         let ir = plan_ok(query);
-        if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &ctx())
+        if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &ctx())
             .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
         {
             statements.push((format!("{query} [scope]"), scope.sql));
@@ -675,9 +678,9 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
                 }),
                 ..ctx()
             };
-            let prepared = build_with(query, &Params::new(), &scoped);
+            let prepared = build_with(query, &Params::default(), &scoped);
             statements.push((format!("{query} [patient scope]"), prepared.sql));
-            if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scoped)
+            if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scoped)
                 .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
             {
                 statements.push((format!("{query} [patient scope, scope]"), scope.sql));
@@ -709,7 +712,7 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
          WHERE o/data/origin/value = '2020'",
         "SELECT o/data FROM COMPOSITION c CONTAINS OBSERVATION o",
     ] {
-        let prepared = build_with(query, &Params::new(), &streaming);
+        let prepared = build_with(query, &Params::default(), &streaming);
         statements.push((format!("{query} [streaming]"), prepared.sql));
     }
 
@@ -734,11 +737,11 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
 fn the_sort_direction_is_a_closed_two_valued_choice() {
     let asc = build(
         "SELECT c/name/value FROM COMPOSITION c ORDER BY c/name/value ASC",
-        &Params::new(),
+        &Params::default(),
     );
     let desc = build(
         "SELECT c/name/value FROM COMPOSITION c ORDER BY c/name/value DESC",
-        &Params::new(),
+        &Params::default(),
     );
     assert_eq!(
         asc.sql.replace(" ASC", " DESC"),
@@ -757,7 +760,7 @@ fn the_sort_direction_is_a_closed_two_valued_choice() {
 #[test]
 fn hostile_execution_context_values_bind() {
     let query = "SELECT e/system_id, c/name/value FROM EHR e CONTAINS COMPOSITION c";
-    let benign = build_with(query, &Params::new(), &ctx());
+    let benign = build_with(query, &Params::default(), &ctx());
     for payload in HOSTILE {
         let mut hostile_ctx = ctx();
         hostile_ctx.system_id = (*payload).to_owned();
@@ -765,7 +768,7 @@ fn hostile_execution_context_values_bind() {
             id: (*payload).to_owned(),
             namespace: Some((*payload).to_owned()),
         });
-        let hostile = build_with(query, &Params::new(), &hostile_ctx);
+        let hostile = build_with(query, &Params::default(), &hostile_ctx);
         assert!(
             !hostile.sql.contains(MARKER),
             "a context value reached the SQL text: {}",
@@ -786,7 +789,7 @@ fn hostile_execution_context_values_bind() {
             id: format!("{payload}{payload}"),
             namespace: Some(format!("{payload}{payload}")),
         });
-        let second = build_with(query, &Params::new(), &second_ctx);
+        let second = build_with(query, &Params::default(), &second_ctx);
         assert_eq!(
             hostile.sql, second.sql,
             "the SQL structure depends on a context value's content"
