@@ -56,11 +56,13 @@ fn party_example_response(
     use openehr_rm::prelude::{Agent, Group, Organisation, Person, Role};
     let ok = http::StatusCode::OK;
     let response = match example.get("_type").and_then(serde_json::Value::as_str)? {
-        "PERSON" => respond_rm::<Person>(headers, ok, example, "person"),
-        "ORGANISATION" => respond_rm::<Organisation>(headers, ok, example, "organisation"),
-        "GROUP" => respond_rm::<Group>(headers, ok, example, "group"),
-        "AGENT" => respond_rm::<Agent>(headers, ok, example, "agent"),
-        "ROLE" => respond_rm::<Role>(headers, ok, example, "role"),
+        "PERSON" => respond_rm::<Person>(headers, ok, example, openehr_its::xml::LOCATABLE_ROOT),
+        "ORGANISATION" => {
+            respond_rm::<Organisation>(headers, ok, example, openehr_its::xml::LOCATABLE_ROOT)
+        }
+        "GROUP" => respond_rm::<Group>(headers, ok, example, openehr_its::xml::LOCATABLE_ROOT),
+        "AGENT" => respond_rm::<Agent>(headers, ok, example, openehr_its::xml::LOCATABLE_ROOT),
+        "ROLE" => respond_rm::<Role>(headers, ok, example, openehr_its::xml::LOCATABLE_ROOT),
         _ => return None,
     };
     Some(response)

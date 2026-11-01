@@ -77,6 +77,14 @@ pub const PUBLISHED_ROOTS: &[PublishedRoot] = &[
     },
 ];
 
+/// The published document element of every `LOCATABLE` that has no element
+/// of its own (a FOLDER, an EHR_STATUS, a PARTY, …): `items`, declared
+/// `LOCATABLE` (abstract), so the root names its class with `xsi:type`.
+///
+/// Spelled once so every caller names the element the schemas publish:
+/// `…/ALL/Structure.xsd`; `…/RM/latest/documents/Structure.xsd`.
+pub const LOCATABLE_ROOT: &str = "items";
+
 /// The declared **abstract** XSD type of published root `element`, when its
 /// type is abstract (the instance must then carry `xsi:type` — see
 /// [`PublishedRoot::type_is_abstract`]).

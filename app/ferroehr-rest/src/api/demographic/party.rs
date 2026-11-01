@@ -334,13 +334,21 @@ fn respond_party(
     body: &serde_json::Value,
 ) -> Response {
     match kind {
-        PartyKind::Agent => negotiate::respond_rm::<Agent>(h, status, body, "agent"),
-        PartyKind::Group => negotiate::respond_rm::<Group>(h, status, body, "group"),
-        PartyKind::Organisation => {
-            negotiate::respond_rm::<Organisation>(h, status, body, "organisation")
+        PartyKind::Agent => {
+            negotiate::respond_rm::<Agent>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
         }
-        PartyKind::Person => negotiate::respond_rm::<Person>(h, status, body, "person"),
-        PartyKind::Role => negotiate::respond_rm::<Role>(h, status, body, "role"),
+        PartyKind::Group => {
+            negotiate::respond_rm::<Group>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+        }
+        PartyKind::Organisation => {
+            negotiate::respond_rm::<Organisation>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+        }
+        PartyKind::Person => {
+            negotiate::respond_rm::<Person>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+        }
+        PartyKind::Role => {
+            negotiate::respond_rm::<Role>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+        }
     }
 }
 

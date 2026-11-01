@@ -438,7 +438,7 @@ async fn a_demographic_template_example_is_a_party() {
 #[tokio::test]
 async fn a_demographic_template_example_serves_canonical_xml() {
     let (_pg, app) = app_with_templates().await;
-    for (template_id, root) in [(ROLE_TEMPLATE, "<role"), (PERSON_TEMPLATE, "<person")] {
+    for (template_id, class) in [(ROLE_TEMPLATE, "ROLE"), (PERSON_TEMPLATE, "PERSON")] {
         let uri = example_uri(template_id, "medium", "input");
         let answer = get(&app, &uri, "application/xml").await;
         assert_eq!(answer.status, StatusCode::OK, "{uri}: {}", answer.body);
@@ -450,7 +450,14 @@ async fn a_demographic_template_example_serves_canonical_xml() {
             "{uri}: {:?}",
             answer.content_type
         );
-        assert!(answer.body.contains(root), "{uri}: {}", answer.body);
+        // ITS-XML `ALL/Structure.xsd` publishes `items` (abstract `LOCATABLE`)
+        // as the only element a party can be rooted at.
+        assert!(answer.body.contains("<items "), "{uri}: {}", answer.body);
+        assert!(
+            answer.body.contains(&format!(r#"xsi:type="{class}""#)),
+            "{uri}: {}",
+            answer.body
+        );
     }
 }
 

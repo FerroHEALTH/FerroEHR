@@ -1044,6 +1044,70 @@ async fn get_directory_as_xml() {
     );
 }
 
+/// The canonical XML FOLDER is served under the published `items` element,
+/// declared `LOCATABLE` (abstract), so the root names `xsi:type="FOLDER"`:
+/// ITS-XML 1.0.2 `ALL/Structure.xsd` and 2.0.0 `RM/latest/documents/
+/// Structure.xsd` publish no `folder` element (ITS-REST
+/// `overview/Resources.md` §XML Format: responses MUST conform to the XSDs).
+/// That holds for the latest, by-version and at-time reads, and the served
+/// document is accepted back as an XML create.
+#[tokio::test]
+async fn directory_xml_root_is_items_typed_folder() {
+    let (_pg, app) = common::test_router().await;
+    let ehr = create_ehr(&app).await;
+    let tree = folder_json("root-xml", vec![folder_json("sub", vec![])]);
+    let (_s, h, _b) = create_directory(&app, &ehr, &tree, None).await;
+    let v1 = etag_uid(&h);
+    let now = jiff::Timestamp::now();
+
+    let mut served = String::new();
+    for uri in [
+        format!("{BASE}/ehr/{ehr}/directory"),
+        format!("{BASE}/ehr/{ehr}/directory/{v1}"),
+        format!("{BASE}/ehr/{ehr}/directory?version_at_time={now}"),
+    ] {
+        let (status, _h, body) = send(&app, get(uri.clone(), Some("application/xml"))).await;
+        assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+        let root = body
+            .trim_start()
+            .strip_prefix("<?xml")
+            .and_then(|rest| rest.split_once("?>"))
+            .map_or(body.trim_start(), |(_, rest)| rest.trim_start());
+        let open = root.split_once('>').map_or(root, |(tag, _)| tag);
+        assert!(
+            open.starts_with("<items "),
+            "{uri}: root is `items`: {open}"
+        );
+        assert!(
+            open.contains(r#"xsi:type="FOLDER""#),
+            "{uri}: the abstract LOCATABLE root names FOLDER: {open}"
+        );
+        assert!(
+            open.contains(r#"xmlns="http://schemas.openehr.org/v"#),
+            "{uri}: in the ITS-XML namespace: {open}"
+        );
+        served = body;
+    }
+
+    let other = create_ehr(&app).await;
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("{BASE}/ehr/{other}/directory"))
+        .header(header::CONTENT_TYPE, "application/xml")
+        .header("Prefer", "return=representation")
+        .body(Body::from(served))
+        .unwrap();
+    let (status, _h, body) = send(&app, req).await;
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "the served XML reads back: {body}"
+    );
+    let created: Value = serde_json::from_str(&body).expect("a JSON FOLDER");
+    assert_eq!(created["name"]["value"], "root-xml", "{body}");
+    assert_eq!(created["folders"][0]["name"]["value"], "sub", "{body}");
+}
+
 // ── 17. Root FOLDER uid population ────────────────────────────────────────────
 
 /// RM FOLDER (`org.openehr.rm.common.folder.adoc`): the root FOLDER's `uid`
