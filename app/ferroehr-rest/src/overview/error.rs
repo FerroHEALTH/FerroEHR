@@ -322,6 +322,11 @@ pub(crate) fn method_not_allowed_response(allow: &'static str, message: &str) ->
     resp
 }
 
+/// What a validation refusal tells a request that did not prefer the
+/// representation, which therefore was not sent the violations.
+const VALIDATION_HINT: &str =
+    "a request with `Prefer: return=representation` receives each path and its violation";
+
 /// The detail of `error`: its message without the status word the
 /// [`ApiError`] display leads with, which the problem's title already says.
 fn detail_of(error: &ApiError) -> String {
@@ -337,11 +342,9 @@ fn detail_of(error: &ApiError) -> String {
         | ApiError::NotAcceptable(message)
         | ApiError::ServiceUnavailable(message)
         | ApiError::Internal(message) => message.clone(),
-        ApiError::ValidationFailed(errors) => format!(
-            "the content fails validation at {} path(s); a request with \
-             `Prefer: return=representation` receives each path and its violation",
-            errors.len()
-        ),
+        ApiError::ValidationFailed(errors) => {
+            format!("the content fails validation at {} path(s)", errors.len())
+        }
         ApiError::NotImplemented => "this server does not provide the operation".to_owned(),
     }
 }
@@ -384,15 +387,17 @@ impl IntoResponse for RestError {
             _ => Refused::blank(status, detail),
         };
         if let ApiError::ValidationFailed(errors) = &self.error {
-            refused = refused.with_detail(Detail::Errors(
-                errors
-                    .iter()
-                    .map(|e| Violation {
-                        path: e.path.clone(),
-                        detail: e.message.clone(),
-                    })
-                    .collect(),
-            ));
+            refused = refused
+                .with_hint(VALIDATION_HINT)
+                .with_detail(Detail::Errors(
+                    errors
+                        .iter()
+                        .map(|e| Violation {
+                            path: e.path.clone(),
+                            detail: e.message.clone(),
+                        })
+                        .collect(),
+                ));
         }
         for detail in self.details {
             refused = refused.with_detail(detail);
@@ -458,12 +463,21 @@ mod tests {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(body["type"], format!("{BASE}validation-failed"));
         assert_eq!(body["status"], 422);
-        assert!(body.get("detail").and_then(Value::as_str).is_some());
+        assert_eq!(
+            body["detail"],
+            "the content fails validation at 2 path(s); a request with \
+             `Prefer: return=representation` receives each path and its violation",
+            "a request without the preference is told how to receive the violations"
+        );
         assert!(
             body.get("errors").is_none(),
             "the additional details wait for Prefer"
         );
         let full = full_problem(violations());
+        assert_eq!(
+            full["detail"], "the content fails validation at 2 path(s)",
+            "a request that sent the preference is not told to send it"
+        );
         let errors = full["errors"].as_array().expect("errors");
         assert_eq!(errors.len(), 2);
         assert_eq!(
