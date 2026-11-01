@@ -19,6 +19,8 @@ pub mod metrics;
 pub mod samplers;
 
 pub mod build_info;
+#[cfg(test)]
+mod conformance_record;
 pub mod provenance;
 
 use std::fs::File;

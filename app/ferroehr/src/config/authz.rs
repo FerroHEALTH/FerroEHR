@@ -66,8 +66,8 @@ pub struct RbacConfig {
     pub user_role: Option<serde::de::IgnoredAny>,
     /// The role marking a principal as read-only (default `READONLY`): a caller
     /// carrying it is refused on every write operation even when it also holds
-    /// granting roles (a restriction overrides a grant). Supports the CNF
-    /// SEC-BASIC authorization-separation profile.
+    /// granting roles (a restriction overrides a grant). Supports the
+    /// conformance catalogue's authorization-separation cases.
     pub readonly_role: String,
     /// The role that may read the access log for ONE subject at a time
     /// (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset).

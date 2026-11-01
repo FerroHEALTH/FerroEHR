@@ -249,7 +249,7 @@ line, the prelude) and `v1_0` (the released LANG 1.0.0).
   with the adjudication at the site — never a synthetic `meta_data` key or a
   shadow field.
 - **`src/v1_1/odin/` is the real ODIN reader** (a `chumsky` parser over
-  `lexer::lex_odin` + an `OdinValue` tree; `openehr_lang::odin::parse`), NOT
+  `lexer::lex(Language::Odin, ..)` + an `OdinValue` tree; `openehr_lang::odin::parse`), NOT
   part of the generated/`bmm*`/`beom` model — never route it through codegen.
   Spec oracle: `docs/specs/openehr/LANG/docs/odin/` + the vendored grammars
   `vendor/grammar/v1_1/{odin.g4,odin_values.g4,base_lexer.g4}`. `openehr-adl`

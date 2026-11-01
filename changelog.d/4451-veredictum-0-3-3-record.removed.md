@@ -1,0 +1,1 @@
+- The Veredictum 0.1.6 conformance documents: `CONFORMANCE_REPORT.md`, `CONFORMANCE_STATEMENT.md`, `CONFORMANCE_CERTIFICATE.md`, `verdicts.json`, `run-exceptions.json`, the CORE, STANDARD, OPTIONS, SEC-BASIC and performance badge files, and the heat grid and chapter bars the book and the landing page drew from them.

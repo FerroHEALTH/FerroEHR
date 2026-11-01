@@ -43,13 +43,6 @@ VEREDICTUM_REPO="https://github.com/Vernum-Projecten/Veredictum"
 # shellcheck disable=SC2034 # read by the scripts that source this file
 VEREDICTUM_IMAGE="ghcr.io/vernum-projecten/veredictum@sha256:50e0138ca23014f71c2b8b0fcdb587893026cc59aeb46488b7d5c2c9022606eb"
 
-# The release the committed record under docs/conformance/ferroehr/ was
-# produced with. Its renderers (scripts/render/perf-assets.sh and
-# conformance-assets.sh) read that record's shape, which no later release
-# reads, so they run this release until the record of the current pin replaces
-# it (#4451, #4452).
-VEREDICTUM_RECORD_VERSION="0.1.6"
-
 # Echoes the container CLI the image runs under.
 veredictum_engine() {
   if [[ -n "${CONTAINER_ENGINE:-}" ]]; then
@@ -129,7 +122,3 @@ veredictum_specs() { printf '%s/specs/openehr' "$(veredictum_root)"; }
 
 # The performance schedule the `--root` flag of the measured commands takes.
 veredictum_perf() { printf '%s/perf' "$(veredictum_root)"; }
-
-# The case-core catalogue of the record's release, which its renderers take as
-# `--root`.
-veredictum_record_artifacts() { printf '%s/artifacts' "$(veredictum_root "$VEREDICTUM_RECORD_VERSION")"; }

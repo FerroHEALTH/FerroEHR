@@ -31,8 +31,8 @@ what you query and what you read back.
 
 - **Conformance you can run yourself.** The openEHR conformance catalogue is
   executed by a committed runner against a live server, over both canonical
-  JSON and canonical XML, and the profile verdicts are computed from the
-  per-case outcomes. The run records live in the repository, and every number
+  JSON and canonical XML, and every row it judges cites the specification
+  text it reads. The run record lives in the repository, and every number
   on the [Conformance](conformance.md) page is derived from them at build time,
   never hand-typed.
 - **The openEHR specifications, generated** directly from the official

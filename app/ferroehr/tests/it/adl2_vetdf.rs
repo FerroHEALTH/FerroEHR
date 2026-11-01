@@ -30,7 +30,7 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::ServiceStatus;
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
@@ -145,10 +145,11 @@ async fn service_at(server: &MockServer) -> (testkit::TestDb, FerroEhrService) {
 }
 
 async fn assert_vetdf_refusal(svc: &FerroEhrService) {
-    let err = svc
-        .upload_artefact(archetype_with_external_binding())
-        .await
-        .expect_err("a term the served code system does not contain must be refused");
+    let err = StatusError::from(
+        svc.template_adl2_upload(archetype_with_external_binding())
+            .await
+            .expect_err("a term the served code system does not contain must be refused"),
+    );
     assert_eq!(
         err.status,
         ServiceStatus::ContentInvalid,
@@ -168,7 +169,7 @@ async fn assert_vetdf_refusal(svc: &FerroEhrService) {
 }
 
 async fn assert_accepted(svc: &FerroEhrService) {
-    svc.upload_artefact(archetype_with_external_binding())
+    svc.template_adl2_upload(archetype_with_external_binding())
         .await
         .expect("the archetype is accepted");
     assert!(

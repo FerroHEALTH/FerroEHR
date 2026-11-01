@@ -51,10 +51,9 @@ path-scoped, so they are not in context until read.
 3a. **CNF zero-drift gate:** confirm a full CNF 2.0 run
    (`/run-conformance` → `scripts/conformance.sh`) happened at close and
    shows zero drift vs the committed baseline
-   (`docs/conformance/ferroehr/results.json` + `verdicts.json`; the
-   baseline only ratchets upward), and that the ratcheted
-   `docs/conformance/ferroehr/` artifacts (results.json, verdicts.json,
-   CONFORMANCE_REPORT/STATEMENT/CERTIFICATE.md, badge*.json) are in-branch.
+   (`docs/conformance/ferroehr/results.json`; the baseline only ratchets
+   upward), and that the ratcheted `docs/conformance/ferroehr/results.json`
+   and `summary.md` are in-branch.
    No green CNF run → the issue is not closable.
 3b. **User docs + changelog updated?** If this work changed a user-visible
    surface (REST, configuration, CLI, deployment artifacts), confirm BOTH:

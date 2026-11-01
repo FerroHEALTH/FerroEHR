@@ -77,15 +77,19 @@ pub const TERM: &str = openehr_term::Generation::V3_1.spec_version();
 /// datastore — our own design; no crate carries this pin, so it stays
 /// hand-maintained here.
 pub const PG_TARGET: &str = "18.6+";
-/// The last machine-computed ECC conformance verdict — the highest profile
-/// obtained — advertised by the System Options manifest (`OPTIONS /`
-/// `conformance_profile`).
+/// The conformance profile the System Options manifest sends (`OPTIONS /`
+/// `conformance_profile`), or none to leave the member out.
 ///
-/// No openEHR spec governs the value; the conformance instrument computes it
-/// (CNF master03 profiles). Updated at each conformance re-baseline from the
-/// runner's committed machine verdict artifacts under
-/// `docs/conformance/ferroehr/`. The manifest MUST NOT out-claim it.
-pub const CONFORMANCE_PROFILE: &str = "STANDARD";
+/// The build script derives it from the committed released-profile summary
+/// of the Veredictum run, `docs/conformance/ferroehr/summary.md`.
+pub const CONFORMANCE_PROFILE: Option<&str> = {
+    let profile = env!("FERROEHR_CONFORMANCE_PROFILE");
+    if profile.is_empty() {
+        None
+    } else {
+        Some(profile)
+    }
+};
 
 #[cfg(test)]
 mod tests {
