@@ -19,6 +19,7 @@
 use std::collections::BTreeSet;
 
 mod adl2;
+mod upload;
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
@@ -45,7 +46,7 @@ use ferrohealth_ui::view::tree::{Tree, TreeKind, TreeNode, TreeWords, tree_view}
 use crate::adl2::TemplateFamily;
 use crate::bff::template_detail::{TemplateDetail, fetch_example, fetch_template_detail};
 use crate::bff::templates::{
-    TemplateRow, delete_adl2_artefact, list_adl2_templates, list_templates, upload_template,
+    TemplateRow, delete_adl2_artefact, list_adl2_templates, list_templates,
 };
 use crate::builder::catalog::CatalogNode;
 use crate::components::source_upload;
@@ -65,6 +66,7 @@ use crate::pages::template_releases::{CompareAsk, Releases, lineage_table, load_
 use crate::routes::Drawn;
 use crate::template_releases::{Lineage, lineages};
 use adl2::{Adl2Body, Adl2Template, adl2_tabs, load_adl2_template};
+use upload::{Uploaded, load_upload};
 
 /// The id of Delete template's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-template";
@@ -371,48 +373,6 @@ pub async fn list_page() -> Drawn {
 /// The id of Upload's form.
 const UPLOAD_FORM: &str = "template-upload";
 
-/// What Upload read of the post it answered.
-#[derive(Debug, Clone)]
-pub enum Uploaded {
-    /// No upload was posted.
-    Fresh,
-    /// The CDR refused the upload.
-    Refused(ViewerError),
-    /// The CDR refused the ADL 2 source `422` for the violations it found.
-    Invalid(Vec<crate::bff::template_adl2::Violation>),
-    /// The upload succeeded and the browser was sent on.
-    Left,
-}
-
-/// Answers an upload posted to Upload a template, of `family`.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
-pub async fn load_upload(
-    // The family uploaded to.
-    family: TemplateFamily,
-) -> Result<Uploaded, ViewerError> {
-    crate::session::require_session()?;
-    let Some(posted) = crate::posted::posted_for("save") else {
-        return Ok(Uploaded::Fresh);
-    };
-    let source = posted.get("source-text").unwrap_or_default();
-    let uploaded = match family {
-        TemplateFamily::Adl14 => upload_template(source)
-            .await
-            .map(|id| template_href(&id))
-            .map_err(Uploaded::Refused),
-        TemplateFamily::Adl2 => adl2::upload(source).await,
-    };
-    Ok(match uploaded {
-        Ok(href) => {
-            redirect_with(&href, &Done::ok(tr(DefinitionsMsg::TemplateUploaded)));
-            Uploaded::Left
-        }
-        Err(refused) => refused,
-    })
-}
-
 /// Upload a template, of the family the address names.
 pub async fn upload_page() -> Drawn {
     let posted = crate::posted::posted();
@@ -431,7 +391,7 @@ pub async fn upload_page() -> Drawn {
     let top = match uploaded {
         Ok(Uploaded::Fresh) => None,
         Ok(Uploaded::Left) => return Drawn::default(),
-        Ok(Uploaded::Invalid(found)) => Some(adl2::violations_refused(&found)),
+        Ok(Uploaded::Invalid(found)) => Some(upload::violations_refused(&found)),
         Ok(Uploaded::Refused(error)) | Err(error) => {
             let found = findings_of(&error, &source, "source-text")
                 .map(|(heading, file)| diagnostics(&current(), &heading, &file));

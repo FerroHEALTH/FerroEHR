@@ -58,6 +58,16 @@ concurrency:
 # would inherit the repository default.
 permissions: {}
 
+# The nightly is a DATED pin, never the moving `nightly` channel: nightly
+# 2026-11-01 (rustc f9ceb4a4d) refuses openehr-rm with an E0391 query cycle
+# ("needs async drop") that 2026-10-31 (rustc 92b5b8c87) does not (#4610), and
+# an unpinned channel turns a compiler regression into a red PR nobody caused.
+# docs/VERSIONS.md names the same pin (the `build` job checks the two agree),
+# and toolchain-watcher.yml moves both to the newest nightly that builds every
+# harness. A `with:` input reads it as `env.FUZZ_NIGHTLY`.
+env:
+  FUZZ_NIGHTLY: nightly-2026-10-31
+
 jobs:
   # Do the harnesses still COMPILE? That is the whole question on a PR, and it
   # is the one the campaign schedule cannot answer in time to be useful.
@@ -73,10 +83,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install nightly Rust
+      - name: Install the pinned nightly Rust
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
-          toolchain: nightly
+          toolchain: ${{ env.FUZZ_NIGHTLY }}
           # The action's default is `deny`, and on nightly cargo that also
           # denies MANIFEST lints: it asks for kebab-case binary names, while a
           # cargo-fuzz target is named after its `fuzz_targets/*.rs` file and
@@ -114,6 +124,17 @@ jobs:
             exit 1
           fi
           echo "trigger paths cover every harness dependency"
+
+      # The pin above and its row in docs/VERSIONS.md move together; a drift
+      # here means one of them was edited by hand.
+      - name: The nightly pin agrees with docs/VERSIONS.md
+        run: |
+          documented=$(sed -nE 's/^\| Fuzz toolchain \| `(nightly-[0-9]{4}-[0-9]{2}-[0-9]{2})`.*/\1/p' docs/VERSIONS.md)
+          if [ "$documented" != "$FUZZ_NIGHTLY" ]; then
+            echo "::error::fuzz.yml pins '$FUZZ_NIGHTLY' but docs/VERSIONS.md names '$documented'. Move both together."
+            exit 1
+          fi
+          echo "fuzz nightly pin: $FUZZ_NIGHTLY"
 
       # Same explicit `--target` as the campaign, and for the same reason:
       # cargo-fuzz otherwise builds for the triple IT was built for (musl),
@@ -162,10 +183,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install nightly Rust
+      - name: Install the pinned nightly Rust
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
-          toolchain: nightly
+          toolchain: ${{ env.FUZZ_NIGHTLY }}
           # The action's default is `deny`, and on nightly cargo that also
           # denies MANIFEST lints: it asks for kebab-case binary names, while a
           # cargo-fuzz target is named after its `fuzz_targets/*.rs` file and

@@ -136,6 +136,10 @@ before `v1.9.0`, and never `v2.0.0`), a release before a release candidate. A
 reference with a minor or patch version (`.v1.2`, `.v1.2.3`) narrows the match
 to it, and an alpha or beta version is matched only by its full id. A
 reference to a major version no loaded release carries is a missing archetype.
+Two major versions of one archetype are two archetypes, so one template may
+reference both (`.v1` and `.v2`), each resolving to its own release. A
+reference resolves within one namespace: the one it names, or, when it names
+none, the namespace of the archetype or template that makes it.
 
 A duplicate artefact id returns **409 Conflict**.
 

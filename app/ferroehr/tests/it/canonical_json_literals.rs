@@ -32,6 +32,12 @@ const ALLOWLIST: &[(&str, &str)] = &[
          request fixtures, including shapes the generated types must refuse",
     ),
     (
+        "service/message/import/tests.rs",
+        "the out-of-line unit tests of `service::message::import`: received \
+         ORIGINAL_VERSION fixtures, including shapes the generated types must \
+         refuse",
+    ),
+    (
         "service/message/export.rs",
         "EXTRACT envelope composed over ALREADY-CANONICAL opaque fragments \
          (versioned-object bodies, version envelopes, revision histories) — \

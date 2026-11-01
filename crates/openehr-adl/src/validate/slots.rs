@@ -202,7 +202,12 @@ impl<'a> ParentScan<'a> {
 
         // VARXR: the referenced archetype must be resolvable in the repository
         // (`master04.5` §`C_ARCHETYPE_ROOT`, VARXR L419).
-        if !root.archetype_ref.is_empty() && self.repo.get(&root.archetype_ref).is_none() {
+        if !root.archetype_ref.is_empty()
+            && self
+                .repo
+                .resolve(&root.archetype_ref, self.referrer_namespace)
+                .is_none()
+        {
             push_issue(
                 &mut self.issues,
                 ValidationCode::Varxr,
@@ -416,7 +421,8 @@ fn check_fillers_of(
     let mut roots = Vec::new();
     collect_roots(v.definition, &mut roots);
     for root in roots {
-        check_filler(root, repo, is_template, root_language, issues);
+        let namespace = v.archetype_id.namespace.as_deref();
+        check_filler(root, repo, namespace, is_template, root_language, issues);
     }
 }
 
@@ -435,6 +441,7 @@ fn template_language(v: &ArchetypeView<'_>) -> Option<String> {
 fn check_filler(
     root: &CArchetypeRoot,
     repo: &ArchetypeRepository,
+    referrer_namespace: Option<&str>,
     is_template: bool,
     root_language: Option<&str>,
     issues: &mut Vec<ValidationIssue>,
@@ -442,7 +449,7 @@ fn check_filler(
     if root.archetype_ref.is_empty() {
         return;
     }
-    let Some(constituent) = repo.get(&root.archetype_ref) else {
+    let Some(constituent) = repo.resolve(&root.archetype_ref, referrer_namespace) else {
         issues.push(
             ValidationIssue::new(
                 ValidationCode::Varxr,

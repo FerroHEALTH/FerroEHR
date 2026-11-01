@@ -394,7 +394,8 @@ fn run_parent_conformance(
             // flat form, then validate against that (`master08` §Flattening:
             // process each parent in order from the top).
             if let Some(parent_id) = view(archetype).parent_archetype_id
-                && let Some(parent) = repo.get(parent_id)
+                && let Some(parent) =
+                    repo.resolve(parent_id, view(archetype).archetype_id.namespace.as_deref())
                 && let Ok(flat_parent) = crate::flatten::flat_form(parent, repo)
             {
                 issues.extend(specialisation::validate_against_flat_parent(

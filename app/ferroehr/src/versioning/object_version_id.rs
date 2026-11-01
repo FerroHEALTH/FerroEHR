@@ -446,8 +446,8 @@ pub(crate) fn expected_from_if_match(if_match: &str) -> Result<Option<TreeId>, V
     }
 }
 
-/// Reads a CONTRIBUTION member's `other_input_version_uids`, the merge
-/// provenance its `ORIGINAL_VERSION` records (RM common
+/// Reads the `other_input_version_uids` of a CONTRIBUTION member or of an
+/// imported `ORIGINAL_VERSION`, the merge provenance it records (RM common
 /// `org.openehr.rm.common.original_version.adoc`: "Identifiers of other versions
 /// whose content was merged into this version").
 ///

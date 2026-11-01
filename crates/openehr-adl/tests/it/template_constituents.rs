@@ -123,6 +123,10 @@ fn every_missing_constituent_is_named_where_create_opt_stops_at_one() {
     );
 }
 
+/// The parent is named as the template's `specialize` section writes it: AOM2
+/// `master03-archetype_package.adoc` §Human-Readable Identifier makes
+/// `parent_archetype_id` "a string reference to an archetype", normally down
+/// to the major version only.
 #[test]
 fn a_missing_specialisation_parent_is_named_too() {
     let root = parse(&template());
@@ -130,7 +134,7 @@ fn a_missing_specialisation_parent_is_named_too() {
     assert_eq!(
         unresolved_constituents(&root, &repo),
         vec![
-            "openEHR-EHR-COMPOSITION.encounter.v1.0.0".to_owned(),
+            "openEHR-EHR-COMPOSITION.encounter.v1".to_owned(),
             APGAR.to_owned()
         ]
     );

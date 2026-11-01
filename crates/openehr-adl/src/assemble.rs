@@ -695,7 +695,7 @@ struct BuildInputs<'a> {
 /// assembled parts and the identification meta (`master07.05`).
 fn build_archetype(i: BuildInputs<'_>) -> Archetype {
     let meta = Meta::from(&i.art.meta);
-    let parent_archetype_id = i.art.parent_ref.as_ref().map(crate::hrid::hrid_to_string);
+    let parent_archetype_id = i.art.parent_reference.clone();
 
     match i.art.kind {
         ArtefactKind::TemplateOverlay => Archetype::TemplateOverlay(Box::new(TemplateOverlay {
