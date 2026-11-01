@@ -72,8 +72,6 @@ crate::locale::messages! {
         MarksEmbeddedLaunchAdvisoryOnlyCdr = "marks-embedded-launch-advisory-only-cdr",
         /// `Launch marker`
         LaunchMarker = "launch-marker",
-        /// `Scopes narrow access, they never grant it: they say what a token may ask for, and the...`
-        ScopesNarrowAccessTheyNeverGrant = "scopes-narrow-access-they-never-grant",
         /// `AuditEvent Bundle JSON: '$e'`
         AuditeventBundleJson = "auditevent-bundle-json",
         /// HTTP `$status`
