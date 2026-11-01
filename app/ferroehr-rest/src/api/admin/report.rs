@@ -35,6 +35,7 @@ use openehr_its::rest::runtime::ApiError;
 use ferroehr::service::admin::types::StatTimeRange;
 use ferroehr::service::platform_service::PlatformService;
 
+use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -96,22 +97,9 @@ pub(crate) fn report_routes() -> OpenApiRouter<AppState> {
                                       bound (BASE `Interval` invariant \
                                       `Limits_consistent`).",
          body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Our own authorization design \
-                                      — the released admin operations carry \
-                                      `security: []` and declare no such \
-                                      branch.",
-         body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value)
+        AdminUnauthenticated,
+        NotAdminClass,
+        AdminDisabled
     )
 )]
 pub(crate) async fn admin_report_contributions(
@@ -164,22 +152,9 @@ pub(crate) async fn admin_report_contributions(
                                       bound (BASE `Interval` invariant \
                                       `Limits_consistent`).",
          body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Our own authorization design \
-                                      — the released admin operations carry \
-                                      `security: []` and declare no such \
-                                      branch.",
-         body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value)
+        AdminUnauthenticated,
+        NotAdminClass,
+        AdminDisabled
     )
 )]
 pub(crate) async fn admin_report_contribution_count(
@@ -234,22 +209,9 @@ pub(crate) async fn admin_report_contribution_count(
                                       bound (BASE `Interval` invariant \
                                       `Limits_consistent`).",
          body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Our own authorization design \
-                                      — the released admin operations carry \
-                                      `security: []` and declare no such \
-                                      branch.",
-         body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value)
+        AdminUnauthenticated,
+        NotAdminClass,
+        AdminDisabled
     )
 )]
 pub(crate) async fn admin_report_versioned_composition_count(
@@ -309,22 +271,9 @@ pub(crate) async fn admin_report_versioned_composition_count(
                                       bound (BASE `Interval` invariant \
                                       `Limits_consistent`).",
          body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Our own authorization design \
-                                      — the released admin operations carry \
-                                      `security: []` and declare no such \
-                                      branch.",
-         body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value)
+        AdminUnauthenticated,
+        NotAdminClass,
+        AdminDisabled
     )
 )]
 pub(crate) async fn admin_report_composition_version_count(

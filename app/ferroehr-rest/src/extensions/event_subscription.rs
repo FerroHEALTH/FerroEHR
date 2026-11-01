@@ -32,6 +32,7 @@ use uuid::Uuid;
 use ferroehr::service::status::StatusError;
 use openehr_its::rest::runtime::ApiError;
 
+use crate::api::refusals::JsonBodyRequired;
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 
@@ -92,7 +93,7 @@ pub(crate) async fn event_subscription_list(
         (status = 201, description = "Created; the stored subscription record is returned.", body = serde_json::Value),
         (status = 400, description = "`name` is missing/empty or not matching `[A-Za-z0-9_.-]`, or the body is not valid JSON.", body = serde_json::Value),
         (status = 409, description = "A subscription with that name already exists.", body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not `application/json`.", body = serde_json::Value),
+        JsonBodyRequired,
         (status = 404, description = "The event-subscription extension is disabled (`events_admin_api` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
     )
 )]
@@ -143,7 +144,7 @@ pub(crate) async fn event_subscription_get(
     responses(
         (status = 200, description = "Updated; the stored subscription record is returned.", body = serde_json::Value),
         (status = 400, description = "`subscription_id` is not a valid UUID, or the body is not valid JSON.", body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not `application/json`.", body = serde_json::Value),
+        JsonBodyRequired,
         (status = 404, description = "No subscription with that id, or the event-subscription extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
     )
 )]

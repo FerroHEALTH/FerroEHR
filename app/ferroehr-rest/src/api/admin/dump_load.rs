@@ -52,6 +52,8 @@ use ferroehr::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
 
+use super::body::{AdminDisabled, NotAdminClass};
+use crate::api::refusals::JsonBodyRequired;
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
@@ -115,19 +117,9 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
                                       — the released admin operations carry \
                                       `security: []`.",
          body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value),
+        NotAdminClass,
+        AdminDisabled,
+        JsonBodyRequired,
         (status = 500, description = "The location, a \
                                       segment entry, a version-payload entry or \
                                       the manifest could not be created or \
@@ -184,14 +176,8 @@ pub(crate) async fn admin_dump(
         (status = 403, description = "Authenticated but not in the Admin class. \
                                       Our own authorization design.",
          body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value),
+        AdminDisabled,
+        JsonBodyRequired,
         (status = 500, description = "The location \
                                       holds no archive container, an entry \
                                       could not be read, the manifest / a \

@@ -133,3 +133,55 @@ pub(super) enum AdminRefusal {
     )]
     Disabled(#[to_schema] serde_json::Value),
 }
+
+/// An admin route's unauthenticated refusal, with the released operations' `security: []` named.
+#[derive(utoipa::IntoResponses)]
+#[expect(
+    dead_code,
+    reason = "a response map the OpenAPI document reads; the refusal itself is built by the authentication layer"
+)]
+pub(super) enum AdminUnauthenticated {
+    #[response(
+        status = 401,
+        description = "Unauthenticated (auth enabled, no valid \
+                      principal). Our own authorization design \
+                      — the released admin operations carry \
+                      `security: []` and declare no such \
+                      branch."
+    )]
+    Unauthenticated,
+}
+
+/// An admin route's refusal of a caller outside the Admin class.
+#[derive(utoipa::IntoResponses)]
+#[expect(
+    dead_code,
+    reason = "a response map the OpenAPI document reads; the refusal itself is built by the access layer"
+)]
+pub(super) enum NotAdminClass {
+    #[response(
+        status = 403,
+        description = "Authenticated but not in the Admin class \
+                      (`OperationClass::Admin`, keyed off the \
+                      `/admin/` path). Our own authorization \
+                      design."
+    )]
+    NotAdmin,
+}
+
+/// An admin route's refusal while the admin API is disabled.
+#[derive(utoipa::IntoResponses)]
+#[expect(
+    dead_code,
+    reason = "a response map the OpenAPI document reads; the refusal itself is built by the admin gate"
+)]
+pub(super) enum AdminDisabled {
+    #[response(
+        status = 405,
+        description = "The admin API is disabled on this server \
+                      (`AppConfig::admin.enabled`, default \
+                      false), answered with an empty `Allow` \
+                      per RFC 9110 §10.2.1."
+    )]
+    Disabled,
+}
