@@ -13,8 +13,8 @@
 
 use serde_json::Value;
 
-/// The summary of one EHR — the `get_ehr` / `get_ehrs_for_subject` return
-/// shape, all six attributes populated.
+/// The summary of one EHR — the `get_ehrs_for_subject` return shape, all six
+/// attributes populated.
 #[derive(Debug, Clone)]
 pub struct EhrSummary {
     /// `ehr_id: UUID` — "EHR identifier of this EHR."

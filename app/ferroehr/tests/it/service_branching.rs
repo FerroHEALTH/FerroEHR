@@ -124,7 +124,10 @@ fn all_versions_spec(ehr: ferroehr::ids::EhrId) -> Value {
 /// from another openEHR system would carry (RM common master06 §Copying: the
 /// `creating_system_id` identifies the system of original creation).
 async fn foreign_extract(svc: &FerroEhrService) -> (Value, String) {
-    let source = svc.create_ehr(None).await.expect("create source ehr");
+    let source = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create source ehr");
     let v1 = svc
         .create_composition(source, uv(&composition("v1"), "249", None))
         .await
@@ -203,8 +206,9 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
     // (2) The container current (latest trunk, master06 latest_trunk_version)
     // is STILL the imported foreign trunk v2 — the branch coexists.
     let current = svc
-        .get_composition_latest(target, vo_id)
+        .composition_latest_response(target, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("current composition");
     assert_eq!(
         current["uid"]["value"].as_str().unwrap(),
@@ -501,8 +505,9 @@ async fn a_version_tree_with_branches_reexports_and_reimports_whole() {
     assert_eq!(ov["item"]["uid"]["value"], json!(branch_uid));
     assert_eq!(ov["item"]["_type"], json!("ORIGINAL_VERSION"));
     let trunk = third_svc
-        .get_composition_latest(third, vo_id)
+        .composition_latest_response(third, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("re-imported trunk current");
     assert_eq!(trunk["uid"]["value"].as_str().unwrap(), foreign_tip);
 }

@@ -30,7 +30,9 @@ use ferroehr::versioning::signature::verify::Verdict;
 
 use ferroehr::service::version_update::change_type_coded;
 use openehr_base::prelude::ObjectVersionId;
-use openehr_its::rest::generated::common::{UpdateAttestation, UpdateAudit, UpdateAuditData};
+use openehr_its::rest::generated::common::{
+    UpdateAttestation, UpdateAudit, UpdateAuditData, UpdateVersion,
+};
 use openehr_rm::prelude::DvText;
 use openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json;
 use serde_json::{Value, json};
@@ -102,8 +104,29 @@ fn assert_digest_recomputes(ov: &Value) {
     );
 }
 
+/// Commits `versions` as one CONTRIBUTION through the
+/// `POST /ehr/{ehr_id}/contribution` service call, returning the CONTRIBUTION
+/// uid.
+async fn commit_contribution(
+    svc: &FerroEhrService,
+    ehr: ferroehr::ids::EhrId,
+    versions: Vec<UpdateVersion<openehr_its::rest::generated::ehr::Versionable>>,
+    audit: UpdateAudit,
+) -> String {
+    svc.ehr_contribution_commit(ehr, json!({ "versions": versions, "audit": audit }), false)
+        .await
+        .expect("commit_contribution")
+        .meta
+        .expect("the commit answers its CONTRIBUTION")
+        .uid
+}
+
 async fn create_ehr(svc: &FerroEhrService) -> String {
-    svc.create_ehr(None).await.expect("create_ehr").to_string()
+    Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string()
 }
 
 #[tokio::test]
@@ -150,8 +173,9 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
 
     // Update EHR_STATUS → v2, then read the ORIGINAL_VERSION of v1.
     let mut body = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid_v1 = uid(&body).to_owned();
     body.as_object_mut().expect("status obj").remove("uid");
@@ -160,8 +184,9 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
     // (is_modifiable = false, RM ehr master04 §"EHR Active Status") would
     // refuse the directory commit below.
     body["is_queryable"] = json!(false);
-    svc.replace_ehr_status(ehr_uuid, uv(&body, "251", Some(&status_ovid_v1)))
+    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&body, "251", Some(&status_ovid_v1))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     let (status_vo, status_ver) = version_components(&status_ovid_v1);
@@ -213,14 +238,13 @@ async fn contribution_versions_are_signed() {
     let ehr_id = create_ehr(&svc).await;
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
-    let contribution_uid = svc
-        .commit_contribution(
-            ehr_uuid,
-            vec![uv(&composition("Via contribution"), "249", None)],
-            contribution_audit("249", "Dr. Contribution"),
-        )
-        .await
-        .expect("commit_contribution");
+    let contribution_uid = commit_contribution(
+        &svc,
+        ehr_uuid,
+        vec![uv(&composition("Via contribution"), "249", None)],
+        contribution_audit("249", "Dr. Contribution"),
+    )
+    .await;
     // NOTE: `commit_contribution` returns the contribution_uid;
     // the created version's OBJECT_VERSION_ID is read back from the CONTRIBUTION.
     let contribution = svc
@@ -257,14 +281,13 @@ async fn client_supplied_signature_is_stored_verbatim() {
 
     let mut version = uv(&composition("Client signed"), "249", None);
     version.signature = Some(CLIENT_SIG.to_owned());
-    let contribution_uid = svc
-        .commit_contribution(
-            ehr_uuid,
-            vec![version],
-            contribution_audit("249", "Dr. Author"),
-        )
-        .await
-        .expect("commit_contribution");
+    let contribution_uid = commit_contribution(
+        &svc,
+        ehr_uuid,
+        vec![version],
+        contribution_audit("249", "Dr. Author"),
+    )
+    .await;
     let contribution = svc
         .get_contribution(ehr_uuid, contribution_uid.parse().expect("contrib uuid"))
         .await
@@ -591,8 +614,9 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     let (_, v2) = version_components(&ovid_v2);
     assert_eq!(v2, "2", "second trunk version");
     let latest = svc
-        .get_composition_latest(ehr_uuid, vo_uuid)
+        .composition_latest_response(ehr_uuid, vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("latest");
     assert_eq!(uid(&latest), ovid_v2, "current version is v2");
 
@@ -605,8 +629,9 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
         .await
         .expect("delete_composition");
     let deleted = svc
-        .get_composition_latest(ehr_uuid, vo_uuid)
+        .composition_latest_response(ehr_uuid, vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("deleted get");
     assert_eq!(
         deleted,
@@ -615,14 +640,13 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     );
 
     // A multi-change CONTRIBUTION also folds each change (commit_version_into).
-    let contribution_uid = svc
-        .commit_contribution(
-            ehr_uuid,
-            vec![uv(&composition("Via contribution"), "249", None)],
-            contribution_audit("249", "Dr. Contribution"),
-        )
-        .await
-        .expect("commit_contribution");
+    let contribution_uid = commit_contribution(
+        &svc,
+        ehr_uuid,
+        vec![uv(&composition("Via contribution"), "249", None)],
+        contribution_audit("249", "Dr. Contribution"),
+    )
+    .await;
     let contribution = svc
         .get_contribution(ehr_uuid, contribution_uid.parse().expect("contrib uuid"))
         .await
@@ -677,8 +701,9 @@ async fn creating_system_id_and_signature_survive_a_system_id_change() {
     // Reading the composition back: the injected uid still carries "sys-origin"
     // (the stored creating_system_id), not the new config value.
     let read = svc_b
-        .get_composition_latest(ehr_uuid, vo_uuid)
+        .composition_latest_response(ehr_uuid, vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get");
     assert_eq!(
         uid(&read),

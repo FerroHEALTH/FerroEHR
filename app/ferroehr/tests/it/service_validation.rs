@@ -108,7 +108,11 @@ async fn composition_validation_gates_persistence() {
         .await
         .expect("upload IPS OPT");
 
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // ── valid composition → committed and retrievable ────────────────────────
@@ -124,8 +128,9 @@ async fn composition_validation_gates_persistence() {
     let vo_id = ovid.split("::").next().unwrap().to_owned();
 
     let fetched = svc
-        .get_composition_latest(ehr_uuid, vo_id.parse().expect("vo uuid"))
+        .composition_latest_response(ehr_uuid, vo_id.parse().expect("vo uuid"))
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("valid composition persisted");
     assert_eq!(
         fetched["uid"]["value"], ovid,
@@ -193,7 +198,11 @@ async fn composition_update_is_validated() {
     svc.template_adl14_upload(fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // Seed a valid v1.
@@ -228,8 +237,9 @@ async fn composition_update_is_validated() {
     );
 
     let current = svc
-        .get_composition_latest(ehr_uuid, vo_uuid)
+        .composition_latest_response(ehr_uuid, vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("current still readable");
     assert_eq!(
         current["uid"]["value"], ovid_v1,
@@ -256,7 +266,11 @@ async fn direct_route_commits_stamp_the_template_id() {
     svc.template_adl14_upload(fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // ── create (direct route) ────────────────────────────────────────────────
@@ -359,7 +373,10 @@ async fn incomplete_lifecycle_relaxes_lower_bounds_but_not_wrongness() {
     svc.template_adl14_upload(fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_uuid = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     // A composition missing its mandatory sections (content emptied): under the
     // IPS template each SECTION has occurrences min >= 1, so this is a pure
@@ -454,7 +471,10 @@ async fn warm_template_is_served_from_cache_without_a_store_read() {
         .expect("template_id")
         .to_owned();
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     // First commit warms the cache (web_template_for: miss → build → cache).
     svc.create_composition(
@@ -541,7 +561,10 @@ async fn deleting_a_template_invalidates_its_web_template_cache() {
     // A commit against the now-deleted template resolves to the clean
     // "template not known" 422 — only reachable if the stale WebTemplate was
     // evicted (otherwise the FK would fail with a database error instead).
-    let ehr_uuid = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     let err = svc
         .create_composition(
             ehr_uuid,
@@ -615,7 +638,10 @@ async fn element_without_value_or_null_flavour_is_rejected_at_commit() {
     svc.template_adl14_upload(fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
-    let ehr_uuid = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     let mut broken = composition("ips_canonical.json");
     let emptied = strip_first_element_value(&mut broken, "")
@@ -690,7 +716,11 @@ async fn direct_route_commit_against_an_adl2_template_stamps_and_guards() {
         openehr_sdt::flat::convert::composition_from_flat(&flat, &wt, "2026-08-03T12:00:00Z")
             .expect("FLAT converts to a canonical COMPOSITION");
 
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let ovid = svc
         .create_composition(ehr_uuid, uv(&composition, "249", None))

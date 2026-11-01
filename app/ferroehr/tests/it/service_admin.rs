@@ -377,7 +377,11 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
     svc.template_adl14_upload(read_fixture(OPT_FIXTURE_REL))
         .await
         .expect("re-upload opt");
-    let ehr: Uuid = svc.create_ehr(None).await.expect("ehr").into();
+    let ehr: Uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .into();
     let referenced = sqlx::query("UPDATE version SET template_id = $1 WHERE ehr_id = $2")
         .bind(OPT_TEMPLATE_ID)
         .bind(ehr)
@@ -882,8 +886,9 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     // Reads are UNCHANGED after archival (zero wire drift): the EHR_STATUS and
     // the party still serve their content.
     let status = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("status still readable after archive");
     assert_eq!(status["_type"], "EHR_STATUS");
     let party = svc
@@ -974,8 +979,9 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     // The composition/EHR_STATUS content served before archiving, to compare
     // against the post-archive read.
     let status_before = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("status before archive");
 
     svc.archive_ehrs(vec![ehr.to_string()])
@@ -994,20 +1000,23 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     assert_eq!(tier_rows(pool, "node_hot", other).await, other_nodes);
     assert_eq!(tier_rows(pool, "version_cold", other).await, 0);
     assert_eq!(tier_rows(pool, "node_cold", other).await, 0);
-    svc.get_ehr_status_at_time(other, None)
+    svc.ehr_status_at_time_response(other, None)
         .await
+        .map(|r| r.body)
         .expect("the unarchived EHR still reads");
 
     // 3. The archived EHR still serves the same content, now from the cold
     //    tier (archiving MOVES storage, it does not remove the object).
     let status_after = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("status after archive");
     assert_eq!(status_before, status_after, "archived read is unchanged");
     let revisions = svc
-        .ehr_status_revision_history(ehr)
+        .ehr_status_revision_history_response(ehr)
         .await
+        .map(|r| r.body)
         .expect("revision history after archive");
     assert_eq!(revisions["_type"], "REVISION_HISTORY");
     assert!(
@@ -1041,8 +1050,9 @@ async fn archive_physically_moves_rows_to_the_cold_tier_and_back() {
     .expect("marker count");
     assert_eq!(markers, 0, "restore drops the archive markers");
     assert_eq!(
-        svc.get_ehr_status_at_time(ehr, None)
+        svc.ehr_status_at_time_response(ehr, None)
             .await
+            .map(|r| r.body)
             .expect("status after restore"),
         status_before
     );
@@ -1085,10 +1095,14 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
     let (_db, pool, svc) = repository().await;
     let pool = &pool;
 
-    let ehr = svc.create_ehr(None).await.expect("ehr");
-    let before = svc
-        .get_ehr_status_at_time(ehr, None)
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
+        .expect("ehr");
+    let before = svc
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .map(|r| r.body)
         .expect("status get");
     let preceding = uid(&before).to_owned();
     let status_vo = preceding.split("::").next().expect("vo uuid").to_owned();
@@ -1102,8 +1116,9 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
 
     let mut updated = before.clone();
     updated.as_object_mut().expect("status obj").remove("uid");
-    svc.replace_ehr_status(ehr, uv(&updated, "251", Some(&preceding)))
+    Box::pin(svc.replace_ehr_status_meta(ehr, uv(&updated, "251", Some(&preceding))))
         .await
+        .map(|m| m.uid)
         .expect("update the archived EHR_STATUS");
 
     // ONLY the written object thaws: the EHR_STATUS is whole in the primary
@@ -1114,8 +1129,9 @@ async fn writing_an_archived_object_thaws_it_back_to_the_primary_tier() {
     assert_eq!(tier_rows(pool, "version_cold", ehr).await, 1);
     assert_eq!(tier_rows(pool, "version_hot", ehr).await, 2);
     let revisions = svc
-        .ehr_status_revision_history(ehr)
+        .ehr_status_revision_history_response(ehr)
         .await
+        .map(|r| r.body)
         .expect("revision history");
     assert_eq!(
         revisions["items"].as_array().expect("items array").len(),

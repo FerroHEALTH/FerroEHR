@@ -1466,10 +1466,14 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
         .expect("an unprotected source stores the person as written");
     let (party, _) = committed_ids(&created.body);
 
-    let ehr = source.create_ehr(None).await.expect("ehr");
-    let mut status = source
-        .get_ehr_status_at_time(ehr, None)
+    let ehr = Box::pin(source.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
+        .expect("ehr");
+    let mut status = source
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = status
         .pointer("/uid/value")
@@ -1486,10 +1490,13 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
             "id": { "_type": "HIER_OBJECT_ID", "value": party }
         }
     });
-    source
-        .replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid)))
-        .await
-        .expect("status update");
+    Box::pin(
+        source
+            .replace_ehr_status_meta(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("status update");
     let exported = source.extract_ehrs(ehr).await.expect("export_ehrs");
     let extract: Extract =
         openehr_its::json::from_canonical_value(exported.first().expect("one EXTRACT"))
@@ -1529,10 +1536,14 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
         .expect("the source seals the identifier");
     let (party, _) = committed_ids(&created.body);
 
-    let ehr = source.create_ehr(None).await.expect("ehr");
-    let mut status = source
-        .get_ehr_status_at_time(ehr, None)
+    let ehr = Box::pin(source.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
+        .expect("ehr");
+    let mut status = source
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = status
         .pointer("/uid/value")
@@ -1549,10 +1560,13 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
             "id": { "_type": "HIER_OBJECT_ID", "value": party }
         }
     });
-    source
-        .replace_ehr_status(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid)))
-        .await
-        .expect("status update");
+    Box::pin(
+        source
+            .replace_ehr_status_meta(ehr, crate::fixtures::uv(&status, "251", Some(&status_ovid))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("status update");
     let exported = source.extract_ehrs(ehr).await.expect("export_ehrs");
     let text = serde_json::to_string(&exported).expect("the extract serializes");
     assert!(
@@ -1718,7 +1732,7 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
         .await
         .expect("create the person");
     let (vo, v1) = committed_ids(&created.body);
-    service
+    let changed = service
         .party_update(
             PartyKind::Person,
             vo.clone(),
@@ -1733,8 +1747,9 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
         .expect("change the identifier");
 
     let party = ferroehr::ids::VoId(vo.parse().expect("a uuid"));
+    let latest = changed.meta.expect("the update answers its version").uid;
     service
-        .delete_party(party)
+        .party_delete(PartyKind::Person, latest, None, None)
         .await
         .expect("logically delete the person");
     let kept: i64 =

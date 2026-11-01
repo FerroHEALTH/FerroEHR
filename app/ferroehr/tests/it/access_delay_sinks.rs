@@ -104,7 +104,10 @@ async fn service(
 /// Commits a composition and holds it from the person by a professional's
 /// act; returns the EHR id and the held object's id.
 async fn held(svc: &FerroEhrService) -> (String, String) {
-    let ehr = svc.create_ehr(None).await.expect("create the EHR");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create the EHR");
     let committed = svc
         .create_composition(ehr, uv(&composition("held"), "249", None))
         .await

@@ -42,7 +42,10 @@ use crate::fixtures::{composition, folder, uv};
 /// (`EHR_STATUS`, `EHR_ACCESS`, the COMPOSITION), every one of which the sweep
 /// reads.
 async fn seed_ehr_with_composition(svc: &FerroEhrService) -> EhrId {
-    let ehr_id = svc.create_ehr(None).await.expect("ehr create");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr create");
     svc.create_composition(ehr_id, uv(&composition("Encounter"), "249", None))
         .await
         .expect("composition commit");
@@ -120,7 +123,10 @@ const TYPED_VALUE_TEMPLATES: [&str; 4] = [
 /// Commits the `medium` example of every [`TYPED_VALUE_TEMPLATES`] entry into
 /// one new EHR.
 pub(crate) async fn seed_typed_value_compositions(svc: &FerroEhrService) {
-    let ehr_id = svc.create_ehr(None).await.expect("ehr create");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr create");
     for template in TYPED_VALUE_TEMPLATES {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join(format!("../../corpus/templates/ckm/{template}.opt"));
@@ -320,7 +326,10 @@ async fn a_logically_deleted_version_sweeps_clean() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = svc.create_ehr(None).await.expect("ehr create");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr create");
     let dir = svc
         .create_directory(ehr_id, uv(&folder("root"), "249", None))
         .await
@@ -354,7 +363,10 @@ async fn node_rows_under_a_bodiless_version_are_reported_as_unexpected_nodes() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = svc.create_ehr(None).await.expect("ehr create");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr create");
     let dir = svc
         .create_directory(ehr_id, uv(&folder("root"), "249", None))
         .await
@@ -1223,9 +1235,10 @@ fn a_person_with_a_contact_address() -> Value {
 /// Commit [`a_person_with_a_contact_address`] through the service seam, and
 /// return the versioned object plus the storage ordinal of its one version.
 async fn seed_contactable_party(svc: &FerroEhrService, pool: &PgPool) -> (VoId, i32) {
-    let vo_id = Box::pin(svc.create_party(uv(&a_person_with_a_contact_address(), "249", None)))
-        .await
-        .expect("create a person through the service seam");
+    let vo_id =
+        crate::fixtures::create_party(svc, uv(&a_person_with_a_contact_address(), "249", None))
+            .await
+            .expect("create a person through the service seam");
     let sys_version: i32 = sqlx::query_scalar(
         "SELECT sys_version FROM party.version WHERE vo_id = $1 \
          ORDER BY sys_version DESC LIMIT 1",
@@ -1322,7 +1335,15 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let (vo_id, sys_version) = seed_contactable_party(&svc, &pool).await;
-    let served = svc.get_party(vo_id).await.expect("read the fresh party");
+    let served = svc
+        .party_get(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            vo_id.to_string(),
+            None,
+        )
+        .await
+        .map(|r| r.body)
+        .expect("read the fresh party");
 
     write_the_old_party_shape(&pool, vo_id, sys_version).await;
 
@@ -1387,7 +1408,14 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
     );
 
     assert_eq!(
-        svc.get_party(vo_id).await.expect("read the repaired party"),
+        svc.party_get(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            vo_id.to_string(),
+            None,
+        )
+        .await
+        .map(|r| r.body)
+        .expect("read the repaired party"),
         served,
         "and the served body never moved: only the index over it did"
     );

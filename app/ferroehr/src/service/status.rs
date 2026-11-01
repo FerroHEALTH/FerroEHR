@@ -3,8 +3,7 @@
 
 //! The service call-status model, our own design.
 //!
-//! Every method returns `Result<T, StatusError>` and a failed call's [`CallStatus`]
-//! object is built on demand via [`StatusError::into_call_status`].
+//! Every method returns `Result<T, StatusError>`.
 //!
 //! The single status-to-HTTP table lives with the protocol adapter
 //! (`ferroehr-rest::overview::error`), so this module is protocol-free. The
@@ -249,41 +248,6 @@ impl StatusError {
     pub fn exception(message: impl Into<String>) -> Self {
         Self::new(ServiceStatus::Exception, message)
     }
-
-    /// Build the [`CallStatus`] record for this failed call; the caller
-    /// supplies the call identity the error does not track.
-    #[must_use]
-    pub fn into_call_status(
-        self,
-        call_name: impl Into<String>,
-        call_string: impl Into<String>,
-    ) -> CallStatus {
-        CallStatus {
-            code: self.status,
-            call_name: call_name.into(),
-            call_string: call_string.into(),
-            meaning: self.status.as_str().to_owned(),
-            message: self.message,
-        }
-    }
-}
-
-/// The record of one failed call: its status, its identity and its message.
-///
-/// Built on demand from a failed call's [`StatusError`] via
-/// [`StatusError::into_call_status`]; every attribute is populated.
-#[derive(Debug, Clone)]
-pub struct CallStatus {
-    /// Call status code for last call.
-    pub code: ServiceStatus,
-    /// Name of call that this status documents.
-    pub call_name: String,
-    /// Full call, in stringified form, including arguments.
-    pub call_string: String,
-    /// Meaning of the result status.
-    pub meaning: String,
-    /// Error message text.
-    pub message: String,
 }
 
 /// Sentinel prefix marking an `exception` [`StatusError`] as a **query-execution
@@ -305,13 +269,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn call_status_carries_every_attribute() {
-        // A failed call yields a CallStatus with all five attributes populated.
+    fn status_error_carries_its_status_and_message() {
+        // A failed call carries its status, the status's meaning and its message.
         let err = StatusError::precondition("no such EHR");
-        let status = err.into_call_status("create_ehr_with_id", "create_ehr_with_id(…)");
-        assert_eq!(status.code, ServiceStatus::PreconditionViolation);
-        assert_eq!(status.meaning, "precondition_violation");
-        assert_eq!(status.call_name, "create_ehr_with_id");
-        assert_eq!(status.message, "no such EHR");
+        assert_eq!(err.status, ServiceStatus::PreconditionViolation);
+        assert_eq!(err.status.as_str(), "precondition_violation");
+        assert_eq!(err.message, "no such EHR");
     }
 }

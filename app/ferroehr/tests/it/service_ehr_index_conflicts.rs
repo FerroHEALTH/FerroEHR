@@ -40,7 +40,11 @@ async fn scan(svc: &FerroEhrService) -> Vec<IndexConflict> {
 
 /// Associate `subject` with a freshly created EHR, returning that EHR's id.
 async fn associate(svc: &FerroEhrService, subject: &SubjectRef) -> String {
-    let ehr = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     svc.add_ehr_subject(ehr.clone(), subject.clone(), None, None)
         .await
         .expect("add subject");

@@ -130,7 +130,11 @@ fn composition(name: &str, magnitude: f64) -> Value {
 async fn create_ehr(svc: &FerroEhrService) -> String {
     // NOTE: `create_ehr` returns the new EHR's `UUID`; `ehr_id.value`
     // IS that uuid, so its string form is the id every assertion here uses.
-    svc.create_ehr(None).await.expect("create_ehr").to_string()
+    Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string()
 }
 
 /// Create a composition in `ehr_id`, returning its `OBJECT_VERSION_ID`.
@@ -425,11 +429,12 @@ async fn aql_acceptance_set() {
     assert_eq!(rows(&r).len(), 1, "one composition in the single-comp EHR");
     let queried = &rows(&r)[0][0];
     let fetched = svc
-        .get_composition_latest(
+        .composition_latest_response(
             single.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
         )
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("get_composition_latest");
     // The stored canonical carries the version uid since commit-time stamping
     // (#439), so the AQL whole-object cell and the read surface serve ONE
@@ -468,11 +473,12 @@ async fn whole_object_projection_batches_over_a_multi_row_page() {
         let ovid = create_comp(&svc, &ehr_id, &name, f64::from(i) + 10.0).await;
         let vo_id = ovid.split("::").next().unwrap();
         let body = svc
-            .get_composition_latest(
+            .composition_latest_response(
                 ehr_id.parse().expect("ehr uuid"),
                 vo_id.parse().expect("vo uuid"),
             )
             .await
+            .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
             .expect("get_composition_latest");
         // One shape since commit-time uid stamping (#439): the AQL cell and
         // the read surface both carry the version uid — compared verbatim.
@@ -4234,16 +4240,22 @@ async fn the_patient_scope_confines_every_query_shape() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let own = svc
-        .create_ehr(Some(status_with_subject("test.patients", "PATIENT-A")))
-        .await
-        .expect("create the in-scope EHR")
-        .to_string();
-    let other = svc
-        .create_ehr(Some(status_with_subject("test.patients", "PATIENT-B")))
-        .await
-        .expect("create the out-of-scope EHR")
-        .to_string();
+    let own = Box::pin(svc.create_ehr_meta(
+        Some(status_with_subject("test.patients", "PATIENT-A")),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect("create the in-scope EHR")
+    .to_string();
+    let other = Box::pin(svc.create_ehr_meta(
+        Some(status_with_subject("test.patients", "PATIENT-B")),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect("create the out-of-scope EHR")
+    .to_string();
     create_comp(&svc, &own, "BP", 80.0).await;
     create_comp(&svc, &other, "BP", 120.0).await;
 
@@ -4326,19 +4338,23 @@ async fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
 
     let mut shared = Vec::new();
     for namespace in ["test.patients", "other.patients"] {
-        let ehr = svc
-            .create_ehr(Some(status_with_subject(namespace, "PATIENT-X")))
-            .await
-            .expect("create an EHR under the shared id")
-            .to_string();
+        let ehr =
+            Box::pin(svc.create_ehr_meta(Some(status_with_subject(namespace, "PATIENT-X")), None))
+                .await
+                .map(|(id, _)| id)
+                .expect("create an EHR under the shared id")
+                .to_string();
         create_comp(&svc, &ehr, "BP", 80.0).await;
         shared.push(ehr);
     }
-    let unique = svc
-        .create_ehr(Some(status_with_subject("test.patients", "PATIENT-U")))
-        .await
-        .expect("create the EHR under a unique id")
-        .to_string();
+    let unique = Box::pin(svc.create_ehr_meta(
+        Some(status_with_subject("test.patients", "PATIENT-U")),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect("create the EHR under a unique id")
+    .to_string();
     create_comp(&svc, &unique, "BP", 90.0).await;
 
     let scoped = |subject: &str| AqlQueryRequest {
@@ -4403,11 +4419,12 @@ async fn a_configured_patient_namespace_admits_the_pair_exactly() {
 
     let mut by_namespace = Vec::new();
     for namespace in ["test.patients", "other.patients"] {
-        let ehr = svc
-            .create_ehr(Some(status_with_subject(namespace, "PATIENT-X")))
-            .await
-            .expect("create an EHR under the shared id")
-            .to_string();
+        let ehr =
+            Box::pin(svc.create_ehr_meta(Some(status_with_subject(namespace, "PATIENT-X")), None))
+                .await
+                .map(|(id, _)| id)
+                .expect("create an EHR under the shared id")
+                .to_string();
         create_comp(&svc, &ehr, "BP", 80.0).await;
         by_namespace.push(ehr);
     }

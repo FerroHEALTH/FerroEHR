@@ -68,11 +68,15 @@ fn uv<T: serde::de::DeserializeOwned>(
 /// `FOLDER`, and the auto-created `EHR_ACCESS`. Returns the EHR id and the
 /// `EHR_STATUS` version-container uid.
 async fn seed_ehr(svc: &FerroEhrService) -> (ferroehr::ids::EhrId, String) {
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     let mut status = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
     let status_vo = status_ovid.split("::").next().unwrap().to_owned();
@@ -90,8 +94,9 @@ async fn seed_ehr(svc: &FerroEhrService) -> (ferroehr::ids::EhrId, String) {
     .expect("directory");
 
     status["is_modifiable"] = json!(false);
-    svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&status_ovid)))
+    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     (ehr_uuid, status_vo)
@@ -165,7 +170,11 @@ async fn export_ehrs_carries_every_versioned_object_latest_only() {
     // Canonical-JSON faithfulness: the exported version data is byte-equal to
     // the read surface's current EHR_STATUS — one shape since commit-time uid
     // stamping (#439).
-    let current = svc.get_ehr_status_at_time(ehr, None).await.expect("read");
+    let current = svc
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .map(|r| r.body)
+        .expect("read");
     assert_eq!(
         versions[0]["data"], current,
         "exported EHR_STATUS data must match the stored canonical content"

@@ -331,16 +331,17 @@ async fn commit_offloads_large_multimedia_and_expands() {
         .with_multimedia(sw.engine());
 
     // Commit an EHR whose EHR_STATUS carries a >threshold inline multimedia.
-    let ehr = svc
-        .create_ehr(Some(status_with_media(multimedia(1000))))
+    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
         .await
+        .map(|(id, _)| id)
         .expect("create ehr");
 
     // The stored/served form is externalized: data gone, uri + integrity + size
     // present (RM invariants honoured), and the blob exists in the store.
     let stored = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("read status");
     let node = media_node(&stored);
     assert!(node.get("data").is_none(), "inline data must be gone");
@@ -383,8 +384,9 @@ async fn commit_offloads_large_multimedia_and_expands() {
 
     // Without the flag the default read keeps the externalized form untouched.
     let unexpanded = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("read again");
     assert!(media_node(&unexpanded).get("data").is_none());
 }
@@ -398,13 +400,14 @@ async fn small_multimedia_stays_inline() {
 
     let media = multimedia(100); // below the 256-byte threshold
     let inline_data = media.get("data").cloned();
-    let ehr = svc
-        .create_ehr(Some(status_with_media(media)))
+    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(media)), None))
         .await
+        .map(|(id, _)| id)
         .expect("create ehr");
     let stored = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("read status");
     let node = media_node(&stored);
     assert_eq!(
@@ -427,11 +430,15 @@ async fn corrupted_blob_fails_integrity_on_expand() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_multimedia(sw.engine());
 
-    let ehr = svc
-        .create_ehr(Some(status_with_media(multimedia(1000))))
+    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
         .await
+        .map(|(id, _)| id)
         .expect("create ehr");
-    let stored = svc.get_ehr_status_at_time(ehr, None).await.expect("read");
+    let stored = svc
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .map(|r| r.body)
+        .expect("read");
     let key = blob_key(&stored);
 
     // Tamper with the stored bytes directly (overwrite the object at its key).
@@ -466,16 +473,24 @@ async fn gc_removes_unreferenced_but_keeps_shared_blobs() {
         .with_multimedia(sw.engine());
 
     // Two EHRs carrying the *same* bytes → the same content-addressed blob.
-    let ehr1 = svc
-        .create_ehr(Some(status_with_media(multimedia(1000))))
+    let ehr1 = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
         .await
+        .map(|(id, _)| id)
         .expect("ehr1");
-    let ehr2 = svc
-        .create_ehr(Some(status_with_media(multimedia(1000))))
+    let ehr2 = Box::pin(svc.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
         .await
+        .map(|(id, _)| id)
         .expect("ehr2");
-    let s1 = svc.get_ehr_status_at_time(ehr1, None).await.expect("s1");
-    let s2 = svc.get_ehr_status_at_time(ehr2, None).await.expect("s2");
+    let s1 = svc
+        .ehr_status_at_time_response(ehr1, None)
+        .await
+        .map(|r| r.body)
+        .expect("s1");
+    let s2 = svc
+        .ehr_status_at_time_response(ehr2, None)
+        .await
+        .map(|r| r.body)
+        .expect("s2");
     let key = blob_key(&s1);
     assert_eq!(key, blob_key(&s2), "identical media dedups to one blob");
     assert!(sw.engine().store().exists(&key).await.unwrap());
@@ -514,9 +529,9 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
     let shared_media = multimedia(1200);
     let solo = make_person_with_media(&svc, "Solo", &solo_media).await;
     let sharer = make_person_with_media(&svc, "Sharer", &shared_media).await;
-    let ehr = svc
-        .create_ehr(Some(status_with_media(shared_media.clone())))
+    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(shared_media.clone())), None))
         .await
+        .map(|(id, _)| id)
         .expect("ehr sharing the blob");
 
     let solo_key = party_blob_key(
@@ -534,8 +549,9 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
     assert_eq!(
         shared_key,
         blob_key(
-            &svc.get_ehr_status_at_time(ehr, None)
+            &svc.ehr_status_at_time_response(ehr, None)
                 .await
+                .map(|r| r.body)
                 .expect("read the sharing EHR")
         ),
         "identical media must dedup to one blob for the cross-domain case to mean anything"
@@ -576,14 +592,15 @@ async fn dump_load_carries_blobs() {
     ))
     .with_multimedia(sw.engine());
 
-    let ehr = source
-        .create_ehr(Some(status_with_media(multimedia(1000))))
+    let ehr = Box::pin(source.create_ehr_meta(Some(status_with_media(multimedia(1000))), None))
         .await
+        .map(|(id, _)| id)
         .expect("seed ehr");
     let key = blob_key(
         &source
-            .get_ehr_status_at_time(ehr, None)
+            .ehr_status_at_time_response(ehr, None)
             .await
+            .map(|r| r.body)
             .expect("read"),
     );
 
@@ -606,8 +623,9 @@ async fn dump_load_carries_blobs() {
     assert!(loaded.is_empty(), "clean load, got {loaded:?}");
 
     let stored = target
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("read target");
     assert_eq!(blob_key(&stored), key, "external reference round-trips");
     assert!(
@@ -631,11 +649,15 @@ async fn disabled_by_default_stores_inline_verbatim() {
 
     let media = multimedia(4096); // well above any threshold
     let inline_data = media.get("data").cloned();
-    let ehr = svc
-        .create_ehr(Some(status_with_media(media)))
+    let ehr = Box::pin(svc.create_ehr_meta(Some(status_with_media(media)), None))
         .await
+        .map(|(id, _)| id)
         .expect("create ehr");
-    let stored = svc.get_ehr_status_at_time(ehr, None).await.expect("read");
+    let stored = svc
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .map(|r| r.body)
+        .expect("read");
     let node = media_node(&stored);
     assert_eq!(
         node.get("data").cloned(),

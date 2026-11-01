@@ -47,7 +47,10 @@ fn decommission(db: &testkit::TestDb) -> Decommission {
 /// a linkage row and an audit record.
 async fn seed_every_domain(pool: &PgPool) {
     let service = FerroEhrService::new(&DomainPools::from_shared(pool));
-    let ehr = service.create_ehr(None).await.expect("create an EHR");
+    let ehr = Box::pin(service.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create an EHR");
     service
         .create_composition(ehr, uv(&composition("Encounter"), "249", None))
         .await

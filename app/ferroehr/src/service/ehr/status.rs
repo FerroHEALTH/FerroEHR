@@ -168,80 +168,6 @@ impl FerroEhrService {
         Ok(committed)
     }
 
-    /// Apply a single in-place mutation to the current `EHR_STATUS` root and
-    /// commit it as a new implicit-CONTRIBUTION version — the shared body of
-    /// the discrete mutators (`set_ehr_queryable` … `update_other_details`),
-    /// each equivalent to a whole-object replace.
-    /// Reuses [`Self::commit_status`] with the current version uid as the
-    /// preceding version (server-driven optimistic lock).
-    ///
-    /// `EHR_STATUS` "is always modifiable" (RM ehr master04 §EHR Active
-    /// Status), so this is deliberately not gated by
-    /// [`Self::ensure_content_writable`], whose guard scopes to EHR contents;
-    /// that is how `clear_ehr_modifiable` disables an EHR yet
-    /// `set_ehr_modifiable` re-enables it.
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR has no current `EHR_STATUS`;
-    /// [`ServiceError::Unprocessable`] when the mutated status fails structural
-    /// validation; [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn status_mutate(
-        &self,
-        ehr_id: EhrId,
-        mutate: impl FnOnce(&mut EhrStatus) -> Result<(), ServiceError>,
-    ) -> Result<crate::versioning::change::Committed, ServiceError> {
-        // Resolve the current EHR_STATUS versioned object once and read its
-        // body; the resolved `vo_id` threads into `commit_status` so its commit
-        // skips a second `current_vo` resolution.
-        let (vo_id, _) = self
-            .current_vo(ehr_id, Kind::EhrStatus)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::EhrIdDoesNotExist,
-                    format!("EHR_STATUS for EHR {ehr_id}"),
-                )
-            })?;
-        let read = read_current(&self.pool, self.spec_profile, vo_id)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::EhrIdDoesNotExist,
-                    format!("EHR_STATUS for EHR {ehr_id}"),
-                )
-            })?;
-        let current = self.version_response(ehr_id, vo_id, read)?;
-        let preceding = current
-            .meta
-            .as_ref()
-            .map(|m| m.uid.clone())
-            .unwrap_or_default();
-        // The stored fragment decodes ONCE into the typed EHR_STATUS, so a
-        // mutation that cannot produce a legal one is either unrepresentable or
-        // refused by the closure itself.
-        let mut status: EhrStatus = openehr_its::json::from_canonical_value(&current.body)
-            .map_err(|e| {
-                ServiceError::content_invalid(
-                    crate::service::error::Violation::new("is not a canonical EHR_STATUS")
-                        .with_path("EHR_STATUS")
-                        .with_decode_failure(&e),
-                )
-            })?;
-        // The read injects `uid`; drop it so the re-commit carries only the
-        // mutated EHR_STATUS content (the server assigns the new version id).
-        status.uid = None;
-        mutate(&mut status)?;
-        // The flag mutators commit a modification of the existing
-        // EHR_STATUS: carry the operation's own change type so the commit
-        // audit resolves without a client envelope (the `direct()` placeholder
-        // is `249|creation|`, which would contradict this update —
-        // `versioning::audit::merged_change_type`).
-        let mut version = crate::service::version_update::direct_envelope(status);
-        *crate::service::version_update::audit_base_mut(&mut version.commit_audit).change_type =
-            crate::service::version_update::change_type_coded(change_type::MODIFICATION);
-        self.commit_status(ehr_id, vo_id, version, &preceding).await
-    }
-
     /// The `VERSIONED_OBJECT` for an EHR's `EHR_STATUS`.
     ///
     /// # Errors
@@ -593,24 +519,6 @@ pub(in crate::service) fn ehr_promoted_columns(
 // ── The EHR_STATUS call surface ───────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// Whether the EHR's
-    /// `EHR_STATUS` versioned object is the one named.
-    ///
-    /// # Errors
-    /// [`StatusError`] if the current-object resolution fails.
-    pub async fn has_ehr_status_version(
-        &self,
-        an_ehr_id: EhrId,
-        a_version_uid: VoId,
-    ) -> Result<bool, StatusError> {
-        // An EHR holds exactly one EHR_STATUS versioned object; the version
-        // exists iff that object's `vo_id` matches.
-        Ok(self
-            .current_vo(an_ehr_id, Kind::EhrStatus)
-            .await?
-            .is_some_and(|(vo, _)| vo == a_version_uid))
-    }
-
     /// The current `EHR_STATUS` (bare, with
     /// its `uid`).
     ///
@@ -619,183 +527,6 @@ impl FerroEhrService {
     /// a read fails.
     pub async fn get_ehr_status(&self, an_ehr_id: EhrId) -> Result<Value, StatusError> {
         Ok(self.status_at(an_ehr_id, None).await?.body)
-    }
-
-    /// The `EHR_STATUS` current at
-    /// `a_time` (time-travel), or the current one when `a_time` is `None`.
-    ///
-    /// # Errors
-    /// [`StatusError`] for a malformed `a_time` (400-equivalent), a missing status
-    /// at that instant (404-equivalent), or a read failure.
-    pub async fn get_ehr_status_at_time(
-        &self,
-        an_ehr_id: EhrId,
-        a_time: Option<String>,
-    ) -> Result<Value, StatusError> {
-        Ok(self
-            .ehr_status_at_time_response(an_ehr_id, a_time)
-            .await?
-            .body)
-    }
-
-    /// The bare `EHR_STATUS` at a specific version (not an
-    /// `ORIGINAL_VERSION`). `a_version` is the `VERSION_TREE_ID` lexical form.
-    ///
-    /// # Errors
-    /// [`StatusError`] for a malformed version id, an unknown version
-    /// (404-equivalent), or a read failure.
-    pub async fn get_ehr_status_at_version(
-        &self,
-        an_ehr_id: EhrId,
-        a_version_uid: VoId,
-        a_version: &str,
-    ) -> Result<Value, StatusError> {
-        Ok(self
-            .ehr_status_at_version_response(an_ehr_id, a_version_uid, a_version)
-            .await?
-            .body)
-    }
-
-    /// The `VERSIONED_EHR_STATUS`
-    /// container object.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
-    /// a read fails.
-    pub async fn get_versioned_ehr_status(&self, an_ehr_id: EhrId) -> Result<Value, StatusError> {
-        Ok(self.versioned_status(an_ehr_id).await?.body)
-    }
-
-    /// Commit a new `EHR_STATUS` version
-    /// with `is_queryable = true`, returning the new version uid.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` or the commit
-    /// fails.
-    pub async fn set_ehr_queryable(&self, an_ehr_id: EhrId) -> Result<String, StatusError> {
-        Ok(self
-            .status_mutate(an_ehr_id, |s| {
-                s.is_queryable = true;
-                Ok(())
-            })
-            .await?
-            .version_uid())
-    }
-
-    /// Commit a new `EHR_STATUS`
-    /// version with `is_queryable = false`, returning the new version uid.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` or the commit
-    /// fails.
-    pub async fn clear_ehr_queryable(&self, an_ehr_id: EhrId) -> Result<String, StatusError> {
-        Ok(self
-            .status_mutate(an_ehr_id, |s| {
-                s.is_queryable = false;
-                Ok(())
-            })
-            .await?
-            .version_uid())
-    }
-
-    /// Commit a new `EHR_STATUS` version
-    /// with `is_modifiable = true` (reactivating the EHR's contents), returning
-    /// the new version uid.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` or the commit
-    /// fails.
-    pub async fn set_ehr_modifiable(&self, an_ehr_id: EhrId) -> Result<String, StatusError> {
-        Ok(self
-            .status_mutate(an_ehr_id, |s| {
-                s.is_modifiable = true;
-                Ok(())
-            })
-            .await?
-            .version_uid())
-    }
-
-    /// Commit a new `EHR_STATUS`
-    /// version with `is_modifiable = false` (deactivating the EHR's contents),
-    /// returning the new version uid.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` or the commit
-    /// fails.
-    pub async fn clear_ehr_modifiable(&self, an_ehr_id: EhrId) -> Result<String, StatusError> {
-        // Committable on the EHR it disables: the write guard scopes to EHR
-        // *contents*, never to EHR_STATUS (RM ehr master04 §EHR Active Status).
-        Ok(self
-            .status_mutate(an_ehr_id, |s| {
-                s.is_modifiable = false;
-                Ok(())
-            })
-            .await?
-            .version_uid())
-    }
-
-    /// Commit a new `EHR_STATUS`
-    /// version with the given `other_details`, returning the new version uid.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS`, the mutated status
-    /// fails validation (a non-`ITEM_STRUCTURE` `other_details` is
-    /// 422-equivalent), or the commit fails.
-    pub async fn update_other_details(
-        &self,
-        an_ehr_id: EhrId,
-        a_details: Value,
-    ) -> Result<String, StatusError> {
-        // Boxed: the typed EHR_STATUS envelope makes the mutate future large
-        // enough to matter on the stack (clippy `large_futures`).
-        Ok(Box::pin(self.status_mutate(an_ehr_id, move |s| {
-            // The client-supplied details decode through the strict reader, so
-            // a non-ITEM_STRUCTURE refuses here, path-named.
-            s.other_details = Some(openehr_its::json::from_canonical_value(&a_details).map_err(
-                |e| {
-                    ServiceError::content_invalid(
-                        crate::service::error::Violation::new("is not a canonical ITEM_STRUCTURE")
-                            .with_path("EHR_STATUS/other_details")
-                            .with_decode_failure(&e),
-                    )
-                },
-            )?);
-            Ok(())
-        }))
-        .await?
-        .version_uid())
-    }
-
-    /// Replace the whole `EHR_STATUS` in one commit (`PUT …/ehr_status`),
-    /// returning the new version uid.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent),
-    /// the `preceding_version_uid` mismatches the current latest
-    /// (412-equivalent), the body fails structural validation
-    /// (422-equivalent), or the commit fails.
-    pub async fn replace_ehr_status(
-        &self,
-        an_ehr_id: EhrId,
-        a_status: UpdateVersion<EhrStatus>,
-    ) -> Result<String, StatusError> {
-        Ok(Box::pin(self.replace_ehr_status_meta(an_ehr_id, a_status))
-            .await?
-            .uid)
-    }
-
-    /// The `REVISION_HISTORY` of the EHR's `EHR_STATUS` (RM common
-    /// `versioned_object.adoc` `revision_history()`); the wire is the
-    /// ITS-REST `revision_history` route.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
-    /// a read fails.
-    pub async fn ehr_status_revision_history(
-        &self,
-        an_ehr_id: EhrId,
-    ) -> Result<Value, StatusError> {
-        Ok(self.status_revision_history(an_ehr_id).await?.body)
     }
 
     /// The VERSION envelope of the EHR's `EHR_STATUS` extant at `a_time`, or
@@ -831,16 +562,16 @@ impl FerroEhrService {
     }
 }
 
-// ── ITS-REST read/write-response adapter (adapter-support extension) ──────────
+// ── The EHR_STATUS reads and the update with their resource metadata ─────────
 //
-// The `EHR_STATUS` calls above return the bare `EHR_STATUS` (or its new version
-// uid), neither of which carries the commit instant `Requests_and_responses.md`
-// §"`ETag` and Last-Modified" wants, so these siblings return the same result
+// `Requests_and_responses.md` §"`ETag` and Last-Modified" wants the commit
+// instant beside the served `EHR_STATUS`, so these calls return the result
 // plus its [`ResourceMeta`] with no second read (no openEHR spec governs the
 // envelope — our own design).
 
 impl FerroEhrService {
-    /// [`Self::get_ehr_status_at_time`] with the version metadata the wire's
+    /// The `EHR_STATUS` current at `a_time` (time-travel), or the current one
+    /// when `a_time` is `None`, with the version metadata the wire's
     /// `ETag`/`Last-Modified` need.
     ///
     /// # Errors
@@ -855,8 +586,9 @@ impl FerroEhrService {
         Ok(self.status_at(an_ehr_id, at).await?)
     }
 
-    /// [`Self::get_ehr_status_at_version`] with the version metadata the
-    /// wire's `ETag`/`Last-Modified` need. The body is the **bare**
+    /// The `EHR_STATUS` at a specific version, with the version metadata the
+    /// wire's `ETag`/`Last-Modified` need. `a_version` is the
+    /// `VERSION_TREE_ID` lexical form, and the body is the **bare**
     /// `EHR_STATUS`, not an `ORIGINAL_VERSION`.
     ///
     /// # Errors
@@ -874,11 +606,11 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// [`Self::get_versioned_ehr_status`] with the container metadata the
-    /// wire's `ETag`/`Last-Modified` need: the container uid identity plus the
-    /// newest held version's commit instant (ITS-REST overview
-    /// `Requests_and_responses.md` §"`ETag` and Last-Modified" — both headers
-    /// SHOULD accompany a `VERSIONED_OBJECT` response).
+    /// The `VERSIONED_EHR_STATUS` container object with the container
+    /// metadata the wire's `ETag`/`Last-Modified` need: the container uid
+    /// identity plus the newest held version's commit instant (ITS-REST
+    /// overview `Requests_and_responses.md` §"`ETag` and Last-Modified" — both
+    /// headers SHOULD accompany a `VERSIONED_OBJECT` response).
     ///
     /// # Errors
     /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
@@ -890,9 +622,10 @@ impl FerroEhrService {
         Ok(self.versioned_status(an_ehr_id).await?)
     }
 
-    /// [`Self::ehr_status_revision_history`] with the container metadata the
-    /// wire's `ETag`/`Last-Modified` need (container uid + newest commit
-    /// instant — same derivation as
+    /// The `REVISION_HISTORY` of the EHR's `EHR_STATUS` (RM common
+    /// `versioned_object.adoc` `revision_history()`) with the container
+    /// metadata the wire's `ETag`/`Last-Modified` need (container uid + newest
+    /// commit instant — same derivation as
     /// [`Self::versioned_ehr_status_response`]).
     ///
     /// # Errors
@@ -905,8 +638,9 @@ impl FerroEhrService {
         Ok(self.status_revision_history(an_ehr_id).await?)
     }
 
-    /// [`Self::replace_ehr_status`] returning the committed version's
-    /// [`ResourceMeta`] (uid + commit instant) instead of the bare uid.
+    /// Replace the whole `EHR_STATUS` in one commit (`PUT …/ehr_status`),
+    /// returning the committed version's [`ResourceMeta`] (uid + commit
+    /// instant).
     ///
     /// # Errors
     /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent),
@@ -921,8 +655,8 @@ impl FerroEhrService {
         // The `If-Match` meta pre-read also yields the `vo_id`, threaded into
         // the write so the versioned object is resolved once (no second
         // `current_vo`). No current EHR_STATUS ⇒ NotFound (404).
-        // NOTE: the ITS-REST wire replaces the whole EHR_STATUS in one PUT — the
-        // aggregate of the five discrete mutators; a mismatch → 412.
+        // NOTE: the ITS-REST wire replaces the whole EHR_STATUS in one PUT; a
+        // mismatch → 412.
         let Some((vo_id, latest)) = self.ehr_status_meta_with_vo(an_ehr_id).await? else {
             return Err(ServiceError::new(
                 ServiceStatus::EhrIdDoesNotExist,

@@ -93,7 +93,10 @@ async fn every_server_minted_identifier_carries_the_stamp_in_force() {
     // A bare service: no licence in force, the fail-safe key.
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let fail_safe = StampKey::fail_safe();
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     assert!(fail_safe.carries(ehr_id.0), "EHR id {ehr_id:?}");
     let (vo, contribution) = commit_one(&svc, ehr_id).await;
     assert!(fail_safe.carries(vo), "versioned-object id {vo}");
@@ -108,7 +111,10 @@ async fn every_server_minted_identifier_carries_the_stamp_in_force() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_licence(licensed(licence_id));
     assert!(svc.licence().is_licensed());
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     assert!(key.carries(ehr_id.0), "EHR id {ehr_id:?}");
     assert!(!fail_safe.carries(ehr_id.0));
     let (vo, contribution) = commit_one(&svc, ehr_id).await;

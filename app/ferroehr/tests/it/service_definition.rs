@@ -381,7 +381,11 @@ async fn opt_delete_refuses_while_referenced() {
     let uuid = opts[0].clone();
 
     // Reference the template from a committed version row.
-    let ehr: uuid::Uuid = svc.create_ehr(None).await.expect("ehr").into();
+    let ehr: uuid::Uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .into();
     let referenced = sqlx::query("UPDATE version SET template_id = $1 WHERE ehr_id = $2")
         .bind(OPT_TEMPLATE_ID)
         .bind(ehr)

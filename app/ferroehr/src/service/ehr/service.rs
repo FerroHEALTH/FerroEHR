@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHR operations and [`EhrSummary`]: EHR create (4 variants),
-//! `has_ehr`(`_for_subject`), `get_ehr(s)`, and the
-//! folder-hierarchy reads the `EHR` wire body needs.
+//! The EHR operations and [`EhrSummary`]: EHR create (by id, minted, and for
+//! a subject), the subject lookups, the EHR reads, and the folder-hierarchy
+//! reads the `EHR` wire body needs.
 //!
 //! Spec: arch-overview `master06-design_of_the_ehr.adoc` §The EHR (EHR root,
 //! `system_id`, `EHR_ACCESS`, `EHR_STATUS`, directory, folders,
@@ -546,18 +546,6 @@ pub(in crate::service) fn archetyped(archetype_id: &str) -> Archetyped {
 // ── The EHR call surface ──────────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// Whether the EHR exists.
-    ///
-    /// # Errors
-    /// [`StatusError`] if the existence read fails (a missing EHR is `Ok(false)`).
-    pub async fn has_ehr(&self, ehr_id: EhrId) -> Result<bool, StatusError> {
-        match self.ensure_ehr_exists(ehr_id).await {
-            Ok(()) => Ok(true),
-            Err(ServiceError::NotFound(_)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
-    }
-
     /// Whether an EHR exists whose
     /// current `EHR_STATUS` names the subject, as the installed EHR index
     /// provider resolves it into the clinical domain
@@ -574,36 +562,6 @@ impl FerroEhrService {
             .ehr_id_for_subject(&subject.id, &subject.namespace)
             .await?
             .is_some())
-    }
-
-    /// Create an EHR with a server-assigned id
-    /// and the given (or default) `EHR_STATUS`, returning the new `ehr_id`.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the status is structurally invalid (422-equivalent),
-    /// the subject already owns an EHR (409-equivalent), or storage fails.
-    pub async fn create_ehr(&self, an_ehr_status: Option<EhrStatus>) -> Result<EhrId, StatusError> {
-        // Boxed: the typed EHR_STATUS argument makes the bootstrap-commit
-        // future wide (clippy `large_futures`).
-        // NOTE: ITS-REST EHR API `POST /ehr` accepts an optional EHR_STATUS
-        // body, so a subject-bearing status is accepted here.
-        Ok(Box::pin(self.create_ehr_meta(an_ehr_status, None)).await?.0)
-    }
-
-    /// Create an EHR under the
-    /// caller-supplied id (`PUT /ehr/{ehr_id}`).
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR already exists (409-equivalent), the status is
-    /// invalid, the subject already owns an EHR, or storage fails.
-    pub async fn create_ehr_with_id(
-        &self,
-        an_ehr_id: EhrId,
-        an_ehr_status: Option<EhrStatus>,
-    ) -> Result<EhrId, StatusError> {
-        // Boxed, as in `create_ehr` (clippy `large_futures`).
-        Box::pin(self.create_ehr_with_id_meta(an_ehr_id, an_ehr_status, None)).await?;
-        Ok(an_ehr_id)
     }
 
     /// Create an EHR whose
@@ -681,15 +639,6 @@ impl FerroEhrService {
         Ok(an_ehr_id)
     }
 
-    /// The `EHR_SUMMARY` of an EHR.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR does not exist (404-equivalent) or a read
-    /// fails.
-    pub async fn get_ehr(&self, an_ehr_id: EhrId) -> Result<EhrSummary, StatusError> {
-        Ok(self.summarize_ehr(an_ehr_id).await?)
-    }
-
     /// The `EHR_SUMMARY` list for a
     /// subject as the installed EHR index provider resolves it (≤1 under the
     /// one-EHR-per-subject rule; see the note on `Self::ehr_by_subject`).
@@ -762,37 +711,20 @@ impl FerroEhrService {
         }
         self.ehr_object(an_ehr_id).await
     }
-
-    /// The canonical RM `EHR` wire object located by subject
-    /// (`GET /ehr?subject_id=…&subject_namespace=…`).
-    ///
-    /// # Errors
-    /// [`StatusError`] when no EHR names the subject (404-equivalent) or a read
-    /// fails.
-    pub async fn ehr_object_for_subject(
-        &self,
-        subject_id: &str,
-        subject_namespace: &str,
-    ) -> Result<Value, StatusError> {
-        Ok(self
-            .ehr_by_subject(subject_id, subject_namespace)
-            .await?
-            .body)
-    }
 }
 
-// ── ITS-REST create-response adapter (adapter-support extension) ──────────────
+// ── The EHR creates ───────────────────────────────────────────────────────────
 //
-// The typed creates return only the new `ehr_id`, but ITS-REST
-// `Requests_and_responses.md` §"`ETag` and Last-Modified" mandates both headers,
-// the `ETag` being `EHR.ehr_id.value` and `Last-Modified` the creating
-// CONTRIBUTION's commit time, so these siblings also return a [`ResourceMeta`]
-// (no openEHR spec governs the envelope — our own design).
+// ITS-REST `Requests_and_responses.md` §"`ETag` and Last-Modified" mandates both
+// headers on a create, the `ETag` being `EHR.ehr_id.value` and `Last-Modified`
+// the creating CONTRIBUTION's commit time, so the creates return the new EHR's
+// [`ResourceMeta`] (no openEHR spec governs the envelope — our own design).
 
 impl FerroEhrService {
-    /// [`Self::create_ehr`] returning the new `ehr_id` together with the
-    /// created EHR's [`ResourceMeta`] (the `ETag`/`Location` id + the creation
-    /// instant).
+    /// Create an EHR with a server-assigned id and the given (or default)
+    /// `EHR_STATUS` (`POST /ehr`), returning the new `ehr_id` together with
+    /// the created EHR's [`ResourceMeta`] (the `ETag`/`Location` id + the
+    /// creation instant).
     ///
     /// `committal` is the `POST /ehr` request's `openehr-version` /
     /// `openehr-audit-details` metadata (see `Self::commit_new_ehr`).
@@ -814,7 +746,8 @@ impl FerroEhrService {
         Ok((ehr_id, meta))
     }
 
-    /// [`Self::create_ehr_with_id`] returning the created EHR's
+    /// Create an EHR under the caller-supplied id (`PUT /ehr/{ehr_id}`) with
+    /// the given (or default) `EHR_STATUS`, returning the created EHR's
     /// [`ResourceMeta`].
     ///
     /// `committal` is the `PUT /ehr/{ehr_id}` request's `openehr-version` /
@@ -831,7 +764,8 @@ impl FerroEhrService {
         an_ehr_status: Option<EhrStatus>,
         committal: Option<&crate::service::version_update::Committal>,
     ) -> Result<ResourceMeta, StatusError> {
-        // see `create_ehr` — a subject-bearing status is accepted.
+        // NOTE: ITS-REST EHR API `POST /ehr` accepts an optional EHR_STATUS
+        // body, so a subject-bearing status is accepted here.
         let status = an_ehr_status.map_or_else(initial_ehr_status, |s| {
             openehr_its::json::to_canonical_value(&s)
         });

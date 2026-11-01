@@ -71,7 +71,10 @@ async fn ehr_access_settings_round_trip_through_contribution() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
     // A fresh EHR gets the default (settings-less) EHR_ACCESS → default-open.
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     assert!(
         svc.current_ehr_access_settings(ehr_id)
             .await

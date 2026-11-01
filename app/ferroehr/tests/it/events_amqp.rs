@@ -315,7 +315,10 @@ async fn end_to_end_publish_and_consume() {
 
     // Commit an EHR (→ EHR_STATUS event, not COMPOSITION) then a composition.
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     svc.create_composition(ehr, uv(&composition("v1"), "249"))
         .await
         .expect("create_composition");
@@ -359,7 +362,10 @@ async fn broker_down_then_up_delivers_without_loss() {
 
     // Commit an EHR + a composition ⇒ two pending outbox rows.
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     svc.create_composition(ehr, uv(&composition("v1"), "249"))
         .await
         .expect("create_composition");
@@ -432,7 +438,10 @@ async fn subscriptions_route_by_predicate_and_wildcard_receives_all() {
     .expect("kind-filtered subscription");
 
     // Commit an EHR (EHR_STATUS + EHR_ACCESS ⇒ 2 versions) + a composition (1).
-    let ehr = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     svc.create_composition(ehr, uv(&composition("v1"), "249"))
         .await
         .expect("create_composition");

@@ -53,7 +53,10 @@ fn assert_unresolvable(err: &StatusError, expected_path_fragment: &str) {
 async fn direct_directory_routes_gate_this_system_refs() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr_create");
 
     // A this-system (`local`) reference to a uid that exists nowhere: refused,
     // naming the item's path.
@@ -147,7 +150,10 @@ async fn direct_directory_routes_gate_this_system_refs() {
 async fn contribution_path_gates_this_system_refs() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr_create");
 
     // Version identity is repository-allocated (a CONTRIBUTION member never
     // carries its own uid), so a folder references content committed EARLIER:
