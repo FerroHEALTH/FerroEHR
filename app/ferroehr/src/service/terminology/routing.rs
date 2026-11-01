@@ -11,7 +11,7 @@
 use std::collections::BTreeMap;
 
 use crate::service::FerroEhrService;
-use crate::service::status::StatusError;
+use crate::service::error::ServiceError;
 use crate::service::terminology::types::{TerminologyDescription, TerminologyExtract};
 
 use super::bundle;
@@ -32,7 +32,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn get_terminology_ids(&self) -> Result<Vec<String>, StatusError> {
+    pub fn get_terminology_ids(&self) -> Result<Vec<String>, ServiceError> {
         Ok(bundle::terminology_ids())
     }
 
@@ -49,7 +49,7 @@ impl FerroEhrService {
                   shape the protocol adapter invokes uniformly, so neither is dropped because \
                   this implementation happens to be stateless and infallible"
     )]
-    pub fn has_terminology(&self, terminology_id: &str) -> Result<bool, StatusError> {
+    pub fn has_terminology(&self, terminology_id: &str) -> Result<bool, ServiceError> {
         Ok(bundle::has_terminology(terminology_id))
     }
 
@@ -69,7 +69,7 @@ impl FerroEhrService {
     pub fn get_terminology_description(
         &self,
         terminology_id: &str,
-    ) -> Result<TerminologyDescription, StatusError> {
+    ) -> Result<TerminologyDescription, ServiceError> {
         bundle::terminology_description(terminology_id)
     }
 
@@ -88,7 +88,7 @@ impl FerroEhrService {
         terminology_id: &str,
         code: &str,
         at_date: Option<String>,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         if bundle::has_terminology(terminology_id) {
             bundle::has_term(terminology_id, code)
         } else if let Some(server) = self.terminology_server() {
@@ -112,7 +112,7 @@ impl FerroEhrService {
         &self,
         system: &str,
         code: &str,
-    ) -> Result<super::fhir::TermExistence, StatusError> {
+    ) -> Result<super::fhir::TermExistence, ServiceError> {
         match self.terminology_server() {
             Some(server) => server.term_existence(system, code).await,
             None => Ok(super::fhir::TermExistence::Unverifiable(
@@ -138,7 +138,7 @@ impl FerroEhrService {
         code: &str,
         attributes: Option<BTreeMap<String, String>>,
         at_date: Option<String>,
-    ) -> Result<TerminologyExtract, StatusError> {
+    ) -> Result<TerminologyExtract, ServiceError> {
         if bundle::has_terminology(terminology_id) {
             bundle::get_term(terminology_id, code)
         } else if let Some(server) = self.terminology_server() {
@@ -166,7 +166,7 @@ impl FerroEhrService {
         terminology_id: &str,
         ref_code: &str,
         candidate_child_code: &str,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         if bundle::has_terminology(terminology_id) {
             bundle::subsumes(terminology_id, ref_code, candidate_child_code)
         } else if let Some(server) = self.terminology_server() {
@@ -195,7 +195,7 @@ impl FerroEhrService {
         value_set_id: &str,
         candidate_code: &str,
         at_date: Option<String>,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         if bundle::has_terminology(terminology_id) {
             bundle::value_set_validate(terminology_id, value_set_id, candidate_code)
         } else if let Some(server) = self.terminology_server() {
@@ -219,7 +219,7 @@ impl FerroEhrService {
         &self,
         terminology_id: &str,
         value_set_code: &str,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         if bundle::has_terminology(terminology_id) {
             Ok(bundle::has_value_set(terminology_id, value_set_code))
         } else if let Some(server) = self.terminology_server() {
@@ -244,7 +244,7 @@ impl FerroEhrService {
         &self,
         terminology_id: &str,
         value_set_code: &str,
-    ) -> Result<TerminologyExtract, StatusError> {
+    ) -> Result<TerminologyExtract, ServiceError> {
         if bundle::has_terminology(terminology_id) {
             bundle::get_value_set(terminology_id, value_set_code)
         } else if let Some(server) = self.terminology_server() {

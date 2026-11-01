@@ -302,3 +302,63 @@ async fn enabled_terminology_group_serves_real_bundle() {
     let (status, _) = send(app, get(format!("{EXT}/terminology"))).await;
     assert_eq!(status, StatusCode::OK);
 }
+
+/// The router over a service whose terminology server is the mock at `base`.
+async fn app_with_server(base: &str) -> (testkit::TestDb, Router) {
+    let cfg = ferroehr::service::terminology::config::TerminologyServerConfig {
+        enabled: true,
+        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
+        request_timeout_ms: 800,
+        ..Default::default()
+    };
+    let provider = ferroehr::service::terminology::fhir::FhirTerminologyProvider::new(&cfg)
+        .expect("build provider");
+    let pg = common::test_db().await;
+    let service = ferroehr::service::FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pg.pool()),
+    )
+    .with_terminology_server(std::sync::Arc::new(provider));
+    let app = ferroehr_rest::build_with(config(true), std::sync::Arc::new(service))
+        .await
+        .expect("router builds");
+    (pg, app)
+}
+
+/// A value set the terminology server does not know is a `404`, and a server
+/// fault is a `500` whose body names nothing of the upstream answer.
+#[tokio::test]
+async fn terminology_server_refusals_keep_their_wire_status() {
+    use wiremock::matchers::path;
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    Mock::given(path("/ValueSet/$expand"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&server)
+        .await;
+    let (_pg, app) = app_with_server(&server.uri()).await;
+    let (status, body) = send(
+        app,
+        get(format!(
+            "{EXT}/terminology/urn:test:system/value_set/urn:test:vs"
+        )),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+
+    let server = MockServer::start().await;
+    Mock::given(path("/ValueSet/$expand"))
+        .respond_with(ResponseTemplate::new(500).set_body_string("upstream-secret-detail"))
+        .mount(&server)
+        .await;
+    let (_pg, app) = app_with_server(&server.uri()).await;
+    let (status, body) = send(
+        app,
+        get(format!(
+            "{EXT}/terminology/urn:test:system/value_set/urn:test:vs"
+        )),
+    )
+    .await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+    assert!(!body.contains("upstream-secret-detail"), "{body}");
+}
