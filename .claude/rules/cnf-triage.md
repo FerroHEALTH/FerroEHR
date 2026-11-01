@@ -95,7 +95,7 @@ the Conformance workflow.
   OAS (file + element), never passed off as docs text. NEVER treat as
   authority: the CNF Platform Conformance Test Schedule (never released
   stable — a GUIDE to which behaviour to test, not the correct answer); or
-  the Robot suites/data sets (stalled/broken, e.g. AMB-47). Where any of
+  the Robot suites/data sets (stalled/broken). Where any of
   these conflicts with a released component, the released component wins. An
   "ambiguity" that exists ONLY because a guide source is
   stale/incomplete/self-contradictory — with no released-component ground —

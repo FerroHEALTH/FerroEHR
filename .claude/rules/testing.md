@@ -19,8 +19,9 @@ applies to every crate — generated and hand-written alike.
   cite the spec clause a test encodes; never adjust an expectation to match
   an implementation bug. Corpus/fixture defects are ADJUDICATED with a
   first-hand spec/schema citation (an expected-rejection entry in the owning
-  gate, or an `artifacts/registers/ambiguities.yaml` entry for spec silence
-  — `.claude/rules/cnf-triage.md`), never routed around by editing the case.
+  gate, or, for spec silence, an `upstream-report` issue that the
+  conformance instrument's option or `report:` citation carries —
+  `.claude/rules/cnf-triage.md`), never routed around by editing the case.
 
 ## Tooling
 
@@ -167,8 +168,8 @@ use-case counts; the goal is total behavioural coverage.
 - **A spec-defined wire behaviour with no case is a COVERAGE GAP, never an
   acceptable omission.** Close it (a new spec-cited case) — or, only where the
   spec genuinely puts a behaviour off-wire, record the honest boundary
-  (statement-declared capability / an `artifacts/registers/` entry). Silence is
-  not coverage.
+  (a statement-declared capability or option arm, or an `upstream-report`
+  issue the catalogue cites). Silence is not coverage.
 - **Coverage only ratchets up.** Cases are added, never removed to go green;
   narrowing coverage needs an adjudicated, spec-cited reason.
 - **One behaviour per case** — many small isolated cases beat one broad case,

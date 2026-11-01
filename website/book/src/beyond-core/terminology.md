@@ -204,8 +204,9 @@ What the sandbox shows, and how it is arranged:
   the `/terminology/*` routes look codes up; AQL `TERMINOLOGY()` expands a value
   set into a `MATCHES` operand.
 - **Fail-open**, the shipped default: a binding the server cannot resolve is
-  accepted. The sandbox declares this posture and the register entry that
-  records why neither posture is spec-mandated (AMB-172).
+  accepted. No openEHR text decides between the two postures, so the
+  conformance instrument names it as an option, and the party statement
+  selects the arm that accepts.
 - **The content is the shaped seed**: two code systems and two value sets under
   the reserved `example.test` domain, with no licensed terminology in them.
 

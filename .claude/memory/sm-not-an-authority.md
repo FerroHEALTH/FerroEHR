@@ -15,8 +15,8 @@ built inside is its own design.
 **How to apply:** never justify, add or keep a feature because SM names it;
 never cite SM as the ground for a decision (cite the wire specification, or
 write "no specification governs this: our own design"); never mark something
-"not realised" against SM as if it were a conformance gap. CNF case cores
-keep SM operation names as identifiers only. The vendored SM text under
+"not realised" against SM as if it were a conformance gap. Veredictum's
+`catalogue/id-map.yaml` keeps SM operation names as identifiers only. The vendored SM text under
 `docs/specs/openehr/SM/` stays as reference with its provenance. This
 supersedes the 2026-07-24 ruling that made SM an oracle beside the ITS-REST
 docs text, and retires the SM chapter-audit program in

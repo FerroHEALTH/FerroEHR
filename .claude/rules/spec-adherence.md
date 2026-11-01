@@ -48,7 +48,7 @@ intuition.
   specification artifacts (overview `Specifications.md`: "Specifications can
   be downloaded as YAML files in OpenAPI Specification 3.0 format"; each API
   Preface repeats it). Only a behaviour BOTH sources withhold is spec
-  silence for the ambiguity register. The OAS remains `emit-rest` codegen
+  silence, an `upstream-report` issue (`.claude/rules/cnf-triage.md`). The OAS remains `emit-rest` codegen
   input and is NEVER served (`served-openapi` rule unchanged).
 - **CNF red-run triage is spec-adjudicated** (`.claude/rules/cnf-triage.md`;
   the `cnf-triage` agent): when the CNF runner and the application disagree,

@@ -52,7 +52,8 @@ ONLY — and a **subordinate wire source** (owner rulings 2026-07-24 +
 the conformance oracle and WINS wherever the two disagree; where the docs
 text is SILENT, the released OAS grounds the expectation (the release's own
 overview `Specifications.md` presents the OAS files as its computable
-artifacts); only both-silent goes to the ambiguity register. It is NEVER
+artifacts); only both-silent is a spec silence, an `upstream-report` issue
+(`.claude/rules/cnf-triage.md`). It is NEVER
 imported into or served by `ferroehr-rest`. The server serves ONLY its own
 natively generated OpenAPI (`#[utoipa::path]` on every handler, composed in
 `ferroehr-rest::extensions::openapi`; owner hard rule: serve only what we

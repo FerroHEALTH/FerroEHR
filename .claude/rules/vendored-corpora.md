@@ -109,11 +109,11 @@ Vendoring is half a change. The standing owner rule (`.claude/rules/testing.md`
   invalid artefacts (e.g. CKM cid `1013.26.61`, whose OPT carries an
   `assumed_value` outside its constrained code list — AM 1.4
   `Assumed_value_valid`). A file our conformant reader rejects is either a
-  spec-cited expected-rejection entry in the owning gate, or an entry in the
-  conformance instrument's ambiguity register — never a quiet exclusion and
-  never a weakened gate. The valid/invalid twins rule holds (testing.md).
-- The per-file verdict/defect manifest for catalogue fixtures lives with the
-  instrument (Veredictum's `artifacts/corpus/MANIFEST.yaml`); the bulk breadth
+  spec-cited expected-rejection entry in the owning gate, or, where the
+  specification is silent, an `upstream-report` issue — never a quiet
+  exclusion and never a weakened gate. The valid/invalid twins rule holds (testing.md).
+- The fixtures the conformance catalogue sends live with the instrument
+  (Veredictum's `catalogue/`, each cited where a workflow uses it); the bulk breadth
   packs here record their inventory + adjudications in the pack's own
   `PROVENANCE.md` and are driven by a directory-walking gate.
 - Size honesty: these packs are large (the full CKM template pack is ~100 MB
