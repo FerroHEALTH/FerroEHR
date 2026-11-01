@@ -198,16 +198,15 @@ async fn a_refused_grant_is_a_typed_error_not_an_anonymous_request() {
     // The refused grant is a TYPED failure — never an anonymous retry — while
     // the operator detail (which client, and the authorization server's own
     // error) stays on the trace record, off the wire body.
-    assert_eq!(
-        err.status,
-        ferroehr::service::status::ServiceStatus::Exception,
+    assert!(
+        matches!(&err, ferroehr::service::error::ServiceError::Fault(_)),
         "got {err:?}"
     );
     assert!(
-        !err.message.contains("client-credentials grant failed")
-            && !err.message.contains("ferroehr-cdr"),
+        !err.message().contains("client-credentials grant failed")
+            && !err.message().contains("ferroehr-cdr"),
         "the deployment's credential configuration must not reach the wire body, got: {}",
-        err.message
+        err.message()
     );
     assert_eq!(
         ts.received_requests().await.unwrap().len(),

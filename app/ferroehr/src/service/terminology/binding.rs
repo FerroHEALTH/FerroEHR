@@ -49,7 +49,7 @@ use openehr_sdt::rm_instance::{ValidationKind, ValidationMessage};
 use serde_json::Value;
 
 use crate::service::FerroEhrService;
-use crate::service::status::StatusError;
+use crate::service::error::ServiceError;
 use crate::service::terminology::fhir::FhirTerminologyProvider;
 
 impl FerroEhrService {
@@ -95,7 +95,9 @@ impl FerroEhrService {
                             message: format!(
                                 "the value set bound to constraint code '{}' ({}) could not be \
                                  resolved and terminology.server.fail_on_error is set: {}",
-                                check.ac_code, check.query_uri, e.message,
+                                check.ac_code,
+                                check.query_uri,
+                                e.message(),
                             ),
                             kind: ValidationKind::Terminology,
                         });
@@ -104,7 +106,7 @@ impl FerroEhrService {
                             ac_code = %check.ac_code,
                             query_uri = %check.query_uri,
                             terminology = %check.binding_terminology,
-                            error = %e.message,
+                            error = %e.message(),
                             "constraint-binding value set unresolved; accepting the composition \
                              (terminology.server.fail_on_error is not set)"
                         );
@@ -121,7 +123,7 @@ impl FerroEhrService {
 async fn resolve_binding(
     server: &FhirTerminologyProvider,
     check: &ConstraintBindingCheck,
-) -> Result<bool, StatusError> {
+) -> Result<bool, ServiceError> {
     server
         .value_set_validate(
             &check.instance_terminology,

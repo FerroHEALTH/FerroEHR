@@ -26,9 +26,7 @@
 //!
 //! The enumerating calls (`get_terminology_ids`, `get_terminology_description`,
 //! `has_terminology`) have no faithful FHIR operation, so the routing layer
-//! answers them from the in-process bundle and
-//! [`FhirTerminologyProvider::get_terminology_description`] is an explicit
-//! `NotImplemented`. The `at_date` of `has_term`/`get_term`/`value_set_validate`
+//! answers them from the in-process bundle. The `at_date` of `has_term`/`get_term`/`value_set_validate`
 //! is sent as the FHIR `date` input of `$lookup` and `$validate-code`.
 //!
 //! A `ValueSet/$expand` may nest members under `contains`. The flat `_terms_`
@@ -39,24 +37,24 @@
 //!
 //! NOTE: a value set, terminology or code the server does not know (HTTP `404`,
 //! or `$validate-code result=false`) is an unknown-entity refusal
-//! ([`ServiceStatus::VersionedObjectDoesNotExist`]) and a transport fault is
-//! [`StatusError::exception`]; the fail-open choice belongs to the caller
+//! ([`ServiceError::NotFound`]) and a transport fault is a curated
+//! [`ServiceError::Fault`]; the fail-open choice belongs to the caller
 //! ([`config::TerminologyServerConfig::fail_on_error`](super::config::TerminologyServerConfig::fail_on_error)).
 
 use std::collections::BTreeMap;
 
-use crate::service::status::{ServiceStatus, StatusError};
+use crate::service::error::{INTERNAL_MESSAGE, ServiceError};
+use crate::service::refusal::Missing;
 use crate::service::terminology::types::{
-    DefinedTerm, TermEntry, TermRelationship, TerminologyDescription, TerminologyExtract,
-    TerminologyRelation,
+    DefinedTerm, TermEntry, TermRelationship, TerminologyExtract, TerminologyRelation,
 };
 
 use super::config::TerminologyServerConfig;
 
-/// The configuration key the client-credentials grant sits under, named in
-/// every refusal of it.
+/// The refusal of the client-credentials grant, naming the configuration key
+/// it sits under.
 #[cfg(feature = "fhir")]
-const OAUTH_KEY: &str = "terminology.server.oauth";
+const GRANT_REFUSED: &str = "terminology.server.oauth: the grant is refused";
 
 /// The `Term_relationship.relation_name` under which a FHIR `$expand`
 /// parent→child `contains` nesting is preserved.
@@ -128,7 +126,7 @@ impl FhirTerminologyProvider {
     ///
     /// # Errors
     ///
-    /// [`StatusError::exception`] if the URL is empty (after trimming) or not a
+    /// A [`ServiceError::Fault`] if the URL is empty (after trimming) or not a
     /// URL, the `oauth` grant is incomplete or refused by the token client, or
     /// the HTTP client cannot be built (e.g. TLS backend init failure).
     #[cfg_attr(
@@ -138,11 +136,11 @@ impl FhirTerminologyProvider {
             reason = "a slim build refuses the server before reading its configuration"
         )
     )]
-    pub fn new(cfg: &TerminologyServerConfig) -> Result<Self, StatusError> {
+    pub fn new(cfg: &TerminologyServerConfig) -> Result<Self, ServiceError> {
         // A slim build carries no FHIR client, so a configured server is
         // refused loudly rather than silently ignored.
         #[cfg(not(feature = "fhir"))]
-        return Err(StatusError::exception(
+        return Err(ServiceError::fault(
             "terminology.server is enabled, but this binary was built without the `fhir` cargo \
              feature (the in-process bundle remains the terminology)",
         ));
@@ -183,7 +181,7 @@ impl FhirTerminologyProvider {
         &self,
         system: &str,
         code: &str,
-    ) -> Result<TermExistence, StatusError> {
+    ) -> Result<TermExistence, ServiceError> {
         match self.lookup(system, code, None).await? {
             Ok(_) => Ok(TermExistence::Exists),
             Err(Absence::UnknownCode) => Ok(TermExistence::Absent),
@@ -224,27 +222,24 @@ impl FhirTerminologyProvider {
             reason = "a slim build sends no request, so nothing can fault"
         )
     )]
-    fn provider_fault(&self, operation: &str, detail: &dyn std::fmt::Display) -> StatusError {
+    fn provider_fault(&self, operation: &str, detail: &dyn std::fmt::Display) -> ServiceError {
         tracing::error!(
             server = %self.endpoint,
             operation,
             error = %detail,
             "terminology server fault → 500"
         );
-        StatusError::exception(crate::service::error::INTERNAL_MESSAGE.to_owned())
+        ServiceError::fault(INTERNAL_MESSAGE)
     }
 
-    /// An unknown terminology, term or value set (`VersionedObjectDoesNotExist`).
+    /// An unknown terminology, term or value set (a `404`).
     ///
     /// The body carries only what the client can act on, the kind and id it
     /// asked about; which server answered is deployment configuration and goes
     /// to the trace record only.
-    fn not_found(&self, what: &str, id: &str) -> StatusError {
+    fn not_found(&self, what: &str, id: &str) -> ServiceError {
         tracing::debug!(server = %self.endpoint, what, id, "terminology lookup: not found");
-        StatusError::new(
-            ServiceStatus::VersionedObjectDoesNotExist,
-            format!("{what} '{id}' not found"),
-        )
+        ServiceError::not_found(Missing::VersionedObject, format!("{what} '{id}' not found"))
     }
 
     /// `value_set_validate` → FHIR `ValueSet/$validate-code`.
@@ -265,9 +260,9 @@ impl FhirTerminologyProvider {
         value_set_id: &str,
         candidate_code: &str,
         at_date: Option<String>,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         if candidate_code.is_empty() {
-            return Err(StatusError::precondition(
+            return Err(ServiceError::precondition(
                 "candidate_code must not be empty",
             ));
         }
@@ -289,7 +284,7 @@ impl FhirTerminologyProvider {
         &self,
         _terminology_id: &str,
         value_set_code: &str,
-    ) -> Result<TerminologyExtract, StatusError> {
+    ) -> Result<TerminologyExtract, ServiceError> {
         let expansion = self
             .expand(value_set_code)
             .await?
@@ -311,7 +306,7 @@ impl FhirTerminologyProvider {
         terminology_id: &str,
         ref_code: &str,
         candidate_child_code: &str,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         self.strictly_subsumes(terminology_id, ref_code, candidate_child_code)
             .await?
             .map_err(|_absence| self.not_found("terminology", terminology_id))
@@ -330,7 +325,7 @@ impl FhirTerminologyProvider {
         terminology_id: &str,
         code: &str,
         at_date: Option<String>,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         Ok(self
             .lookup(terminology_id, code, at_date.as_deref())
             .await?
@@ -358,7 +353,7 @@ impl FhirTerminologyProvider {
         code: &str,
         _attributes: Option<BTreeMap<String, String>>,
         at_date: Option<String>,
-    ) -> Result<TerminologyExtract, StatusError> {
+    ) -> Result<TerminologyExtract, ServiceError> {
         let text = self
             .lookup(terminology_id, code, at_date.as_deref())
             .await?
@@ -394,30 +389,8 @@ impl FhirTerminologyProvider {
         &self,
         _terminology_id: &str,
         value_set_code: &str,
-    ) -> Result<bool, StatusError> {
+    ) -> Result<bool, ServiceError> {
         Ok(self.expand(value_set_code).await?.is_ok())
-    }
-
-    /// `get_terminology_description` → not modelled for a FHIR TS (NOTE
-    /// at module head; the routing layer answers this from the bundle).
-    ///
-    /// # Errors
-    ///
-    /// Always [`ServiceStatus::NotImplemented`].
-    #[expect(
-        clippy::unused_self,
-        reason = "every service call is a method on the service, which the protocol \
-                  adapter invokes uniformly, so the receiver stays even where this \
-                  implementation ignores it"
-    )]
-    pub fn get_terminology_description(
-        &self,
-        _terminology_id: &str,
-    ) -> Result<TerminologyDescription, StatusError> {
-        Err(StatusError::new(
-            ServiceStatus::NotImplemented,
-            "a FHIR terminology server does not expose terminology descriptions",
-        ))
     }
 }
 
@@ -465,7 +438,7 @@ impl Expansion {
 }
 
 /// The operations on the server, each answering a value, a classified
-/// [`Absence`], or a [`StatusError`] for a fault.
+/// [`Absence`], or a [`ServiceError`] for a fault.
 #[cfg(feature = "fhir")]
 mod wire {
     use std::sync::Arc;
@@ -483,11 +456,10 @@ mod wire {
     use http::StatusCode;
 
     use super::{
-        Absence, CHILD_RELATION, Expansion, FhirTerminologyProvider, OAUTH_KEY,
+        Absence, CHILD_RELATION, Expansion, FhirTerminologyProvider, GRANT_REFUSED,
         TerminologyServerConfig,
     };
-    use crate::service::error::ErrorChain;
-    use crate::service::status::StatusError;
+    use crate::service::error::{ErrorChain, INTERNAL_MESSAGE, ServiceError};
     use crate::service::terminology::types::{DefinedTerm, TermCode, TermEntry, TermRelationship};
 
     /// The `tx-issue-type` code for "the code system is not known to the
@@ -498,16 +470,15 @@ mod wire {
     const TX_ISSUE_INVALID_CODE: &str = "invalid-code";
 
     /// Builds the client of the server `cfg` names.
-    pub(super) fn connect(cfg: &TerminologyServerConfig) -> Result<Client, StatusError> {
+    pub(super) fn connect(cfg: &TerminologyServerConfig) -> Result<Client, ServiceError> {
         let raw = cfg.url.expose().trim();
         if raw.is_empty() {
-            return Err(StatusError::exception(
+            return Err(ServiceError::fault(
                 "terminology.server.url must not be empty",
             ));
         }
-        let base = url::Url::parse(raw).map_err(|e| {
-            StatusError::exception("terminology.server.url is not a URL").with_source(e)
-        })?;
+        let base = url::Url::parse(raw)
+            .map_err(|e| ServiceError::fault_caused("terminology.server.url is not a URL", e))?;
         // NOTE: no openEHR spec governs retrying — our own design: one attempt,
         // so `request_timeout_ms` bounds the whole call on the commit path.
         let mut config = Config::new(base, WireVersion::R4B)
@@ -517,18 +488,16 @@ mod wire {
                 ..RetryPolicy::default()
             });
         if let Some(oauth) = &cfg.oauth {
-            let grant = oauth.resolve().map_err(|e| {
-                StatusError::exception(format!("{OAUTH_KEY}: the grant is refused")).with_source(e)
-            })?;
-            let source = TokenSource::new(grant).map_err(|e| {
-                StatusError::exception(format!("{OAUTH_KEY}: the grant is refused")).with_source(e)
-            })?;
+            let grant = oauth
+                .resolve()
+                .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;
+            let source = TokenSource::new(grant)
+                .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;
             config =
                 config.with_credentials(Credentials::OAuth(Arc::new(SmartToken::from(source))));
         }
-        Client::new(config).map_err(|e| {
-            StatusError::exception("building the terminology client failed").with_source(e)
-        })
+        Client::new(config)
+            .map_err(|e| ServiceError::fault_caused("building the terminology client failed", e))
     }
 
     /// Why a refusal says the asked-about thing is unknown, from the
@@ -554,7 +523,11 @@ mod wire {
 
     impl FhirTerminologyProvider {
         /// The classified absence a failed call states, or the fault it is.
-        fn absence_or_fault(&self, operation: &str, error: &Error) -> Result<Absence, StatusError> {
+        fn absence_or_fault(
+            &self,
+            operation: &str,
+            error: &Error,
+        ) -> Result<Absence, ServiceError> {
             match error {
                 Error::Token { .. } | Error::Renewal { .. } => Err(self.token_failure(error)),
                 Error::Refused { upstream, .. }
@@ -570,13 +543,13 @@ mod wire {
         /// error) goes to the trace record, the wire body stays the curated 500
         /// message, so a client cannot read the credential configuration out of
         /// a response. No openEHR spec governs 500 body content — our own design.
-        fn token_failure(&self, error: &Error) -> StatusError {
+        fn token_failure(&self, error: &Error) -> ServiceError {
             tracing::error!(
                 server = %self.endpoint,
                 error = %ErrorChain::new(error),
                 "terminology oauth2 client-credentials grant failed → 500"
             );
-            StatusError::exception(crate::service::error::INTERNAL_MESSAGE.to_owned())
+            ServiceError::fault(INTERNAL_MESSAGE)
         }
 
         /// `CodeSystem/$lookup`: the concept's display, or why it is absent.
@@ -585,7 +558,7 @@ mod wire {
             system: &str,
             code: &str,
             at_date: Option<&str>,
-        ) -> Result<Result<String, Absence>, StatusError> {
+        ) -> Result<Result<String, Absence>, ServiceError> {
             let answer = match at_date {
                 Some(date) => self.wire.lookup_at(system, code, None, date).await,
                 None => self.wire.lookup(system, code, None).await,
@@ -611,7 +584,7 @@ mod wire {
             system: &str,
             code: &str,
             at_date: Option<String>,
-        ) -> Result<Result<bool, Absence>, StatusError> {
+        ) -> Result<Result<bool, Absence>, ServiceError> {
             let validation = Validation {
                 value_set_url: value_set_url.to_owned(),
                 value_set_version: None,
@@ -643,7 +616,7 @@ mod wire {
             system: &str,
             code_a: &str,
             code_b: &str,
-        ) -> Result<Result<bool, Absence>, StatusError> {
+        ) -> Result<Result<bool, Absence>, ServiceError> {
             match self
                 .wire
                 .subsumes(&Subsumption::new(system, code_a, code_b))
@@ -660,7 +633,7 @@ mod wire {
         pub(super) async fn expand(
             &self,
             value_set_url: &str,
-        ) -> Result<Result<Expansion, Absence>, StatusError> {
+        ) -> Result<Result<Expansion, Absence>, ServiceError> {
             match self
                 .wire
                 .expand(&ferrobridge_term::outcome::Expansion::new(value_set_url))
@@ -686,7 +659,7 @@ mod wire {
 
         /// `CodeSystem?url=<system>&_summary=count`: how many code systems the
         /// server holds under `system`.
-        pub(super) async fn code_system_count(&self, system: &str) -> Result<u32, StatusError> {
+        pub(super) async fn code_system_count(&self, system: &str) -> Result<u32, ServiceError> {
             self.wire.code_system_count(system).await.map_err(|e| {
                 self.provider_fault(ferrobridge_term::CODE_SYSTEM_SEARCH, &ErrorChain::new(&e))
             })
@@ -737,7 +710,7 @@ impl FhirTerminologyProvider {
         _system: &str,
         _code: &str,
         _at_date: Option<&str>,
-    ) -> std::future::Ready<Result<Result<String, Absence>, StatusError>> {
+    ) -> std::future::Ready<Result<Result<String, Absence>, ServiceError>> {
         match self.wire {}
     }
 
@@ -748,7 +721,7 @@ impl FhirTerminologyProvider {
         _system: &str,
         _code: &str,
         _at_date: Option<String>,
-    ) -> std::future::Ready<Result<Result<bool, Absence>, StatusError>> {
+    ) -> std::future::Ready<Result<Result<bool, Absence>, ServiceError>> {
         match self.wire {}
     }
 
@@ -758,7 +731,7 @@ impl FhirTerminologyProvider {
         _system: &str,
         _code_a: &str,
         _code_b: &str,
-    ) -> std::future::Ready<Result<Result<bool, Absence>, StatusError>> {
+    ) -> std::future::Ready<Result<Result<bool, Absence>, ServiceError>> {
         match self.wire {}
     }
 
@@ -766,12 +739,12 @@ impl FhirTerminologyProvider {
     fn expand(
         &self,
         _value_set_url: &str,
-    ) -> std::future::Ready<Result<Result<Expansion, Absence>, StatusError>> {
+    ) -> std::future::Ready<Result<Result<Expansion, Absence>, ServiceError>> {
         match self.wire {}
     }
 
     /// Unreachable: no provider exists without the `fhir` feature.
-    fn code_system_count(&self, _system: &str) -> std::future::Ready<Result<u32, StatusError>> {
+    fn code_system_count(&self, _system: &str) -> std::future::Ready<Result<u32, ServiceError>> {
         match self.wire {}
     }
 }
