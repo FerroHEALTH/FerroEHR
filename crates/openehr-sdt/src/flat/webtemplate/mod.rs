@@ -13,6 +13,7 @@
 //! master04 §"Node ID Generation Rules" algorithm, and `inputs` for the
 //! per-RM-type input mapping.
 
+mod binding_v2_4;
 pub mod builder;
 pub mod builder_v2_4;
 mod id;

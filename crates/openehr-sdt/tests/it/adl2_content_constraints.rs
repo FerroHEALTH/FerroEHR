@@ -754,3 +754,72 @@ fn an_open_adl14_interval_reads_back_with_its_value() {
         "the STRUCTURED read loses the interval"
     );
 }
+
+/// The `code` of a composition's `category` as `(terminology, code)`.
+fn category_code(composition: &Value) -> (Option<&str>, Option<&str>) {
+    let code = composition.pointer("/category/defining_code");
+    (
+        code.and_then(|c| c.pointer("/terminology_id/value"))
+            .and_then(Value::as_str),
+        code.and_then(|c| c.pointer("/code_string"))
+            .and_then(Value::as_str),
+    )
+}
+
+#[test]
+fn the_category_carries_its_openehr_binding() {
+    // Every catalogue template constrains `category` to `[at1]` and binds
+    // `at1` to `http://openehr.org/id/433`; the data carries the bound term
+    // (ADL2 `master08-terminology_integration.adoc` §From Constraints to
+    // Concrete Codes in Data), as RM `COMPOSITION` invariant
+    // `Category_validity` requires.
+    for (id, wt) in &templates() {
+        let category = wt
+            .tree
+            .children
+            .iter()
+            .find(|c| c.aql_path == "/category")
+            .unwrap_or_else(|| panic!("{id}: no /category node"));
+        let code = category
+            .inputs
+            .iter()
+            .find(|i| i.suffix.as_deref() == Some("code"))
+            .unwrap_or_else(|| panic!("{id}: no category code input"));
+        assert_eq!(code.terminology.as_deref(), Some("openehr"), "{id}");
+        let values: Vec<&str> = code.list.iter().map(|v| v.value.as_str()).collect();
+        assert_eq!(values, ["433"], "{id}");
+        assert_eq!(
+            code.list.first().and_then(|v| v.label.as_deref()),
+            Some("event")
+        );
+
+        let example = example_composition(wt, DetailLevel::Required)
+            .unwrap_or_else(|e| panic!("{id}: example: {e}"));
+        assert_eq!(
+            category_code(&example),
+            (Some("openehr"), Some("433")),
+            "{id}"
+        );
+        assert_eq!(validate_rm_and_terminology(&example), Vec::new(), "{id}");
+
+        let mut flat = serde_json::Map::new();
+        flat.insert(format!("{}/language|code", wt.tree.id), "en".into());
+        flat.insert(
+            format!("{}/language|terminology", wt.tree.id),
+            "ISO_639-1".into(),
+        );
+        flat.insert(format!("{}/territory|code", wt.tree.id), "NL".into());
+        flat.insert(
+            format!("{}/territory|terminology", wt.tree.id),
+            "ISO_3166-1".into(),
+        );
+        flat.insert(format!("{}/composer|name", wt.tree.id), "Composer".into());
+        let built = composition_from_flat(&flat, wt, "2026-01-01T10:00:00Z")
+            .unwrap_or_else(|e| panic!("{id}: build: {e}"));
+        assert_eq!(
+            category_code(&built),
+            (Some("openehr"), Some("433")),
+            "{id}"
+        );
+    }
+}
