@@ -1,7 +1,7 @@
 # Provenance
 
 - Upstream: https://github.com/Vernum-Projecten/Veredictum
-- Ref: tag `v0.3.2`, commit `085adc11b0ce1b6e268ab4298af68dd2241ced53`
+- Ref: tag `v0.3.3`, commit `bfcb62d0514eb065396f3786a8476de306fd13b3`
 - Files: `catalogue/cases/_setup/content_templates_adl2.arazzo.yaml` (the ADL 2
   operational templates, one upload workflow each) and the 26
   `catalogue/cases/content/adl2_*.arazzo.yaml` documents (each commit step's

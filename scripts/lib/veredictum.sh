@@ -38,7 +38,7 @@
 # comment and its `image:`) together: the digest is the one `docker buildx
 # imagetools inspect` reports for the tag's index, and
 # scripts/checks/veredictum-action.sh fails while the three disagree (#4449).
-VEREDICTUM_VERSION="0.3.2"
+VEREDICTUM_VERSION="0.3.3"
 VEREDICTUM_REPO="https://github.com/Vernum-Projecten/Veredictum"
 # shellcheck disable=SC2034 # read by the scripts that source this file
 VEREDICTUM_IMAGE="ghcr.io/vernum-projecten/veredictum@sha256:df50feb4df9de262be64502ff999d0bbe784ba623ffbfa32313b52769a594efd"

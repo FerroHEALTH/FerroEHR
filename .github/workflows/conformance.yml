@@ -313,7 +313,7 @@ jobs:
           printf '## Released profile: the record of record\n\nThe catalogue read against the frozen openEHR release. This run is the verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: released
         if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@085adc11b0ce1b6e268ab4298af68dd2241ced53 # v0.3.2
+        uses: Vernum-Projecten/Veredictum@bfcb62d0514eb065396f3786a8476de306fd13b3 # v0.3.3
         # The verdict step below fails the job on this run's exit-code output,
         # after the views of both runs are uploaded.
         continue-on-error: true
@@ -351,7 +351,7 @@ jobs:
           printf '## Development profile: published beside the record\n\nThe same catalogue read against the pinned master of each openEHR repository. It is never counted toward the released record and is no verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: development
         if: ${{ !cancelled() && steps.recompose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@085adc11b0ce1b6e268ab4298af68dd2241ced53 # v0.3.2
+        uses: Vernum-Projecten/Veredictum@bfcb62d0514eb065396f3786a8476de306fd13b3 # v0.3.3
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
