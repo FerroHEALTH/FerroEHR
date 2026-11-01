@@ -219,9 +219,7 @@ impl FerroEhrService {
         committal: Option<Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         let body = openehr_its::json::to_canonical_value(&body);
-        let vo_id = parse_uid_based_id(&uid_based_id)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&uid_based_id)?;
         // Resolve the current version ONCE (lean, kind-checked): the same handle
         // serves the `If-Match` `ETag` compare here and the service write gate —
         // the dispatcher never resolves and the service again.
@@ -312,9 +310,7 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         let body = self.versioned_party(vo_id).await?;
         // ITS-REST overview §"ETag and Last-Modified" derives `Last-Modified`
         // from `VERSION.commit_audit.time_committed.value`, and the container
@@ -345,9 +341,7 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         Ok(ServiceResponse::plain(
             self.party_revision_history(vo_id).await?,
         ))
@@ -367,9 +361,7 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.party_version_at_time(vo_id, at).await
     }
@@ -386,9 +378,7 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         let (_, version) =
             parse_version_uid(&version_uid).map_err(VersionIdError::into_argument)?;
         Ok(ServiceResponse::plain(
@@ -514,9 +504,7 @@ impl FerroEhrService {
         kind: PartyKind,
         uid_based_id: String,
     ) -> Result<Option<ResourceMeta>, ServiceError> {
-        let vo_id = parse_uid_based_id(&uid_based_id)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&uid_based_id)?;
         self.party_current_meta(kind, vo_id).await
     }
 }
@@ -585,9 +573,7 @@ impl FerroEhrService {
         committal: Option<Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         let body = openehr_its::json::to_canonical_value(&body);
-        let vo_id = parse_uid_based_id(&uid_based_id)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&uid_based_id)?;
         let current = self.relationship_current(vo_id).await?;
         let meta = current.as_ref().map(CurrentRelationship::resource_meta);
         ensure_full_ovid_if_match(Some(&if_match), meta.as_ref())?;
@@ -667,9 +653,7 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         Ok(ServiceResponse::plain(
             self.versioned_relationship(vo_id).await?,
         ))
@@ -686,9 +670,7 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         Ok(ServiceResponse::plain(
             self.relationship_revision_history(vo_id).await?,
         ))
@@ -708,9 +690,7 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.relationship_version_at_time(vo_id, at).await
     }
@@ -727,9 +707,7 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&versioned_object_uid)?;
         let (_, version) =
             parse_version_uid(&version_uid).map_err(VersionIdError::into_argument)?;
         Ok(ServiceResponse::plain(
@@ -748,11 +726,16 @@ impl FerroEhrService {
         &self,
         uid_based_id: String,
     ) -> Result<Option<ResourceMeta>, ServiceError> {
-        let vo_id = parse_uid_based_id(&uid_based_id)
-            .map_err(VersionIdError::into_argument)?
-            .vo_id;
+        let vo_id = argument_vo(&uid_based_id)?;
         self.relationship_current_meta(vo_id).await
     }
+}
+
+/// The versioned object a `uid_based_id` call argument names, a `400` when malformed.
+fn argument_vo(uid_based_id: &str) -> Result<VoId, ServiceError> {
+    Ok(parse_uid_based_id(uid_based_id)
+        .map_err(VersionIdError::into_argument)?
+        .vo_id)
 }
 
 #[cfg(test)]
