@@ -145,13 +145,17 @@ impl FerroEhrService {
         // Clone the (cheap, Arc-backed) service into an owned, `'static` load
         // future so `moka`'s single-flight `try_get_with` can drive it.
         let svc = self.clone();
-        self.ehr_access
+        let loaded = self
+            .ehr_access
             .get_or_load(
                 ehr_id,
                 async move { svc.load_ehr_access_settings(ehr_id).await },
             )
-            .await
-            .map_err(owned)
+            .await;
+        owned_or_reload(loaded, || async {
+            self.load_ehr_access_settings(ehr_id).await.map(Arc::new)
+        })
+        .await
     }
 
     /// Every EHR whose current `EHR_ACCESS` carries settings this server
@@ -168,10 +172,14 @@ impl FerroEhrService {
     /// [`ServiceError`] when the storage read fails or a stored body is not JSON.
     pub async fn ehr_access_settings_index(&self) -> Result<EhrAccessIndex, ServiceError> {
         let svc = self.clone();
-        self.ehr_access
+        let loaded = self
+            .ehr_access
             .index_or_load(async move { svc.load_ehr_access_index().await })
-            .await
-            .map_err(owned)
+            .await;
+        owned_or_reload(loaded, || async {
+            self.load_ehr_access_index().await.map(Arc::new)
+        })
+        .await
     }
 
     /// The cache-miss path of [`Self::ehr_access_settings_index`].
@@ -341,21 +349,75 @@ impl EhrAccessCache {
     }
 }
 
-/// The error of a failed single-flight load, owned: the caller that ran the
-/// load gets it as it was, and a concurrent waiter, which shares it, gets a
-/// server fault carrying it as the cause. No openEHR spec governs the cache:
-/// our own design.
-fn owned(error: Arc<ServiceError>) -> ServiceError {
-    Arc::try_unwrap(error).unwrap_or_else(|shared| {
-        ServiceError::internal(
-            "a concurrent load of the EHR access settings failed",
-            shared,
-        )
-    })
+/// The outcome of a single-flight load, with an error of the caller's own.
+///
+/// The caller that ran a failed load holds its error alone and gets it as it
+/// was raised. A concurrent waiter only shares it, and a `ServiceError` cannot
+/// be cloned, so the waiter reads again and answers with its own error of the
+/// same class and body. No openEHR spec governs the cache: our own design.
+async fn owned_or_reload<T, Fut>(
+    loaded: Result<T, Arc<ServiceError>>,
+    reload: impl FnOnce() -> Fut,
+) -> Result<T, ServiceError>
+where
+    Fut: Future<Output = Result<T, ServiceError>>,
+{
+    match loaded {
+        Ok(value) => Ok(value),
+        Err(shared) => match Arc::try_unwrap(shared) {
+            Ok(error) => Err(error),
+            Err(_) => reload().await,
+        },
+    }
 }
 
 impl Default for EhrAccessCache {
     fn default() -> Self {
         Self::new(4096)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::refusal::{Missing, Refusal};
+
+    /// The refusal a missing EHR's settings load answers.
+    fn missing() -> ServiceError {
+        ServiceError::not_found(Missing::Ehr, "no EHR with this id")
+    }
+
+    /// Two concurrent loads of one EHR's settings that fail answer the same
+    /// refusal: the caller that ran the load keeps its error, and the waiter
+    /// that only shared it reads again for its own.
+    #[tokio::test]
+    async fn concurrent_loads_of_a_missing_ehr_answer_the_same_refusal() {
+        let cache = EhrAccessCache::new(16);
+        let ehr_id = EhrId(uuid::Uuid::now_v7());
+        let load = || async {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            Err(missing())
+        };
+        let (first, second) = tokio::join!(
+            cache.get_or_load(ehr_id, load()),
+            cache.get_or_load(ehr_id, load())
+        );
+        let (first, second) = tokio::join!(
+            owned_or_reload(first, || async { Err(missing()) }),
+            owned_or_reload(second, || async { Err(missing()) }),
+        );
+        for answer in [first, second] {
+            assert!(
+                matches!(
+                    &answer,
+                    Err(ServiceError::NotFound(Refusal {
+                        kind: Missing::Ehr,
+                        message,
+                        ..
+                    })) if message == "no EHR with this id"
+                ),
+                "every concurrent caller answers the loader's refusal: {answer:?}"
+            );
+        }
     }
 }
