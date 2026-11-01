@@ -320,16 +320,21 @@ async fn opt_converts_to_adl2_sources() {
     // The service loads the stored OPT by template_id, decomposes + converts it, and
     // returns one ADL2 source per embedded archetype root (>= 2 here: the
     // COMPOSITION root and the embedded OBSERVATION).
-    let sources = svc
+    let conversion = svc
         .adl14_convert_opt_to_adl2(template_id)
         .await
         .expect("convert stored OPT to ADL2");
+    assert!(
+        !conversion.structure.is_empty(),
+        "the embedded OBSERVATION fills a slot of the COMPOSITION"
+    );
+    let sources: Vec<&str> = conversion.roots.iter().map(|r| r.adl2.as_str()).collect();
     assert!(
         sources.len() >= 2,
         "expected >= 2 converted sources, got {}",
         sources.len()
     );
-    for src in &sources {
+    for src in sources {
         assert!(
             src.contains("archetype"),
             "each converted source is ADL2 text: {}",

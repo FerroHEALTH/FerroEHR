@@ -90,6 +90,9 @@ impl Decomposer<'_> {
             extra_bindings: Vec::new(),
             notes: BTreeMap::new(),
         };
+        // This root takes its place before the embedded roots the walk below
+        // appends, so the units stay in document order.
+        let position = self.units.len();
         let attributes = self.map_attributes(&root.attributes, &archetype_id, path, &mut cx);
         let definition = CComplexObject::CComplexObject(CComplexObjectData {
             parent: None,
@@ -106,12 +109,15 @@ impl Decomposer<'_> {
             attribute_tuples: openehr_base::containers::present(Vec::new()),
         });
         let terminology = self.build_terminology(&archetype_id, root, is_top, &mut cx);
-        self.units.push(RawUnit {
-            archetype_id,
-            definition,
-            terminology,
-            notes: cx.notes,
-        });
+        self.units.insert(
+            position,
+            RawUnit {
+                archetype_id,
+                definition,
+                terminology,
+                notes: cx.notes,
+            },
+        );
     }
 
     /// The flattened ontology slice for one archetype root: the OPT `ontology`

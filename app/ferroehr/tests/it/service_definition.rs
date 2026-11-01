@@ -251,10 +251,17 @@ async fn adl14_convert_to_adl2_migration_round_trip() {
         .await
         .expect("upload 1.4 archetype");
 
-    let adl2 = svc
+    let conversion = svc
         .adl14_convert_to_adl2(ARCHETYPE_ID.to_owned())
         .await
         .expect("convert stored 1.4 archetype to ADL2");
+    assert_eq!(conversion.roots.len(), 1, "one archetype, one root");
+    assert_eq!(
+        conversion.structure,
+        Vec::new(),
+        "an archetype fills no slot"
+    );
+    let adl2 = conversion.roots[0].adl2.clone();
     assert!(
         adl2.contains("archetype") && adl2.contains("COMPOSITION"),
         "converted output is ADL2 source, got: {}",
@@ -731,7 +738,7 @@ async fn opt_errors() {
 
     // Invalid OPT → 422 reporting invalid_template.
     let bad = svc
-        .upload_opt("<not-a-template/>".to_owned())
+        .template_adl14_upload("<not-a-template/>".to_owned())
         .await
         .expect_err("invalid opt");
     assert!(

@@ -87,12 +87,16 @@ fn management_lookup(op: &str) -> Option<Classification> {
 ///
 /// The physical party delete records what `admin_ehr_delete` records for an
 /// EHR: a `D` on the deleted record, here a demographic party, and the
-/// protected-identifier read an `R` on the party it expands. Every other id
-/// falls through to the management table.
+/// protected-identifier read an `R` on the party it expands, and the ADL 1.4
+/// template conversion an `R` on the template it reads. Every other id falls
+/// through to the management table.
 fn extension_lookup(op: &str) -> Option<Classification> {
     match op {
         "admin_party_delete" => Some(Classification::audited(Delete, Demographic)),
         "admin_party_identifiers" => Some(Classification::audited(Read, Demographic)),
+        // NOTE: no specification governs the conversion route: our own design,
+        // a read of the stored template audited as the template reads are.
+        "definition_template_adl14_convert" => Some(Classification::audited(Read, Template)),
         _ => management_lookup(op),
     }
 }
@@ -498,6 +502,10 @@ mod tests {
         );
         assert_eq!(
             audit_for("definition_template_adl1.4_get"),
+            Some((Read, Template))
+        );
+        assert_eq!(
+            audit_for("definition_template_adl14_convert"),
             Some((Read, Template))
         );
         assert_eq!(audit_for("person_create"), Some((Create, Demographic)));
