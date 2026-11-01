@@ -987,3 +987,65 @@ and development profiles and their README badges (#4503); and the
   badges show the run as it stands, and no text claims a green record.
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
+
+## The review of 2026-11-01, for 5.6.0-rc7
+
+Read on the tree after commit `3e519c06b`, for the FerroEHR release candidate
+5.6.0-rc7. The facts added since 5.6.0-rc6 and checked in every text in scope:
+the EHDS Art. 10 opt-out from the access services, off until
+`[authz.rbac] access_service_roles` declares their roles, with the Art. 10(2)
+vital-interest override (#4516); every write's committer checked against the
+authenticated caller and a Bearer caller's default committer issued by the
+token issuer (#4520, #4585); the ADL 2 FLAT and STRUCTURED writes, Web
+Template and validation fixes (#4552, #4559, #4560, #4568, #4574, #4579,
+#4580); the AQL archetype predicate that matches the namespace exactly and the
+version as the oldest release (#4629, #4630); the CONTRIBUTION merge inputs
+and the import of a malformed one (#4577, #4602); the syslog form of an
+access-delay record naming the held composition (#4569); the viewer's upload
+refusals (#4523, #4596); storage generation 4 and the storage bench on one
+runner (#4525); `ferroehr report` naming the published `openehr-*` crate
+versions (#4565); the response texts without the Service Model vocabulary
+(#4531, #4634); chart 21.0.0-rc7 with `appVersion` 5.6.0-rc7.
+
+### Read and kept on 2026-11-01, for 5.6.0-rc7
+
+- **The security, authentication and administration pages**:
+  [security](../security.md), the
+  [authentication configuration](../installation/config-auth.md) and the
+  [administration APIs](../operations-admin-apis.md) describe the Art. 10
+  opt-out as a Member State option that FerroEHR ships the software part of,
+  off by default, which hides the EHR from the declared access services only
+  and deletes nothing.
+- **The audit page**: [the audit trail](../audit.md) states that the syslog
+  and FHIR forms of the hold's record name the same `access-delay:<vo>`.
+- **The resources and query pages**:
+  [resources](../using-the-api/resources.md) states the committer check and
+  the CONTRIBUTION merge inputs, and [querying with AQL](../querying-aql.md)
+  states the namespace and version rule of an archetype predicate.
+- **The performance and operations pages**: [performance](../performance.md)
+  describes the storage bench as two builds on one runner and names its
+  bounds, and [operations](../operations.md) and the
+  [command line](../installation/config-cli.md) say which `openehr-*`
+  versions `ferroehr report` names, read through `openehr_crates_origin`.
+- **The hazard log and the technical documentation**: the logging component
+  changed since 5.6.0-rc6 (the syslog object of an EHR-level record, the
+  opt-out's access records and the override's mark), so the hazard log gains
+  review 15, H2 and H9 name their new tests, and the technical documentation
+  gains its 5.6.0-rc7 row.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc7 and image 5.6.0-rc7 in the book of main.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-01, for 5.6.0-rc7
+
+- The conformance run on `main` under the released profile fails no row
+  against the server and has one errored row, Veredictum's own
+  (Vernum-Projecten/Veredictum#964, closed upstream after the pinned 0.3.2,
+  which still errors on it); the triage on #4455 stays open. The badges show the run as it
+  stands, and no text claims a green record.
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths and the old error body until 5.6.0 ships.

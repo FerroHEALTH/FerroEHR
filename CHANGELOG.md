@@ -17,6 +17,904 @@ has no matching section here.
 
 ## [Unreleased]
 
+## [5.6.0-rc7] - 2026-11-01
+
+5.6.0-rc7 is the seventh release candidate of 5.6.0, published for testing. It carries the CONTRIBUTION break of 5.6.0-rc6: `POST /ehr/{ehr_id}/contribution` and `POST /demographic/contribution` read the body through the released `NewContribution` schema and answer `400` for a `lifecycle_state` that is no `DV_CODED_TEXT`, a `description` that is a plain string or an object without `_type`, an audit without `change_type`, an audit typed `ATTESTATION` or `UPDATE_ATTESTATION`, a missing `audit` or `versions`, and a `preceding_version_uid` sent as a plain string, and a stated empty `system_id` is refused with `422` on every write path (#3595, #4543). These notes carry every change since 5.5.0, those of the 5.6.0-rc6, 5.6.0-rc5, 5.6.0-rc4 and 5.6.0-rc3 sections below included. New since 5.6.0-rc6: the EHDS Art. 10 opt-out from access through the access services, off by default until `[authz.rbac] access_service_roles` declares the access-service roles, with the Art. 10(2) vital-interest override marked as an emergency (#4516); every write's committer checked against the authenticated caller (#4520) and a Bearer caller's default committer issued by the token issuer (#4585); ADL 2 FLAT and STRUCTURED writes that carry the names, archetype references and RM release the template gives (#4560), a served Web Template that writes a bound coded input as the bound terms (#4574) and gives every `DV_INTERVAL` its `lower` and `upper` parts (#4559); ADL 2 validation that checks a `C_INTEGER` or `C_REAL` union of ranges (#4552), a repository keyed by namespace, archetype and major version (#4579), a read that resolves a release before its pre-releases (#4580) and an upload and a delete ordered by one lock (#4568); an AQL archetype predicate that matches the namespace exactly and the version as the oldest release (#4629, #4630); a CONTRIBUTION that records its merge inputs and accepts the `UPDATE_VERSION` members the schema leaves open (#4577), and an EHR Extract import that refuses a malformed merge input and names the version's position (#4602); the syslog form of an access-delay record naming the held composition (#4569); the viewer's ADL 2 and ADL 1.4 uploads naming each violation the CDR found (#4523, #4596); storage generation 4 and its benchmark records (#4525); `ferroehr report` naming the published `openehr-*` crate versions in a release build (#4565); and response texts without the Service Model vocabulary (#4531, #4634). The conformance run on main under the released profile fails no row against the server and still has one errored row, Veredictum's own (Vernum-Projecten/Veredictum#964, closed upstream after the pinned 0.3.2, which still errors on it), and the triage on #4455 stays open, so this candidate does not claim a green Veredictum record. 5.5.0 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.6.0 itself replaces it. Before you try it: a write whose committer names another login of the caller's token issuer or of this server, or a `PARTY_SELF` committer from a caller who is not the record's person, answers `403`, and a direct write whose committer breaks its own rules answers `422`; a write that sends no committer on a bare RM body route records a Bearer caller's login as issued by the token issuer, where it recorded `ferroehr`; an AQL archetype predicate matches the namespace exactly and reads the version it names as the oldest release it accepts, so a query may find less than before; a FLAT or STRUCTURED composition under an ADL 2 template records the complete archetype identifier and the template's `rm_release`, and the served Web Template writes a bound coded input, `COMPOSITION.category` among them, as the bound terms (`openehr::433`) where it wrote the local at-code; a CONTRIBUTION commit must take the shapes above; a write under a token whose SMART resource scopes are all `patient/` scopes records `PARTY_SELF` as committer and may change only what the person committed, and a service `auth_failure` answers `403` where it answered `500`; a versioned read whose `version` is no SEMVER version or prefix answers `400` where it answered `404`; the served Web Template of an ADL 2 template writes a data value's `aqlPath` without an `[idN]` predicate; a composition that breaks an ADL 2 template's leaf constraint, and an ADL 2 template whose constituent archetype is not held, answer `422`; every route ITS-REST 1.1.0 does not define moves from `/ferroehr/rest/openehr/v1/` to `/ferroehr/rest/extensions/v1/`, and the ITI-81 retrieval to `/ferroehr/rest/fhir/r4/AuditEvent`, with no redirect from the old paths; an error body is `application/problem+json`, so a client that read `message` reads `detail`, and one that read `validationErrors` sends `Prefer: return=representation` and reads `errors`; audit migration 0017 refuses an audit store that holds records written by 5.5.0 or earlier, while an audit store that 5.6.0-rc2 migrated upgrades in place; a `[server.tls]` table with `client_ca_file` must set `client_auth = "required"` (or `"optional"`) beside it, or the configuration is refused at load; `[server] header_read_timeout_ms` no longer bounds an idle kept-alive connection, which the new `[server] idle_timeout_ms` (120000 by default) closes, so keep it longer than the idle timeout of your clients and load balancers; a client that wrote a space as `+` in a query string sends `%20`; a party delete names the latest `OBJECT_VERSION_ID` in its path and answers `400` for a versioned object id; a body the RM refuses after the ITS-JSON schema admits it answers `422`, and a misplaced CONTRIBUTION member, a Simplified Format commit without `openehr-template-id` and a flat `|raw` value without `_type` answer `400`; a tag update under `Prefer: return=identifier` answers `200` with the tag list; with `[authz.rbac] enabled` a token holding only `system/` SMART on openEHR scopes reaches clinical operations without a role; the viewer image serves no `/pkg/` and reads no `LEPTOS_SITE_ROOT`, `LEPTOS_OUTPUT_NAME` or `LEPTOS_HASH_FILES`, and its Content-Security-Policy is `script-src 'self'; style-src 'self'`; Helm chart 21.0.0-rc7 refuses to render until `config.deployment_profile` names `sandbox` or `production`, and a values file for its FerroPIX moves `ferropix.config.server.public_base_url` to `ferropix.config.public_base_url` and each issuer's `clients` to `ferropix.config.trust.issuer`. Storage generation 3 adds node columns and migrates no data, and ext migration 0008 names generation 4, the generation with the node header columns, and changes only the label; clinical migration 0020 adds the origin to retention policies and 0021 statistics on the archetype columns, and clinical 0022 and 0023 and party 0013 and 0014 rebuild the version tree's uniqueness constraint and index its version id columns, which reads every version row of an existing store once; clinical 0024 and party 0015 index the version uid, ext 0006, clinical 0025 and party 0016 add the ELEMENT value search index, built over every hot node row of an existing store, party 0017 adds the archetype statistics, and clinical 0026 and party 0018 grant `MAINTAIN` on the partitioned tables to the serving roles; clinical 0027 and party 0019 add the access delay, and ext 0007, clinical 0028 and party 0020 add the node header columns with no data migrated; audit migration 0019 gives the search token index a pending list of 512 kB, and audit 0020 adds the hash index on `request_id`; clinical 0029 adds the access opt-out. Helm chart 21.0.0-rc7 carries `appVersion` 5.6.0-rc7. Security carries two advisories, GHSA-2mc2-h3jq-c5wg and GHSA-52mf-qg39-4q4j, and the OpenVEX judgement of CVE-2026-84243.
+
+### Added
+
+- The logging component's intended performance is stated as checkable claims (EHDS Annex II 1.1): every composition create and read recorded exactly once and every AQL execution at least once, no access succeeding without its record, at most 125 % of the latency and at least 80 % of the throughput with the access log off, and a 50-record ITI-81 page within 250 ms at p95. `scripts/perf/audit.sh` measures them with the access log off and on (the load test's new `--audit` mode counts the records through ITI-81 and times retrievals), `scripts/perf/audit-verdict.sh` gives the verdict, the release refuses a claim not met and attaches the summary as `ferroehr-<tag>-logging-performance.md` (Annex III point 2), and the weekly performance guard runs it on main. The book's compliance section gains the page that states the claims and the method (#4293).
+
+- `scripts/interop/atna.sh` exercises the logging component's ATNA transactions against independent implementations run from published images (EHDS Annex II 1.4): the ITI-20 FHIR feed into HAPI FHIR as the Audit Record Repository, judged by its validator with IHE BALP 1.1.4; the ITI-20 syslog feed into syslog-ng over RFC 5425 TLS, each payload read as a DICOM PS3.15 `AuditMessage`; and the same ITI-81 searches put to FerroEHR and to HAPI. The audit trail page documents it (#4296).
+
+- FerroEHR ships an EHDS category map for the published CKM templates and COMPOSITION archetypes whose data sit in one Art. 14(1) priority category (the International Patient Summary, ePrescription, the generic laboratory result and CCTA report templates; the `health_summary`, `prescription` and `transfer_summary` archetypes), so an installation that declares no `[audit.categories]` keys records those accesses classified instead of `unclassified` (EHDS Annex II 3.2(c)). A deployment that declares any template or archetype replaces it whole. `[audit.categories] shipped_map = false` with nothing declared leaves no map, which `deployment_profile = "production"` refuses as the new `no_category_map` gap unless `deployment_accepts` names it (#4298).
+
+- Retention periods and access rules can take the origin and the category of the data into account (EHDS Annex II 3.4). The new top-level `[origins]` register declares the origins a deployment recognises, each by the id its data carry and the clients whose direct commits come from it; a body without a `FEEDER_AUDIT` committed by a registered client is stamped with that client's origin instead of the server's `system_id`. `PUT /admin/retention/policy` takes an optional `origin` naming a registered origin, the register and `GET /admin/retention/due` report it, and the due list lists an origin-keyed period over the objects of that origin (clinical migration `0020_retention_by_origin.sql`). The ABAC request carries `category` (the access record's category tokens) and `origin` resource attributes on composition, contribution and query operations, the Cedar schema declares both, and a remote PDP binding may name them as parameters (#4299).
+
+- The operations page gains a storage sizing section, measured on 5.6.0-rc5: about 21.6 KB of clinical storage per version of a vital signs composition (2.0 times its canonical JSON, 85 % of it node rows) and 155 KB for an International Patient Summary, about 1.2 KB per audit record of a read, the effect of `[audit.store]` retention on growth, `pg_wal` up to `max_wal_size`, the `REINDEX INDEX CONCURRENTLY clinical.node_hot_pkey` step (20 % of that index after heavy concurrent writing) and a query for the size per relation, with the method to reproduce the figures (#4304).
+
+- EHDS Art. 5: what a person inserts in their own EHR is marked as theirs, and
+  they cannot alter what a professional committed. A write under a token whose
+  SMART resource scopes are all `patient/` scopes records `PARTY_SELF` as its
+  `AUDIT_DETAILS.committer`, its `external_ref` naming the login, whatever
+  committer the request names; a COMPOSITION it commits must name `PARTY_SELF`
+  or `PARTY_RELATED` as composer; and its update or deletion of a version whose
+  committer is not `PARTY_SELF`, directly or inside a CONTRIBUTION, is refused
+  with `403`. A professional's writes are unchanged. The contribution list
+  extension gains `inserted_by_person` per row, and the viewer names a
+  `PARTY_SELF` committer "The person or their representative". A service
+  `auth_failure` status now answers `403` where it answered `500` (#4350).
+
+- The EHDS Art. 3(3) delay of the person's own access to newly registered data, a Member State option and off by default. The new `[access_delay]` section (`enabled`, `categories`, `hours`) holds every new COMPOSITION of a listed `[audit.categories]` category from requests that may be the person's own (a bearer token with a SMART `patient/` grant or the ABAC patient claim, also beside `user/` or `system/` grants, as `ferrohealth-smart` 0.8.7 decides it) for at most `hours`: a read answers `404` as for an unknown composition, and a query, an export and a CONTRIBUTION leave it out, while a professional reads it as before. The treating professional releases a held composition from the clinical route `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release`, with the checks of a write to that EHR, and the controller with `POST /admin/access-delay/release`; a professional holds one by hand within the limit with `POST /admin/access-delay` and reads the register with `GET /admin/access-delay`; every hold ends at its limit, and placing, releasing and expiry are each an access record. The subject-scoped ITI-81 read of the person's own trail (EHDS Art. 9) leaves out the records about a held composition until it is released or expires, then serves them with their original times (`ehds-logging` 0.3.3) (clinical migration `0027_access_delay.sql`, party migration `0019_access_delay_column.sql`) (#4351).
+
+- The `openehr-its` client reads an RFC 9457 problem details refusal:
+  `ErrorBody::problem()` exposes its `type`, `title`, `status`, `detail` and
+  `instance`, ignoring a member of the wrong type (RFC 9457 §3.1), and
+  `ErrorBody::message()` answers the problem's `detail`, else its `title`,
+  where it answered only the ITS-REST `Error`'s `message`. The `openehr-*`
+  crates move to 0.0.115 (#4355).
+
+- The local EHR index (`[ehr_index] provider = "local"`) is a supported production posture beside the IHE patient identity source: `EHR_STATUS.subject` names a patient by its own namespace and identifier, which `GET /ehr?subject_id=&subject_namespace=` matches, and with no `[privacy] subject_namespaces` declared the reference is stored as the client sends it. The compose quickstart selects it with `FERROEHR_EHR_INDEX=local docker compose up`, which runs its `ferroehr-config-local` block (#4379).
+
+- CI checks every inline configuration of the compose quickstart with the `config check` of the image the file pins, FerroEHR's and FerroPIX's, so the quickstart can no longer carry a configuration its pinned server refuses (#4380).
+
+- The Conformance workflow runs the Veredictum 0.3.0 catalogue in CI through the Veredictum GitHub Action, pinned by commit SHA and running the release image by digest. It builds FerroEHR from the commit, composes it with FerroTERM beside it on fresh volumes, reviews the party statement with `veredictum validate`, fails on a failed or errored row, writes the Markdown summary to the job summary and uploads the results, JUnit and CTRF views. It runs on pull requests that touch the server, the party set, the conformance compose files or the workflow, on `main`, on a release tag and twice a week. `scripts/conformance.sh` takes a stage (`run`, `review`, `up`, `down`), so CI and a local run compose the same deployment, and `scripts/checks/veredictum-action.sh` fails while the Action SHA, its version comment, the image digest and `VEREDICTUM_VERSION` disagree (#4449).
+
+- The Conformance workflow runs the Veredictum `smart` documents (`smart_discovery`, `smart_scopes`) against the same FerroEHR build after the Veredictum Action, which forwards no SMART Platform base URL and no scoped tokens. The same pinned image runs `veredictum test` with `--platform-url` and `docs/conformance/party/ferroehr/ixit-smart.json`, minting each access token in memory from the committed test issuer the SMART overlay trusts, and the job uploads its results, JUnit and CTRF views beside the catalogue's and adds its summary under a heading of its own. `scripts/conformance.sh` gains the `smart` stage, and `run` drives it after the catalogue, so a local run covers SMART too (#4450).
+
+- `GET /ehr/{ehr_id}` and `GET /ehr?subject_id=…` now send `Last-Modified`:
+  the commit that created the EHR, or the later commit that added or deleted
+  one of its folder hierarchies (#4462).
+
+- The EHDS Art. 10 opt-out from access through the access services of Arts. 4 and 12, a Member State option and off by default. The new `[authz.rbac] access_service_roles` key declares the roles of the access-service callers; while an EHR carries the opt-out, a caller holding one reads it as absent: a route naming the EHR or an object in it answers `404` as for an unknown EHR, a population query leaves its data out, a scoped query, an export and the lookup by subject find no such EHR, and a write to it is refused as absent. Every other caller, the provider's own care included, reads it as before. The controller records the opt-out on the person's instruction with `POST /admin/access-opt-out`, reverses it with `POST /admin/access-opt-out/reverse` (the register keeps the reversal) and reads the register with `GET /admin/access-opt-out`; recording is refused with `400` while no access-service role is declared. An access-service caller that declares one of `[audit] emergency_purpose_codes` and does not act for the person reads the EHR under the Art. 10(2) vital-interest override, with the emergency mark on its access record and an `access-opt-out-override` record against the EHR. Recording, reversing and reading the register are access records (clinical migration `0029_access_opt_out.sql`) (#4516).
+
+### Changed
+
+- **Breaking for clients that relied on the old leniencies:** `POST
+  /ehr/{ehr_id}/contribution` and `POST /demographic/contribution` now read the
+  body through the released `NewContribution` schema, and refuse every shape it
+  does not define. Each refused shape answers **400**: (#3595)
+  - a `lifecycle_state` in the CODE_PHRASE shape `{"terminology_id": …,
+    "code_string": …}`, as a plain string, or as a bare `{"value": …}`. Send
+    a `DV_CODED_TEXT`: `{"value": "complete", "defining_code":
+    {"terminology_id": {"value": "openehr"}, "code_string": "532"}}`;
+  - a `description` sent as a plain string, on the contribution `audit`, on a
+    `commit_audit` or on an attestation. Send a `DV_TEXT` or `DV_CODED_TEXT`
+    object: `{"_type": "DV_TEXT", "value": "…"}`;
+  - a `commit_audit` or contribution `audit` without `change_type`. The server
+    no longer infers creation or modification from `preceding_version_uid`;
+    send the code of the change, for example `249` (creation), `251`
+    (modification), `523` (deleted) or `666` (attestation);
+  - a `commit_audit` or contribution `audit` whose `_type` is `ATTESTATION` or
+    `UPDATE_ATTESTATION`, or any value other than `UPDATE_AUDIT` or
+    `AUDIT_DETAILS`. Send the audit as `UPDATE_AUDIT` (or with no `_type`) and
+    put each attestation in the version's `attestations` list as an
+    `UPDATE_ATTESTATION`. A `666` (attestation) version carries its
+    attestations there too, and one with no attestation is refused;
+  - a missing `audit`, which answered 422 before. A missing `versions` list,
+    an attestation without `reason` or `is_pending`, a `system_id` that is not
+    a string, and a `preceding_version_uid` sent as a plain string instead of
+    `{"value": "…"}` are refused the same way.
+
+- An attestation's own `system_id` is kept, and one that states none takes the
+  `system_id` of the version audit it belongs to instead of the server's. An
+  attestation committer is now checked against its `PARTY_PROXY` rules like
+  every other committer, so an invalid one answers 422 (#3595).
+
+- The served OpenAPI document describes each extension route by what it does
+  and by the ITS-REST text that governs it, and no longer names openEHR Service
+  Model operations, interfaces or status codes. Routes, request and response
+  fields and status codes are unchanged (#4213).
+
+- A population AQL query that only counts its root objects, such as
+  `SELECT COUNT(c) FROM EHR e CONTAINS COMPOSITION c` or the same with
+  `COUNT(*)`, reads the current version rows and no longer probes the root
+  node of every composition. At 545 000 compositions the count fell from about
+  9 s to 0.2 s (#4286).
+
+- A REST request checks a connection out of each database pool once and keeps
+  it until it answers, where it took one for each statement: two to four
+  checkouts for a read of an EHR, an EHR_STATUS or a COMPOSITION, each waiting
+  in the pool's queue under load and each paying the pool's release round
+  trip. At 48 concurrent clients and a pool of 10, throughput rose by about
+  18 % and the median latency fell by about 13 % (#4289).
+
+- The Helm chart, at a new major version (21), has no default deployment profile: it refuses to render until `config.deployment_profile` names `sandbox` or `production`, so an installation that follows a quickstart instead of the instructions for use no longer runs the sandbox posture by omission (EHDS Annex II 1.2). A values file that relied on the old `sandbox` default must now set it, for example `--set config.deployment_profile=sandbox`; `values-production.yaml` sets `production` as before. The server binary's own default and the Compose files, which declare `sandbox` explicitly, are unchanged (#4294).
+
+- The audit store keeps each record's facts in columns and renders its FHIR R4
+  `AuditEvent` from them when the record is read over ITI-81 or delivered by
+  the FHIR feed, instead of storing the rendered document in every record. A
+  record takes about a quarter of the space it took before. The configuration
+  the rendering depends on (the audit source, the store horizon, the category
+  map and the emergency purposes) is kept once per distinct configuration in
+  `audit.audit_render_policy`, and every record names the policy it was
+  written under, so it renders the same document after the configuration
+  changes. The tamper chain hashes every column of the record in one digest
+  and checks each render policy against its digest; the earlier digest
+  versions are retired. Audit migration 0017 needs an empty audit store and
+  refuses one that holds records written by an earlier release, naming the
+  remedy. ITI-81 parameters on an element of the document (`address`, the
+  `.identifier` parameters, `entity-type`, `entity-role`, `type`, `subtype`)
+  are matched against the rendered document (#4300).
+
+- The three audit indexes on `recorded_at` ascend, so their pages fill instead
+  of splitting half full on every insert; the newest-first ITI-81 search scans
+  them backward (#4302).
+
+- A clinical or party node row now stores only the part of its canonical JSON fragment that its own columns do not hold: `_type`, a lowercase `archetype_node_id`, a plain or simply coded name, and an ELEMENT value in one of the common basic shapes (a quantity, count, ordinal, coded or plain text, date, time, duration, identifier, boolean or URI) move into columns, the value into the new typed value columns. Every reader rebuilds the omitted keys, so the canonical JSON and every AQL result are unchanged, and a filter on a quantity's magnitude or a code reads its column directly. The node heap shrinks by about a third (storage generation 3); a row written before keeps its whole fragment and reads the same. Migrations `ext/0005`, `clinical/0019` and `party/0012` add the columns and the readers; no data is migrated (#4306).
+
+- Every ITI-81 search parameter answers through an index again. The store
+  takes the search tokens of a record's rendered `AuditEvent` when it writes
+  the record: each distinct token once in `audit.audit_search_token`, the
+  code-system tokens (`type`, `subtype`, `entity-type`, `entity-role`,
+  `source.identifier`) as one shared set in `audit.audit_search_set`, and their
+  ids on the record in `search_tokens` under a GIN index; `entity` reads a hash
+  index on `resource_id`. A search on `address` or a token parameter no longer
+  renders every record in its `date` window. The tamper chain covers
+  `search_tokens`, and the verifier reports a changed token or set (#4313).
+
+- The storage-bench lane measures the baseline and the candidate on one
+  runner in eight interleaved rounds each and gives two verdicts. The plan
+  verdict fails an operation whose median pages per call rose more than 10 %
+  and one page above the baseline's highest round, whatever its time. The
+  time verdict divides each round by its machine factor, so a slow spell of
+  the runner no longer reads as the code, and fails an operation whose median
+  p50 or p99 rose more than 15 % with every candidate round slower than every
+  baseline round, or a candidate build that ran more than 15 % slower across
+  the board in every round. A latency is no longer compared with a record
+  measured on another runner (#4318).
+
+- The viewer takes FerroUI 0.5.8: a menu item draws a visible bar under the pointer and the keyboard focus, and the top bar's search no longer opens its panel again over the page the router draws after a search is submitted or one of its options followed (#4319).
+
+- Nothing ITS-REST 1.1.0 does not define is served under the openEHR base path
+  any more. FerroEHR serves three namespaces beside each other under
+  `/ferroehr/rest/`: `/openehr/v1/` holds only the ITS-REST routes,
+  `/fhir/r4/` the FHIR and IHE interfaces, and `/extensions/v1/` FerroEHR's own
+  extensions. The ITI-81 retrieval moved from
+  `/ferroehr/rest/openehr/v1/fhir/r4/AuditEvent` to
+  `/ferroehr/rest/fhir/r4/AuditEvent`. These routes moved from
+  `/ferroehr/rest/openehr/v1/...` to `/ferroehr/rest/extensions/v1/...` with
+  the same relative path: `/terminology/...`, `/admin/event_subscription...`,
+  `/demographic/party_relationship...`,
+  `/demographic/versioned_party_relationship/...`,
+  `/definition/archetype/...`, `/definition/artefact/...`, `/message/export...`,
+  `/message/import...`, `/query/cohort`, and the admin extensions
+  `/admin/config`, `/admin/template/{template_id}`,
+  `/admin/query/{qualified_query_name}/{version}`, `/admin/party/...`,
+  `/admin/archive/...`, `/admin/report/...`, `/admin/dump`, `/admin/load`,
+  `/admin/integrity/...`, `/admin/restriction...`,
+  `/admin/access-restriction...`, `/admin/research-objection` and
+  `/admin/retention/...`. The old paths answer 404, with no redirect. The
+  served OpenAPI document and its family documents name the new paths; the
+  admin extensions, the archetype library and the cohort query have family
+  documents of their own (`admin-extensions`, `archetypes`, `cohort`,
+  `contributions`). The paged CONTRIBUTION list moved too, to
+  `/ferroehr/rest/extensions/v1/ehr/{ehr_id}/contribution` (#4330).
+
+- The server and viewer images build on the current
+  `gcr.io/distroless/cc-debian13:nonroot` digest, so they carry the base
+  image's latest Debian package updates (#4335).
+
+- Canonical JSON validation against the openEHR ITS-JSON schemas runs on
+  `jsonschema` 0.59.0, which refuses a value whose regex match the engine
+  cannot finish where 0.58 accepted it under `not` or `patternProperties`.
+  The `openehr-*` crates move to 0.0.113 (#4336).
+
+- A statement the database cancels, by its `statement_timeout` or a cancel
+  request (SQLSTATE `57014`), answers `503` with `Retry-After` instead of
+  `500`: the statement rolled back, so the request can be repeated. By default
+  the request timeout answers before the 60 s statement timeout fires, so on a
+  request path it is raised by an operator's cancel or by a forward step of
+  the database host's clock, which fires every running statement's timeout at
+  once (#4338).
+
+- Every error on the openEHR routes (`/ferroehr/rest/openehr/v1/`), the
+  extension routes (`/ferroehr/rest/extensions/v1/`) and the management
+  routes answers RFC 9457 problem details, `application/problem+json`, in
+  place of the `{ message, validationErrors, error }` body shaped after the
+  ITS-REST example. The status codes are unchanged. A problem carries
+  `type`, `title`, `status`, `detail` and the request id as a `urn:uuid:`
+  `instance`; the refusals a client acts on have FerroEHR types documented
+  on the book's Problem types page (`aql-invalid`, `query-timeout`,
+  `validation-failed`, `content-invalid`, `conflict`, `version-conflict`,
+  `unauthenticated`, `forbidden`, `processing-restricted`, `unavailable`,
+  `rate-limited`), every other error is `about:blank`. A request with
+  `Prefer: return=representation` receives the additional details ITS-REST
+  allows: the violations of a validation refusal as `errors`
+  (`{path, detail}`, where `validationErrors` held `"<path>: <message>"`
+  strings), the byte `position` of an AQL parse refusal, and the
+  `current_version` of a `412`. The stack's own `408`, `413`, `429`, `503`
+  and panic `500` are problems too, and an `OperationOutcome` under the
+  FHIR base, where an authentication refusal is now an `OperationOutcome`
+  as well. The served OpenAPI document declares the `Problem` schema for
+  every `4xx` and `5xx`, and the viewer reads problem details. A client
+  that read `message` reads `detail`; one that read `validationErrors`
+  sends `Prefer: return=representation` and reads `errors` (#4342).
+
+- The FHIR `AuditEvent` of an EHDS access record names the object it reads,
+  creates, updates or deletes by its openEHR object id as
+  `entity.what.identifier` with the system `urn:openehr:object-id`, where it
+  wrote a `what.reference` that no FHIR server resolves and HAPI FHIR refused
+  (FHIR R4 references.html §2.3.0.3). ITI-81 finds the record by
+  `entity.identifier`. FerroEHR takes FerroAUDIT 0.3.2 (`ihe-atna` and
+  `ehds-logging`) (#4366).
+
+- The access log costs the request path less under load. The audit store
+  writes a drained batch, its search tokens and its token sets in one
+  transaction on one connection (one commit where it took up to three), stores
+  only the tokens it does not hold yet, and the GIN index on `search_tokens`
+  takes new entries through a pending list of 512 kB. On the release load
+  test the store wrote 1.5 KB of WAL per record where it wrote 5.2 KB (#4375).
+
+- **The LANG specification text is re-vendored** at `f80763ab` (#4377). SPECLANG-18 states how a P_BMM schema's JSON form encodes a cardinality interval, which the JSON schema reader already followed; its documentation now cites the rule, and a test pins it. SPECLANG-16 types the P_BMM class lists as keyed collections; the generated P_BMM model takes that change with #4497. The nine `openehr-*` crates step to 0.0.122.
+
+- `[ehr_index] provider = "local"` beside `pixm_url`, `assigning_authority`, `[ehr_index.oauth]` or `[ehr_index.tls]` is accepted, where it was refused: the IHE keys are kept, not used and named at boot, so `provider` alone switches the index, in the file or as `FERROEHR__EHR_INDEX__PROVIDER`. Declared pseudonym namespaces stay in force under either index (#4379).
+
+- A build no release lane marked reports its commit beside the package version, as SemVer build metadata (`5.6.0-rc2+dev.1a2b3c4d5e6f`), on `ferroehr --version` and `server_version` of `GET /ferroehr/rest/status` (the boot banner and `/management/info` already name the commit beside the version), so a report from a build of `main` no longer reads as the release it follows; a release build reports the bare version (#4380).
+
+- The compose quickstart runs FerroPIX 0.0.12, pinned by digest, with its configuration moved to that release's keys (`public_base_url` at the top level, the Patient Identity Source's client under `[[trust.issuer]]`), and Dependabot proposes each FerroPIX release (#4380).
+
+- The Helm chart runs FerroPIX 0.0.12 by digest, with the FerroPIX chart 0.3.4 built for it, and the hosted sandbox runs FerroPIX 0.0.12 too; both had stayed at 0.0.7 and 0.0.10 when the quickstart moved. A values file for the chart's FerroPIX moves `ferropix.config.server.public_base_url` to `ferropix.config.public_base_url` and each issuer's `clients` to `ferropix.config.trust.issuer`, the keys FerroPIX reads since 0.0.8; the chart's examples and the production overlay do. FerroPIX's chart now also runs its pods with `enableServiceLinks: false` and in a user namespace (`ferropix.hostUsers: false`, the default). A CI guard holds the quickstart, chart and sandbox to one FerroPIX release and checks the sandbox's and the chart's FerroPIX configuration under it, so the Dependabot proposal for the quickstart pin moves all three (#4392).
+
+- `openehr-query`, the AQL 1.1.0 lexer, parser, typed AST and printer, is published under Apache-2.0 from 0.0.116, like the generated model crates and `openehr-its`, so any Rust project can parse AQL with it. Versions 0.0.60 to 0.0.115 keep the Business Source License 1.1 they were published under (#4405).
+
+- FerroEHR takes `ferrohealth-server` 0.4.0 in place of 0.3.9. The new
+  `[server] idle_timeout_ms` (120000 by default) closes a kept-alive
+  HTTP/1.1 connection that waits that long for its next request, with a
+  clean end of stream, and `[server] header_read_timeout_ms` counts from the
+  first byte of each request head on a kept-alive connection (from accept
+  for the first one, as before). The head bound used to count from the end
+  of the previous answer, so it also closed an idle connection after 30 s,
+  sometimes as a client sent its next request into it, which a client such
+  as Go's `net/http` saw as `EOF` on a `POST` it does not retry (#4381). A
+  deployment that set `header_read_timeout_ms` to bound idle connections
+  sets `idle_timeout_ms` instead. The refusals the listener writes itself
+  (`408`, `413`, `429`, `503`) and a panic's `500` keep naming the server's
+  request id as their `instance` when the client sends its own
+  `X-Request-Id`, as every other FerroEHR refusal does (#4417).
+
+- FerroEHR runs on `ferrohealth-server` 0.4.1, which keeps a product's own
+  fallback and the layers around it when the stack merges its routes
+  (FerroHEALTH/FerroSYS#199). FerroEHR, v5.6.0-rc3 included, was not exposed
+  to the regression 0.4.1 fixes: the REST API and the viewer declare their
+  own fallback inside their layers, and the management endpoints guard each
+  route they serve, so a path no route matches answers as it did before (#4427).
+
+- The viewer draws every page on its server with FerroUI 0.6, with no Leptos and no WebAssembly: a link and a form load a new page, and FerroUI's own small script modules add behaviour on top of what the server drew, so every page works with JavaScript off. The image ships the one `ferroehr-viewer` binary, with no `/site` tree beside it and no `hash.txt`; FerroUI's stylesheet, theme and scripts are served from inside it under `/ferrohealth-ui/0.6.0/`, and `/pkg/` no longer answers. The Content-Security-Policy is now `script-src 'self'; style-src 'self'` with no per-response nonce and no `'wasm-unsafe-eval'`. The image no longer reads `LEPTOS_SITE_ROOT`, `LEPTOS_OUTPUT_NAME` or `LEPTOS_HASH_FILES`, so a deployment that sets them can drop them; `LEPTOS_SITE_ADDR` naming another address than `server.listen` still refuses the start. A proxy rule written for `/pkg/` (the hosted deployment's `Cache-Control` for it is removed) has nothing left to match (#4433).
+
+- The viewer runs on `ferrohealth-server` 0.4.2 and takes its Content-Security-Policy from the family's server-rendered console headers (FerroHEALTH/FerroSYS#202) in place of a layer of its own. The policy a deployment sees is unchanged: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, with no nonce. FerroUI's assets under `/ferrohealth-ui/` keep the `Cache-Control` FerroUI sets, and a refusal under that path is `no-store` whatever FerroUI's router sets, so a cache in front of the viewer keeps no error answer for an asset. The REST server takes the same `ferrohealth-server` release with no change in what it serves (#4439).
+
+- `scripts/conformance.sh` runs the Veredictum 0.3.0 catalogue against one FerroEHR deployment: it reviews the party statement with `veredictum validate`, drives `veredictum test` in the release image pinned by digest with Basic login, and writes `results.json`, the HAR recording and the JUnit, CTRF and Markdown views to `docs/conformance/ferroehr/`. Docker or Podman runs it (`CONTAINER_ENGINE`). The FerroEHR statement now claims the 15 capability folders and answers every option of the 0.3.0 catalogue, and the IXIT keeps only what 0.3.0 reads (#4448).
+
+- The serving roles may now analyze their store's partitioned tables: new
+  migrations (clinical 0026, party 0018) grant `MAINTAIN` on `node`,
+  `version` and `vo_attestation`, and on `clinical.ehr`, to
+  `ferroehr_clinical` and `ferroehr_party`, so the hourly statistics
+  refresh works under the role split. `MAINTAIN` also allows `VACUUM`,
+  `CLUSTER`, `REINDEX` and `LOCK TABLE` on exactly those tables. A role
+  that still lacks it gets the warning naming the tables, as before (#4453).
+
+- With the role gate on (`[authz.rbac] enabled`), a bearer token whose SMART
+  on openEHR resource scopes are all `system/` scopes, such as
+  `system/template-*.r`, now reaches a clinical operation without a role: it is
+  a backend client, and its scopes decide what it reaches. A `user/` or
+  `patient/` token belongs to a person and still needs at least one role, as
+  does a token with no SMART on openEHR scope and a Basic user; an admin
+  operation still needs the admin role (#4467).
+
+- A tag update (`PUT …/tags` on EHR_STATUS, COMPOSITION and the five party
+  kinds) sent with `Prefer: return=identifier` now answers `200` with the
+  stored tag list and `Preference-Applied: return=identifier`. It answered
+  `204` (#4475).
+
+- The conformance deployment runs FerroTERM beside FerroEHR, pinned by digest, with `[terminology.server]` pointed at it, locally in `scripts/conformance.sh` and in the Conformance workflow, so the `aql-terminology-supported` arm of the party statement runs against a real terminology server (#4476).
+
+- **The P_BMM model follows SPECLANG-16.** The LANG 1.1.0 BMM that `openehr-codegen` reads is now the `specifications-LANG` file at `f80763ab`, so `P_BMM_SCHEMA.primitive_types` and `class_definitions` are maps keyed by class name, `P_BMM_CLASS.ancestor_defs` is a map of `P_BMM_BASE_TYPE` keyed by type signature (a simple ancestor included), and `P_BMM_GENERIC_TYPE.generic_parameter_defs` is an optional map keyed by formal parameter name. The formal and actual generic parameters (`P_BMM_CLASS.generic_parameter_defs`, `P_BMM_GENERIC_TYPE.generic_parameter_defs`, `BMM_GENERIC_CLASS.generic_parameters`) are insertion-ordered `IndexMap`s, because the specification fixes their declaration order, and the model builders bind each actual parameter to its formal by name. In the released `v1_0` generation, `P_BMM_GENERIC_TYPE.generic_parameter_defs` now carries the `1..*` bound its BMM states. The nine `openehr-*` crates step to 0.0.123 (#4497).
+
+- The conformance pipeline runs Veredictum 0.3.1. The Conformance workflow drives the catalogue through the Veredictum Action twice, each run on fresh volumes: under the `released` profile, the frozen openEHR release, which is the record and decides the job, and under the `development` profile, the pinned `master` of each openEHR repository, which is published beside it under its own job summary heading and artifact and never counted toward it. Both runs include the SMART documents: the Action now takes the SMART Platform base URL and the committed test issuer's key. The workflow reads the result paths and the exit status from the Action's outputs. `scripts/conformance.sh` takes the profile as `CONF_PROFILE` (`released` by default; a `development` run writes to `docs/conformance/ferroehr-development/`) and drives the SMART documents in the same run, and the IXIT carries the test issuer's `scoped_tokens` declaration (#4503).
+
+- The viewer groups a template's releases. The template list draws one group
+  per template, the newest release first with the number of releases and the
+  earlier releases under it, in both the ADL 1.4 and the ADL 2 tab. A
+  template's page names its release beside its title, where every other
+  release is a link with the newest marked, also with FerroUI's scripts
+  refused; the release select and its Open button above the tabs are gone.
+  The Overview lists the releases with the compositions committed against
+  each, and a new Compare tab lists the paths one release adds, removes and
+  changes against another (#4506).
+
+- Every write checks the committer against the login that authenticated the
+  request where the server can compare them: a committer naming another login
+  of the caller's token issuer or of this server, or a `PARTY_SELF` committer
+  from a caller who is not the record's person, is refused with a **403**. A
+  name only, or an identifier of another authority, is stored as sent. The
+  direct writes (composition, EHR status, directory, EHR, demographic) now
+  also refuse a committer that breaks its own rules with a **422**, as the
+  contribution path already did (#4520).
+
+- An audit record no longer adds a row to `audit.audit_search_token` for its
+  request id or for the version uid a create wrote. ITI-81 `entity.identifier`
+  finds both from the record's own `request_id` and `resource_id` columns,
+  through a new hash index on `request_id` (audit migration 0020), so the token
+  table stays flat as requests are audited. Retention now deletes the search
+  tokens that no remaining record names, among them the request id tokens of
+  records written by 5.6.0-rc5 and earlier, and the database still refuses to
+  delete a token a kept record names (#4524).
+
+- A clinical or party node row below the root no longer repeats its archetype header, language and encoding: an archetype root's `archetype_details` and `archetype_node_id` are rebuilt from the `archetype` column and a new `rm_version` column, and a `language` in `ISO_639-1` and an `encoding` in `IANA_character-sets` keep only their code, in the new `language` and `encoding` columns. Every reader puts the keys back where they stood, so the canonical JSON, every AQL result and the served key order are unchanged; a header of any other shape stays in the fragment. A vital signs version takes 17.1 KB instead of 21.6 KB and an International Patient Summary 131 KB instead of 159 KB. Migrations `ext/0007`, `clinical/0028` and `party/0020` add the columns and the readers; no data is migrated, and a row written before keeps its whole fragment and reads the same (#4525).
+
+- `ext.storage_generation()` reports `generation-4`, the storage generation with the node header columns, and the storage benchmark records for it are committed under `docs/benchmarks/storage/generation-4/`. Migration `ext/0008` changes only the label; nothing in the serving path reads it (#4525).
+
+- Five response messages no longer name the openEHR Service Model. The admin
+  dump route's `400` for a missing `file_sys_loc` now reads "request body must
+  carry a non-empty `file_sys_loc` string, a location on the server's file
+  system (FerroEHR's own dump/load extension)", and its `400` for an
+  `encoding` member reads "`encoding` is not accepted: FerroEHR's own
+  dump/load extension defines no encoding, so no value names one". The admin
+  activity-report `400`s for `a_service` now list the accepted service names
+  ("query parameter `a_service` is required: one of Admin, Definitions, …" and
+  "query parameter `a_service` names no platform service: … (expected one of
+  …)"). The not-implemented answer of `store_query_set` reads "store_query_set
+  is not implemented: no openEHR specification defines a query set". The
+  `openehr-rm` validation docs for the three `PARTY` and `PARTY_RELATIONSHIP`
+  relationship invariants now name the separate relationship container as
+  FerroEHR's own design against RM demographic §Party Relationships (#4531).
+
+- **Breaking for clients that relied on the remaining commit-audit
+  leniencies:** the audit rules of the CONTRIBUTION commit now hold on every
+  write path (#4543).
+  - A `description` object without `_type`, such as `{"value": "…"}`, is
+    refused with **400** on a contribution `audit`, a `commit_audit` and an
+    attestation, and so is an attestation `reason` without `_type`. Send
+    `{"_type": "DV_TEXT", "value": "…"}` or a `DV_CODED_TEXT` with its
+    `_type`.
+  - A stated empty `system_id` is refused with **422** on the direct writes
+    too (`openehr-audit-details: system_id=""` on a create, update or delete),
+    where the server used to replace it with its own. Leave `system_id` out to
+    get the server's, or send a non-empty one. A `system_id` that is not a
+    string stays a **400** on both CONTRIBUTION routes.
+  - A commit audit of type `UPDATE_ATTESTATION` handed to the library's direct
+    write calls (`create_composition`, `update_composition`, the EHR_STATUS,
+    DIRECTORY and party writes) is refused with **400**, as on the
+    CONTRIBUTION routes. Send the audit as `UPDATE_AUDIT` and put each
+    attestation in the version's `attestations` list.
+
+- Members that `NewContribution` or `UPDATE_AUDIT` do not declare, such as a
+  `reason` or `is_pending` on a plain audit or an extra top-level member of a
+  contribution, are accepted and ignored: the released schemas leave both
+  objects open (#4543).
+
+- **The `openehr-*` crates take their version when they are published.** A
+  pull request that changes the crates no longer bumps their lockstep `0.0.x`
+  version: the crates publish reads crates.io, takes the next version when
+  packaged content changed since the newest published one, and refuses to
+  publish changed content under a version crates.io already holds. The
+  version in the manifests on `main` can therefore trail the newest version
+  on crates.io (#4555).
+
+- The served Web Template of an ADL 2 operational template writes the
+  `aqlPath` of an ELEMENT's value and of a data value's parts without an
+  `[idN]` predicate, since a data value carries no `archetype_node_id` (ADL2
+  `master05-paths` §"Relationship with W3C Xpath"). A `DV_INTERVAL` and its
+  parts read `…/value`, `…/value/lower` and `…/value/upper`, the form the
+  ADL 1.4 Web Template writes, where they read `…/value[id6]/lower[id7]`
+  before, and the parts' ids are `lower` and `upper` (#4559).
+
+- The served Web Template gives every `DV_INTERVAL<T>` node its `lower` and
+  `upper` children, each of type `T`, also when the operational template
+  leaves them unconstrained (RM `data_types` §DV_INTERVAL). Such a node had no
+  children before. An unconstrained part carries the open inputs of its type,
+  and its `aqlPath` is `…/value/lower` or `…/value/upper`. This holds for ADL
+  1.4 and ADL 2 templates (#4559).
+
+- The template example fills such an interval: an unconstrained part takes
+  the example value of its constrained sibling, so the limits stay
+  consistent (#4559).
+
+- The served Web Template of an ADL 2 operational template writes a coded
+  input whose at-codes the template binds to a terminology as the bound
+  terms: its `code` list carries each binding's code and label and its
+  `terminology` names the bound terminology (ADL2
+  `master08-terminology_integration` §"From Constraints to Concrete Codes in
+  Data"). `COMPOSITION.category` bound `at1` to `openehr::433` reads
+  `{"value": "433", "label": "event"}` with `terminology: "openehr"`, where
+  it read the local `at1` before, and an `[acN@ttttt]` constraint takes the
+  bound terms of the terminology it names. A FLAT or STRUCTURED composition
+  without a category, and the example composition, now carry `openehr::433`.
+  The `aqlPath` of every data value drops its `[idN]` predicate, so a
+  constrained `category` and `context/setting` read `/category` and
+  `/context/setting` (#4574).
+
+- A CONTRIBUTION's `versions[]` entry records its merge inputs: the
+  `other_input_version_uids` it states are stored on the committed
+  `ORIGINAL_VERSION` and served on every read, where the server used to refuse
+  the member with **400**. The uids may name versions the server does not hold;
+  an empty list or an entry that is not an `OBJECT_VERSION_ID` is a **422** (#4577).
+
+- Other members `UPDATE_VERSION` does not declare, such as `item` or an
+  extension member, are accepted and ignored, where the server used to refuse
+  them with **400**: the released schema leaves the object open, as it does
+  `NewContribution` and `UPDATE_AUDIT`. A `uid` or `contribution` on a version
+  entry is still refused with **400**, because the server assigns both, and so
+  is a `_type` other than `UPDATE_VERSION` or `ORIGINAL_VERSION` (#4577).
+
+- The admin dump route's refusals name its parameters by their wire names
+  and list the accepted values, not the Service Model class names. A bad
+  `logical_format` or `compression_format` now reads "`<field>` must be a
+  string, one of …" or "`<field>` names no accepted value: … (expected one of
+  …)", and a non-integer `segment_split_size` reads "`segment_split_size` must
+  be an integer size in kb". The served OpenAPI text for the route no longer
+  names `EXPORT_SPEC` or `EXPORT_FORMAT` (#4634).
+
+### Removed
+
+- The conformance pipeline no longer runs EHRbase or the extra FerroEHR deployments. `docker/sut-ehrbase.yml`, the EHRbase record and party set, `docs/conformance/COMPARISON.md`, the book's Comparison with EHRbase page, and the openPGP-signing, fail-open and stable-spec compose overlays (`docker/sut-signing-pgp.yml`, `sut-pgp-parallel.yml`, `sut-terminology-failclosed.yml`, `sut-terminology-failopen.yml`, `sut-spec-stable.yml`) with the test signing keys under `corpus/keys/` are gone. `scripts/conformance.sh` no longer takes `CONF_SUT`, `CONF_IXIT` or `CONF_STATEMENT`, and refuses `CONF_PERF_CLASS` and `CONF_STRESS` until the measured lanes move to the Veredictum `perf/` tree (#4448).
+
+- The Veredictum pin watcher workflow, `scripts/checks/veredictum-pin.sh` with its `veredictum-pin-guard` job, and the `no-conformance-run` label are gone: a pin bump now runs the new catalogue against its own build in the Conformance workflow (#4449).
+
+- The separate SMART step of the Conformance workflow, the `smart` stage of `scripts/conformance.sh` with its `CONF_SMART_OUT`, and `docs/conformance/party/ferroehr/ixit-smart.json` are gone: the one catalogue run covers the SMART documents. The party statement no longer carries the `performance` block, which the Veredictum 0.3.1 statement schema refuses (#4503).
+
+### Fixed
+
+- The hosted sandbox seeds its full demo dataset again. The v5.5.0 reseed
+  stopped at the ADL 2 archetype library (233 stored / 89 refused against the
+  pinned 231 / 91) because the box's `.env` still forced FerroTERM 0.1.6, which
+  reads none of the FerroTERM 0.3 settings the sandbox posture passes, so it
+  served no LOINC and VETDF could only warn on `braden_scale`'s mistyped
+  LA9605-4. The corpus, the pin and the CDR were right. The seed now asks the
+  CDR for a LOINC code before the library step and names a posture without
+  LOINC (`SANDBOX_TERMINOLOGY=without-loinc` opts a local run into 233 / 89),
+  checks that the two files it names move together, and a corpus test holds
+  the manifest's pin to the adjudicated split with and without LOINC. The
+  FerroPIX rollout script retires a stale `FERROTERM_IMAGE` override, checks
+  that FerroTERM runs the pinned version and serves LOINC, and wipes before it
+  seeds over an unfinished seed (#4278).
+
+- The measurement overlay `docker/sut-measurement.yml` switches the caller rate limiter off by removing the `[server.caller_rate]` keys, so the server logs `caller rate limiting configured` with `enabled=false` at boot, instead of setting a rate of 4294967295 per second that `ferrohealth-server` 0.3.5 truncated to a zero interval and that answered stray `429`s under concurrency. `scripts/conformance.sh` refuses to start a measurement stack whose `ferroehr` service still sets a caller rate (#4281).
+
+- A response to a request whose body FerroEHR left unread, such as a `404`
+  to a `POST` of a path it does not serve or a declared-length `413`, now
+  carries `Connection: close`. The connection closed after such a response
+  without saying so, and a client that sent its next request on it met a
+  closed socket, which a non-idempotent request cannot safely retry
+  (RFC 9112 §9.6) (#4283).
+
+- A `[server.caller_rate]` above 1 000 000 000 requests per second no longer
+  answers `429` to concurrent requests: such a rate now limits nothing, as
+  its operator meant (#4283).
+
+- Every request leaves one request line, a timeout `408`, a declared-length
+  `413` and the `500` of a panicked handler included, and a `413` for a
+  body with no declared length that passes `[server] body_limit_bytes` is
+  answered with the openEHR error body, as the declared-length `413` is (#4283).
+
+- An AQL query whose `WHERE` clause chains thousands of `NOT`, `AND` or `OR`
+  terms no longer overflows the stack and aborts the server. The parser
+  refuses a query that nests brackets and `CONTAINS` deeper than 64 levels or
+  builds an expression deeper than 512 levels with `400 Bad Request`, before
+  any recursive pass runs, on the ad-hoc, stored-query store and execution
+  paths alike. A long `OR` over one path is written as `MATCHES {…}`, which
+  the bound does not count. A statement PostgreSQL refuses for its own
+  complexity limit (SQLSTATE class 54) also answers `400` instead of `500`.
+  `openehr-query` gains `ParseError::TooDeep` (#4284).
+
+- An AQL query (ad hoc or stored) whose client disconnects, or that the
+  server's own `query.timeout_ms` or HTTP request timeout gives up on, no
+  longer keeps its statement running and its pooled connection busy until the
+  statement ends. The connection is closed instead of returned to the pool, so
+  the slot frees at once, and every pooled session now sets PostgreSQL's
+  `client_connection_check_interval` to one second, so the backend stops the
+  abandoned statement within about a second. The composition-count
+  statistics behave the same way (#4285).
+
+- The server's resident memory no longer climbs under sustained load until the
+  container's memory limit kills it. The `ferroehr` binary now allocates through
+  mimalloc instead of glibc `malloc`, whose per-thread arenas kept freed memory
+  and never gave it back. On a load test of 10 000 mixed jobs at 48 workers the
+  peak resident set fell from 2.3 to 3.2 GB (growing run after run) to about
+  600 MB, and throughput rose by about a third (#4288).
+
+- A request whose database connection a PostgreSQL restart, a crash or the
+  network cuts now answers `503 Service Unavailable` with `Retry-After`, as a
+  request that cannot get a connection already did, instead of `500`. SQLSTATE
+  class `08` (except `08P01`), `57P01`, `57P02`, `57P03` and `57P05`, and a
+  reset, aborted or closed socket on an open session count as such a cut (#4290).
+
+- While PostgreSQL is down, requests that need the database answer `503` with
+  `Retry-After` about a second after the first one starts waiting, and at once
+  after that, instead of each queueing up to `db.acquire_timeout_secs`
+  (30 seconds by default). An acquire that has waited a second tries one
+  connection of its own; when that cannot reach the database, the outage is
+  known until a fresh attempt connects, and requests are served again as soon
+  as one does. A pool that is only busy keeps queueing as before (#4323).
+
+- Superseding a composition or a party no longer slows down as its history grows. The foreign-key check that every new node and attestation row makes against its version could scan all versions of the object instead of probing one, depending on the planner statistics at the time: on the storage bench, superseding an object with a few hundred versions took about 14 ms instead of 9 ms when the plan flipped. Migrations `clinical/0022` and `party/0013` re-key the version-tree uniqueness constraint `uq_version_tree` with the object id last, so the check always probes the primary key. The constraint enforces the same uniqueness as before (#4340).
+
+- The FHIR rendering of an access record `ehds-logging` does not classify (a template upload, a stored-query write, a template read) now carries the IHE BALP 1.1.4 `entity:data` slice its Create, Read, Update or Delete profile requires: type `2`, role `4` and `what.identifier`, naming the operation when the record names no object. HAPI FHIR's validator refused the template upload record without it (#4353).
+
+- A `+` in a query string is a literal plus, as RFC 3986 §2.1 and §3.4
+  decode a URI query, on every ITS-REST operation and every extension route:
+  a date-time offset such as `2026-10-28T10:00:00+01:00` or an AQL parameter
+  sent with an unencoded `+` reaches the server unchanged, where it was read
+  as a space. A space in a query value is sent as `%20`. This reverses the
+  form-decoding of #3891: a client that writes a space as `+` now sends a
+  plus. The `openehr-*` crates move to 0.0.114 (#4356).
+
+- An AQL `EHR e[ehr_id/value='…']` predicate whose value is not a UUID (`'1234'`, the AQL 1.1.0 example) answers an empty result, as its `WHERE e/ehr_id/value = '…'` spelling does, on `POST` and `GET /query/aql`; it was refused with `400`. Both spellings lower the EHR id comparison through one path, and a value the database cannot cast is refused with a message that no longer claims it came from a query parameter (#4378).
+
+- A request sent on a kept-alive connection that sat idle longer than
+  `[server] header_read_timeout_ms` (30 s by default) is answered. The server
+  used to close such a connection, sometimes while the request was arriving,
+  so a client that reused it got `EOF` with no answer and no server log line,
+  and a client that never retries a `POST` on a reused connection, such as
+  Go's `net/http`, reported a composition commit as failed. An idle
+  connection now stays open until `[server] idle_timeout_ms` (120 s by
+  default) and then ends cleanly before any new request byte; keep that
+  limit longer than the idle timeout of your clients (90 s for Go) and of any
+  load balancer in front (#4381).
+
+- An AQL query with an archetype predicate no longer builds the archetype
+  index bitmap of the whole store once per version. The planner multiplied
+  the selectivities of the archetype columns, which each archetype fixes
+  together, and expected about 15 000 of 545 067 blood-pressure OBSERVATIONs;
+  a query over one EHR then took 38.8 s and answered `408`. Clinical migration
+  `0021_archetype_statistics.sql` gives the columns a statistics object, and
+  the same query takes 0.3 s (#4399).
+
+- `FROM PERSON p CONTAINS EHR e` (and the `ORGANISATION` and `ROLE` roots)
+  joins a party to the EHR whose `EHR_STATUS.subject.external_ref` names it,
+  so a party created with `POST /demographic/person` and an EHR created with
+  `POST /ehr` answer their row with no other call. Before, the join read only
+  the party-to-EHR map, which no REST route writes, and answered no rows on a
+  deployed server. The reference matches when its `id.value` is the party's
+  uid without `::<system>::<version>` and its `type` is the root class or its
+  RM ancestor (`ACTOR`, `PARTY`), in any namespace; an EHR linked both ways
+  answers once (#4411).
+
+- An AQL projection whose path ends on a list attribute inside a node's data
+  (`c/feeder_audit/originating_system_item_ids`, `c/links`,
+  `c/context/participations`, `c/composer/identifiers`, `.../mappings`)
+  answers the list itself, `[{…}, {…}]`, and `null` when the list is absent.
+  It answered the list wrapped in a second list, `[[{…}, {…}]]`; a client that
+  unwrapped that outer array reads the column directly now. A path that
+  continues below a list (`.../originating_system_item_ids/id`) still answers
+  the array of its matches, `["…", "…"]`. `COUNT` over a path ending on a list
+  counts its elements (#4413).
+
+- Reading one version of a composition, EHR_STATUS, folder or party by its version id no longer slows down as the object's history grows. Once a connection reused its prepared read, the plan scanned every version of the object and kept the one asked for: on the storage bench's history of 500 versions such a read touched about 520 buffers instead of 12 to 24. Migrations `clinical/0023` and `party/0014` add an index on the version tree id columns of both storage tiers, so the read probes the one version it returns (#4420).
+
+- An audit store that 5.6.0-rc2 migrated starts again. Audit migration 0017
+  changed after 5.6.0-rc2 shipped it, so the server refused such a store on
+  the migration's checksum at boot. 0017 is back to its 5.6.0-rc2 text, and
+  the new audit migration `0019_search_tokens_pending_list.sql` gives the
+  search token index its pending list of 512 kB, so a store that 5.6.0-rc2
+  migrated upgrades in place (#4424).
+
+- An AQL query ordered by `c/uid/value` with a `LIMIT` no longer starts a parallel worker on every call, and no longer switches between that plan and a sort of the whole join depending on the planner statistics. The version uid it sorts on had no index, so the planner sorted the version rows through a parallel `Gather Merge`, which costs a worker's start-up per query on a server of any size: about 19 ms on the storage bench's CI runner, where the two flat-shape path reads measured 23 ms in some rounds and 42 ms in others. Migrations `clinical/0024` and `party/0015` add an index on the uid expression of the hot version partition, so the query reads versions in uid order from it in one backend and stops at the limit (#4429).
+
+- An AQL query that reads values along a path no longer spends up to a second compiling itself before it runs. Each path step was bound through a set-returning function that PostgreSQL estimates at ten rows, so a chain of steps multiplied the row estimate tenfold per step: the planner chose join orders for a statement millions of times larger than the real one and switched on JIT compilation for it. On the storage bench, a wide projection of 9 values over one EHR read in 1 s instead of 15 to 20 ms, and an ordered WHERE on a magnitude in about 0.5 s instead of 50 ms (#4430). Each step is now a `LATERAL` subquery that the planner estimates from its own plan; results do not change (#4431).
+
+- An AQL lookup by an ELEMENT value, such as a person by an identifier
+  (`WHERE id/items[at0001]/value/id = $v`) or a composition by a text value,
+  read every node of the archetype in both stores and tested the value last:
+  about 350 ms at 50 000 persons. The engine now anchors such an equality on
+  the ELEMENT rows of the same version by their search text
+  (`ext.node_search_text`, ext migration `0006`), which the new partial
+  expression index `idx_node_hot_value_search` and its statistics object
+  serve (clinical migration `0025`, party migration `0016`), so the lookup
+  reads the one object: 26 buffers and under a millisecond at 50 000
+  persons. The party store also gets the archetype dependency statistics the
+  clinical store has had since 5.6.0-rc2 (party migration `0017`). The
+  storage bench measures the lookup as `person_identifier_lookup` (#4437).
+
+- The revision history and every point read of a version now reach the
+  version's commit audit through a lateral subquery that probes
+  `pk_commit_audit` by key once per version row, so stale statistics on
+  the partitioned `version` table can no longer turn the read into a walk
+  of the whole commit audit index (1 318 buffers against 21 for a
+  four-version object beside 1 300 others) (#4438).
+
+- A revision history or a current-version read of a COMPOSITION committed
+  after the partitioned `version` table last had statistics could walk the
+  whole commit audit index: the planner held the highest commit audit id
+  of the seed for the highest there is and rated a merge join over
+  `pk_commit_audit` as cheap. On a store of 1 300 compositions the history
+  of a four-version object read 1 318 buffers instead of 21, and the
+  storage bench read `revision_history` at about 440 buffers per call in 3
+  of 8 rounds. The server now keeps the partitioned parents' statistics
+  (#4453), and each read probes the commit audit by key (#4438).
+
+- An AQL lookup of an EHR by the subject of its EHR_STATUS
+  (`WHERE e/ehr_status/subject/external_ref/id/value = $u AND
+  e/ehr_status/subject/external_ref/namespace = $n`) joined every EHR_STATUS
+  version and read the subject out of its stored fragment: about 150 ms on a
+  store of a few thousand EHRs. The two leaves now read the EHR row's
+  `subject_id` and `subject_namespace`, the copy the commit keeps of the
+  current EHR_STATUS subject, so the lookup enters through `uq_ehr_subject`
+  and reads one row. The storage bench measures it as `ehr_by_subject` (#4442).
+
+- The partitioned tables `node`, `version` and `vo_attestation` of the
+  clinical and party stores never had planner statistics of their own,
+  since autovacuum does not analyze a partitioned table, so the planner
+  estimated joins over them without any (PostgreSQL 18 §24.1.3). The
+  server now runs `ANALYZE ONLY` on them, and on `ehr` while autovacuum
+  has never analyzed it, after applying the migrations, after
+  `load_ehrs`, at boot and every hour. The role it runs as needs the
+  `MAINTAIN` privilege on those tables; without it the server logs the
+  tables it could not analyze. The population `CONTAINS` of an archetype
+  now enters through `idx_node_hot_arch_subsume` (3 703 buffers to
+  1 745 on the storage bench's seed) (#4453).
+
+- A party delete (`DELETE /demographic/{agent,group,organisation,person,role}/{uid_based_id}`)
+  and the party relationship delete now answer `400` when the path names the
+  versioned object instead of its latest `OBJECT_VERSION_ID`, and delete
+  nothing. They answered `204` and deleted the current version. The release
+  requires the `preceding_version_uid` in that path (ITS-REST
+  `agent_delete.yaml` and its four siblings) (#4478) (#4458).
+
+- A CONTRIBUTION member outside the operation's member set, a party in an EHR
+  CONTRIBUTION or a FOLDER in a demographic CONTRIBUTION, now answers `400`
+  as a body that fails the request schema. It answered `422` (#4459).
+
+- A party update whose body carries no `uid` now checks each relationship
+  `source` against the party the path names and refuses a foreign source with
+  `422`, as RM `Relationships_validity` requires. The check ran only when the
+  body carried a `uid`, so such an update committed a relationship sourced at
+  another party (#4460).
+
+- An ADL 1.4 template upload whose XML ends with an element still open now
+  answers `400`, as for any document that is not well-formed XML. The
+  well-formedness gate stopped at the end of input without checking that
+  every element was closed, so a truncated upload answered `422` (#4461).
+
+- A canonical JSON body that the published ITS-JSON schema admits and the RM
+  refuses, such as a `DV_URI` or `DV_EHR_URI` without `value` or a
+  `DV_INTERVAL` limit `DV_ORDINAL` without `symbol`, now answers `422` naming
+  the member, on the direct commit routes, the CONTRIBUTION members and the
+  party commits. A body the schema refuses still answers `400`. All of them
+  answered `400` (#4463).
+
+- A directory create or update whose root FOLDER names an archetype in
+  `archetype_node_id` and carries no `archetype_details` now answers `422` and
+  commits nothing: an archetype root carries `archetype_details` (RM common
+  §The LOCATABLE Class). FerroEHR created such a directory. A
+  `553|incomplete|` commit and a nested FOLDER keep it optional. The viewer's
+  empty directory root now carries `archetype_details` (#4464).
+
+- AQL `EHR e NOT CONTAINS <class expression>` now runs and returns the EHRs
+  that hold no matching object. It was refused as unsupported with `400` (#4465).
+
+- An AQL comparison between a `DV_DATE_TIME` path that ends on the data value
+  itself, such as `c/context/start_time`, and a date-time literal now compares
+  the instants both name, so values with different offsets compare correctly.
+  The comparison read the whole data value and matched nothing (#4466).
+
+- A container member whose node id names an object constraint of the
+  template but whose RM type conforms to none of them, such as an ELEMENT
+  where the template allows only a CLUSTER, is now refused with `422`. Only
+  the opposite direction was refused (#4468).
+
+- An ADL 1.4 template upload with `Prefer: return=representation` now answers
+  the representation `Accept` names: the OPT XML, or the Web Template under
+  `application/openehr.wt+json` or `application/json`. An `Accept` outside
+  those answers `406` and stores nothing. The upload always answered XML (#4469).
+
+- A Simplified Format COMPOSITION commit without the `openehr-template-id`
+  header, and a flat `|raw` value without `_type`, now answer `400`. Both
+  answered `422` (#4470).
+
+- A Simplified Flat or Structured `…/action_archetype_id` now sets the String
+  `ACTIVITY.action_archetype_id`, and the flat output writes it back. The
+  converter built an object from the template's string constraint, so the
+  commit answered `422` (#4471).
+
+- `ctx/action_ism_transition_current_state`, as a rubric or a code, now sets
+  `ACTION.ism_transition.current_state` of every ACTION the document gives no
+  state. The converter wrote `524|initial|` first and the context value never
+  applied (#4472).
+
+- `ctx/instruction_narrative` now becomes `INSTRUCTION.narrative` of every
+  INSTRUCTION the document gives no narrative. A placeholder `<narrative>` was
+  stored instead (#4473).
+
+- The Simplified Flat `DV_INTERVAL` suffixes `|lower_unbounded`,
+  `|upper_unbounded`, `|lower_included` and `|upper_included` are now read on
+  an interval whose bounds are template nodes, and the flat output writes an
+  unbounded flag when true and an included flag when false. The suffixes were
+  refused as unknown with `422` (#4474).
+
+- An AQL query aimed at named EHRs (the ITS-REST `ehr_id` parameter) reads those EHRs' objects first and each object's own content after them, whatever the planner statistics say. When an archetype's rows fell out of the most-common-value list of the archetype statistics, the planner estimated them at one row and could start from that archetype over the whole population, evaluating every projected path for every EHR's rows before the EHR filter: the storage bench's wide projection over one EHR read about 10 000 pages per call in some rounds and 1 200 in others. A node contained in a versioned object is now read inside its parent on such a query; results do not change (#4487).
+
+- AQL `TERMINOLOGY('expand', …)` against a FHIR terminology server takes the value set from the `url` argument when `params_uri` is the `$expand` query form (`url=http://…`), as the openEHR AQL examples write it, and still takes a bare value-set URL as it is. A query form without `url` is a 400 that names the missing argument. Before, the whole `params_uri` went to the server as the URL, and the query was answered 400 because the value set was not found (#4488).
+
+- AQL `TERMINOLOGY('validate', …)` and `TERMINOLOGY('subsumes', …)` keep a `params_uri` argument whole when its value carries a `?`, as the QUERY master03 example `url=http://snomed.info/sct?fhir_vs` does. Before, the arguments were read from after the first `?` anywhere in `params_uri`, so the value-set URL reached the terminology server truncated and the arguments before it were lost. A `params_uri` that starts with a path still has its arguments read from after the path's `?` (#4490).
+
+- **An ADL 2 template whose constituent archetype the CDR does not hold is
+  refused at upload**, with a `422` whose `errors` carry one `VARXR` entry per
+  missing archetype (AOM2 `C_ARCHETYPE_ROOT` validity rule VARXR); the 2013
+  CKM `t_encounter_opt_test`, built on the refused `apgar`, no longer loads,
+  so the sandbox library pin is 231 accepted / 91 refused. A stored template
+  whose constituent was deleted later answers its JSON form and example with
+  the same `VARXR` list, and the viewer says so on every tab of the template,
+  names each missing archetype and links to uploading it, instead of a raw
+  `422` (#4505).
+
+- **ADL 2 validation admits a constraint on an RM computed attribute.** VCARM accepts an attribute "stored or computed" (AOM2 `master04.5` §Validity Rules: `C_ATTRIBUTE`), and a function with no arguments is a computed attribute (`master04.2` §Attribute Nodes), so an archetype that constrains `DV_PROPORTION.is_integral`, `DV_QUANTITY.is_integral` or `EVENT.offset` is no longer refused with `422`. The generated RM model (`openehr_rm::v1_2::model`) now carries each class's computed attributes from the BMM functions (`RmClass::computed_attributes`, `computed_attribute`). `openEHR-EHR-CLUSTER.microscopy_prostate_carcinoma.v1.0.0` from the 2013 CKM ADL 2 export now uploads, and the sandbox archetype-library pin moves to 232 accepted and 90 refused. `DV_QUANTITY.property`, which no RM release defines, stays refused. The nine `openehr-*` crates step to 0.0.124 (#4513).
+
+- `DELETE /ferroehr/rest/extensions/v1/definition/artefact/adl2/{artefact_id}`
+  refuses with `409 Conflict` while another stored ADL 2 artefact does not
+  compile without the one deleted (a slot filler, a `use_archetype` reference
+  or a specialisation parent, directly or through another artefact), and the
+  message names every one of them. Before, the delete succeeded and left each
+  template built on the archetype unable to compile (#4522).
+
+- The viewer's ADL 2 template upload names each violation the CDR found when
+  it refuses the source: every AOM2 rule code with the CDR's words for it, so
+  a template whose constituent archetype the CDR does not hold names that
+  archetype (`VARXR`). The upload now asks for `Prefer: return=representation`,
+  the preference under which ITS-REST lets a `4xx` carry its error details,
+  and reads the stored template's id from the `ETag` of the `201` (#4523).
+
+- An ADL 2 operational template whose included archetype reuses the template's
+  node ids uploads again, where it was refused with `422` under VCOSU. Node-id
+  uniqueness now holds per archetype and restarts at each `C_ARCHETYPE_ROOT`
+  (AOM 2 VCOSU, "unique within the archetype"), and on an operational template
+  the codes and interior node ids below a root are judged against that
+  constituent's entry in `component_terminologies` (OPT 2 `master03-opt_raw`).
+  A duplicate node id inside one archetype is still refused. The nine
+  `openehr-*` crates step to 0.0.125 (#4529).
+
+- The viewer's dashboard draws the EHR or composition count as unavailable, with the reason in plain words, when the CDR answers its count query with a result set of another shape (no row, several rows, an empty row, several values, or a value that is no whole number), where it drew 0 before. The template Releases table draws such a count the same way. A real zero still draws 0 (#4533).
+
+- An ADL 2 operational template upload runs the terminology integrity rules
+  (VTLC, VATCV, VTVSID, VTVSUQ, VTVSMD, VTTBK, VTCBK, and VTSD where the level
+  is carried) on each `component_terminologies` entry, and each violation names
+  the component's archetype id (#4536).
+
+- A COMPOSITION committed against an ADL 2 operational template is validated
+  against the template's leaf constraints, where it was stored with `201`
+  whatever it held. An inlined archetype recorded by its complete identifier
+  (`openEHR-EHR-OBSERVATION.x.v1.0.0`, BASE `master07-referencing`
+  §Reconstitutability) now matches its template node, so the `C_INTEGER`,
+  `C_REAL`, `C_STRING`, `C_BOOLEAN`, tuple, value-set and cardinality
+  constraints below it answer `422` (AOM 2 `master04.5`). An archetype root the
+  template does not inline is refused as a node the template does not define,
+  and a `C_INTEGER` or `C_REAL` list (`{10, 15, 20}`) admits each of its values
+  where only the first was read. Canonical, FLAT and STRUCTURED commits take
+  the same check. The nine `openehr-*` crates step to 0.0.127 (#4540).
+
+- A versioned read whose `version` path segment is no SEMVER version and no
+  `{major}` or `{major}.{minor}` prefix, such as `v1.x`, `1.x` or `01`, now
+  answers `400` before any lookup, where it answered `404`
+  (`parameters/path/version.yaml`, `responses/400.yaml`). This covers the ADL 2
+  template read `GET /definition/template/adl2/{template_id}/{version}`, the
+  stored-query read `GET /definition/query/{qualified_query_name}/{version}` and
+  both stored-query executions at a version, `GET` and `POST
+  /query/{qualified_query_name}/{version}`. A well-formed version the server
+  does not hold still answers `404` (#4541).
+
+- A FLAT or STRUCTURED read of a COMPOSITION committed against an ADL 2
+  operational template returns the content below an inlined archetype that
+  the composition records by its complete identifier
+  (`openEHR-EHR-OBSERVATION.x.v1.0.0`, BASE `master07-referencing`
+  §Reconstitutability). The read left out everything below such a root with no
+  error; it now matches the root to its template node the way the commit does.
+  The nine `openehr-*` crates step to 0.0.128 (#4551).
+
+- A COMPOSITION committed against an ADL 2 operational template whose
+  `C_INTEGER` or `C_REAL` constraint is a union of ranges (for example
+  `magnitude matches {|0..5|, |10..15|}`) is refused with 422 when the value
+  lies outside every range. Such a value was stored. The served Web Template
+  does not change: its input `validation.range` holds one range, so a union
+  leaves it out, as before, and the check runs on the commit (#4552).
+
+- A FLAT or STRUCTURED read of a COMPOSITION committed against an ADL 2
+  operational template returns the value of an ELEMENT that holds a
+  `DV_INTERVAL` whose `lower` and `upper` the template constrains. The read
+  left the value out with no error (#4559).
+
+- A FLAT or STRUCTURED read of a COMPOSITION returns the value of an ELEMENT
+  that holds a `DV_INTERVAL` whose template leaves the interval's `lower` and
+  `upper` unconstrained, for ADL 1.4 and ADL 2 templates. The read left the
+  value out with no error, and a FLAT or STRUCTURED commit could not name the
+  parts (#4559).
+
+- A COMPOSITION written from FLAT or STRUCTURED against an ADL 2 operational
+  template carries what a canonical body built to that template carries. A
+  node the template gives no term text, such as the HISTORY and ITEM_TREE of
+  an OBSERVATION, is named for its RM type (`History`, `Tree`) instead of its
+  bare id-code (`id2`). Every inlined archetype root records the complete
+  identifier the template names (`…cnf_minimal.v1.0.0`, BASE
+  `master07-referencing` §Reconstitutability) in its `archetype_node_id` and
+  `archetype_details.archetype_id`, and `archetype_details.rm_version` is the
+  template's `rm_release`. Before this change the root recorded the interface
+  form (`…v1`) and the server's RM 1.2.0. Compositions built against an
+  ADL 1.4 template keep their major-version archetype ids and RM 1.2.0 (#4560).
+
+- `ferroehr report` in a release build names the `openehr-*` crate versions that release published to crates.io: the release lanes stamp the published version into the checkout before they build the server, where the report used to name the floor the source tree holds. A new `openehr_crates_origin` field says `published` for a release build and `source_tree` for any other, a pre-release included (#4565).
+
+- An ADL 2 archetype reference resolves to one defined stored release: an interface reference (`….v1`) takes the newest release of its major version, a reference with a minor or patch version narrows the match to it, and an alpha or beta version matches only its full identifier (BASE Artefact Identification, Referencing). With several releases of one archetype stored, a template upload, an operational template and the delete's dependents check used whichever release PostgreSQL returned last, and a reference to a major version no stored release carries resolved to another major version (#4567).
+
+- An ADL 2 upload and an ADL 2 delete no longer race. An upload validated before a concurrent delete of an archetype it uses committed could store a template whose constituent was gone. Both now hold one transaction-scoped advisory lock from the repository read to the commit, so the second write decides on what the first committed: an upload after the delete is refused with `VARXR`, and a delete after the upload is refused with a `409` naming the template (#4568).
+
+- The syslog form (DICOM PS3.15, IHE ITI-20) of an EHR-level audit record
+  names its object beside the patient, as a URI participant object with the
+  id its FHIR `AuditEvent` names. The record of placing, releasing or
+  expiring an EHDS Art. 3(3) access delay names the held composition as
+  `access-delay:<vo>`, so an Audit Record Repository fed by syslog can tell
+  which composition a hold covers (#4569).
+
+- An ADL 2 template or archetype that references two major versions of one archetype (`….v1` and `….v2`), or one archetype under two namespaces, now compiles against both: the `openehr-adl` repository holds an artefact under its namespace, archetype and major version, and resolves each reference within that key (BASE Artefact Identification, Referencing). A reference without a namespace now resolves in the namespace of the artefact that makes it, and never in another namespace (#4579).
+
+- A read of a stored ADL 2 template by a partial id or a `version` (`GET /definition/template/adl2/{template_id}`) now resolves the way template compilation does: with `v1.0.0` stored beside `v1.0.0-rc.1`, `….v1`, `….v1.0` and `version=1.0.0` answer the release in either upload order, and the release candidate is read only by its full version (BASE Artefact Identification, Referencing) (#4580).
+
+- A write that sends no committer, on a route that takes a bare RM body (the
+  `EHR_STATUS`, COMPOSITION and DIRECTORY writes, and the demographic party
+  and relationship writes), now records a Bearer caller's login as issued by
+  the token issuer, as EHR creation and every other default committer already
+  did. It recorded the issuer `ferroehr` for every caller before; a Basic
+  caller's login is still issued by `ferroehr` (#4585).
+
+- The viewer's ADL 1.4 template upload opens the stored template's page, read
+  from the `ETag` (else the `Location`) of the CDR's `201`, where it went to an
+  address with no template id. A refused upload names each violation the CDR
+  found, its rule code or path and the CDR's words for it, as the ADL 2 upload
+  does: the upload asks for `Prefer: return=representation`, the preference
+  under which ITS-REST lets a `4xx` carry its error details (#4596).
+
+- An EHR Extract import refusal for a received version now names that
+  version's position in the extract (`chapters[i]/items[j]/item/versions[k]`),
+  so an importer can find the defective `ORIGINAL_VERSION` in a large extract (#4602).
+
+- The import reads a version's `other_input_version_uids` with the parser the
+  CONTRIBUTION path uses and refuses an entry that is not an
+  `OBJECT_VERSION_ID`, where it used to drop the entry. On the wire the
+  extract decode already refuses such an entry with **422**, so the import
+  stays all or nothing (#4602).
+
+- An AQL archetype predicate matches the namespace exactly and reads the
+  version it names as the oldest release it accepts within the major:
+  `org.a::…` no longer finds data recorded in `org.b`, an id without a
+  namespace finds only data recorded without one, and `.v1.4.2` no longer
+  finds data recorded under `v1.0.0` (BASE Artefact Identification
+  §Referencing and §Supporting Archetype-based Querying; #4629, #4630).
+
+### Security
+
+Shipped with functional changes because: both fixes exist only in `ferrohealth-server` releases that carry functional changes in the same serving path beside them (0.3.7 two fixes, 0.3.8 and 0.3.9 the problem details module, the kept listener TLS and the unmasked remedy), so there is no security-only release of the crate for FerroEHR to take, and the client CA refusal ships in the release candidate the advisory names.
+
+- FerroEHR takes `ferrohealth-server` 0.3.7 in place of 0.3.5
+  (GHSA-2mc2-h3jq-c5wg). Every earlier release held a plain-HTTP connection
+  that never sent a byte for as long as the client kept it open, so about
+  8400 silent connections from a client with no credentials exhausted the
+  quickstart's file descriptors and the CDR stopped answering, health checks
+  included; the listener then retried a failed `accept` at once and logged
+  every failure. Such a connection now closes once
+  `[server] header_read_timeout_ms` passes (30 s by default), counted from
+  accept, and after an `EMFILE` or `ENFILE` the listener pauses up to 1 s
+  before it accepts again and logs one warning every 10 seconds (#4283).
+
+- A `[server.tls]` table that sets `client_ca_file` with `client_auth` at
+  `none`, written or by default, is refused at load, naming the setting
+  (GHSA-52mf-qg39-4q4j). Before 5.5.0 a client CA alone meant that every
+  client presents a certificate; 5.5.0 moved the listener onto
+  `ferrohealth-server`, where `client_auth` defaults to `none` and the CA was
+  read and ignored, so a configuration carried over passed `config check` and
+  served without asking a client certificate. FerroEHR takes
+  `ferrohealth-server` 0.3.9, which refuses it and names the remedy in full. A 5.5.0 deployer who sets
+  `client_ca_file` sets `client_auth = "required"` beside it. The default
+  template no longer pairs a client CA with `none`, and says what each
+  `client_auth` value does (#4349).
+
+- CVE-2026-84243, the glibc gettext `LANGUAGE` directory traversal
+  (GLIBC-SA-2026-0025), has no Debian fix for trixie yet and is judged
+  `not_affected` in every image. The `ferroehr` and `ferroehr-viewer`
+  programs never leave the C locale, so glibc ignores `LANGUAGE` and opens no
+  message catalog (`security/vex/ferroehr-os.openvex.json`). In
+  `ferroehr-postgres` only the container environment the operator writes can
+  set `LANGUAGE`; no database connection can
+  (`security/vex/postgres-os.openvex.json`) (#4500).
+
 ## [5.6.0-rc6] - 2026-11-01
 
 5.6.0-rc6 is the sixth release candidate of 5.6.0, published for testing. It breaks clients that relied on the lenient CONTRIBUTION commit: `POST /ehr/{ehr_id}/contribution` and `POST /demographic/contribution` read the body through the released `NewContribution` schema and answer `400` for a `lifecycle_state` that is no `DV_CODED_TEXT`, a `description` that is a plain string or an object without `_type`, an audit without `change_type`, an audit typed `ATTESTATION` or `UPDATE_ATTESTATION`, a missing `audit` or `versions`, and a `preceding_version_uid` sent as a plain string, and a stated empty `system_id` is refused with `422` on every write path (#3595, #4543). These notes carry every change since 5.5.0, those of the 5.6.0-rc5, 5.6.0-rc4 and 5.6.0-rc3 sections below included. New since 5.6.0-rc5: the EHDS Art. 3(3) delay of the person's own access to newly registered data, off by default under the new `[access_delay]` section, with release by the treating professional or the controller (#4351); the EHDS Art. 5 mark of what a person inserts in their own EHR, with their update or deletion of a professional's version refused with `403` (#4350); ADL 2 validation that admits a constraint on an RM computed attribute (#4513), holds VCOSU and the code checks per constituent archetype (#4529), refuses a template whose constituent archetype is not held (#4505) and the delete of an artefact another stored artefact needs (#4522), runs the terminology integrity rules on each component terminology (#4536), enforces a template's leaf constraints at the commit (#4540) and resolves a reference to the newest stored release of its major version (#4567); FLAT and STRUCTURED reads under an ADL 2 template that return the content below a root recorded by its full archetype reference (#4551) and a `DV_INTERVAL` value (#4559); a node row below the root that keeps its archetype header, language and encoding in columns (#4525); an audit record whose request id and version uid ITI-81 finds from the record's own columns, with retention reaping the search tokens no record names (#4524); a versioned read with a malformed `version` segment answered `400` (#4541); the viewer's release groups and Compare tab (#4506) and its malformed AQL count drawn as unavailable (#4533); the conformance pipeline on Veredictum 0.3.2 with the released and development profiles and their badges (#4503); and the `openehr-*` crates versioned at publish (#4555). The conformance run on main still has known red rows, tracked on #4455, two of them Veredictum's (Vernum-Projecten/Veredictum#964 and Vernum-Projecten/Veredictum#965), so this candidate does not claim a green Veredictum record. 5.5.0 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.6.0 itself replaces it. Before you try it: a CONTRIBUTION commit must take the shapes above; a write under a token whose SMART resource scopes are all `patient/` scopes records `PARTY_SELF` as committer and may change only what the person committed, and a service `auth_failure` answers `403` where it answered `500`; a versioned read whose `version` is no SEMVER version or prefix answers `400` where it answered `404`; the served Web Template of an ADL 2 template writes a data value's `aqlPath` without an `[idN]` predicate; a composition that breaks an ADL 2 template's leaf constraint, and an ADL 2 template whose constituent archetype is not held, answer `422`; every route ITS-REST 1.1.0 does not define moves from `/ferroehr/rest/openehr/v1/` to `/ferroehr/rest/extensions/v1/`, and the ITI-81 retrieval to `/ferroehr/rest/fhir/r4/AuditEvent`, with no redirect from the old paths; an error body is `application/problem+json`, so a client that read `message` reads `detail`, and one that read `validationErrors` sends `Prefer: return=representation` and reads `errors`; audit migration 0017 refuses an audit store that holds records written by 5.5.0 or earlier, while an audit store that 5.6.0-rc2 migrated upgrades in place; a `[server.tls]` table with `client_ca_file` must set `client_auth = "required"` (or `"optional"`) beside it, or the configuration is refused at load; `[server] header_read_timeout_ms` no longer bounds an idle kept-alive connection, which the new `[server] idle_timeout_ms` (120000 by default) closes, so keep it longer than the idle timeout of your clients and load balancers; a client that wrote a space as `+` in a query string sends `%20`; a party delete names the latest `OBJECT_VERSION_ID` in its path and answers `400` for a versioned object id; a body the RM refuses after the ITS-JSON schema admits it answers `422`, and a misplaced CONTRIBUTION member, a Simplified Format commit without `openehr-template-id` and a flat `|raw` value without `_type` answer `400`; a tag update under `Prefer: return=identifier` answers `200` with the tag list; with `[authz.rbac] enabled` a token holding only `system/` SMART on openEHR scopes reaches clinical operations without a role; the viewer image serves no `/pkg/` and reads no `LEPTOS_SITE_ROOT`, `LEPTOS_OUTPUT_NAME` or `LEPTOS_HASH_FILES`, and its Content-Security-Policy is `script-src 'self'; style-src 'self'`; Helm chart 21.0.0-rc6 refuses to render until `config.deployment_profile` names `sandbox` or `production`, and a values file for its FerroPIX moves `ferropix.config.server.public_base_url` to `ferropix.config.public_base_url` and each issuer's `clients` to `ferropix.config.trust.issuer`. Storage generation 3 adds node columns and migrates no data; clinical migration 0020 adds the origin to retention policies and 0021 statistics on the archetype columns, and clinical 0022 and 0023 and party 0013 and 0014 rebuild the version tree's uniqueness constraint and index its version id columns, which reads every version row of an existing store once; clinical 0024 and party 0015 index the version uid, ext 0006, clinical 0025 and party 0016 add the ELEMENT value search index, built over every hot node row of an existing store, party 0017 adds the archetype statistics, and clinical 0026 and party 0018 grant `MAINTAIN` on the partitioned tables to the serving roles; clinical 0027 and party 0019 add the access delay, and ext 0007, clinical 0028 and party 0020 add the node header columns with no data migrated; audit migration 0019 gives the search token index a pending list of 512 kB, and audit 0020 adds the hash index on `request_id`. Helm chart 21.0.0-rc6 carries `appVersion` 5.6.0-rc6. Security carries two advisories, GHSA-2mc2-h3jq-c5wg and GHSA-52mf-qg39-4q4j, and the OpenVEX judgement of CVE-2026-84243.
@@ -15784,6 +16682,7 @@ but has not yet run in production.
 
 
 [unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...HEAD
+[5.6.0-rc7]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0-rc7
 [5.6.0-rc6]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0-rc6
 [5.6.0-rc5]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0-rc5
 [5.6.0-rc4]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0-rc4

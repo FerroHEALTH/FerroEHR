@@ -12,7 +12,7 @@ resolver = "3"
 members = ["crates/*", "app/*", "tools/*"]
 
 [workspace.package]
-version = "5.6.0-rc6"
+version = "5.6.0-rc7"
 edition = "2024"
 rust-version = "1.98"
 license = "BUSL-1.1"
