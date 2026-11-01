@@ -57,10 +57,11 @@ run, forever, instead of living on one machine until the next `seeds.sh`.
 The corpus is not a substitute for a test: a fixed defect is also pinned by a
 regression test in the crate that owns the code
 (`.claude/rules/fuzzing.md`). Reproducing one artifact directly — name the
-FILE, which libFuzzer runs once and exits:
+FILE, which libFuzzer runs once and exits (`FUZZ_NIGHTLY` is the pinned nightly,
+set as in [Running](#running)):
 
 ```sh
-cargo +nightly fuzz run -s none aql_query \
+cargo +"$FUZZ_NIGHTLY" fuzz run -s none aql_query \
   fuzz/regressions/aql_query/timeout_2758_nested_predicates.aql
 ```
 
@@ -74,20 +75,27 @@ directory reaches it read-only, as the second corpus argument (below).
 `cargo-fuzz` needs a **nightly** toolchain, and `fuzz/` is therefore its own
 workspace: no ordinary `cargo build`, `cargo clippy` or `cargo nextest` run over
 `crates/*`, `app/*` or `tools/*` ever sees this package, and the CDR workspace
-stays on its pinned stable toolchain.
+stays on its pinned stable toolchain (the `Rust toolchain` row of
+`docs/VERSIONS.md`).
+
+Use the dated nightly that CI pins, never the moving `nightly` channel: a regression
+CI was pinned away from would otherwise reach your local run. The pin is the
+`Fuzz toolchain` row of `docs/VERSIONS.md`, the `FUZZ_NIGHTLY` value of
+`.github/workflows/fuzz.yml`, and the commands below read it from there:
 
 ```sh
-rustup toolchain install nightly
+FUZZ_NIGHTLY=$(sed -nE 's/^  FUZZ_NIGHTLY: (nightly-[0-9-]+)$/\1/p' .github/workflows/fuzz.yml)
+rustup toolchain install "$FUZZ_NIGHTLY"
 cargo install cargo-fuzz --locked
 
 fuzz/seeds.sh
 
 # A short run, the shape CI uses.
-cargo +nightly fuzz run canonical_xml fuzz/corpus/canonical_xml fuzz/seeds/canonical_xml \
+cargo +"$FUZZ_NIGHTLY" fuzz run canonical_xml fuzz/corpus/canonical_xml fuzz/seeds/canonical_xml \
   -- -max_total_time=300 -max_len=32768 -timeout=25
 
 # A long local campaign: several cores, no time limit, until you stop it.
-cargo +nightly fuzz run --jobs 8 canonical_xml \
+cargo +"$FUZZ_NIGHTLY" fuzz run --jobs 8 canonical_xml \
   fuzz/corpus/canonical_xml fuzz/seeds/canonical_xml \
   -- -max_len=32768 -timeout=25
 ```
@@ -102,14 +110,14 @@ inputs and `fuzz/corpus/<target>/` accumulates everything new.
 Coverage of a corpus, to see what a campaign actually reached:
 
 ```sh
-cargo +nightly fuzz coverage canonical_xml fuzz/corpus/canonical_xml
+cargo +"$FUZZ_NIGHTLY" fuzz coverage canonical_xml fuzz/corpus/canonical_xml
 ```
 
 ## When a target crashes
 
 A crash writes its input to `fuzz/artifacts/<target>/`. The sequence is fixed:
 
-1. **Minimize** it — `cargo +nightly fuzz tmin <target> fuzz/artifacts/<target>/<input>`.
+1. **Minimize** it — `cargo +"$FUZZ_NIGHTLY" fuzz tmin <target> fuzz/artifacts/<target>/<input>`.
 2. **Fix the defect** in the crate that owns the parser. For a `// @generated`
    file that means an `openehr-codegen` emitter change plus regeneration, never a
    hand-edit.
