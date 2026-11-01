@@ -335,9 +335,9 @@ fn null_items_is_absent_not_invalid() {
 ///
 /// The inherited `change_type` is a `DV_CODED_TEXT`: ITS-REST
 /// `schemas/common/UpdateAudit.yaml` `$ref`s `DvCodedText` for it, and the
-/// ITS-REST docs text is silent on the member's shape, so the released OAS
-/// grounds it (`.claude/rules/spec-adherence.md` §the ITS-REST
-/// wire-oracle order). The `CODE_PHRASE` shape `{terminology_id, code_string}`
+/// ITS-REST docs text is silent on the member's shape, so that released
+/// schema (`change_type: $ref: ../data_types/DvCodedText.yaml`) grounds it.
+/// The `CODE_PHRASE` shape `{terminology_id, code_string}`
 /// this fixture used to send is not that shape — see
 /// [`flat_terminology_code_change_type_is_refused`] for the twin that
 /// pins its refusal.

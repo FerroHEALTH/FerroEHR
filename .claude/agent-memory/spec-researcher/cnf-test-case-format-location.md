@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 CNF Platform Conformance Test Schedule = `docs/specs/openehr/CNF/docs/platform_test_schedule/`.
 
 - **Test-case format definition** (normative): `master03-overview.adoc` §"Test Case <SERVICE_COMPONENT>.<operation>-<test-specific id>" — the 4-row table `Description | Pre-conditions | Post-conditions | Flow` (an implementation adds a 5th `Test runners` row). Key normative sentence: "A 'test' is therefore the execution of a particular test case with a particular data set." Two test aspects: API conformance + Data Validation conformance.

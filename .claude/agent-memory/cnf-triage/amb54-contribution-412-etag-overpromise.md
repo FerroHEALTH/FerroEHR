@@ -5,6 +5,9 @@ metadata:
   type: project
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 `I_EHR_CONTRIBUTION.commit_contribution-stale_preceding_version` step 3 went
 red on `header ETag: … got none` (status 412 matched). Attributed **catalogue**
 2026-07-27, confirmed first-hand:

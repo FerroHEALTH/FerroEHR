@@ -5,6 +5,9 @@ metadata:
   type: project
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 `export_ehrs` (SM: takes no `EXTRACT_SPEC`; our route `GET
 /message/export/{ehr_id}`) synthesizes a latest-only spec, and that is
 spec-required, not a shortcut:

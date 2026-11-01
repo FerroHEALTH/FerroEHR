@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # "Must an importer re-validate received VERSIONs?" — navigation
 
 Answer shape: **no released text requires it, and several passages positively

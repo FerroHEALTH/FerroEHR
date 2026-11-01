@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 DIRECTORY / EHR FOLDER API spec locations (ITS-REST is OAS-split YAML; the EHR-API
 docs prose is a STUB — see [[ehr-status-ops-location]]).
 
@@ -48,7 +51,7 @@ has_directory_version, get_directory_at_version, get_versioned_directory);
 `openehr_platform/master03-common_package.adoc §Version Update Semantics`.
 `master05-ehr_service.adoc` is INCLUDE-ONLY (30 lines, zero directory prose).
 
-**SM validity predicates (the ONLY commit-time validation vocabulary):**
+**SM validity predicates (reference text only; SM's commit-time validation vocabulary):**
 `create_directory`/`update_directory` carry `Pre_definitions_valid: definitions_valid(...)`
 + `Pre_content_valid: valid_content(...)`, errors `definition_unknown`/`content_invalid`.
 Both predicates are DEFINED in `SM/docs/UML/classes/i_validity_checker.adoc`:

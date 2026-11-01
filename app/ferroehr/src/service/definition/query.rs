@@ -167,7 +167,7 @@ impl FerroEhrService {
     ) -> Result<String, StatusError> {
         Err(StatusError::new(
             ServiceStatus::NotImplemented,
-            "store_query_set is an SM TODO (i_definition_query.adoc): not implemented",
+            "store_query_set is not implemented: no openEHR specification defines a query set",
         ))
     }
 

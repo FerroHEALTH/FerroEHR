@@ -2892,7 +2892,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.party.adoc",
-        reason: "reads the source-party aggregate the SM's independently-versioned relationship containers deliberately do not maintain (the two representations are DISJOINT — RM demographic master02 §Party Relationships vs SM i_party_relationship; the adjudication lives at `app/ferroehr/src/service/demographic/relationship.rs`); an inline `relationships` list in a committed PARTY body stays validated and served verbatim.",
+        reason: "reads the source-party aggregate, which FerroEHR's own design does not maintain: RM demographic master02 §Party Relationships stores a PARTY_RELATIONSHIP as data of its source PARTY, and FerroEHR instead gives every relationship its own version container (our own design; the two representations are DISJOINT); an inline `relationships` list in a committed PARTY body stays validated and served verbatim.",
     },
     InvariantRealization {
         class: "PARTY",
@@ -2900,7 +2900,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.party.adoc",
-        reason: "quantifies over `repository (demographics).all_party_relationships` — a whole-repository aggregate no per-node evaluation can read; the SM's disjoint relationship containers carry the served representation.",
+        reason: "quantifies over `repository (demographics).all_party_relationships` — a whole-repository aggregate no per-node evaluation can read; FerroEHR's own disjoint relationship containers carry the served representation (our own design).",
     },
     InvariantRealization {
         class: "PARTY_RELATIONSHIP",
@@ -2908,7 +2908,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.party_relationship.adoc",
-        reason: "`source.relationships.has (self)` reads the source party's aggregate through the back-reference the generated model breaks; under the SM's disjoint containers the RM compositional linkage is deliberately not maintained (the `PARTY.Relationships_validity` adjudication).",
+        reason: "`source.relationships.has (self)` reads the source party's aggregate through the back-reference the generated model breaks; under FerroEHR's own disjoint relationship containers (our own design) the RM compositional linkage of master02 §Party Relationships is deliberately not maintained (the `PARTY.Relationships_validity` adjudication).",
     },
     InvariantRealization {
         class: "PARTY_RELATIONSHIP",
