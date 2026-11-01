@@ -16,7 +16,7 @@ store and the retention), the active
 [`spec_profile`](../installation/configuration.md#spec_profile) with the
 openEHR specification versions it selects, the manufacturer, and the end month
 of the release's support. The conformance manifest the CDR answers at
-`OPTIONS` on its base path (its product, vendor, REST API version and the
+`OPTIONS` on its base path (its product, vendor, conformance profile and the
 API groups it mounts) is on About.
 
 ![Server](img/server/overview.png)

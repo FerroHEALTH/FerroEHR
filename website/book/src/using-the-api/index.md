@@ -54,8 +54,8 @@ process root whatever the base path is: `/health`, `/health/liveness`,
 
 An `OPTIONS` request to the **API base path** returns the server's
 **conformance manifest**: the product name and version, the vendor, the openEHR
-REST API version it implements, and the API groups this deployment actually
-mounts.
+REST API version it implements, the conformance profile its conformance record
+earns, and the API groups this deployment actually mounts.
 
 ```shell
 curl -X OPTIONS -i \
@@ -70,6 +70,7 @@ The response carries an `Allow` header and a JSON body:
   "solution_version": "…",
   "vendor": "Cadasto B.V.",
   "restapi_specs_version": "1.1.0",
+  "conformance_profile": "…",
   "endpoints": ["/ehr", "/definition", "/query", "/demographic"]
 }
 ```
@@ -84,9 +85,13 @@ Two things to know before you build discovery on it:
 - **The identity fields are configurable** (`[rest.identity]`, see
   [Server, database & telemetry](../installation/config-server.md#restidentity));
   their defaults are the build's own provenance.
-- **No `conformance_profile`.** The ITS-REST `Options` schema makes the member
-  optional, and FerroEHR leaves it out: no conformance record it publishes
-  assigns a profile.
+- **`conformance_profile` is derived from the conformance record.** The build
+  reads the committed Veredictum summary (`docs/conformance/ferroehr/summary.md`
+  in the repository) and sends `BASE+OPTIONS` when the BASE rows and the
+  OPTIONS rows the run claimed have none failed and none errored, `BASE` when
+  only the BASE rows do, and leaves the member out otherwise. ITS-REST types
+  the member as a free string and the openEHR conformance framework names no
+  profiles, so these values are FerroEHR's own. No configuration key sets it.
 
 > [!NOTE]
 > The manifest lives at the API base path and nowhere else. A bare `/` alias

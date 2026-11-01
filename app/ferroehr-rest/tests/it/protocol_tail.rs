@@ -224,8 +224,8 @@ async fn options_root_is_system_options_and_conformance() {
         v["restapi_specs_version"],
         ferroehr::telemetry::provenance::ITS_REST
     );
-    // ITS-REST 1.1.0 `schemas/others/Options.yaml`: the optional member is left out.
-    assert!(v.get("conformance_profile").is_none(), "{v}");
+    // The profile the committed Veredictum record earns, derived at build time.
+    assert_eq!(v["conformance_profile"], "BASE+OPTIONS");
     assert!(v["endpoints"].as_array().is_some_and(|e| !e.is_empty()));
 }
 

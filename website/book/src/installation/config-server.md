@@ -296,9 +296,9 @@ data is [`system_id`](#system_id-the-data-authoring-identity).
 | `restapi_specs_version` | string | the ITS-REST release this build implements (`1.1.0`) | The openEHR REST API edition advertised. |
 
 The defaults are derived from the build rather than typed into the handler.
-Override them only to rebrand. The manifest carries no `conformance_profile`:
-the ITS-REST `Options` schema makes that member optional, and FerroEHR leaves
-it out because no conformance record it publishes assigns a profile.
+Override them only to rebrand. The manifest's `conformance_profile` is no
+identity field and has no key here: the build derives it from the committed
+conformance record (see [Using the API](../using-the-api/index.md#capability-discovery)).
 
 ## `[db]`
 

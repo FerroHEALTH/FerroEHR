@@ -77,6 +77,19 @@ pub const TERM: &str = openehr_term::Generation::V3_1.spec_version();
 /// datastore — our own design; no crate carries this pin, so it stays
 /// hand-maintained here.
 pub const PG_TARGET: &str = "18.6+";
+/// The conformance profile the System Options manifest sends (`OPTIONS /`
+/// `conformance_profile`), or none to leave the member out.
+///
+/// The build script derives it from the committed released-profile summary
+/// of the Veredictum run, `docs/conformance/ferroehr/summary.md`.
+pub const CONFORMANCE_PROFILE: Option<&str> = {
+    let profile = env!("FERROEHR_CONFORMANCE_PROFILE");
+    if profile.is_empty() {
+        None
+    } else {
+        Some(profile)
+    }
+};
 
 #[cfg(test)]
 mod tests {

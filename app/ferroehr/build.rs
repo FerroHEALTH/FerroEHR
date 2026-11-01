@@ -9,6 +9,9 @@
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[path = "src/telemetry/conformance_record.rs"]
+mod conformance_record;
+
 #[expect(
     clippy::disallowed_methods,
     reason = "a build script's ONLY input channel is the process environment \
@@ -113,6 +116,23 @@ fn main() {
         .unwrap_or_default();
     println!("cargo:rustc-env=FERROEHR_RELEASE_DATE={release_date}");
     println!("cargo:rerun-if-changed=../../CHANGELOG.md");
+
+    // The conformance profile `OPTIONS /` sends, derived from the committed
+    // released-profile summary; empty leaves the member out. A build without
+    // the summary claims none, and a summary that does not parse stops it.
+    let summary = "../../docs/conformance/ferroehr/summary.md";
+    let profile = match std::fs::read_to_string(summary) {
+        Ok(text) => match conformance_record::profile(&text) {
+            Ok(profile) => profile.unwrap_or_default(),
+            Err(message) => {
+                println!("cargo::error={summary}: {message}");
+                ""
+            }
+        },
+        Err(_) => "",
+    };
+    println!("cargo:rustc-env=FERROEHR_CONFORMANCE_PROFILE={profile}");
+    println!("cargo:rerun-if-changed={summary}");
 
     println!("cargo:rerun-if-env-changed=REVISION");
     println!("cargo:rerun-if-env-changed=FERROEHR_RELEASE_TAG");

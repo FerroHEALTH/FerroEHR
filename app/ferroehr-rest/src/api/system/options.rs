@@ -67,6 +67,10 @@ pub const SPEC_ENDPOINTS: &[&str] = &["/ehr", "/demographic", "/definition", "/q
 /// The defaults are the single shared provenance source
 /// ([`ferroehr::telemetry::provenance`]): `restapi_specs_version` quotes the
 /// tested-contract identity [`ferroehr::telemetry::provenance::ITS_REST`].
+/// The manifest's `conformance_profile` is no identity field: it is
+/// [`ferroehr::telemetry::provenance::CONFORMANCE_PROFILE`], which the build
+/// derives from the committed conformance record, and configuration cannot
+/// set it.
 /// [`ferroehr::config::rest::RestConfig`] carries a
 /// `SystemOptionsConfig` as its `identity` field (the `[rest.identity]`
 /// section of the one config tree), so an operator MAY override any identity
@@ -77,8 +81,8 @@ use ferroehr::config::rest::SystemOptionsConfig;
 /// body (ITS-REST System API `Options` schema,
 /// `specifications/schemas/others/Options.yaml`): the service's identity and
 /// the API groups it mounts, "exposing service capabilities for a
-/// conformance manifest" (`operations/options.yaml`). It carries no
-/// `conformance_profile`, which that schema declares as an optional string.
+/// conformance manifest" (`operations/options.yaml`), with the conformance
+/// profile the committed conformance record earns.
 ///
 /// The utoipa DOCUMENTATION projection of the generated wire DTO
 /// (`openehr_its::rest::generated::system::Options`) — the served OpenAPI
@@ -94,6 +98,7 @@ use ferroehr::config::rest::SystemOptionsConfig;
         "solution_version": "3.11.0",
         "vendor": "Cadasto B.V.",
         "restapi_specs_version": "1.1.0",
+        "conformance_profile": ferroehr::telemetry::provenance::CONFORMANCE_PROFILE,
         "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
     })
 )]
@@ -106,6 +111,10 @@ struct OptionsDoc<'a> {
     vendor: &'a str,
     /// The released ITS-REST contract version this server implements.
     restapi_specs_version: &'a str,
+    /// `BASE+OPTIONS` or `BASE`, derived at build time from the committed
+    /// Veredictum record; left out when the record earns neither.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    conformance_profile: Option<&'a str>,
     /// The API groups this server actually mounts (the live set, not a
     /// static list).
     endpoints: &'a [String],
@@ -143,17 +152,16 @@ impl SystemManifest {
     }
 
     /// Returns the manifest as the generated contract `Options` DTO, the wire
-    /// carrier; its skip-if-none serialization emits every member but
-    /// `conformance_profile`.
+    /// carrier; its skip-if-none serialization leaves out a
+    /// `conformance_profile` the record does not earn.
     fn body(&self) -> openehr_its::rest::generated::system::Options {
         openehr_its::rest::generated::system::Options {
             solution: Some(self.config.solution.clone()),
             solution_version: Some(self.config.solution_version.clone()),
             vendor: Some(self.config.vendor.clone()),
             restapi_specs_version: Some(self.config.restapi_specs_version.clone()),
-            // NOTE: ITS-REST 1.1.0 `schemas/others/Options.yaml` makes
-            // `conformance_profile` an optional string; no record we publish assigns one.
-            conformance_profile: None,
+            conformance_profile: ferroehr::telemetry::provenance::CONFORMANCE_PROFILE
+                .map(str::to_owned),
             endpoints: Some(self.endpoints.clone()),
             additional_properties: std::collections::BTreeMap::new(),
         }
@@ -223,7 +231,9 @@ where
     description = "Describes the communication options and capabilities of \
                    this openEHR service as a conformance manifest: the \
                    product identity, the implemented ITS-REST contract \
-                   version, and the API \
+                   version, the conformance profile derived from the \
+                   committed Veredictum record (`BASE+OPTIONS` or `BASE`, \
+                   left out when it earns neither), and the API \
                    groups this deployment actually mounts. ITS-REST System \
                    API (STABLE), operation `options`.",
     params(
@@ -251,7 +261,8 @@ where
                 "solution_version": "3.11.0",
                 "vendor": "Cadasto B.V.",
                 "restapi_specs_version": "1.1.0",
-                        "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
+                "conformance_profile": ferroehr::telemetry::provenance::CONFORMANCE_PROFILE,
+                "endpoints": ["/ehr", "/demographic", "/definition", "/query"]
             })),
         (status = 406, description = "No acceptable representation: the \
                                       manifest has no canonical-XML shape, \
@@ -308,6 +319,7 @@ mod tests {
             solution_version: "v",
             vendor: "o",
             restapi_specs_version: "r",
+            conformance_profile: ferroehr::telemetry::provenance::CONFORMANCE_PROFILE,
             endpoints: &endpoints,
         })
         .expect("doc projection serializes");
@@ -345,7 +357,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn options_returns_200_with_allow_header_and_five_fields() {
+    async fn options_returns_200_with_allow_header_and_all_six_fields() {
         let resp = manifest().respond(&HeaderMap::new());
         assert_eq!(resp.status(), StatusCode::OK);
         assert_eq!(
@@ -361,7 +373,7 @@ mod tests {
         );
 
         let v = body_json(resp).await;
-        // Five OAS `Options` properties are present and correctly typed.
+        // All six OAS `Options` properties are present and correctly typed.
         assert!(v["solution"].is_string());
         assert!(v["solution_version"].is_string());
         assert!(v["vendor"].is_string());
@@ -371,8 +383,12 @@ mod tests {
             v["restapi_specs_version"],
             ferroehr::telemetry::provenance::ITS_REST
         );
-        // The optional `conformance_profile` is left out.
-        assert!(v.get("conformance_profile").is_none(), "{v}");
+        // The profile the committed record earns, derived at build time.
+        assert_eq!(v["conformance_profile"], "BASE+OPTIONS");
+        assert_eq!(
+            v["conformance_profile"].as_str(),
+            ferroehr::telemetry::provenance::CONFORMANCE_PROFILE
+        );
         assert!(v["endpoints"].is_array());
     }
 
@@ -403,10 +419,10 @@ mod tests {
         assert_eq!(v["vendor"], ferroehr::manufacturer::MANUFACTURER.name);
     }
 
-    /// `OPTIONS /` claims no conformance profile: ITS-REST 1.1.0
-    /// `schemas/others/Options.yaml` makes the member optional (#4672).
+    /// `OPTIONS /` sends the six members of ITS-REST 1.1.0
+    /// `schemas/others/Options.yaml`, the profile among them (#4672).
     #[tokio::test]
-    async fn the_manifest_claims_no_conformance_profile() {
+    async fn the_manifest_sends_the_six_members() {
         let v = body_json(manifest().respond(&HeaderMap::new())).await;
         let mut members: Vec<&str> = v
             .as_object()
@@ -418,6 +434,7 @@ mod tests {
         assert_eq!(
             members,
             [
+                "conformance_profile",
                 "endpoints",
                 "restapi_specs_version",
                 "solution",
