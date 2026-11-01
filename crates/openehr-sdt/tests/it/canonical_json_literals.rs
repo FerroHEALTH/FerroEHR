@@ -24,6 +24,11 @@ const ALLOWLIST: &[(&str, &str)] = &[
          pinned by the simplified-formats corpus + round-trip gates",
     ),
     (
+        "flat/identity.rs",
+        "the identity half of that tree builder: the `name` and \
+         `archetype_details` fragments stamped onto a node still being built",
+    ),
+    (
         "flat/map/data_values.rs",
         "leaf DV_* fragments grown attribute-by-attribute from flat suffixes \
          (a suffix set is an OPEN partial shape until the merge completes)",

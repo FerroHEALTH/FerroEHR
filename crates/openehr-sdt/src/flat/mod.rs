@@ -35,6 +35,7 @@ pub(crate) mod ctx;
 pub mod error;
 pub mod example;
 pub mod flatten;
+pub(crate) mod identity;
 pub(crate) mod map;
 pub mod path;
 pub(crate) mod rmpath;

@@ -35,6 +35,10 @@ use serde_json::{Map, Value, json};
 
 use crate::flat::ctx;
 use crate::flat::error::FlatError;
+use crate::flat::identity::{
+    default_name, name_value, recorded_archetype_id, stamp_archetype_details,
+    stamp_locatable_identity,
+};
 use crate::flat::map;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode};
@@ -86,10 +90,18 @@ impl<'a> BuildOptions<'a> {
         self.rm_version = rm_version;
         self
     }
+
+    /// The options a build against `wt` uses when its caller names none: the
+    /// RM release of an OPT2 (its `rm_release`, AOM2
+    /// `master03-archetype_package.adoc`), else [`RM_VERSION`].
+    #[must_use]
+    pub fn for_template(wt: &'a WebTemplate) -> Self {
+        Self::default().with_rm_version(wt.tree.rm_release.as_deref().unwrap_or(RM_VERSION))
+    }
 }
 
 /// Converts a parsed simplified document to a canonical-JSON composition,
-/// driven by `wt`, stamping [`RM_VERSION`].
+/// driven by `wt`, with [`BuildOptions::for_template`].
 ///
 /// `now` is the caller's current timestamp, used only for the `ctx/time`
 /// default (`master04 §Context`). A document that names no `category` takes
@@ -103,7 +115,7 @@ pub fn build_composition(
     wt: &WebTemplate,
     now: &str,
 ) -> Result<Value, FlatError> {
-    build_composition_with(doc, wt, now, &BuildOptions::default())
+    build_composition_with(doc, wt, now, &BuildOptions::for_template(wt))
 }
 
 /// Converts a parsed simplified document to a canonical-JSON composition,
@@ -1598,27 +1610,6 @@ fn is_entry_family(rm_type: &str) -> bool {
     )
 }
 
-/// The `name` value for a locatable node: a DV_CODED_TEXT carrying the
-/// template's constrained `defining_code` when the name is coded (RM common
-/// `master03-archetyped_package.adoc` §"The LOCATABLE class"), else a plain
-/// DV_TEXT.
-fn name_value(display: &str, coded: Option<&CodedName>) -> Value {
-    match coded {
-        Some(CodedName {
-            terminology, code, ..
-        }) => json!({
-            "_type": "DV_CODED_TEXT",
-            "value": display,
-            "defining_code": {
-                "_type": "CODE_PHRASE",
-                "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
-                "code_string": code,
-            },
-        }),
-        None => json!({"_type": "DV_TEXT", "value": display}),
-    }
-}
-
 /// Create a collapsed structural RM node for `seg`. Its `_type` is the
 /// template-constrained concrete type (`constrained`, when the template narrowed
 /// the hoisted wrapper — `ITEM_LIST`/`ITEM_SINGLE`/`INTERVAL_EVENT` — per AOM 1.4
@@ -1662,9 +1653,8 @@ fn new_struct(
             .name_value
             .as_deref()
             .or(name)
-            .or(node_id)
-            .unwrap_or(rm_type);
-        o.insert("name".into(), name_value(display, coded_name));
+            .map_or_else(|| default_name(rm_type), str::to_owned);
+        o.insert("name".into(), name_value(&display, coded_name));
         if let Some(nid) = node_id {
             o.insert("archetype_node_id".into(), json!(nid));
         }
@@ -1759,26 +1749,6 @@ fn empty_item_tree() -> Value {
     })
 }
 
-/// Stamp the two LOCATABLE identity members (`name`, `archetype_node_id`) on a
-/// built node — and ONLY when its class is a LOCATABLE (see [`is_locatable`]).
-fn stamp_locatable_identity(obj: &mut Map<String, Value>, node: &WebTemplateNode, rm_type: &str) {
-    if !is_locatable(rm_type) {
-        return;
-    }
-    obj.entry("name".to_owned()).or_insert_with(|| {
-        let text = node
-            .name
-            .as_deref()
-            .or(node.node_id.as_deref())
-            .unwrap_or(rm_type);
-        name_value(text, node.name_coded.as_ref())
-    });
-    if let Some(nid) = &node.node_id {
-        obj.entry("archetype_node_id".to_owned())
-            .or_insert_with(|| json!(nid));
-    }
-}
-
 /// Fill the mandatory identity/occurrence fields for a built locatable node.
 fn finish_identity(
     obj: &mut Map<String, Value>,
@@ -1849,42 +1819,6 @@ fn fill_time_anchor(obj: &mut Map<String, Value>, rm_type: &str) {
         }
         _ => {}
     }
-}
-
-/// Stamps `archetype_details` on an archetype-root node, naming `rm_version`
-/// as the RM release the object was created to (RM common
-/// `master03-archetyped_package.adoc` §ARCHETYPED `rm_version`).
-pub(crate) fn stamp_archetype_details(
-    obj: &mut Map<String, Value>,
-    node: &WebTemplateNode,
-    is_root: bool,
-    template_id: &str,
-    rm_version: &str,
-) {
-    let is_root_arch = node
-        .node_id
-        .as_deref()
-        .is_some_and(openehr_rm::v1_2::paths::is_archetype_root_node_id);
-    if !is_root_arch {
-        return;
-    }
-    obj.entry("archetype_details".to_owned())
-        .or_insert_with(|| {
-            let mut a = Map::new();
-            a.insert("_type".into(), json!("ARCHETYPED"));
-            a.insert(
-                "archetype_id".into(),
-                json!({"_type": "ARCHETYPE_ID", "value": node.node_id}),
-            );
-            if is_root && !template_id.is_empty() {
-                a.insert(
-                    "template_id".into(),
-                    json!({"_type": "TEMPLATE_ID", "value": template_id}),
-                );
-            }
-            a.insert("rm_version".into(), json!(rm_version));
-            Value::Object(a)
-        });
 }
 
 /// Fills the RM-mandatory ENTRY attributes the simplified form carried no
@@ -2059,7 +1993,7 @@ fn ensure_template_id(
         .entry("archetype_details".to_owned())
         .or_insert_with(|| {
             json!({"_type": "ARCHETYPED",
-                   "archetype_id": {"_type": "ARCHETYPE_ID", "value": root.node_id},
+                   "archetype_id": {"_type": "ARCHETYPE_ID", "value": recorded_archetype_id(root)},
                    "rm_version": rm_version})
         });
     if let Value::Object(ad) = ad {
@@ -2486,22 +2420,6 @@ mod tests {
         assert_eq!(instant("1970-01-01T00:00:00Z"), Some(0));
         assert_eq!(instant("1970-01-01T01:00:00.5+01:00"), Some(500_000_000));
         assert_eq!(instant("not a time"), None);
-    }
-
-    #[test]
-    fn name_value_stamps_coded_and_plain_names() {
-        let coded = CodedName {
-            terminology: "local".to_owned(),
-            code: "at0007".to_owned(),
-            incoherent: false,
-        };
-        let v = name_value("Exclusion", Some(&coded));
-        assert_eq!(v["_type"], "DV_CODED_TEXT");
-        assert_eq!(v["defining_code"]["code_string"], "at0007");
-        assert_eq!(
-            name_value("Systolic", None),
-            json!({"_type": "DV_TEXT", "value": "Systolic"})
-        );
     }
 
     /// The two `_`-families a PARTY leaf builder consumes itself, so the

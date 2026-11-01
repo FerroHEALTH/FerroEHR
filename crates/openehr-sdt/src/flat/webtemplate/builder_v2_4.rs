@@ -113,6 +113,8 @@ pub fn build_web_template_v2_4(
     // master04 §"Web Template Metadata": the root `nodeId` is the archetype id
     // (interface form), not the internal concept code.
     tree.node_id = Some(interface_id_of_hrid(&opt.archetype_id));
+    tree.archetype_ref = Some(template_id.clone());
+    tree.rm_release = Some(opt.rm_release.clone());
     tree.min = Some(1);
     tree.max = 1;
 
@@ -151,13 +153,10 @@ fn archetype_refs(
     let mut out = BTreeMap::new();
     let mut stack = vec![co];
     while let Some(co) = stack.pop() {
-        if let CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) = co {
-            let reference = overlay_parents
-                .get(&r.archetype_ref)
-                .unwrap_or(&r.archetype_ref);
+        if let Some(reference) = object_archetype_ref(co, overlay_parents) {
             let interface = interface_id(reference);
-            if *reference != interface {
-                out.insert(reference.clone(), interface);
+            if reference != interface {
+                out.insert(reference.to_owned(), interface);
             }
         }
         for attr in co_attributes(co) {
@@ -366,6 +365,9 @@ fn create_node(
     } else {
         Some(arch_node_id)
     };
+    if archetyped {
+        node.archetype_ref = object_archetype_ref(co, &ctx.overlay_parents).map(str::to_owned);
+    }
     node.min = min;
     node.max = max;
 
@@ -1608,14 +1610,25 @@ fn object_node_id(co: &CObject) -> &str {
 /// archetype root, the specialisation parent's for a template overlay (see
 /// [`overlay_parents`]), else the constraint node id (at/id-code).
 fn object_archetype_node_id(co: &CObject, overlay_parents: &BTreeMap<String, String>) -> String {
+    object_archetype_ref(co, overlay_parents)
+        .map_or_else(|| object_node_id(co).to_owned(), interface_id)
+}
+
+/// The complete identifier an inlined archetype root carries in data: the
+/// template's reference, or its specialisation parent's for a template overlay
+/// (see [`overlay_parents`]); `None` below a root.
+fn object_archetype_ref<'a>(
+    co: &'a CObject,
+    overlay_parents: &'a BTreeMap<String, String>,
+) -> Option<&'a str> {
     match co {
-        CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) => {
-            let reference = overlay_parents
+        CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) => Some(
+            overlay_parents
                 .get(&r.archetype_ref)
-                .unwrap_or(&r.archetype_ref);
-            interface_id(reference)
-        }
-        _ => object_node_id(co).to_owned(),
+                .unwrap_or(&r.archetype_ref)
+                .as_str(),
+        ),
+        _ => None,
     }
 }
 
