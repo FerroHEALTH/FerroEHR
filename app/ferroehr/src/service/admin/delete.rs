@@ -39,7 +39,7 @@ impl FerroEhrService {
     /// # Errors
     /// - `precondition_violation` (`400`) — `ehr_id` is not a well-formed UUID.
     /// - `versioned_object_does_not_exist` (`404`) — no EHR with that id
-    ///   (`has_ehr` false → `ehr_id_does_not_exist`).
+    ///   (`ehr_id_does_not_exist`).
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn admin_ehr_delete(&self, ehr_id: String) -> Result<(), StatusError> {
         Ok(self
@@ -210,8 +210,8 @@ impl FerroEhrService {
     /// where processing is necessary "for compliance with a legal obligation",
     /// and the logging periods are that obligation.
     ///
-    /// Row-count 0 on the EHR delete means the EHR did not exist (`has_ehr`
-    /// false) → [`ServiceError::NotFound`].
+    /// Row-count 0 on the EHR delete means the EHR did not exist →
+    /// [`ServiceError::NotFound`].
     ///
     /// NOTE: ITS-REST `operations/admin_ehr_delete.yaml` answers `404` for an
     /// unknown id, so `ehr_id_does_not_exist` maps to `NotFound`.
@@ -247,7 +247,7 @@ impl FerroEhrService {
             .execute(&mut *tx)
             .await?;
         if deleted.rows_affected() == 0 {
-            // `has_ehr(ehr_id)` is false → `ehr_id_does_not_exist`. Rolls back
+            // No such EHR → `ehr_id_does_not_exist`. Rolls back
             // (nothing was written), so the audit capture above is discarded.
             return Err(ServiceError::new(
                 ServiceStatus::EhrIdDoesNotExist,

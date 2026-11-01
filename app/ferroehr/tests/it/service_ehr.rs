@@ -2195,72 +2195,6 @@ async fn directory_endpoint_rejects_a_second_directory_create() {
     );
 }
 
-#[tokio::test]
-async fn ehr_uri_resolves_local_structures_and_item_paths() {
-    // `ehr:` URI local resolution (our own extension — no openEHR spec obliges
-    // a server to resolve a DV_EHR_URI; BASE architecture_overview master11
-    // §"EHR URIs"): a top-level structure resolves by versioned-object uid
-    // (latest trunk assumed) or exact OBJECT_VERSION_ID, and an item path
-    // selects interior nodes (master11 §"Item URIs").
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
-    let comp_ovid = svc
-        .create_composition(ehr_uuid, uv(&composition("Uri target"), "249", None))
-        .await
-        .expect("composition_create")
-        .version_uid();
-    let comp_vo = comp_ovid.split("::").next().unwrap();
-
-    // Latest-trunk form: ehr:/{ehr_id}/compositions/{vo_id}.
-    let uri: openehr_rm::v1_2::paths::EhrUri = format!("ehr:/{ehr_uuid}/compositions/{comp_vo}")
-        .parse()
-        .expect("latest-form uri");
-    let comp = svc.resolve_ehr_uri(&uri).await.expect("resolve latest");
-    assert_eq!(comp["_type"], "COMPOSITION");
-    assert_eq!(uid(&comp), comp_ovid);
-
-    // Exact-version form: ehr:/{ehr_id}/compositions/{OBJECT_VERSION_ID}.
-    let uri: openehr_rm::v1_2::paths::EhrUri = format!("ehr:/{ehr_uuid}/compositions/{comp_ovid}")
-        .parse()
-        .expect("exact-version uri");
-    let same = svc.resolve_ehr_uri(&uri).await.expect("resolve exact");
-    assert_eq!(uid(&same), comp_ovid);
-
-    // Item path into the structure: /name/value is a unique leaf.
-    let uri: openehr_rm::v1_2::paths::EhrUri =
-        format!("ehr:/{ehr_uuid}/compositions/{comp_vo}/name/value")
-            .parse()
-            .expect("item-path uri");
-    let name = svc.resolve_ehr_uri(&uri).await.expect("resolve item path");
-    assert_eq!(name, json!("Uri target"));
-
-    // The attribute-only `directory` locator resolves EHR.directory once a
-    // hierarchy exists (= folders.item(1), RM ehr §EHR Class
-    // Directory_in_folders).
-    svc.create_directory(ehr_uuid, uv(&folder("root"), "249", None))
-        .await
-        .expect("directory create");
-    let uri: openehr_rm::v1_2::paths::EhrUri = format!("ehr:/{ehr_uuid}/directory")
-        .parse()
-        .expect("directory uri");
-    let dir = svc.resolve_ehr_uri(&uri).await.expect("resolve directory");
-    assert_eq!(dir["_type"], "FOLDER");
-
-    // A foreign system id is not locally resolvable (master11 §"EHR URIs":
-    // cross-system name resolution is unspecified) → NotFound.
-    let uri: openehr_rm::v1_2::paths::EhrUri =
-        format!("ehr://foreign.example.org/{ehr_uuid}/compositions/{comp_vo}")
-            .parse()
-            .expect("foreign uri");
-    let err = svc.resolve_ehr_uri(&uri).await.expect_err("foreign system");
-    assert!(err.to_string().contains("foreign system"), "got {err}");
-}
-
 /// Commits the current `EHR_STATUS` with `change` applied through the
 /// `PUT /ehr/{ehr_id}/ehr_status` service call, preceded by the current
 /// version, returning the committed version's uid.
@@ -2437,12 +2371,10 @@ async fn directory_version_exists(
     }
 }
 
-/// The directory version read + `get_versioned_directory`: the
-/// existence check is true for real versions (incl. across updates) and false
-/// for an unknown version id; the `VERSIONED_OBJECT` view carries the mandatory
-/// `time_created` (`VERSIONED_OBJECT.time_created`, RM common `change_control`).
+/// The directory version read: a real version reads (incl. across updates)
+/// and an unknown version id does not.
 #[tokio::test]
-async fn directory_versioned_and_has_version() {
+async fn directory_has_version() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
@@ -2492,20 +2424,6 @@ async fn directory_versioned_and_has_version() {
     assert!(
         directory_version_exists(&svc, ehr_uuid, &dir_v2).await,
         "has v2"
-    );
-
-    // get_versioned_directory: the VERSIONED_OBJECT view.
-    let versioned = svc
-        .get_versioned_directory(ehr_uuid)
-        .await
-        .expect("get_versioned_directory");
-    // RM ehr master04: the concrete binding VERSIONED_FOLDER.
-    assert_eq!(versioned["_type"], "VERSIONED_FOLDER");
-    assert_eq!(versioned["uid"]["value"], sp[0]);
-    assert_eq!(versioned["owner_id"]["id"]["value"], ehr_uuid.to_string());
-    assert!(
-        versioned["time_created"]["value"].is_string(),
-        "VERSIONED_OBJECT.time_created must be present, got {versioned}"
     );
 }
 

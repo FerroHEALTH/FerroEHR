@@ -131,7 +131,7 @@ impl FerroEhrService {
     /// communication → `EventActionCode::Read`).
     ///
     /// # Errors
-    /// - `ehr_id_does_not_exist` — no EHR with `an_ehr_id` (`has_ehr` false).
+    /// - `ehr_id_does_not_exist` — no EHR with `an_ehr_id`.
     /// - `exception` — a database/codec fault while building the extract.
     pub async fn extract_ehrs(&self, an_ehr_id: EhrId) -> Result<Vec<Value>, StatusError> {
         if !self.extract_ehr_exists(an_ehr_id).await? {
@@ -265,7 +265,7 @@ impl FerroEhrService {
     }
 
     /// Whether an EHR with `ehr_id` exists and the request may read it (the
-    /// `has_ehr` precondition of both export calls).
+    /// EHR-existence precondition of both export calls).
     async fn extract_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
         let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
             .bind(ehr_id)

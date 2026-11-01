@@ -141,7 +141,7 @@ impl FerroEhrService {
         // committing system is the local one).
         // NOTE: no openEHR spec governs the storage SQL — our own design: the
         // clone-target EHR row is inserted here (master06 §Copying Case-1)
-        // rather than via `create_ehr`, which would mint a fresh EHR_STATUS.
+        // rather than through the EHR create, which would mint a fresh EHR_STATUS.
         let inserted =
             sqlx::query("INSERT INTO ehr (id, system_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
                 .bind(ehr_id)
@@ -197,7 +197,7 @@ impl FerroEhrService {
     /// them in.
     ///
     /// # Errors
-    /// - `ehr_id_does_not_exist` — no EHR with `an_ehr_id` (`has_ehr` false).
+    /// - `ehr_id_does_not_exist` — no EHR with `an_ehr_id`.
     /// - `precondition_violation` (`400`) — duplicate singleton containers, or
     ///   any malformed content item / `ORIGINAL_VERSION` (see the parse errors
     ///   in this module).
@@ -354,7 +354,7 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Whether an EHR with `ehr_id` exists (the `has_ehr` precondition of
+    /// Whether an EHR with `ehr_id` exists (the EHR-existence precondition of
     /// `import_ehr_extract`).
     async fn import_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
         Ok(

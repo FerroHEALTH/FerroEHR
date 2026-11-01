@@ -29,7 +29,6 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::list::Page;
 use crate::service::status::ServiceStatus;
 use crate::versioning::attestation::{AttestationInput, AttestationParts, PendingAttest};
 use crate::versioning::audit::{
@@ -1495,30 +1494,6 @@ pub(crate) async fn get_contribution(
         "audit": audit_details,
         "versions": versions
     }))
-}
-
-/// The ids of the EHR's
-/// CONTRIBUTIONs, oldest-first, within the optional commit-time window, paged.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] when the EHR does not exist; the storage read
-/// error of the list query.
-pub(crate) async fn list_contributions(
-    pool: &sqlx::PgPool,
-    ehr_id: EhrId,
-    time_range: TimeRange,
-    page: Page,
-) -> Result<Vec<Uuid>, ServiceError> {
-    ensure_ehr_exists(pool, ehr_id).await?;
-    let (lower, upper) = time_range.unwrap_or((None, None));
-    let offset = i64::try_from(page.offset()).unwrap_or(i64::MAX);
-    let limit = page.limit().map(|l| i64::try_from(l).unwrap_or(i64::MAX));
-    Ok(
-        crate::storage::version_repo::contribution::list_contributions(
-            pool, ehr_id, lower, upper, offset, limit,
-        )
-        .await?,
-    )
 }
 
 /// The number of CONTRIBUTIONs in

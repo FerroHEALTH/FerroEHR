@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The shared decoder for the ITS-REST datetime request parameters,
-//! `version_at_time` and the contribution `time_range` bounds, used by every
-//! at-time read of the EHR and DEMOGRAPHIC groups.
+//! The shared decoder for the ITS-REST datetime request parameter
+//! `version_at_time`, used by every at-time read of the EHR and DEMOGRAPHIC groups.
 //!
 //! ITS-REST `docs/overview/Resources.md` §"Datetime format" fixes the wire
 //! grammar: query parameters and path segments that are dates, datetimes or
@@ -91,22 +90,9 @@ pub(in crate::service) fn parse_at_time(raw: &str) -> Result<jiff::Timestamp, St
     resolve(raw).ok_or_else(|| StatusError::precondition(format!("invalid version_at_time: {raw}")))
 }
 
-/// Parse one bound of a contribution `time_range` (an ISO 8601 date-time)
-/// into an instant.
-///
-/// # Errors
-/// [`StatusError`] `precondition_violation` (→ `400`) when the bound is not an
-/// extended-ISO-8601 datetime.
-pub(in crate::service) fn parse_time_range_bound(
-    raw: &str,
-) -> Result<jiff::Timestamp, StatusError> {
-    resolve(raw)
-        .ok_or_else(|| StatusError::precondition(format!("invalid time_range bound: {raw}")))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{parse_at_time, parse_time_range_bound, resolve};
+    use super::{parse_at_time, resolve};
 
     /// The same civil datetime resolved in the server's own timezone — the
     /// TZ-independent expectation for every offset-less assertion below.
@@ -210,20 +196,5 @@ mod tests {
             assert!(resolve(bad).is_none(), "{bad:?} must not resolve");
             assert!(parse_at_time(bad).is_err(), "{bad:?} must be a 400");
         }
-    }
-
-    /// The `time_range` bounds share the decoder (and so the offset-less
-    /// acceptance), differing only in the message they report.
-    #[test]
-    fn time_range_bounds_share_the_decoder() {
-        assert_eq!(
-            parse_time_range_bound("2016-06-23T13:42:16").unwrap(),
-            local("2016-06-23T13:42:16")
-        );
-        let err = parse_time_range_bound("not-a-time").unwrap_err();
-        assert!(
-            err.to_string().contains("time_range bound"),
-            "the bound error names its own parameter: {err}"
-        );
     }
 }

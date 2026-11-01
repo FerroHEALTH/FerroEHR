@@ -31,9 +31,3 @@ pub struct EhrSummary {
     /// this EHR."
     pub composition_count: i64,
 }
-
-/// The optional inclusive `(lower, upper)` ISO-8601 bounds of a time interval.
-///
-/// The filter of `list_contributions` / `contribution_count`; either side open
-/// (`None`) means unbounded.
-pub type TimeRange = Option<(Option<String>, Option<String>)>;

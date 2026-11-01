@@ -269,9 +269,10 @@ async fn tagging_does_not_re_version_or_contribute() {
     // The state a tag write must not disturb: the contribution set of the whole
     // EHR and the versioned object's revision history.
     let contributions_before = svc
-        .contribution_count(ehr, None)
+        .ehr_contribution_list_page(ehr, 0, 1)
         .await
-        .expect("contribution count before");
+        .expect("contribution count before")["total"]
+        .clone();
     let history_before = svc
         .composition_revision_history_response(ehr, vo)
         .await
@@ -328,9 +329,9 @@ async fn tagging_does_not_re_version_or_contribute() {
     );
     // … and no new CONTRIBUTION anywhere in the EHR.
     assert_eq!(
-        svc.contribution_count(ehr, None)
+        svc.ehr_contribution_list_page(ehr, 0, 1)
             .await
-            .expect("contribution count after"),
+            .expect("contribution count after")["total"],
         contributions_before,
         "tagging must open no change set"
     );

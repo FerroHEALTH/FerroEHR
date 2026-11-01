@@ -43,7 +43,6 @@ use crate::versioning::audit::change_type;
 use crate::versioning::change::{create, delete, update};
 use crate::versioning::object_version_id::{TreeId, components};
 use crate::versioning::read::{read_version, version_at};
-use crate::versioning::wire::versioned_object;
 
 use super::validation::check_folder_item_refs;
 use super::{ensure_if_match, resolve_envelope};
@@ -225,31 +224,6 @@ impl FerroEhrService {
             })?;
         }
         Ok(response)
-    }
-
-    /// The `VERSIONED_OBJECT` for an EHR's directory
-    /// (`get_versioned_directory`).
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR has no directory;
-    /// [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn versioned_directory(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = self.directory_vo(ehr_id).await?;
-        let (body, last_modified) = versioned_object(&self.pool, vo_id, ehr_id, "VERSIONED_FOLDER")
-            .await?
-            .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::VersionedObjectDoesNotExist,
-                    format!("versioned object {vo_id}"),
-                )
-            })?;
-        Ok(ServiceResponse::new(
-            body,
-            super::meta::container_meta(ehr_id, vo_id, last_modified),
-        ))
     }
 
     /// Update the EHR's directory. `vo_id` is the directory-slot versioned
@@ -613,15 +587,5 @@ impl FerroEhrService {
             super::ensure_addressed_version(&a_version_uid, &meta.uid)?;
         }
         Ok(resp)
-    }
-
-    /// The `VERSIONED_FOLDER`
-    /// container object.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no directory (404-equivalent) or a read
-    /// fails.
-    pub async fn get_versioned_directory(&self, an_ehr_id: EhrId) -> Result<Value, StatusError> {
-        Ok(self.versioned_directory(an_ehr_id).await?.body)
     }
 }

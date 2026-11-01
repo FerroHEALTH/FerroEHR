@@ -35,47 +35,6 @@ use crate::system_log::event::{
 use crate::versioning::object_version_id::parse_version_uid;
 
 impl FerroEhrService {
-    /// The party holding `value` in `scheme`, resolved without decrypting, and
-    /// recorded as an access.
-    ///
-    /// The sole identifier-to-party path above the store. The resolution goes
-    /// through the keyed digest, so the plaintext never reaches the database,
-    /// and every call — hit or miss — writes an access event naming the actor,
-    /// the scheme and the purpose the caller declared. A resolution nobody can
-    /// reconstruct afterwards is the boundary crossing the access log exists to
-    /// prevent, and a MISS is worth recording for the same reason a hit is: it
-    /// says someone asked whether this deployment holds that identifier.
-    ///
-    /// **No openEHR spec governs this — our own design/extension.**
-    ///
-    /// # Errors
-    /// [`StatusError::precondition`] when the deployment configures no
-    /// identifier protection, and `exception` when the resolution query fails.
-    pub async fn resolve_party_by_identifier(
-        &self,
-        scheme: &str,
-        value: &str,
-    ) -> Result<Option<VoId>, StatusError> {
-        let Some(engine) = self.identifier_protection() else {
-            return Err(StatusError::precondition(
-                "this deployment configures no national-identifier protection, so there is \
-                 no protected identifier to resolve",
-            ));
-        };
-        let resolved = engine.resolve(scheme, value).await.map_err(|error| {
-            if let StoreError::Acquire(acquire) = error {
-                return StatusError::from(acquire);
-            }
-            // The client is told the scheme and nothing else; the cause rides
-            // as a source so an operator can walk the chain without a database
-            // error text reaching a caller.
-            StatusError::exception(format!("resolving a `{scheme}` identifier failed"))
-                .with_source(error)
-        })?;
-        self.emit_identifier_resolution(scheme, resolved.is_some())?;
-        Ok(resolved.map(VoId))
-    }
-
     /// The `ORIGINAL_VERSION` of the party version `version_uid` with its
     /// protected identifiers expanded back to their values, and the scheme of
     /// each value expanded, recorded as an access.
@@ -171,29 +130,5 @@ impl FerroEhrService {
             self.record_access(event)?;
         }
         Ok(())
-    }
-
-    /// Record one identifier resolution on the access log.
-    ///
-    /// The record names the scheme and whether it matched, never the value:
-    /// an audit trail that carried the identifier would hold the very data the
-    /// sealing exists to keep out of readable storage.
-    ///
-    /// # Errors
-    /// The `service_overloaded` [`StatusError`] when the sender rejected the record
-    /// under `fail_mode = "closed"`; the resolution is then withheld.
-    fn emit_identifier_resolution(&self, scheme: &str, matched: bool) -> Result<(), StatusError> {
-        if !self.audit_enabled() {
-            return Ok(());
-        }
-        let mut event = AuditEvent::new(
-            EventActionCode::Execute,
-            ObjectClass::Demographic,
-            EventOutcome::Success,
-        );
-        event.domain = AccessDomain::Linkage;
-        event.object_id = Some(format!("national-identifier:{scheme}"));
-        event.result_count = Some(u64::from(matched));
-        self.record_access(event)
     }
 }

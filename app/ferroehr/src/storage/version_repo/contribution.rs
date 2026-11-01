@@ -167,9 +167,8 @@ pub async fn list_contribution_summaries(
                 a.committer ->> '_type' IS NOT DISTINCT FROM 'PARTY_SELF' AS person \
          FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
          WHERE c.ehr_id = $1 \
-         -- newest-first: this extension is an activity feed (the sibling
-         -- list_contributions stays oldest-first; a UI-facing summary — our
-         -- own extension, no openEHR spec governs it)
+         -- newest-first: this extension is an activity feed (a UI-facing
+         -- summary — our own extension, no openEHR spec governs it)
          ORDER BY a.time_committed DESC, c.id DESC \
          OFFSET $2 LIMIT $3",
     )
@@ -191,39 +190,6 @@ pub async fn list_contribution_summaries(
             })
         })
         .collect()
-}
-
-/// The ids of an EHR's CONTRIBUTIONs, oldest-first (audit `time_committed`,
-/// then id), within the optional inclusive commit-time window, paged.
-///
-/// A NULL bound disables that side; a NULL LIMIT returns all rows.
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn list_contributions(
-    pool: &PgPool,
-    ehr_id: EhrId,
-    lower: Option<jiff::Timestamp>,
-    upper: Option<jiff::Timestamp>,
-    offset: i64,
-    limit: Option<i64>,
-) -> Result<Vec<Uuid>, StorageError> {
-    let rows = sqlx::query(
-        "SELECT c.id FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
-         WHERE c.ehr_id = $1 \
-           AND ($2::timestamptz IS NULL OR a.time_committed >= $2::timestamptz) \
-           AND ($3::timestamptz IS NULL OR a.time_committed <= $3::timestamptz) \
-         ORDER BY a.time_committed, c.id \
-         OFFSET $4 LIMIT $5",
-    )
-    .bind(ehr_id)
-    .bind(lower.map(|t| t.to_string()))
-    .bind(upper.map(|t| t.to_string()))
-    .bind(offset)
-    .bind(limit)
-    .fetch_all(&mut *acquire(pool).await?)
-    .await?;
-    rows.iter().map(|row| Ok(row.try_get("id")?)).collect()
 }
 
 /// The number of an EHR's CONTRIBUTIONs within the optional inclusive
