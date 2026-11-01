@@ -88,6 +88,28 @@ use crate::v1_1::bmm_persistence::p_bmm_schema::PBmmSchema;
 use crate::v1_1::bmm_persistence::p_bmm_type::PBmmType;
 use openehr_base::containers::present;
 
+/// A `BMM_CLASS` descendant `$ty` from its [`ClassCore`], with the
+/// descendant's own fields after the `BMM_CLASS` attributes the generated
+/// descendants repeat as fields of their own.
+macro_rules! class_from_core {
+    ($ty:ident, $core:expr $(, $field:ident $(: $value:expr)?)* $(,)?) => {{
+        let core: ClassCore = $core;
+        $ty {
+            documentation: core.documentation,
+            name: core.name,
+            ancestors: core.ancestors,
+            package: core.package,
+            properties: core.properties,
+            source_schema_id: core.source_schema_id,
+            immediate_descendants: present(core.immediate_descendants),
+            is_abstract: core.is_abstract,
+            is_primitive_type: core.is_primitive_type,
+            is_override: core.is_override,
+            $($field $(: $value)?,)*
+        }
+    }};
+}
+
 /// Materialise the in-memory `BMM_MODEL` of an inclusion-resolved
 /// `P_BMM_SCHEMA`.
 ///
@@ -361,32 +383,13 @@ impl<'a> Builder<'a> {
             )));
         }
         if persisted.is_generic() {
-            return Ok(BmmClass::BmmGenericClass(BmmGenericClass {
-                documentation: core.documentation,
-                name: core.name,
-                ancestors: core.ancestors,
-                package: core.package,
-                properties: core.properties,
-                source_schema_id: core.source_schema_id,
-                immediate_descendants: present(core.immediate_descendants),
-                is_abstract: core.is_abstract,
-                is_primitive_type: core.is_primitive_type,
-                is_override: core.is_override,
+            return Ok(BmmClass::BmmGenericClass(class_from_core!(
+                BmmGenericClass,
+                core,
                 generic_parameters: self.build_generic_parameters(persisted, depth)?,
-            }));
+            )));
         }
-        Ok(BmmClass::BmmClass(BmmClassData {
-            documentation: core.documentation,
-            name: core.name,
-            ancestors: core.ancestors,
-            package: core.package,
-            properties: core.properties,
-            source_schema_id: core.source_schema_id,
-            immediate_descendants: present(core.immediate_descendants),
-            is_abstract: core.is_abstract,
-            is_primitive_type: core.is_primitive_type,
-            is_override: core.is_override,
-        }))
+        Ok(BmmClass::BmmClass(class_from_core!(BmmClassData, core)))
     }
 
     /// Builds a class's `BMM_CLASS.ancestors` map at the depth one level below
@@ -983,54 +986,30 @@ fn build_enumeration(core: ClassCore, persisted: &PBmmEnumeration) -> BmmEnumera
     let underlying_type_name = persisted.underlying_type_name().to_owned();
     match persisted {
         PBmmEnumeration::PBmmEnumerationInteger(_) => {
-            BmmEnumeration::BmmEnumerationInteger(BmmEnumerationInteger {
-                documentation: core.documentation,
-                name: core.name,
-                ancestors: core.ancestors,
-                package: core.package,
-                properties: core.properties,
-                source_schema_id: core.source_schema_id,
-                immediate_descendants: present(core.immediate_descendants),
-                is_abstract: core.is_abstract,
-                is_primitive_type: core.is_primitive_type,
-                is_override: core.is_override,
+            BmmEnumeration::BmmEnumerationInteger(class_from_core!(
+                BmmEnumerationInteger,
+                core,
                 item_names: present(item_names),
                 item_values: present(item_values),
                 underlying_type_name,
-            })
+            ))
         }
         PBmmEnumeration::PBmmEnumerationString(_) => {
-            BmmEnumeration::BmmEnumerationString(BmmEnumerationString {
-                documentation: core.documentation,
-                name: core.name,
-                ancestors: core.ancestors,
-                package: core.package,
-                properties: core.properties,
-                source_schema_id: core.source_schema_id,
-                immediate_descendants: present(core.immediate_descendants),
-                is_abstract: core.is_abstract,
-                is_primitive_type: core.is_primitive_type,
-                is_override: core.is_override,
+            BmmEnumeration::BmmEnumerationString(class_from_core!(
+                BmmEnumerationString,
+                core,
                 item_names: present(item_names),
                 item_values: present(item_values),
                 underlying_type_name,
-            })
+            ))
         }
-        PBmmEnumeration::PBmmEnumeration(_) => BmmEnumeration::BmmEnumeration(BmmEnumerationData {
-            documentation: core.documentation,
-            name: core.name,
-            ancestors: core.ancestors,
-            package: core.package,
-            properties: core.properties,
-            source_schema_id: core.source_schema_id,
-            immediate_descendants: present(core.immediate_descendants),
-            is_abstract: core.is_abstract,
-            is_primitive_type: core.is_primitive_type,
-            is_override: core.is_override,
+        PBmmEnumeration::PBmmEnumeration(_) => BmmEnumeration::BmmEnumeration(class_from_core!(
+            BmmEnumerationData,
+            core,
             item_names: present(item_names),
             item_values: present(item_values),
             underlying_type_name,
-        }),
+        )),
     }
 }
 
