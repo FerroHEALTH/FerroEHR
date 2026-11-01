@@ -272,13 +272,11 @@ async fn opt_upload_without_content_type_is_created() {
     assert_eq!(status, StatusCode::CREATED, "{body}");
 }
 
-// ── POST: the 400-vs-422 invalid-payload split ───────────────────────────────
+// ── POST: every invalid payload is a 400 ─────────────────────────────────────
 // `responses/400.yaml`: "400 Bad Request is returned when the request could
-// not be parsed or is invalid (e.g. … syntactically invalid … content)" — the
-// released branch for a payload that is not well-formed XML. A WELL-FORMED
-// document that is not a valid OPT is a semantic error (overview
-// `Requests_and_responses.md` §HTTP status codes, the 422 row; no template
-// operation declares 422, so the semantic branch is register-adjudicated).
+// not be parsed or is invalid (e.g. … syntactically invalid … content)".
+// `operations/definition_template_adl1.4_upload.yaml` declares only 201, 400
+// and 409, so a well-formed document that is not a valid OPT is a 400 too.
 
 /// `POST /definition/template/adl1.4` with an arbitrary body under
 /// `Content-Type: application/xml`.
@@ -338,19 +336,26 @@ async fn opt_upload_empty_body_is_400() {
 }
 
 #[tokio::test]
-async fn opt_upload_well_formed_non_opt_is_422() {
+async fn opt_upload_well_formed_non_opt_is_400() {
     let (_pg, app) = empty_app().await;
     let (status, body) = upload_body(&app, "<not_an_opt/>").await;
     assert_eq!(
         status,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "well-formed XML that does not decode as an OPT is the semantic 422 \
-         branch (overview §HTTP status codes), not the syntactic 400: {body}"
+        StatusCode::BAD_REQUEST,
+        "well-formed XML that does not decode as an OPT is invalid content, the \
+         only refusal the upload declares (responses/400.yaml): {body}"
+    );
+    let detail = serde_json::from_str::<Value>(&body).expect("an error document")["detail"]
+        .as_str()
+        .map(str::to_owned);
+    assert!(
+        detail.is_some_and(|d| !d.is_empty()),
+        "the 400 keeps the refusal's detail: {body}"
     );
 }
 
 /// An OPT whose typed `default_value` has no content, the shape Archetype
-/// Designer emits by itself, is refused `422` with a message that names the
+/// Designer emits by itself, is refused `400` with a message that names the
 /// element, its line and the class attribute the absent child realises, so
 /// the author can find an element that is not there (#3067). The refusal
 /// itself is unchanged: `DV_IDENTIFIER.id` is mandatory (RM `Id_valid`).
@@ -379,7 +384,7 @@ async fn opt_upload_with_an_empty_typed_default_value_names_the_place() {
     }
     let line = closing + 5;
     let (status, text) = upload_body(&app, &body).await;
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{text}");
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{text}");
     let message = serde_json::from_str::<Value>(&text).expect("an error document")["detail"]
         .as_str()
         .expect("detail")

@@ -46,12 +46,13 @@ is also a **409 Conflict**, not a second template.
 
 ### What "invalid template" means, and which status you get
 
-The upload runs two distinct gates, and they answer differently:
+The upload runs two distinct gates. Both answer **400 Bad Request**, the only
+refusal ITS-REST 1.1.0 declares for the upload besides the 409 duplicate:
 
-- **A payload that is not well-formed XML is a 400 Bad Request:** the server
-  could not read it as XML at all.
-- **A well-formed document that is not a valid operational template is a 422
-  Unprocessable Entity.** This covers both the structural check (foreign or
+- **A payload that is not well-formed XML:** the server could not read it as
+  XML at all.
+- **A well-formed document that is not a valid operational template.** This
+  covers both the structural check (foreign or
   duplicated top-level elements, a decoded OPT with an empty `template_id` or
   `concept`) and the full archetype-model artefact-validity catalogue:
   reference-model conformance of every constrained type and attribute,
@@ -64,7 +65,7 @@ The upload runs two distinct gates, and they answer differently:
   with `Prefer: return=representation` receives them
   ([Problem types](using-the-api/problems.md#validation-failed)).
 
-The 422 gate also validates the template's **own meta-data** against the RM
+The second gate also validates the template's **own meta-data** against the RM
 resource-package invariants: the template's `language` (and every description
 detail's) must be in the openEHR `languages` code set, `is_controlled` must
 agree with the presence of a `revision_history`, and a `description` needs a
@@ -98,7 +99,7 @@ One requirement of the OPT 1.4 XML format catches exported templates. Inside a
 `defining_code`. The element may be empty, `<value/>`: the rubric a user sees is
 resolved from the template's `term_definitions`, not from this text. CKM's
 exporter writes the empty element, so its templates load. Archetype Designer
-omits it, and such a template is refused with **422**, naming the `<symbol>`
+omits it, and such a template is refused with **400**, naming the `<symbol>`
 element, its line, and the fix. Add `<value/>` to each ordinal symbol and upload
 again.
 
@@ -115,18 +116,19 @@ catalogue (phase-1 basic integrity, reference-model conformance, and, for a
 specialised artefact whose parent is already loaded, specialisation
 conformance).
 
-The two failure modes are again distinguished by status:
+Both failure modes answer **400 Bad Request**, the only refusal ITS-REST 1.1.0
+declares for the upload besides the 409 duplicate:
 
-- **A source that does not parse is a 400 Bad Request**, carrying the ADL syntax
-  (`S`-prefixed) error codes.
-- **A source that parses but fails validation is a 422 Unprocessable Entity**,
-  whose `errors` list the AOM2 validity (`V`-prefixed) rule codes:
-  `VARD`, `VCORM`, `VACSD` and friends.
+- **A source that does not parse** carries the ADL syntax (`S`-prefixed) error
+  codes.
+- **A source that parses but fails validation** lists the AOM2 validity
+  (`V`-prefixed) rule codes in its `errors`: `VARD`, `VCORM`, `VCARM`, `VACSD`
+  and friends.
 
 Every archetype a template or archetype fills a slot with or references
 through `use_archetype` must already be loaded (AOM2 rule `VARXR`), so upload
 the archetypes before the templates built on them. A template naming one the
-CDR does not hold is refused with a 422 whose `errors` carry one `VARXR` entry
+CDR does not hold is refused with a 400 whose `errors` carry one `VARXR` entry
 per missing archetype id.
 
 A reference may name its archetype down to the major version only

@@ -282,8 +282,9 @@ impl FerroEhrService {
     /// (S-codes) is syntactically invalid content, the released `400` branch
     /// (`responses/400.yaml`, via [`syntax_bad_request`]), while an AOM2
     /// validation-phase failure (V-codes) on a parsed source is a
-    /// `ValidationFailed` (`422`) rendering the ITS-REST `Error` object with the
-    /// rule-code mnemonics as `validationErrors[]`. The openEHR
+    /// `ValidationFailed` carrying the rule-code mnemonics, which the template
+    /// upload answers `400` too
+    /// (`operations/definition_template_adl2_upload.yaml` declares no `422`). The openEHR
     /// [`ProductionRmModel`] governs openEHR-published archetypes; a foreign or
     /// test model skips the RM pass, which would false-fire VCORM
     /// (`AOM2/master04.3` §Reference Model Type Matching). External term
@@ -413,7 +414,8 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - Unparseable source → `BadRequest` (`400`).
-    /// - AOM2-invalid source → `ValidationFailed` (`422` with rule codes).
+    /// - AOM2-invalid source → `ValidationFailed` with rule codes, which the
+    ///   REST upload answers `400`.
     /// - An ADL2 artefact with the same HRID already stored → `Conflict`
     ///   (`409`).
     /// - A database failure (`500`).
@@ -899,7 +901,8 @@ fn join_syntax_errors(errs: &[openehr_adl::error::SyntaxError]) -> String {
 /// (`docs/specs/openehr/ITS-REST/specifications/responses/400.yaml`: "the
 /// request could not be parsed or is invalid (e.g. … syntactically invalid …
 /// content)"). AOM2 validation-phase failures (V-codes) on a *parsed* source
-/// are the semantic `422` branch instead (see [`FerroEhrService::adl2_store`]).
+/// are [`ServiceError::ValidationFailed`] instead (see
+/// [`FerroEhrService::adl2_store`]), which the template upload answers `400` too.
 fn syntax_bad_request(errs: &[openehr_adl::error::SyntaxError]) -> ServiceError {
     ServiceError::precondition(format!(
         "syntactically invalid ADL2 content: {}",
@@ -912,7 +915,7 @@ fn syntax_bad_request(errs: &[openehr_adl::error::SyntaxError]) -> ServiceError 
 /// is `{archetype, template, operational_template}` (our own design — no openEHR
 /// spec governs the schema); an overlay is a specialising fragment of a
 /// template, so it is stored under `template`. This keeps an ADL2 upload from
-/// ever reaching a DB constraint (a malformed upload is a `422` at validation,
+/// ever reaching a DB constraint (a malformed upload is refused at validation,
 /// never a `500`).
 fn store_kind(kind: &str) -> &str {
     match kind {

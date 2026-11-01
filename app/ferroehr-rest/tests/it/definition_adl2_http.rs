@@ -3,7 +3,7 @@
 
 //! End-to-end HTTP tests for the ADL2 template wire:
 //! `POST /definition/template/adl2` (text/plain source upload, `Location` +
-//! `Prefer` body, `422`-with-rule-codes on an invalid source),
+//! `Prefer` body, `400`-with-rule-codes on an invalid source),
 //! `GET /definition/template/adl2/{template_id}` (text/plain source /
 //! `application/json` `OperationalTemplateV2` / `406` on xml-only),
 //! `GET …/{template_id}/{version}` (the deprecated versioned get),
@@ -473,11 +473,14 @@ async fn example_get_400_on_bad_enum_404_unknown_406_wrong_accept() {
     assert_eq!(send(&app, req).await.0, StatusCode::NOT_FOUND);
 }
 
+/// The upload declares only 201, 400 and 409
+/// (`operations/definition_template_adl2_upload.yaml`), so an AOM2-invalid
+/// source is the `400` of `responses/400.yaml`, its rule codes kept.
 #[tokio::test]
-async fn upload_invalid_source_is_422_with_rule_codes() {
+async fn upload_invalid_source_is_400_with_rule_codes() {
     let (_pg, app) = app().await;
     // A source missing the mandatory `description` section → VARD (AOM2
-    // master03 §Validity Rules). The engine rejects it; the wire renders a 422
+    // master03 §Validity Rules). The engine rejects it; the wire renders a 400
     // problem whose `errors` carry the rule code.
     let invalid = "operational_template (adl_version=2.0.6; rm_release=1.1.0)\n    \
                    openEHR-EHR-COMPOSITION.t_no_desc.v1.0.0\n\n\
@@ -493,7 +496,7 @@ async fn upload_invalid_source_is_422_with_rule_codes() {
         .body(Body::from(invalid))
         .unwrap();
     let (status, _headers, body) = send(&app, req).await;
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     let v: Value = serde_json::from_str(&body).unwrap();
     let errors = v
         .get("errors")
@@ -502,7 +505,7 @@ async fn upload_invalid_source_is_422_with_rule_codes() {
     assert!(
         errors.iter().any(|e| e["path"].as_str() == Some("VARD")
             || e["detail"].as_str().is_some_and(|s| s.contains("VARD"))),
-        "the rule code VARD is reported in the 422 body: {errors:?}"
+        "the rule code VARD is reported in the 400 body: {errors:?}"
     );
 }
 
@@ -659,8 +662,7 @@ async fn upload_unparseable_source_is_400() {
     // Content that fails the ADL2 grammar outright is *syntactically invalid
     // content* — the released 400 branch declared on the upload
     // (`responses/400.yaml`: "the request could not be parsed or is invalid
-    // (e.g. ... syntactically invalid ... content)") — never the semantic 422
-    // that AOM2 validation-phase failures (V-codes) carry.
+    // (e.g. ... syntactically invalid ... content)").
     let req = Request::builder()
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl2"))
@@ -694,12 +696,13 @@ async fn upload_empty_source_is_400() {
 }
 
 /// A specialised upload whose `specialise` clause names a parent the repository
-/// does not hold is refused as `422` carrying VASID: without the flat parent
+/// does not hold is refused as `400` carrying VASID, the only refusal
+/// `operations/definition_template_adl2_upload.yaml` declares: without the flat parent
 /// the archetype cannot validate (AOM2 master03 VASID, master08 §Phase 2), and
 /// storing it unchecked
 /// would let a child uploaded before its parent skip conformance for good.
 #[tokio::test]
-async fn upload_with_absent_parent_is_422_with_vasid() {
+async fn upload_with_absent_parent_is_400_with_vasid() {
     let (_db, app) = app().await;
     let src = "archetype (adl_version=2.0.6; rm_release=1.1.0)\n    \
          openEHR-EHR-CLUSTER.orphan-child.v1.0.0\n\n\
@@ -718,10 +721,10 @@ async fn upload_with_absent_parent_is_422_with_vasid() {
         .body(Body::from(src))
         .unwrap();
     let (status, _h, body) = send(&app, req).await;
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert!(
         body.contains("VASID") && body.contains("openEHR-EHR-CLUSTER.orphan.v1.0.0"),
-        "the 422 names VASID and the missing parent: {body}"
+        "the 400 names VASID and the missing parent: {body}"
     );
 }
 
@@ -837,10 +840,11 @@ fn varxr_details(body: &str) -> Vec<String> {
 /// AOM2 VARXR (`AM/docs/AOM2/master04.5-constraint_model-class_definitions.adoc`
 /// §Validity Rules: `C_ARCHETYPE_ROOT`): "the archetype reference must refer
 /// to an artefact that can be found in the current repository". An upload
-/// whose fillers the CDR does not hold is refused with a `422` that names
-/// each of them, and nothing is stored.
+/// whose fillers the CDR does not hold is refused with a `400` that names
+/// each of them, and nothing is stored: the upload declares only 201, 400 and
+/// 409 (`operations/definition_template_adl2_upload.yaml`).
 #[tokio::test]
-async fn upload_with_unheld_constituents_is_422_naming_each_with_varxr() {
+async fn upload_with_unheld_constituents_is_400_naming_each_with_varxr() {
     let (_pg, app) = app().await;
     let hrid = "openEHR-EHR-COMPOSITION.t_unheld.v1.0.0";
     let missing = [
@@ -848,7 +852,7 @@ async fn upload_with_unheld_constituents_is_422_naming_each_with_varxr() {
         "openEHR-EHR-OBSERVATION.unheld_b.v1",
     ];
     let (status, _h, body) = send(&app, upload_source(template_using(hrid, &missing))).await;
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     let errors: Vec<Value> = serde_json::from_str::<Value>(&body).unwrap()["errors"]
         .as_array()
         .expect("errors")
@@ -857,7 +861,7 @@ async fn upload_with_unheld_constituents_is_422_naming_each_with_varxr() {
         assert!(
             errors.iter().any(|e| e["path"].as_str() == Some("VARXR")
                 && e["detail"].as_str().is_some_and(|d| d.contains(id))),
-            "the 422 names {id} under VARXR: {body}"
+            "the 400 names {id} under VARXR: {body}"
         );
     }
     let req = Request::builder()

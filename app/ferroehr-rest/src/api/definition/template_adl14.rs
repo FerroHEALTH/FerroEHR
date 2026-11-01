@@ -110,7 +110,11 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
         None
     };
     let xml = negotiate::text_body(&parts.body)?;
-    let meta = state.backend().template_adl14_upload(xml.clone()).await?;
+    let meta = state
+        .backend()
+        .template_adl14_upload(xml.clone())
+        .await
+        .map_err(|e| RestError::from(e).into_template_upload_refusal())?;
     let template_id = meta
         .get("template_id")
         .and_then(serde_json::Value::as_str)

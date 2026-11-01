@@ -25,7 +25,7 @@ pub(super) enum Uploaded {
     Fresh,
     /// The CDR refused the upload.
     Refused(ViewerError),
-    /// The CDR refused the source `422` for the violations it found.
+    /// The CDR refused the source `400` for the violations it found.
     Invalid(Vec<Violation>),
     /// The upload succeeded and the browser was sent on.
     Left,
@@ -81,7 +81,7 @@ pub(super) fn violations_refused(found: &[Violation]) -> Html {
     refusal(
         &current(),
         &Refusal {
-            status: Some(http::StatusCode::UNPROCESSABLE_ENTITY.as_u16()),
+            status: Some(http::StatusCode::BAD_REQUEST.as_u16()),
             summary: tr_with(
                 DefinitionsMsg::TemplateUploadInvalid,
                 &[("count", count(found.len()))],
