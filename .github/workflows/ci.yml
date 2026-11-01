@@ -91,7 +91,8 @@ env:
   # bevy sets exactly these two vars; polars uses `-C debuginfo=0`).
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_PROFILE_TEST_DEBUG: "0"
-  # Every job here is REQUIRED — there is no advisory tier.
+  # Every job here is REQUIRED except `conformance`, which reports its verdict
+  # without failing while its call passes `advisory: true` (#4455, #4600).
   #
   # Event gating (#2777), the rule behind every `if:` in this file that names
   # an event: a job reading `pull_request` OR `merge_group` is a WHOLE-TREE
@@ -281,9 +282,8 @@ jobs:
               echo "::warning::could not list the merge-queue runs of $PUSH_SHA, so every lane runs"
               runs=""
             fi
-            # The run's own conclusion is no answer: an advisory job (the
-            # conclusion step's ADVISORY list) can fail it while the required
-            # `conclusion` check passed.
+            # The run's own conclusion is no answer: a job can fail it while
+            # the required `conclusion` check passed.
             while IFS= read -r run; do
               [ -n "$run" ] || continue
               if passed=$(gh api --paginate "repos/$REPO/actions/runs/$run/jobs?filter=latest&per_page=100" --jq '.jobs[] | select(.name == "conclusion") | .conclusion') \
@@ -2928,6 +2928,10 @@ jobs:
   # commit, by digest. The reusable job asks for `contents: write`, which the
   # Action uses only to push badges from a run on main that is not a pull
   # request, so it never pushes from here; a fork's token is read-only anyway.
+  # While `advisory` is set the job ends green and hands its verdict to
+  # `conclusion` as an output: a failed job fails the run, and a merge-queue
+  # run that ends `failure` fails its entry even while `conclusion` passed
+  # (#4600).
   conformance:
     name: conformance
     needs: [changes, ui-e2e-binary]
@@ -2938,6 +2942,9 @@ jobs:
     uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       server-binary-artifact: ui-e2e-server-binary
+      # THE SWITCH (#4455): delete this line to make conformance required,
+      # once the released run on main is green.
+      advisory: true
 
   veredictum-action:
     name: veredictum-action
@@ -3042,14 +3049,10 @@ jobs:
       - name: Every needed job succeeded or was skipped
         env:
           NEEDS: ${{ toJSON(needs) }}
-          # THE SWITCH (#4455): jobs that run and report here but do not gate
-          # yet. `conformance` leaves this list, making it required, once the
-          # released run on main is green; while main has red rows it would
-          # block every pull request.
-          ADVISORY: '["conformance"]'
         run: |
           set -euo pipefail
-          echo "$NEEDS" | jq -r --argjson advisory "$ADVISORY" \
-            'to_entries[] | "\(.key): \(.value.result)\(if (.key | IN($advisory[])) then " (advisory)" else "" end)"'
-          echo "$NEEDS" | jq -e --argjson advisory "$ADVISORY" \
-            'with_entries(select(.key | IN($advisory[]) | not)) | all(.[] | .result; . == "success" or . == "skipped")' >/dev/null
+          # A job that reports a verdict output (the advisory `conformance`)
+          # shows it beside its result.
+          echo "$NEEDS" | jq -r \
+            'to_entries[] | "\(.key): \(.value.result)\(if (.value.outputs.verdict // "") != "" then " (verdict: \(.value.outputs.verdict))" else "" end)"'
+          echo "$NEEDS" | jq -e 'all(.[] | .result; . == "success" or . == "skipped")' >/dev/null
