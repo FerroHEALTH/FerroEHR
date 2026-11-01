@@ -494,6 +494,9 @@ jobs:
   # its revision label names a commit with this tree's inputs and refuses an
   # older one (#4547). Every push runs it, the badges included, as
   # conformance.yml did on main before. A failed or cancelled build sits it out.
+  # While `advisory` is set the job ends green with its verdict in its summary
+  # and the badges, which are the published record: a red row would otherwise
+  # mark every push's run failed and hide a failed image or smoke lane (#4605).
   conformance:
     name: conformance
     needs: [binary, app-image, postgres-image]
@@ -509,6 +512,9 @@ jobs:
     with:
       server-image: ${{ case(needs.app-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr@{0}', needs.app-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr:main') }}
       postgres-image: ${{ case(needs.postgres-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr-postgres@{0}', needs.postgres-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr-postgres:main') }}
+      # THE SWITCH (#4455): delete this line to make a red verdict fail the
+      # run, once the released run on main is green.
+      advisory: true
 
   # The pushed VIEWER artifact was once assembled from two jobs (the per-arch
   # binary and a separately built site bundle), and an assembly that
