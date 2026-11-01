@@ -156,8 +156,8 @@ tools/openehr-codegen/src/lib.rs: run -> cli::run()
 tools/openehr-codegen/src/plan/overrides.rs: cardinality_contradicted -> contradicted(owner, field, ContradictionKind::LowerBound)
 tools/openehr-codegen/src/plan/overrides.rs: existence_contradicted -> contradicted(owner, field, ContradictionKind::Existence)
 tools/openehr-codegen/src/render/emit.rs: doc_block -> doc_block_summarized(b, doc, indent, "")
-tools/openehr-codegen/src/testsupport.rs: default_unrenderable -> overrides::default_unrenderable(owner, field)
+tools/openehr-codegen/src/testsupport.rs: default_unrenderable -> overrides::default_unrenderable(owner, field)	testsupport is the crate's public surface for its integration tests, the one door to a crate-private emitter decision in plan::overrides; opening plan would publish the whole plan stage
 tools/openehr-codegen/src/testsupport.rs: model_query -> model_query_view(component, class, attribute, format, false)
-tools/openehr-codegen/src/testsupport.rs: resolve_default -> overrides::resolve_default(default, resolve)
+tools/openehr-codegen/src/testsupport.rs: resolve_default -> overrides::resolve_default(default, resolve)	testsupport is the crate's public surface for its integration tests, the one door to a crate-private emitter decision in plan::overrides; opening plan would publish the whole plan stage
 tools/openehr-codegen/src/testsupport.rs: v2_4_reemit_closure -> reemit_closure("am", "v2_4")
 tools/testkit/src/syslog_tls.rs: SyslogTlsListener::bind -> Self::bind_refusing(0)

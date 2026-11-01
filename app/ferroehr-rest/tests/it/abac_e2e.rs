@@ -299,7 +299,7 @@ async fn seed_composition(seed: &Router, ehr_id: &str) -> String {
 // ── ATNA capture ───────────────────────────────────────────────────────────────
 
 async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
-    let socket = SyslogTlsListener::bind().await.expect("syslog listener");
+    let socket = SyslogTlsListener::bind(0).await.expect("syslog listener");
     let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,

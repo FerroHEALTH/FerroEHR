@@ -893,14 +893,6 @@ pub fn v2_4_reemit_mirrors() -> Result<Vec<Mirror>, Error> {
         .collect())
 }
 
-/// The AM 2.4 downstream re-emission closure (class-name set).
-///
-/// # Errors
-/// Returns an error if the AM/BASE/LANG BMM files cannot be loaded.
-pub fn v2_4_reemit_closure() -> Result<BTreeSet<String>, Error> {
-    reemit_closure("am", "v2_4")
-}
-
 /// One generation's raw downstream re-emission closure — the upstream classes
 /// `analyze::cross_schema_reemit` (crate-private) reports for generation
 /// `module` of crate `key`.
@@ -1694,29 +1686,15 @@ pub fn merged_fallback_schema_names() -> Result<(BTreeSet<String>, BTreeSet<Stri
 ///
 /// `component`/`class`/`attribute` are the optional filters; `format` is one of
 /// `table`, `tsv`, `json`.
+/// `flattened` reports one row per class × CARRIED attribute (inherited ones
+/// included, each with its declaring class) instead of one row per class ×
+/// declared attribute.
 ///
 /// # Errors
 /// Returns an error if a vendored BMM file cannot be loaded, if `format` is not
 /// a valid format, or if a filter names a component/class/attribute the loaded
 /// model does not have.
 pub fn model_query(
-    component: Option<&str>,
-    class: Option<&str>,
-    attribute: Option<&str>,
-    format: &str,
-) -> Result<String, Error> {
-    model_query_view(component, class, attribute, format, false)
-}
-
-/// [`model_query()`] with the view selectable.
-///
-/// `flattened` reports one row per class × CARRIED attribute (inherited ones
-/// included, each with its declaring class) instead of one row per class ×
-/// declared attribute.
-///
-/// # Errors
-/// Same as [`model_query()`].
-pub fn model_query_view(
     component: Option<&str>,
     class: Option<&str>,
     attribute: Option<&str>,
