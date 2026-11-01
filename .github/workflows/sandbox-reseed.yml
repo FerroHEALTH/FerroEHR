@@ -103,7 +103,7 @@ jobs:
       # wipe the database the sandbox actually runs on. That structural bound
       # replaces the old runner-side psql and its Neon-endpoint fence.
       - name: Wipe the sandbox schemas
-        uses: ./.github/actions/hosted-deploy
+        uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           verb: wipe
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
@@ -136,7 +136,7 @@ jobs:
           fi
 
       - name: Restart the CDR
-        uses: ./.github/actions/hosted-deploy
+        uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           verb: restart
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
@@ -211,7 +211,7 @@ jobs:
         with:
           persist-credentials: false
       - name: The box's deploy script offers the identities verb
-        uses: ./.github/actions/deploy-verbs
+        uses: ./.github/actions/deploy-verbs # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           verb: identities
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}

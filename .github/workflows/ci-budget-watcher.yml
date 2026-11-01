@@ -83,7 +83,7 @@ jobs:
 
       - name: File or update the tracking issue
         if: steps.check.outputs.over == '1'
-        uses: ./.github/actions/file-watcher-issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           title: "ci: a sharded lane is past its wall-clock budget on main"
           body-file: body.md

@@ -58,6 +58,14 @@ on:
         description: The runner label matching the target's architecture.
         required: true
         type: string
+      crate-version:
+        description: >-
+          The openehr-* lockstep version the release publishes to crates.io,
+          stamped into the checkout before the build so the server reports
+          it; empty for a pre-release, which publishes no crates.
+        required: false
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -92,14 +100,25 @@ jobs:
         uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cargo-auditable@0.7.5
+      # The manifests on main hold a floor below the published line, so the
+      # release stamps the version its crates leg publishes; build.rs refuses
+      # the build when the lock does not then record it.
+      - name: Stamp the published openehr-* version
+        if: inputs.crate-version != ''
+        env:
+          CRATE_VERSION: ${{ inputs.crate-version }}
+        run: bash scripts/release/publish-crates.sh stamp "$CRATE_VERSION"
       - name: Build server
         # `ferroehr-server` is the binary-producing crate (bin name stays
         # `ferroehr`) since the crate consolidation; `-p ferroehr` is the
         # platform library and yields no binary.
         # FERROEHR_RELEASE_TAG marks this a release build, so the binary
         # reports the bare release version rather than `+dev.<commit>`.
+        # FERROEHR_OPENEHR_CRATE_VERSION names the stamped version, so the
+        # report says its openehr-* versions are the published ones.
         env:
           FERROEHR_RELEASE_TAG: ${{ inputs.tag }}
+          FERROEHR_OPENEHR_CRATE_VERSION: ${{ inputs.crate-version }}
         run: cargo auditable build --release --locked -p ferroehr-server
       - name: Package
         shell: bash
