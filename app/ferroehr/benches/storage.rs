@@ -1206,7 +1206,7 @@ fn bench_query(
                 rt.block_on(async {
                     let start = Instant::now();
                     for _ in 0..iters {
-                        svc.execute_ad_hoc_query(aql.clone(), one_ehr.clone())
+                        svc.execute_aql(&aql, None, &one_ehr)
                             .await
                             .expect("the single-EHR CONTAINS query executes");
                     }
@@ -1219,7 +1219,7 @@ fn bench_query(
                 rt.block_on(async {
                     let start = Instant::now();
                     for _ in 0..iters {
-                        svc.execute_ad_hoc_query(aql.clone(), AqlQueryRequest::default())
+                        svc.execute_aql(&aql, None, &AqlQueryRequest::default())
                             .await
                             .expect("the population CONTAINS query executes");
                     }
@@ -1315,7 +1315,7 @@ fn bench_paths(
                     rt.block_on(async {
                         let start = Instant::now();
                         for _ in 0..iters {
-                            svc.execute_ad_hoc_query(aql.clone(), AqlQueryRequest::default())
+                            svc.execute_aql(&aql, None, &AqlQueryRequest::default())
                                 .await
                                 .expect("the sibling-leaves query executes");
                         }
@@ -1742,7 +1742,7 @@ fn bench_aql(
         println!("storage_aql: `{}` runs {}", path.name, path.aql);
         let rows = rt.block_on(async {
             let outcome = svc
-                .execute_ad_hoc_query(path.aql.clone(), request.clone())
+                .execute_aql(&path.aql, None, &request)
                 .await
                 .expect("the hot path executes before it is timed");
             result_rows(&outcome.result_set)
@@ -1758,7 +1758,7 @@ fn bench_aql(
                 rt.block_on(async {
                     let start = Instant::now();
                     for _ in 0..iters {
-                        svc.execute_ad_hoc_query(path.aql.clone(), request.clone())
+                        svc.execute_aql(&path.aql, None, &request)
                             .await
                             .expect("the hot path executes");
                     }

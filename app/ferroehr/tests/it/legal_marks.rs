@@ -87,9 +87,10 @@ async fn seed(svc: &FerroEhrService) -> (EhrId, String) {
 /// see.
 async fn population_rows(svc: &FerroEhrService) -> usize {
     let result = svc
-        .execute_ad_hoc_query(
-            "SELECT e/ehr_id/value FROM EHR e".to_owned(),
-            AqlQueryRequest::default(),
+        .execute_aql(
+            "SELECT e/ehr_id/value FROM EHR e",
+            None,
+            &AqlQueryRequest::default(),
         )
         .await
         .expect("population query")
@@ -100,9 +101,10 @@ async fn population_rows(svc: &FerroEhrService) -> usize {
 /// The rows a query scoped to one EHR can see.
 async fn scoped_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
     let result = svc
-        .execute_ad_hoc_query(
-            "SELECT e/ehr_id/value FROM EHR e".to_owned(),
-            AqlQueryRequest {
+        .execute_aql(
+            "SELECT e/ehr_id/value FROM EHR e",
+            None,
+            &AqlQueryRequest {
                 ehr_ids: vec![ehr_id.to_string()],
                 ..AqlQueryRequest::default()
             },

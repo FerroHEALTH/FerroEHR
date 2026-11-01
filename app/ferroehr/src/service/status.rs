@@ -284,6 +284,16 @@ impl StatusError {
             message: fault.message.to_owned(),
         }
     }
+
+    /// The `exception` a query timeout becomes on the status bridge, its
+    /// message tagged with [`QUERY_TIMEOUT_TAG`] so the wire still answers `408`.
+    pub(crate) fn from_timeout(timeout: &Refusal) -> Self {
+        Self {
+            status: ServiceStatus::Exception,
+            source: timeout.shared_source(),
+            message: format!("{QUERY_TIMEOUT_TAG}{}", timeout.message),
+        }
+    }
 }
 
 impl From<Missing> for ServiceStatus {
@@ -338,18 +348,13 @@ impl From<Invalid> for ServiceStatus {
     }
 }
 
-/// Sentinel prefix marking an `exception` [`StatusError`] as a **query-execution
-/// timeout** rather than a generic server fault — the "message-tagged" 408
-/// seam.
+/// Sentinel prefix marking an `exception` [`StatusError`] as a query timeout.
 ///
-/// The query chapter ([`super::query`]) aborts a query that overruns its
-/// configured execution budget and returns
-/// `StatusError::exception(format!("{QUERY_TIMEOUT_TAG}{detail}"))`. The
-/// status model has no timeout status, so the protocol adapter recognises the
-/// tag, strips it and renders `408 Request Timeout`
-/// (`Requests_and_responses.md` §HTTP status codes;
-/// `responses/408_Query.yaml`). The tag is a control-char sentinel, so it can
-/// never collide with a genuine message and is never shown to clients.
+/// The two bridges tag a [`ServiceError::Timeout`](super::error::ServiceError::Timeout)
+/// with it, and the protocol adapter strips it and renders `408`
+/// (`Requests_and_responses.md` §HTTP status codes; `responses/408_Query.yaml`).
+/// A control-char sentinel, so it never collides with a message or reaches a
+/// client.
 pub const QUERY_TIMEOUT_TAG: &str = "\u{1}query-execution-timeout\u{1}";
 
 #[cfg(test)]

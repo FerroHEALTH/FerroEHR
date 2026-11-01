@@ -426,7 +426,7 @@ fn ehr_scope(ehr_id: EhrId) -> AqlQueryRequest {
 /// The `RESULT_SET` rows of a successful query.
 async fn query_rows(svc: &FerroEhrService, aql: &str, ehr_id: EhrId) -> Vec<Value> {
     let outcome = svc
-        .execute_ad_hoc_query(aql.to_owned(), ehr_scope(ehr_id))
+        .execute_aql(aql, None, &ehr_scope(ehr_id))
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"));
     outcome.result_set["rows"]
@@ -437,18 +437,16 @@ async fn query_rows(svc: &FerroEhrService, aql: &str, ehr_id: EhrId) -> Vec<Valu
 
 /// The refusal message of a query the active profile must not answer.
 async fn query_conflict(svc: &FerroEhrService, aql: &str, ehr_id: EhrId) -> String {
-    let refused = svc
-        .execute_ad_hoc_query(aql.to_owned(), ehr_scope(ehr_id))
-        .await;
-    let Err(ferroehr::service::status::StatusError {
-        status: ferroehr::service::status::ServiceStatus::Conflict,
-        message,
-        ..
-    }) = refused
-    else {
+    let refused = svc.execute_aql(aql, None, &ehr_scope(ehr_id)).await;
+    let Err(ServiceError::Conflict(conflict)) = refused else {
         panic!("the stable profile must refuse {aql:?} with a conflict, got {refused:?}");
     };
-    message
+    assert_eq!(
+        conflict.kind,
+        Clash::State,
+        "the profile refusal is the state conflict"
+    );
+    conflict.message
 }
 
 const WHOLE_OBJECT_AQL: &str = "SELECT c FROM EHR e CONTAINS COMPOSITION c";

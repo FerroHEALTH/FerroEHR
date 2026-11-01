@@ -666,6 +666,30 @@ mod tests {
         assert!(full["position"]["end"].is_u64(), "{full}");
     }
 
+    /// The query path raises a timeout as `ServiceError::Timeout`, and the
+    /// wire still answers the `408` of `responses/408_Query.yaml`.
+    #[test]
+    fn a_service_timeout_renders_408_with_clean_detail() {
+        use ferroehr::service::{error::ServiceError, refusal::Refusal};
+        let err = ServiceError::Timeout(Refusal::new((), "query aborted after 5000ms"));
+        let full = full_problem_of(RestError::from(err));
+        assert_eq!(full["type"], format!("{BASE}query-timeout"));
+        assert_eq!(full["status"], 408);
+        assert_eq!(full["detail"], "query aborted after 5000ms");
+    }
+
+    /// An AQL parse refusal raised as a `ServiceError` keeps its type and
+    /// position, as the query path now raises it.
+    #[test]
+    fn an_aql_parse_service_refusal_is_aql_invalid_with_its_position() {
+        let err = openehr_query::parser::parse_str("SELECT e FROM EHR e WHERE").unwrap_err();
+        let err = ferroehr::service::error::ServiceError::bad_request("invalid AQL", err);
+        let full = full_problem_of(RestError::from(err));
+        assert_eq!(full["type"], format!("{BASE}aql-invalid"));
+        assert_eq!(full["status"], 400);
+        assert!(full["position"]["start"].is_u64(), "{full}");
+    }
+
     #[test]
     fn a_processing_restriction_is_its_own_type() {
         use ferroehr::service::status::{ServiceStatus, StatusError};

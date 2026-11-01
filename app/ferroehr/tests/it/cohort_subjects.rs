@@ -32,10 +32,11 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr_index::IndexError;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
 use ferroehr::service::linkage::cohort::{CohortError, CohortPredicate, CohortQueryRequest};
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::Malformed;
 
 use crate::ehr_index_ihe::{
     CLINICAL, OPERATION, RED_ID, answer, red_subject, red_to_blue, service,
@@ -217,10 +218,10 @@ async fn a_predicate_is_refused_under_an_identity_source() {
         matches!(refused, CohortError::IdentityNotHeld),
         "{refused:?}"
     );
-    assert_eq!(
-        StatusError::from(refused).status,
-        ServiceStatus::PreconditionViolation
-    );
+    assert!(matches!(
+        ServiceError::from(refused),
+        ServiceError::BadRequest(r) if r.kind == Malformed::Precondition
+    ));
     assert!(
         pix.received_requests().await.expect("recorded").is_empty(),
         "a refused cohort asks the source nothing"
@@ -270,7 +271,10 @@ async fn a_failing_resolution_fails_the_cohort() {
         matches!(refused, CohortError::Subject(IndexError::IdentitySource(_))),
         "{refused:?}"
     );
-    assert_eq!(StatusError::from(refused).status, ServiceStatus::Exception);
+    assert!(matches!(
+        ServiceError::from(refused),
+        ServiceError::Fault(_)
+    ));
 
     let bare = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_cohort(cohort_config());
@@ -375,7 +379,7 @@ async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
         );
 
         let population = svc
-            .execute_ad_hoc_query(aql.to_owned(), AqlQueryRequest::default())
+            .execute_aql(aql, None, &AqlQueryRequest::default())
             .await
             .expect("the population query runs");
         assert_eq!(
@@ -386,9 +390,10 @@ async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
     }
 
     let named = svc
-        .execute_ad_hoc_query(
-            COHORT_AQL.to_owned(),
-            AqlQueryRequest {
+        .execute_aql(
+            COHORT_AQL,
+            None,
+            &AqlQueryRequest {
                 ehr_ids: vec![hidden.to_string()],
                 ..AqlQueryRequest::default()
             },

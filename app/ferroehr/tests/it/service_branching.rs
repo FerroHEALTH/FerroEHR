@@ -541,10 +541,10 @@ async fn all_versions_returns_the_branch_row_beside_the_trunk() {
         ..AqlQueryRequest::default()
     };
     let result = svc
-        .execute_ad_hoc_query(
-            "SELECT c/uid/value FROM EHR e CONTAINS VERSION v[ALL_VERSIONS] CONTAINS COMPOSITION c"
-                .to_owned(),
-            request,
+        .execute_aql(
+            "SELECT c/uid/value FROM EHR e CONTAINS VERSION v[ALL_VERSIONS] CONTAINS COMPOSITION c",
+            None,
+            &request,
         )
         .await
         .expect("ALL_VERSIONS query")
@@ -567,9 +567,10 @@ async fn all_versions_returns_the_branch_row_beside_the_trunk() {
     // head alone (master06 §The 'Virtual Version Tree': a fork does not
     // supersede the trunk).
     let latest = svc
-        .execute_ad_hoc_query(
-            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c".to_owned(),
-            AqlQueryRequest {
+        .execute_aql(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+            None,
+            &AqlQueryRequest {
                 ehr_ids: vec![target.0.to_string()],
                 ..AqlQueryRequest::default()
             },

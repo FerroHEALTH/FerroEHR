@@ -32,36 +32,14 @@ use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::sql::SqlCtx;
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
-use crate::service::error::{ErrorChain, internal_fault_caused};
+use crate::service::error::{ErrorChain, ServiceError};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
-use crate::service::status::{QUERY_TIMEOUT_TAG, StatusError};
+use crate::service::refusal::{Missing, Refusal};
 use crate::system_log::categories::{AccessedContent, ContentIds};
 
 use super::result_set::{build_params, result_set_json, substitute_params};
 
 impl FerroEhrService {
-    /// `execute_ad_hoc_query` — execute an ad hoc query, supplying the query
-    /// text.
-    ///
-    /// # Errors
-    ///
-    /// - a query that does not parse, an unsupported AQL construct, a path/
-    ///   typing error, an unbound `$parameter`, a REST-vs-AQL paging
-    ///   collision, or a malformed `ehr_id` → precondition (`400`);
-    /// - a listed EHR that does not exist → `ehr_id_does_not_exist`;
-    /// - a whole-object projection that would serve a stored version body the
-    ///   active `spec_profile` cannot express → conflict (`409`), our own
-    ///   extension (`crate::versioning::profile::gate_result_bodies`);
-    /// - a database/assembly failure, or an execution-budget overrun (tagged
-    ///   [`QUERY_TIMEOUT_TAG`], rendered `408` at the wire) → exception.
-    pub async fn execute_ad_hoc_query(
-        &self,
-        aql: String,
-        request: AqlQueryRequest,
-    ) -> Result<QueryOutcome, StatusError> {
-        self.execute_aql(&aql, None, &request).await
-    }
-
     /// `execute_stored_query` — execute a query stored in the definition
     /// service by its qualified name (`version` a semver.org string, latest
     /// when absent).
@@ -70,14 +48,14 @@ impl FerroEhrService {
     ///
     /// - a malformed `version` (`400`), no matching stored query, or a stored
     ///   record with no query text → the definition-store error / exception;
-    /// - otherwise exactly the [`FerroEhrService::execute_ad_hoc_query`]
-    ///   failure conditions (the stored text executes identically).
+    /// - otherwise exactly the [`FerroEhrService::execute_aql`] failure
+    ///   conditions (the stored text executes identically).
     pub async fn execute_stored_query(
         &self,
         qualified_query_name: String,
         version: Option<String>,
         request: AqlQueryRequest,
-    ) -> Result<QueryOutcome, StatusError> {
+    ) -> Result<QueryOutcome, ServiceError> {
         // The stored AQL text resolves through the DEFINITION store by
         // exact/partial SEMVER, or the latest.
         let stored = self
@@ -86,41 +64,44 @@ impl FerroEhrService {
         let aql = stored
             .get("q")
             .and_then(Value::as_str)
-            .ok_or_else(|| {
-                StatusError::exception(format!(
-                    "stored query `{qualified_query_name}` has no query text"
-                ))
-            })?
+            .ok_or_else(|| ServiceError::fault("the stored query has no query text"))?
             .to_owned();
         self.execute_aql(&aql, Some(&qualified_query_name), &request)
             .await
     }
 
-    /// Parses, plans, executes, and assembles an AQL query into an ITS-REST
-    /// `RESULT_SET`; `name` is the stored-query name for the result metadata
-    /// (`None` for an ad-hoc query).
+    /// `execute_ad_hoc_query` — parse, plan, execute and assemble an AQL query
+    /// into an ITS-REST `RESULT_SET`; `name` is the stored-query name for the
+    /// result metadata (`None` for an ad-hoc query).
     ///
     /// Emits `aql_query_duration_seconds{phase}` for `plan` and `execute`, each
     /// recorded only when its phase completes, and `aql_queries_total{outcome}`
-    /// exactly once per call, every failure arm routing through [`Failure`].
+    /// exactly once per call, every failure arm counted on its way out.
     ///
     /// # Errors
     ///
-    /// See [`FerroEhrService::execute_ad_hoc_query`] — this is the shared
-    /// orchestration both public calls delegate to.
-    pub(crate) async fn execute_aql(
+    /// - a query that does not parse, an unsupported AQL construct, a path/
+    ///   typing error, an unbound `$parameter`, a REST-vs-AQL paging
+    ///   collision, or a malformed `ehr_id` → precondition (`400`);
+    /// - a listed EHR that does not exist → `404`;
+    /// - a whole-object projection that would serve a stored version body the
+    ///   active `spec_profile` cannot express → conflict (`409`), our own
+    ///   extension (`crate::versioning::profile::gate_result_bodies`);
+    /// - an execution-budget overrun → [`ServiceError::Timeout`] (`408`);
+    /// - a database or assembly failure → a server fault.
+    pub async fn execute_aql(
         &self,
         aql: &str,
         name: Option<&str>,
         request: &AqlQueryRequest,
-    ) -> Result<QueryOutcome, StatusError> {
+    ) -> Result<QueryOutcome, ServiceError> {
         let outcome = self.execute_aql_inner(aql, name, request).await;
         let label = match &outcome {
             Ok(_) => "ok",
             Err(failure) => failure.outcome,
         };
         count_query(label);
-        outcome.map_err(|failure| failure.error)
+        outcome.map_err(|failure| *failure.error)
     }
 
     /// The fallible body of [`FerroEhrService::execute_aql`]: every failure
@@ -162,7 +143,7 @@ impl FerroEhrService {
         // No openEHR spec governs AQL over a demographic repository: our own
         // design.
         if ir.domain == QueryDomain::Demographic && !request.ehr_ids.is_empty() {
-            return Err(Failure::analysis(StatusError::precondition(
+            return Err(Failure::analysis(ServiceError::precondition(
                 "a query rooted at a demographic class reads no EHR, so an `ehr_id` scope \
                  cannot apply to it; send the query without one"
                     .to_owned(),
@@ -281,7 +262,7 @@ impl FerroEhrService {
         // Miss: full parse → terminology expansion → lowering.
         let mut ast = parse_str(aql).map_err(|e| {
             let message = format!("invalid AQL: {}", ErrorChain::new(&e));
-            Failure::analysis(StatusError::precondition(message).with_source(e))
+            Failure::analysis(ServiceError::bad_request(message, e))
         })?;
         // Semantic-analysis pre-pass: resolve every `TERMINOLOGY('expand', …)`
         // used in a `matches` operand through the terminology-service seam
@@ -329,7 +310,7 @@ impl FerroEhrService {
                           is not part of the wire contract"
             )]
             let uuid = Uuid::parse_str(id).map_err(|_| {
-                Failure::analysis(StatusError::precondition(format!("invalid ehr_id `{id}`")))
+                Failure::analysis(ServiceError::precondition(format!("invalid ehr_id `{id}`")))
             })?;
             ids.push(EhrId(uuid));
         }
@@ -348,19 +329,20 @@ impl FerroEhrService {
                 .fetch_all(
                     &mut *acquire(&self.pool)
                         .await
-                        .map_err(|e| Failure::analysis(StatusError::from(e)))?,
+                        .map_err(|e| Failure::analysis(ServiceError::Acquire(e)))?,
                 )
                 .await
                 .map_err(|e| {
-                    Failure::analysis(internal_fault_caused("resolve the requested ehr_ids", &e))
+                    Failure::analysis(ServiceError::internal("resolve the requested ehr_ids", e))
                 })?
                 .into_iter()
                 .map(|id| id.0)
                 .collect();
         if let Some(missing) = ids.iter().find(|id| !present.contains(&id.0)) {
-            return Err(Failure::analysis(StatusError::ehr_not_found(format!(
-                "no EHR with id {missing}"
-            ))));
+            return Err(Failure::analysis(ServiceError::not_found(
+                Missing::Ehr,
+                format!("no EHR with id {missing}"),
+            )));
         }
         Ok(ids)
     }
@@ -419,16 +401,16 @@ pub(super) fn accessed_content(
 /// counts + returns uniformly, exactly once.
 pub(super) struct Failure {
     outcome: &'static str,
-    error: StatusError,
+    error: Box<ServiceError>,
 }
 
 impl Failure {
     /// A failure with the fixed `analysis_error` label (client preconditions
     /// and pre-execution service faults — the historical bookkeeping).
-    pub(super) fn analysis(error: StatusError) -> Self {
+    pub(super) fn analysis(error: ServiceError) -> Self {
         Self {
             outcome: "analysis_error",
-            error,
+            error: Box::new(error),
         }
     }
 
@@ -438,7 +420,7 @@ impl Failure {
     pub(super) fn plan(e: AqlError) -> Self {
         Self {
             outcome: outcome_of(&e),
-            error: map_plan_error(e),
+            error: Box::new(map_plan_error(e)),
         }
     }
 
@@ -447,22 +429,23 @@ impl Failure {
     pub(super) fn exec(e: AqlError) -> Self {
         Self {
             outcome: outcome_of(&e),
-            error: map_exec_error(e),
+            error: Box::new(map_exec_error(e)),
         }
     }
 
-    /// The execution-budget overrun: an `exception` [`StatusError`] whose message
-    /// is prefixed with [`QUERY_TIMEOUT_TAG`] so the REST adapter renders it
-    /// as `408 Request Timeout` (`Requests_and_responses.md` §HTTP status
-    /// codes). The tag is stripped at the wire, leaving the clean detail.
+    /// The execution-budget overrun, the wire's `408 Request Timeout`
+    /// (`Requests_and_responses.md` §HTTP status codes).
     pub(super) fn timeout(budget: Duration) -> Self {
         Self {
             outcome: "exec_error",
-            error: StatusError::exception(format!(
-                "{QUERY_TIMEOUT_TAG}query execution exceeded the maximum time of {}ms; \
-                 the server aborted the query",
-                budget.as_millis()
-            )),
+            error: Box::new(ServiceError::Timeout(Refusal::new(
+                (),
+                format!(
+                    "query execution exceeded the maximum time of {}ms; the server aborted \
+                     the query",
+                    budget.as_millis()
+                ),
+            ))),
         }
     }
 }
@@ -483,7 +466,7 @@ pub(super) fn compose_paging(
     request: &AqlQueryRequest,
 ) -> Result<(Option<i64>, Option<i64>), Failure> {
     if request.fetch.is_some() && limit_is_top {
-        return Err(Failure::analysis(StatusError::precondition(
+        return Err(Failure::analysis(ServiceError::precondition(
             "the `fetch` query parameter cannot be combined with the deprecated AQL TOP \
              modifier (ITS-REST query Request.md §Common Headers and Query Parameters)"
                 .to_owned(),
@@ -492,14 +475,14 @@ pub(super) fn compose_paging(
     if let Some(f) = request.fetch
         && f < 0
     {
-        return Err(Failure::analysis(StatusError::precondition(format!(
+        return Err(Failure::analysis(ServiceError::precondition(format!(
             "the `fetch` query parameter must be non-negative, got {f}"
         ))));
     }
     if let Some(o) = request.offset
         && o < 0
     {
-        return Err(Failure::analysis(StatusError::precondition(format!(
+        return Err(Failure::analysis(ServiceError::precondition(format!(
             "the `offset` query parameter must be non-negative, got {o}"
         ))));
     }
@@ -541,7 +524,7 @@ pub(super) fn apply_result_ceiling(
     match (limit, ceiling) {
         (None, Some(ceiling)) => Ok(Some(ceiling)),
         (Some(asked), Some(ceiling)) if asked > ceiling => {
-            Err(Failure::analysis(StatusError::precondition(format!(
+            Err(Failure::analysis(ServiceError::precondition(format!(
                 "the requested page of {asked} rows exceeds the largest page this server \
                  serves ({ceiling} rows, `query.max_result_rows`); page with `offset` and \
                  a `fetch` at or below it"
@@ -583,10 +566,10 @@ fn record_phase(phase: &'static str, start: Instant) {
 /// Map a planning error to an ITS-REST status: an unsupported feature, a
 /// path/typing error, or an unrenderable construct all mean the query as
 /// written cannot be served → `400 Bad Request` (ITS-REST `400_QUERY.yaml`).
-fn map_plan_error(e: AqlError) -> StatusError {
+fn map_plan_error(e: AqlError) -> ServiceError {
     match e {
         AqlError::Feature(_) | AqlError::Analysis(_) | AqlError::Sql(_) => {
-            StatusError::precondition(e.to_string()).with_source(e)
+            ServiceError::bad_request(e.to_string(), e)
         }
         AqlError::Exec(inner) => map_exec_error(inner.into()),
     }
@@ -603,7 +586,7 @@ fn map_plan_error(e: AqlError) -> StatusError {
 /// schema objects the generated SQL touched, an assembly failure names the
 /// internal node-row shape, and a missing column alias names a generated SQL
 /// alias — server-internal detail that goes to `tracing` instead
-/// ([`internal_fault_caused`]).
+/// ([`ServiceError::internal`]).
 /// The refusal of a value the query compares that the database cannot cast to
 /// the type of the path it is compared with. The driver error does not say
 /// whether the value was written in the query or bound from
@@ -612,7 +595,7 @@ const CAST_REFUSAL: &str = "a value in the query cannot be coerced to the type i
                             compares against (an invalid date/time or text representation); \
                             correct the value";
 
-fn map_exec_error(e: AqlError) -> StatusError {
+fn map_exec_error(e: AqlError) -> ServiceError {
     match e {
         // A data-exception the DRIVER raises here is a value of the query (a
         // literal or a bound `query_parameters` value) failing a text→type
@@ -626,7 +609,7 @@ fn map_exec_error(e: AqlError) -> StatusError {
                 Some("22007" | "22008" | "22P02")
             ) =>
         {
-            StatusError::precondition(CAST_REFUSAL).with_source(db)
+            ServiceError::bad_request(CAST_REFUSAL, db)
         }
         // Class 54 `program_limit_exceeded` (`54001` statement_too_complex,
         // PostgreSQL Appendix A) is the query's own shape outgrowing a database
@@ -637,49 +620,60 @@ fn map_exec_error(e: AqlError) -> StatusError {
                 .and_then(sqlx::error::DatabaseError::code)
                 .is_some_and(|code| code.starts_with("54")) =>
         {
-            StatusError::precondition(
+            ServiceError::bad_request(
                 "the query is too complex for the database to run; split it or \
                  write a long OR over one path as MATCHES {...}",
+                db,
             )
-            .with_source(db)
         }
         // No connection could be obtained: no statement ran, so the request can
         // be repeated (`503` plus `Retry-After`).
         AqlError::Exec(
             ExecError::Acquire(e)
             | ExecError::Assembly(crate::storage::error::StorageError::Acquire(e)),
-        ) => StatusError::from(e),
-        AqlError::Exec(ExecError::Database(db)) => crate::storage::error::classify_sqlx(&db),
+        ) => ServiceError::Acquire(e),
+        AqlError::Exec(ExecError::Database(db)) => ServiceError::Database(db),
         AqlError::Exec(ExecError::Assembly(a)) => {
-            internal_fault_caused("assemble the RESULT_SET", &a)
+            ServiceError::internal("assemble the RESULT_SET", a)
         }
-        AqlError::Exec(ExecError::Terminology(msg)) => StatusError::exception(msg),
+        e @ AqlError::Exec(ExecError::Terminology(_)) => ServiceError::fault_caused(
+            "the terminology service failed while the query was being planned",
+            e,
+        ),
         // The `spec_profile` refusal is already the `conflict` the resource
         // reads carry (→ `409`), so it crosses unchanged: same cause, same
         // status, same remedy, whichever route reached the stored body.
-        AqlError::Exec(ExecError::Profile(e)) => StatusError::from(e),
+        AqlError::Exec(ExecError::Profile(e)) => e,
         AqlError::Exec(e @ ExecError::MissingColumnAlias { .. }) => {
-            internal_fault_caused("bind a RESULT_SET column to its generated SQL alias", &e)
+            ServiceError::internal("bind a RESULT_SET column to its generated SQL alias", e)
         }
         AqlError::Feature(_) | AqlError::Analysis(_) | AqlError::Sql(_) => {
-            StatusError::precondition(e.to_string()).with_source(e)
+            ServiceError::bad_request(e.to_string(), e)
         }
     }
 }
 
-impl From<AqlError> for StatusError {
-    /// Bridges an AQL-engine failure to the call-status model as a query
-    /// execution reports it (`map_exec_error`): a connection that cannot be
+impl From<AqlError> for crate::service::status::StatusError {
+    /// An AQL-engine failure as a query execution reports it, on the status
+    /// bridge the access resolvers still read: a connection that cannot be
     /// obtained is `service_overloaded` (`503` plus `Retry-After`).
     fn from(e: AqlError) -> Self {
-        map_exec_error(e)
+        Self::from(map_exec_error(e))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use openehr_its::rest::runtime::ApiError;
+
     use super::{AqlError, ExecError, map_exec_error};
-    use crate::service::status::ServiceStatus;
+    use crate::service::error::ServiceError;
+    use crate::service::refusal::Malformed;
+
+    /// Whether `error` answers the wire's `503` (plus `Retry-After`).
+    fn sheds(error: ServiceError) -> bool {
+        matches!(ApiError::from(error), ApiError::ServiceUnavailable(_))
+    }
 
     /// The query path's database leg is classified, not blanket-500: a
     /// pool-acquire timeout sheds as `service_overloaded` (→ 503 +
@@ -691,24 +685,23 @@ mod tests {
         let shed = map_exec_error(AqlError::Exec(ExecError::Database(
             sqlx::Error::PoolTimedOut,
         )));
-        assert_eq!(
-            shed.status,
-            ServiceStatus::ServiceOverloaded,
-            "a pool-acquire timeout on the query path sheds, got {shed:?}"
+        assert!(
+            matches!(&shed, ServiceError::Database(_)) && sheds(shed),
+            "a pool-acquire timeout on the query path sheds"
         );
 
         let fault = map_exec_error(AqlError::Exec(ExecError::Database(
             sqlx::Error::RowNotFound,
         )));
-        assert_eq!(
-            fault.status,
-            ServiceStatus::Exception,
-            "an unclassified driver failure is still a server fault, got {fault:?}"
-        );
-        assert!(
-            !fault.message.contains("RowNotFound"),
-            "the driver diagnostic never reaches the wire body, got {fault:?}"
-        );
+        match ApiError::from(fault) {
+            ApiError::Internal(message) => assert!(
+                !message.contains("RowNotFound"),
+                "the driver diagnostic never reaches the wire body, got {message}"
+            ),
+            other => {
+                panic!("an unclassified driver failure is still a server fault, got {other:?}")
+            }
+        }
     }
 
     /// A cast the database refuses is the query's fault (`400`), and its
@@ -720,15 +713,14 @@ mod tests {
             let err = map_exec_error(AqlError::Exec(ExecError::Database(
                 crate::storage::error::tests::db_error(sqlstate),
             )));
-            assert_eq!(
-                err.status,
-                ServiceStatus::PreconditionViolation,
-                "{sqlstate}"
-            );
+            let ServiceError::BadRequest(refusal) = err else {
+                panic!("{sqlstate}: a cast refusal is a precondition, got {err:?}");
+            };
+            assert_eq!(refusal.kind, Malformed::Precondition, "{sqlstate}");
             assert!(
-                !err.message.contains("parameter"),
+                !refusal.message.contains("parameter"),
                 "{sqlstate}: {}",
-                err.message
+                refusal.message
             );
         }
     }
@@ -741,12 +733,23 @@ mod tests {
             let err = map_exec_error(AqlError::Exec(ExecError::Database(
                 crate::storage::error::tests::db_error(sqlstate),
             )));
-            assert_eq!(
-                err.status,
-                ServiceStatus::PreconditionViolation,
-                "{sqlstate}"
+            assert!(
+                matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
+                "{sqlstate}: got {err:?}"
             );
         }
+    }
+
+    /// An overrun of the execution budget is the timeout refusal, and its
+    /// message names the budget.
+    #[test]
+    fn an_overrun_budget_is_a_timeout_naming_it() {
+        let failure = super::Failure::timeout(std::time::Duration::from_millis(250));
+        assert!(
+            matches!(&*failure.error, ServiceError::Timeout(r) if r.message.contains("250ms")),
+            "got {:?}",
+            failure.error
+        );
     }
 
     /// A closed pool: every acquire on it fails before any statement runs.
@@ -787,10 +790,7 @@ mod tests {
             matches!(failure, AqlError::Exec(ExecError::Acquire(_))),
             "the failure carries the acquire phase, got {failure:?}"
         );
-        assert_eq!(
-            map_exec_error(failure).status,
-            ServiceStatus::ServiceOverloaded
-        );
+        assert!(sheds(map_exec_error(failure)));
         let collected = crate::aql::exec::collect_scope(&pool, &ir, &params, &ctx)
             .await
             .expect_err("the scope collection acquires too");
@@ -809,6 +809,6 @@ mod tests {
         let err = map_exec_error(AqlError::Exec(ExecError::Assembly(
             crate::storage::error::StorageError::Acquire(failure),
         )));
-        assert_eq!(err.status, ServiceStatus::ServiceOverloaded);
+        assert!(matches!(&err, ServiceError::Acquire(_)) && sheds(err));
     }
 }

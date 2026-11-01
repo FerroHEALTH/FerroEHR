@@ -36,8 +36,9 @@ use crate::terminology_wire::{operation, parameter};
 use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::ServiceStatus;
+use ferroehr::service::refusal::Malformed;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 
@@ -145,7 +146,7 @@ async fn create_coded(
 }
 
 async fn run_aql(svc: &FerroEhrService, aql: &str) -> Value {
-    svc.execute_ad_hoc_query(aql.to_owned(), AqlQueryRequest::default())
+    svc.execute_aql(aql, None, &AqlQueryRequest::default())
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
         .result_set
@@ -217,10 +218,13 @@ async fn terminology_expand_unknown_service_is_bad_request() {
          WHERE o/{CODE_PATH} matches TERMINOLOGY('expand', 'bogus.terminology.api', 'x')"
     );
     let err = svc
-        .execute_ad_hoc_query(aql, AqlQueryRequest::default())
+        .execute_aql(&aql, None, &AqlQueryRequest::default())
         .await
         .expect_err("unknown service_api must be rejected");
-    assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
+    assert!(
+        matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
+        "{err:?}"
+    );
 }
 
 #[tokio::test]
@@ -237,10 +241,13 @@ async fn terminology_expand_unknown_value_set_is_bad_request() {
          WHERE o/{CODE_PATH} matches TERMINOLOGY('expand', 'openehr', 'no_such_group')"
     );
     let err = svc
-        .execute_ad_hoc_query(aql, AqlQueryRequest::default())
+        .execute_aql(&aql, None, &AqlQueryRequest::default())
         .await
         .expect_err("unknown value set must be rejected");
-    assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
+    assert!(
+        matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
+        "{err:?}"
+    );
 }
 
 // ── the FHIR provider (wiremock, no network) ─────────────────────────────────

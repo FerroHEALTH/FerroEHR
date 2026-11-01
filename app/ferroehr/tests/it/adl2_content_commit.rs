@@ -574,7 +574,7 @@ async fn one_row(svc: &FerroEhrService, ehr: EhrId, aql: &str) -> Value {
         ..Default::default()
     };
     let result = svc
-        .execute_ad_hoc_query(aql.to_owned(), request)
+        .execute_aql(aql, None, &request)
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
         .result_set;

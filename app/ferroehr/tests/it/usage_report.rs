@@ -407,7 +407,7 @@ async fn no_route_parameter_query_text_or_licence_id_reaches_the_payload() {
     let service = FerroEhrService::new(&DomainPools::from_shared(&db.pool()));
     let aql = "SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = 'SENTINEL-AQL-LITERAL'";
     service
-        .execute_ad_hoc_query(aql.to_owned(), AqlQueryRequest::default())
+        .execute_aql(aql, None, &AqlQueryRequest::default())
         .await
         .expect("the query executes");
 

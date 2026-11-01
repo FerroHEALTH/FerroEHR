@@ -611,9 +611,10 @@ async fn a_dropped_stream_stops_the_sweep_where_it_stood() {
 /// sees the rebuild's actual output.
 async fn aql_composition_names(svc: &FerroEhrService) -> Vec<String> {
     let result = svc
-        .execute_ad_hoc_query(
-            "SELECT c/name/value FROM COMPOSITION c".to_owned(),
-            ferroehr::service::query::request::AqlQueryRequest::default(),
+        .execute_aql(
+            "SELECT c/name/value FROM COMPOSITION c",
+            None,
+            &ferroehr::service::query::request::AqlQueryRequest::default(),
         )
         .await
         .expect("ad-hoc AQL")

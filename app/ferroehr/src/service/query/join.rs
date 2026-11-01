@@ -38,10 +38,8 @@ use crate::aql::join::{JoinPlan, Side};
 use crate::aql::sql::{EhrAccessScope, EhrScopeKind, SqlCtx};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::{internal_fault, internal_fault_caused};
-use crate::service::linkage::LinkageError;
+use crate::service::error::ServiceError;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
-use crate::service::status::StatusError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -93,7 +91,7 @@ impl FerroEhrService {
         job: &JoinRequest<'_>,
     ) -> Result<QueryOutcome, Failure> {
         if !job.request.ehr_ids.is_empty() {
-            return Err(Failure::analysis(StatusError::precondition(
+            return Err(Failure::analysis(ServiceError::precondition(
                 "a query rooted at a demographic class names its EHRs through the party, so an \
                  `ehr_id` scope cannot apply to it; send the query without one"
                     .to_owned(),
@@ -236,7 +234,7 @@ impl FerroEhrService {
         let mut rows = Vec::with_capacity(page.len());
         for row in page {
             let ehr = Uuid::parse_str(row.ehr).map_err(|e| {
-                Failure::analysis(internal_fault_caused("read the joined row's EHR id", &e))
+                Failure::analysis(ServiceError::internal("read the joined row's EHR id", e))
             })?;
             match served.iter_mut().find(|(id, _)| *id == ehr) {
                 Some((_, count)) => *count += 1,
@@ -321,7 +319,7 @@ impl FerroEhrService {
             u64::try_from(pairs.len()).unwrap_or(u64::MAX),
             true,
         )
-        .map_err(|e| Failure::analysis(linkage_failure(e)))?;
+        .map_err(Failure::analysis)?;
         Ok(pairs)
     }
 
@@ -343,7 +341,7 @@ impl FerroEhrService {
             crate::storage::ehr_repo::ehrs_by_subject_ids(&self.pool, &ids, subject_types(root))
                 .await
                 .map_err(|e| {
-                    Failure::analysis(internal_fault_caused("read the EHRs of the subjects", &e))
+                    Failure::analysis(ServiceError::internal("read the EHRs of the subjects", e))
                 })?;
         found
             .into_iter()
@@ -351,7 +349,7 @@ impl FerroEhrService {
                 Uuid::parse_str(&subject)
                     .map(|party| (VoId(party), ehr))
                     .map_err(|e| {
-                        Failure::analysis(internal_fault_caused("read a matched subject id", &e))
+                        Failure::analysis(ServiceError::internal("read a matched subject id", e))
                     })
             })
             .collect()
@@ -361,9 +359,9 @@ impl FerroEhrService {
     /// naming how many parties the served rows came from.
     ///
     /// # Errors
-    /// [`StatusError`] when the record is refused under `fail_mode = "closed"`;
+    /// [`ServiceError::Unrecorded`] when the record is refused under `fail_mode = "closed"`;
     /// the caller withholds its result.
-    fn record_party_query(&self, parties: u64) -> Result<(), StatusError> {
+    fn record_party_query(&self, parties: u64) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -377,7 +375,7 @@ impl FerroEhrService {
         event.result_count = Some(parties);
         crate::service::linkage::stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).map_err(StatusError::from)
+        self.record_access(event)
     }
 }
 
@@ -404,9 +402,8 @@ fn lower_half(
     let ir = aql::lower_query(half, profile).map_err(Failure::plan)?;
     aql::check_params(&ir, params).map_err(Failure::plan)?;
     if ir.domain != domain {
-        return Err(Failure::analysis(internal_fault(
-            "plan a joined query",
-            &"a half lowered to the other domain",
+        return Err(Failure::analysis(ServiceError::exception(
+            "plan a joined query: a half lowered to the other domain",
         )));
     }
     Ok(ir)
@@ -418,7 +415,7 @@ fn refuse_above(ceiling: Option<i64>, rows: usize, what: &str) -> Result<(), Fai
         return Ok(());
     };
     if i64::try_from(rows).unwrap_or(i64::MAX) > ceiling {
-        return Err(Failure::analysis(StatusError::precondition(format!(
+        return Err(Failure::analysis(ServiceError::precondition(format!(
             "the {what} half of a query that joins a demographic root to its EHR matches more \
              than {ceiling} rows (`query.max_result_rows`); narrow it with a WHERE condition"
         ))));
@@ -435,9 +432,9 @@ fn party_ids(rows: &[Vec<Value>], column: usize) -> Result<Vec<VoId>, Failure> {
             let uid = row.get(column).and_then(Value::as_str).unwrap_or_default();
             let object = uid.split("::").next().unwrap_or_default();
             Uuid::parse_str(object).map(VoId).map_err(|e| {
-                Failure::analysis(internal_fault_caused(
+                Failure::analysis(ServiceError::internal(
                     "read a party row's versioned-object id",
-                    &e,
+                    e,
                 ))
             })
         })
@@ -455,9 +452,8 @@ fn join_rows<'a>(
     let mut by_ehr: BTreeMap<&'a str, Vec<usize>> = BTreeMap::new();
     for (i, row) in clinical.iter().enumerate() {
         let ehr = row.get(ehr_column).and_then(Value::as_str).ok_or_else(|| {
-            Failure::analysis(internal_fault(
-                "read a clinical row's EHR id",
-                &"the hidden EHR column is not a string",
+            Failure::analysis(ServiceError::exception(
+                "read a clinical row's EHR id: the hidden EHR column is not a string",
             ))
         })?;
         by_ehr.entry(ehr).or_default().push(i);
@@ -561,13 +557,5 @@ fn empty_result() -> QueryResult {
         origin_count: 0,
         served_content: Vec::new(),
         constraints: crate::system_log::categories::QueryConstraints::default(),
-    }
-}
-
-/// A linkage failure as the query surface reports it: the refused access
-/// record keeps its own status.
-fn linkage_failure(error: LinkageError) -> StatusError {
-    match error {
-        LinkageError::Unrecorded(e) => e,
     }
 }
