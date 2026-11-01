@@ -490,19 +490,19 @@ mod tests {
             None,
             r#"{"status":422,"detail":"fails"}"#,
         ));
-        assert!(matches!(
-            bare,
-            Err(crate::error::ViewerError::Cdr { status: 422, .. })
-        ));
+        assert_eq!(
+            bare.map_err(|refused| refused.status_code()),
+            Err(Some(http::StatusCode::UNPROCESSABLE_ENTITY))
+        );
         let duplicate = adl2_upload_answer(answer(
             http::StatusCode::CONFLICT,
             None,
             None,
             r#"{"status":409,"detail":"the template is already stored"}"#,
         ));
-        assert!(matches!(
-            duplicate,
-            Err(crate::error::ViewerError::Cdr { status: 409, .. })
-        ));
+        assert_eq!(
+            duplicate.map_err(|refused| refused.status_code()),
+            Err(Some(http::StatusCode::CONFLICT))
+        );
     }
 }
