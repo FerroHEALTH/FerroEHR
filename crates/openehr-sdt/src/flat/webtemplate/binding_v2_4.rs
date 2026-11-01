@@ -15,8 +15,6 @@
 //! IHTSDO form (AOM2 `master01-preface.adoc`), `http://openehr.org/id/433` for
 //! the openEHR term `433`.
 
-use std::collections::BTreeMap;
-
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 
 /// The terminology an `@ttttt` operational binding names on a constraint,
@@ -32,11 +30,14 @@ pub(super) fn split_operational(constraint: &str) -> (&str, Option<&str>) {
 /// The admitted at-codes written as the terms they are bound to: the
 /// terminology and one bound code per at-code, in order.
 ///
-/// The terminology an `@ttttt` operational binding names wins; otherwise the
-/// one terminology that binds every admitted code, and `openehr` among
-/// several. `None` keeps the local codes: no binding, or a binding that
-/// leaves an admitted code unbound (AOM2 `master04.2` §"Terminology Code
-/// Resolution": at-codes then occur in real data).
+/// Two bindings substitute: the one an `@ttttt` operational binding names
+/// (ADL2 `master04.5-cadl_primitive_types.adoc`), and an `openehr` binding,
+/// whose term the RM requires where it codes an RM attribute (RM
+/// `COMPOSITION` invariant `Category_validity`, `EVENT_CONTEXT` invariant
+/// `Setting_valid`). Any other binding keeps the local at-codes, the default
+/// ADL2 `master08-terminology_integration.adoc` §"From Constraints to Concrete
+/// Codes in Data" names, as does a binding that leaves an admitted code
+/// unbound.
 pub(super) fn bound_codes<'t>(
     term: &'t ArchetypeTerminology,
     operational: Option<&str>,
@@ -45,32 +46,19 @@ pub(super) fn bound_codes<'t>(
     if codes.is_empty() {
         return None;
     }
-    let bindings = term.term_bindings.as_ref()?;
-    let covering = |targets: &BTreeMap<String, String>| -> Option<Vec<String>> {
-        codes
-            .iter()
-            .map(|code| targets.get(code).and_then(|uri| bound_term_code(uri)))
-            .collect()
-    };
-    if let Some(named) = operational {
-        let (terminology, targets) = bindings
-            .iter()
-            .find(|(terminology, _)| terminology.eq_ignore_ascii_case(named))?;
-        return covering(targets).map(|bound| (terminology.as_str(), bound));
-    }
-    let mut full: Vec<(&str, Vec<String>)> = bindings
+    // NOTE: ADL2 master08 §"From Constraints to Concrete Codes in Data" makes
+    // substitution a choice; only `@ttttt` and an RM-required `openehr` code take it.
+    let named = operational.unwrap_or("openehr");
+    let (terminology, targets) = term
+        .term_bindings
+        .as_ref()?
         .iter()
-        .filter_map(|(terminology, targets)| {
-            covering(targets).map(|bound| (terminology.as_str(), bound))
-        })
-        .collect();
-    if full.len() == 1 {
-        return full.pop();
-    }
-    // NOTE: AOM2 master04.2 §"Terminology Code Resolution" names no winner among
-    // several full bindings; preferring `openehr` is our own design.
-    full.into_iter()
-        .find(|(terminology, _)| terminology.eq_ignore_ascii_case("openehr"))
+        .find(|(terminology, _)| terminology.eq_ignore_ascii_case(named))?;
+    let bound = codes
+        .iter()
+        .map(|code| targets.get(code).and_then(|uri| bound_term_code(uri)))
+        .collect::<Option<Vec<_>>>()?;
+    Some((terminology.as_str(), bound))
 }
 
 /// The code a term-binding URI names: the last segment after `/id/`, as in
@@ -84,6 +72,8 @@ fn bound_term_code(uri: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use super::*;
 
     fn terminology(bindings: &[(&str, &[(&str, &str)])]) -> ArchetypeTerminology {
@@ -124,12 +114,24 @@ mod tests {
 
     #[test]
     fn a_partial_binding_keeps_the_local_codes() {
-        let term = terminology(&[("snomed_ct", &[("at1", "http://snomed.info/id/1")])]);
+        let term = terminology(&[("openehr", &[("at1", "http://openehr.org/id/433")])]);
         assert_eq!(bound_codes(&term, None, &codes(&["at1", "at2"])), None);
     }
 
     #[test]
-    fn openehr_wins_among_several_full_bindings_and_an_operational_one_wins_over_both() {
+    fn a_binding_other_than_openehr_keeps_the_local_code_unless_named() {
+        let term = terminology(&[("snomed_ct", &[("at1", "http://snomed.info/id/7")])]);
+        let at1 = codes(&["at1"]);
+        assert_eq!(bound_codes(&term, None, &at1), None);
+        assert_eq!(
+            bound_codes(&term, Some("snomed_ct"), &at1),
+            Some(("snomed_ct", codes(&["7"])))
+        );
+        assert_eq!(bound_codes(&term, Some("loinc"), &at1), None);
+    }
+
+    #[test]
+    fn an_operational_binding_wins_over_openehr() {
         let term = terminology(&[
             ("openehr", &[("at1", "http://openehr.org/id/433")]),
             ("snomed_ct", &[("at1", "http://snomed.info/id/7")]),
@@ -143,7 +145,6 @@ mod tests {
             bound_codes(&term, Some("snomed_ct"), &at1),
             Some(("snomed_ct", codes(&["7"])))
         );
-        assert_eq!(bound_codes(&term, Some("loinc"), &at1), None);
     }
 
     #[test]
