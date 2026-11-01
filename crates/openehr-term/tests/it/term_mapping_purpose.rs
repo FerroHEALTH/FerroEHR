@@ -17,7 +17,7 @@ use openehr_term::bundle::openehr;
 #[test]
 fn specterm_31_interoperability_is_a_term_mapping_purpose() {
     let bundle = openehr();
-    assert!(bundle.is_valid_term_mapping_purpose("672"));
+    assert!(bundle.is_valid_code("term_mapping_purpose", "672"));
     assert_eq!(
         bundle.rubric("term_mapping_purpose", "672", "en"),
         Some("interoperability")
@@ -30,5 +30,5 @@ fn specterm_31_interoperability_is_a_term_mapping_purpose() {
             "672 has a rubric in {language}"
         );
     }
-    assert!(!bundle.is_valid_term_mapping_purpose("673"));
+    assert!(!bundle.is_valid_code("term_mapping_purpose", "673"));
 }

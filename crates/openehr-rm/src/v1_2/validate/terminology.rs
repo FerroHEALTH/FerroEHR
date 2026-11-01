@@ -91,19 +91,19 @@ impl Group {
     #[must_use]
     pub fn is_valid(self, t: &OpenehrTerminology, code: &str) -> bool {
         match self {
-            Group::CompositionCategory => t.is_valid_composition_category(code),
-            Group::Setting => t.is_valid_setting(code),
-            Group::NullFlavour => t.is_valid_null_flavour(code),
-            Group::InstructionState => t.is_valid_instruction_state(code),
-            Group::InstructionTransition => t.is_valid_instruction_transition(code),
-            Group::ParticipationFunction => t.is_valid_participation_function(code),
-            Group::ParticipationMode => t.is_valid_participation_mode(code),
-            Group::EventMathFunction => t.is_valid_event_math_function(code),
-            Group::TermMappingPurpose => t.is_valid_term_mapping_purpose(code),
-            Group::AuditChangeType => t.is_valid_audit_change_type(code),
-            Group::AttestationReason => t.is_valid_attestation_reason(code),
-            Group::SubjectRelationship => t.is_valid_subject_relationship(code),
-            Group::VersionLifecycleState => t.is_valid_version_lifecycle_state(code),
+            Group::CompositionCategory => t.is_valid_code("composition_category", code),
+            Group::Setting => t.is_valid_code("setting", code),
+            Group::NullFlavour => t.is_valid_code("null_flavours", code),
+            Group::InstructionState => t.is_valid_code("instruction_states", code),
+            Group::InstructionTransition => t.is_valid_code("instruction_transitions", code),
+            Group::ParticipationFunction => t.is_valid_code("participation_function", code),
+            Group::ParticipationMode => t.is_valid_code("participation_mode", code),
+            Group::EventMathFunction => t.is_valid_code("event_math_function", code),
+            Group::TermMappingPurpose => t.is_valid_code("term_mapping_purpose", code),
+            Group::AuditChangeType => t.is_valid_code("audit_change_type", code),
+            Group::AttestationReason => t.is_valid_code("attestation_reason", code),
+            Group::SubjectRelationship => t.is_valid_code("subject_relationship", code),
+            Group::VersionLifecycleState => t.is_valid_code("version_lifecycle_state", code),
         }
     }
 
@@ -155,10 +155,10 @@ impl CodeSet {
     #[must_use]
     pub fn is_valid(self, t: &OpenehrTerminology, code: &str) -> bool {
         match self {
-            CodeSet::Languages => t.is_valid_language(code),
-            CodeSet::Countries => t.is_valid_country(code),
-            CodeSet::CharacterSets => t.is_valid_character_set(code),
-            CodeSet::MediaTypes => t.is_valid_media_type(code),
+            CodeSet::Languages => t.is_valid_external_code("languages", code),
+            CodeSet::Countries => t.is_valid_external_code("countries", code),
+            CodeSet::CharacterSets => t.is_valid_external_code("character_sets", code),
+            CodeSet::MediaTypes => t.is_valid_external_code("media_types", code),
             CodeSet::NormalStatuses => t.is_valid_normal_status(code),
             // No dedicated convenience method: check the internal code set directly.
             CodeSet::CompressionAlgorithms => t

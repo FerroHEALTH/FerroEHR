@@ -229,7 +229,7 @@ pub(super) fn check_dv_quantity(c: &CDvQuantity, node_id: &str) -> Result<(), Ru
         // placeholder is "no constraint", not a foreign code.
         && !property.code_string.is_empty()
         && property.code_string != "0"
-        && !openehr_term::bundle::openehr().is_valid_property(&property.code_string)
+        && !openehr_term::bundle::openehr().is_valid_code("property", &property.code_string)
     {
         return Err(RuleViolation::new(
             "Property_valid",

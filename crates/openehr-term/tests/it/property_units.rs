@@ -23,14 +23,17 @@ fn specpr_450_properties_are_in_the_property_group() {
         ("764", "Length per area"),
         ("765", "Concentration per volume"),
     ] {
-        assert!(bundle.is_valid_property(code), "{code} must be a property");
+        assert!(
+            bundle.is_valid_code("property", code),
+            "{code} must be a property"
+        );
         assert_eq!(
             bundle.rubric("property", code, "en"),
             Some(rubric),
             "{code}"
         );
     }
-    assert!(!bundle.is_valid_property("766"));
+    assert!(!bundle.is_valid_code("property", "766"));
 }
 
 /// `PropertyUnitData.xml` gives property 765 its two concentration-per-volume

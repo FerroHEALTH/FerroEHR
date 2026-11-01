@@ -55,12 +55,12 @@ mod tests {
         group.sort();
         assert_eq!(group, ["431", "433", "451", "815"]);
         for c in &group {
-            assert!(t.is_valid_composition_category(c), "code {c}");
+            assert!(t.is_valid_code("composition_category", c), "code {c}");
             // `code_string` must be numeric (the group's wire form).
             assert!(c.chars().all(char::is_numeric), "code {c}");
         }
         // The named constant is a real member of that group.
-        assert!(t.is_valid_composition_category(code::PERSISTENT));
+        assert!(t.is_valid_code("composition_category", code::PERSISTENT));
         assert!(group.iter().any(|c| c == code::PERSISTENT));
     }
 }

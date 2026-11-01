@@ -23,7 +23,7 @@ use crate::artefact::ArchetypeView;
 pub(super) fn check(v: &ArchetypeView<'_>, issues: &mut Vec<ValidationIssue>) {
     let original = v.original_language.map(|l| l.code_string.as_str());
     if let Some(original) = original
-        && !openehr_term::bundle::openehr().is_valid_language(original)
+        && !openehr_term::bundle::openehr().is_valid_external_code("languages", original)
     {
         issues.push(ValidationIssue::new(
             ValidationCode::RmArOriginalLanguage,
@@ -47,7 +47,7 @@ pub(super) fn check(v: &ArchetypeView<'_>, issues: &mut Vec<ValidationIssue>) {
         }
         for translation in translations.values() {
             let language = translation.language.code_string.as_str();
-            if !openehr_term::bundle::openehr().is_valid_language(language) {
+            if !openehr_term::bundle::openehr().is_valid_external_code("languages", language) {
                 issues.push(ValidationIssue::new(
                     ValidationCode::RmTdLanguage,
                     format!(
@@ -91,7 +91,7 @@ fn check_description(
     }
     for (language, item) in details.into_iter().flatten() {
         let item_language = item.language.code_string.as_str();
-        if !openehr_term::bundle::openehr().is_valid_language(item_language) {
+        if !openehr_term::bundle::openehr().is_valid_external_code("languages", item_language) {
             issues.push(ValidationIssue::new(
                 ValidationCode::RmRdiLanguage,
                 format!(
