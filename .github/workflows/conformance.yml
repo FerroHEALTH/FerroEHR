@@ -78,6 +78,21 @@ on:
         required: false
         type: string
         default: ""
+      advisory:
+        description: >-
+          Report the verdict without failing: the job ends green with the
+          verdict in the `verdict` output, the job summary and an annotation,
+          and a pipeline defect fails the job without failing the caller's run.
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      verdict:
+        description: >-
+          `passed` when the released-profile run passed, `failed` when it did
+          not or the run could not be judged; empty when the job ended before
+          its verdict.
+        value: ${{ jobs.conformance.outputs.verdict }}
   schedule:
     # Tue + Fri 04:37 UTC, off the hour and in a slot of its own (read the
     # estate's slots with `grep -rE '^ +- cron:' .github/workflows/`).
@@ -124,6 +139,12 @@ jobs:
     name: conformance
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # An advisory caller's run must not fail on this job (#4600): a merge
+    # queue run that ends `failure` fails its queue entry even while the
+    # required check passed. Only an earlier step can still fail it here.
+    continue-on-error: ${{ inputs.advisory == true }}
+    outputs:
+      verdict: ${{ steps.verdict.outputs.verdict }}
     permissions:
       # Each run pushes its badges to its own branch: veredictum-badges and
       # veredictum-badges-development.
@@ -391,25 +412,46 @@ jobs:
           path: conformance-views/development
           if-no-files-found: warn
       # The released run decides the job. The development run fails it only
-      # when it could not run at all, which is a defect of this pipeline.
-      - name: The verdict of the released run
+      # when it could not run at all, which is a defect of this pipeline. An
+      # advisory caller gets the same verdict as an output, a summary line and
+      # a warning, and a green job.
+      - id: verdict
+        name: The verdict of the released run
         if: ${{ !cancelled() }}
         env:
           RELEASED_EXIT: ${{ steps.released.outputs.exit-code }}
           DEVELOPMENT_EXIT: ${{ steps.development.outputs.exit-code }}
+          ADVISORY: ${{ inputs.advisory == true }}
         shell: bash
         run: |
           set -euo pipefail
           bad=0
+          problems=()
           case "$DEVELOPMENT_EXIT" in
             0) echo "the development-profile run passed" ;;
             1) echo "::warning::the development-profile run has failed or errored rows; it is published beside the record and is no verdict" ;;
             3) echo "::warning::the development-profile run has inconclusive rows; it is published beside the record and is no verdict" ;;
-            *) echo "::error::the development-profile run could not run (exit status ${DEVELOPMENT_EXIT:-none})"; bad=1 ;;
+            *) problems+=("the development-profile run could not run (exit status ${DEVELOPMENT_EXIT:-none})"); bad=1 ;;
           esac
           if [ "$RELEASED_EXIT" != 0 ]; then
-            echo "::error::the released-profile run exited ${RELEASED_EXIT:-without a status}"
+            problems+=("the released-profile run exited ${RELEASED_EXIT:-without a status}")
             bad=1
+          fi
+          if [ "$bad" = 0 ]; then verdict=passed; else verdict=failed; fi
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          if [ "$ADVISORY" = true ]; then
+            level=warning
+            printf '## Verdict: %s (advisory, not gating)\n\n' "$verdict" >> "$GITHUB_STEP_SUMMARY"
+          else
+            level=error
+            printf '## Verdict: %s\n\n' "$verdict" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          for problem in ${problems[@]+"${problems[@]}"}; do
+            echo "::$level::$problem"
+            printf -- '- %s\n' "$problem" >> "$GITHUB_STEP_SUMMARY"
+          done
+          if [ "$ADVISORY" = true ]; then
+            exit 0
           fi
           exit "$bad"
       - name: The deployment's state, when the run did not pass

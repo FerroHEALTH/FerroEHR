@@ -70,9 +70,8 @@ fn workflows(doc: &Value) -> &[Value] {
         .as_slice()
 }
 
-/// Every setup template, built into its Web Template and keyed by the upload
-/// workflow a case names in `dependsOn`.
-fn templates() -> BTreeMap<String, WebTemplate> {
+/// The ADL 2 source of every setup template, keyed by its upload workflow.
+fn sources() -> BTreeMap<String, String> {
     let setup = yaml(&corpus().join("_setup/content_templates_adl2.arazzo.yaml"));
     workflows(&setup)
         .iter()
@@ -80,21 +79,36 @@ fn templates() -> BTreeMap<String, WebTemplate> {
             let id = wf
                 .pointer("/workflowId")
                 .and_then(Value::as_str)
-                .expect("workflowId")
-                .to_owned();
+                .expect("workflowId");
             let source = wf
                 .pointer("/steps/0/requestBody/payload")
                 .and_then(Value::as_str)
                 .expect("ADL 2 payload");
-            let archetype = parse_artefact(source, Dialect::Adl2)
-                .unwrap_or_else(|e| panic!("parse {id}: {e:?}"));
-            let Archetype::AuthoredArchetype(authored) = archetype else {
-                panic!("{id} is not an authored archetype");
-            };
-            let AuthoredArchetype::OperationalTemplate(opt) = *authored else {
-                panic!("{id} is not an operational template");
-            };
-            let wt = build_web_template_v2_4(&opt).unwrap_or_else(|e| panic!("build {id}: {e}"));
+            (id.to_owned(), source.to_owned())
+        })
+        .collect()
+}
+
+/// The Web Template of the operational template `source`, named `id`.
+fn web_template(id: &str, source: &str) -> WebTemplate {
+    let archetype =
+        parse_artefact(source, Dialect::Adl2).unwrap_or_else(|e| panic!("parse {id}: {e:?}"));
+    let Archetype::AuthoredArchetype(authored) = archetype else {
+        panic!("{id} is not an authored archetype");
+    };
+    let AuthoredArchetype::OperationalTemplate(opt) = *authored else {
+        panic!("{id} is not an operational template");
+    };
+    build_web_template_v2_4(&opt).unwrap_or_else(|e| panic!("build {id}: {e}"))
+}
+
+/// Every setup template, built into its Web Template and keyed by the upload
+/// workflow a case names in `dependsOn`.
+fn templates() -> BTreeMap<String, WebTemplate> {
+    sources()
+        .into_iter()
+        .map(|(id, source)| {
+            let wt = web_template(&id, &source);
             (id, wt)
         })
         .collect()
@@ -312,6 +326,82 @@ fn count_case_with(edit: impl FnOnce(&mut Value)) -> (Value, WebTemplate) {
             .expect("the inlined OBSERVATION"),
     );
     (body, wt)
+}
+
+/// A `C_INTEGER` or `C_REAL` constraint made of several non-point intervals is
+/// a union of ranges and admits a value inside any one of them (AOM2
+/// `master04.5` §"Conformance semantics: C_ORDERED"; AM
+/// `org.openehr.am.aom2.c_integer.adoc` §`constraint`): the template pass
+/// admits a value inside one range and refuses one between the ranges or
+/// outside them all.
+#[test]
+fn a_union_of_ranges_admits_a_value_inside_one_of_them() {
+    let sources = sources();
+    let cases = cases();
+    let rows = [
+        (
+            "adl2-dv_count-validate_range-accepted",
+            (
+                "magnitude matches {|10..20|}",
+                "magnitude matches {|0..5|, |10..15|}",
+            ),
+            "magnitude",
+            [
+                (Value::from(3), true),
+                (Value::from(12), true),
+                (Value::from(7), false),
+                (Value::from(20), false),
+                (Value::from(-1), false),
+            ],
+        ),
+        (
+            "adl2-dv_proportion-validate_ratio_range-accepted",
+            (
+                "numerator matches {|5.0..20.0|}",
+                "numerator matches {|5.0..10.0|, |15.0..20.0|}",
+            ),
+            "numerator",
+            [
+                (Value::from(7.5), true),
+                (Value::from(17.5), true),
+                (Value::from(12.5), false),
+                (Value::from(25.0), false),
+                (Value::from(1.0), false),
+            ],
+        ),
+    ];
+    for (workflow, (from, to), datum, values) in rows {
+        let case = cases
+            .iter()
+            .find(|c| c.workflow == workflow)
+            .expect(workflow);
+        let source = sources.get(&case.template).expect("the case's template");
+        assert_eq!(source.matches(from).count(), 1, "{workflow}: {from}");
+        let wt = web_template(&case.template, &source.replace(from, to));
+        for (value, admitted) in values {
+            let mut body = case.body.clone();
+            let field = body
+                .pointer_mut(&format!(
+                    "/content/0/data/events/0/data/items/0/value/{datum}"
+                ))
+                .expect("the ELEMENT's datum");
+            field.clone_from(&value);
+            let findings = validate_archetype_conformance(&body, &wt);
+            assert_eq!(
+                findings.is_empty(),
+                admitted,
+                "{workflow}: {datum} {value} against {to}: {findings:?}"
+            );
+            if !admitted {
+                assert!(
+                    findings
+                        .iter()
+                        .all(|f| f.kind == ValidationKind::RangeError),
+                    "{workflow}: {datum} {value}: {findings:?}"
+                );
+            }
+        }
+    }
 }
 
 /// An archetype root the template did not inline is refused: an OPT2 inlines

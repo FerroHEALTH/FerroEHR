@@ -33,7 +33,7 @@
 //! `crate::versioning::CommitEnv`, the hooks the CONTRIBUTION commit engine
 //! needs, is implemented for `FerroEhrService` in `service/mod.rs`; its
 //! EHR-owned constituents are authored in this chapter. `default_committer` is
-//! `meta::committer`; `ensure_ehr_exists`, `ensure_content_writable`,
+//! `committer::request_committer`; `ensure_ehr_exists`, `ensure_content_writable`,
 //! `current_vo` and `invalidate_ehr_access` are `FerroEhrService` methods here;
 //! and the two in-transaction hooks delegate to
 //! `check_versioned_composition_invariants` (COMPOSITION modify) and

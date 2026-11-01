@@ -41,7 +41,7 @@ impl CommitEnv for FerroEhrService {
     }
 
     fn default_committer(&self) -> openehr_rm::prelude::PartyProxy {
-        ehr::meta::committer()
+        crate::service::committer::request_committer()
     }
 
     fn signing_ctx(&self) -> SigningCtx<'_> {

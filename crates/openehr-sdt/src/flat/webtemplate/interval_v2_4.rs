@@ -52,6 +52,25 @@ pub(super) fn point_list<T: Clone>(constraint: Option<&Vec<Interval<T>>>) -> Opt
         .collect()
 }
 
+/// The ranges of a constraint made of two or more intervals that are not all
+/// points, a union of ranges admitting a value inside any one of them (AOM2
+/// `master04.5-constraint_model-class_definitions.adoc` §"Conformance
+/// semantics: C_ORDERED"); `None` for any other constraint, and when one of
+/// the intervals is unbounded at both ends, which admits every value.
+pub(super) fn range_union<T>(
+    constraint: Option<&Vec<Interval<T>>>,
+    range: fn(&Interval<T>) -> Option<WebTemplateRange>,
+) -> Option<Vec<WebTemplateRange>> {
+    let ivs = constraint.filter(|ivs| ivs.len() > 1)?;
+    if ivs
+        .iter()
+        .all(|iv| matches!(iv, Interval::PointInterval(_)))
+    {
+        return None;
+    }
+    ivs.iter().map(range).collect()
+}
+
 /// A `WebTemplateRange` from a `C_REAL` interval (bounds + inclusivity ops).
 pub(super) fn real_range(iv: &Interval<f64>) -> Option<WebTemplateRange> {
     let (lo, hi, lo_inc, hi_inc, lo_unb, hi_unb) = interval_bounds(iv)?;

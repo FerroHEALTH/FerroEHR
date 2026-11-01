@@ -38,7 +38,7 @@ use crate::versioning::lifecycle::{
     self, reject_deleted_with_data, resolve_lifecycle, validate_transition,
 };
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id};
-use crate::versioning::{Kind, SigningCtx, integrity, person, profile};
+use crate::versioning::{Kind, SigningCtx, integrity, person, profile, restriction};
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -184,6 +184,8 @@ pub(crate) enum Change {
         /// Wire `UPDATE_VERSION.attestations` committed with this version
         /// (master06 §Attestation "Signing content at committal").
         attestations: Vec<attestation::AttestationInput>,
+        /// `ORIGINAL_VERSION.other_input_version_uids` (master06 §Version Merging).
+        other_input_version_uids: Vec<String>,
     },
     /// Commit a new version of an existing object.
     Modify {
@@ -195,6 +197,7 @@ pub(crate) enum Change {
         signature: Option<String>,
         lifecycle_state: Option<String>,
         attestations: Vec<attestation::AttestationInput>,
+        other_input_version_uids: Vec<String>,
     },
     /// Logically delete an object (a content-less `deleted` version — master06
     /// §Logical Deletion).
@@ -203,6 +206,7 @@ pub(crate) enum Change {
         kind: Kind,
         expected: Option<TreeId>,
         signature: Option<String>,
+        other_input_version_uids: Vec<String>,
     },
 }
 
@@ -454,6 +458,8 @@ struct ResolvedWrite {
     lifecycle: String,
     /// `ORIGINAL_VERSION.preceding_version_uid` (`None` for a first version).
     preceding_uid: Option<String>,
+    /// `ORIGINAL_VERSION.other_input_version_uids` (empty when not a merge).
+    other_input_version_uids: Vec<String>,
     template_id: Option<String>,
     /// A client-supplied `UPDATE_VERSION.signature`, stored verbatim (master06
     /// §Digital Signature); `None` on the direct endpoints.
@@ -697,90 +703,6 @@ pub(crate) fn protection_refusal(error: StoreError) -> ServiceError {
     }
 }
 
-/// Refuse a write that would process an object whose processing is restricted.
-///
-/// GDPR Art. 18(2) leaves storage as the only processing a restricted object
-/// admits (`docs/law/eu/gdpr/text.html`), so a new version of it, a logical
-/// delete of it or an attestation appended to it is refused — while the rows
-/// already stored stay exactly where they are. The mark is read inside the
-/// commit transaction, like the `is_modifiable` gate beside it, so a
-/// concurrent lift either commits first and is seen or waits for this commit.
-/// Both grains are checked: a whole-EHR restriction reaches an object that has
-/// no mark of its own yet, because it is created after the restriction was
-/// recorded. No openEHR spec governs restriction of processing — our own
-/// design/extension.
-///
-/// # Errors
-/// [`ServiceError::Restricted`] (`403`) when either grain is marked;
-/// [`ServiceError::Database`] if the marks cannot be read.
-pub(crate) async fn ensure_not_restricted_tx(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    vo_id: Option<VoId>,
-) -> Result<(), ServiceError> {
-    if let Some(ehr_id) = ehr_id {
-        let restricted: Option<bool> =
-            sqlx::query_scalar("SELECT restricted_at IS NOT NULL FROM ehr WHERE id = $1")
-                .bind(ehr_id)
-                .fetch_optional(&mut *tx)
-                .await?;
-        if restricted == Some(true) {
-            return Err(ServiceError::restricted(&format!("EHR {ehr_id}")));
-        }
-    }
-    if let Some(vo_id) = vo_id
-        && crate::storage::marks::is_restricted(&mut *tx, vo_id).await?
-    {
-        return Err(ServiceError::restricted(&format!(
-            "versioned object {vo_id}"
-        )));
-    }
-    ensure_not_access_restricted_tx(tx, ehr_id, vo_id).await?;
-    crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await
-}
-
-/// Refuse, as though the target did not exist, a write a health professional
-/// makes to data under an EHDS Art. 8 access restriction, whose fact is "not
-/// visible to healthcare providers" (`docs/law/eu/ehds/text.html` Art. 8),
-/// while the request enforces it. No openEHR spec governs restriction of
-/// access — our own design/extension.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] (`ehr_id_does_not_exist` or
-/// `versioned_object_does_not_exist`) when either grain is marked;
-/// [`ServiceError::Database`] if the marks cannot be read.
-async fn ensure_not_access_restricted_tx(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    vo_id: Option<VoId>,
-) -> Result<(), ServiceError> {
-    if !crate::system_log::access_context::access_restriction_enforced() {
-        return Ok(());
-    }
-    if let Some(ehr_id) = ehr_id {
-        let restricted: Option<bool> =
-            sqlx::query_scalar("SELECT access_restricted_at IS NOT NULL FROM ehr WHERE id = $1")
-                .bind(ehr_id)
-                .fetch_optional(&mut *tx)
-                .await?;
-        if restricted == Some(true) {
-            return Err(ServiceError::new(
-                ServiceStatus::EhrIdDoesNotExist,
-                format!("EHR {ehr_id}"),
-            ));
-        }
-    }
-    if let Some(vo_id) = vo_id
-        && crate::storage::marks::is_access_restricted(&mut *tx, vo_id).await?
-    {
-        return Err(ServiceError::new(
-            ServiceStatus::VersionedObjectDoesNotExist,
-            format!("versioned object {vo_id}"),
-        ));
-    }
-    Ok(())
-}
-
 #[expect(
     clippy::too_many_lines,
     reason = "the three change arms build one resolved write; splitting them \
@@ -799,7 +721,7 @@ async fn apply_change(
         known_now,
         preplaced,
     } = scope;
-    ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
+    restriction::ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
     let resolved = match change {
         Change::Create {
             kind,
@@ -808,6 +730,7 @@ async fn apply_change(
             signature,
             lifecycle_state,
             attestations,
+            other_input_version_uids,
         } => {
             // Externalize large inline DV_MULTIMEDIA before decompose/sign, so
             // the stored, served and signed form is the offloaded one.
@@ -851,6 +774,7 @@ async fn apply_change(
                 tree: TreeId::trunk(1),
                 lifecycle,
                 preceding_uid: None,
+                other_input_version_uids,
                 template_id,
                 client_signature: signature,
                 rows,
@@ -871,6 +795,7 @@ async fn apply_change(
             signature,
             lifecycle_state,
             attestations,
+            other_input_version_uids,
         } => {
             #[cfg(feature = "multimedia")]
             if let Some(engine) = ctx.multimedia {
@@ -908,6 +833,7 @@ async fn apply_change(
                 tree: next.tree,
                 lifecycle,
                 preceding_uid: Some(next.preceding_uid),
+                other_input_version_uids,
                 template_id,
                 client_signature: signature,
                 rows,
@@ -924,6 +850,7 @@ async fn apply_change(
             kind,
             expected,
             signature,
+            other_input_version_uids,
         } => {
             let next =
                 next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
@@ -941,6 +868,7 @@ async fn apply_change(
                 tree: next.tree,
                 lifecycle: lifecycle::state::DELETED.to_owned(),
                 preceding_uid: Some(next.preceding_uid),
+                other_input_version_uids,
                 template_id: None,
                 client_signature: signature,
                 rows: Vec::new(),
@@ -1022,6 +950,7 @@ async fn commit_resolved(
         lifecycle_state: &r.lifecycle,
         creating_system_id: &ctx.system_id,
         preceding_version_uid: r.preceding_uid.as_deref(),
+        other_input_version_uids: &r.other_input_version_uids,
         template_id: r.template_id.as_deref(),
         signature: signature.as_deref(),
         signature_client_supplied,
@@ -1178,6 +1107,7 @@ fn version_signature(
         r.vo_id,
         r.tree,
         r.preceding_uid.as_deref(),
+        &r.other_input_version_uids,
         contribution_id,
         &r.lifecycle,
         body.unwrap_or(&Value::Null),
@@ -1298,6 +1228,7 @@ pub(crate) async fn create(
             signature: envelope.signature,
             lifecycle_state: envelope.lifecycle_state,
             attestations: envelope.attestations,
+            other_input_version_uids: Vec::new(),
         },
     )
     .await?;
@@ -1329,30 +1260,20 @@ pub(crate) async fn update(
     envelope: WriteEnvelope,
     ctx: &SigningCtx<'_>,
 ) -> Result<Committed, ServiceError> {
-    let (committed, contribution_id) = apply_change(
+    update_with_placement(
         tx,
-        CommitScope {
-            ehr_id,
-            contribution: ContributionCtx::New,
-            audit,
-            ctx,
-            known_now: None,
-            preplaced: None,
-        },
-        Change::Modify {
-            vo_id,
-            kind,
-            canonical,
-            expected,
-            template_id: template_id.map(str::to_owned),
-            signature: envelope.signature,
-            lifecycle_state: envelope.lifecycle_state,
-            attestations: envelope.attestations,
-        },
+        ehr_id,
+        vo_id,
+        kind,
+        canonical,
+        expected,
+        template_id,
+        audit,
+        envelope,
+        ctx,
+        None,
     )
-    .await?;
-    write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
-    Ok(committed)
+    .await
 }
 
 /// [`update`] with the advisory lock and placement read already taken by the
@@ -1363,7 +1284,7 @@ pub(crate) async fn update(
 /// ([`crate::storage::version_repo::placement::update_placement`]); this
 /// commits the new version off that placement without re-reading. `expected`
 /// must equal the placement tip's tree id (the caller's `If-Match` gate pins
-/// it; [`next_version`] re-checks).
+/// it; [`next_version`] re-checks). `None` reads the placement here.
 ///
 /// # Errors
 /// The [`update`] errors, minus the placement read's own.
@@ -1383,7 +1304,7 @@ pub(crate) async fn update_with_placement(
     audit: &AuditInput,
     envelope: WriteEnvelope,
     ctx: &SigningCtx<'_>,
-    placement: crate::storage::version_repo::placement::Placement,
+    placement: Option<crate::storage::version_repo::placement::Placement>,
 ) -> Result<Committed, ServiceError> {
     let (committed, contribution_id) = apply_change(
         tx,
@@ -1393,7 +1314,7 @@ pub(crate) async fn update_with_placement(
             audit,
             ctx,
             known_now: None,
-            preplaced: Some(placement),
+            preplaced: placement,
         },
         Change::Modify {
             vo_id,
@@ -1404,6 +1325,7 @@ pub(crate) async fn update_with_placement(
             signature: envelope.signature,
             lifecycle_state: envelope.lifecycle_state,
             attestations: envelope.attestations,
+            other_input_version_uids: Vec::new(),
         },
     )
     .await?;
@@ -1453,6 +1375,7 @@ pub(crate) async fn delete(
             kind,
             expected,
             signature,
+            other_input_version_uids: Vec::new(),
         },
     )
     .await?;
@@ -1535,7 +1458,7 @@ pub(crate) async fn commit_contribution(
     // Standalone 666 attestations of existing versions (no new version) —
     // completed with the contribution's commit-act time.
     for item in attests {
-        ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id)).await?;
+        restriction::ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id)).await?;
         let full =
             attestation::complete_attestation(&item.partial, &item.system_id, contribution_time);
         committed.push(

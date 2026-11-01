@@ -6350,10 +6350,11 @@ pub(crate) async fn versioned_party_version_get_by_id(
                                       (`UpdateVersion.yaml` lists it under `required`); a non-creation \
                                       change type on a member with no `preceding_version_uid` (the released \
                                       first-version-of-a-MODIFICATION trigger); \
-                                      a member carrying a property \
-                                      `UpdateVersion.yaml` does not declare \
-                                      (`other_input_version_uids` and `item` \
-                                      included); or a member names a \
+                                      a member stating a `uid` or `contribution` \
+                                      (the server assigns both, RM common \
+                                      master06 §Version and its Subtypes) \
+                                      or a `_type` other than `UPDATE_VERSION` \
+                                      or `ORIGINAL_VERSION`; or a member names a \
                                       `preceding_version_uid` whose \
                                       VERSIONED_OBJECT does not exist.",
          body = serde_json::Value),
