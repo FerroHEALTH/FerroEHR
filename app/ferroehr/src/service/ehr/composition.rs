@@ -33,7 +33,7 @@ use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, Servi
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{create, delete, update_with_placement};
-use crate::versioning::object_version_id::{TreeId, components, parse_tree_id};
+use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
 use crate::versioning::read::{read_current, read_version, version_at};
 use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
 use openehr_its::rest::generated::common::UpdateVersion;
@@ -835,7 +835,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         a_version_uid: ObjectVersionId,
     ) -> Result<Value, ServiceError> {
-        let (vo_id, _) = components(&a_version_uid)?;
+        let (vo_id, _) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
         let resp = self
             .composition_at_version_response(an_ehr_id, a_version_uid)
             .await?;
@@ -873,7 +873,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         a_version_uid: ObjectVersionId,
     ) -> Result<Value, ServiceError> {
-        let (vo_id, version) = components(&a_version_uid)?;
+        let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
         let body = self.composition_version(an_ehr_id, vo_id, version).await?;
         // The served VERSION.uid is the stored full identity; the
         // addressed uid must equal it (Resources.md §Identifier types; BASE
@@ -939,7 +939,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         a_version_uid: ObjectVersionId,
     ) -> Result<RawServiceResponse, ServiceError> {
-        let (vo_id, version) = components(&a_version_uid)?;
+        let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
         let read = self
             .read_composition_raw(an_ehr_id, vo_id, Some(version))
             .await?;

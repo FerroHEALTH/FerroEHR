@@ -156,7 +156,11 @@ pub(super) async fn run_collection(
     )?;
     let tags = state
         .backend()
-        .demographic_tags_get(p.tag_key, p.tag_value, p.tag_target_path)
+        .demographic_tags_get(
+            p.tag_key.as_deref(),
+            p.tag_value.as_deref(),
+            p.tag_target_path.as_deref(),
+        )
         .await?;
     Ok(negotiate::respond(
         h,

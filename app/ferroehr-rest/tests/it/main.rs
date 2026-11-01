@@ -92,4 +92,5 @@ mod subject_query_privacy;
 mod template_adl14_http;
 mod terminology_http;
 mod trace_shape;
+mod version_id_argument_http;
 mod xml_document_roots_http;

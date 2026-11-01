@@ -31,8 +31,8 @@ use uuid::Uuid;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
+use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::ServiceStatus;
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::contribution::{commit_version_set, decode_new_contribution};
@@ -77,8 +77,8 @@ impl FerroEhrService {
         )
         .await?
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::ContributionDoesNotExist,
+            ServiceError::not_found(
+                Missing::Contribution,
                 format!("demographic CONTRIBUTION {contribution_id}"),
             )
         })?;
