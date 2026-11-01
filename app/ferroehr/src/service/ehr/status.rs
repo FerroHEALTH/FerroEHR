@@ -33,7 +33,9 @@ use crate::service::error::ServiceError;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::update;
-use crate::versioning::object_version_id::{TreeId, expected_from_if_match, parse_tree_id};
+use crate::versioning::object_version_id::{
+    TreeId, VersionIdError, expected_from_if_match, parse_tree_id,
+};
 use crate::versioning::read::{read_current, read_version, version_at};
 use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
 
@@ -519,7 +521,7 @@ impl FerroEhrService {
         a_version_uid: VoId,
         a_version: &str,
     ) -> Result<Value, ServiceError> {
-        let tree = parse_tree_id(a_version)?;
+        let tree = parse_tree_id(a_version).map_err(VersionIdError::into_argument)?;
         self.status_version(an_ehr_id, a_version_uid, tree).await
     }
 }
@@ -562,7 +564,7 @@ impl FerroEhrService {
         a_version_uid: VoId,
         a_version: &str,
     ) -> Result<ServiceResponse, ServiceError> {
-        let tree = parse_tree_id(a_version)?;
+        let tree = parse_tree_id(a_version).map_err(VersionIdError::into_argument)?;
         self.status_by_version(an_ehr_id, a_version_uid, tree).await
     }
 

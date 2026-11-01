@@ -230,6 +230,18 @@ impl From<VersionIdError> for ApiError {
     }
 }
 
+impl VersionIdError {
+    /// A malformed version id in a call argument (a path segment, an
+    /// `If-Match` value): an argument-validity precondition, `400`, matching
+    /// the [`From<VersionIdError> for ApiError`] `BadRequest` row. A
+    /// malformed id inside submitted content stays the `422` of
+    /// `From<VersionIdError> for ServiceError`.
+    #[must_use]
+    pub fn into_argument(self) -> ServiceError {
+        ServiceError::precondition(self.wire_message())
+    }
+}
+
 impl From<VersionIdError> for ServiceError {
     fn from(e: VersionIdError) -> Self {
         ServiceError::content_invalid(crate::service::error::Violation::new(e.wire_message()))

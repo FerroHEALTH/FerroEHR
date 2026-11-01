@@ -451,7 +451,7 @@ impl FerroEhrService {
 pub(in crate::service) fn parse_tag_target(
     uid_based_id: &str,
 ) -> Result<(VoId, Option<ObjectVersionId>), ServiceError> {
-    let decoded = parse_uid_based_id(uid_based_id)?;
+    let decoded = parse_uid_based_id(uid_based_id).map_err(VersionIdError::into_argument)?;
     Ok((decoded.vo_id, decoded.version))
 }
 

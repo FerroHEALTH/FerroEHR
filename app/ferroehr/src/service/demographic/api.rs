@@ -32,7 +32,7 @@ use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::Committal;
 use crate::versioning::object_version_id::{
-    expected_from_if_match, if_match_token, parse_uid_based_id, parse_version_uid,
+    VersionIdError, expected_from_if_match, if_match_token, parse_uid_based_id, parse_version_uid,
 };
 use openehr_its::rest::generated::common::UpdateAudit;
 use openehr_rm::prelude::{Party, PartyRelationship};
@@ -130,7 +130,8 @@ impl FerroEhrService {
         &self,
         a_party_version_id: String,
     ) -> Result<Value, ServiceError> {
-        let (vo_id, tree) = parse_version_uid(&a_party_version_id)?;
+        let (vo_id, tree) =
+            parse_version_uid(&a_party_version_id).map_err(VersionIdError::into_argument)?;
         // The version-addressed read carries `object_version_does_not_exist`
         // itself (`ServiceError` round-trips the granular status losslessly).
         self.party_version(vo_id, tree).await
@@ -183,7 +184,7 @@ impl FerroEhrService {
         uid_based_id: String,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let decoded = parse_uid_based_id(&uid_based_id)?;
+        let decoded = parse_uid_based_id(&uid_based_id).map_err(VersionIdError::into_argument)?;
         let (vo_id, version) = (decoded.vo_id, decoded.tree());
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         let mut resp = self.read_party(kind, vo_id, version, at).await?;
@@ -218,14 +219,16 @@ impl FerroEhrService {
         committal: Option<Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         let body = openehr_its::json::to_canonical_value(&body);
-        let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
+        let vo_id = parse_uid_based_id(&uid_based_id)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         // Resolve the current version ONCE (lean, kind-checked): the same handle
         // serves the `If-Match` `ETag` compare here and the service write gate —
         // the dispatcher never resolves and the service again.
         let current = self.party_current(kind, vo_id).await?;
         let meta = current.as_ref().map(CurrentParty::resource_meta);
         ensure_full_ovid_if_match(Some(&if_match), meta.as_ref())?;
-        let expected = expected_from_if_match(&if_match)?;
+        let expected = expected_from_if_match(&if_match).map_err(VersionIdError::into_argument)?;
         let current = current.ok_or_else(|| {
             ServiceError::not_found(
                 Missing::VersionedObject,
@@ -262,7 +265,7 @@ impl FerroEhrService {
         if_match: Option<String>,
         update_audit: Option<UpdateAudit>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let decoded = parse_uid_based_id(&uid_based_id)?;
+        let decoded = parse_uid_based_id(&uid_based_id).map_err(VersionIdError::into_argument)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
         // NOTE: ITS-REST `parameters/path/uid_based_id_as_version_uid.yaml` types the
         // delete path as a `version_uid`, so a bare container id is an invalid parameter (400).
@@ -280,7 +283,9 @@ impl FerroEhrService {
         // A malformed `If-Match` is rejected, not silently ignored;
         // an absent header falls back to the path OVID's version.
         let expected = match if_match.as_deref() {
-            Some(raw) => expected_from_if_match(raw)?.or(path_version),
+            Some(raw) => expected_from_if_match(raw)
+                .map_err(VersionIdError::into_argument)?
+                .or(path_version),
             None => path_version,
         };
         let current = current.ok_or_else(|| {
@@ -307,7 +312,9 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         let body = self.versioned_party(vo_id).await?;
         // ITS-REST overview §"ETag and Last-Modified" derives `Last-Modified`
         // from `VERSION.commit_audit.time_committed.value`, and the container
@@ -338,7 +345,9 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         Ok(ServiceResponse::plain(
             self.party_revision_history(vo_id).await?,
         ))
@@ -358,7 +367,9 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.party_version_at_time(vo_id, at).await
     }
@@ -375,8 +386,11 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
-        let (_, version) = parse_version_uid(&version_uid)?;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
+        let (_, version) =
+            parse_version_uid(&version_uid).map_err(VersionIdError::into_argument)?;
         Ok(ServiceResponse::plain(
             self.party_version(vo_id, version).await?,
         ))
@@ -500,7 +514,9 @@ impl FerroEhrService {
         kind: PartyKind,
         uid_based_id: String,
     ) -> Result<Option<ResourceMeta>, ServiceError> {
-        let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
+        let vo_id = parse_uid_based_id(&uid_based_id)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         self.party_current_meta(kind, vo_id).await
     }
 }
@@ -541,7 +557,7 @@ impl FerroEhrService {
         uid_based_id: String,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let decoded = parse_uid_based_id(&uid_based_id)?;
+        let decoded = parse_uid_based_id(&uid_based_id).map_err(VersionIdError::into_argument)?;
         let (vo_id, version) = (decoded.vo_id, decoded.tree());
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.read_relationship(vo_id, version, at).await
@@ -569,11 +585,13 @@ impl FerroEhrService {
         committal: Option<Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         let body = openehr_its::json::to_canonical_value(&body);
-        let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
+        let vo_id = parse_uid_based_id(&uid_based_id)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         let current = self.relationship_current(vo_id).await?;
         let meta = current.as_ref().map(CurrentRelationship::resource_meta);
         ensure_full_ovid_if_match(Some(&if_match), meta.as_ref())?;
-        let expected = expected_from_if_match(&if_match)?;
+        let expected = expected_from_if_match(&if_match).map_err(VersionIdError::into_argument)?;
         let current = current.ok_or_else(|| {
             ServiceError::not_found(
                 Missing::VersionedObject,
@@ -605,7 +623,7 @@ impl FerroEhrService {
         if_match: Option<String>,
         update_audit: Option<UpdateAudit>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let decoded = parse_uid_based_id(&uid_based_id)?;
+        let decoded = parse_uid_based_id(&uid_based_id).map_err(VersionIdError::into_argument)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
         // NOTE: no openEHR spec defines this route (our own extension); it takes the
         // party delete operations' rule that the path is a version uid, so a container id is a 400.
@@ -622,7 +640,9 @@ impl FerroEhrService {
         // A malformed `If-Match` is rejected, not silently ignored;
         // an absent header falls back to the path OVID's version.
         let expected = match if_match.as_deref() {
-            Some(raw) => expected_from_if_match(raw)?.or(path_version),
+            Some(raw) => expected_from_if_match(raw)
+                .map_err(VersionIdError::into_argument)?
+                .or(path_version),
             None => path_version,
         };
         let current = current.ok_or_else(|| {
@@ -647,7 +667,9 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         Ok(ServiceResponse::plain(
             self.versioned_relationship(vo_id).await?,
         ))
@@ -664,7 +686,9 @@ impl FerroEhrService {
         &self,
         versioned_object_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         Ok(ServiceResponse::plain(
             self.relationship_revision_history(vo_id).await?,
         ))
@@ -684,7 +708,9 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.relationship_version_at_time(vo_id, at).await
     }
@@ -701,8 +727,11 @@ impl FerroEhrService {
         versioned_object_uid: String,
         version_uid: String,
     ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = parse_uid_based_id(&versioned_object_uid)?.vo_id;
-        let (_, version) = parse_version_uid(&version_uid)?;
+        let vo_id = parse_uid_based_id(&versioned_object_uid)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
+        let (_, version) =
+            parse_version_uid(&version_uid).map_err(VersionIdError::into_argument)?;
         Ok(ServiceResponse::plain(
             self.relationship_version(vo_id, version).await?,
         ))
@@ -719,7 +748,9 @@ impl FerroEhrService {
         &self,
         uid_based_id: String,
     ) -> Result<Option<ResourceMeta>, ServiceError> {
-        let vo_id = parse_uid_based_id(&uid_based_id)?.vo_id;
+        let vo_id = parse_uid_based_id(&uid_based_id)
+            .map_err(VersionIdError::into_argument)?
+            .vo_id;
         self.relationship_current_meta(vo_id).await
     }
 }

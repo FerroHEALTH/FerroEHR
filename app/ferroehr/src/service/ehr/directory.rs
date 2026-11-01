@@ -41,7 +41,7 @@ use crate::service::error::ServiceError;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{create, delete, update};
-use crate::versioning::object_version_id::{TreeId, components};
+use crate::versioning::object_version_id::{TreeId, VersionIdError, components};
 use crate::versioning::read::{read_version, version_at};
 
 use super::validation::check_folder_item_refs;
@@ -511,7 +511,8 @@ impl FerroEhrService {
             .preceding_version_uid
             .as_ref()
             .map(|o| components(o).map(|(_, v)| v))
-            .transpose()?;
+            .transpose()
+            .map_err(VersionIdError::into_argument)?;
         super::committed_meta(
             self.commit_directory_update(an_ehr_id, vo_id, a_dir_struct, expected, is_modifiable)
                 .await
@@ -547,7 +548,8 @@ impl FerroEhrService {
         let expected = preceding_version_uid
             .as_ref()
             .map(|o| components(o).map(|(_, v)| v))
-            .transpose()?;
+            .transpose()
+            .map_err(VersionIdError::into_argument)?;
         let resp = self
             .delete_directory_at(an_ehr_id, vo_id, expected, is_modifiable, update_audit)
             .await?;
@@ -568,7 +570,7 @@ impl FerroEhrService {
         a_version_uid: ObjectVersionId,
         a_path: Option<&str>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let (vo_id, version) = components(&a_version_uid)?;
+        let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
         let resp = self
             .directory_version(an_ehr_id, vo_id, version, a_path)
             .await?;
