@@ -13,6 +13,7 @@
 //! date/time constraint-pattern validators in [`crate::parse::patterns`].
 
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
 use openehr_am::v2_4::aom2::constraint_model::primitive::constraint_status::ConstraintStatus;
 use openehr_base::prelude::{Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso8601Time};
 
@@ -536,13 +537,14 @@ impl Parser<'_> {
         )))
     }
 
-    /// Split a `CONTAINED_REGEXP` token (`{ /re/ [;"assumed"] }` or the `^re^`
-    /// form) into `(regex-with-/-delims, assumed?)`, compile-checking it.
-    pub(crate) fn contained_regexp_parts(
+    /// The `C_STRING` of a `CONTAINED_REGEXP` token (`{ /re/ [;"assumed"] }` or
+    /// the `^re^` form): its regex with `/` delimiters, compile-checked, and its
+    /// assumed value.
+    pub(crate) fn contained_regexp(
         &mut self,
         raw: &str,
         span: std::ops::Range<usize>,
-    ) -> PResult<(String, Option<String>)> {
+    ) -> PResult<CString> {
         let body = raw
             .trim()
             .trim_start_matches('{')
@@ -575,7 +577,8 @@ impl Parser<'_> {
             );
             return Err(());
         }
-        Ok((format!("/{}/", escape_regex_delimiter(inner)), assumed))
+        let regex = format!("/{}/", escape_regex_delimiter(inner));
+        Ok(PrimitiveNode::inline("String").c_string(vec![regex], assumed))
     }
 
     /// A body-less type-headed primitive object (`String[id2]`): recognise the
