@@ -35,7 +35,6 @@ basic-authentication = Basic authentication
 openid-connect-scope-identifies-user-application = An OpenID Connect scope: it identifies the user to the application and reaches no clinical data.
 marks-embedded-launch-advisory-only-cdr = Marks an embedded launch. Advisory only: the CDR performs no launch selection.
 launch-marker = Launch marker
-scopes-narrow-access-they-never-grant = Scopes narrow access, they never grant it: they say what a token may ask for, and the CDR still decides every request against its own policies and your permissions. A grant shown here is an upper bound.
 auditevent-bundle-json = AuditEvent Bundle JSON: { $e }
 http = HTTP { $status }
 the-cdr-answered-there = the CDR answered { $status } there
