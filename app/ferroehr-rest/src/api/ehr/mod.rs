@@ -111,6 +111,18 @@ fn commit_instant(body: &Value) -> Option<jiff::Timestamp> {
 /// (RM common master06 §Version and its Subtypes).
 pub(super) const VERSION_ROOT_TAG: &str = "version";
 
+// NOTE: no specification governs this: our own design. No ITS-XML bundle
+// declares an element for EHR, VERSIONED_COMPOSITION, VERSIONED_EHR_STATUS or
+// REVISION_HISTORY, so each root is named after its class until #4652 settles.
+/// The canonical-XML root tag of the `EHR` document.
+pub(super) const EHR_ROOT_TAG: &str = "ehr";
+/// The canonical-XML root tag of the `VERSIONED_COMPOSITION` document.
+pub(super) const VERSIONED_COMPOSITION_ROOT_TAG: &str = "versioned_composition";
+/// The canonical-XML root tag of the `VERSIONED_EHR_STATUS` document.
+pub(super) const VERSIONED_EHR_STATUS_ROOT_TAG: &str = "versioned_ehr_status";
+/// The canonical-XML root tag of the `REVISION_HISTORY` document.
+pub(super) const REVISION_HISTORY_ROOT_TAG: &str = "revision_history";
+
 /// Re-inlines externalized `DV_MULTIMEDIA` content when the caller asked for it
 /// with `?expand_multimedia=true`, verifying each blob's integrity.
 ///

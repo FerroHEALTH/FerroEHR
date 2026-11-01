@@ -25,7 +25,7 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::{EhrStatus, RevisionHistory, Version, VersionedEhrStatus};
 
 use crate::api::RequestParts;
-use crate::api::ehr::VERSION_ROOT_TAG;
+use crate::api::ehr::{REVISION_HISTORY_ROOT_TAG, VERSION_ROOT_TAG, VERSIONED_EHR_STATUS_ROOT_TAG};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid};
@@ -56,7 +56,7 @@ pub(super) async fn run(
                 &base,
                 None,
                 &resp,
-                "versioned_ehr_status",
+                VERSIONED_EHR_STATUS_ROOT_TAG,
             ))
         }
         "versioned_ehr_status_revision_history" => {
@@ -74,7 +74,7 @@ pub(super) async fn run(
                 &base,
                 None,
                 &resp,
-                "revision_history",
+                REVISION_HISTORY_ROOT_TAG,
             ))
         }
         "versioned_ehr_status_version_get_at_time" => {

@@ -152,7 +152,7 @@ fn create_committal(
 /// identifiers". The EHR's creating commit dates it until a folder hierarchy
 /// joins or leaves `EHR.folders`.
 fn ehr_read_response(h: &http::HeaderMap, status: StatusCode, read: &ServiceResponse) -> Response {
-    let mut out = negotiate::respond_rm::<Ehr>(h, status, &read.body, "ehr");
+    let mut out = negotiate::respond_rm::<Ehr>(h, status, &read.body, super::EHR_ROOT_TAG);
     if let Some(id) = read
         .body
         .get("ehr_id")
@@ -198,6 +198,6 @@ async fn ehr_write_response(
         StatusCode::CREATED,
         None,
         &resp,
-        "ehr",
+        super::EHR_ROOT_TAG,
     ))
 }
