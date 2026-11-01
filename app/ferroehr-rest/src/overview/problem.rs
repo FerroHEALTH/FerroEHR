@@ -251,6 +251,7 @@ impl Detail {
 pub struct Refused {
     problem: Problem,
     details: Vec<Detail>,
+    hint: Option<String>,
 }
 
 impl Refused {
@@ -260,6 +261,7 @@ impl Refused {
         Self {
             problem: Problem::of(&kind.problem_type()).with_detail(detail),
             details: Vec::new(),
+            hint: None,
         }
     }
 
@@ -269,6 +271,7 @@ impl Refused {
         Self {
             problem: Problem::new(status).with_detail(detail),
             details: Vec::new(),
+            hint: None,
         }
     }
 
@@ -278,6 +281,15 @@ impl Refused {
     pub fn with_detail(mut self, detail: Detail) -> Self {
         self.details.retain(|kept| kept.name() != detail.name());
         self.details.push(detail);
+        self
+    }
+
+    /// This refusal with `hint` after its detail for a request that did not
+    /// prefer the representation, telling the client how to receive the
+    /// additional details it was not sent.
+    #[must_use]
+    pub fn with_hint(mut self, hint: impl Into<String>) -> Self {
+        self.hint = Some(hint.into());
         self
     }
 
@@ -292,6 +304,13 @@ impl Refused {
         let mut problem = self.problem.clone();
         if let Some(id) = request_id {
             problem = problem.with_request_id(id);
+        }
+        if !representation && let Some(hint) = &self.hint {
+            let detail = match self.problem.detail() {
+                Some(detail) => format!("{detail}; {hint}"),
+                None => hint.clone(),
+            };
+            problem = problem.with_detail(detail);
         }
         if representation {
             for detail in &self.details {
@@ -572,5 +591,19 @@ mod tests {
             full["errors"]
         );
         assert_eq!(StatusCode::UNPROCESSABLE_ENTITY, refused.status());
+    }
+
+    #[test]
+    fn the_hint_reaches_only_a_request_without_the_preference() {
+        let refused = Refused::of(Kind::ValidationFailed, "the content fails validation")
+            .with_hint("send the preference");
+        assert_eq!(
+            serde_json::json!("the content fails validation; send the preference"),
+            refused.render(None, false).to_json()["detail"]
+        );
+        assert_eq!(
+            serde_json::json!("the content fails validation"),
+            refused.render(None, true).to_json()["detail"]
+        );
     }
 }

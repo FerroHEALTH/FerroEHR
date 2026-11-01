@@ -439,7 +439,8 @@ that header, a problem carries its extension members, and the response says
 
 - `validation-failed` lists every violation in `errors`, as
   `{"path": …, "detail": …}`, so a client can point the user at the exact
-  offending node:
+  offending node. Its `detail` then ends after the number of paths, without
+  the advice to send the header:
 
   ```json
   "errors": [
