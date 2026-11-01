@@ -594,3 +594,177 @@ fn a_delete_member_states_the_deleted_lifecycle_or_nothing() {
         other => panic!("an out-of-group delete state must be 422, got {other:?}"),
     }
 }
+
+/// The undeclared members of one decoded `versions[]` entry: `extra` added to
+/// the member of [`body`].
+fn undeclared_of(extra: &[(&str, Value)]) -> std::collections::BTreeMap<String, Value> {
+    let mut wire = body(complete(), update_audit(), update_audit());
+    for (key, value) in extra {
+        wire["versions"][0][*key] = value.clone();
+    }
+    let mut decoded = decode(&wire).expect("an open UPDATE_VERSION decodes");
+    decoded.versions.remove(0).additional_properties
+}
+
+/// #4577: `UPDATE_VERSION` is an open object (`schemas/ehr/UpdateVersion.yaml`
+/// declares no `additionalProperties`), so a member with no meaning on a local
+/// `ORIGINAL_VERSION` passes and merges nothing: `item` belongs to
+/// `IMPORTED_VERSION` (RM common master06 §Version and its Subtypes).
+#[test]
+fn undeclared_members_without_rm_meaning_are_accepted() {
+    for (key, value) in [
+        ("item", json!({ "_type": "ORIGINAL_VERSION" })),
+        ("extension", json!({ "note": "an extension member" })),
+    ] {
+        let undeclared = undeclared_of(&[(key, value)]);
+        assert!(undeclared.contains_key(key), "{key} reaches the envelope");
+        let merged = read_undeclared_members(&undeclared, 0)
+            .unwrap_or_else(|e| panic!("{key} is accepted on an open object: {e:?}"));
+        assert!(merged.is_empty(), "{key} records no merge provenance");
+    }
+}
+
+/// #4577: `other_input_version_uids` is the merge provenance of the
+/// `ORIGINAL_VERSION` (RM common `org.openehr.rm.common.original_version.adoc`)
+/// and is read in order, foreign `UID` forms included; no RM text requires
+/// this repository to hold the versions it names.
+#[test]
+fn merge_inputs_are_read_as_given() {
+    let uids = [
+        "0198f1f1-0000-7000-8000-000000000001::sysB.example.org::2.1.2",
+        "1.2.840.113619.6.1::sysC.example.org::4",
+    ];
+    let undeclared = undeclared_of(&[(
+        "other_input_version_uids",
+        json!([
+            { "_type": "OBJECT_VERSION_ID", "value": uids[0] },
+            { "value": uids[1] }
+        ]),
+    )]);
+    let merged = read_undeclared_members(&undeclared, 0).expect("well-formed merge inputs");
+    assert_eq!(merged, uids);
+}
+
+/// #4577: a malformed merge input, or an empty list
+/// (`ORIGINAL_VERSION.Other_input_version_uids_valid`), is the 422 at the
+/// member path.
+#[test]
+fn malformed_merge_inputs_are_refused() {
+    for (value, invariant) in [
+        (
+            json!([]),
+            Some("ORIGINAL_VERSION.Other_input_version_uids_valid"),
+        ),
+        (json!([{ "value": "not-a-version-id" }]), None),
+        (
+            json!(["0198f1f1-0000-7000-8000-000000000001::sysB::1"]),
+            None,
+        ),
+        (
+            json!([{ "_type": "HIER_OBJECT_ID", "value": "0198f1f1-0000-7000-8000-000000000001" }]),
+            None,
+        ),
+        (
+            json!({ "value": "0198f1f1-0000-7000-8000-000000000001::sysB::1" }),
+            None,
+        ),
+    ] {
+        let undeclared = undeclared_of(&[("other_input_version_uids", value.clone())]);
+        match read_undeclared_members(&undeclared, 3) {
+            Err(ServiceError::Unprocessable { violation: v, .. }) => {
+                assert_eq!(
+                    v.path(),
+                    Some("versions[3]/other_input_version_uids"),
+                    "{value}"
+                );
+                assert_eq!(v.invariant(), invariant, "{value}");
+            }
+            other => panic!("{value}: malformed merge inputs must be the 422, got {other:?}"),
+        }
+    }
+}
+
+/// #4577: `uid` and `contribution` stay refused under every legal self-tag,
+/// because the server assigns both on a locally created version (RM common
+/// master06 §Version Identification, §Version and its Subtypes); the refusal
+/// names the member path.
+#[test]
+fn server_assigned_members_are_refused_under_every_self_tag() {
+    let uid = json!({ "_type": "OBJECT_VERSION_ID",
+        "value": "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::3" });
+    let contribution = json!({ "id": { "_type": "HIER_OBJECT_ID", "value": "x" },
+        "namespace": "local", "type": "CONTRIBUTION" });
+    for (key, value, cited) in [
+        ("uid", uid, "Version Identification"),
+        ("contribution", contribution, "Version and its Subtypes"),
+    ] {
+        for tag in [None, Some("UPDATE_VERSION"), Some("ORIGINAL_VERSION")] {
+            let mut extra = vec![(key, value.clone())];
+            if let Some(tag) = tag {
+                extra.push(("_type", json!(tag)));
+            }
+            match read_undeclared_members(&undeclared_of(&extra), 2) {
+                Err(ServiceError::BadRequest(e)) => {
+                    assert!(
+                        e.message.contains(&format!("versions[2]/{key}")),
+                        "{tag:?}: {e:?}"
+                    );
+                    assert!(e.message.contains(cited), "{tag:?}: {e:?}");
+                }
+                other => panic!("{key} {tag:?}: must be the 400, got {other:?}"),
+            }
+        }
+    }
+}
+
+/// #4577: `_type` names the class (ITS-REST `Resources.md` §Resource
+/// representation), so only the two this wire commits pass.
+#[test]
+fn only_a_committable_self_tag_is_accepted() {
+    for tag in COMMITTABLE_MEMBER_TYPES {
+        read_undeclared_members(&undeclared_of(&[("_type", json!(tag))]), 0)
+            .unwrap_or_else(|e| panic!("{tag} is a legal self-tag: {e:?}"));
+    }
+    for tag in [
+        json!("IMPORTED_VERSION"),
+        json!("VERSION"),
+        json!("COMPOSITION"),
+    ] {
+        match read_undeclared_members(&undeclared_of(&[("_type", tag.clone())]), 1) {
+            Err(ServiceError::BadRequest(e)) => {
+                assert!(e.message.contains("versions[1]/_type"), "{tag}: {e:?}");
+            }
+            other => panic!("{tag}: a foreign self-tag must be the 400, got {other:?}"),
+        }
+    }
+}
+
+/// #4577: a `666|attestation|` member commits no version, so merge provenance
+/// on it has no `ORIGINAL_VERSION` to be recorded on: the 422.
+#[test]
+fn merge_inputs_on_an_attestation_member_are_refused() {
+    let mut wire = body(
+        complete(),
+        json!({ "_type": "UPDATE_AUDIT", "change_type": coded("666", "attestation"),
+            "committer": committer() }),
+        update_audit(),
+    );
+    wire["versions"][0]["preceding_version_uid"] =
+        json!({ "value": "0198f1f1-0000-7000-8000-000000000001::local::1" });
+    wire["versions"][0]["other_input_version_uids"] =
+        json!([{ "value": "0198f1f1-0000-7000-8000-000000000002::sysB::1" }]);
+    wire["versions"][0]
+        .as_object_mut()
+        .expect("member object")
+        .remove("data");
+    let mut decoded = decode(&wire).expect("the member decodes");
+    match plan_version(decoded.versions.remove(0), 0, "local") {
+        Err(ServiceError::Unprocessable { violation: v, .. }) => {
+            assert_eq!(v.path(), Some("versions[0]/other_input_version_uids"));
+        }
+        Err(other) => {
+            panic!("merge inputs on an attestation member must be the 422, got {other:?}")
+        }
+        Ok(_) => panic!("merge inputs on an attestation member must be refused"),
+    }
+}

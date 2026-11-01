@@ -211,7 +211,7 @@ jobs:
 
       - name: File or update the tracking issue
         if: steps.scan.outputs.total != '0' && !inputs.report_only
-        uses: ./.github/actions/file-watcher-issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           title: "security(images): published images carry fixable HIGH/CRITICAL findings"
           body-file: body.md

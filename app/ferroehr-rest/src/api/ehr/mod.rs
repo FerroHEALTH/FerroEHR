@@ -49,12 +49,11 @@ use uuid::Uuid;
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 use openehr_its::rest::runtime::ApiError;
-use openehr_rm::prelude::{DvIdentifier, PartyIdentified, PartyIdentifiedData, PartyProxy};
+use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded, plain_text};
 
-use crate::extensions::access::authn::AuthMethod;
 use crate::overview::error::RestError;
 use crate::overview::params::query_param;
 use crate::state::AppState;
@@ -148,38 +147,13 @@ pub(super) fn read_resp(ehr_id: &str, body: Value) -> ServiceResponse {
     }
 }
 
-/// The committer `PARTY_PROXY` for a write, from the authenticated principal
-/// published by the auth middleware. With no authenticated principal the write
-/// is attributed to this CDR's own system identity
-/// ([`ferroehr::service::SYSTEM_COMMITTER_NAME`]) — the same constant the
-/// platform library uses, so both layers name the system committer identically.
-/// The service re-derives the committer from the same principal, so
-/// this rides in the [`UpdateVersion`] envelope for completeness.
+/// The committer `PARTY_PROXY` a write states when the client sent none: the
+/// service's default committer for the request's authenticated caller
+/// ([`ferroehr::service::committer::default_committer`]), so this adapter and
+/// the service stamp the same identity, naming the token issuer for a Bearer
+/// caller and `ferroehr` for a Basic one.
 pub(crate) fn committer_proxy() -> PartyProxy {
-    let party = match crate::extensions::access::authn::current_principal() {
-        Some(principal) => {
-            let id_type = match principal.method {
-                AuthMethod::Basic => "basic",
-                AuthMethod::Bearer => "oauth2",
-            };
-            PartyIdentifiedData {
-                external_ref: None,
-                name: Some(principal.subject.clone()),
-                identifiers: Some(openehr_base::containers::NonEmptyVec::of(DvIdentifier {
-                    issuer: Some("ferroehr".to_owned()),
-                    assigner: None,
-                    id: principal.subject,
-                    r#type: Some(id_type.to_owned()),
-                })),
-            }
-        }
-        None => PartyIdentifiedData {
-            external_ref: None,
-            name: Some(ferroehr::service::SYSTEM_COMMITTER_NAME.to_owned()),
-            identifiers: None,
-        },
-    };
-    PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party))
+    ferroehr::service::committer::request_committer()
 }
 
 /// Synthesizes the `UPDATE_VERSION` commit envelope for a bare-RM-body write

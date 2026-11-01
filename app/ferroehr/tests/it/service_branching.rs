@@ -344,13 +344,12 @@ async fn the_served_imported_version_is_the_wrapper_shape_without_data() {
 #[tokio::test]
 async fn merge_provenance_is_preserved_by_the_route_that_carries_it() {
     // `ORIGINAL_VERSION.other_input_version_uids` (RM common master06 §Version
-    // Merging) is PRODUCE-only on this server: the released commit wire declares
-    // no merge shape at all, so a member carrying it is refused. What DOES carry
-    // merge provenance is the route that reproduces a FOREIGN `ORIGINAL_VERSION`
-    // verbatim — master06 §Copying: "the `ORIGINAL_VERSION` instance is never
-    // modified". This test pins that direction end to end: an imported merged
-    // version keeps its inputs and serves them, while a locally committed
-    // version carries none (`Is_merged_validity`).
+    // Merging) arrives on a local commit only when a CONTRIBUTION member states
+    // it (#4577, `service_contribution`). The import route reproduces a FOREIGN
+    // `ORIGINAL_VERSION` verbatim, master06 §Copying: "the `ORIGINAL_VERSION`
+    // instance is never modified". This test pins that direction end to end: an
+    // imported merged version keeps its inputs and serves them, while a local
+    // commit that states none carries none (`Is_merged_validity`).
     let source_db = testkit::db().await.expect("testkit database");
     let source_svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &source_db.pool(),

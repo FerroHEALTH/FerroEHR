@@ -534,7 +534,7 @@ impl FerroEhrService {
             &audit,
             envelope,
             &self.signing_ctx(),
-            pre.placement,
+            Some(pre.placement),
         )
         .await?;
         tx.commit().await?;

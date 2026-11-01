@@ -83,7 +83,7 @@ runs:
     # deploy.sh does not update itself, so the box can hold an older release's
     # copy than this action expects: the verb is asked for first (#4372).
     - name: The box's deploy script offers the verb
-      uses: ./.github/actions/deploy-verbs
+      uses: ./.github/actions/deploy-verbs # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
       with:
         verb: ${{ inputs.verb }}
         ssh-key: ${{ inputs.ssh-key }}

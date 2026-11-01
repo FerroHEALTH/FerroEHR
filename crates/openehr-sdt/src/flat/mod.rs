@@ -39,5 +39,6 @@ pub(crate) mod map;
 pub mod path;
 pub(crate) mod rmpath;
 pub mod sim;
+mod uid;
 pub mod validation;
 pub mod webtemplate;
