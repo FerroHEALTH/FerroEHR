@@ -66,6 +66,7 @@ cd "$(dirname "$0")/../.."
 # against the repository-relative path).
 readonly BOUNDARY_PATTERNS=(
   '(^|/)migrations/demographic/'
+  '^app/ferroehr/migrations/party/'
   '^app/ferroehr/src/service/demographic/'
   '^app/ferroehr/src/service/linkage/'
   '^app/ferroehr[^/]*/src/.*identifier_scan'
@@ -228,6 +229,10 @@ self_test() {
 
   # The path patterns, including the paths that do not exist yet.
   expect_path hit 'app/ferroehr/migrations/demographic/0001_baseline.sql'
+  expect_path hit 'app/ferroehr/migrations/party/0004_identifiers.sql'
+  expect_path hit 'app/ferroehr/migrations/party/0008_grants.sql'
+  expect_path miss 'app/ferroehr/migrations/clinical/0001_baseline.sql'
+  expect_path miss 'app/ferroehr-ext/migrations/party/0001_baseline.sql'
   expect_path hit 'app/ferroehr/src/service/linkage/mod.rs'
   expect_path hit 'app/ferroehr/src/service/demographic/party.rs'
   expect_path hit 'app/ferroehr/src/scan/identifier_scanner.rs'
