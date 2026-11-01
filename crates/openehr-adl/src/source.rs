@@ -83,6 +83,9 @@ pub struct SourceArtefact {
     pub hrid: ArchetypeHrid,
     /// The `specialise`/`specialize` parent reference, if any.
     pub parent_ref: Option<ArchetypeHrid>,
+    /// The parent reference as the source writes it, "a string reference to an
+    /// archetype" (`AOM2/master03-archetype_package.adoc` §Human-Readable Identifier).
+    pub parent_reference: Option<String>,
     /// The ADL **1.4** `concept` section's local term code, without its
     /// brackets (`concept [at0000]` ⇒ `"at0000"`).
     ///
@@ -372,6 +375,7 @@ impl Outer<'_> {
             meta,
             hrid,
             parent_ref: None,
+            parent_reference: None,
             concept: None,
             language: None,
             description: None,
@@ -448,7 +452,10 @@ impl Outer<'_> {
                     && let Some(Token::ArchetypeId(s)) = self.toks.get(body.start).map(|t| &t.token)
                 {
                     match parse_hrid(s) {
-                        Ok(h) => art.parent_ref = Some(h),
+                        Ok(h) => {
+                            art.parent_ref = Some(h);
+                            art.parent_reference = Some(s.to_owned());
+                        }
                         Err(msg) => {
                             self.push(SyntaxErrorCode::Sasid, msg, self.span_at(body.start));
                         }

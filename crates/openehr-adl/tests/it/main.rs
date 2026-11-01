@@ -42,6 +42,7 @@ mod legacy14_corpus;
 mod nesting_bounds;
 mod opt_archetype_scope;
 mod opt_spec;
+mod repository_versions;
 mod rules_parse;
 mod template_constituents;
 mod templates_corpus;

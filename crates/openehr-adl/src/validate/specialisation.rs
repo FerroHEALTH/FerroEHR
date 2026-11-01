@@ -68,6 +68,7 @@ pub(super) fn validate_against_flat_parent<'a>(
     let mut scan = ParentScan {
         rm,
         repo,
+        referrer_namespace: cv.archetype_id.namespace.as_deref(),
         child_level: cv.specialisation_level(),
         parent_root: pv.definition,
         child_value_sets: value_set_members(cv.terminology),
@@ -101,6 +102,8 @@ fn value_set_members(
 pub(super) struct ParentScan<'a> {
     rm: &'a dyn RmModel,
     pub(super) repo: &'a ArchetypeRepository,
+    /// The child's namespace, which a reference without one takes.
+    pub(super) referrer_namespace: Option<&'a str>,
     child_level: usize,
     parent_root: &'a CComplexObject,
     /// The child archetype's value-set membership (`ac-code` → members).
@@ -928,7 +931,7 @@ pub(super) fn check_specialisation_depth(
     let Some(repo) = repo else {
         return; // standalone validation: the parent-dependent half needs a repository
     };
-    let Some(parent) = repo.get(parent_id) else {
+    let Some(parent) = repo.resolve(parent_id, v.archetype_id.namespace.as_deref()) else {
         // An operational template is already the flat form (master08 §Phase 3):
         // its `specialise` clause records lineage, and no phase-2 conformance
         // against a parent applies to it.
@@ -983,13 +986,10 @@ pub(super) fn check_language_conformance(
     repo: Option<&ArchetypeRepository>,
     out: &mut Vec<ValidationIssue>,
 ) {
-    let Some(parent_id) = v.parent_archetype_id else {
+    let (Some(parent_id), Some(repo)) = (v.parent_archetype_id, repo) else {
         return;
     };
-    let Some(repo) = repo else {
-        return;
-    };
-    let Some(parent) = repo.get(parent_id) else {
+    let Some(parent) = repo.resolve(parent_id, v.archetype_id.namespace.as_deref()) else {
         return;
     };
     let flat_parent = crate::flatten::flat_form(parent, repo).ok();
