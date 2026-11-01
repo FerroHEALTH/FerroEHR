@@ -1,0 +1,1 @@
+- The `CONF_PERF_CLASS`, `CONF_PERF_HOURS` and `CONF_STRESS` settings of the measured lanes are gone, along with the class runs, the step-load stress ladder and the AQL probe, which Veredictum 0.3.1 removed.

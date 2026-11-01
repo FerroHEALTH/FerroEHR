@@ -64,15 +64,16 @@ FORBIDDEN:
    bash scripts/conformance.sh          # optionally: CONF_DOCUMENTS="<id> …"
    ```
    It drives one FerroEHR deployment through the pinned Veredictum release
-   image with Basic login. The measured performance lane moves to
-   Veredictum's `perf/` tree (#4452); the step-load STRESS ladder is a
-   separate, non-conformance instrument:
-   `veredictum stress --root "$(veredictum_perf)"
-   --ixit docs/conformance/party/<sut>/ixit.json
-   --out docs/conformance/<sut>/stress.json [--corpus-class POC]` (source
-   `scripts/lib/veredictum.sh` first) — it writes stress.json only, never
-   results.json. The full canonical CLI table lives in
-   Veredictum's own `CLAUDE.md`.
+   image with Basic login. The measured performance lane is a separate,
+   non-conformance stage: `bash scripts/conformance.sh perf` (or `perf-aa`
+   for the A/A noise floor) composes the deployment with
+   `docker/sut-measurement.yml`, runs `veredictum perf` over the pinned
+   workload from the pin's `perf/` tree, re-derives the record with
+   `perf-judge` and redraws the book's charts. It writes
+   `docs/conformance/ferroehr/perf-result.json` only, never `results.json`,
+   and a published record is measured on the idle reference host only
+   (`.claude/memory/measurement-environment-discipline.md`). The full CLI
+   lives in Veredictum's book (`veredictum.eu/docs/`).
 3. **Compare against the committed baseline**
    (`docs/conformance/ferroehr/results.json`): the only permitted delta is
    newly-green rows, **zero drift**. Report: passed / failed / warning /

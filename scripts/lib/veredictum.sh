@@ -15,11 +15,15 @@
 #               (/work/specs/openehr), so `validate`, `test` and `export` run
 #               in it with nothing else fetched. scripts/conformance.sh uses it.
 #   the DATA    the repository at the tag of the pin, a shallow cached clone,
-#               for what the image does not carry: the performance schedule
-#               (`perf/`) the measured lanes read.
+#               for what the image does not carry: the performance tree
+#               (`perf/`: workloads, payloads, host prescriptions) the measured
+#               lane reads, beside the catalogue its `requires` resolve in.
 #   the BINARY  `cargo install veredictum`, from crates.io when the release is
 #               published there and from the repository tag otherwise, for
-#               the lanes that run on the host beside the clone.
+#               the measured lane: `perf`, `perf-judge`, `perf-compare` and
+#               `perf-assets` run on the host, because `perf` reaches the
+#               database container with `docker exec` (scripts/conformance.sh
+#               perf, scripts/render/perf-assets.sh).
 #
 # The clone and the binary are cached under one version-keyed root, and both
 # resolvers are idempotent: a warm machine re-runs them for the cost of a check.
@@ -114,11 +118,16 @@ veredictum_root() {
   printf '%s' "$root"
 }
 
-# The conformance catalogue the `--root` flag of `validate` and `test` takes.
+# The conformance catalogue: the `--root` of `validate` and `test`, and the
+# `--catalogue` a workload's `requires` resolve against in `perf`.
 veredictum_catalogue() { printf '%s/catalogue' "$(veredictum_root)"; }
 
 # The vendored spec oracle the `--specs` flag takes.
 veredictum_specs() { printf '%s/specs/openehr' "$(veredictum_root)"; }
 
-# The performance schedule the `--root` flag of the measured commands takes.
+# The performance tree the `--root` flag of `perf` and `perf-compare` takes.
 veredictum_perf() { printf '%s/perf' "$(veredictum_root)"; }
+
+# The pinned workload document `perf --workload` takes, by its id under
+# `perf/workloads/` (default: clinical-mix, the reference workload).
+veredictum_workload() { printf '%s/workloads/%s.yaml' "$(veredictum_perf)" "${1:-clinical-mix}"; }

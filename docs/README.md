@@ -59,11 +59,10 @@ externalization; acceptance is the openEHR conformance suite. See
 - `conformance/` — the conformance record of FerroEHR (`ferroehr/`:
   `results.json`) and its party set (`party/ferroehr/`: the statement and the
   IXIT). Numbers live ONLY in these committed artifacts.
-Statement-level profiling evidence is not produced here. `veredictum aql-probe`
-seeds a class-scale corpus, fires the measurement machinery's AQL set against
-the composed stack, and attributes the database-side cost per statement through
-`pg_stat_statements`; its report is exploration evidence and never a
-conformance record.
+  The measured performance record is `ferroehr/perf-result.json`, written by
+  `scripts/conformance.sh perf` (`veredictum perf`); its server-side readings
+  carry the top `pg_stat_statements` entries, so statement-level evidence comes
+  with that record, which is never a conformance record.
 
 - `benchmarks/` — benchmark records, which are deliberately NOT under
   `conformance/`: conformance is the CNF 2.0 suite

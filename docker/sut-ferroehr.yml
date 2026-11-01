@@ -59,8 +59,8 @@ services:
       PG_INIT_PASSWORD: ${PG_INIT_PASSWORD:-ferroehr}
       PG_INIT_DB: ${PG_INIT_DB:-ferroehr}
     # The same PG tuning floor the measurement instruments assume
-    # (pg_stat_statements so `veredictum aql-probe` can attribute time per
-    # statement; negligible overhead, ships in the stock image).
+    # (pg_stat_statements so `veredictum perf` records time per statement in
+    # its server-side readings; negligible overhead, ships in the stock image).
     command:
       - postgres
       - -c

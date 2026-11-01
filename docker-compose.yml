@@ -142,9 +142,9 @@ services:
       PG_INIT_USER: ${PG_INIT_USER:-ferroehr}
       PG_INIT_PASSWORD: ${PG_INIT_PASSWORD:-ferroehr}
       PG_INIT_DB: ${PG_INIT_DB:-ferroehr}
-    # pg_stat_statements is loaded so the optimization probe
-    # (`veredictum aql-probe`) can attribute time per statement; negligible
-    # overhead, ships in the stock image.
+    # pg_stat_statements is loaded so a measured run (`veredictum perf`) can
+    # attribute time per statement; negligible overhead, ships in the stock
+    # image.
     # The same PG tuning floor the measurement instruments assume, so a local
     # probe measures the tuned configuration.
     command:
