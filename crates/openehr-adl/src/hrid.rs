@@ -13,10 +13,10 @@
 //!
 //! Two further, deliberately *looser* readings of the same grammar live here so
 //! all three sit side by side and their differences are visible:
-//! [`hrid_lookup_key`]/[`raw_id_lookup_key`] (repository keying — version and
-//! namespace insensitive, case-folded) and [`is_archetype_id`] (the
-//! `master04.3` slot/root meta-pattern predicate, which judges shape only and
-//! parses nothing).
+//! [`hrid_lookup_key`]/[`raw_id_lookup_key`] (the case-folded family the
+//! repository keys on beside the namespace and the major version) and
+//! [`is_archetype_id`] (the `master04.3` slot/root meta-pattern predicate,
+//! which judges shape only and parses nothing).
 //!
 //! Everything that has to locate the `.v` version boundary in a raw id string —
 //! [`parse_hrid`], [`raw_id_lookup_key`], [`raw_id_concept`],

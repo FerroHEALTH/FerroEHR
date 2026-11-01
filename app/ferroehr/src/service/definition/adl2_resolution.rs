@@ -1,259 +1,138 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The stored release of an ADL2 artefact that a reference resolves to.
+//! The repository of stored ADL2 artefacts an artefact compiles against.
 //!
-//! The `openehr-adl` [`ArchetypeRepository`] holds one artefact per
-//! `publisher-package-class.concept` family and ignores the version, so the
-//! store chooses the release each reference names before the engine sees it.
-//! BASE Artefact Identification
+//! The `openehr-adl` [`ArchetypeRepository`] holds every stored release under
+//! its namespace, family and major version and resolves each reference to the
+//! release BASE Artefact Identification
 //! (`BASE/docs/artefact_identification/master07-referencing.adoc`
-//! §Referencing): an interface reference (`ihrid_ref`, major version only)
-//! "will match the latest release available of that major version", a
-//! reference with more version parts narrows the match to them, and "a
-//! pre-release version is referenced by its full identifier".
+//! §Referencing) names, so every stored artefact goes in and the engine
+//! applies the one resolution rule.
 
-use openehr_adl::artefact::ArchetypeRepository;
+use openehr_adl::artefact::{ArchetypeRepository, resolve_hrid};
 use openehr_adl::assemble::parse_artefact;
-use openehr_adl::hrid::{hrid_lookup_key, parse_hrid, raw_id_lookup_key, raw_id_version};
-use openehr_adl::opt::unresolved_constituents;
+use openehr_adl::hrid::{parse_hrid, split_at_version};
 use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
-use openehr_base::v1_3::base_types::definitions::version_status::VersionStatus;
 
-/// One stored artefact a reference can resolve to.
-#[derive(Debug, Clone)]
-pub(super) struct Candidate {
-    /// The stored `ARCHETYPE_HRID`, parsed.
-    hrid: ArchetypeHrid,
-    /// The parsed stored source.
-    artefact: Archetype,
-}
-
-impl Candidate {
-    /// One stored `(hrid, adl)` row, or `None` when either no longer parses.
-    ///
-    /// NOTE: a stored row that no longer parses is left out, as the engine
-    /// repository always left it out; it was engine-valid at its upload.
-    pub(super) fn parse(hrid: &str, adl: &str) -> Option<Self> {
-        Some(Self {
-            hrid: parse_hrid(hrid).ok()?,
-            artefact: parse_artefact(adl, Dialect::Adl2).ok()?,
-        })
-    }
-
-    /// The parsed stored source.
-    pub(super) fn artefact(&self) -> &Archetype {
-        &self.artefact
-    }
-}
-
-/// Every stored `(hrid, adl)` row that still parses, in the order of `rows`.
-pub(super) fn parse_stored(rows: &[(String, String)]) -> Vec<Candidate> {
-    rows.iter()
-        .filter_map(|(hrid, adl)| Candidate::parse(hrid, adl))
-        .collect()
-}
-
-/// The repository `root` resolves against: every specialisation parent and
-/// archetype reference in its closure resolved to the stored release
-/// [`choose`] picks for it, and nothing else.
+/// One stored ADL2 source, parsed, or `None` when it no longer parses.
 ///
-/// A family the closure references at two major versions holds the first one
-/// resolved, the engine repository holding one artefact per family.
-pub(super) fn repository_for(root: &Archetype, stored: &[Candidate]) -> ArchetypeRepository {
-    let hrids: Vec<&ArchetypeHrid> = stored.iter().map(|c| &c.hrid).collect();
+/// NOTE: a stored row that no longer parses is left out, as the engine
+/// repository always left it out; it was engine-valid at its upload.
+pub(super) fn parse_stored(adl: &str) -> Option<Archetype> {
+    parse_artefact(adl, Dialect::Adl2).ok()
+}
+
+/// The repository holding every one of `stored`.
+pub(super) fn repository_of(stored: impl IntoIterator<Item = Archetype>) -> ArchetypeRepository {
     let mut repo = ArchetypeRepository::new();
-    // Each round that inserts resolves at least one family for good, so the
-    // walk ends within one round per stored artefact.
-    for _ in 0..=stored.len() {
-        let mut grew = false;
-        for reference in unresolved_constituents(root, &repo) {
-            if let Some(found) = choose(&reference, &hrids).and_then(|i| stored.get(i)) {
-                repo.insert(found.artefact.clone());
-                grew = true;
-            }
-        }
-        if !grew {
-            break;
-        }
+    for artefact in stored {
+        repo.insert(artefact);
     }
     repo
 }
 
-/// What a reference asks of a stored version.
-enum Wanted {
-    /// The leading numeric version parts a release or release candidate must
-    /// carry (`v1` → `[1]`, `v1.2` → `[1, 2]`).
-    Prefix(Vec<u64>),
-    /// A pre-release named by its full identifier.
-    Exact(ArchetypeHrid),
-}
-
-impl Wanted {
-    /// The version `reference` asks for, or `None` when its version is not
-    /// numeric, so that nothing stored matches it.
-    fn of(reference: &str) -> Option<Self> {
-        if let Ok(h) = parse_hrid(reference)
-            && h.version_status != VersionStatus::Released
-        {
-            return Some(Self::Exact(h));
-        }
-        let version = raw_id_version(reference);
-        if version.is_empty() {
-            return Some(Self::Prefix(Vec::new()));
-        }
-        version
-            .split('.')
-            .map(|part| part.parse().ok())
-            .collect::<Option<Vec<u64>>>()
-            .map(Self::Prefix)
-    }
-
-    /// The precedence of `stored` when it matches, higher first.
-    fn rank(&self, stored: &ArchetypeHrid) -> Option<Precedence> {
-        let precedence = precedence(stored)?;
-        let admitted = match self {
-            Self::Prefix(parts) => {
-                precedence.status != Status::Other && precedence.release.starts_with(parts)
-            }
-            Self::Exact(h) => {
-                h.release_version == stored.release_version
-                    && h.version_status == stored.version_status
-                    && h.build_count == stored.build_count
-            }
-        };
-        admitted.then_some(precedence)
+/// The archetype reference a wire `template_id` and its optional `version`
+/// make: the `version` replaces any version the `template_id` writes.
+pub(super) fn wire_reference(template_id: &str, version: Option<&str>) -> String {
+    let Some(version) = version else {
+        return template_id.to_owned();
+    };
+    let (namespace, core) = match template_id.rsplit_once("::") {
+        Some((namespace, core)) => (Some(namespace), core),
+        None => (None, template_id),
+    };
+    let family = split_at_version(core).0;
+    match namespace {
+        Some(namespace) => format!("{namespace}::{family}.v{version}"),
+        None => format!("{family}.v{version}"),
     }
 }
 
-/// The lifecycle of a stored version as reference matching ranks it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum Status {
-    /// An alpha, beta or build version, matched by its full identifier only.
-    Other,
-    /// A release candidate.
-    Candidate,
-    /// A released version.
-    Released,
-}
-
-/// The order of the stored versions one reference matches: released before
-/// any release candidate, then the newest release number, then the build.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct Precedence {
-    /// The lifecycle, compared first.
-    status: Status,
-    /// `major.minor.patch`.
-    release: [u64; 3],
-    /// The pre-release build count, `0` when none.
-    build: u64,
-}
-
-/// The [`Precedence`] of a stored version, or `None` when its release number
-/// is not numeric.
+/// The stored HRID among `stored` that `reference` resolves to, by the
+/// engine's rule ([`resolve_hrid`], BASE Artefact Identification
+/// `master07-referencing.adoc` §Referencing): a release outranks its
+/// pre-releases, and a pre-release is read only by its full identifier.
 ///
-/// NOTE: `master07-referencing.adoc` §Archetype External References (ADL/AOM 2)
-/// resolves to "the most recent released version … OR the latest release
-/// candidate" without an order; our own design takes the release first.
-fn precedence(h: &ArchetypeHrid) -> Option<Precedence> {
-    let number = |part: &str| part.parse::<u64>().ok();
-    let status = match h.version_status {
-        VersionStatus::Released => Status::Released,
-        VersionStatus::ReleaseCandidate => Status::Candidate,
-        _ => Status::Other,
-    };
-    let build = if h.build_count.is_empty() {
-        0
-    } else {
-        number(&h.build_count)?
-    };
-    Some(Precedence {
-        status,
-        release: [
-            number(h.major_version())?,
-            number(h.minor_version())?,
-            number(h.patch_version())?,
-        ],
-        build,
-    })
-}
-
-/// The index in `stored` of the version `reference` resolves to: the
-/// highest-ranked one of its family that matches it, the last of equals.
-fn choose(reference: &str, stored: &[&ArchetypeHrid]) -> Option<usize> {
-    let family = raw_id_lookup_key(reference);
-    let wanted = Wanted::of(reference)?;
-    stored
-        .iter()
-        .enumerate()
-        .filter(|(_, h)| hrid_lookup_key(h) == family)
-        .filter_map(|(i, h)| wanted.rank(h).map(|rank| (i, rank)))
-        .max_by_key(|(_, rank)| *rank)
-        .map(|(i, _)| i)
+/// NOTE: a stored HRID that no longer parses is left out, as
+/// [`parse_stored`] leaves out a stored source; it parsed at its upload.
+pub(super) fn resolve_stored(reference: &str, stored: Vec<String>) -> Option<String> {
+    let any_namespace = !reference.contains("::");
+    let held: Vec<(ArchetypeHrid, String)> = stored
+        .into_iter()
+        .filter_map(|raw| parse_hrid(&raw).ok().map(|h| (h, raw)))
+        .map(|(mut h, raw)| {
+            // NOTE: ITS-REST `template_id_adl2.yaml` reads the partial id
+            // `openEHR-EHR-COMPOSITION.t_vital_signs.v1` as its namespaced
+            // example template, so a wire id without a namespace reads every one.
+            if any_namespace {
+                h.namespace = None;
+            }
+            (h, raw)
+        })
+        .collect();
+    let chosen = resolve_hrid(reference, None, held.iter().map(|(h, _)| h))?;
+    held.iter()
+        .find(|(h, _)| std::ptr::eq(h, chosen))
+        .map(|(_, raw)| raw.clone())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// The id `choose` picks for `reference` out of `ids`.
-    fn chosen<'a>(reference: &str, ids: &[&'a str]) -> Option<&'a str> {
-        let parsed: Vec<ArchetypeHrid> = ids.iter().map(|id| parse_hrid(id).unwrap()).collect();
-        let refs: Vec<&ArchetypeHrid> = parsed.iter().collect();
-        choose(reference, &refs).map(|i| ids[i])
-    }
-
-    const OBS: &str = "openEHR-EHR-OBSERVATION.bp";
-
-    fn id(version: &str) -> String {
-        format!("{OBS}.v{version}")
+    #[test]
+    fn a_wire_version_replaces_the_template_id_version() {
+        let family = "openEHR-EHR-COMPOSITION.c";
+        assert_eq!(
+            wire_reference(&format!("{family}.v1"), None),
+            "openEHR-EHR-COMPOSITION.c.v1"
+        );
+        assert_eq!(
+            wire_reference(family, Some("1.0.0-rc.1")),
+            format!("{family}.v1.0.0-rc.1")
+        );
+        assert_eq!(
+            wire_reference(&format!("{family}.v2"), Some("1.2")),
+            format!("{family}.v1.2")
+        );
+        assert_eq!(
+            wire_reference(&format!("org.example::{family}.v2"), Some("1")),
+            format!("org.example::{family}.v1")
+        );
     }
 
     #[test]
-    fn an_interface_reference_takes_the_newest_release_of_its_major_version() {
-        let ids = [id("1.0.0"), id("1.10.0"), id("1.9.3"), id("2.0.0")];
-        let ids: Vec<&str> = ids.iter().map(String::as_str).collect();
-        assert_eq!(chosen(&id("1"), &ids), Some(ids[1]));
-        assert_eq!(chosen(&id("2"), &ids), Some(ids[3]));
-        assert_eq!(chosen(&id("3"), &ids), None);
-        let mut reversed = ids.clone();
-        reversed.reverse();
-        assert_eq!(chosen(&id("1"), &reversed), Some(ids[1]));
+    fn a_stored_release_outranks_its_candidate_in_either_order() {
+        let release = "openEHR-EHR-COMPOSITION.c.v1.0.0".to_owned();
+        let candidate = "openEHR-EHR-COMPOSITION.c.v1.0.0-rc.1".to_owned();
+        for stored in [
+            vec![release.clone(), candidate.clone()],
+            vec![candidate.clone(), release.clone()],
+        ] {
+            let read = |reference: &str| resolve_stored(reference, stored.clone());
+            assert_eq!(read("openEHR-EHR-COMPOSITION.c.v1"), Some(release.clone()));
+            assert_eq!(
+                read("openEHR-EHR-COMPOSITION.c.v1.0.0"),
+                Some(release.clone())
+            );
+            assert_eq!(read(&candidate), Some(candidate.clone()));
+            assert_eq!(read("openEHR-EHR-COMPOSITION.c.v2"), None);
+        }
     }
 
     #[test]
-    fn more_version_parts_narrow_the_match() {
-        let ids = [id("1.2.0"), id("1.2.7"), id("1.3.0")];
-        let ids: Vec<&str> = ids.iter().map(String::as_str).collect();
-        assert_eq!(chosen(&id("1.2"), &ids), Some(ids[1]));
-        assert_eq!(chosen(&id("1.2.0"), &ids), Some(ids[0]));
-        assert_eq!(chosen(&id("1.4"), &ids), None);
-    }
-
-    #[test]
-    fn a_release_wins_over_a_newer_release_candidate() {
-        let ids = [id("1.3.0-rc.2"), id("1.2.0"), id("1.3.0-rc.10")];
-        let ids: Vec<&str> = ids.iter().map(String::as_str).collect();
-        assert_eq!(chosen(&id("1"), &ids), Some(ids[1]));
-        assert_eq!(chosen(&id("1"), &[ids[0], ids[2]]), Some(ids[2]));
-    }
-
-    #[test]
-    fn alpha_and_beta_versions_match_only_their_full_identifier() {
-        let ids = [id("1.0.0-alpha"), id("1.0.0-beta.2")];
-        let ids: Vec<&str> = ids.iter().map(String::as_str).collect();
-        assert_eq!(chosen(&id("1"), &ids), None);
-        assert_eq!(chosen(&id("1.0.0-beta.2"), &ids), Some(ids[1]));
-    }
-
-    #[test]
-    fn the_family_is_case_insensitive_and_other_families_never_match() {
-        let ids = [
-            "openehr-ehr-observation.BP.v1.0.0",
-            "openEHR-EHR-OBSERVATION.bp2.v1.1.0",
-        ];
-        assert_eq!(chosen(&id("1"), &ids), Some(ids[0]));
+    fn a_wire_id_without_a_namespace_reads_a_namespaced_template() {
+        let stored = vec!["org.highmed::openEHR-EHR-COMPOSITION.t.v1.0.0".to_owned()];
+        assert_eq!(
+            resolve_stored("openEHR-EHR-COMPOSITION.t.v1", stored.clone()),
+            stored.first().cloned()
+        );
+        assert_eq!(
+            resolve_stored("org.other::openEHR-EHR-COMPOSITION.t.v1", stored),
+            None
+        );
     }
 }

@@ -323,6 +323,67 @@ async fn import_ehr_extract_of_a_malformed_extract_is_bad_request() {
     assert_eq!(status, StatusCode::BAD_REQUEST, "malformed EXTRACT: {body}");
 }
 
+/// An imported `ORIGINAL_VERSION.other_input_version_uids` entry that is no
+/// `OBJECT_VERSION_ID` (RM common `original_version`:
+/// `Other_input_version_uids_valid`; master06 §Version Merging) refuses the
+/// whole import with `422`, naming the entry's position in the extract, and
+/// stores nothing; the twin carrying only the valid input lands.
+#[tokio::test]
+async fn import_ehr_with_a_malformed_merge_input_is_refused_and_stores_nothing() {
+    let (_pg, app) = common::test_router().await;
+    let valid = "5f0c2a1e-7b3d-4e9a-8c21-6d4b2f1a0e77::cnf.source.openehr.org::2";
+    let stamped = |inputs: Value| {
+        let mut extract: Value =
+            serde_json::from_str(&corpus("ehr_extract.v1.json")).expect("extract json");
+        extract["chapters"][0]["items"][0]["item"]["versions"][0]["other_input_version_uids"] =
+            inputs;
+        extract.to_string()
+    };
+
+    let refused = "3a9e5c7d-1f2b-4d6e-9a8c-0b1d2e3f4a5b";
+    let (status, body) = send(
+        &app,
+        post(
+            &format!("/message/import?ehr_id={refused}"),
+            "application/json",
+            stamped(serde_json::json!([
+                { "_type": "OBJECT_VERSION_ID", "value": valid },
+                { "_type": "OBJECT_VERSION_ID", "value": "not-a-version-id" }
+            ])),
+        ),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "malformed merge input: {body}"
+    );
+    assert!(
+        body.contains("chapters[0].items[0].item.versions[0].other_input_version_uids[1]"),
+        "the refusal names the entry's position in the extract: {body}"
+    );
+    let (status, _body) = send(&app, get(&format!("/ehr/{refused}"))).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "a refused import stores nothing"
+    );
+
+    let landed = "6b8f4d2c-0e1a-4f3b-8d7c-1a2b3c4d5e6f";
+    let (status, body) = send(
+        &app,
+        post(
+            &format!("/message/import?ehr_id={landed}"),
+            "application/json",
+            stamped(serde_json::json!([
+                { "_type": "OBJECT_VERSION_ID", "value": valid }
+            ])),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "valid merge input: {body}");
+}
+
 // ── Removed routes ───────────────────────────────────────────────────────────
 
 /// The Template Data Document import routes were removed (#4199), so each

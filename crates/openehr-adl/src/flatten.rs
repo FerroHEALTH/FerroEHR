@@ -158,9 +158,10 @@ fn flat_form_memo(
         // `is_differential = false` so downstream consumers see a flat artefact.
         return Ok(mark_flat(archetype));
     };
-    let key = parent_id.to_owned();
+    let namespace = v.archetype_id.namespace.as_deref();
+    let key = format!("{}::{parent_id}", namespace.unwrap_or_default());
     if stack.contains(&key) {
-        return Err(FlattenError::CyclicLineage(key));
+        return Err(FlattenError::CyclicLineage(parent_id.to_owned()));
     }
     if stack.len() >= MAX_NESTING_DEPTH {
         return Err(FlattenError::LineageTooDeep {
@@ -168,10 +169,9 @@ fn flat_form_memo(
         });
     }
     if let Some(cached) = memo.get(&key) {
-        let cached = cached.clone();
-        return flatten(archetype, &cached, repo);
+        return flatten(archetype, cached, repo);
     }
-    let Some(parent) = repo.get(parent_id) else {
+    let Some(parent) = repo.resolve(parent_id, namespace) else {
         return Err(FlattenError::ParentNotFound(parent_id.to_owned()));
     };
     stack.push(key.clone());

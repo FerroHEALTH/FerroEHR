@@ -233,7 +233,7 @@ pub fn unresolved_constituents(root: &Archetype, repo: &ArchetypeRepository) -> 
     while let Some(artefact) = queue.pop() {
         let mut lineage = artefact;
         while let Some(parent_id) = view(lineage).parent_archetype_id {
-            match work.get(parent_id) {
+            match work.resolve(parent_id, view(lineage).archetype_id.namespace.as_deref()) {
                 Some(parent) if seen.insert(hrid_to_string(view(parent).archetype_id)) => {
                     lineage = parent;
                 }
@@ -254,7 +254,8 @@ pub fn unresolved_constituents(root: &Archetype, repo: &ArchetypeRepository) -> 
             if reference.archetype_ref.is_empty() {
                 continue;
             }
-            match work.get(&reference.archetype_ref) {
+            let namespace = view(artefact).archetype_id.namespace.as_deref();
+            match work.resolve(&reference.archetype_ref, namespace) {
                 Some(constituent) => {
                     if seen.insert(hrid_to_string(view(constituent).archetype_id)) {
                         queue.push(constituent);
@@ -427,7 +428,9 @@ impl Transform<'_> {
         mut r: CArchetypeRoot,
         level: Nesting,
     ) -> Result<CObject, OptError> {
-        let Some(constituent) = self.work.get(&r.archetype_ref) else {
+        let work = self.work;
+        let referrer = self.inlining.last().and_then(|id| id.rsplit_once("::"));
+        let Some(constituent) = work.resolve(&r.archetype_ref, referrer.map(|(ns, _)| ns)) else {
             return Err(OptError::UnresolvedReference(r.archetype_ref.clone()));
         };
         let full_id = hrid_to_string(view(constituent).archetype_id);
@@ -439,10 +442,12 @@ impl Transform<'_> {
         if let Archetype::TemplateOverlay(overlay) = constituent
             && let Some(parent) = overlay.parent_archetype_id.as_deref()
         {
-            let parent_id = self.work.get(parent).map_or_else(
-                || parent.to_owned(),
-                |found| hrid_to_string(view(found).archetype_id),
-            );
+            let parent_id = work
+                .resolve(parent, overlay.archetype_id.namespace.as_deref())
+                .map_or_else(
+                    || parent.to_owned(),
+                    |found| hrid_to_string(view(found).archetype_id),
+                );
             self.overlay_parents.insert(full_id.clone(), parent_id);
         }
         let flat = flat_form(constituent, self.work)?;

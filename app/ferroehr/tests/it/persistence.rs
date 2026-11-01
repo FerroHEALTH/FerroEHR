@@ -86,7 +86,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 8);
-    assert_eq!(applied("clinical").await, 28);
+    assert_eq!(applied("clinical").await, 29);
     assert_eq!(applied("party").await, 20);
     assert_eq!(applied("linkage").await, 5);
     assert_eq!(applied("audit").await, 20);
@@ -111,6 +111,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
         tables("clinical").await,
         [
             "access_delay",
+            "access_opt_out",
             "access_restriction",
             "adl2_artefact",
             "archetype_store",

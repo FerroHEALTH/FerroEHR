@@ -18,6 +18,8 @@
 //!   objection and the retention register; our own extension.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access;
 //!   our own extension.
+//! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
+//!   services; our own extension.
 //! - `dump_load` — `export_ehrs` / `load_ehrs`.
 //! - [`integrity`] — the storage-parity sweep, our own extension: no openEHR
 //!   spec governs storage mechanics.
@@ -43,6 +45,7 @@ mod statistics;
 pub mod access_delay;
 pub mod integrity;
 pub mod marks;
+pub mod opt_out;
 pub mod types;
 
 use uuid::Uuid;

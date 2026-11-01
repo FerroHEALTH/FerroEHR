@@ -93,6 +93,9 @@ pub struct RbacConfig {
     /// may. No openEHR spec governs restriction of access — our own
     /// design/extension.
     pub emergency_access_role: Option<String>,
+    /// The roles of an EHDS Art. 10 access-service caller, held to an opt-out
+    /// (`FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES`; empty, the default, holds nobody).
+    pub access_service_roles: Vec<String>,
     /// The role that may read a party's protected national identifiers
     /// (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset).
     ///
@@ -129,6 +132,7 @@ impl Default for RbacConfig {
             readonly_role: "READONLY".to_owned(),
             subject_audit_role: None,
             emergency_access_role: None,
+            access_service_roles: Vec::new(),
             identifier_reader_role: None,
             ehr_access_default: EhrAccessDefault::Open,
         }
@@ -227,8 +231,7 @@ impl Default for RemoteConfig {
         Self {
             server: None,
             connect_timeout_ms: 2_000,
-            // 5 s: the whole-request budget the discovery and terminology
-            // clients use, so one outbound-HTTP posture spans the server.
+            // 5 s, the whole-request budget the discovery and terminology clients use too.
             request_timeout_ms: 5_000,
             oauth: None,
         }
@@ -357,9 +360,8 @@ pub enum AuthzConfigError {
          (ehr, ehr_status, composition, contribution, query, directory)"
     )]
     UnknownPolicyKind(String),
-    /// A `template` parameter was configured for `ehr`/`ehr_status` — illegal
-    /// A missing entry is refused at boot rather than at the first request, so a
-    /// deployment cannot discover the gap from a 500 in production.
+    /// A `template` parameter was configured for `ehr`/`ehr_status`, whose
+    /// resources carry no template.
     #[error("authz.abac.policy.{0} must not take the `template` parameter")]
     TemplateParamIllegal(&'static str),
     /// `engine = remote` without a configured base URL.
@@ -437,12 +439,10 @@ impl AbacConfig {
         self.validate_policy_rules()?;
         match self.engine {
             AbacEngineKind::Remote => self.validate_remote_engine(),
-            AbacEngineKind::Cedar => {
-                if self.cedar.policy_dir.is_none() {
-                    return Err(AuthzConfigError::CedarDirMissing);
-                }
-                Ok(())
-            }
+            AbacEngineKind::Cedar => match self.cedar.policy_dir {
+                Some(_) => Ok(()),
+                None => Err(AuthzConfigError::CedarDirMissing),
+            },
         }
     }
 

@@ -44,6 +44,8 @@
 //!   retention register, and the marks on `ehr` / `vo_head` they drive.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access
 //!   and its mark on `vo_head`.
+//! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
+//!   services and its mark on `ehr`.
 //!
 //! The seam with the versioning layer is a value contract rather than shared
 //! SQL: versioning owns the semantics (classify, tree placement, lifecycle,
@@ -59,6 +61,7 @@ pub mod error;
 pub mod header;
 pub mod marks;
 pub mod node_repo;
+pub mod opt_out;
 pub mod promoted;
 pub mod row;
 pub mod slim;

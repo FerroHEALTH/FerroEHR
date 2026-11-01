@@ -1184,10 +1184,10 @@ jobs:
   # ── openEHR conformance against this release's own images (#4539) ──────────
   # The reusable conformance.yml on the digests app-image and postgres-image
   # pushed, which this pipeline compiled cold from no cache: the run pulls them
-  # and compiles nothing. It reports and gates nothing yet (#4455): announce
-  # names its outcome without failing on it, nothing else needs it, and the
-  # milestone does not wait for it. The badge push is the Action's on main
-  # only, so a tag run pushes none.
+  # and compiles nothing. While `advisory` is set it ends green and hands its
+  # verdict to announce as an output, which names it in the run summary
+  # (#4455, #4605); nothing else needs it, and the milestone does not wait for
+  # it. The badge push is the Action's on main only, so a tag run pushes none.
   conformance:
     name: conformance
     needs: [plan, app-image, postgres-image]
@@ -1198,6 +1198,9 @@ jobs:
     with:
       server-image: ghcr.io/ferrohealth/ferroehr@${{ needs.app-image.outputs.digest }}
       postgres-image: ghcr.io/ferrohealth/ferroehr-postgres@${{ needs.postgres-image.outputs.digest }}
+      # THE SWITCH (#4455): delete this line to make conformance gate the
+      # release, once the released run on main is green.
+      advisory: true
 
   # ── The Helm chart ──────────────────────────────────────────────────────────
   # `needs: scan-and-tag` is the whole fix for the defect class this pipeline
@@ -1576,6 +1579,7 @@ jobs:
           R_CRATES: ${{ needs.crates.result }}
           R_MILESTONE: ${{ needs.milestone.result }}
           R_CONFORMANCE: ${{ needs.conformance.result }}
+          CONFORMANCE_VERDICT: ${{ needs.conformance.outputs.verdict }}
         run: |
           set -uo pipefail
           fail=0
@@ -1595,10 +1599,6 @@ jobs:
             fi
             if [ "$skip_ok" = "prerelease" ] && [ "$result" = "skipped" ] && [ "$IS_RELEASE" != "true" ]; then
               rows="${rows}| ${leg} | skipped — pre-release |"$'\n'
-              return
-            fi
-            if [ "$skip_ok" = "advisory" ]; then
-              rows="${rows}| ${leg} | ${result} (reported, not gating) |"$'\n'
               return
             fi
             rows="${rows}| ${leg} | **${result}** |"$'\n'
@@ -1625,8 +1625,10 @@ jobs:
           check "docs freeze" "$R_DOCS_FREEZE" prerelease
           check "crates.io" "$R_CRATES" prerelease
           check "milestone closed" "$R_MILESTONE"
-          # Reported, not gating, until conformance on main is green (#4455).
-          check "conformance (released profile)" "$R_CONFORMANCE" advisory
+          # The job gates like every leg; while its call passes `advisory` it
+          # ends green whatever its verdict, which the row and the section
+          # below name (#4455).
+          check "conformance (released profile, verdict: ${CONFORMANCE_VERDICT:-none})" "$R_CONFORMANCE"
 
           chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | sed -n 1p)"
           crates_version="${CRATE_VERSION:-unknown}"
@@ -1658,6 +1660,16 @@ jobs:
             printf '| crates.io | %s |\n' \
               "$([ "$R_CRATES" = "success" ] && echo "${crates_count:-unknown} \`openehr-*\` crates at \`${crates_version}\`" || echo "$R_CRATES")"
             printf '\n'
+            printf '### Conformance\n\n'
+            # Named the way the 5.6.0-rc6 notes named it while main had red rows.
+            case "$CONFORMANCE_VERDICT" in
+              passed)
+                printf "The released-profile Veredictum run of this release's images passed.\n\n" ;;
+              failed)
+                printf "The released-profile Veredictum run of this release's images failed: the run on main still has known red rows, tracked on #4455, so %s does not claim a green Veredictum record. The %s job summary names each red row, or the step that could not run.\n\n" "$TAG" '`conformance`' ;;
+              *)
+                printf "The conformance run gave no verdict (job result: %s), so %s does not claim a green Veredictum record.\n\n" "$R_CONFORMANCE" "$TAG" ;;
+            esac
             if [ "$fail" != 0 ]; then
               printf '### Recovery\n\n'
               printf 'Re-run this pipeline for `%s`. Every leg is idempotent, so a re-run\n' "$TAG"

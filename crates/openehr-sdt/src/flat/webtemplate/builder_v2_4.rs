@@ -55,6 +55,7 @@ use openehr_am::v2_4::beom::core::expression::Expression;
 use openehr_base::prelude::{Cardinality, MultiplicityInterval};
 use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
+use super::binding_v2_4::{bound_codes, split_operational};
 use super::implicit;
 use super::inputs::{assumed_code, default_string};
 use super::interval_v2_4::{
@@ -113,6 +114,8 @@ pub fn build_web_template_v2_4(
     // master04 §"Web Template Metadata": the root `nodeId` is the archetype id
     // (interface form), not the internal concept code.
     tree.node_id = Some(interface_id_of_hrid(&opt.archetype_id));
+    tree.archetype_ref = Some(template_id.clone());
+    tree.rm_release = Some(opt.rm_release.clone());
     tree.min = Some(1);
     tree.max = 1;
 
@@ -151,13 +154,10 @@ fn archetype_refs(
     let mut out = BTreeMap::new();
     let mut stack = vec![co];
     while let Some(co) = stack.pop() {
-        if let CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) = co {
-            let reference = overlay_parents
-                .get(&r.archetype_ref)
-                .unwrap_or(&r.archetype_ref);
+        if let Some(reference) = object_archetype_ref(co, overlay_parents) {
             let interface = interface_id(reference);
-            if *reference != interface {
-                out.insert(reference.clone(), interface);
+            if reference != interface {
+                out.insert(reference.to_owned(), interface);
             }
         }
         for attr in co_attributes(co) {
@@ -366,6 +366,9 @@ fn create_node(
     } else {
         Some(arch_node_id)
     };
+    if archetyped {
+        node.archetype_ref = object_archetype_ref(co, &ctx.overlay_parents).map(str::to_owned);
+    }
     node.min = min;
     node.max = max;
 
@@ -638,8 +641,12 @@ fn coded_inputs_from(
     if let Some(qualified) = Adl14Qualified::parse(&ctc.constraint) {
         return qualified.inputs(ctx, term);
     }
-    let codes = expand_codes(term, &ctc.constraint);
+    let (constraint, operational) = split_operational(&ctc.constraint);
+    let codes = expand_codes(term, constraint);
     let assumed = ctc.assumed_value.as_ref().map(|tc| tc.code_string.as_str());
+    if let Some((terminology, bound)) = bound_codes(term, operational, &codes) {
+        return vec![bound_input(ctx, term, terminology, &codes, &bound, assumed)];
+    }
     if codes.is_empty() {
         let mut inputs = external_coded_inputs();
         if let Some(code) = inputs.first_mut() {
@@ -658,6 +665,48 @@ fn coded_inputs_from(
     // Local (archetype-defined) value sets have terminology `local` — left
     // implicit (the reference form omits `terminology: "local"`).
     vec![input]
+}
+
+/// The `code` input of a constraint whose at-codes the template binds to
+/// `terminology`: each at-code written as its `bound` term (module
+/// [`super::binding_v2_4`]), an `openehr` term labelled from the openEHR
+/// terminology and any other from the archetype's rubric.
+fn bound_input(
+    ctx: &Ctx,
+    term: &ArchetypeTerminology,
+    terminology: &str,
+    codes: &[String],
+    bound: &[String],
+    assumed: Option<&str>,
+) -> WebTemplateInput {
+    let openehr = terminology.eq_ignore_ascii_case("openehr");
+    let mut input = WebTemplateInput::new(WebTemplateInputType::CodedText, Some("code"));
+    input.list = codes
+        .iter()
+        .zip(bound)
+        .map(|(local, code)| {
+            let mut cv = coded_value(ctx, term, local);
+            cv.value.clone_from(code);
+            if openehr {
+                let rubrics = openehr_term::bundle::openehr();
+                for (lang, label) in &mut cv.localized_labels {
+                    if let Some(rubric) = rubrics.concept_rubric(code, lang) {
+                        rubric.clone_into(label);
+                    }
+                }
+                if let Some(rubric) = rubrics.concept_rubric(code, &ctx.default_language) {
+                    cv.label = Some(rubric.to_owned());
+                }
+            }
+            cv
+        })
+        .collect();
+    input.terminology = Some(terminology.to_owned());
+    input.default_value = assumed
+        .and_then(|a| codes.iter().position(|code| code == a))
+        .and_then(|i| bound.get(i))
+        .map(default_string);
+    input
 }
 
 /// An ADL 1.4 qualified term constraint an archetype read in the ADL 1.4
@@ -1608,14 +1657,25 @@ fn object_node_id(co: &CObject) -> &str {
 /// archetype root, the specialisation parent's for a template overlay (see
 /// [`overlay_parents`]), else the constraint node id (at/id-code).
 fn object_archetype_node_id(co: &CObject, overlay_parents: &BTreeMap<String, String>) -> String {
+    object_archetype_ref(co, overlay_parents)
+        .map_or_else(|| object_node_id(co).to_owned(), interface_id)
+}
+
+/// The complete identifier an inlined archetype root carries in data: the
+/// template's reference, or its specialisation parent's for a template overlay
+/// (see [`overlay_parents`]); `None` below a root.
+fn object_archetype_ref<'a>(
+    co: &'a CObject,
+    overlay_parents: &'a BTreeMap<String, String>,
+) -> Option<&'a str> {
     match co {
-        CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) => {
-            let reference = overlay_parents
+        CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) => Some(
+            overlay_parents
                 .get(&r.archetype_ref)
-                .unwrap_or(&r.archetype_ref);
-            interface_id(reference)
-        }
-        _ => object_node_id(co).to_owned(),
+                .unwrap_or(&r.archetype_ref)
+                .as_str(),
+        ),
+        _ => None,
     }
 }
 
@@ -1669,10 +1729,10 @@ fn meet_single_existence(occurrences_min: Option<i32>, owner: Option<&CAttribute
 /// The data path of a node below `parent`. An `[idN]` predicate stands
 /// for `[@archetype_node_id = 'idN']` (ADL2 `master05-paths.adoc` §"Relationship
 /// with W3C Xpath"), which a `DATA_VALUE` lacks, being no `LOCATABLE` (RM
-/// `data_types`; RM `common` §Archetyped Package), so an ELEMENT's value and
-/// the parts of a data value take none: a `DV_INTERVAL`'s parts read `/lower`
-/// and `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
-/// §DV_INTERVAL).
+/// `data_types`; RM `common` §Archetyped Package), so no data-value step takes
+/// one: `COMPOSITION.category` reads `/category`, and a `DV_INTERVAL`'s parts
+/// read `/lower` and `/upper` (ITS-REST
+/// `simplified_formats/master05-rm_mapping.adoc` §DV_INTERVAL).
 fn build_path(
     parent: Option<&WebTemplateNode>,
     attr: Option<&str>,
@@ -1682,10 +1742,8 @@ fn build_path(
     let (Some(parent), Some(a)) = (parent, attr) else {
         return String::new();
     };
-    let owner = parent.rm_type.as_str();
-    let value = rm_type.starts_with("DV_") && (owner == "ELEMENT" || owner.starts_with("DV_"));
     let path = &parent.aql_path;
-    if id.is_empty() || value {
+    if id.is_empty() || rm_type.starts_with("DV_") {
         format!("{path}/{a}")
     } else {
         format!("{path}/{a}[{id}]")

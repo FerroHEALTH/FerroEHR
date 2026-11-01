@@ -8,8 +8,8 @@
 //! Validation is the real `openehr-adl` engine (parse → AOM2 phase 1 → RM
 //! phase 2 → specialisation phase 2 against the flat parent). The engine needs
 //! an [`ArchetypeRepository`] to resolve specialisation parents +
-//! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds one per
-//! artefact from the stored ADL2 sources (the registry is low-volume — an
+//! `use_archetype` fillers; [`FerroEhrService::adl2_repository`] builds it
+//! from the stored ADL2 sources (the registry is low-volume — an
 //! admin surface — so parse-on-demand is cheap; the
 //! `openehr-adl` phases degrade gracefully when a parent is unresolved).
 
@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 use openehr_adl::artefact::ArchetypeRepository;
 use openehr_adl::assemble::parse_artefact;
-use openehr_adl::hrid::{raw_id_concept, raw_id_lookup_key, raw_id_version};
+use openehr_adl::hrid::raw_id_concept;
 use openehr_adl::meta::{ArtefactSummary, summarize};
 use openehr_adl::opt::{OptError, create_opt, unresolved_constituents};
 use openehr_adl::parse::Dialect;
@@ -50,8 +50,8 @@ use crate::service::status::{ServiceStatus, StatusError};
 
 use super::adl2_dependents::adl2_write_lock;
 use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
-use super::adl2_resolution::{parse_stored, repository_for};
-use super::version_selector::{check_version_selector, cmp_version, version_prefix_matches};
+use super::adl2_resolution::{parse_stored, repository_of, resolve_stored, wire_reference};
+use super::version_selector::check_version_selector;
 use super::{compile_pattern, page_bounds, paginate};
 
 /// The `WebTemplate`-cache key namespace for ADL2/OPT2 templates. The trailing
@@ -248,10 +248,10 @@ impl FerroEhrService {
         .await?)
     }
 
-    /// Build the [`ArchetypeRepository`] `root` resolves against, so the
+    /// Build the [`ArchetypeRepository`] of every stored ADL2 artefact, so the
     /// `openehr-adl` engine can resolve specialisation parents +
     /// `use_archetype` fillers when validating an upload or projecting an OPT:
-    /// each reference takes the stored release [`repository_for`] picks.
+    /// the engine resolves each reference to its stored release.
     ///
     /// NOTE: the repository is re-parsed on every call, this path being reached
     /// only for an ADL2 upload or an OPT projection, so a memoized copy would
@@ -260,14 +260,15 @@ impl FerroEhrService {
     async fn adl2_repository(
         &self,
         conn: &mut PgConnection,
-        root: &Archetype,
     ) -> Result<ArchetypeRepository, ServiceError> {
-        let rows: Vec<(String, String)> =
-            sqlx::query_as("SELECT hrid, adl FROM adl2_artefact ORDER BY hrid")
+        let sources: Vec<String> =
+            sqlx::query_scalar("SELECT adl FROM adl2_artefact ORDER BY hrid")
                 .fetch_all(conn)
                 .await?;
-        let root = root.clone();
-        on_engine_stack(move || repository_for(&root, &parse_stored(&rows))).await
+        on_engine_stack(move || {
+            repository_of(sources.iter().map(String::as_str).filter_map(parse_stored))
+        })
+        .await
     }
 
     /// Validate one uploaded ADL2 source with the `openehr-adl` engine and store
@@ -305,7 +306,7 @@ impl FerroEhrService {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         adl2_write_lock(&mut tx).await?;
-        let repo = self.adl2_repository(&mut tx, &archetype).await?;
+        let repo = self.adl2_repository(&mut tx).await?;
         let owned = source.to_owned();
         let issues = on_engine_stack(move || match resolver {
             Some(resolver) => validate_source(&owned, Some(&repo), &ProductionRmModel, &resolver),
@@ -347,9 +348,10 @@ impl FerroEhrService {
     ///
     /// The artefact's declared `specialize` parent travels with it into
     /// `parent_hrid`: it is the archetype-lineage edge AQL resolves a parent
-    /// query through (AM `Identification` master07 §Supporting Archetype-based
-    /// Querying — for a specialised archetype the lineage "can only be obtained
-    /// from the operational form of the archetype"), and the engine has already
+    /// query through (BASE Artefact Identification
+    /// `master07-referencing.adoc` §Supporting Archetype-based Querying: for a
+    /// specialised archetype the lineage "can only be obtained from the
+    /// operational form of the archetype"), and the engine has already
     /// extracted it into the [`ArtefactSummary`] during validation.
     async fn adl2_persist(
         tx: &mut PgConnection,
@@ -420,12 +422,13 @@ impl FerroEhrService {
     }
 
     /// Resolve a wire `template_id` (`+` optional `version`) to the exact stored
-    /// `ARCHETYPE_HRID`. A full HRID matches case-insensitively; a partial
-    /// `template_id` (`…concept.v1`, or `…concept` + a `version` prefix)
-    /// resolves to the **highest** stored version whose family +
-    /// `{major}[.{minor}[.{patch}]]` prefix match (`template_id_adl2.yaml` — "a
-    /// partial `template_id` will resolve to 'latest' major version";
-    /// `version.yaml` — "a pattern as partial prefix … highest matching").
+    /// `ARCHETYPE_HRID`. A full HRID matches case-insensitively; any other
+    /// `template_id` (`…concept.v1`, or `…concept` + a `version`) resolves by
+    /// the engine's rule (BASE Artefact Identification
+    /// `master07-referencing.adoc` §Referencing): the newest version carrying
+    /// the given version parts, a release before its pre-releases, and a
+    /// pre-release only by its full version (`template_id_adl2.yaml`: "a
+    /// partial `template_id` will resolve to 'latest' major version").
     ///
     /// # Errors
     ///
@@ -449,36 +452,22 @@ impl FerroEhrService {
         {
             return Ok(hrid);
         }
-        // Partial resolution over the (small) registry: match the family and the
-        // version prefix, then take the highest release version.
-        let family = raw_id_lookup_key(template_id);
-        let want_version = version.map(str::to_owned).or_else(|| {
-            let v = raw_id_version(template_id);
-            (!v.is_empty()).then(|| v.to_owned())
-        });
-        let hrids: Vec<String> = sqlx::query_scalar("SELECT hrid FROM adl2_artefact")
+        // Every other read resolves by the engine's rule over the (small)
+        // registry.
+        let hrids: Vec<String> = sqlx::query_scalar("SELECT hrid FROM adl2_artefact ORDER BY hrid")
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
-        hrids
-            .into_iter()
-            .filter(|h| raw_id_lookup_key(h) == family)
-            .filter(|h| {
-                want_version
-                    .as_deref()
-                    .is_none_or(|want| version_prefix_matches(raw_id_version(h), want))
-            })
-            .max_by(|a, b| cmp_version(raw_id_version(a), raw_id_version(b)))
-            .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::TemplateDoesNotExist,
-                    format!(
-                        "ADL2 template {template_id}{}",
-                        version
-                            .map(|v| format!(" at version {v}"))
-                            .unwrap_or_default()
-                    ),
-                )
-            })
+        resolve_stored(&wire_reference(template_id, version), hrids).ok_or_else(|| {
+            ServiceError::new(
+                ServiceStatus::TemplateDoesNotExist,
+                format!(
+                    "ADL2 template {template_id}{}",
+                    version
+                        .map(|v| format!(" at version {v}"))
+                        .unwrap_or_default()
+                ),
+            )
+        })
     }
 
     /// Project the stored ADL2 source into its `OperationalTemplateV2` canonical
@@ -683,7 +672,7 @@ impl FerroEhrService {
             return Ok(opt.as_ref().clone());
         }
         let repo = self
-            .adl2_repository(&mut *acquire(&self.pool).await?, &archetype)
+            .adl2_repository(&mut *acquire(&self.pool).await?)
             .await?;
         on_engine_stack(move || {
             create_opt(&archetype, &repo).map_err(|e| match e {
@@ -934,6 +923,8 @@ fn store_kind(kind: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use openehr_adl::hrid::{raw_id_lookup_key, raw_id_version};
+
     use super::*;
 
     #[test]

@@ -16,7 +16,7 @@
 //! This module sits BELOW validation, flattening, and OPT generation: all three
 //! read through it, and it depends on none of them.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
@@ -25,21 +25,54 @@ use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::rm_overlay::rm_overlay::RmOverlay;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 use openehr_am::v2_4::resource::resource_description::ResourceDescription;
-use openehr_base::prelude::{ResourceAnnotations, TerminologyCode};
+use openehr_base::prelude::{ResourceAnnotations, TerminologyCode, VersionStatus};
 
-use crate::hrid::{hrid_lookup_key, raw_id_lookup_key};
+use crate::hrid::{hrid_lookup_key, parse_hrid, raw_id_lookup_key, raw_id_version};
 use crate::source::ArtefactKind;
 
 /// A minimal in-memory archetype repository — the parent/supplier seam the
 /// specialisation-aware checks resolve against.
 ///
-/// Keyed on the `publisher-package-class.concept` portion of the HRID (version
-/// family and namespace are ignored for lookup), so a child's
-/// `parent_archetype_id` (`…redefine_occurrences.v1`) resolves to the parsed
-/// parent (`…redefine_occurrences.v1.0.0`).
+/// An artefact is held under its namespace, its case-folded
+/// `publisher-package-class.concept` family and its major version: BASE
+/// `artefact_identification` `master07-referencing.adoc` §Referencing makes
+/// two major versions of one archetype "different logical archetypes", and a
+/// namespace is "never a wildcard". Every release of one key is kept, and a
+/// reference resolves within its key by [`ArchetypeRepository::resolve`].
 #[derive(Debug, Default, Clone)]
 pub struct ArchetypeRepository {
-    by_id: HashMap<String, Archetype>,
+    by_key: BTreeMap<ArtefactKey, Vec<Archetype>>,
+}
+
+/// The identity a reference matches before its version is read: namespace,
+/// family and major version.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct ArtefactKey {
+    /// The namespace as the identifier writes it, `None` when it carries none.
+    namespace: Option<String>,
+    /// The case-folded `publisher-package-class.concept` ([`hrid_lookup_key`]).
+    family: String,
+    /// The major version, as a number when it is one.
+    major: String,
+}
+
+impl ArtefactKey {
+    /// The key of a stored artefact's identifier.
+    fn of(h: &ArchetypeHrid) -> Self {
+        Self {
+            namespace: h.namespace.clone(),
+            family: hrid_lookup_key(h),
+            major: major_key(h.major_version()),
+        }
+    }
+}
+
+/// A major version written canonically (`01` → `1`), so a reference and a
+/// stored identifier agree on it.
+fn major_key(major: &str) -> String {
+    major
+        .parse::<u64>()
+        .map_or_else(|_| major.to_owned(), |n| n.to_string())
 }
 
 impl ArchetypeRepository {
@@ -49,17 +82,248 @@ impl ArchetypeRepository {
         Self::default()
     }
 
-    /// Register a parsed archetype under its HRID key.
+    /// Register a parsed archetype under its namespace, family and major
+    /// version, replacing an artefact of the same full version.
     pub fn insert(&mut self, archetype: Archetype) {
-        let key = hrid_lookup_key(view(&archetype).archetype_id);
-        self.by_id.insert(key, archetype);
+        let hrid = view(&archetype).archetype_id;
+        let held = self.by_key.entry(ArtefactKey::of(hrid)).or_default();
+        let same = held
+            .iter()
+            .position(|a| same_version(view(a).archetype_id, hrid));
+        match same.and_then(|i| held.get_mut(i)) {
+            Some(slot) => *slot = archetype,
+            None => held.push(archetype),
+        }
     }
 
-    /// Resolve a raw archetype-id reference (as it appears in a
-    /// `parent_archetype_id` / external ref) to a registered archetype.
+    /// Resolve a raw archetype reference (a `parent_archetype_id`, a
+    /// `use_archetype` or filler reference) in the namespace the reference
+    /// writes, or in no namespace when it writes none.
     #[must_use]
-    pub fn get(&self, raw_id: &str) -> Option<&Archetype> {
-        self.by_id.get(&raw_id_lookup_key(raw_id))
+    pub fn get(&self, reference: &str) -> Option<&Archetype> {
+        self.resolve(reference, None)
+    }
+
+    /// Resolve a raw archetype reference made from an artefact in
+    /// `referrer_namespace`.
+    ///
+    /// A reference without a namespace takes the referrer's, and a reference
+    /// resolves only within its namespace, family and major version (BASE
+    /// `artefact_identification` `master07-referencing.adoc` §Referencing).
+    /// An interface reference (`v1`) or a specific one (`v1.2`) takes the
+    /// newest version carrying those version parts, a full reference
+    /// (`v1.2.3`) that version, and a release outranks every release
+    /// candidate. An alpha or beta version matches only its full identifier.
+    #[must_use]
+    pub fn resolve(&self, reference: &str, referrer_namespace: Option<&str>) -> Option<&Archetype> {
+        let query = Query::of(reference, referrer_namespace)?;
+        let held: Vec<&Archetype> = match query.key() {
+            Some(key) => self.by_key.get(&key).into_iter().flatten().collect(),
+            None => self
+                .by_key
+                .iter()
+                .filter(|(key, _)| query.admits(key))
+                .flat_map(|(_, held)| held)
+                .collect(),
+        };
+        query.best(held, |a| view(a).archetype_id)
+    }
+}
+
+/// The identifier among `held` that `reference`, made from an artefact in
+/// `referrer_namespace`, resolves to, by the rule of
+/// [`ArchetypeRepository::resolve`].
+///
+/// This is that rule over bare identifiers, for a caller that holds the
+/// identifiers of stored artefacts without their parsed content.
+#[must_use]
+pub fn resolve_hrid<'a>(
+    reference: &str,
+    referrer_namespace: Option<&str>,
+    held: impl IntoIterator<Item = &'a ArchetypeHrid>,
+) -> Option<&'a ArchetypeHrid> {
+    let query = Query::of(reference, referrer_namespace)?;
+    let held = held
+        .into_iter()
+        .filter(|h| query.admits(&ArtefactKey::of(h)));
+    query.best(held, |h| h)
+}
+
+/// One reference, read once: the namespace it resolves in, its family and the
+/// version it asks for.
+struct Query {
+    /// The reference's namespace, else the referrer's.
+    namespace: Option<String>,
+    /// The case-folded family ([`raw_id_lookup_key`]).
+    family: String,
+    /// The version asked for.
+    wanted: Wanted,
+}
+
+impl Query {
+    /// The query of `reference`, or `None` when its version is not numeric.
+    fn of(reference: &str, referrer_namespace: Option<&str>) -> Option<Self> {
+        let (namespace, _) = split_namespace(reference);
+        Some(Self {
+            namespace: namespace.or(referrer_namespace).map(str::to_owned),
+            family: raw_id_lookup_key(reference),
+            wanted: Wanted::of(reference)?,
+        })
+    }
+
+    /// The one key this query reads, `None` for a versionless reference.
+    fn key(&self) -> Option<ArtefactKey> {
+        self.wanted.major().map(|major| ArtefactKey {
+            namespace: self.namespace.clone(),
+            family: self.family.clone(),
+            major,
+        })
+    }
+
+    /// Whether artefacts held under `key` are candidates for this query.
+    ///
+    /// NOTE: no openEHR spec governs a reference without a version
+    /// (`master07-referencing.adoc` §Referencing gives every `hrid_ref` a
+    /// major version); our own design reads it across every major version.
+    fn admits(&self, key: &ArtefactKey) -> bool {
+        key.namespace == self.namespace
+            && key.family == self.family
+            && self.wanted.major().is_none_or(|major| key.major == major)
+    }
+
+    /// The candidate of highest precedence among `held` that the wanted
+    /// version admits.
+    fn best<T>(
+        &self,
+        held: impl IntoIterator<Item = T>,
+        hrid: impl Fn(&T) -> &ArchetypeHrid,
+    ) -> Option<T> {
+        held.into_iter()
+            .filter_map(|t| self.wanted.rank(hrid(&t)).map(|rank| (t, rank)))
+            .max_by_key(|(_, rank)| *rank)
+            .map(|(t, _)| t)
+    }
+}
+
+/// A raw identifier split at its `ns::` prefix: the namespace, if any, and the
+/// rest.
+fn split_namespace(raw: &str) -> (Option<&str>, &str) {
+    match raw.rsplit_once("::") {
+        Some((namespace, rest)) => (Some(namespace), rest),
+        None => (None, raw),
+    }
+}
+
+/// True when two identifiers name the same full version.
+fn same_version(a: &ArchetypeHrid, b: &ArchetypeHrid) -> bool {
+    a.release_version == b.release_version
+        && a.version_status == b.version_status
+        && a.build_count == b.build_count
+}
+
+/// What a reference asks of a held version.
+enum Wanted {
+    /// The leading numeric version parts a release or release candidate must
+    /// carry (`v1` → `[1]`, `v1.2` → `[1, 2]`; none for a versionless id).
+    Prefix(Vec<u64>),
+    /// A pre-release named by its full identifier.
+    Exact(ArchetypeHrid),
+}
+
+impl Wanted {
+    /// The version `reference` asks for, or `None` when its version is not
+    /// numeric, so that nothing held matches it.
+    fn of(reference: &str) -> Option<Self> {
+        if let Ok(h) = parse_hrid(reference)
+            && h.version_status != VersionStatus::Released
+        {
+            return Some(Self::Exact(h));
+        }
+        let version = raw_id_version(reference);
+        if version.is_empty() {
+            return Some(Self::Prefix(Vec::new()));
+        }
+        version
+            .split('.')
+            .map(|part| part.parse().ok())
+            .collect::<Option<Vec<u64>>>()
+            .map(Self::Prefix)
+    }
+
+    /// The major version this reference is confined to, `None` for a
+    /// versionless reference.
+    fn major(&self) -> Option<String> {
+        match self {
+            Self::Prefix(parts) => parts.first().map(u64::to_string),
+            Self::Exact(h) => Some(major_key(h.major_version())),
+        }
+    }
+
+    /// The precedence of `held` when it matches, higher first.
+    fn rank(&self, held: &ArchetypeHrid) -> Option<Precedence> {
+        let precedence = Precedence::of(held)?;
+        let admitted = match self {
+            Self::Prefix(parts) => {
+                precedence.status != Status::Other && precedence.release.starts_with(parts)
+            }
+            Self::Exact(h) => same_version(h, held),
+        };
+        admitted.then_some(precedence)
+    }
+}
+
+/// The lifecycle of a held version as reference matching ranks it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Status {
+    /// An alpha, beta or build version, matched by its full identifier only.
+    Other,
+    /// A release candidate.
+    Candidate,
+    /// A released version.
+    Released,
+}
+
+/// The order of the held versions one reference matches: released before any
+/// release candidate, then the newest release number, then the build.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct Precedence {
+    /// The lifecycle, compared first.
+    status: Status,
+    /// `major.minor.patch`, an absent part read as `0`.
+    release: [u64; 3],
+    /// The pre-release build count, `0` when none.
+    build: u64,
+}
+
+impl Precedence {
+    /// The precedence of a held version, or `None` when its version is not
+    /// numeric.
+    ///
+    /// NOTE: `master07-referencing.adoc` §Archetype External References (ADL/AOM 2)
+    /// resolves to "the most recent released version … OR the latest release
+    /// candidate" without an order; our own design takes the release first.
+    fn of(h: &ArchetypeHrid) -> Option<Self> {
+        let number = |part: &str| {
+            if part.is_empty() {
+                Some(0)
+            } else {
+                part.parse::<u64>().ok()
+            }
+        };
+        let status = match h.version_status {
+            VersionStatus::Released => Status::Released,
+            VersionStatus::ReleaseCandidate => Status::Candidate,
+            _ => Status::Other,
+        };
+        Some(Self {
+            status,
+            release: [
+                number(h.major_version())?,
+                number(h.minor_version())?,
+                number(h.patch_version())?,
+            ],
+            build: number(&h.build_count)?,
+        })
     }
 }
 
@@ -101,7 +365,8 @@ pub fn resolve_flat_parent<'a>(child: &Archetype, repo: &'a ArchetypeRepository)
     let Some(parent_id) = view(child).parent_archetype_id else {
         return FlatParent::NotSpecialised;
     };
-    let Some(parent) = repo.get(parent_id) else {
+    let Some(parent) = repo.resolve(parent_id, view(child).archetype_id.namespace.as_deref())
+    else {
         return FlatParent::NotFound;
     };
     if view(parent).is_specialised() {
