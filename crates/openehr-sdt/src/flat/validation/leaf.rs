@@ -20,6 +20,8 @@
               (#1694)"
 )]
 
+use std::collections::BTreeSet;
+
 use openehr_base::v1_3::base_types::definitions::definitions_impl::LOCAL_TERMINOLOGY_ID;
 use serde_json::Value;
 
@@ -60,16 +62,18 @@ pub(super) fn check_inputs(v: &mut Validator, instance: &Value, wt: &WebTemplate
     check_code_lists(v, instance, wt);
 }
 
-/// `C_INTEGER.range` / `C_REAL.range` on a leaf's numeric datum the `inputs`
-/// builders do not otherwise carry (`DV_MULTIMEDIA.size` — AOM 1.4
-/// `master04-constraint_model_package.adoc` §`C_INTEGER`; RM `data_types`
-/// §`DV_MULTIMEDIA`): the instance datum must lie within the declared interval.
+/// `C_INTEGER`/`C_REAL` ranges on a leaf's numeric datum the `inputs` do not
+/// carry (`DV_MULTIMEDIA.size`, RM `data_types` §`DV_MULTIMEDIA`; an ADL 2 union
+/// of ranges, AOM2 `master04.5-constraint_model-class_definitions.adoc`
+/// §C_ORDERED): the datum must lie within one of the ranges given for it.
 fn check_numeric_ranges(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
-    for (attr, range) in &wt.numeric_ranges {
+    let attrs: BTreeSet<&str> = wt.numeric_ranges.iter().map(|(a, _)| a.as_str()).collect();
+    for attr in attrs {
         let Some(value) = instance.get(attr).and_then(as_f64) else {
             continue;
         };
-        if !in_range(value, range) {
+        let mut ranges = wt.numeric_ranges.iter().filter(|(a, _)| a == attr);
+        if !ranges.any(|(_, range)| in_range(value, range)) {
             v.push(
                 &wt.aql_path,
                 format!("{attr} {value} is outside the constrained range"),
@@ -1091,23 +1095,15 @@ fn as_f64(v: &Value) -> Option<f64> {
 // `minOp`/`maxOp` boundary openness (foundation_types interval.adoc); the
 // reference semantics + tests live in `openehr-base` `interval_impl.rs`.
 fn in_range(value: f64, range: &WebTemplateRange) -> bool {
-    if let Some(min) = range.min.as_ref().and_then(as_f64) {
-        let ok = match range.min_op.as_deref() {
-            Some(">") => value > min,
-            _ => value >= min,
-        };
-        if !ok {
-            return false;
-        }
-    }
-    if let Some(max) = range.max.as_ref().and_then(as_f64) {
-        let ok = match range.max_op.as_deref() {
-            Some("<") => value < max,
-            _ => value <= max,
-        };
-        if !ok {
-            return false;
-        }
-    }
-    true
+    let min = range.min.as_ref().and_then(as_f64);
+    let max = range.max.as_ref().and_then(as_f64);
+    let above = min.is_none_or(|m| match range.min_op.as_deref() {
+        Some(">") => value > m,
+        _ => value >= m,
+    });
+    above
+        && max.is_none_or(|m| match range.max_op.as_deref() {
+            Some("<") => value < m,
+            _ => value <= m,
+        })
 }
