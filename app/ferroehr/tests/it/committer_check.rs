@@ -121,7 +121,10 @@ fn person() -> Value {
 async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId) {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     (db, svc, ehr_id)
 }
 
@@ -310,13 +313,14 @@ async fn ehr_status_update_checks_the_committer() {
         let svc = svc.clone();
         async move {
             let mut body = svc
-                .get_ehr_status_at_time(ehr, None)
+                .ehr_status_at_time_response(ehr, None)
                 .await
+                .map(|r| r.body)
                 .expect("the current EHR_STATUS");
             let preceding = body["uid"]["value"].as_str().expect("uid").to_owned();
             body.as_object_mut().expect("an object").remove("uid");
-            let write =
-                svc.replace_ehr_status(ehr, version(&body, "251", Some(&preceding), &committer));
+            let write = svc
+                .replace_ehr_status_meta(ehr, version(&body, "251", Some(&preceding), &committer));
             outcome(with_committer(Some(professional()), Box::pin(write)).await)
         }
     };
@@ -345,7 +349,10 @@ async fn directory_create_checks_the_committer() {
 async fn demographic_create_checks_the_committer() {
     let (_db, svc, _) = setup().await;
     let create = |committer: Value| {
-        let write = Box::pin(svc.create_party(version(&person(), "249", None, &committer)));
+        let write = Box::pin(crate::fixtures::create_party(
+            &svc,
+            version(&person(), "249", None, &committer),
+        ));
         async move { outcome(with_committer(Some(professional()), write).await) }
     };
     assert_eq!(create(matching()).await, None);

@@ -74,7 +74,10 @@ async fn ehr(svc: &FerroEhrService, n: u8) -> EhrId {
         "is_modifiable": true
     }))
     .expect("the subject-bearing EHR_STATUS decodes");
-    svc.create_ehr(Some(status)).await.expect("create the EHR")
+    Box::pin(svc.create_ehr_meta(Some(status), None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create the EHR")
 }
 
 /// Commit a composition named `name`; returns its version uid.

@@ -221,11 +221,16 @@ async fn seed(
     sex: &str,
     born: &str,
 ) -> Subject {
-    let party =
-        Box::pin(svc.create_party(uv(&person(name, city, postcode, sex, born), "249", None)))
-            .await
-            .unwrap_or_else(|e| panic!("create_party ({name}): {e:?}"));
-    let ehr = svc.create_ehr(None).await.expect("create_ehr");
+    let party = crate::fixtures::create_party(
+        svc,
+        uv(&person(name, city, postcode, sex, born), "249", None),
+    )
+    .await
+    .unwrap_or_else(|e| panic!("create_party ({name}): {e:?}"));
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     svc.link(party, ehr).await.expect("link party to ehr");
     let composition_uid = svc
         .create_composition(ehr, uv(&composition(name), "249", None))

@@ -45,10 +45,8 @@ app/ferroehr/src/service/admin/dump_load.rs 2453
 app/ferroehr/src/service/definition/adl2.rs 1043
 app/ferroehr/src/service/definition/opt14_convert.rs 2727
 app/ferroehr/src/service/definition/query.rs 988
-app/ferroehr/src/service/demographic/api.rs 1226
-app/ferroehr/src/service/ehr/composition.rs 1197
-app/ferroehr/src/service/ehr/service.rs 874
-app/ferroehr/src/service/ehr/status.rs 950
+app/ferroehr/src/service/demographic/api.rs 832
+app/ferroehr/src/service/ehr/composition.rs 1076
 app/ferroehr/src/service/ehr/validation.rs 1593
 app/ferroehr/src/service/error.rs 1530
 app/ferroehr/src/service/message/export.rs 1135

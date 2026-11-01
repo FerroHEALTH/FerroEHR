@@ -293,8 +293,9 @@ async fn seed(svc: &Arc<FerroEhrService>, pool: &PgPool, class: BenchClass) -> C
         .map(|index| {
             let svc = Arc::clone(svc);
             async move {
-                svc.create_ehr(Some(ehr_status(index)))
+                Box::pin(svc.create_ehr_meta(Some(ehr_status(index)), None))
                     .await
+                    .map(|(id, _)| id)
                     .expect("create_ehr")
             }
         })
@@ -1137,8 +1138,11 @@ fn bench_read(
                     rt.block_on(async {
                         let start = Instant::now();
                         for _ in 0..iters {
-                            svc.get_composition_latest(kept.ehr, kept.vo)
+                            svc.composition_latest_response(kept.ehr, kept.vo)
                                 .await
+                                .map(|r| {
+                                    r.body.into_value().expect("the stored COMPOSITION decodes")
+                                })
                                 .expect("read the latest version");
                         }
                         start.elapsed()
@@ -1164,8 +1168,9 @@ fn bench_read(
                 rt.block_on(async {
                     let start = Instant::now();
                     for _ in 0..iters {
-                        svc.composition_revision_history(kept.ehr, kept.vo)
+                        svc.composition_revision_history_response(kept.ehr, kept.vo)
                             .await
+                            .map(|r| r.body)
                             .expect("read the revision history");
                     }
                     start.elapsed()

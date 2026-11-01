@@ -40,8 +40,15 @@ use crate::fixtures::{composition, uv};
 /// Create an EHR + one composition on `svc` and return
 /// `(EHR.system_id, OBJECT_VERSION_ID, AUDIT_DETAILS.system_id)`.
 async fn stamped_identities(svc: &FerroEhrService) -> (String, String, String) {
-    let ehr_id: EhrId = svc.create_ehr(None).await.expect("create_ehr");
-    let summary = svc.get_ehr(ehr_id).await.expect("get_ehr");
+    let ehr_id: EhrId = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
+    let ehr = svc.ehr_read(ehr_id).await.expect("ehr_read").body;
+    let ehr_system_id = ehr["system_id"]["value"]
+        .as_str()
+        .expect("EHR.system_id")
+        .to_owned();
 
     let ovid = svc
         .create_composition(ehr_id, uv(&composition("system id"), "249", None))
@@ -57,7 +64,7 @@ async fn stamped_identities(svc: &FerroEhrService) -> (String, String, String) {
         .expect("commit_audit.system_id")
         .to_owned();
 
-    (summary.system_id, ovid, audit_system_id)
+    (ehr_system_id, ovid, audit_system_id)
 }
 
 #[tokio::test]

@@ -45,10 +45,14 @@ use crate::fixtures::uv;
 /// A fresh repository plus one EHR carrying an `EHR_STATUS` and a directory
 /// `FOLDER`, and the `EHR_STATUS` version-container id.
 async fn seed(svc: &FerroEhrService) -> (EhrId, String) {
-    let ehr_id = svc.create_ehr(None).await.expect("ehr");
-    let status = svc
-        .get_ehr_status_at_time(ehr_id, None)
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
+        .expect("ehr");
+    let status = svc
+        .ehr_status_at_time_response(ehr_id, None)
+        .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
     let status_vo = status_ovid
@@ -133,8 +137,9 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
 
     // Before the mark: the EHR_STATUS reads, and the population query sees it.
     let mut update_body = svc
-        .get_ehr_status_at_time(ehr_id, None)
+        .ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect("an unrestricted status reads");
     let status_ovid = update_body["uid"]["value"]
         .as_str()
@@ -159,8 +164,9 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
     // would deny the record exists, and not a 403 from the access layer, which
     // would send the caller to fix their credentials.
     let refusal = svc
-        .get_ehr_status_at_time(ehr_id, None)
+        .ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect_err("a restricted status is refused");
     assert_eq!(refusal.status, ServiceStatus::ProcessingRestricted);
     assert!(
@@ -171,18 +177,20 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
 
     // The revision history is the same object's change record, refused alike.
     let history = svc
-        .ehr_status_revision_history(ehr_id)
+        .ehr_status_revision_history_response(ehr_id)
         .await
+        .map(|r| r.body)
         .expect_err("a restricted object's revision history is refused");
     assert_eq!(history.status, ServiceStatus::ProcessingRestricted);
 
     // A write to it is refused: Art. 18(2) leaves only storage. The body is
     // the one read back before the mark, so the refusal is the restriction's
     // and not a validation failure standing in for it.
-    let write = svc
-        .replace_ehr_status(ehr_id, uv(&update_body, "251", Some(&status_ovid)))
-        .await
-        .expect_err("a write to a restricted object is refused");
+    let write =
+        Box::pin(svc.replace_ehr_status_meta(ehr_id, uv(&update_body, "251", Some(&status_ovid))))
+            .await
+            .map(|m| m.uid)
+            .expect_err("a write to a restricted object is refused");
     assert_eq!(write.status, ServiceStatus::ProcessingRestricted);
 
     // The stored rows are untouched: a restriction limits processing, it does
@@ -198,8 +206,9 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
     svc.lift_restriction(&ehr_id.to_string(), Some(&status_vo))
         .await
         .expect("lift");
-    svc.get_ehr_status_at_time(ehr_id, None)
+    svc.ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect("a lifted status reads again");
 
     // Art. 18(3) needs the sequence, so the register still carries the request.
@@ -232,7 +241,10 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     .expect("restrict the whole EHR");
 
     assert!(
-        svc.get_ehr_status_at_time(ehr_id, None).await.is_err(),
+        svc.ehr_status_at_time_response(ehr_id, None)
+            .await
+            .map(|r| r.body)
+            .is_err(),
         "the status of a restricted EHR is refused"
     );
     assert!(
@@ -265,8 +277,9 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     svc.lift_restriction(&ehr_id.to_string(), None)
         .await
         .expect("lift");
-    svc.get_ehr_status_at_time(ehr_id, None)
+    svc.ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect("the status reads again");
     assert_eq!(population_rows(&svc).await, 1);
     assert!(
@@ -297,7 +310,10 @@ async fn an_object_restriction_survives_a_whole_ehr_lift() {
         .await
         .expect("the directory is no longer restricted");
     assert!(
-        svc.get_ehr_status_at_time(ehr_id, None).await.is_err(),
+        svc.ehr_status_at_time_response(ehr_id, None)
+            .await
+            .map(|r| r.body)
+            .is_err(),
         "the object-scoped restriction stands on its own"
     );
 }
@@ -322,7 +338,11 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
 
     let foreign = svc
         .restrict_processing(
-            &svc.create_ehr(None).await.expect("second ehr").to_string(),
+            &Box::pin(svc.create_ehr_meta(None, None))
+                .await
+                .map(|(id, _)| id)
+                .expect("second ehr")
+                .to_string(),
             Some(&status_vo),
             "national",
             None,
@@ -363,8 +383,9 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         1,
         "a query naming the ehr_id is care, not research, and is untouched"
     );
-    svc.get_ehr_status_at_time(ehr_id, None)
+    svc.ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect("the treating clinician's read is untouched");
     let extract = svc
         .extract_ehrs(ehr_id)
@@ -466,8 +487,9 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
 
     // Nothing was deleted by the listing: the record is indelible and disposal
     // is the controller's act.
-    svc.get_ehr_status_at_time(ehr_id, None)
+    svc.ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect("the due EHR still serves its content");
 
     // A per-object hold moves the object from due to held (EPDV Art. 10

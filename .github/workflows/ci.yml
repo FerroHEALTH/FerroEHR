@@ -91,8 +91,8 @@ env:
   # bevy sets exactly these two vars; polars uses `-C debuginfo=0`).
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_PROFILE_TEST_DEBUG: "0"
-  # Every job here is REQUIRED except `conformance`, which reports its verdict
-  # without failing while its call passes `advisory: true` (#4455, #4600).
+  # Every job here is REQUIRED, `conformance` included: a red released-profile
+  # verdict fails the merge queue (#4455).
   #
   # Event gating (#2777), the rule behind every `if:` in this file that names
   # an event: a job reading `pull_request` OR `merge_group` is a WHOLE-TREE
@@ -2988,9 +2988,6 @@ jobs:
     uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       server-binary-artifact: ui-e2e-server-binary
-      # THE SWITCH (#4455): delete this line to make conformance required,
-      # once the released run on main is green.
-      advisory: true
 
   veredictum-action:
     name: veredictum-action

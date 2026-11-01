@@ -235,7 +235,10 @@ async fn a_reachable_database_gives_levels_and_no_patient_identifier() {
     });
     let status = openehr_its::json::from_canonical_value::<openehr_rm::prelude::EhrStatus>(&status)
         .expect("a valid EHR_STATUS");
-    let ehr_id = svc.create_ehr(Some(status)).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(Some(status), None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     let mut config = FerroEhrConfig::default();
     config.db.url = SecretUrl::new(db.url());

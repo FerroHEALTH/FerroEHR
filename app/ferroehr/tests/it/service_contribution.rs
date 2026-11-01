@@ -50,7 +50,11 @@ fn attestation(reason: &str, is_pending: bool) -> Value {
 }
 
 async fn create_ehr(svc: &FerroEhrService) -> String {
-    svc.create_ehr(None).await.expect("create_ehr").to_string()
+    Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string()
 }
 
 /// Read the served `ORIGINAL_VERSION` of a composition version.
@@ -175,11 +179,12 @@ async fn accompanying_attestation_then_standalone_666_attestation() {
     // attestations (revision_history_item.adoc "there may also be further
     // attestations").
     let rh = svc
-        .composition_revision_history(
+        .composition_revision_history_response(
             ehr_id.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
         )
         .await
+        .map(|r| r.body)
         .expect("revision history");
     let items = rh["items"].as_array().expect("items");
     assert_eq!(items.len(), 1, "one version");
@@ -700,8 +705,8 @@ fn ehr_status(queryable: bool) -> Value {
     })
 }
 
-/// `list_contributions` / `contribution_count` + `get_ehr` → `EHR_SUMMARY`,
-/// against a real PG 18. Native-API calls only (no ITS-REST route).
+/// `list_contributions` / `contribution_count` and the EHR read with its
+/// counts, against a real PG 18.
 #[tokio::test]
 async fn contribution_listing_count_and_ehr_summary() {
     let db = testkit::db().await.expect("testkit database");
@@ -727,7 +732,7 @@ async fn contribution_listing_count_and_ehr_summary() {
         })
     ));
     assert!(matches!(
-        svc.get_ehr(ghost.parse().expect("uuid")).await,
+        svc.ehr_read(ghost.parse().expect("uuid")).await,
         Err(StatusError {
             status: ServiceStatus::EhrIdDoesNotExist,
             ..
@@ -740,15 +745,19 @@ async fn contribution_listing_count_and_ehr_summary() {
 
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let status_uid = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
         .to_owned();
-    svc.replace_ehr_status(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid)))
-        .await
-        .expect("EHR_STATUS update"); // contribution #2
+    Box::pin(
+        svc.replace_ehr_status_meta(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("EHR_STATUS update"); // contribution #2
 
     svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
         .await
@@ -820,18 +829,46 @@ async fn contribution_listing_count_and_ehr_summary() {
         })
     ));
 
-    // EHR_SUMMARY: mandatory fields + the counts.
-    let summary = svc.get_ehr(ehr_uuid).await.expect("get_ehr_summary");
-    assert_eq!(summary.ehr_id, ehr_id);
-    assert!(!summary.system_id.is_empty(), "system_id (EHR.system_id)");
-    assert_eq!(summary.ehr_status["_type"], "EHR_STATUS", "ehr_status copy");
+    // The EHR as the wire reads it: mandatory fields + the counts.
+    let ehr = svc.ehr_read(ehr_uuid).await.expect("ehr_read").body;
+    assert_eq!(ehr["ehr_id"]["value"], ehr_id);
     assert!(
-        summary.time_created.parse::<jiff::Timestamp>().is_ok(),
+        ehr["system_id"]["value"]
+            .as_str()
+            .is_some_and(|id| !id.is_empty()),
+        "system_id (EHR.system_id)"
+    );
+    let status = svc
+        .ehr_status_at_time_response(ehr_uuid, None)
+        .await
+        .expect("the current EHR_STATUS")
+        .body;
+    assert_eq!(status["_type"], "EHR_STATUS", "ehr_status copy");
+    assert!(
+        ehr["time_created"]["value"]
+            .as_str()
+            .is_some_and(|t| t.parse::<jiff::Timestamp>().is_ok()),
         "time_created is ISO 8601"
     );
-    assert_eq!(summary.contribution_count, 3);
+    let listed = svc
+        .ehr_contribution_list_page(ehr_uuid, 0, 10)
+        .await
+        .expect("ehr_contribution_list_page");
+    assert_eq!(listed["total"], json!(3));
+    let compositions = svc
+        .execute_ad_hoc_query(
+            "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c".to_owned(),
+            ferroehr::service::query::request::AqlQueryRequest {
+                ehr_ids: vec![ehr_id.clone()],
+                ..ferroehr::service::query::request::AqlQueryRequest::default()
+            },
+        )
+        .await
+        .expect("count the EHR's compositions")
+        .result_set;
     assert_eq!(
-        summary.composition_count, 1,
+        compositions["rows"][0][0],
+        json!(1),
         "one versioned COMPOSITION (versioned objects, not versions)"
     );
 }
@@ -862,15 +899,19 @@ async fn ehr_contribution_list_page_extension() {
     let ehr_id = create_ehr(&svc).await;
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let status_uid = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
         .to_owned();
-    svc.replace_ehr_status(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid)))
-        .await
-        .expect("EHR_STATUS update");
+    Box::pin(
+        svc.replace_ehr_status_meta(ehr_uuid, uv(&ehr_status(false), "251", Some(&status_uid))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("EHR_STATUS update");
     svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
         .await
         .expect("composition_create");
@@ -995,11 +1036,12 @@ async fn contribution_honors_the_five_lifecycle_states() {
     assert_eq!(ov1["data"]["_type"], "COMPOSITION");
     // The latest read returns 200 with data (not the deleted 204 path).
     let latest = svc
-        .get_composition_latest(
+        .composition_latest_response(
             ehr_id.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
         )
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get incomplete");
     assert_eq!(latest["name"]["value"], "incomplete v1");
 
@@ -1118,11 +1160,12 @@ async fn contribution_honors_the_five_lifecycle_states() {
     .expect("delete (523) → 201");
     // The now-current version is a deletion: lifecycle 523.
     let del = svc
-        .get_composition_latest(
+        .composition_latest_response(
             ehr_id.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
         )
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get deleted");
     assert!(
         del.is_null(),
@@ -1476,8 +1519,9 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
     // content write is refused with a conflict (the modifiability signal of the
     // folded query, checked after existence).
     let status_uid = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
@@ -1496,8 +1540,9 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
         "is_queryable": true,
         "is_modifiable": false
     });
-    svc.replace_ehr_status(ehr_uuid, uv(&deactivated, "251", Some(&status_uid)))
+    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&deactivated, "251", Some(&status_uid))))
         .await
+        .map(|m| m.uid)
         .expect("EHR_STATUS deactivation");
 
     let blocked = svc
@@ -1599,8 +1644,9 @@ async fn contribution_cannot_delete_the_ehr_status() {
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let status_uid = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status read")["uid"]["value"]
         .as_str()
         .expect("status version uid")
@@ -1630,8 +1676,9 @@ async fn contribution_cannot_delete_the_ehr_status() {
 
     // the status is still there
     let still = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status still present");
     assert_eq!(still["_type"].as_str(), Some("EHR_STATUS"));
 }
@@ -1722,8 +1769,9 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     // Neither refusal wrote anything: the composition is still at version 1
     // and still readable (no 523 row with node rows behind it).
     let live = svc
-        .get_composition_latest(ehr_uuid, vo_uuid)
+        .composition_latest_response(ehr_uuid, vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("still live");
     assert_eq!(live["name"]["value"], "v1");
 
@@ -1825,8 +1873,9 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
 
     // Neither refusal committed anything: the composition is still live at v1.
     let live = svc
-        .get_composition_latest(ehr_uuid, vo_uuid)
+        .composition_latest_response(ehr_uuid, vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("still live");
     assert_eq!(live["name"]["value"], "v1");
 
@@ -1836,8 +1885,9 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
         .await
         .expect("the 523-declaring delete member commits");
     let del = svc
-        .get_composition_latest(ehr_uuid, vo_uuid)
+        .composition_latest_response(ehr_uuid, vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get deleted");
     assert!(
         del.is_null(),
@@ -2723,8 +2773,9 @@ fn member(data: Value, change: (&str, &str), preceding: Option<&str>) -> Value {
 
 /// The current `EHR_STATUS` version uid of an EHR.
 async fn current_status_uid(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) -> String {
-    svc.get_ehr_status_at_time(ehr, None)
+    svc.ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("current EHR_STATUS")["uid"]["value"]
         .as_str()
         .expect("status uid")
@@ -2780,11 +2831,12 @@ async fn reactivating_contribution_unlocks_its_own_content() {
 
     // Deactivate up front.
     let status_uid = current_status_uid(&svc, ehr_uuid).await;
-    svc.replace_ehr_status(
+    Box::pin(svc.replace_ehr_status_meta(
         ehr_uuid,
         uv(&ehr_status_modifiable(false), "251", Some(&status_uid)),
-    )
+    ))
     .await
+    .map(|m| m.uid)
     .expect("EHR_STATUS deactivation");
 
     // (1) Content alone → refused.
@@ -2938,11 +2990,12 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
     let ehr_id = create_ehr(&svc).await;
     let ehr_uuid: ferroehr::ids::EhrId = ehr_id.parse().expect("ehr uuid");
     let status_uid = current_status_uid(&svc, ehr_uuid).await;
-    svc.replace_ehr_status(
+    Box::pin(svc.replace_ehr_status_meta(
         ehr_uuid,
         uv(&ehr_status_modifiable(false), "251", Some(&status_uid)),
-    )
+    ))
     .await
+    .map(|m| m.uid)
     .expect("EHR_STATUS deactivation");
 
     // A composition missing its mandatory `language`: a 422 on a writable EHR.

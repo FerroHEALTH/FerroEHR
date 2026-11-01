@@ -221,9 +221,7 @@ impl FerroEhrService {
         }
     }
 
-    /// `get_party_relationship` / `get_party_relationship_at_time`: retrieve a
-    /// relationship by its
-    /// versioned-object id, optionally at a specific version or instant (else
+    /// Retrieve a relationship by its versioned-object id, optionally at a specific version or instant (else
     /// the latest). A deleted current version resolves to `Null` (→ `204`); an
     /// unknown or wrong-kind id is `404`.
     pub(super) async fn read_relationship(
@@ -239,32 +237,9 @@ impl FerroEhrService {
         Ok(support::version_response(vo_id, read)?)
     }
 
-    /// Commit a new
-    /// version. Resolves the current version once (existence gate, pre
-    /// `has_party_relationship`) and delegates to
-    /// [`Self::commit_relationship_update`]; the wire seam resolves for
-    /// `If-Match` and calls it directly, threading its handle. `expected`
-    /// (from `If-Match`) enforces optimistic concurrency.
-    pub(super) async fn update_relationship(
-        &self,
-        vo_id: VoId,
-        body: Value,
-        expected: Option<TreeId>,
-        committal: Option<&Committal>,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
-                format!("PARTY_RELATIONSHIP {vo_id}"),
-            )
-        })?;
-        self.commit_relationship_update(current, body, expected, committal)
-            .await
-    }
-
     /// Commit a new version of an already-resolved relationship.
     ///
-    /// A deleted current is `404` (pre `has_party_relationship`); a stale
+    /// A deleted current is `404`; a stale
     /// `expected` → the engine's version conflict. The response is the stored
     /// form: the body in hand, or a read-back when the commit rewrites it
     /// ([`support::commit_rewrites_body`]).

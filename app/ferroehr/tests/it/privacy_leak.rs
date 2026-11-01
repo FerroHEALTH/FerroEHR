@@ -157,9 +157,9 @@ async fn the_outbox_envelope_carries_no_subject_identifier() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = enforcing_service(&db);
-    let ehr_id = svc
-        .create_ehr(Some(pseudonymised_status()))
+    let ehr_id = Box::pin(svc.create_ehr_meta(Some(pseudonymised_status()), None))
         .await
+        .map(|(id, _)| id)
         .expect("create_ehr");
     svc.create_composition(ehr_id, uv(&pseudonymised_composition(), "249", None))
         .await
@@ -195,9 +195,9 @@ async fn the_atna_records_carry_the_opaque_pseudonym_and_nothing_else() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = enforcing_service(&db);
-    let ehr_id = svc
-        .create_ehr(Some(pseudonymised_status()))
+    let ehr_id = Box::pin(svc.create_ehr_meta(Some(pseudonymised_status()), None))
         .await
+        .map(|(id, _)| id)
         .expect("create_ehr");
 
     // The Patient-Number participant is filled from `ehr.subject_id`, exactly
@@ -294,9 +294,9 @@ async fn the_commit_traces_carry_no_subject_identifier() {
     );
     let guard = tracing::subscriber::set_default(subscriber);
 
-    let ehr_id = svc
-        .create_ehr(Some(pseudonymised_status()))
+    let ehr_id = Box::pin(svc.create_ehr_meta(Some(pseudonymised_status()), None))
         .await
+        .map(|(id, _)| id)
         .expect("create_ehr");
     svc.create_composition(ehr_id, uv(&pseudonymised_composition(), "249", None))
         .await
@@ -356,8 +356,9 @@ async fn an_identifying_subject_never_reaches_any_sink_because_the_write_is_refu
         }))
         .expect("the fixture decodes");
 
-    svc.create_ehr(Some(identifying))
+    Box::pin(svc.create_ehr_meta(Some(identifying), None))
         .await
+        .map(|(id, _)| id)
         .expect_err("the write path refuses a national identifier as the subject");
 
     let leaked: i64 = sqlx::query_scalar("SELECT count(*) FROM ehr WHERE subject_id = $1")

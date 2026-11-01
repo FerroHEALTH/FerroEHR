@@ -43,7 +43,10 @@ fn folder_item(extract: &Value) -> &Value {
 /// An extract carrying only the directory `FOLDER` of a freshly seeded source
 /// EHR, so importing it into another EHR is a first receipt of one container.
 async fn folder_only_extract(source: &FerroEhrService) -> Extract {
-    let ehr = source.create_ehr(None).await.expect("source ehr");
+    let ehr = Box::pin(source.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("source ehr");
     source
         .create_directory(
             ehr,
@@ -119,7 +122,10 @@ async fn concurrent_imports_into_one_container_are_serialised() {
     let target = FerroEhrService::new(&DomainPools::from_shared(&target_db.pool()));
 
     let extract = folder_only_extract(&source).await;
-    let ehr = target.create_ehr(None).await.expect("target ehr");
+    let ehr = Box::pin(target.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("target ehr");
 
     let (first, second) = tokio::join!(
         target.import_ehr_extract(ehr, extract.clone()),

@@ -55,11 +55,15 @@ pub(crate) async fn repository() -> (testkit::TestDb, PgPool, FerroEhrService) {
 /// whose `EHR_STATUS.is_modifiable` is `false` are refused (RM ehr master04
 /// §"EHR Active Status").
 pub(crate) async fn seed_full_ehr(svc: &FerroEhrService) -> EhrId {
-    let ehr_id = svc.create_ehr(None).await.expect("ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     let mut updated = svc
-        .get_ehr_status_at_time(ehr_id, None)
+        .ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = uid(&updated).to_owned();
     let status_vo = vo_of(&status_ovid).to_owned();
@@ -89,8 +93,9 @@ pub(crate) async fn seed_full_ehr(svc: &FerroEhrService) -> EhrId {
     .expect("directory");
 
     updated["is_modifiable"] = json!(false);
-    svc.replace_ehr_status(ehr_id, uv(&updated, "251", Some(&status_ovid)))
+    Box::pin(svc.replace_ehr_status_meta(ehr_id, uv(&updated, "251", Some(&status_ovid))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     ehr_id

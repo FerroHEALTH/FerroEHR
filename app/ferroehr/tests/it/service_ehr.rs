@@ -66,7 +66,10 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // NOTE: `create_ehr` returns the new UUID; the RM `EHR` body is read
     // via `ehr_object`, and the ETag/Location meta (ehr_id == uid) is exactly
     // that returned uuid, so the meta assertions fold into the uuid/body checks.
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr_create");
     let ehr_id = ehr_uuid.to_string();
     let ehr = svc.ehr_object(ehr_uuid).await.expect("ehr object");
     assert_eq!(ehr["_type"], "EHR");
@@ -77,8 +80,9 @@ async fn ehr_composition_lifecycle_end_to_end() {
 
     // ── EHR_STATUS: read v1, update → v2, optimistic concurrency ─────────────
     let status_v1 = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid_v1 = uid(&status_v1).to_owned();
     assert!(status_ovid_v1.ends_with("::1"), "got {status_ovid_v1}");
@@ -88,24 +92,27 @@ async fn ehr_composition_lifecycle_end_to_end() {
     status_v2_body["is_modifiable"] = json!(false);
     // NOTE: `replace_ehr_status` returns the new version_uid (the
     // old `.meta.uid`); the content is re-read to assert it.
-    let status_v2_uid = svc
-        .replace_ehr_status(ehr_uuid, uv(&status_v2_body, "251", Some(&status_ovid_v1)))
-        .await
-        .expect("status update");
+    let status_v2_uid = Box::pin(
+        svc.replace_ehr_status_meta(ehr_uuid, uv(&status_v2_body, "251", Some(&status_ovid_v1))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("status update");
     assert!(status_v2_uid.ends_with("::2"));
     let status_v2 = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status v2");
     assert_eq!(status_v2["is_modifiable"], json!(false));
 
     // Stale If-Match is rejected (precondition failed → 412 / version_mismatch).
-    let stale = svc
-        .replace_ehr_status(
-            ehr_uuid,
-            uv(&status_v1.clone(), "251", Some(&status_ovid_v1)),
-        )
-        .await;
+    let stale = Box::pin(svc.replace_ehr_status_meta(
+        ehr_uuid,
+        uv(&status_v1.clone(), "251", Some(&status_ovid_v1)),
+    ))
+    .await
+    .map(|m| m.uid);
     assert!(
         matches!(
             stale,
@@ -125,18 +132,21 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let mut status_v3_body = status_v2.clone();
     status_v3_body.as_object_mut().unwrap().remove("uid");
     status_v3_body["is_modifiable"] = json!(true);
-    let status_v3_uid = svc
-        .replace_ehr_status(ehr_uuid, uv(&status_v3_body, "251", Some(&status_v2_uid)))
-        .await
-        .expect("status reactivate");
+    let status_v3_uid = Box::pin(
+        svc.replace_ehr_status_meta(ehr_uuid, uv(&status_v3_body, "251", Some(&status_v2_uid))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("status reactivate");
     assert!(status_v3_uid.ends_with("::3"));
 
     // A specific EHR_STATUS version reads as the BARE EHR_STATUS, not
     // an ORIGINAL_VERSION wrapper.
     let sp: Vec<&str> = status_ovid_v1.split("::").collect();
     let status_by_v = svc
-        .get_ehr_status_at_version(ehr_uuid, sp[0].parse().expect("status vo uuid"), sp[2])
+        .ehr_status_at_version_response(ehr_uuid, sp[0].parse().expect("status vo uuid"), sp[2])
         .await
+        .map(|r| r.body)
         .expect("status by version");
     assert_eq!(status_by_v["_type"], "EHR_STATUS");
     assert_eq!(uid(&status_by_v), status_ovid_v1);
@@ -151,8 +161,9 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let comp_vo_uuid = comp_vo_id.parse::<ferroehr::ids::VoId>().expect("vo uuid");
 
     let got = svc
-        .get_composition_latest(ehr_uuid, comp_vo_uuid)
+        .composition_latest_response(ehr_uuid, comp_vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get");
     assert_eq!(got["name"]["value"], "Encounter");
 
@@ -169,8 +180,9 @@ async fn ehr_composition_lifecycle_end_to_end() {
 
     // current is v2; the pinned OBJECT_VERSION_ID still returns v1
     let current = svc
-        .get_composition_latest(ehr_uuid, comp_vo_uuid)
+        .composition_latest_response(ehr_uuid, comp_vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("get current");
     assert_eq!(current["name"]["value"], "Encounter v2");
     let pinned = svc
@@ -181,8 +193,9 @@ async fn ehr_composition_lifecycle_end_to_end() {
 
     // VERSIONED_OBJECT + ORIGINAL_VERSION (provenance: the CONTRIBUTION ref)
     let versioned = svc
-        .get_versioned_composition(ehr_uuid, comp_vo_uuid)
+        .versioned_composition_response(ehr_uuid, comp_vo_uuid)
         .await
+        .map(|r| r.body)
         .expect("versioned_composition_get");
     // RM ehr master04: the concrete binding VERSIONED_COMPOSITION, never the
     // generic VERSIONED_OBJECT, appears on the wire.
@@ -261,8 +274,9 @@ async fn ehr_composition_lifecycle_end_to_end() {
         "a stale volunteered If-Match must 412, got {volunteered_stale:?}"
     );
     let still_live = svc
-        .get_composition_latest(ehr_uuid, comp_vo_uuid)
+        .composition_latest_response(ehr_uuid, comp_vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the refused delete performed nothing");
     assert!(
         !still_live.is_null(),
@@ -316,8 +330,9 @@ async fn ehr_composition_lifecycle_end_to_end() {
     );
     // A deleted read is NOT an error/500 — it yields Null (→ 204).
     let after_delete = svc
-        .get_composition_latest(ehr_uuid, comp_vo_uuid)
+        .composition_latest_response(ehr_uuid, comp_vo_uuid)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("deleted composition read must not error");
     assert!(
         after_delete.is_null(),
@@ -392,7 +407,10 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     // Seed a COMPOSITION and a directory while the EHR is active (default
     // is_modifiable = true), so update/delete have a target once deactivated.
@@ -417,17 +435,20 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     // Deactivate: set is_modifiable = false. This EHR_STATUS write MUST succeed
     // (the EHR_STATUS object is always modifiable).
     let status_v1 = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status v1");
     let status_ovid_v1 = uid(&status_v1).to_owned();
     let mut deactivate = status_v1.clone();
     deactivate.as_object_mut().unwrap().remove("uid");
     deactivate["is_modifiable"] = json!(false);
-    let status_v2_ovid = svc
-        .replace_ehr_status(ehr_uuid, uv(&deactivate, "251", Some(&status_ovid_v1)))
-        .await
-        .expect("deactivating EHR_STATUS is allowed");
+    let status_v2_ovid = Box::pin(
+        svc.replace_ehr_status_meta(ehr_uuid, uv(&deactivate, "251", Some(&status_ovid_v1))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("deactivating EHR_STATUS is allowed");
 
     // A blocked EHR-content write is 409 Conflict (the generic `conflict`
     // → `ServiceError::Conflict` on the composition write path; the directory
@@ -512,15 +533,17 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     // But an EHR_STATUS-only CONTRIBUTION (here, flipping it back to modifiable)
     // is still allowed — the EHR_STATUS object is always modifiable.
     let status_v2 = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status v2");
     assert_eq!(status_v2["is_modifiable"], json!(false));
     let mut reactivate = status_v2.clone();
     reactivate.as_object_mut().unwrap().remove("uid");
     reactivate["is_modifiable"] = json!(true);
-    svc.replace_ehr_status(ehr_uuid, uv(&reactivate, "251", Some(&status_v2_ovid)))
+    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&reactivate, "251", Some(&status_v2_ovid))))
         .await
+        .map(|m| m.uid)
         .expect("reactivating EHR_STATUS is allowed while inactive");
 
     // Reactivated → content writes work again.
@@ -535,10 +558,10 @@ async fn creating_an_ehr_with_an_existing_id_conflicts() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
     let id = ferroehr::ids::EhrId(uuid::Uuid::now_v7());
-    svc.create_ehr_with_id(id, None)
+    svc.create_ehr_with_id_meta(id, None, None)
         .await
         .expect("first create");
-    let again = svc.create_ehr_with_id(id, None).await;
+    let again = svc.create_ehr_with_id_meta(id, None, None).await;
     assert!(again.is_err(), "duplicate EHR id must conflict");
 }
 
@@ -578,8 +601,7 @@ async fn ehr_creation_merges_the_committal_metadata() {
         // `532|complete|` default.
         lifecycle_state: Some("553".to_owned()),
     };
-    let (ehr_id, _meta) = svc
-        .create_ehr_meta(None, Some(&committal))
+    let (ehr_id, _meta) = Box::pin(svc.create_ehr_meta(None, Some(&committal)))
         .await
         .expect("create_ehr with committal metadata");
 
@@ -648,13 +670,13 @@ async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
     };
 
     for code in ["250", "523", "999"] {
-        let rejected = svc.create_ehr_meta(None, Some(&committal(code))).await;
+        let rejected = Box::pin(svc.create_ehr_meta(None, Some(&committal(code)))).await;
         assert!(
             rejected.is_err(),
             "change_type {code} on an EHR create must be rejected, got {rejected:?}"
         );
     }
-    svc.create_ehr_meta(None, Some(&committal("249")))
+    Box::pin(svc.create_ehr_meta(None, Some(&committal("249"))))
         .await
         .expect("a restated creation change_type is accepted");
 }
@@ -682,8 +704,7 @@ async fn ehr_creation_refuses_a_stated_empty_system_id() {
         }),
         lifecycle_state: None,
     };
-    let err = svc
-        .create_ehr_meta(None, Some(&committal))
+    let err = Box::pin(svc.create_ehr_meta(None, Some(&committal)))
         .await
         .expect_err("an empty system_id is refused");
     assert_eq!(err.status, ServiceStatus::ContentInvalid, "{err:?}");
@@ -748,10 +769,14 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
 
     // (2) The PUT seam is the same typed door, so the same body is
     //     unrepresentable there too — an EHR_STATUS commit cannot carry it.
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
-    let status_v1 = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
+        .expect("ehr");
+    let status_v1 = svc
+        .ehr_status_at_time_response(ehr_uuid, None)
+        .await
+        .map(|r| r.body)
         .expect("status v1");
     assert!(
         !uid(&status_v1).is_empty(),
@@ -784,8 +809,9 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    svc.create_ehr(Some(typed(&anonymous)))
+    Box::pin(svc.create_ehr_meta(Some(typed(&anonymous)), None))
         .await
+        .map(|(id, _)| id)
         .expect("an anonymous PARTY_SELF EHR_STATUS is accepted");
 }
 
@@ -794,7 +820,11 @@ async fn contribution_commits_a_composition_atomically() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let body = json!({
@@ -843,7 +873,11 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let created = svc
@@ -971,7 +1005,11 @@ async fn templateless_composition_still_gets_rm_and_terminology_validation() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let bad = svc
@@ -994,7 +1032,11 @@ async fn contribution_rejects_an_invalid_composition() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let body = json!({
@@ -1026,22 +1068,29 @@ async fn revision_history_lists_every_version() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let mut status = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status");
     let ovid_v1 = uid(&status).to_owned();
     status.as_object_mut().unwrap().remove("uid");
-    svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&ovid_v1)))
+    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&status, "251", Some(&ovid_v1))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     let history = svc
-        .ehr_status_revision_history(ehr_uuid)
+        .ehr_status_revision_history_response(ehr_uuid)
         .await
+        .map(|r| r.body)
         .expect("revision history");
     assert_eq!(history["_type"], "REVISION_HISTORY");
     let items = history["items"].as_array().expect("items");
@@ -1079,21 +1128,23 @@ async fn ehr_get_by_subject_finds_the_ehr() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    let ehr_id = svc
-        .create_ehr(Some(typed(&status)))
+    let ehr_id = Box::pin(svc.create_ehr_meta(Some(typed(&status)), None))
         .await
+        .map(|(id, _)| id)
         .expect("ehr")
         .to_string();
 
     let found = svc
-        .ehr_object_for_subject("patient-123", "patients")
+        .ehr_read_for_subject("patient-123", "patients")
         .await
+        .map(|r| r.body)
         .expect("get by subject");
     assert_eq!(found["ehr_id"]["value"], ehr_id);
 
     assert!(
-        svc.ehr_object_for_subject("nobody", "patients")
+        svc.ehr_read_for_subject("nobody", "patients")
             .await
+            .map(|r| r.body)
             .is_err()
     );
 }
@@ -1232,7 +1283,11 @@ async fn item_tag_crud() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1287,7 +1342,11 @@ async fn item_tag_wire_shape_is_the_rm_item_tag() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1343,7 +1402,11 @@ async fn item_tag_identity_is_the_key_and_target_path_pair() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("PairTagged"), "249", None))
@@ -1402,7 +1465,11 @@ async fn item_tag_version_and_container_targets_are_distinct() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let version_uid = svc
         .create_composition(ehr_uuid, uv(&composition("VersionTagged"), "249", None))
@@ -1500,7 +1567,11 @@ async fn a_surviving_tag_keeps_its_creation_instant_across_a_replace() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1584,7 +1655,11 @@ async fn item_tag_put_replaces_the_whole_collection() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let comp = svc
         .create_composition(ehr_uuid, uv(&composition("Tagged"), "249", None))
@@ -1678,7 +1753,10 @@ async fn ehr_creation_produces_an_ehr_access() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
     let ehr = svc.ehr_object(ehr_uuid).await.expect("ehr object");
     let access = &ehr["ehr_access"];
     assert_eq!(access["_type"], "OBJECT_REF");
@@ -1730,10 +1808,13 @@ async fn duplicate_subject_ehr_creation_conflicts() {
         })
     };
 
-    svc.create_ehr(Some(typed(&status("patient-1"))))
+    Box::pin(svc.create_ehr_meta(Some(typed(&status("patient-1"))), None))
         .await
+        .map(|(id, _)| id)
         .expect("first EHR for the subject");
-    let dup = svc.create_ehr(Some(typed(&status("patient-1")))).await;
+    let dup = Box::pin(svc.create_ehr_meta(Some(typed(&status("patient-1"))), None))
+        .await
+        .map(|(id, _)| id);
     assert!(
         matches!(
             dup,
@@ -1746,14 +1827,17 @@ async fn duplicate_subject_ehr_creation_conflicts() {
     );
 
     // A different subject — and the subject-less default — still create fine.
-    svc.create_ehr(Some(typed(&status("patient-2"))))
+    Box::pin(svc.create_ehr_meta(Some(typed(&status("patient-2"))), None))
         .await
+        .map(|(id, _)| id)
         .expect("different subject creates");
-    svc.create_ehr(None)
+    Box::pin(svc.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
         .expect("subject-less EHR creates");
-    svc.create_ehr(None)
+    Box::pin(svc.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
         .expect("multiple subject-less EHRs never conflict");
 }
 
@@ -1766,7 +1850,11 @@ async fn version_get_at_time_returns_the_original_version() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_id = svc.create_ehr(None).await.expect("ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr")
+        .to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // EHR_STATUS: no version_at_time → the latest VERSION.
@@ -1854,7 +1942,10 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     // Before any folder: `EHR.folders`/`EHR.directory` (both 0..1) are absent.
     let ehr0 = svc.ehr_object(ehr_uuid).await.expect("ehr0");
@@ -1995,7 +2086,10 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
 async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     // Two hierarchies, both via CONTRIBUTION.
     let f1 = svc
@@ -2077,7 +2171,10 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
 async fn directory_endpoint_rejects_a_second_directory_create() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     svc.create_directory(ehr_uuid, uv(&folder("root"), "249", None))
         .await
@@ -2108,7 +2205,10 @@ async fn ehr_uri_resolves_local_structures_and_item_paths() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
     let comp_ovid = svc
         .create_composition(ehr_uuid, uv(&composition("Uri target"), "249", None))
         .await
@@ -2161,66 +2261,102 @@ async fn ehr_uri_resolves_local_structures_and_item_paths() {
     assert!(err.to_string().contains("foreign system"), "got {err}");
 }
 
-/// The discrete `EHR_STATUS` mutators (`set/clear_ehr_queryable`,
-/// `set/clear_ehr_modifiable`, `update_other_details`):
-/// each commits a new implicit-CONTRIBUTION `EHR_STATUS` version and its
-/// post-condition is observable via `get_ehr_status`. Critically,
-/// `clear_ehr_modifiable` must stay committable on the EHR it disables and
-/// `set_ehr_modifiable` must undo it (`EHR_STATUS` "is always modifiable",
-/// ehr/master04 §"EHR Active Status").
+/// Commits the current `EHR_STATUS` with `change` applied through the
+/// `PUT /ehr/{ehr_id}/ehr_status` service call, preceded by the current
+/// version, returning the committed version's uid.
+#[expect(
+    clippy::expect_used,
+    reason = "clippy's in-test lint scoping reaches only `#[test]` functions; a failing \
+              test helper must panic at the helper (the Rust Book ch11)"
+)]
+async fn change_ehr_status(
+    svc: &FerroEhrService,
+    ehr: ferroehr::ids::EhrId,
+    change: impl FnOnce(&mut serde_json::Map<String, Value>),
+) -> Result<String, StatusError> {
+    let mut body = svc
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .expect("the current EHR_STATUS reads")
+        .body;
+    let preceding = uid(&body).to_owned();
+    let status = body.as_object_mut().expect("an EHR_STATUS object");
+    status.remove("uid");
+    change(status);
+    Box::pin(svc.replace_ehr_status_meta(ehr, uv(&body, "251", Some(&preceding))))
+        .await
+        .map(|meta| meta.uid)
+}
+
+/// Single-attribute `EHR_STATUS` changes (`is_queryable`, `is_modifiable`,
+/// `other_details`) through the status update: each commits a new
+/// implicit-CONTRIBUTION `EHR_STATUS` version and its post-condition is
+/// observable on the status read. Critically, clearing `is_modifiable` must
+/// stay committable on the EHR it disables and setting it again must undo it
+/// (`EHR_STATUS` "is always modifiable", ehr/master04 §"EHR Active Status").
 #[tokio::test]
 async fn ehr_status_discrete_mutators() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .expect("ehr_create")
+        .0;
 
     // Defaults: both flags true (default_ehr_status).
     let v1 = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
-        .expect("status v1");
+        .expect("status v1")
+        .body;
     assert_eq!(v1["is_queryable"], json!(true));
     assert_eq!(v1["is_modifiable"], json!(true));
     assert!(uid(&v1).ends_with("::1"));
 
-    // clear_ehr_queryable → false; a new trunk version is committed.
-    let q_off = svc
-        .clear_ehr_queryable(ehr_uuid)
-        .await
-        .expect("clear_ehr_queryable");
+    // is_queryable cleared → false; a new trunk version is committed.
+    let q_off = change_ehr_status(&svc, ehr_uuid, |s| {
+        s.insert("is_queryable".to_owned(), json!(false));
+    })
+    .await
+    .expect("clear is_queryable");
     assert!(q_off.ends_with("::2"), "got {q_off}");
     let s = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
-        .expect("status");
+        .expect("status")
+        .body;
     assert_eq!(s["is_queryable"], json!(false));
     assert_eq!(s["is_modifiable"], json!(true), "unrelated flag untouched");
 
-    // set_ehr_queryable → true again.
-    let q_on = svc
-        .set_ehr_queryable(ehr_uuid)
-        .await
-        .expect("set_ehr_queryable");
+    // is_queryable set → true again.
+    let q_on = change_ehr_status(&svc, ehr_uuid, |s| {
+        s.insert("is_queryable".to_owned(), json!(true));
+    })
+    .await
+    .expect("set is_queryable");
     assert!(q_on.ends_with("::3"), "got {q_on}");
     assert_eq!(
-        svc.get_ehr_status_at_time(ehr_uuid, None)
+        svc.ehr_status_at_time_response(ehr_uuid, None)
             .await
-            .expect("status")["is_queryable"],
+            .expect("status")
+            .body["is_queryable"],
         json!(true)
     );
 
-    // clear_ehr_modifiable deactivates the EHR's contents — the STATUS write
+    // Clearing is_modifiable deactivates the EHR's contents — the STATUS write
     // itself must still succeed (EHR_STATUS is always modifiable).
-    let m_off = svc
-        .clear_ehr_modifiable(ehr_uuid)
-        .await
-        .expect("clear_ehr_modifiable must be committable on the EHR it disables");
+    let m_off = change_ehr_status(&svc, ehr_uuid, |s| {
+        s.insert("is_modifiable".to_owned(), json!(false));
+    })
+    .await
+    .expect("clearing is_modifiable must be committable on the EHR it disables");
     assert!(m_off.ends_with("::4"), "got {m_off}");
     assert_eq!(
-        svc.get_ehr_status_at_time(ehr_uuid, None)
+        svc.ehr_status_at_time_response(ehr_uuid, None)
             .await
-            .expect("status")["is_modifiable"],
+            .expect("status")
+            .body["is_modifiable"],
         json!(false)
     );
 
@@ -2233,16 +2369,18 @@ async fn ehr_status_discrete_mutators() {
         "content write on a non-modifiable EHR must be refused, got {blocked:?}"
     );
 
-    // … yet set_ehr_modifiable reactivates it (the STATUS mutator is not gated).
-    let m_on = svc
-        .set_ehr_modifiable(ehr_uuid)
-        .await
-        .expect("set_ehr_modifiable reactivates");
+    // … yet setting is_modifiable reactivates it (the STATUS write is not gated).
+    let m_on = change_ehr_status(&svc, ehr_uuid, |s| {
+        s.insert("is_modifiable".to_owned(), json!(true));
+    })
+    .await
+    .expect("setting is_modifiable reactivates");
     assert!(m_on.ends_with("::5"), "got {m_on}");
     assert_eq!(
-        svc.get_ehr_status_at_time(ehr_uuid, None)
+        svc.ehr_status_at_time_response(ehr_uuid, None)
             .await
-            .expect("status")["is_modifiable"],
+            .expect("status")
+            .body["is_modifiable"],
         json!(true)
     );
     // Reactivated: content writes now succeed.
@@ -2250,27 +2388,56 @@ async fn ehr_status_discrete_mutators() {
         .await
         .expect("content write after reactivation");
 
-    // update_other_details replaces the ITEM_TREE.
+    // other_details replaced by an ITEM_TREE.
     let details = json!({
         "_type": "ITEM_TREE",
         "archetype_node_id": "at0001",
         "name": { "_type": "DV_TEXT", "value": "other_details" },
         "items": []
     });
-    let od = svc
-        .update_other_details(ehr_uuid, details.clone())
-        .await
-        .expect("update_other_details");
+    let od = change_ehr_status(&svc, ehr_uuid, |s| {
+        s.insert("other_details".to_owned(), details.clone());
+    })
+    .await
+    .expect("update other_details");
     assert!(od.ends_with("::6"), "got {od}");
     let after = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
-        .expect("status");
+        .expect("status")
+        .body;
     assert_eq!(after["other_details"]["_type"], "ITEM_TREE");
     assert_eq!(after["other_details"]["archetype_node_id"], "at0001");
 }
 
-/// `has_directory_version` + `get_versioned_directory`: the
+/// Whether the directory version `ovid` exists for `ehr`, read through the
+/// `GET /ehr/{ehr_id}/directory/{version_uid}` service call: a not-found read
+/// is `false`, any other failure fails the test.
+#[expect(
+    clippy::expect_used,
+    reason = "clippy's in-test lint scoping reaches only `#[test]` functions; a failing \
+              test helper must panic at the helper (the Rust Book ch11)"
+)]
+async fn directory_version_exists(
+    svc: &FerroEhrService,
+    ehr: ferroehr::ids::EhrId,
+    ovid: &str,
+) -> bool {
+    let ovid = ovid.parse().expect("an OBJECT_VERSION_ID");
+    match svc.get_directory_at_version(ehr, ovid, None).await {
+        Ok(_) => true,
+        Err(e) => {
+            let shown = format!("{e:?}");
+            assert!(
+                matches!(ServiceError::from(e), ServiceError::NotFound(_)),
+                "the directory read fails only as not found: {shown}"
+            );
+            false
+        }
+    }
+}
+
+/// The directory version read + `get_versioned_directory`: the
 /// existence check is true for real versions (incl. across updates) and false
 /// for an unknown version id; the `VERSIONED_OBJECT` view carries the mandatory
 /// `time_created` (`VERSIONED_OBJECT.time_created`, RM common `change_control`).
@@ -2279,7 +2446,10 @@ async fn directory_versioned_and_has_version() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr_create");
 
     let dir_v1 = svc
         .create_directory(ehr_uuid, uv(&folder("root"), "249", None))
@@ -2288,11 +2458,9 @@ async fn directory_versioned_and_has_version() {
         .uid;
     assert!(dir_v1.ends_with("::1"));
 
-    // has_directory_version: true for the real v1 OBJECT_VERSION_ID.
+    // The version read: true for the real v1 OBJECT_VERSION_ID.
     assert!(
-        svc.has_directory_version(ehr_uuid, dir_v1.parse().expect("ovid"))
-            .await
-            .expect("has_directory_version v1"),
+        directory_version_exists(&svc, ehr_uuid, &dir_v1).await,
         "the committed directory version must exist"
     );
 
@@ -2300,9 +2468,7 @@ async fn directory_versioned_and_has_version() {
     let sp: Vec<&str> = dir_v1.split("::").collect();
     let phantom = format!("{}::{}::2", sp[0], sp[1]);
     assert!(
-        !svc.has_directory_version(ehr_uuid, phantom.parse().expect("ovid"))
-            .await
-            .expect("has_directory_version phantom"),
+        !directory_version_exists(&svc, ehr_uuid, &phantom).await,
         "an uncommitted version id must not exist"
     );
 
@@ -2310,9 +2476,7 @@ async fn directory_versioned_and_has_version() {
     // way the store mints one (uuidv7) so the probe carries a realistic shape.
     let alien = format!("{}::{}::1", uuid::Uuid::now_v7(), sp[1]);
     assert!(
-        !svc.has_directory_version(ehr_uuid, alien.parse().expect("ovid"))
-            .await
-            .expect("has_directory_version alien"),
+        !directory_version_exists(&svc, ehr_uuid, &alien).await,
         "a foreign vo id is not this EHR's directory"
     );
 
@@ -2326,9 +2490,8 @@ async fn directory_versioned_and_has_version() {
         .uid;
     assert!(dir_v2.ends_with("::2"));
     assert!(
-        svc.has_directory_version(ehr_uuid, dir_v2.parse().expect("ovid"))
-            .await
-            .expect("has v2")
+        directory_version_exists(&svc, ehr_uuid, &dir_v2).await,
+        "has v2"
     );
 
     // get_versioned_directory: the VERSIONED_OBJECT view.
@@ -2366,7 +2529,10 @@ async fn write_responses_match_a_fresh_read() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
     // Fix E — built-from-commit EHR body == fresh ehr_summary read.
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr_create");
     let built = svc
         .ehr_created_object(ehr_uuid)
         .await
@@ -2432,10 +2598,12 @@ async fn write_responses_match_a_fresh_read() {
         .expect("status object")
         .remove("uid");
     status_body["is_queryable"] = json!(false);
-    let status_uid_v2 = svc
-        .replace_ehr_status(ehr_uuid, uv(&status_body, "251", Some(&status_uid_v1)))
-        .await
-        .expect("replace_ehr_status");
+    let status_uid_v2 = Box::pin(
+        svc.replace_ehr_status_meta(ehr_uuid, uv(&status_body, "251", Some(&status_uid_v1))),
+    )
+    .await
+    .map(|m| m.uid)
+    .expect("replace_ehr_status");
     assert!(
         status_uid_v2.ends_with("::2"),
         "status update yields trunk version 2"
@@ -2469,7 +2637,10 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
 
     let first = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_system_id("openehr.first.example.com");
-    let ehr_uuid = first.create_ehr(None).await.expect("ehr create");
+    let ehr_uuid = Box::pin(first.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr create");
     let at_creation = first.ehr_object(ehr_uuid).await.expect("ehr at creation");
     assert_eq!(
         at_creation["system_id"]["value"], "openehr.first.example.com",
@@ -2496,9 +2667,9 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
 
     // An EHR created AFTER the change does take the new id — the value is
     // pinned at creation, not frozen repository-wide.
-    let later_uuid = second
-        .create_ehr(None)
+    let later_uuid = Box::pin(second.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
         .expect("ehr create post-change");
     let later = second.ehr_object(later_uuid).await.expect("later ehr");
     assert_eq!(
@@ -2519,7 +2690,10 @@ async fn the_default_ehr_status_satisfies_the_locatable_root_invariants() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr create");
     let status = svc
         .get_ehr_status(ehr_uuid)
         .await
@@ -2590,44 +2764,50 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
         })
     };
 
-    let lower = svc
-        .create_ehr(Some(typed(&status("case-subject-a", "patients"))))
-        .await
-        .expect("lower-case subject");
+    let lower =
+        Box::pin(svc.create_ehr_meta(Some(typed(&status("case-subject-a", "patients"))), None))
+            .await
+            .map(|(id, _)| id)
+            .expect("lower-case subject");
     // A case VARIANT of the same string is a DIFFERENT subject: it creates a
     // second EHR instead of colliding with the first.
-    let upper = svc
-        .create_ehr(Some(typed(&status("Case-Subject-A", "patients"))))
-        .await
-        .expect("case-variant subject is a distinct subject, not a duplicate");
+    let upper =
+        Box::pin(svc.create_ehr_meta(Some(typed(&status("Case-Subject-A", "patients"))), None))
+            .await
+            .map(|(id, _)| id)
+            .expect("case-variant subject is a distinct subject, not a duplicate");
     assert_ne!(lower, upper);
 
     // The namespace half of the key is exact too.
-    let other_ns = svc
-        .create_ehr(Some(typed(&status("case-subject-a", "Patients"))))
-        .await
-        .expect("case-variant namespace is a distinct key");
+    let other_ns =
+        Box::pin(svc.create_ehr_meta(Some(typed(&status("case-subject-a", "Patients"))), None))
+            .await
+            .map(|(id, _)| id)
+            .expect("case-variant namespace is a distinct key");
     assert_ne!(lower, other_ns);
 
     // Each spelling resolves to its OWN EHR on the read side — the lookup key
     // is the same exact-match key the uniqueness check uses, so a subject can
     // never be served another subject's record.
     let by_lower = svc
-        .ehr_object_for_subject("case-subject-a", "patients")
+        .ehr_read_for_subject("case-subject-a", "patients")
         .await
+        .map(|r| r.body)
         .expect("lookup by the exact lower-case subject");
     assert_eq!(by_lower["ehr_id"]["value"], lower.to_string());
     let by_upper = svc
-        .ehr_object_for_subject("Case-Subject-A", "patients")
+        .ehr_read_for_subject("Case-Subject-A", "patients")
         .await
+        .map(|r| r.body)
         .expect("lookup by the exact case-variant subject");
     assert_eq!(by_upper["ehr_id"]["value"], upper.to_string());
 
     // And re-using an EXACT spelling still conflicts — the exactness narrows
     // the key, it does not disable the uniqueness rule.
-    let dup = svc
-        .create_ehr(Some(typed(&status("case-subject-a", "patients"))))
-        .await;
+    let dup =
+        Box::pin(svc.create_ehr_meta(Some(typed(&status("case-subject-a", "patients"))), None))
+            .await
+            .map(|(id, _)| id);
     assert!(
         matches!(
             dup,
@@ -2653,7 +2833,10 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr create");
     let status_v1 = svc.get_ehr_status(ehr_uuid).await.expect("status v1");
     let ovid_v1 = uid(&status_v1).to_owned();
     let parts: Vec<&str> = ovid_v1.split("::").collect();
@@ -2682,9 +2865,9 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
     let mut next = status_v1.clone();
     next.as_object_mut().expect("status object").remove("uid");
     next["is_queryable"] = json!(false);
-    let ovid_v2 = svc
-        .replace_ehr_status(ehr_uuid, uv(&next, "251", Some(&ovid_v1)))
+    let ovid_v2 = Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&next, "251", Some(&ovid_v1))))
         .await
+        .map(|m| m.uid)
         .expect("status v2");
     let parts_v2: Vec<&str> = ovid_v2.split("::").collect();
     let original_v2 = svc
@@ -2707,12 +2890,16 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
 async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr_create");
 
     // The EHR's own EHR_STATUS container id, and one committed COMPOSITION.
     let status_v1 = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status get");
     let status_version_id = uid(&status_v1).to_owned();
     let status_container: ferroehr::ids::VoId = status_version_id
@@ -2734,7 +2921,10 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
         .expect("comp vo uuid");
 
     // COMPOSITION read addressed with the EHR_STATUS container: not found.
-    let cross = svc.get_composition_latest(ehr_uuid, status_container).await;
+    let cross = svc
+        .composition_latest_response(ehr_uuid, status_container)
+        .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     assert!(
         matches!(
             &cross,
@@ -2756,8 +2946,9 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
     );
 
     // The right-kind reads still serve (the filter narrows, never breaks).
-    svc.get_composition_latest(ehr_uuid, comp_vo)
+    svc.composition_latest_response(ehr_uuid, comp_vo)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the composition still reads by its own id");
     svc.ehr_status_at_version_response(ehr_uuid, status_container, "1")
         .await

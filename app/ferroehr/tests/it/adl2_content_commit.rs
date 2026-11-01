@@ -146,7 +146,11 @@ fn creation(data: &Value) -> UpdateVersion<openehr_rm::prelude::Composition> {
 }
 
 async fn new_ehr(svc: &FerroEhrService) -> EhrId {
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string();
     EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"))
 }
 
@@ -413,9 +417,12 @@ async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost
             .await
             .unwrap_or_else(|e| panic!("{}: commit: {e:?}", case.workflow));
         let stored = svc
-            .get_composition_latest(ehr, committed.vo_id)
+            .composition_latest_response(ehr, committed.vo_id)
             .await
-            .unwrap_or_else(|e| panic!("{}: read: {e:?}", case.workflow));
+            .unwrap_or_else(|e| panic!("{}: read: {e:?}", case.workflow))
+            .body
+            .into_value()
+            .expect("the stored COMPOSITION decodes");
         let wt = svc
             .web_template(text(&stored, "/archetype_details/template_id/value"))
             .await
@@ -549,9 +556,12 @@ async fn a_simplified_commit_stores_the_names_and_archetype_details_of_the_canon
                 .await
                 .unwrap_or_else(|e| panic!("{} {format}: commit: {e:?}", case.workflow));
             let stored = svc
-                .get_composition_latest(ehr, committed.vo_id)
+                .composition_latest_response(ehr, committed.vo_id)
                 .await
-                .unwrap_or_else(|e| panic!("{} {format}: read: {e:?}", case.workflow));
+                .unwrap_or_else(|e| panic!("{} {format}: read: {e:?}", case.workflow))
+                .body
+                .into_value()
+                .expect("the stored COMPOSITION decodes");
             assert_eq!(locatables(&stored), want, "{} {format}", case.workflow);
         }
     }
@@ -600,8 +610,9 @@ async fn aql_finds_a_flat_adl2_commit_by_interface_and_full_archetype_ids() {
         .await
         .expect("the FLAT commit");
     let stored = svc
-        .get_composition_latest(ehr, committed.vo_id)
+        .composition_latest_response(ehr, committed.vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the stored composition");
     let (root, inlined) = (
         "openEHR-EHR-COMPOSITION.cnf_adl2_dv_count_range",

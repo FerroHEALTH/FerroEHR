@@ -81,9 +81,18 @@ async fn seed_ehr(pool: &PgPool) -> Uuid {
 
 // ─── PARTY_RELATIONSHIP ───────────────────────────────────────────────────────
 
-/// The typed relationship calls (Uuid/version arguments), not the wire seam:
-/// `create_party_relationship` → `has`/`get`/`get_at_version` → `update` →
-/// `delete`, checking that a deleted relationship is no longer present.
+/// Whether a live relationship is served under `vo_id`: the read answers a
+/// body, where a deleted current version reads empty.
+async fn relationship_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId) -> bool {
+    !svc.party_relationship_get(vo_id.to_string(), None)
+        .await
+        .expect("the relationship reads")
+        .is_empty()
+}
+
+/// The relationship round trip through the service calls the REST routes
+/// make: create → read (current, by version) → update → delete, checking
+/// that a deleted relationship is no longer present.
 #[tokio::test]
 async fn relationship_typed_calls_round_trip() {
     let db = testkit::db().await.expect("testkit database");
@@ -92,69 +101,77 @@ async fn relationship_typed_calls_round_trip() {
     let src = "11111111-1111-4111-8111-111111111111";
     let tgt = "22222222-2222-4222-8222-222222222222";
 
-    // create_party_relationship(UV) → the new VERSIONED_OBJECT's id.
-    let vo_id = svc
-        .create_party_relationship(uv(&relationship("parent-of", src, tgt), "249", None))
-        .await
-        .expect("create_party_relationship");
+    // The create → the new VERSIONED_OBJECT's id.
+    let vo_id = Box::pin(crate::fixtures::create_relationship(
+        &svc,
+        uv(&relationship("parent-of", src, tgt), "249", None),
+    ))
+    .await
+    .expect("create_party_relationship");
 
-    assert!(
-        svc.has_party_relationship(vo_id)
-            .await
-            .expect("has_party_relationship"),
-        "live relationship"
-    );
+    assert!(relationship_is_live(&svc, vo_id).await, "live relationship");
     let got = svc
-        .get_party_relationship(vo_id)
+        .party_relationship_get(vo_id.to_string(), None)
         .await
-        .expect("get_party_relationship");
+        .expect("get_party_relationship")
+        .body;
     assert_eq!(got["_type"], "PARTY_RELATIONSHIP");
     assert_eq!(got["name"]["value"], "parent-of");
 
     let v1 = got["uid"]["value"].as_str().expect("uid.value").to_owned();
     let by_ver = svc
-        .get_party_relationship_at_version(v1.clone())
+        .party_relationship_version_get_by_id(vo_id.to_string(), v1.clone())
         .await
-        .expect("get_party_relationship_at_version");
+        .expect("get_party_relationship_at_version")
+        .body;
     assert_eq!(by_ver["_type"], "ORIGINAL_VERSION");
 
-    // update_party_relationship(UV with preceding) → the new version uid.
+    // The update under `If-Match` = the current version → the new version uid.
+    let update: openehr_its::rest::generated::common::UpdateVersion<
+        openehr_rm::prelude::PartyRelationship,
+    > = uv(&relationship("guardian-of", src, tgt), "251", Some(&v1));
+    let committal = crate::fixtures::envelope_committal(&update);
     let v2 = svc
-        .update_party_relationship(
-            vo_id,
-            uv(&relationship("guardian-of", src, tgt), "251", Some(&v1)),
+        .party_relationship_update(
+            vo_id.to_string(),
+            v1.clone(),
+            update.data.expect("a PARTY_RELATIONSHIP"),
+            Some(committal),
         )
         .await
-        .expect("update_party_relationship");
+        .expect("update_party_relationship")
+        .meta
+        .expect("the update answers its version")
+        .uid;
     assert!(v2.ends_with("::2"), "second version, got {v2}");
     let got2 = svc
-        .get_party_relationship(vo_id)
+        .party_relationship_get(vo_id.to_string(), None)
         .await
-        .expect("get after update");
+        .expect("get after update")
+        .body;
     assert_eq!(got2["name"]["value"], "guardian-of");
 
-    // delete_party_relationship → post-condition `not has_party_relationship`.
+    // The delete of the latest version → the relationship is no longer present.
     let del = svc
-        .delete_party_relationship(vo_id)
+        .party_relationship_delete(v2.clone(), None, None)
         .await
-        .expect("delete_party_relationship");
+        .expect("delete_party_relationship")
+        .meta
+        .map(|meta| meta.uid)
+        .unwrap_or_default();
     assert!(!del.is_empty(), "delete returns the deleted version uid");
     assert!(
-        !svc.has_party_relationship(vo_id)
-            .await
-            .expect("has after delete"),
+        !relationship_is_live(&svc, vo_id).await,
         "a deleted relationship is no longer present"
     );
-    let after = svc.get_party_relationship(vo_id).await;
+    // A deleted relationship reads empty, served as `204`.
+    let after = svc
+        .party_relationship_get(vo_id.to_string(), None)
+        .await
+        .expect("a deleted relationship reads");
     assert!(
-        matches!(
-            after,
-            Err(StatusError {
-                status: ServiceStatus::VersionedObjectDoesNotExist,
-                ..
-            })
-        ),
-        "get after delete → 404, got {after:?}"
+        after.is_empty(),
+        "get after delete serves no body, got {after:?}"
     );
 }
 

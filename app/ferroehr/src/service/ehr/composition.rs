@@ -143,38 +143,9 @@ impl FerroEhrService {
     }
 
     /// Retrieve a COMPOSITION by its versioned-object id, optionally at a
-    /// specific version (else the latest). A deleted version resolves to
-    /// `Value::Null` (→ `204`) — never 404 or 500.
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when the version does not exist or belongs
-    /// to another EHR; [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn read_composition(
-        &self,
-        ehr_id: EhrId,
-        vo_id: VoId,
-        version: Option<TreeId>,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let read = match version {
-            Some(v) => read_version(&self.pool, self.spec_profile, vo_id, v).await?,
-            None => read_current(&self.pool, self.spec_profile, vo_id).await?,
-        }
-        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
-        .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::CompositionDoesNotExist,
-                format!("COMPOSITION {vo_id}"),
-            )
-        })?;
-
-        if read.deleted() {
-            return Ok(ServiceResponse::plain(Value::Null));
-        }
-        Ok(self.version_response(ehr_id, vo_id, read)?)
-    }
-
-    /// [`Self::read_composition`] with the body kept as the stored canonical
-    /// text wherever nothing needs it parsed — the JSON-accept passthrough.
+    /// specific version (else the latest), with the body kept as the stored
+    /// canonical text wherever nothing needs it parsed — the JSON-accept
+    /// passthrough. A deleted version resolves to `Value::Null` (→ `204`).
     ///
     /// The stored body is uid-stamped at commit (`stamp_version_uid` runs before
     /// decomposition) and jsonb renders object keys length-first, so a stamped
@@ -856,47 +827,6 @@ impl FerroEhrService {
 // ── The COMPOSITION call surface ──────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// Whether the named version
-    /// exists in the EHR.
-    ///
-    /// # Errors
-    /// [`StatusError`] for a malformed `OBJECT_VERSION_ID` or a failing read (a
-    /// missing version is `Ok(false)`).
-    pub async fn has_composition(
-        &self,
-        an_ehr_id: EhrId,
-        a_version_uid: ObjectVersionId,
-    ) -> Result<bool, StatusError> {
-        let (vo_id, version) = components(&a_version_uid)?;
-        match self.read_composition(an_ehr_id, vo_id, Some(version)).await {
-            Ok(read) => Ok(match read.meta.as_ref() {
-                Some(meta) => super::ensure_addressed_version(&a_version_uid, &meta.uid).is_ok(),
-                // A deleted version serves no representation/meta; the
-                // fetched tree row existing is the answer.
-                None => true,
-            }),
-            Err(ServiceError::NotFound(_)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// The latest COMPOSITION of a versioned object (bare, with its `uid`); a
-    /// deleted latest version yields `Value::Null` (→ 204).
-    ///
-    /// # Errors
-    /// [`StatusError`] when the object does not exist in this EHR
-    /// (404-equivalent) or a read fails.
-    pub async fn get_composition_latest(
-        &self,
-        an_ehr_id: EhrId,
-        a_versioned_object_uid: VoId,
-    ) -> Result<Value, StatusError> {
-        let resp = self
-            .composition_latest_response(an_ehr_id, a_versioned_object_uid)
-            .await?;
-        Ok(Self::read_body_value(a_versioned_object_uid, resp.body)?)
-    }
-
     /// The typed value of a [`ReadBody`], mapping an undecodable stored text
     /// to an internal fault (the stored body is our own jsonb rendering).
     fn read_body_value(vo_id: VoId, body: ReadBody) -> Result<Value, ServiceError> {
@@ -905,24 +835,6 @@ impl FerroEhrService {
                 "the stored body of COMPOSITION {vo_id} is not decodable JSON: {e}"
             ))
         })
-    }
-
-    /// The COMPOSITION
-    /// current at `a_time`, or the latest when `a_time` is `None`.
-    ///
-    /// # Errors
-    /// [`StatusError`] for a malformed `a_time` (400-equivalent), a missing
-    /// version at that instant (404-equivalent), or a read failure.
-    pub async fn get_composition_at_time(
-        &self,
-        an_ehr_id: EhrId,
-        a_versioned_object_uid: VoId,
-        a_time: Option<String>,
-    ) -> Result<Value, StatusError> {
-        let resp = self
-            .composition_at_time_response(an_ehr_id, a_versioned_object_uid, a_time)
-            .await?;
-        Ok(Self::read_body_value(a_versioned_object_uid, resp.body)?)
     }
 
     /// The bare
@@ -943,28 +855,11 @@ impl FerroEhrService {
         Ok(Self::read_body_value(vo_id, resp.body)?)
     }
 
-    /// The
-    /// `VERSIONED_COMPOSITION` container object.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the object does not exist in this EHR
-    /// (404-equivalent) or a read fails.
-    pub async fn get_versioned_composition(
-        &self,
-        an_ehr_id: EhrId,
-        a_versioned_object_uid: VoId,
-    ) -> Result<Value, StatusError> {
-        Ok(self
-            .versioned_composition(an_ehr_id, a_versioned_object_uid)
-            .await?
-            .body)
-    }
-
-    /// [`Self::get_versioned_composition`] with the container metadata the
-    /// wire's `ETag`/`Last-Modified` need: the container uid identity plus the
-    /// newest held version's commit instant (ITS-REST overview
-    /// `Requests_and_responses.md` §"`ETag` and Last-Modified" — both headers
-    /// SHOULD accompany a `VERSIONED_OBJECT` response).
+    /// The `VERSIONED_COMPOSITION` container object with the container
+    /// metadata the wire's `ETag`/`Last-Modified` need: the container uid
+    /// identity plus the newest held version's commit instant (ITS-REST
+    /// overview `Requests_and_responses.md` §"`ETag` and Last-Modified" — both
+    /// headers SHOULD accompany a `VERSIONED_OBJECT` response).
     ///
     /// # Errors
     /// [`StatusError`] when the object does not exist in this EHR
@@ -979,25 +874,8 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// The `REVISION_HISTORY`
-    /// of a COMPOSITION.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the object does not exist in this EHR
-    /// (404-equivalent) or a read fails.
-    pub async fn composition_revision_history(
-        &self,
-        an_ehr_id: EhrId,
-        a_versioned_object_uid: VoId,
-    ) -> Result<Value, StatusError> {
-        Ok(self
-            .composition_revision_history_value(an_ehr_id, a_versioned_object_uid)
-            .await?
-            .body)
-    }
-
-    /// [`Self::composition_revision_history`] with the container metadata the
-    /// wire's `ETag`/`Last-Modified` need (container uid + newest commit
+    /// The `REVISION_HISTORY` of a COMPOSITION with the container metadata
+    /// the wire's `ETag`/`Last-Modified` need (container uid + newest commit
     /// instant — same derivation as
     /// [`Self::versioned_composition_response`]).
     ///
@@ -1064,16 +942,16 @@ impl FerroEhrService {
 
 // ── ITS-REST read-response adapter (adapter-support extension) ────────────────
 //
-// The reads above return the bare COMPOSITION, which carries no commit
-// audit, yet ITS-REST derives `Last-Modified` from
-// `VERSION.commit_audit.time_committed.value` (`Requests_and_responses.md`
-// §"`ETag` and Last-Modified"), so these siblings return the read plus its
-// [`ResourceMeta`] (no openEHR spec governs the envelope — our own design).
+// A bare COMPOSITION carries no commit audit, yet ITS-REST derives
+// `Last-Modified` from `VERSION.commit_audit.time_committed.value`
+// (`Requests_and_responses.md` §"`ETag` and Last-Modified"), so these reads
+// return the COMPOSITION plus its [`ResourceMeta`] (no openEHR spec governs the
+// envelope — our own design).
 
 impl FerroEhrService {
-    /// [`Self::get_composition_latest`] with the version metadata the wire's
-    /// `ETag`/`Last-Modified` need. A deleted latest version yields a null body
-    /// and no metadata (→ `204`).
+    /// The latest COMPOSITION of a versioned object, with the version metadata
+    /// the wire's `ETag`/`Last-Modified` need. A deleted latest version yields
+    /// a null body and no metadata (→ `204`).
     ///
     /// # Errors
     /// [`StatusError`] when the object does not exist in this EHR
@@ -1088,8 +966,9 @@ impl FerroEhrService {
             .await?)
     }
 
-    /// [`Self::get_composition_at_time`] with the version metadata the wire's
-    /// `ETag`/`Last-Modified` need.
+    /// The COMPOSITION current at `a_time`, or the latest when `a_time` is
+    /// `None`, with the version metadata the wire's `ETag`/`Last-Modified`
+    /// need.
     ///
     /// # Errors
     /// [`StatusError`] for a malformed `a_time` (400-equivalent), a missing

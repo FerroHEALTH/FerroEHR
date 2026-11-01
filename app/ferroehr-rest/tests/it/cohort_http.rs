@@ -154,10 +154,32 @@ fn uv<T: serde::de::DeserializeOwned>(
 /// Seed three linked subjects in `city`, each with one composition.
 async fn seed(service: &FerroEhrService, city: &str, names: &[&str]) {
     for name in names {
-        let party = Box::pin(service.create_party(uv(&person(name, city))))
+        let version: openehr_its::rest::generated::common::UpdateVersion<
+            openehr_rm::prelude::Party,
+        > = uv(&person(name, city));
+        let committal = ferroehr::service::version_update::Committal {
+            audit: version.commit_audit,
+            lifecycle_state: None,
+        };
+        let created = Box::pin(service.party_create(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            version.data.expect("a PERSON"),
+            Some(committal),
+        ))
+        .await
+        .expect("create_party");
+        let created_uid = created.meta.expect("the create answers its version").uid;
+        let party = ferroehr::ids::VoId(
+            created_uid
+                .split("::")
+                .next()
+                .and_then(|vo| vo.parse().ok())
+                .expect("a uuid versioned object id"),
+        );
+        let ehr = Box::pin(service.create_ehr_meta(None, None))
             .await
-            .expect("create_party");
-        let ehr = service.create_ehr(None).await.expect("create_ehr");
+            .map(|(id, _)| id)
+            .expect("create_ehr");
         service.link(party, ehr).await.expect("link");
         service
             .create_composition(ehr, uv(&composition(name)))
