@@ -94,7 +94,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Recipients | *yours* |
 | Third-country transfers | *yours* |
 | Retention | Parties leave only by an administrator's deletion. The subject reference of an EHR leaves with the EHR that carries it |
-| Security measures | Two schemas under their own roles, revoked from each other in both directions and checked at boot; AES-256-GCM sealing with a keyed HMAC-SHA-256 digest for lookup, under per-domain subkeys; the one crossing runs in the application over two pools and writes an access record |
+| Security measures | Two schemas under their own roles, revoked from each other in both directions and checked at boot; AES-256-GCM sealing with a keyed HMAC-SHA-256 digest for lookup, under per-domain subkeys; each crossing from a party or a subject to its EHRs runs in the application over two pools and writes an access record |
 
 ## 5. Access logging
 

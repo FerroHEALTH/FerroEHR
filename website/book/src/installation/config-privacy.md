@@ -367,17 +367,16 @@ Four properties worth knowing before you enable it:
 - **The stored, signed and served body are the same form.** Sealing runs before
   the body is decomposed and signed, exactly like the multimedia offload, so a
   signature still verifies against the bytes the server holds. What a reader
-  receives carries the reference; the value is available through the resolution
-  path below. A create or update response serves the stored form as well, so
+  receives carries the reference; the value is available through the admin
+  read below. A create or update response serves the stored form as well, so
   the value you submitted does not come back in it.
 - **Each party version keeps its own sealed rows.** A later version retires
   the rows of the one before it without rewriting them, so an older version
-  still expands to the value it committed. Only live rows take part in
-  resolution.
-- **Resolution is audited.** Going from an identifier to a party is recorded as
-  a `linkage`-domain access naming the scheme and whether it matched — never the
-  value. A miss is recorded too: it says someone asked whether this deployment
-  holds that identifier.
+  still expands to the value it committed. Only live rows take part in the
+  one-party-per-value rule.
+- **Nothing resolves an identifier to a party.** The server offers no lookup
+  from an identifier value to the party that holds it. The keyed digest keeps a
+  value live for at most one party at a time.
 - **Reading a value back is audited and needs its own role.**
   `GET /ferroehr/rest/extensions/v1/admin/party/identifiers` serves a party version with its values
   put back, for a caller holding both the admin role and

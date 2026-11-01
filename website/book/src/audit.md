@@ -496,8 +496,8 @@ The local store is the durability anchor. Under `fail_mode = "closed"`, an
 operation whose audit record cannot be recorded answers
 `503 Service Unavailable`: the deployment demanded an audit trail it cannot
 currently deliver, so no un-audited PHI access happens, and the same holds for
-the domain-level records the linkage, subject and identifier resolutions and
-the EHR-Extract transfers write. `open`, the default, drops-and-meters instead,
+the domain-level records the subject resolutions and the EHR-Extract
+transfers write. `open`, the default, drops-and-meters instead,
 and every loss path is metered (the `atna_audit_*` counters in
 [Operations](operations.md)); the server announces that default at boot and on
 the readiness indicator as a stated caution, because a metered loss is still a

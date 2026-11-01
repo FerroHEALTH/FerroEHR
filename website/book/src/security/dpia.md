@@ -40,7 +40,7 @@ the Art. 30 fields, in
    an audit entry in the same transaction, and no version is overwritten.
 3. **Query** over stored content, in AQL.
 4. **Identity and linkage**: parties, protected national identifiers, and the
-   resolution of a party or a subject to the EHRs whose subject it is.
+   resolution of a party or a subject to the EHRs whose `EHR_STATUS` names it.
 5. **Access logging**: one record per access, in DICOM PS3.15 and FHIR
    `AuditEvent` renderings.
 6. **Change-event publication**: a PHI-free envelope per commit, drained to a
@@ -159,11 +159,11 @@ control is irrelevant to that source.
 |---|---|---|---|---|---|
 | Demographic parties in their own schema under a non-overlapping runtime role | [#3153](https://github.com/FerroHEALTH/FerroEHR/issues/3153) | Art. 4(5), Art. 32(1)(a) | pseudonymisation domain | — | — |
 | The clinical side refuses identifying data; the subject reference is constrained to a pseudonym namespace | [#3154](https://github.com/FerroHEALTH/FerroEHR/issues/3154) | Art. 4(5), Art. 25(2) | — | — | — |
-| National identifiers sealed, looked up by keyed digest, resolved under audit | [#3155](https://github.com/FerroHEALTH/FerroEHR/issues/3155) | Art. 32(1)(a) | — | — | NEN 7510-2 cryptographic controls |
+| National identifiers sealed, with a keyed digest that keeps a value live for one party at a time | [#3155](https://github.com/FerroHEALTH/FerroEHR/issues/3155) | Art. 32(1)(a) | — | — | NEN 7510-2 cryptographic controls |
 | Per-domain access logging for reads and queries | [#3156](https://github.com/FerroHEALTH/FerroEHR/issues/3156) | — | — | Art. 9 | NEN 7513 event content |
 | Separate encryption keys and per-schema backup handling | [#3157](https://github.com/FerroHEALTH/FerroEHR/issues/3157) | Art. 4(5), Art. 32(1)(c) | — | — | — |
 | The declared deployment profile: `production` refuses what it cannot prove | [#3226](https://github.com/FerroHEALTH/FerroEHR/issues/3226) | Art. 32(1) | — | — | — |
-| The server mints the subject pseudonym; no caller value becomes one | [#3232](https://github.com/FerroHEALTH/FerroEHR/issues/3232) | Art. 4(5) | — | — | — |
+| The subject pseudonym is opt-in: FerroEHR mints none, and a declared namespace constrains every subject reference | [#3232](https://github.com/FerroHEALTH/FerroEHR/issues/3232) | Art. 4(5) | — | — | — |
 | A jurisdictional floor under access-log retention | [#3242](https://github.com/FerroHEALTH/FerroEHR/issues/3242) | Art. 5(1)(e) | — | — | NEN 7513 retention |
 | The accessing organisation on every access record | [#3204](https://github.com/FerroHEALTH/FerroEHR/issues/3204) | — | — | Annex II 3.2(a) | — |
 | The actor's roles on every access record | [#3239](https://github.com/FerroHEALTH/FerroEHR/issues/3239) | — | — | — | NEN 7513 actor role |
