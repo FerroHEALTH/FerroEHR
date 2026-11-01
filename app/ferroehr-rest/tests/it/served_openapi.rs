@@ -1267,11 +1267,14 @@ async fn admin_operations_are_fully_documented() {
         conflict.contains("orphan"),
         "DELETE {path} 409 must state the never-orphan-committed-data guard; has: {conflict}"
     );
+    let template_id = param_doc(&op, "template_id");
     assert!(
         text(&op).contains("case-insensitively")
-            && text(&op).contains("/definition/template/adl1.4/{template_id}"),
+            && template_id.contains("case-insensitively")
+            && template_id.contains("/definition/template/adl1.4/{template_id}"),
         "DELETE {path} must state that it is addressed by the case-insensitive \
-         `template_id`, as the released template reads are"
+         `template_id`, as the released template reads are; has: {} / {template_id}",
+        text(&op)
     );
 
     // ── the stored-query-version delete: one version, never the whole query ──
@@ -1480,7 +1483,16 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
             "/ferroehr/rest/extensions/v1/definition/artefact/",
         ],
         flag: "no its-rest operation governs this",
-        operations: 9,
+        // 9 + the ADL 1.4 to ADL 2 conversion of a stored archetype (#4655).
+        operations: 10,
+    },
+    NonSpecFamily {
+        // The ADL 1.4 to ADL 2 conversion of a stored operational template;
+        // the released Definition API declares no conversion.
+        label: "the ADL 1.4 to ADL 2 template conversion extension",
+        prefixes: &["/ferroehr/rest/extensions/v1/definition/template/"],
+        flag: "no its-rest operation governs this",
+        operations: 1,
     },
     NonSpecFamily {
         // The export/load pair; nothing released reads or

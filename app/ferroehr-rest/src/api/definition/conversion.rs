@@ -134,8 +134,8 @@ impl From<FillEdge> for Fill {
 /// Convert a stored ADL 1.4 archetype to ADL 2
 /// (`GET /definition/archetype/adl1.4/{archetype_id}/adl2`).
 ///
-/// **Our own extension: no openEHR specification defines a conversion
-/// operation** (module docs). The store is only read.
+/// **Our own extension: no ITS-REST operation governs this**, and no openEHR
+/// specification defines a conversion operation (module docs). The store is only read.
 #[utoipa::path(
     get, path = "/definition/archetype/adl1.4/{archetype_id}/adl2", tag = "definition-archetype",
     params(
@@ -178,8 +178,8 @@ pub(crate) async fn definition_archetype_adl14_convert(
 /// Convert a stored ADL 1.4 operational template to ADL 2
 /// (`GET /definition/template/adl1.4/{template_id}/adl2`).
 ///
-/// **Our own extension: no openEHR specification defines a conversion
-/// operation** (module docs). The template is decomposed into one source per
+/// **Our own extension: no ITS-REST operation governs this**, and no openEHR
+/// specification defines a conversion operation (module docs). The template is decomposed into one source per
 /// embedded archetype root; the store is only read.
 #[utoipa::path(
     get, path = "/definition/template/adl1.4/{template_id}/adl2", tag = "definition-archetype",

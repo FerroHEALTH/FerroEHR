@@ -196,6 +196,15 @@ impl SmartRoutes {
                 resource: None,
             };
         }
+        if under("/definition/template") {
+            // NOTE: master08 §Resource Scopes, the template conversion reads the stored
+            // template, so it carries the template- requirement of the released reads.
+            return Requirement::OpenEhr {
+                family: ResourceFamily::Template,
+                permission: permission_of_method(method),
+                resource: path_param(template, path, "template_id"),
+            };
+        }
         if under("/definition/query") {
             return Requirement::OpenEhr {
                 family: ResourceFamily::Aql,
@@ -489,6 +498,19 @@ mod tests {
         let table = routes();
         let template = format!("{BASE}/definition/template/adl1.4/{{template_id}}");
         let path = format!("{BASE}/definition/template/adl1.4/Vitals.v1");
+        assert_eq!(
+            table.need(&Method::GET, Some(&template), &path),
+            Need::Now(Requirement::OpenEhr {
+                family: ResourceFamily::Template,
+                permission: Permission::Read,
+                resource: Some("Vitals.v1".to_owned()),
+            })
+        );
+        // The ADL 2 conversion of a stored template, an extension route, is
+        // held to the requirement of the released template read.
+        let ext = "/ferroehr/rest/extensions/v1";
+        let template = format!("{ext}/definition/template/adl1.4/{{template_id}}/adl2");
+        let path = format!("{ext}/definition/template/adl1.4/Vitals.v1/adl2");
         assert_eq!(
             table.need(&Method::GET, Some(&template), &path),
             Need::Now(Requirement::OpenEhr {
