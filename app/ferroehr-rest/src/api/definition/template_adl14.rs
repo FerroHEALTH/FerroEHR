@@ -130,22 +130,35 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // Web Template was built before it.
     let body = match representation {
         Some(WireFormat::CanonicalXml) => Some(negotiate::xml_body(StatusCode::CREATED, xml)),
-        Some(fmt) => Some(
+        Some(fmt) => {
             match web_template_response(state, &template_id, fmt, StatusCode::CREATED).await {
-                Ok(resp) => resp,
+                Ok(resp) => Some(resp),
                 Err(error) => {
                     tracing::error!(
                         template_id,
                         status = %error.status(),
-                        "the stored template's Web Template was not served; answering its OPT"
+                        "the stored template's Web Template was not served; answering without a body"
                     );
-                    negotiate::xml_body(StatusCode::CREATED, xml)
+                    return Ok(unrepresented_response(&location, &template_id));
                 }
-            },
-        ),
+            }
+        }
         None => None,
     };
     Ok(upload_response(h, &location, &template_id, body))
+}
+
+/// The `201` of a stored template whose requested representation could not be
+/// served: `Location` and `ETag`, no body, and no `Preference-Applied`.
+// NOTE: RFC 7240 §2 lets a server ignore a preference, and §3 has
+// `Preference-Applied` name only the preferences that were applied.
+fn unrepresented_response(location: &str, template_id: &str) -> Response {
+    let mut resp = StatusCode::CREATED.into_response();
+    if let Ok(v) = HeaderValue::from_str(location) {
+        resp.headers_mut().insert(header::LOCATION, v);
+    }
+    set_template_etag(&mut resp, template_id);
+    resp
 }
 
 /// The `406` detail for an `Accept` outside [`TEMPLATE_DEF_FORMATS`].
