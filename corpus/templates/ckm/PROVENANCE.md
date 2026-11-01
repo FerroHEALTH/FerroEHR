@@ -1,39 +1,29 @@
 # CKM template pack — provenance
 
 Vendored from the official openEHR CKM (`https://ckm.openehr.org/ckm/rest/v1`) by
-`scripts/vendor/ckm-templates.sh` on 2026-08-01T15:09:43Z.
+`scripts/vendor/ckm-templates.sh` on 2026-11-01T23:40:36Z.
 Each file is CKM's own OPT export for the cited template, verbatim.
 Example skeletons (`*.example.json`) are generated once against the
 composed SUT by `scripts/generate-ckm-examples.sh` and committed
 (byte-identical payload ground for every SUT; never fetched at run
-time). Manifest entries live with the conformance instrument
-(Veredictum's `artifacts/corpus/MANIFEST.yaml`).
+time). The conformance instrument's measured workloads carry their
+own copies of this pack under the same slugs (Veredictum's
+`perf/payloads.yaml`).
 
-Four of them — `ccta-report`, `gp-data-set`,
-`international-patient-summary`, `sars-event-notification` — were
-produced by the pre-fix generator and carried `name` /
-`archetype_node_id` on their `ISM_TRANSITION` nodes, which RM
-`UML/classes/org.openehr.rm.composition.ism_transition.adoc` inherits
-from PATHABLE, not LOCATABLE, so it declares neither. The fixed
-generator's transformation was applied to the committed files directly
-(via `jq`) rather than by a re-run: they are in exact `jq -S .` output
-form and RM-correct, but a real re-run against a composed SUT
-confirming byte-identical output is still outstanding (issue #1724).
-
-The **curated journey pack** below is referenced by slug from the
-manifest, the journey definitions and the example generator — the
-slugs are a stable contract. The **full library** is a separate pack
-under `full/` with its own provenance file.
+The **curated pack** below is referenced by slug from this
+repository's tests and benches, the sandbox reseed, the example
+generator and Veredictum's `perf/payloads.yaml` — the slugs are a
+stable contract. The **full library** is a separate pack under
+`full/` with its own provenance file.
 
 ## Licensing
 
 CKM publishes no repository-level license; each OPT embeds its source
 archetypes' `licence` metadata, and the corpus is **mixed**: a count
 over this directory on 2026-08-12 found **114 files carrying CC-BY-SA
-4.0 and 10 carrying CC-BY-SA 3.0**. The earlier wording here —
-"predominantly CC-BY-SA 3.0" — was the wrong way round. Read the
-individual file; its own metadata is the authority. Vendored verbatim,
-so authorship and licence metadata ride along; root reference copies:
+4.0 and 10 carrying CC-BY-SA 3.0**. Read the individual file; its own
+metadata is the authority. Vendored verbatim, so authorship and
+licence metadata ride along; root reference copies:
 `LICENSE-CC-BY-SA-3.0` and `LICENSE-CC-BY-SA-4.0`, and `REUSE.toml`
 declares this tree as `CC-BY-SA-3.0 AND CC-BY-SA-4.0`.
 

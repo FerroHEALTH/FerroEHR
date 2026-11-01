@@ -10,11 +10,12 @@
 # TWO PACKS, one script:
 #
 #   * the CURATED journey pack -> corpus/templates/ckm/<slug>.opt
-#     Hand-picked, all COMPOSITION-rooted, each mapped to a role in the
-#     measured-performance hospital-simulation journeys. The slugs are
-#     REFERENCED BY NAME from the conformance instrument's corpus manifest and
-#     journey definitions, and from scripts/generate-ckm-examples.sh — never
-#     rename or drop one.
+#     Hand-picked, all COMPOSITION-rooted, each with the clinical role it was
+#     chosen for. The slugs are REFERENCED BY NAME from this repository's tests
+#     and benches, scripts/sandbox/reseed.sh and
+#     scripts/generate-ckm-examples.sh, and the conformance instrument's
+#     measured workloads carry copies under the same slugs (Veredictum's
+#     perf/payloads.yaml), so never rename or drop one.
 #
 #   * the FULL library -> corpus/templates/ckm/full/<slug>.opt
 #     Every template CKM publishes (slug derived from the display name),
@@ -129,21 +130,26 @@ if [[ "$MODE" != full ]]; then
     echo "Example skeletons (\`*.example.json\`) are generated once against the"
     echo "composed SUT by \`scripts/generate-ckm-examples.sh\` and committed"
     echo "(byte-identical payload ground for every SUT; never fetched at run"
-    echo "time). Manifest entries live with the conformance instrument"
-    echo "(Veredictum's \`artifacts/corpus/MANIFEST.yaml\`)."
+    echo "time). The conformance instrument's measured workloads carry their"
+    echo "own copies of this pack under the same slugs (Veredictum's"
+    echo "\`perf/payloads.yaml\`)."
     echo
-    echo "The **curated journey pack** below is referenced by slug from the"
-    echo "manifest, the journey definitions and the example generator — the"
-    echo "slugs are a stable contract. The **full library** is a separate pack"
-    echo "under \`full/\` with its own provenance file."
+    echo "The **curated pack** below is referenced by slug from this"
+    echo "repository's tests and benches, the sandbox reseed, the example"
+    echo "generator and Veredictum's \`perf/payloads.yaml\` — the slugs are a"
+    echo "stable contract. The **full library** is a separate pack under"
+    echo "\`full/\` with its own provenance file."
     echo
     echo "## Licensing"
     echo
     echo "CKM publishes no repository-level license; each OPT embeds its source"
-    echo "archetypes' \`licence\` metadata (predominantly CC-BY-SA 3.0 where"
-    echo "stated — see the individual file). Vendored verbatim, so authorship"
-    echo "and licence metadata ride along; root reference copy:"
-    echo "\`LICENSE-CC-BY-SA-3.0\`."
+    echo "archetypes' \`licence\` metadata, and the corpus is **mixed**: a count"
+    echo "over this directory on 2026-08-12 found **114 files carrying CC-BY-SA"
+    echo "4.0 and 10 carrying CC-BY-SA 3.0**. Read the individual file; its own"
+    echo "metadata is the authority. Vendored verbatim, so authorship and"
+    echo "licence metadata ride along; root reference copies:"
+    echo "\`LICENSE-CC-BY-SA-3.0\` and \`LICENSE-CC-BY-SA-4.0\`, and \`REUSE.toml\`"
+    echo "declares this tree as \`CC-BY-SA-3.0 AND CC-BY-SA-4.0\`."
     echo
     echo "| cid | slug | display name | status | modified | journey role |"
     echo "|---|---|---|---|---|---|"
@@ -165,6 +171,21 @@ if [[ "$MODE" != full ]]; then
     }
     echo "| $cid | $slug | $name | $status | $modified | $role |" >> "$PROV"
   done
+  {
+    echo
+    echo "## Adjudicated boundaries"
+    echo
+    echo "Two EHDS Annex I priority categories have no template in this pack, and the"
+    echo "gap is a boundary rather than an omission (#3206): CKM publishes no operational"
+    echo "template for **electronic dispensations** (Annex I 3) or **discharge reports**"
+    echo "(Annex I 6) as such at the pinned revision, and this pack vendors CKM content"
+    echo "verbatim, never a template authored here to fill a category. The"
+    echo "international-patient-summary template covers admission and discharge"
+    echo "summaries as a COMPOSITION shape, not the discharge-report category the"
+    echo "Regulation names. The question reopens when a CKM template for either category"
+    echo "is published, or when the Article 36 implementing acts fix the exchange format"
+    echo "those categories must be provided in."
+  } >> "$PROV"
   echo "==> curated pack: $(grep -c '^OK' "$WORK/curated.log") OPTs → $OUT"
 fi
 
