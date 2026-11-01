@@ -1153,3 +1153,48 @@ async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
         .await
         .expect("undeclared members are valid content and commit");
 }
+
+/// #4577 on the demographic CONTRIBUTION path: `schemas/demographic/UpdateVersion.yaml`
+/// leaves `additionalProperties` open as its EHR copy does, so undeclared
+/// member keys commit, and a member-borne `uid` stays the 400 naming its member
+/// path, because the server assigns the version identity (RM common master06
+/// §Version Identification).
+#[tokio::test]
+async fn demographic_contribution_member_is_open_but_uid_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let member = |extra: &[(&str, Value)]| {
+        let mut version = json!({
+            "lifecycle_state": { "value": "complete",
+                "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" } },
+            "commit_audit": { "change_type": { "value": "creation",
+                    "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" } },
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } },
+            "data": person("Open member")
+        });
+        for (key, value) in extra {
+            version[*key] = value.clone();
+        }
+        json!({
+            "versions": [version],
+            "audit": { "change_type": { "value": "creation",
+                    "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" } },
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } }
+        })
+    };
+    svc.demographic_contribution_create(member(&[
+        ("contribution", json!({ "id": { "value": "x" } })),
+        ("other_input_version_uids", json!([])),
+        ("extension", json!({ "note": "an undeclared member" })),
+    ]))
+    .await
+    .expect("undeclared members of the open UPDATE_VERSION commit");
+    let uid = json!({ "_type": "OBJECT_VERSION_ID",
+        "value": "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::1" });
+    let err = svc
+        .demographic_contribution_create(member(&[("uid", uid)]))
+        .await
+        .expect_err("a member-borne uid is refused");
+    assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
+    assert!(err.message.contains("versions[0]/uid"), "{err:?}");
+}

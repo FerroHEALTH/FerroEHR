@@ -291,33 +291,37 @@ struct PlannedVersion {
 /// `schemas/ehr/NewContribution.yaml` types `versions` items as). Admitting
 /// `ORIGINAL_VERSION` names the class the member becomes, per the `_type` rule
 /// of `specifications/docs/overview/Resources.md` §Resource representation; the
-/// server still supplies every attribute the partial omits, `uid` included, so
+/// server still assigns the version identity, so
 /// [`reject_foreign_version_identity`] refuses a member-borne `uid` under either
 /// tag.
 const COMMITTABLE_MEMBER_TYPES: [&str; 2] = ["UPDATE_VERSION", "ORIGINAL_VERSION"];
 
-/// Refuses a CONTRIBUTION version member that declares a version identity this
-/// repository did not create, or any other member the commit wire does not
-/// declare.
+/// Refuses a CONTRIBUTION version member that states its own version identity
+/// or self-tags as a class this wire does not commit.
 ///
-/// The released commit wire declares six member properties (ITS-REST
-/// `schemas/ehr/UpdateVersion.yaml`) and `schemas/ehr/NewContribution.yaml`
-/// types `versions` items as `UpdateVersion` with no `oneOf` and no
-/// discriminator, so no member can name its own `uid` or carry the `item` an
-/// `IMPORTED_VERSION` wraps. RM common `master06-change_control_package.adoc`
-/// §Copying puts the import behind `VERSIONED_OBJECT.commit_imported_version`,
-/// for which the release defines no wire shape; the EHR-Extract import route
-/// carries a foreign `ORIGINAL_VERSION` verbatim instead. Left accepted, such a
-/// member would commit as a locally created `ORIGINAL_VERSION` under a freshly
-/// minted uid, discarding the declared foreign identity without a diagnostic.
+/// `UPDATE_VERSION` is an open object: ITS-REST `schemas/ehr/UpdateVersion.yaml`
+/// (and its demographic copy) declares six properties and no
+/// `additionalProperties`, where the release closes an object it means to close
+/// with `additionalProperties: false` (`ItemTag.yaml`). Every other undeclared
+/// member is accepted and ignored, as on `NewContribution` and `UpdateAudit`.
+///
+/// `uid` is the one member refused by name: the identity of a locally created
+/// version is the server's to assign. RM common
+/// `master06-change_control_package.adoc` §Version Identification sets its
+/// `creating_system_id` to "the identifier of the local system" and numbers its
+/// `version_tree_id` from 1, and ITS-REST `Resources.md` §Resource
+/// identification says "Once assigned, a resource identifier remains
+/// unchanged". A stated `uid` is either the value the server computes or a
+/// foreign identity, which RM master06 §Copying commits as an
+/// `IMPORTED_VERSION`; ignoring it would commit under an identity other than
+/// the one the client stated.
 ///
 /// `undeclared` is the generated envelope's `additional_properties`: every key
 /// of the member outside the six the schema declares.
 ///
-/// NOTE: `_type` is the one undeclared key with a legal value here, its value
-/// being "the uppercase class name from the RM specification" (ITS-REST
-/// `specifications/docs/overview/Resources.md` §Resource representation), but
-/// only for a class this wire commits ([`COMMITTABLE_MEMBER_TYPES`]).
+/// NOTE: `_type` must name "the uppercase class name from the RM specification"
+/// (ITS-REST `specifications/docs/overview/Resources.md` §Resource
+/// representation), so only a class this wire commits passes.
 ///
 /// # Errors
 /// [`ServiceError::BadRequest`] naming the offending key.
@@ -325,61 +329,30 @@ fn reject_foreign_version_identity(
     undeclared: &std::collections::BTreeMap<String, Value>,
     index: usize,
 ) -> Result<(), ServiceError> {
-    const SPECIFICALLY_REFUSED: [&str; 3] = ["item", "uid", "other_input_version_uids"];
-    for key in undeclared.keys() {
-        if key != "_type" && !SPECIFICALLY_REFUSED.contains(&key.as_str()) {
-            return Err(ServiceError::precondition(format!(
-                "versions[{index}]/{key} is not a member of UPDATE_VERSION — the \
-                 released commit wire declares preceding_version_uid, signature, \
-                 lifecycle_state, attestations, data, commit_audit (ITS-REST \
-                 UpdateVersion.yaml), and a member may additionally self-tag with \
-                 _type; undeclared members are refused, never silently ignored"
-            )));
-        }
-    }
-    if undeclared.contains_key("item") {
-        return Err(ServiceError::precondition(
-            "item is not a member of UPDATE_VERSION — it is the sole own attribute of \
-             IMPORTED_VERSION, and the released commit wire declares no import shape \
-             (ITS-REST UpdateVersion.yaml / NewContribution.yaml). An imported \
-             ORIGINAL_VERSION is wrapped and committed by the EHR-Extract import route \
-             (RM common master06 §Copying), never by a CONTRIBUTION member"
-                .to_owned(),
-        ));
-    }
     if undeclared.contains_key("uid") {
-        return Err(ServiceError::precondition(
-            "uid is not carried on a CONTRIBUTION version member — the member is the \
-             commit-wire PARTIAL of the version it becomes (ITS-REST \
-             UpdateVersion.yaml declares six properties and no uid), and the version \
-             identifier of a locally committed version is allocated by this repository, \
-             which then serves the completed ORIGINAL_VERSION with its mandatory uid \
-             filled in. This holds whichever of UPDATE_VERSION / ORIGINAL_VERSION the \
-             member self-tags as. A version whose identity comes from elsewhere is an \
-             IMPORTED_VERSION, which RM common master06 §Copying commits through \
-             commit_imported_version — an operation the release gives no wire shape"
-                .to_owned(),
-        ));
-    }
-    if undeclared.contains_key("other_input_version_uids") {
         return Err(ServiceError::precondition(format!(
-            "versions[{index}]: other_input_version_uids is not a member of \
-             UPDATE_VERSION — the released commit wire declares no merge shape \
-             (ITS-REST UpdateVersion.yaml); merge provenance is served on reads \
-             only (OriginalVersion.yaml)"
+            "versions[{index}]/uid is not carried on a CONTRIBUTION version member: \
+             the identity of a locally committed version is assigned by this \
+             repository (RM common master06 §Version Identification: its \
+             creating_system_id is the local system and its version_tree_id is \
+             numbered here; ITS-REST Resources.md §Resource identification), and the \
+             committed ORIGINAL_VERSION is served with it. This holds whichever of \
+             UPDATE_VERSION / ORIGINAL_VERSION the member self-tags as. A version whose \
+             identity comes from elsewhere is an IMPORTED_VERSION (RM common master06 \
+             §Copying), which the EHR-Extract import route commits"
         )));
     }
     match undeclared.get("_type") {
         None => Ok(()),
         Some(Value::String(name)) if COMMITTABLE_MEMBER_TYPES.contains(&name.as_str()) => Ok(()),
         Some(other) => Err(ServiceError::precondition(format!(
-            "_type {other} does not name a class the CONTRIBUTION commit wire commits \
-             — a member self-tags as UPDATE_VERSION or ORIGINAL_VERSION or not at all \
-             (ITS-REST Resources.md: the value \"MUST be the uppercase class name from \
-             the RM specification\"; UpdateVersion.yaml is the only member schema \
-             NewContribution declares). An IMPORTED_VERSION member has no released \
-             shape — the EHR-Extract import route carries foreign versions instead \
-             (RM common master06 §Copying)"
+            "versions[{index}]/_type {other} does not name a class the CONTRIBUTION \
+             commit wire commits: a member self-tags as UPDATE_VERSION or \
+             ORIGINAL_VERSION or not at all (ITS-REST Resources.md: the value \"MUST \
+             be the uppercase class name from the RM specification\"; \
+             UpdateVersion.yaml is the only member schema NewContribution declares). \
+             An IMPORTED_VERSION member has no released shape; the EHR-Extract import \
+             route carries foreign versions instead (RM common master06 §Copying)"
         ))),
     }
 }
@@ -750,7 +723,7 @@ fn parse_contribution_audit(
 /// unparsable preceding target, an attestation failing its RM invariants, or
 /// (on a `666|attestation|` member) a `lifecycle_state` outside the openEHR
 /// `version_lifecycle_state` group; [`ServiceError::precondition`] for an
-/// undeclared member key ([`reject_foreign_version_identity`]) or a
+/// member-borne `uid` or foreign `_type` ([`reject_foreign_version_identity`]) or a
 /// `commit_audit` that is an `UPDATE_ATTESTATION` ([`plain_audit`]).
 fn plan_version(
     version: UpdateVersion<Value>,

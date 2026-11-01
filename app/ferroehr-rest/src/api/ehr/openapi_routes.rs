@@ -5641,11 +5641,10 @@ pub(crate) async fn directory_get_by_version_id(
                                       not a canonical `PARTY_PROXY`, and a \
                                       member that OMITS the required \
                                       `lifecycle_state` or \
-                                      that carries `other_input_version_uids` \
-                                      (a property the released `UPDATE_VERSION` \
-                                      does not declare — merge provenance is \
-                                      served on reads only), is a `400` shape \
-                                      failure, not a `422`.",
+                                      that states its own `uid` (the server assigns it, RM \
+                                      common master06 §Version Identification), is a `400` \
+                                      shape failure, not a `422`. Other undeclared members \
+                                      of the open `UpdateVersion.yaml` are ignored.",
          body = serde_json::Value),
         (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
                                       operation defines restriction of \

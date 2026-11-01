@@ -594,3 +594,83 @@ fn a_delete_member_states_the_deleted_lifecycle_or_nothing() {
         other => panic!("an out-of-group delete state must be 422, got {other:?}"),
     }
 }
+
+/// The undeclared members of one decoded `versions[]` entry: `extra` added to
+/// the member of [`body`].
+fn undeclared_of(extra: &[(&str, Value)]) -> std::collections::BTreeMap<String, Value> {
+    let mut wire = body(complete(), update_audit(), update_audit());
+    for (key, value) in extra {
+        wire["versions"][0][*key] = value.clone();
+    }
+    let mut decoded = decode(&wire).expect("an open UPDATE_VERSION decodes");
+    decoded.versions.remove(0).additional_properties
+}
+
+/// #4577: `UPDATE_VERSION` is an open object (`schemas/ehr/UpdateVersion.yaml`
+/// declares no `additionalProperties`), so a member the schema does not
+/// declare passes, the RM `VERSION` attributes a client could copy over
+/// included.
+#[test]
+fn undeclared_update_version_members_are_accepted() {
+    for (key, value) in [
+        ("contribution", json!({ "id": { "value": "x" } })),
+        (
+            "other_input_version_uids",
+            json!([{ "value": "0198f1f1-0000-7000-8000-000000000001::sysA.example.org::3" }]),
+        ),
+        ("item", json!({ "_type": "ORIGINAL_VERSION" })),
+        ("extension", json!({ "note": "an extension member" })),
+    ] {
+        let undeclared = undeclared_of(&[(key, value)]);
+        assert!(undeclared.contains_key(key), "{key} reaches the envelope");
+        reject_foreign_version_identity(&undeclared, 0)
+            .unwrap_or_else(|e| panic!("{key} is accepted on an open object: {e:?}"));
+    }
+}
+
+/// #4577: `uid` stays refused under every legal self-tag, because the server
+/// assigns a locally created version's identity (RM common master06 §Version
+/// Identification); the refusal names the member path.
+#[test]
+fn a_member_borne_uid_is_refused_under_every_self_tag() {
+    let uid = json!({ "_type": "OBJECT_VERSION_ID",
+        "value": "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::3" });
+    for tag in [None, Some("UPDATE_VERSION"), Some("ORIGINAL_VERSION")] {
+        let mut extra = vec![("uid", uid.clone())];
+        if let Some(tag) = tag {
+            extra.push(("_type", json!(tag)));
+        }
+        match reject_foreign_version_identity(&undeclared_of(&extra), 2) {
+            Err(ServiceError::BadRequest(e)) => {
+                assert!(e.message.contains("versions[2]/uid"), "{tag:?}: {e:?}");
+                assert!(
+                    e.message.contains("Version Identification"),
+                    "{tag:?}: {e:?}"
+                );
+            }
+            other => panic!("{tag:?}: a member-borne uid must be the 400, got {other:?}"),
+        }
+    }
+}
+
+/// #4577: `_type` names the class (ITS-REST `Resources.md` §Resource
+/// representation), so only the two this wire commits pass.
+#[test]
+fn only_a_committable_self_tag_is_accepted() {
+    for tag in COMMITTABLE_MEMBER_TYPES {
+        reject_foreign_version_identity(&undeclared_of(&[("_type", json!(tag))]), 0)
+            .unwrap_or_else(|e| panic!("{tag} is a legal self-tag: {e:?}"));
+    }
+    for tag in [
+        json!("IMPORTED_VERSION"),
+        json!("VERSION"),
+        json!("COMPOSITION"),
+    ] {
+        match reject_foreign_version_identity(&undeclared_of(&[("_type", tag.clone())]), 1) {
+            Err(ServiceError::BadRequest(e)) => {
+                assert!(e.message.contains("versions[1]/_type"), "{tag}: {e:?}");
+            }
+            other => panic!("{tag}: a foreign self-tag must be the 400, got {other:?}"),
+        }
+    }
+}
