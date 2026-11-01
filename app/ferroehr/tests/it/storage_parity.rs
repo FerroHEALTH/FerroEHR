@@ -135,7 +135,9 @@ pub(crate) async fn seed_typed_value_compositions(svc: &FerroEhrService) {
             .expect("the vendored OPT parses")
             .template_id
             .value;
-        svc.upload_opt(xml).await.expect("upload the template");
+        svc.template_adl14_upload(xml)
+            .await
+            .expect("upload the template");
         let example = svc
             .template_adl14_example(template_id, Some("medium".to_owned()), None)
             .await

@@ -536,6 +536,7 @@ async fn route_ehr_id(req: Request) -> (Request, Option<String>) {
 fn object_id_from_path(op: &str, path: &str) -> Option<String> {
     match op {
         _ if op.starts_with("definition_template_adl1.4") => segment_after(path, "adl1.4"),
+        "definition_template_adl14_convert" => segment_after(path, "adl1.4"),
         _ if op.starts_with("definition_template_adl2") => segment_after(path, "adl2"),
         // /definition/query/{name} and /query/{name} — but never /query/aql.
         _ if op.starts_with("definition_query") => segment_after(path, "query"),
@@ -700,6 +701,14 @@ mod tests {
                 "/x/definition/template/adl2/t.v1/1.0.0"
             ),
             Some("t.v1".to_owned())
+        );
+        // The ADL 2 conversion names the template it reads.
+        assert_eq!(
+            object_id_from_path(
+                "definition_template_adl14_convert",
+                "/x/definition/template/adl1.4/vital_signs.v1/adl2"
+            ),
+            Some("vital_signs.v1".to_owned())
         );
     }
 

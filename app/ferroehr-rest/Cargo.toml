@@ -26,6 +26,8 @@ openehr-rm = { path = "../../crates/openehr-rm" }
 openehr-its = { path = "../../crates/openehr-its" }
 openehr-sdt = { path = "../../crates/openehr-sdt" }
 openehr-query = { path = "../../crates/openehr-query" }
+# The ADL 1.4 to ADL 2 conversion result the conversion extension serves.
+openehr-adl = { path = "../../crates/openehr-adl" }
 # The platform library: the service this crate dispatches to, plus its
 # response/query types. The audit tower layer emits through the platform's
 # `SystemLog` component; the ATNA event model + `EmitOutcome` come from here.

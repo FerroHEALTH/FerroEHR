@@ -231,6 +231,13 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("GET", "/definition/template/adl2/{template_id}/{version}"),
     ("GET", "/definition/archetype/adl1.4"),
     ("GET", "/definition/archetype/adl1.4/{archetype_id}"),
+    ("GET", "/definition/archetype/adl1.4/{archetype_id}/adl2"),
+    // The conversion extension's template route, spelled from the REST root:
+    // its path would otherwise read as the released template group's.
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/definition/template/adl1.4/{template_id}/adl2",
+    ),
     ("GET", "/definition/archetype/adl2"),
     ("GET", "/definition/archetype/adl2/count"),
     ("GET", "/definition/artefact/adl2"),

@@ -2570,6 +2570,7 @@ dependencies = [
  "jiff",
  "jiff-sqlx",
  "jsonwebtoken",
+ "openehr-adl",
  "openehr-base",
  "openehr-its",
  "openehr-lang",

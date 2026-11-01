@@ -15,23 +15,26 @@
 //! A 1.4 source is never validated post-conversion, which would change what is
 //! being judged.
 //!
-//! An in-CDR 1.4 to ADL 2 migration is offered as a service capability
-//! ([`FerroEhrService::adl14_convert_to_adl2`]), converting the stored 1.4 source
-//! text through the `openehr_adl::adl14` converter.
+//! A stored 1.4 archetype or operational template converts to ADL 2
+//! ([`FerroEhrService::adl14_convert_to_adl2`],
+//! [`FerroEhrService::adl14_convert_opt_to_adl2`]) through the
+//! `openehr_adl::adl14` converter, which two read-only extension routes serve.
 //!
 //! NOTE: no openEHR spec governs 1.4 to 2 conversion and the vendored ITS-REST
-//! OAS declares no conversion operation — our own design/extension, service-level
-//! only and never exposed on the wire.
+//! OAS declares no conversion operation, so the conversion is our own design.
 
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use openehr_adl::adl14::convert::{ConvertConfig, parse_and_convert};
 use openehr_adl::adl14::log::ConversionLog;
-use openehr_adl::adl14::opt::convert_opt_to_adl2;
+use openehr_adl::adl14::opt::{ConvertedRoot, OptConversion, convert_opt_to_adl2};
 use openehr_adl::error::SyntaxError;
 use openehr_adl::validate::catalogue::Severity;
 use openehr_adl::validate::rm::ProductionRmModel;
 use openehr_adl::validate::{ValidationIssue, validate_adl14_source};
+use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
+use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
 use openehr_base::prelude::ArchetypeId;
 use openehr_base::validate::InvariantViolation;
 use sqlx::Connection as _;
@@ -83,23 +86,21 @@ impl FerroEhrService {
     pub async fn upload_archetype(&self, adl: String) -> Result<String, StatusError> {
         // NOTE: no specification names this status token: our own design for a
         // semantically invalid archetype.
-        archetype_validate(&adl)
-            .map_err(|e| invalid_artefact_status(e, ServiceStatus::InvalidArchetype))?;
+        archetype_validate(&adl).map_err(invalid_archetype_status)?;
         Ok(self.archetype_upload(&adl).await?)
     }
 
-    /// Converts a stored ADL 1.4 archetype (by `ARCHETYPE_ID`) to ADL 2 source
-    /// text via the `openehr_adl::adl14` converter.
+    /// Converts a stored ADL 1.4 archetype (by `ARCHETYPE_ID`) to ADL 2: the
+    /// ADL 2 source, the conversion log and the conversion details, as the one
+    /// root of an [`OptConversion`] with no fill structure.
     ///
-    /// The stored artefact is 1.4 source text on `archetype_store`, which the
-    /// converter consumes directly. A specialised source is base-converted,
-    /// renumbered against its own codes; re-differentialisation against a
-    /// converted and flattened parent is the converter's `differ`. Stored 1.4
-    /// operational templates go through the sibling
-    /// [`FerroEhrService::adl14_convert_opt_to_adl2`] instead.
+    /// The stored artefact is 1.4 source text on `archetype_store`, which
+    /// [`parse_and_convert`] consumes directly. A specialised source is
+    /// base-converted, renumbered against its own codes. Identity is
+    /// case-insensitive (BASE master05 §Composite Identifiers and Case).
     ///
-    /// NOTE: no openEHR spec governs 1.4 to 2 conversion — our own
-    /// design/extension, a service capability with no REST endpoint.
+    /// NOTE: no openEHR spec governs 1.4 to 2 conversion: our own design, served
+    /// as the extension route `GET /definition/archetype/adl1.4/{archetype_id}/adl2`.
     ///
     /// # Errors
     ///
@@ -108,7 +109,7 @@ impl FerroEhrService {
     ///   the conversion result carries a node with no ADL2 syntax →
     ///   `content_invalid` (`422`).
     /// - A database failure (`exception` → `500`).
-    pub async fn adl14_convert_to_adl2(&self, an_id: String) -> Result<String, StatusError> {
+    pub async fn adl14_convert_to_adl2(&self, an_id: String) -> Result<OptConversion, StatusError> {
         let source = self.archetype_get(&an_id).await?;
         let mut log = ConversionLog::default();
         let converted =
@@ -117,29 +118,44 @@ impl FerroEhrService {
                     Violation::new(format!("1.4 → 2 conversion failed: {e}")).with_source(e),
                 )
             })?;
-        openehr_adl::print::print(&converted).map_err(|e| {
-            StatusError::from(ServiceError::content_invalid(
+        let adl2 = openehr_adl::print::print(&converted).map_err(|e| {
+            ServiceError::content_invalid(
                 Violation::new(format!("1.4 → 2 conversion produced unprintable ADL2: {e}"))
                     .with_source(e),
-            ))
+            )
+        })?;
+        let conversion_details = if let Archetype::AuthoredArchetype(authored) = &converted
+            && let AuthoredArchetype::AuthoredArchetype(data) = authored.as_ref()
+        {
+            data.description
+                .as_ref()
+                .and_then(|d| d.conversion_details.clone())
+                .unwrap_or_default()
+        } else {
+            BTreeMap::new()
+        };
+        Ok(OptConversion {
+            roots: vec![ConvertedRoot {
+                archetype_id: an_id,
+                adl2,
+                log,
+                conversion_details,
+            }],
+            structure: Vec::new(),
         })
     }
 
-    /// Convert a stored ADL 1.4 **operational template** (by its `template_id`)
-    /// to ADL2 source text via the `openehr_adl::adl14` converter, returning one
-    /// ADL2 source per embedded archetype root (the top COMPOSITION root first,
-    /// then each component in document order).
+    /// Converts a stored ADL 1.4 **operational template** (by its `template_id`)
+    /// to ADL 2: one ADL 2 source per embedded archetype root (the top root
+    /// first, then each component in document order), each with its conversion
+    /// log and details, and the slot fills that joined them.
     ///
-    /// A 1.4 OPT is specialisation-flattened: its `definition` is one
-    /// `C_ARCHETYPE_ROOT` tree with the component archetypes embedded as nested
-    /// `C_ARCHETYPE_ROOT` nodes, each with its own at-code space.
-    /// [`openehr_adl::adl14::opt::convert_opt_to_adl2`] decomposes it into one
-    /// scoped 1.4-shaped `v2_4` source per embedded root and converts each.
-    /// The `template_id` is matched case-insensitively (BASE master05
-    /// §Composite Identifiers and Case).
+    /// [`convert_opt_to_adl2`] decomposes the flattened OPT into one scoped
+    /// source per embedded root and converts each. The `template_id` is matched
+    /// case-insensitively (BASE master05 §Composite Identifiers and Case).
     ///
-    /// NOTE: no openEHR spec governs 1.4 to 2 conversion — our own
-    /// design/extension, a service capability with no REST endpoint.
+    /// NOTE: no openEHR spec governs 1.4 to 2 conversion: our own design, served
+    /// as the extension route `GET /definition/template/adl1.4/{template_id}/adl2`.
     ///
     /// # Errors
     ///
@@ -150,19 +166,18 @@ impl FerroEhrService {
     pub async fn adl14_convert_opt_to_adl2(
         &self,
         template_id: String,
-    ) -> Result<Vec<String>, StatusError> {
+    ) -> Result<OptConversion, StatusError> {
         let xml = self.opt_get_by_template_id(&template_id).await?;
         let opt = openehr_its::opt14::from_xml(&xml).map_err(|e| {
             ServiceError::content_invalid(
                 Violation::new(format!("stored OPT no longer parses: {e:?}")).with_source(e),
             )
         })?;
-        let conversion = convert_opt_to_adl2(&opt).map_err(|e| {
+        Ok(convert_opt_to_adl2(&opt).map_err(|e| {
             ServiceError::content_invalid(
                 Violation::new(format!("OPT 1.4 → 2 conversion failed: {e}")).with_source(e),
             )
-        })?;
-        Ok(conversion.roots.into_iter().map(|r| r.adl2).collect())
+        })?)
     }
 
     /// `get_archetype` — the ADL 1.4 source of the archetype with id `an_id`
@@ -195,29 +210,6 @@ impl FerroEhrService {
     /// - A database failure (`exception` → `500`).
     pub async fn delete_archetype(&self, an_id: String) -> Result<(), StatusError> {
         Ok(self.archetype_delete(&an_id).await?)
-    }
-
-    /// `upload_opt` — store an OPT 1.4 canonical-XML template. Ingestion runs
-    /// in the templates layer: `store_template` parses + structurally
-    /// validates the OPT and stores it create-only.
-    ///
-    /// # Errors
-    ///
-    /// - Not well-formed XML → bad request (`400` — the released
-    ///   "syntactically invalid … content" branch,
-    ///   ITS-REST `responses/400.yaml`).
-    /// - Well-formed but undecodable / structurally invalid OPT XML →
-    ///   `invalid_template` (`422`).
-    /// - A template with the same `template_id` already stored → conflict
-    ///   (`409`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn upload_opt(&self, opt_xml: String) -> Result<(), StatusError> {
-        // NOTE: no specification names this status token: our own design for a
-        // semantically invalid operational template.
-        self.store_template(&opt_xml)
-            .await
-            .map_err(|e| invalid_artefact_status(e, ServiceStatus::InvalidTemplate))?;
-        Ok(())
     }
 }
 
@@ -360,17 +352,13 @@ fn archetype_validate(adl: &str) -> Result<(), ServiceError> {
     }
 }
 
-/// Promote the generic `content_invalid` of a [`ServiceError`] crossing an
-/// upload seam to the operation's artefact status.
-///
-/// An OPT upload reports `invalid_template` and an archetype upload
-/// `invalid_archetype` for a semantically invalid artefact; every other status passes through
-/// unchanged, so a duplicate-artefact conflict or a storage fault keeps its
-/// own token.
-fn invalid_artefact_status(e: ServiceError, status: ServiceStatus) -> StatusError {
+/// Promote the generic `content_invalid` of a [`ServiceError`] crossing the
+/// archetype upload to `invalid_archetype`; every other status passes through
+/// unchanged, so a storage fault keeps its own token.
+fn invalid_archetype_status(e: ServiceError) -> StatusError {
     let mut err = StatusError::from(e);
     if err.status == ServiceStatus::ContentInvalid {
-        err.status = status;
+        err.status = ServiceStatus::InvalidArchetype;
     }
     err
 }

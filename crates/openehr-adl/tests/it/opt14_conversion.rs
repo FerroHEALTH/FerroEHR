@@ -144,3 +144,22 @@ fn converted_roots_carry_their_conversion_details() {
         "the conversion result, logs included, is deterministic"
     );
 }
+
+/// The roots come in document order: the template's top root first, then each
+/// embedded root as the definition reaches it.
+#[test]
+fn roots_come_in_document_order() {
+    let conversion = convert_opt_to_adl2(&parse_opt(MINIMAL_OBSERVATION)).expect("convert");
+    let ids: Vec<&str> = conversion
+        .roots
+        .iter()
+        .map(|root| root.archetype_id.as_str())
+        .collect();
+    assert_eq!(
+        ids,
+        [
+            "openEHR-EHR-COMPOSITION.minimal.v1",
+            "openEHR-EHR-OBSERVATION.minimal.v1"
+        ]
+    );
+}

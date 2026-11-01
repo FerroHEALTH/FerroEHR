@@ -571,7 +571,7 @@ fn cursor_param(query: Option<&str>, key: &str) -> Result<Option<u64>, RestError
 
 /// Read a required path segment (a missing segment is impossible for a matched
 /// route, so it is a routing bug → `500`).
-fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
+pub(super) fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
     parts.path.get(key).cloned().ok_or_else(|| {
         RestError::from(ApiError::Internal(format!(
             "missing path parameter `{key}`"
