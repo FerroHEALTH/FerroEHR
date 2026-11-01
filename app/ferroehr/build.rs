@@ -85,6 +85,23 @@ fn main() {
     println!("cargo:rustc-env=FERROEHR_OPENEHR_CRATES={openehr_crates}");
     println!("cargo:rerun-if-changed=../../Cargo.lock");
 
+    // Where those versions come from. A release lane stamps the lockstep
+    // version it publishes to crates.io into the checkout and names it in
+    // FERROEHR_OPENEHR_CRATE_VERSION; every other build carries the source
+    // tree's manifests, a floor below the published line. A named version the
+    // lock does not hold stops the build, so a report never claims a stamp
+    // that did not happen.
+    let stamped = std::env::var("FERROEHR_OPENEHR_CRATE_VERSION").unwrap_or_default();
+    let origin = match crate_origin(&openehr_crates, &stamped) {
+        Ok(origin) => origin,
+        Err(message) => {
+            println!("cargo::error={message}");
+            "source_tree"
+        }
+    };
+    println!("cargo:rustc-env=FERROEHR_OPENEHR_CRATES_ORIGIN={origin}");
+    println!("cargo:rerun-if-env-changed=FERROEHR_OPENEHR_CRATE_VERSION");
+
     // The release date of this package version: the date of its
     // `## [X.Y.Z] - YYYY-MM-DD` heading in the changelog, from which the support
     // period runs (Regulation (EU) 2024/2847 Art. 13(8)). Empty when the
@@ -131,6 +148,41 @@ fn release_date(changelog: &str, version: &str) -> Option<String> {
                 && day.parse::<u8>().is_ok_and(|d| (1..=31).contains(&d))
     );
     shaped.then_some(date)
+}
+
+/// The origin of the recorded `openehr-*` versions: `published` when the
+/// release lane named the version it stamped and every linked crate is at it,
+/// `source_tree` when it named none.
+///
+/// # Errors
+///
+/// The message for a named version that the lock does not record for every
+/// linked crate, or a lock that records no linked crate at all.
+fn crate_origin(linked: &str, stamped: &str) -> Result<&'static str, String> {
+    if stamped.is_empty() {
+        return Ok("source_tree");
+    }
+    if linked.is_empty() {
+        return Err(format!(
+            "FERROEHR_OPENEHR_CRATE_VERSION names {stamped}, but the build read no openehr-* crate from Cargo.lock"
+        ));
+    }
+    let off: Vec<&str> = linked
+        .split(',')
+        .filter(|entry| {
+            entry
+                .split_once('=')
+                .is_none_or(|(_, version)| version != stamped)
+        })
+        .collect();
+    if off.is_empty() {
+        Ok("published")
+    } else {
+        Err(format!(
+            "FERROEHR_OPENEHR_CRATE_VERSION names {stamped}, but Cargo.lock records {}; run scripts/release/publish-crates.sh stamp {stamped} first",
+            off.join(", ")
+        ))
+    }
 }
 
 /// The `openehr-*` dependencies of the `ferroehr` package in a `Cargo.lock`,

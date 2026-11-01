@@ -47,7 +47,7 @@
 #   publish-crates.sh list            # print the crates, one per line, in publish order
 #
 # Requires: cargo, curl, git, jq, sha256sum, tar; `plan` and `publish` need
-# the full history (fetch-depth: 0). `publish` additionally requires
+# the full history (fetch-depth: 0). `stamp` needs only awk, grep and sed. `publish` additionally requires
 # CARGO_REGISTRY_TOKEN in the environment.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -180,7 +180,10 @@ do_plan() {
 # Write <version> into the nine manifests, every internal `path =
 # "../openehr-*", version = "…"` requirement, and the path entries of
 # Cargo.lock and fuzz/Cargo.lock. The edit stays in the publishing checkout:
-# `cargo package` records it as `"dirty": true` beside the commit.
+# `cargo package` records it as `"dirty": true` beside the commit. The release
+# lanes that build the server stamp too, so its report names the published
+# version, and one of them builds in a container without git: the stamp reads
+# the tree with grep alone.
 do_stamp() {
   local new="$1" old crate f lock names got
   [[ "$new" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "'$new' is not a plain x.y.z version"
@@ -214,7 +217,7 @@ do_stamp() {
     got="$(manifest_version "$crate")"
     [[ "$got" == "$new" ]] || die "crates/$crate is at $got after the stamp, not $new"
   done
-  got="$(git grep -hoE 'path = "\.\./openehr-[a-z]+", version = "[^"]+"' -- 'crates/*/Cargo.toml' || true)"
+  got="$(grep -hoE 'path = "\.\./openehr-[a-z]+", version = "[^"]+"' crates/*/Cargo.toml || true)"
   got="$(sed -E 's/.*version = "([^"]+)"/\1/' <<<"$got" | sort -u)"
   [[ "$got" == "$new" ]] || die "internal requirements name ${got//$'\n'/ } after the stamp, not $new"
   for lock in Cargo.lock fuzz/Cargo.lock; do
