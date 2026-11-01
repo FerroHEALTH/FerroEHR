@@ -1198,9 +1198,6 @@ jobs:
     with:
       server-image: ghcr.io/ferrohealth/ferroehr@${{ needs.app-image.outputs.digest }}
       postgres-image: ghcr.io/ferrohealth/ferroehr-postgres@${{ needs.postgres-image.outputs.digest }}
-      # THE SWITCH (#4455): delete this line to make conformance gate the
-      # release, once the released run on main is green.
-      advisory: true
 
   # ── The Helm chart ──────────────────────────────────────────────────────────
   # `needs: scan-and-tag` is the whole fix for the defect class this pipeline
