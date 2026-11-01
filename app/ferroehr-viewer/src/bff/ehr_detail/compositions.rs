@@ -33,10 +33,8 @@ use crate::locale::tr_served;
 /// builds the statement and the bindings together.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when a date bound is neither a date nor an
-/// instant; CDR transport errors pass through; a non-2xx CDR answer normalizes
-/// via [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when a date bound is neither a date nor an instant;
 /// [`ViewerError::Internal`] when the result set is not valid JSON.
 pub async fn list_compositions(
     // The EHR whose compositions to list.
@@ -54,24 +52,12 @@ pub async fn list_compositions(
     // How many rows the page holds.
     fetch: u32,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let filter = CompositionFilter::new(&template, &from, &to, &composer);
     let query = composition_query(&ehr_id, &filter)?;
-    let url = state.cdr.rest_v1("query/aql");
+    let url = cdr.rest_v1("query/aql");
     let body = aql_request_body(&query.aql, &query.parameters, offset, fetch);
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.post(&url).body("application/json", body).ok().await?;
     parse_result_set(&response.body, offset)
 }
 
@@ -110,12 +96,11 @@ pub async fn all_compositions(ehr_id: String, offset: u32) -> Result<ResultPage,
 /// version uid.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on an empty body or a FLAT commit without a
-/// template id; CDR transport errors pass through; a non-2xx CDR answer (its
-/// validation diagnostics, which the UI renders verbatim, included)
-/// normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// template id; a non-2xx CDR answer (its validation diagnostics, which the UI
+/// renders verbatim, included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn commit_composition(
     // The EHR to commit into.
     ehr_id: String,
@@ -126,8 +111,7 @@ pub async fn commit_composition(
     // The composition document to commit, as text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::CompositionBodyEmpty)));
     }
@@ -141,20 +125,12 @@ pub async fn commit_composition(
         }
         headers.push(("openehr-template-id", template_id));
     }
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/composition", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            format.media_type(),
-            "application/json",
-            &headers,
-            body,
-        )
+    let url = cdr.rest_v1(&format!("ehr/{}/composition", urlencoding::encode(&ehr_id)));
+    let response = cdr
+        .post(&url)
+        .body(format.media_type(), body)
+        .headers(&headers)
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(uid_value_of(&response.body))
 }

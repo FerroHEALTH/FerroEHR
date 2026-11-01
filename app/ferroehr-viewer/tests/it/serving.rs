@@ -187,7 +187,8 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
     }))
     .expect("the client builds over the CA file");
     let answered = trusting
-        .get_public(&url, "application/json")
+        .public(http::Method::GET, &url)
+        .send()
         .await
         .expect("the CA the table names is trusted");
     assert!(answered.is(http::StatusCode::OK));
@@ -196,7 +197,8 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
         .expect("the client builds over the platform roots");
     assert!(
         platform_only
-            .get_public(&url, "application/json")
+            .public(http::Method::GET, &url)
+            .send()
             .await
             .is_err(),
         "a private CA is not among the platform's roots"

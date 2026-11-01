@@ -171,7 +171,7 @@ enum ListModel {
 /// Loads Subscriptions: the list, and the toggle a post asks for.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_list() -> Result<ListModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_list().await)
@@ -520,7 +520,7 @@ enum NewModel {
 /// templates it offers.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_new() -> Result<NewModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_new().await)
@@ -644,7 +644,7 @@ enum EditModel {
 /// Delete) and reads the templates it offers.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_edit(
     // The subscription the route names.
     name: String,

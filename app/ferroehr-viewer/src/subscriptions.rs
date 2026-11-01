@@ -158,16 +158,11 @@ pub fn name_is_valid(name: &str) -> bool {
 /// answer means it is.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnreachable`] on transport failure.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn probe_event_subscriptions() -> Result<SubscriptionAvailability, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1("admin/event_subscription");
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.extensions_v1("admin/event_subscription");
+    let response = cdr.get(&url).send().await?;
     Ok(availability_of_status(response.status))
 }
 
@@ -179,22 +174,16 @@ pub async fn probe_event_subscriptions() -> Result<SubscriptionAvailability, Vie
 /// renders it as its own first-class state.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// when the body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Internal`] when the body is not valid JSON.
 pub async fn list_event_subscriptions() -> Result<Option<Vec<SubscriptionRow>>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1("admin/event_subscription");
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.extensions_v1("admin/event_subscription");
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
     }
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = response.ok()?.body;
     let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             Msg::EventSubscriptionListJson,
@@ -212,40 +201,34 @@ pub async fn list_event_subscriptions() -> Result<Option<Vec<SubscriptionRow>>, 
 ///
 /// The CDR's `400` (empty name, or a name outside `[A-Za-z0-9_.-]`), `409`
 /// (duplicate name) and `415` (wrong content type) diagnostics surface verbatim
-/// through [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// through [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when the name cannot be accepted;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// when the created record is not valid JSON.
+/// [`ViewerError::Internal`] when the created record is not valid JSON.
 pub async fn create_event_subscription(
     // The subscription name (unique on the CDR, immutable afterwards).
     name: String,
     // The predicates and the enabled flag to store.
     predicates: SubscriptionPredicates,
 ) -> Result<SubscriptionRow, ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if !name_is_valid(&name) {
         return Err(ViewerError::Invalid(
             { tr_served(Msg::SubscriptionNameRequiredMayHoldOnly) }.clone(),
         ));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1("admin/event_subscription");
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
+    let url = cdr.extensions_v1("admin/event_subscription");
+    let response = cdr
+        .post(&url)
+        .body(
             "application/json",
-            "application/json",
-            &[],
             subscription_definition(&name, &predicates),
         )
+        .send()
         .await?;
-    stored_record(&crate::cdr::CdrClient::expect_success(response)?.body)
+    stored_record(&response.ok()?.body)
 }
 
 /// Replace one subscription's predicates and enabled flag
@@ -259,63 +242,50 @@ pub async fn create_event_subscription(
 /// as text, and the viewer never hand-rolls a codec for a path segment.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for an empty id;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// when the stored record is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for an empty id; [`ViewerError::Internal`] when the
+/// stored record is not valid JSON.
 pub async fn update_event_subscription(
     // The subscription to update, by CDR id.
     subscription_id: String,
     // The predicates and the enabled flag to store, replacing what is there.
     predicates: SubscriptionPredicates,
 ) -> Result<SubscriptionRow, ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if subscription_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdUpdate)));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1(&format!(
+    let url = cdr.extensions_v1(&format!(
         "admin/event_subscription/{}",
         urlencoding::encode(&subscription_id)
     ));
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            subscription_update(&predicates),
-        )
+    let response = cdr
+        .put(&url)
+        .body("application/json", subscription_update(&predicates))
+        .send()
         .await?;
-    stored_record(&crate::cdr::CdrClient::expect_success(response)?.body)
+    stored_record(&response.ok()?.body)
 }
 
 /// Delete one subscription
 /// (`DELETE admin/event_subscription/{subscription_id}`).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for an empty id;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for an empty id.
 pub async fn delete_event_subscription(
     // The subscription to delete, by CDR id.
     subscription_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if subscription_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::NoSubscriptionIdDelete)));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1(&format!(
+    let url = cdr.extensions_v1(&format!(
         "admin/event_subscription/{}",
         urlencoding::encode(&subscription_id)
     ));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    crate::cdr::CdrClient::expect_success(response)?;
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 

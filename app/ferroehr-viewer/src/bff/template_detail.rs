@@ -111,27 +111,22 @@ pub fn template_detail_from_opt(source: String) -> Result<TemplateDetail, Viewer
 /// [`template_detail_from_opt`].
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Cdr`] (e.g. `404` for an unknown template) /
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`]
+/// (e.g. `404` for an unknown template) / [`ViewerError::CdrUnauthorized`] /
+/// [`ViewerError::Forbidden`] / [`ViewerError::CdrUnreachable`] from the CDR;
 /// [`ViewerError::Internal`] when the OPT fails to parse or the Web Template
 /// fails to build.
 pub async fn fetch_template_detail(
     // The template whose OPT to read.
     template_id: String,
 ) -> Result<TemplateDetail, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "definition/template/adl1.4/{}",
         urlencoding::encode(&template_id)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/xml")
-        .await?;
-    template_detail_from_opt(crate::cdr::CdrClient::expect_success(response)?.body)
+    let response = cdr.get(&url).accept("application/xml").send().await?;
+    template_detail_from_opt(response.ok()?.body)
 }
 
 /// Fetch a template's Web Template path catalog alone — the Query Builder's
@@ -175,8 +170,8 @@ pub fn example_path(template_id: &str, detail: ExampleDetail, kind: ExampleType)
 /// (`docs/specs/openehr/ITS-REST/specifications/operations/definition_template_adl1.4_example_get.yaml`).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`] /
+/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
 pub async fn fetch_example(
     // The template to generate an example composition for.
@@ -188,14 +183,10 @@ pub async fn fetch_example(
     // Which form the example is shaped for (`type`).
     kind: ExampleType,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&example_path(&template_id, detail, kind));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, format.media_type())
-        .await?;
-    Ok(crate::cdr::CdrClient::expect_success(response)?.body)
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&example_path(&template_id, detail, kind));
+    let response = cdr.get(&url).accept(format.media_type()).send().await?;
+    Ok(response.ok()?.body)
 }
 
 #[cfg(test)]

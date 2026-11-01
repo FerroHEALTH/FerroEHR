@@ -111,9 +111,7 @@ pub(crate) fn parse_result_set(body: &str, offset: u32) -> Result<ResultPage, Vi
 /// List EHRs newest-first via `LIST_EHRS_AQL`, one page at `offset`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] when the result set is not valid JSON.
 pub async fn list_ehrs(
     // First row of the page to return.
@@ -121,22 +119,10 @@ pub async fn list_ehrs(
     // How many rows the page holds.
     fetch: u32,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1("query/aql");
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1("query/aql");
     let body = aql_request_body(LIST_EHRS_AQL, &serde_json::json!({}), offset, fetch);
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.post(&url).body("application/json", body).ok().await?;
     parse_result_set(&response.body, offset)
 }
 
@@ -238,12 +224,11 @@ pub(crate) fn is_uuid(value: &str) -> bool {
 /// and returns the new `ehr_id`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when exactly one subject field is filled or the
-/// supplied `ehr_id` is not a UUID; CDR transport errors pass through; a
-/// non-2xx CDR answer (the `409` for an id already in use, and any validation
-/// diagnostic, included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// supplied `ehr_id` is not a UUID; a non-2xx CDR answer (the `409` for an id
+/// already in use, and any validation diagnostic, included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn create_ehr(
     // The EHR id to create under; empty lets the CDR assign one.
     ehr_id: String,
@@ -252,8 +237,7 @@ pub async fn create_ehr(
     // The issuing namespace the subject id belongs to.
     subject_namespace: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let ehr_id = ehr_id.trim();
     let subject_id = subject_id.trim();
     let subject_namespace = subject_namespace.trim();
@@ -279,35 +263,21 @@ pub async fn create_ehr(
         )));
     }
     let response = if ehr_id.is_empty() {
-        let url = state.cdr.rest_v1("ehr");
-        state
-            .cdr
-            .post(
-                &session.credential,
-                &url,
-                "application/json",
-                "application/json",
-                &[("Prefer", "return=representation")],
-                body,
-            )
+        let url = cdr.rest_v1("ehr");
+        cdr.post(&url)
+            .body("application/json", body)
+            .headers(&[("Prefer", "return=representation")])
+            .send()
             .await?
     } else {
-        let url = state
-            .cdr
-            .rest_v1(&format!("ehr/{}", urlencoding::encode(ehr_id)));
-        state
-            .cdr
-            .put(
-                &session.credential,
-                &url,
-                "application/json",
-                "application/json",
-                &[("Prefer", "return=representation")],
-                body,
-            )
+        let url = cdr.rest_v1(&format!("ehr/{}", urlencoding::encode(ehr_id)));
+        cdr.put(&url)
+            .body("application/json", body)
+            .headers(&[("Prefer", "return=representation")])
+            .send()
             .await?
     };
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = response.ok()?;
     let created = parse_ehr_id(&response.body);
     // The representation body names the created EHR; when a client supplied the
     // id, that id is its own answer even if the CDR returned no body.
@@ -325,18 +295,15 @@ pub async fn create_ehr(
 /// subject — a first-class empty state, not an error).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when either subject field is empty; CDR transport
-/// errors pass through; a non-2xx, non-404 CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when either subject field is empty.
 pub async fn find_ehr_by_subject(
     // The subject's external id to look up.
     subject_id: String,
     // The issuing namespace the subject id belongs to.
     subject_namespace: String,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let subject_id = subject_id.trim();
     let subject_namespace = subject_namespace.trim();
     if subject_id.is_empty() || subject_namespace.is_empty() {
@@ -344,19 +311,16 @@ pub async fn find_ehr_by_subject(
             Msg::BothSubjectIdSubjectNamespaceRequired,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr?subject_id={}&subject_namespace={}",
         urlencoding::encode(subject_id),
         urlencoding::encode(subject_namespace)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
     }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = response.ok()?;
     parse_ehr_id(&response.body).map(Some)
 }
 

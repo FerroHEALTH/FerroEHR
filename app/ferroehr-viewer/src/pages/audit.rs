@@ -358,7 +358,7 @@ enum LogModel {
 /// it.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_log() -> Result<LogModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_log().await)
@@ -479,7 +479,7 @@ enum RecordModel {
 /// was recorded at.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_record(
     // The record's place the route names.
     id: Option<String>,

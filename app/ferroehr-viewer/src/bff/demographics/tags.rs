@@ -40,9 +40,7 @@ use crate::locale::tr_served;
 /// `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] when the list is not valid JSON.
 pub async fn list_demographic_tags(
     // Exact `ITEM_TAG.key` filter; empty constrains nothing.
@@ -52,15 +50,10 @@ pub async fn list_demographic_tags(
     // Exact `ITEM_TAG.target_path` filter; empty constrains nothing.
     target_path: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let query = crate::bff::item_tags::tag_filter_query(&key, &value, &target_path);
-    let url = state.cdr.rest_v1(&format!("demographic/tags{query}"));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let url = cdr.rest_v1(&format!("demographic/tags{query}"));
+    let response = cdr.get(&url).ok().await?;
     crate::bff::item_tags::parse_item_tags(&response.body)
 }
 
@@ -71,23 +64,21 @@ pub async fn list_demographic_tags(
 /// `VERSIONED_PARTY`'s own tags (module docs).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an unknown kind segment; CDR transport errors
-/// pass through; a non-2xx CDR answer (the `404` for an unknown id included)
-/// normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the list is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an unknown kind segment; a non-2xx CDR answer
+/// (the `404` for an unknown id included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the list is not valid JSON.
 pub async fn fetch_party_tags(
     // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
     // The party's version container id.
     uid: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
-    read_party_tags(&state, &session.credential, kind, &uid).await
+    read_party_tags(&cdr, kind, &uid).await
 }
 
 /// Read one party's container tag collection.
@@ -98,18 +89,15 @@ pub async fn fetch_party_tags(
 ///
 /// # Errors
 /// CDR transport errors pass through; a non-2xx answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok);
 /// [`ViewerError::Internal`] when the list is not valid JSON.
 async fn read_party_tags(
-    state: &crate::state::AppState,
-    credential: &crate::session::Credential,
+    cdr: &crate::bff::Cdr,
     kind: PartyKind,
     uid: &str,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let url = tags_url(state, kind, uid);
-    let response = state.cdr.get(credential, &url, "application/json").await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    crate::bff::item_tags::parse_item_tags(&response.body)
+    let url = tags_url(cdr, kind, uid);
+    crate::bff::item_tags::parse_item_tags(&cdr.get(&url).ok().await?.body)
 }
 
 /// Set one tag on a party, keeping every other tag it already carries
@@ -121,11 +109,10 @@ async fn read_party_tags(
 /// or replaces the requested `(key, target_path)` entry.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an unknown kind segment or a blank key; CDR
-/// transport errors pass through; any non-2xx CDR answer (the `422` for a tag
-/// that breaks an `ITEM_TAG` invariant included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an unknown kind segment or a blank key; any
+/// non-2xx CDR answer (the `422` for a tag that breaks an `ITEM_TAG` invariant
+/// included) normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok);
 /// [`ViewerError::Internal`] when the current list is not valid JSON.
 pub async fn set_party_tag(
     // The party family, as its route segment ([`PartyKind::segment`]).
@@ -139,8 +126,7 @@ pub async fn set_party_tag(
     // The tag's `target_path`; blank tags the whole object.
     target_path: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     if key.trim().is_empty() {
@@ -148,29 +134,22 @@ pub async fn set_party_tag(
             { tr_served(Msg::TagKeyRequiredItemTagInvariant) }.clone(),
         ));
     }
-    let existing = read_party_tags(&state, &session.credential, kind, &uid).await?;
+    let existing = read_party_tags(&cdr, kind, &uid).await?;
     let body = crate::bff::item_tags::merged_tag_body(
         &existing,
         key.trim(),
         value.trim(),
         target_path.trim(),
     );
-    let url = tags_url(&state, kind, &uid);
+    let url = tags_url(&cdr, kind, &uid);
     // NOTE: clients are "strongly encouraged to always include the `Prefer`
     // request header explicitly" — ITS-REST
     // `specifications/docs/overview/Requests_and_responses.md` §Deprecated headers.
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=minimal")],
-            body,
-        )
+    cdr.put(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=minimal")])
+        .ok()
         .await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
     Ok(())
 }
 
@@ -183,10 +162,8 @@ pub async fn set_party_tag(
 /// is its `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an unknown kind segment or a blank key; CDR
-/// transport errors pass through; any non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an unknown kind segment or a blank key.
 pub async fn delete_party_tag(
     // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
@@ -195,8 +172,7 @@ pub async fn delete_party_tag(
     // The tag key to remove.
     key: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let key = key.trim();
@@ -205,18 +181,17 @@ pub async fn delete_party_tag(
     }
     let url = format!(
         "{}/{}",
-        tags_url(&state, kind, &uid),
+        tags_url(&cdr, kind, &uid),
         urlencoding::encode(key)
     );
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 
 /// The `/demographic/{kind}/{uid_based_id}/tags` URL of a party's container tag
 /// collection.
-fn tags_url(state: &crate::state::AppState, kind: PartyKind, uid: &str) -> String {
-    state.cdr.rest_v1(&format!(
+fn tags_url(cdr: &crate::cdr::CdrClient, kind: PartyKind, uid: &str) -> String {
+    cdr.rest_v1(&format!(
         "demographic/{}/{}/tags",
         kind.segment(),
         urlencoding::encode(&crate::uid::container_uid_of(uid))

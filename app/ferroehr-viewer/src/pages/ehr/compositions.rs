@@ -179,7 +179,7 @@ struct Panel {
 /// Loads the tab: the page of compositions the request's filters find.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load(ehr_id: String) -> Result<EhrModel<Panel>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_page(ehr_id).await)

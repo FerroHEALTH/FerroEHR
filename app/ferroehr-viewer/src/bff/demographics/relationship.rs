@@ -123,36 +123,31 @@ pub struct InlineRelationship {
 /// the party read.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an empty id; CDR transport errors pass through;
-/// a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success) — a
-/// `404` from a CDR that does not serve this extension surfaces there;
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an empty id; a non-2xx CDR answer normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok) — a `404` from a CDR that
+/// does not serve this extension surfaces there; [`ViewerError::Internal`] when
+/// the body is not valid JSON.
 pub async fn fetch_relationship(
     // The relationship's `uid_based_id` (either form; the container is used).
     uid: String,
 ) -> Result<Option<RelationshipState>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::RelationshipIdRequired,
         )));
     }
-    let url = state.cdr.extensions_v1(&format!(
+    let url = cdr.extensions_v1(&format!(
         "demographic/party_relationship/{}",
         urlencoding::encode(&uid)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NO_CONTENT) {
         return Ok(None);
     }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = response.ok()?;
     let served_etag = response.etag_version_uid();
     parse_relationship_state(&response.body, served_etag.as_deref()).map(Some)
 }
@@ -170,13 +165,12 @@ pub async fn fetch_relationship(
 /// `OBJECT_VERSION_ID` there.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when a mandatory field is blank, an endpoint kind
-/// is outside the five, or `details` is not a JSON object; CDR transport errors
-/// pass through; any non-2xx CDR answer (the `422` ref-invariant diagnostics
-/// included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the created resource carries no `uid`.
+/// is outside the five, or `details` is not a JSON object; any non-2xx CDR
+/// answer (the `422` ref-invariant diagnostics included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the created resource carries no `uid`.
 pub async fn create_relationship(
     // The relationship's `archetype_node_id`.
     archetype_node_id: String,
@@ -193,8 +187,7 @@ pub async fn create_relationship(
     // The optional `details`, as a JSON object; empty leaves it out.
     details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let body = relationship_body(&RelationshipDraft {
         archetype_node_id,
         name,
@@ -205,19 +198,13 @@ pub async fn create_relationship(
         details,
     })
     .map_err(ViewerError::Invalid)?;
-    let url = state.cdr.extensions_v1("demographic/party_relationship");
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=representation")],
-            body,
-        )
+    let url = cdr.extensions_v1("demographic/party_relationship");
+    let response = cdr
+        .post(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=representation")])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     let uid = crate::uid::uid_value_of(&response.body);
     if uid.is_empty() {
         return Err(ViewerError::Internal(tr_served(
@@ -238,11 +225,11 @@ pub async fn create_relationship(
 /// so the viewer does not offer it.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on a missing version uid, a blank name, or a
-/// `details` draft that is not a JSON object; CDR transport errors pass
-/// through; any non-2xx CDR answer (the `412` collision included) normalizes
-/// via [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// `details` draft that is not a JSON object; any non-2xx CDR answer (the `412`
+/// collision included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn update_relationship(
     // The version container to update.
     versioned_object_uid: String,
@@ -255,8 +242,7 @@ pub async fn update_relationship(
     // The replacement `details`, as a JSON object; empty removes it.
     details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -265,25 +251,19 @@ pub async fn update_relationship(
     }
     let body = apply_relationship_edits(&base_body, &name, &details)?;
     let if_match = format!("\"{current}\"");
-    let url = state.cdr.extensions_v1(&format!(
+    let url = cdr.extensions_v1(&format!(
         "demographic/party_relationship/{}",
         urlencoding::encode(&container_uid_of(&versioned_object_uid))
     ));
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[
-                ("If-Match", if_match.as_str()),
-                ("Prefer", "return=representation"),
-            ],
-            body,
-        )
+    let response = cdr
+        .put(&url)
+        .body("application/json", body)
+        .headers(&[
+            ("If-Match", if_match.as_str()),
+            ("Prefer", "return=representation"),
+        ])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
@@ -294,28 +274,24 @@ pub async fn update_relationship(
 /// the CDR answers `409` when it is not the latest.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when the id is not a full `OBJECT_VERSION_ID`; CDR
-/// transport errors pass through; any non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when the id is not a full `OBJECT_VERSION_ID`.
 pub async fn delete_relationship(
     // The version to supersede, as a full `OBJECT_VERSION_ID`.
     version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let version_uid = version_uid.trim();
     if !version_uid.contains("::") {
         return Err(ViewerError::Invalid(tr_served(
             RecordsMsg::DeletingRelationshipNeedsLatestVersionS,
         )));
     }
-    let url = state.cdr.extensions_v1(&format!(
+    let url = cdr.extensions_v1(&format!(
         "demographic/party_relationship/{}",
         urlencoding::encode(version_uid)
     ));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 

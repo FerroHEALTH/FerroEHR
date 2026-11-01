@@ -229,7 +229,7 @@ struct Overview {
 /// Loads Overview: the status the shell read and the build information.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_overview() -> Result<Tabbed<Overview>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_overview().await)
@@ -415,7 +415,7 @@ fn flow_of(status: &str) -> FlowState {
 /// Loads Health: the readiness document.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_health() -> Result<Tabbed<Result<ReadinessView, Refused>>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_health().await)
@@ -496,7 +496,7 @@ struct Metrics {
 /// Loads Metrics: the headline, the names and the picked metric.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_metrics() -> Result<Tabbed<Metrics>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_metrics().await)
@@ -674,7 +674,7 @@ enum Logging {
 /// Loads Logging: answers its post (Apply, Reset) and reads the filters.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_logging() -> Result<Tabbed<Logging>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_logging().await)
@@ -850,7 +850,7 @@ struct Api {
 /// Loads API: the document of the family the address picks.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_api() -> Result<Tabbed<Api>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_api().await)
@@ -1006,7 +1006,7 @@ struct Smart {
 /// Loads SMART: the CDR's discovery document, `None` when it serves none.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_smart() -> Result<Tabbed<Result<Option<Smart>, Refused>>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_smart().await)

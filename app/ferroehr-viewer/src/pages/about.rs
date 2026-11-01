@@ -49,7 +49,7 @@ struct Model {
 /// Loads About: the status the shell read and the conformance manifest.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load() -> Result<Model, ViewerError> {
     crate::session::require_session()?;
     Ok(read_page().await)

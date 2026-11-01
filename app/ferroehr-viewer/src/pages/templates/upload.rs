@@ -34,7 +34,7 @@ pub(super) enum Uploaded {
 /// Answers an upload posted to Upload a template, of `family`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub(super) async fn load_upload(
     // The family uploaded to.
     family: TemplateFamily,

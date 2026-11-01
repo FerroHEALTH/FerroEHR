@@ -44,10 +44,8 @@ pub struct StoredQueryRow {
 /// conservative choice, so such a query reaches the CDR exactly as written.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a session;
-/// [`ViewerError::Invalid`] when `parameters_json` is not a JSON object;
-/// CDR errors normalized via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when `parameters_json` is not a JSON object.
 pub async fn run_aql(
     // The AQL to execute.
     aql: String,
@@ -56,8 +54,7 @@ pub async fn run_aql(
     // First row of the page to return.
     offset: u32,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let parameters: serde_json::Value = if parameters_json.trim().is_empty() {
         serde_json::json!({})
     } else {
@@ -73,7 +70,7 @@ pub async fn run_aql(
             ServerMsg::ParametersMustJsonObject,
         )));
     }
-    let url = state.cdr.rest_v1("query/aql");
+    let url = cdr.rest_v1("query/aql");
     // NOTE: `fetch` "cannot be combined with AQL-top" —
     // `docs/specs/openehr/ITS-REST/specifications/docs/query/Request.md`
     // §Common Headers and Query Parameters.
@@ -83,18 +80,7 @@ pub async fn run_aql(
     } else {
         crate::bff::ehrs::aql_request_body(&aql, &parameters, offset, crate::bff::PAGE_SIZE)
     };
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.post(&url).body("application/json", body).ok().await?;
     crate::bff::ehrs::parse_result_set(&response.body, offset)
 }
 
@@ -107,21 +93,17 @@ pub async fn run_aql(
 /// so the segment-less listing the viewer reads is the CDR's own route.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a session; CDR errors
-/// normalized; [`ViewerError::Internal`] on an unparseable body.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Internal`] on an unparseable body.
 pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1("definition/query");
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1("definition/query");
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         // A CDR with no stored queries may 404 the listing; treat as empty.
         return Ok(Vec::new());
     }
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = response.ok()?.body;
     let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             ServerMsg::StoredQueryListJson,
@@ -157,26 +139,21 @@ pub async fn list_stored_queries() -> Result<Vec<StoredQueryRow>, ViewerError> {
 /// (`GET definition/query/{name}/{version}`).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a session; CDR errors
-/// normalized (a `404` for an unknown name included).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); CDR errors normalized
+/// (a `404` for an unknown name included).
 pub async fn fetch_stored_query(
     // The qualified stored-query name.
     name: String,
     // The version to read; a partial pattern resolves by prefix.
     version: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "definition/query/{}/{}",
         urlencoding::encode(&name),
         urlencoding::encode(&version)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = cdr.get(&url).ok().await?.body;
     let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             ServerMsg::StoredQueryJson,
@@ -216,7 +193,7 @@ pub async fn fetch_stored_query(
 /// pattern is the READ form, not something to file a definition under.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] for a bad name, a non-triple version, or
 /// unparseable AQL; CDR errors normalized (notably `409` for an existing
 /// `(name, version)` pair).
@@ -228,7 +205,7 @@ pub async fn store_query(
     // The AQL text to store.
     aql: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if name.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::StoredQueryNeedsName,
@@ -249,7 +226,6 @@ pub async fn store_query(
     }
     openehr_query::parser::parse_str(&aql)
         .map_err(|e| ViewerError::Invalid(crate::error::error_chain(&e)))?;
-    let state = crate::scope::state()?;
     let path = match version.as_deref() {
         Some(version) => format!(
             "definition/query/{}/{}",
@@ -258,12 +234,8 @@ pub async fn store_query(
         ),
         None => format!("definition/query/{}", urlencoding::encode(&name)),
     };
-    let url = state.cdr.rest_v1(&path);
-    let response = state
-        .cdr
-        .put_text(&session.credential, &url, "text/plain", aql)
-        .await?;
-    crate::cdr::CdrClient::expect_success(response)?;
+    let url = cdr.rest_v1(&path);
+    cdr.put(&url).body("text/plain", aql).ok().await?;
     Ok(())
 }
 
@@ -302,10 +274,9 @@ pub async fn store_query(
 /// ([`carries_own_window`](crate::aql_text::carries_own_window)).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] when `parameters_json` is not a JSON object; CDR
-/// errors normalized via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success)
+/// errors normalized via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok)
 /// (notably `404` when no stored version matches the resolution form);
 /// [`ViewerError::Internal`] when the result set is not valid JSON.
 pub async fn run_stored_query(
@@ -320,8 +291,7 @@ pub async fn run_stored_query(
     // Whether the request owns the row window (see above).
     paged: bool,
 ) -> Result<ResultPage, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     if name.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             ServerMsg::NoStoredQueryRunOpenOne,
@@ -354,7 +324,7 @@ pub async fn run_stored_query(
             urlencoding::encode(version)
         )
     };
-    let url = state.cdr.rest_v1(&path);
+    let url = cdr.rest_v1(&path);
     let body = if paged {
         serde_json::json!({
             "query_parameters": parameters,
@@ -364,18 +334,11 @@ pub async fn run_stored_query(
     } else {
         serde_json::json!({ "query_parameters": parameters })
     };
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body.to_string(),
-        )
+    let response = cdr
+        .post(&url)
+        .body("application/json", body.to_string())
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     crate::bff::ehrs::parse_result_set(&response.body, if paged { offset } else { 0 })
 }
 
@@ -392,26 +355,21 @@ pub async fn run_stored_query(
 /// cap every tile at the table page size instead of reporting a magnitude.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a session; CDR errors
-/// normalized; [`ViewerError::Internal`] on an unparseable result.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Internal`] on an unparseable result.
 pub async fn run_stored_count(
     // The qualified stored-query name.
     name: String,
     // The version to run.
     version: String,
 ) -> Result<i64, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "query/{}/{}",
         urlencoding::encode(&name),
         urlencoding::encode(&version)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = cdr.get(&url).ok().await?.body;
     let doc: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             ServerMsg::StoredQueryResultJson,

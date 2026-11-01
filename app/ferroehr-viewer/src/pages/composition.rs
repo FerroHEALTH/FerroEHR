@@ -758,7 +758,7 @@ enum CompositionModel {
 /// composition the CDR does not hold answers `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load(
     // The EHR the route names.
     ehr_id: String,
@@ -1157,7 +1157,7 @@ enum EditModel {
 /// latest version.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_edit(
     // The EHR the route names.
     ehr_id: String,
@@ -1411,7 +1411,7 @@ fn new_format(format_key: &str) -> ReprFormat {
 /// templates.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_new(
     // The EHR the route names.
     ehr_id: String,

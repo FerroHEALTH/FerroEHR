@@ -287,11 +287,10 @@ pub fn contribution_href(uid: &str) -> String {
 /// (`operations/versioned_party_version_get_at_time.yaml`).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (the `404` for an unknown
-/// container or version included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when either body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
+/// (the `404` for an unknown container or version included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when either body is not valid JSON.
 pub async fn fetch_versioned_object(
     // Which versioned-object family the container belongs to, as its route
     // segment ([`VersionedFamily::segment`]).
@@ -301,39 +300,27 @@ pub async fn fetch_versioned_object(
     // The version whose envelope facts to read; empty reads the latest.
     version_uid: String,
 ) -> Result<VersionedObjectFacts, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let versioned = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let family = versioned.segment();
     let container = urlencoding::encode(&container_uid_of(&versioned_object_uid)).into_owned();
-    let object_url = versioned.url(&state.cdr, &format!("demographic/{family}/{container}"));
-    let object_response = state
-        .cdr
-        .get(&session.credential, &object_url, "application/json")
-        .await?;
-    let object_body = crate::cdr::CdrClient::expect_success(object_response)?.body;
+    let object_url = versioned.url(&cdr, &format!("demographic/{family}/{container}"));
+    let object_body = cdr.get(&object_url).ok().await?.body;
 
     let version_uid = version_uid.trim();
     let version_url = if version_uid.is_empty() {
-        versioned.url(
-            &state.cdr,
-            &format!("demographic/{family}/{container}/version"),
-        )
+        versioned.url(&cdr, &format!("demographic/{family}/{container}/version"))
     } else {
         versioned.url(
-            &state.cdr,
+            &cdr,
             &format!(
                 "demographic/{family}/{container}/version/{}",
                 urlencoding::encode(version_uid)
             ),
         )
     };
-    let version_response = state
-        .cdr
-        .get(&session.credential, &version_url, "application/json")
-        .await?;
-    let version_body = crate::cdr::CdrClient::expect_success(version_response)?.body;
+    let version_body = cdr.get(&version_url).ok().await?.body;
     parse_versioned_object(&object_body, &version_body)
 }
 
@@ -345,11 +332,10 @@ pub async fn fetch_versioned_object(
 /// the same `parse_versions`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (a `404` for an unknown container
-/// included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the history is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a
+/// `404` for an unknown container included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the history is not valid JSON.
 pub async fn fetch_demographic_revision_history(
     // Which versioned-object family the container belongs to, as its route
     // segment ([`VersionedFamily::segment`]).
@@ -357,23 +343,18 @@ pub async fn fetch_demographic_revision_history(
     // The container id (`versioned_object_uid`).
     versioned_object_uid: String,
 ) -> Result<Vec<VersionEntry>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let family = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let url = family.url(
-        &state.cdr,
+        &cdr,
         &format!(
             "demographic/{}/{}/revision_history",
             family.segment(),
             urlencoding::encode(&container_uid_of(&versioned_object_uid))
         ),
     );
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     // NOTE: REVISION_HISTORY.items arrives most-recent-LAST on the wire (RM
     // common `org.openehr.rm.common.revision_history.adoc` §items); the table
     // presents newest-first, so reverse here.
@@ -394,11 +375,11 @@ pub async fn fetch_demographic_revision_history(
 /// `OBJECT_VERSION_ID`; the string is returned so the caller can pin it.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when `at_time` is empty; CDR transport errors pass
-/// through; a non-2xx CDR answer (the `404` for no version at that time
-/// included, which the UI renders as an inline note) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when `at_time` is empty; a non-2xx CDR answer (the
+/// `404` for no version at that time included, which the UI renders as an
+/// inline note) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn resolve_demographic_version_at_time(
     // Which versioned-object family the container belongs to, as its route
     // segment ([`VersionedFamily::segment`]).
@@ -408,8 +389,7 @@ pub async fn resolve_demographic_version_at_time(
     // The instant to resolve, as a `datetime-local` input value.
     at_time: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let family = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
@@ -417,7 +397,7 @@ pub async fn resolve_demographic_version_at_time(
         return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
     }
     let url = family.url(
-        &state.cdr,
+        &cdr,
         &format!(
             "demographic/{}/{}/version?version_at_time={}",
             family.segment(),
@@ -425,11 +405,7 @@ pub async fn resolve_demographic_version_at_time(
             urlencoding::encode(&at_time),
         ),
     );
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
@@ -444,10 +420,8 @@ pub async fn resolve_demographic_version_at_time(
 /// [`fetch_versioned_object`] instead.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when no version uid is given; CDR transport errors
-/// pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when no version uid is given.
 pub async fn fetch_demographic_version_document(
     // Which resource family the version belongs to, as its route segment
     // ([`DemographicResource::segment`]).
@@ -455,8 +429,7 @@ pub async fn fetch_demographic_version_document(
     // The version to read, as a full `OBJECT_VERSION_ID`.
     version_uid: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let resource = DemographicResource::from_segment(&resource)
         .ok_or_else(|| unknown_segment(&resource, "resource"))?;
     let version_uid = version_uid.trim();
@@ -466,18 +439,14 @@ pub async fn fetch_demographic_version_document(
         )));
     }
     let url = resource.url(
-        &state.cdr,
+        &cdr,
         &format!(
             "demographic/{}/{}",
             resource.segment(),
             urlencoding::encode(version_uid)
         ),
     );
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = cdr.get(&url).ok().await?.body;
     Ok(crate::bff::pretty_body(
         &body,
         crate::format::ReprFormat::CanonicalJson,
@@ -499,30 +468,23 @@ pub async fn fetch_demographic_version_document(
 /// without this.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when `uid` is empty; CDR transport errors pass
-/// through; a refusal or any non-`404` failure normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success) rather
-/// than being read as "not found".
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when `uid` is empty; a refusal or any non-`404`
+/// failure normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok)
+/// rather than being read as "not found".
 pub async fn resolve_party_kind(
     // The party id to place, in either `uid_based_id` form.
     uid: String,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PartyIdRequired)));
     }
     let encoded = urlencoding::encode(&uid).into_owned();
     for kind in PartyKind::ALL {
-        let url = state
-            .cdr
-            .rest_v1(&format!("demographic/{}/{encoded}", kind.segment()));
-        let response = state
-            .cdr
-            .get(&session.credential, &url, "application/json")
-            .await?;
+        let url = cdr.rest_v1(&format!("demographic/{}/{encoded}", kind.segment()));
+        let response = cdr.get(&url).send().await?;
         if response.is(http::StatusCode::OK) || response.is(http::StatusCode::NO_CONTENT) {
             return Ok(Some(kind.segment().to_owned()));
         }
@@ -531,7 +493,7 @@ pub async fn resolve_party_kind(
         }
         // A refusal or a server fault is NOT "this kind does not hold it":
         // swallowing it would report a reachable party as missing.
-        drop(crate::cdr::CdrClient::expect_success(response)?);
+        response.ok()?;
     }
     Ok(None)
 }

@@ -90,39 +90,35 @@ pub struct PartyState {
 /// `operations/person_get.yaml`) — a first-class state, not an error.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an unknown kind segment or an empty id; CDR
-/// transport errors pass through; a non-2xx CDR answer (the `404` for an
-/// unknown id, or for an id held by a DIFFERENT kind, included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an unknown kind segment or an empty id; a
+/// non-2xx CDR answer (the `404` for an unknown id, or for an id held by a
+/// DIFFERENT kind, included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the body is not valid JSON.
 pub async fn fetch_party(
     // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
     // The party's `uid_based_id` (either form; the container is used).
     uid: String,
 ) -> Result<Option<PartyState>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let uid = container_uid_of(&uid);
     if uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PartyIdRequired)));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "demographic/{}/{}",
         kind.segment(),
         urlencoding::encode(&uid)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NO_CONTENT) {
         return Ok(None);
     }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = response.ok()?;
     let served_etag = response.etag_version_uid();
     parse_party_state(&response.body, served_etag.as_deref()).map(Some)
 }
@@ -136,40 +132,30 @@ pub async fn fetch_party(
 /// resource, whose `uid.value` is the new version.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on an unknown kind segment, a body that is not a
 /// JSON object, or a body whose `_type` names a different kind than the route;
-/// CDR transport errors pass through; any non-2xx CDR answer (the `400` parse
-/// refusal and the `422` validation diagnostic, rendered verbatim, included)
-/// normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the created resource carries no `uid`.
+/// any non-2xx CDR answer (the `400` parse refusal and the `422` validation
+/// diagnostic, rendered verbatim, included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the created resource carries no `uid`.
 pub async fn create_party(
     // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
     // The party document to commit, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let body = checked_party_body(&body, kind)?;
-    let url = state
-        .cdr
-        .rest_v1(&format!("demographic/{}", kind.segment()));
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=representation")],
-            body,
-        )
+    let url = cdr.rest_v1(&format!("demographic/{}", kind.segment()));
+    let response = cdr
+        .post(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=representation")])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     let uid = crate::uid::uid_value_of(&response.body);
     if uid.is_empty() {
         return Err(ViewerError::Internal(tr_served(
@@ -196,13 +182,12 @@ pub async fn create_party(
 /// replaced (`apply_party_edits`); everything else travels back verbatim.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on an unknown kind segment, a missing version uid,
 /// an `identities` draft that is not a non-empty JSON array, or a `details`
-/// draft that is not a JSON object; CDR transport errors pass through; any
-/// non-2xx CDR answer (the `412` collision and the `400`/`422` diagnostics
-/// included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// draft that is not a JSON object; any non-2xx CDR answer (the `412` collision
+/// and the `400`/`422` diagnostics included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn update_party(
     // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
@@ -217,8 +202,7 @@ pub async fn update_party(
     // The replacement `details`, as a JSON object; empty removes it.
     details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let current = current_version_uid.trim();
@@ -229,26 +213,20 @@ pub async fn update_party(
     }
     let body = apply_party_edits(&base_body, &identities, &details)?;
     let if_match = format!("\"{current}\"");
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "demographic/{}/{}",
         kind.segment(),
         urlencoding::encode(&container_uid_of(&versioned_object_uid))
     ));
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[
-                ("If-Match", if_match.as_str()),
-                ("Prefer", "return=representation"),
-            ],
-            body,
-        )
+    let response = cdr
+        .put(&url)
+        .body("application/json", body)
+        .headers(&[
+            ("If-Match", if_match.as_str()),
+            ("Prefer", "return=representation"),
+        ])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
@@ -266,20 +244,18 @@ pub async fn update_party(
 /// every earlier version stays readable by its own uid.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on an unknown kind segment or a version uid that
-/// is not a full `OBJECT_VERSION_ID`; CDR transport errors pass through; any
-/// non-2xx CDR answer (the `409` stale-uid and `400` already-deleted branches
-/// included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on an unknown kind segment or a version uid that is
+/// not a full `OBJECT_VERSION_ID`; any non-2xx CDR answer (the `409` stale-uid
+/// and `400` already-deleted branches included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn delete_party(
     // The party family, as its route segment ([`PartyKind::segment`]).
     kind: String,
     // The version to supersede, as a full `OBJECT_VERSION_ID`.
     version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
     let version_uid = version_uid.trim();
@@ -288,13 +264,12 @@ pub async fn delete_party(
             RecordsMsg::DeletingPartyNeedsLatestVersionS,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "demographic/{}/{}",
         kind.segment(),
         urlencoding::encode(version_uid)
     ));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 

@@ -97,29 +97,17 @@ pub(crate) fn read_count(page: &crate::bff::ehrs::ResultPage) -> Count {
 ///
 /// # Errors
 /// CDR errors normalized via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok);
 /// [`ViewerError::Internal`] when the result set is not JSON. A result set of
 /// another shape is the `Ok` value's [`CountShape`].
 pub(crate) async fn run_count_aql(
-    state: &crate::state::AppState,
-    session: &crate::session::ViewerSession,
+    cdr: &crate::bff::Cdr,
     aql: &str,
     parameters: serde_json::Value,
 ) -> Result<Count, ViewerError> {
-    let url = state.cdr.rest_v1("query/aql");
+    let url = cdr.rest_v1("query/aql");
     let body = serde_json::json!({ "q": aql, "query_parameters": parameters }).to_string();
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.post(&url).body("application/json", body).ok().await?;
     let page = crate::bff::ehrs::parse_result_set(&response.body, 0)?;
     Ok(read_count(&page))
 }
@@ -134,16 +122,13 @@ pub(crate) async fn run_count_aql(
 /// unavailable.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
-/// normalized via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] on a result set that is not JSON.
 pub async fn dashboard_counts() -> Result<(Count, Count, u32), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let none = || serde_json::json!({});
-    let ehrs = run_count_aql(&state, &session, EHR_COUNT_AQL, none()).await?;
-    let compositions = run_count_aql(&state, &session, COMPOSITION_COUNT_AQL, none()).await?;
+    let ehrs = run_count_aql(&cdr, EHR_COUNT_AQL, none()).await?;
+    let compositions = run_count_aql(&cdr, COMPOSITION_COUNT_AQL, none()).await?;
     let templates =
         u32::try_from(crate::bff::templates::list_templates().await?.len()).unwrap_or(u32::MAX);
     Ok((ehrs, compositions, templates))
@@ -175,9 +160,9 @@ pub struct NamespaceTile {
 /// own tile.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors from
-/// the stored-query LISTING normalized (a failure there means no grouping at
-/// all); a failing member RUN is confined to its own tile's `matches: None`.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); CDR errors from the
+/// stored-query LISTING normalized (a failure there means no grouping at all);
+/// a failing member RUN is confined to its own tile's `matches: None`.
 pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
     use futures::stream::StreamExt;
 
@@ -252,30 +237,18 @@ pub async fn namespace_tiles() -> Result<Vec<NamespaceTile>, ViewerError> {
 /// [`bucket_by_day`](crate::activity::bucket_by_day).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
-/// normalized; [`ViewerError::Internal`] on an unparseable result set.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Internal`] on an unparseable result set.
 pub async fn commit_trend() -> Result<Vec<ActivityPoint>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1("query/aql");
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1("query/aql");
     let body = serde_json::json!({
         "q": TREND_AQL,
         "query_parameters": {},
         "fetch": TREND_FETCH,
     })
     .to_string();
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.post(&url).body("application/json", body).ok().await?;
     let page = crate::bff::ehrs::parse_result_set(&response.body, 0)?;
     let times: Vec<String> = page
         .rows

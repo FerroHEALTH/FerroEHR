@@ -103,7 +103,11 @@ pub async fn sign_in_basic(
     // (Definition API). 401 = wrong credentials; with CDR auth disabled the
     // probe trivially passes, which is the dev posture.
     let url = state.cdr.rest_v1("definition/template/adl1.4");
-    let probe = state.cdr.get(&credential, &url, "application/json").await?;
+    let probe = state
+        .cdr
+        .call(http::Method::GET, &url, &credential)
+        .send()
+        .await?;
     if probe.is(http::StatusCode::UNAUTHORIZED) {
         return Ok(SignedIn::Refused);
     }
@@ -153,14 +157,13 @@ pub async fn fetch_login_screen() -> Result<LoginScreen, ViewerError> {
 /// JSON: the shell's health pill and the system panel both read it.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a session (the shell only
-/// polls when logged in); CDR transport errors pass through.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Unauthenticated`] without a session (the shell only polls
+/// when logged in).
 pub async fn fetch_status() -> Result<String, ViewerError> {
-    crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_root_url("status");
-    let response = state.cdr.get_public(&url, "application/json").await?;
-    Ok(crate::cdr::CdrClient::expect_success(response)?.body)
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_root_url("status");
+    Ok(cdr.public(http::Method::GET, &url).ok().await?.body)
 }
 
 #[cfg(test)]

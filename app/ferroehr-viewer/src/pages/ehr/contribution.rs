@@ -169,7 +169,7 @@ struct ContributionsPanel {
 /// Loads the Contributions tab.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_tab(
     // The EHR the route names.
     ehr_id: String,
@@ -375,7 +375,7 @@ enum ContributionModel {
 /// hold answers `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_contribution(
     // The EHR the route names.
     ehr_id: String,
@@ -880,7 +880,7 @@ enum NewModel {
 /// Commit) and reads what its changes start from and what the picks offer.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_new(
     // The EHR the route names.
     ehr_id: String,

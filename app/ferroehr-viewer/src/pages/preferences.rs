@@ -96,7 +96,7 @@ fn reveal_row(back: &str, saved: bool) -> Html {
 /// Loads the languages the browser asks for, its `Accept-Language` header.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 fn load() -> Result<String, ViewerError> {
     crate::session::require_session()?;
     Ok(read_page())

@@ -90,24 +90,15 @@ pub struct EhrStatusState {
 /// tab reads versions.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] when the body is not valid JSON.
 pub async fn fetch_ehr_status(
     // The EHR whose current status document to read.
     ehr_id: String,
 ) -> Result<EhrStatusState, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/ehr_status", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!("ehr/{}/ehr_status", urlencoding::encode(&ehr_id)));
+    let response = cdr.get(&url).ok().await?;
     let served_etag = response.etag_version_uid();
     parse_status_state(&response.body, served_etag.as_deref())
 }
@@ -122,35 +113,29 @@ pub async fn fetch_ehr_status(
 /// ids the CDR itself reported.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when no version is given; CDR transport errors pass
-/// through; a non-2xx CDR answer (the `404` for an unknown
-/// `ehr_id`/`version_uid` included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when no version is given; a non-2xx CDR answer (the
+/// `404` for an unknown `ehr_id`/`version_uid` included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn fetch_ehr_status_version(
     // The EHR holding the versioned status.
     ehr_id: String,
     // The status version to read.
     version_uid: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let version_uid = version_uid.trim();
     if version_uid.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             Msg::VersionUidRequiredReadPastEhr,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/ehr_status/{}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(version_uid)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = cdr.get(&url).ok().await?.body;
     Ok(crate::bff::pretty_body(
         &body,
         crate::format::ReprFormat::CanonicalJson,
@@ -186,12 +171,12 @@ pub async fn fetch_ehr_status_version(
 /// name.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on a missing version uid or an `other_details`
-/// value that is not a JSON object; CDR transport errors pass through; any
-/// non-2xx CDR answer (the `412` concurrency failure and the `400`/`422`
-/// validation diagnostics, which the UI renders verbatim, included) normalizes
-/// via [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// value that is not a JSON object; any non-2xx CDR answer (the `412`
+/// concurrency failure and the `400`/`422` validation diagnostics, which the UI
+/// renders verbatim, included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn update_ehr_status(
     // The EHR whose status to update.
     ehr_id: String,
@@ -206,8 +191,7 @@ pub async fn update_ehr_status(
     // The replacement `other_details`, as JSON object text; empty leaves it out.
     other_details: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let current = current_version_uid.trim();
     if current.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -216,24 +200,16 @@ pub async fn update_ehr_status(
     }
     let body = edit::apply_status_edits(&base_body, is_queryable, is_modifiable, &other_details)?;
     let if_match = format!("\"{current}\"");
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/ehr_status", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[
-                ("If-Match", if_match.as_str()),
-                ("Prefer", "return=representation"),
-            ],
-            body,
-        )
+    let url = cdr.rest_v1(&format!("ehr/{}/ehr_status", urlencoding::encode(&ehr_id)));
+    let response = cdr
+        .put(&url)
+        .body("application/json", body)
+        .headers(&[
+            ("If-Match", if_match.as_str()),
+            ("Prefer", "return=representation"),
+        ])
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
@@ -244,26 +220,20 @@ pub async fn update_ehr_status(
 /// the same `crate::bff::composition::parse_versions`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (the `404` for an unknown `ehr_id`
-/// included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the history is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
+/// (the `404` for an unknown `ehr_id` included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the history is not valid JSON.
 pub async fn fetch_status_revision_history(
     // The EHR whose status revision history to read.
     ehr_id: String,
 ) -> Result<Vec<VersionEntry>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/versioned_ehr_status/revision_history",
         urlencoding::encode(&ehr_id)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     // NOTE: REVISION_HISTORY.items arrives most-recent-LAST on the wire (RM
     // common, generic package — the `items` attribute documentation); the table
     // presents newest-first, so reverse here.
@@ -284,45 +254,31 @@ pub async fn fetch_status_revision_history(
 /// (`…/versioned_ehr_status/version?version_at_time=` — latest when omitted).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (a `404` for an unknown
-/// `ehr_id`/version included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when either body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a
+/// `404` for an unknown `ehr_id`/version included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when either body is not valid JSON.
 pub async fn fetch_versioned_status(
     // The EHR holding the versioned status.
     ehr_id: String,
     // The status version whose envelope facts to read.
     version_uid: String,
 ) -> Result<VersionedObjectFacts, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let ehr = urlencoding::encode(&ehr_id);
-    let object_url = state
-        .cdr
-        .rest_v1(&format!("ehr/{ehr}/versioned_ehr_status"));
-    let object_response = state
-        .cdr
-        .get(&session.credential, &object_url, "application/json")
-        .await?;
-    let object_body = crate::cdr::CdrClient::expect_success(object_response)?.body;
+    let object_url = cdr.rest_v1(&format!("ehr/{ehr}/versioned_ehr_status"));
+    let object_body = cdr.get(&object_url).ok().await?.body;
 
     let version_uid = version_uid.trim();
     let version_url = if version_uid.is_empty() {
-        state
-            .cdr
-            .rest_v1(&format!("ehr/{ehr}/versioned_ehr_status/version"))
+        cdr.rest_v1(&format!("ehr/{ehr}/versioned_ehr_status/version"))
     } else {
-        state.cdr.rest_v1(&format!(
+        cdr.rest_v1(&format!(
             "ehr/{ehr}/versioned_ehr_status/version/{}",
             urlencoding::encode(version_uid)
         ))
     };
-    let version_response = state
-        .cdr
-        .get(&session.credential, &version_url, "application/json")
-        .await?;
-    let version_body = crate::cdr::CdrClient::expect_success(version_response)?.body;
+    let version_body = cdr.get(&version_url).ok().await?.body;
     parse_versioned_status(&object_body, &version_body)
 }
 
@@ -341,33 +297,28 @@ pub async fn fetch_versioned_status(
 /// `crate::format::datetime_local_to_rfc3339`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when `at_time` is empty; CDR transport errors pass
-/// through; a non-2xx CDR answer (the `404` for no version at that time
-/// included, which the UI renders as an inline note) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when `at_time` is empty; a non-2xx CDR answer (the
+/// `404` for no version at that time included, which the UI renders as an
+/// inline note) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn fetch_status_version_at_time(
     // The EHR holding the versioned status.
     ehr_id: String,
     // The instant to resolve, as a `datetime-local` input value.
     at_time: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
     if at_time.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/versioned_ehr_status/version?version_at_time={}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(&at_time),
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
