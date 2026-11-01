@@ -20,7 +20,7 @@ use assert_fs::prelude::*;
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::db::domain::DomainPools;
 use ferroehr::manufacturer::MANUFACTURER;
-use ferroehr::report::{ManifestEntry, PartStatus, Report};
+use ferroehr::report::{CrateOrigin, ManifestEntry, PartStatus, Report};
 use ferroehr::service::FerroEhrService;
 use ferrohealth_secret::secret::Secret;
 use ferrohealth_secret::secret_url::SecretUrl;
@@ -193,6 +193,8 @@ async fn the_report_names_the_build_and_the_manufacturer() {
         "{:?}",
         report.openehr_crates
     );
+    // No release lane stamped this build, so the versions are the source tree's.
+    assert_eq!(report.openehr_crates_origin, CrateOrigin::SourceTree);
     assert!(
         report.file_name().starts_with("ferroehr-report-")
             && report.file_name().ends_with("Z.json"),

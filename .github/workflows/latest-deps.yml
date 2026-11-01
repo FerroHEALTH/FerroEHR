@@ -98,7 +98,7 @@ jobs:
           } > body.md
       - name: File or update the tracking issue
         if: steps.check.outputs.status != '0'
-        uses: ./.github/actions/file-watcher-issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           title: "latest-deps: workspace no longer builds against the newest in-range dependencies"
           body-file: body.md

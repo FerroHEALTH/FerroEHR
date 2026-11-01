@@ -118,7 +118,7 @@ jobs:
       # The same helm the golden renders are pinned to, from the same file. The
       # read-and-install pair lives in the composite (#2775), which is also where
       # the `version` vs `version-file` trap is recorded.
-      - uses: ./.github/actions/helm-pinned
+      - uses: ./.github/actions/helm-pinned # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
       - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
         with:
           version: 1.3.3
@@ -317,7 +317,7 @@ jobs:
       # the defect; an exotic suffix now annotates as a pre-release too.
       - id: kind
         if: inputs.release-tag != ''
-        uses: ./.github/actions/release-kind
+        uses: ./.github/actions/release-kind # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           tag: ${{ inputs.release-tag }}
 

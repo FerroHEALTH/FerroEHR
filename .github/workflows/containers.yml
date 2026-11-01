@@ -305,7 +305,7 @@ jobs:
     # SLSA Build L3 construction (#2140): this caller passes data-only inputs
     # and cannot add steps beside the signing. Labels mirror the Dockerfile's;
     # scripts/checks/image-labels.sh fails if the two ever disagree.
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr
       defer-tags: true
@@ -401,7 +401,7 @@ jobs:
       id-token: write # Sigstore, for the signed attestations
       attestations: write # store them against this repository
     # The reusable SLSA Build L3 lane; see the app image above.
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr-viewer
       defer-tags: true
@@ -437,7 +437,7 @@ jobs:
       attestations: write # store them against this repository
     # The reusable SLSA Build L3 lane. QEMU: the one RUN layer (the Debian
     # security upgrade, #2408) executes on the non-native platform.
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr-postgres
       defer-tags: true
@@ -474,7 +474,7 @@ jobs:
     permissions:
       contents: read
       packages: write # pull the pushed digests, then tag them
-    uses: ./.github/workflows/scan-and-tag.yml
+    uses: ./.github/workflows/scan-and-tag.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       app-image: ghcr.io/ferrohealth/ferroehr
       app-digest: ${{ needs.app-image.outputs.digest }}
@@ -505,7 +505,7 @@ jobs:
     permissions:
       contents: write # each run pushes its badges to its own branch, from main only
       packages: read # pull the digests this run pushed
-    uses: ./.github/workflows/conformance.yml
+    uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       server-image: ${{ case(needs.app-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr@{0}', needs.app-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr:main') }}
       postgres-image: ${{ case(needs.postgres-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr-postgres@{0}', needs.postgres-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr-postgres:main') }}
