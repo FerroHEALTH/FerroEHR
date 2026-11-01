@@ -40,6 +40,7 @@ use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
 use openehr_am::v2_4::aom2::constraint_model::primitive::c_terminology_code::CTerminologyCode;
 use openehr_am::v2_4::aom2::constraint_model::primitive::c_time::CTime;
 use openehr_am::v2_4::aom2::constraint_model::primitive::constraint_status::ConstraintStatus;
+use openehr_base::containers::present;
 use openehr_base::prelude::{
     Interval, Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso8601Time, MultiplicityInterval,
     PointInterval, ProperInterval, ProperIntervalData, TerminologyCode,
@@ -141,12 +142,12 @@ pub(crate) fn complex_object(
         rm_type_name,
         occurrences: None,
         node_id,
-        alternative_ids: openehr_base::containers::present(Vec::new()),
+        alternative_ids: present(Vec::new()),
         is_deprecated: None,
         sibling_order: None,
         default_value,
-        attributes: openehr_base::containers::present(attributes),
-        attribute_tuples: openehr_base::containers::present(attribute_tuples),
+        attributes: present(attributes),
+        attribute_tuples: present(attribute_tuples),
     }))
 }
 
@@ -164,7 +165,7 @@ pub(crate) fn into_archetype_root(obj: CObject, archetype_ref: String) -> CObjec
         rm_type_name: d.rm_type_name,
         occurrences: d.occurrences,
         node_id: d.node_id,
-        alternative_ids: openehr_base::containers::present(Vec::new()),
+        alternative_ids: present(Vec::new()),
         is_deprecated: None,
         sibling_order: None,
         default_value: d.default_value,
@@ -181,7 +182,7 @@ pub(crate) fn tuple_member(rm_attribute_name: String) -> CAttribute {
         soc_parent: None,
         rm_attribute_name,
         existence: None,
-        children: openehr_base::containers::present(Vec::new()),
+        children: present(Vec::new()),
         differential_path: None,
         cardinality: None,
         is_multiple: false,
@@ -209,7 +210,7 @@ pub(crate) fn cattr_empty(name: &str) -> CAttribute {
         soc_parent: None,
         rm_attribute_name: name.to_owned(),
         existence: None,
-        children: openehr_base::containers::present(Vec::new()),
+        children: present(Vec::new()),
         differential_path: None,
         cardinality: None,
         is_multiple: false,
@@ -230,6 +231,28 @@ pub(crate) struct PrimitiveNode {
     pub(crate) occurrences: Option<MultiplicityInterval>,
 }
 
+/// A `$ty` over `$node`: the inherited fields every generated
+/// `C_PRIMITIVE_OBJECT` descendant repeats as fields of its own, then the
+/// descendant's own fields.
+macro_rules! primitive {
+    ($ty:ident, $node:expr $(, $field:ident $(: $value:expr)?)* $(,)?) => {{
+        let node: PrimitiveNode = $node;
+        $ty {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: node.rm_type_name,
+            occurrences: node.occurrences,
+            node_id: node.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            is_enumerated_type_constraint: None,
+            $($field $(: $value)?,)*
+        }
+    }};
+}
+
 impl PrimitiveNode {
     /// An inline primitive of `rm_type_name`, whose node id is the special
     /// value `Primitive_node_id` (`AOM2/master04.5` §`C_OBJECT`, `node_id`).
@@ -243,20 +266,7 @@ impl PrimitiveNode {
 
     /// A `C_BOOLEAN` over this node.
     pub(crate) fn c_boolean(self, constraint: Vec<bool>, assumed_value: Option<bool>) -> CBoolean {
-        CBoolean {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
-        }
+        primitive!(CBoolean, self, assumed_value, constraint: present(constraint))
     }
 
     /// A `C_STRING` over this node; a regex constraint keeps its delimiters.
@@ -265,20 +275,7 @@ impl PrimitiveNode {
         constraint: Vec<String>,
         assumed_value: Option<String>,
     ) -> CString {
-        CString {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
-        }
+        primitive!(CString, self, assumed_value, constraint: present(constraint))
     }
 
     /// A `C_INTEGER` over this node.
@@ -287,20 +284,7 @@ impl PrimitiveNode {
         constraint: Vec<Interval<i32>>,
         assumed_value: Option<f64>,
     ) -> CInteger {
-        CInteger {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
-        }
+        primitive!(CInteger, self, assumed_value, constraint: present(constraint))
     }
 
     /// A `C_REAL` over this node.
@@ -309,20 +293,7 @@ impl PrimitiveNode {
         constraint: Vec<Interval<f64>>,
         assumed_value: Option<f64>,
     ) -> CReal {
-        CReal {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
-        }
+        primitive!(CReal, self, assumed_value, constraint: present(constraint))
     }
 
     /// A `C_DATE` over this node, with its value list or its pattern.
@@ -332,21 +303,13 @@ impl PrimitiveNode {
         pattern_constraint: Option<String>,
         assumed_value: Option<Iso8601Date>,
     ) -> CDate {
-        CDate {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
+        primitive!(
+            CDate,
+            self,
             assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
+            constraint: present(constraint),
             pattern_constraint,
-        }
+        )
     }
 
     /// A `C_TIME` over this node, with its value list or its pattern.
@@ -356,21 +319,13 @@ impl PrimitiveNode {
         pattern_constraint: Option<String>,
         assumed_value: Option<Iso8601Time>,
     ) -> CTime {
-        CTime {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
+        primitive!(
+            CTime,
+            self,
             assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
+            constraint: present(constraint),
             pattern_constraint,
-        }
+        )
     }
 
     /// A `C_DATE_TIME` over this node, with its value list or its pattern.
@@ -380,21 +335,13 @@ impl PrimitiveNode {
         pattern_constraint: Option<String>,
         assumed_value: Option<Iso8601DateTime>,
     ) -> CDateTime {
-        CDateTime {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
+        primitive!(
+            CDateTime,
+            self,
             assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
+            constraint: present(constraint),
             pattern_constraint,
-        }
+        )
     }
 
     /// A `C_DURATION` over this node, with its value list, its pattern, or
@@ -405,21 +352,13 @@ impl PrimitiveNode {
         pattern_constraint: Option<String>,
         assumed_value: Option<Iso8601Duration>,
     ) -> CDuration {
-        CDuration {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
+        primitive!(
+            CDuration,
+            self,
             assumed_value,
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(constraint),
+            constraint: present(constraint),
             pattern_constraint,
-        }
+        )
     }
 
     /// A `C_TERMINOLOGY_CODE` over this node.
@@ -429,21 +368,13 @@ impl PrimitiveNode {
         constraint_status: Option<ConstraintStatus>,
         assumed_value: Option<TerminologyCode>,
     ) -> CTerminologyCode {
-        CTerminologyCode {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: self.rm_type_name,
-            occurrences: self.occurrences,
-            node_id: self.node_id,
-            alternative_ids: None,
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
+        primitive!(
+            CTerminologyCode,
+            self,
             assumed_value,
-            is_enumerated_type_constraint: None,
             constraint,
             constraint_status,
-        }
+        )
     }
 }
 
