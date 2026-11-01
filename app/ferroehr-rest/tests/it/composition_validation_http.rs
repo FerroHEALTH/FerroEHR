@@ -27,7 +27,7 @@ use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use serde_json::Value;
+use serde_json::{Value, json};
 use tower::ServiceExt;
 
 use crate::common;
@@ -347,4 +347,66 @@ async fn an_item_of_a_type_the_template_does_not_allow_is_422() {
             );
         }
     }
+}
+
+/// Empty the `events` of the first HISTORY in `v`.
+fn empty_first_history_events(v: &mut Value) -> bool {
+    match v {
+        Value::Object(map) => {
+            if map.get("_type").and_then(Value::as_str) == Some("HISTORY")
+                && map.contains_key("events")
+            {
+                map.insert("events".to_owned(), Value::Array(Vec::new()));
+                return true;
+            }
+            map.values_mut().any(empty_first_history_events)
+        }
+        Value::Array(items) => items.iter_mut().any(empty_first_history_events),
+        _ => false,
+    }
+}
+
+/// A HISTORY carrying `events: []` is a body the ITS-JSON schema refuses
+/// (`ITS-JSON/components/RM/Release-1.1.0/Data_structures/HISTORY.json`:
+/// `events` has `minItems: 1`; ITS-REST `overview/Resources.md` §JSON Format),
+/// so the commit is `400` and the EHR holds no composition.
+#[tokio::test]
+async fn a_history_with_an_empty_events_array_is_400() {
+    let (_pg, app, ehr_id) = app_with_template().await;
+    let mut broken = canonical_composition();
+    assert!(
+        empty_first_history_events(&mut broken),
+        "the IPS composition carries a HISTORY"
+    );
+    let (status, _h, body) = send(
+        &app,
+        Request::builder()
+            .method("POST")
+            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(broken.to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body.contains("events"), "names the member: {body}");
+
+    let query = json!({
+        "q": format!(
+            "SELECT c/uid/value FROM EHR e[ehr_id/value='{ehr_id}'] CONTAINS COMPOSITION c"
+        )
+    });
+    let (status, _h, body) = send(
+        &app,
+        Request::builder()
+            .method("POST")
+            .uri(format!("{BASE}/query/aql"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(query.to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let result: Value = serde_json::from_str(&body).expect("a result set");
+    assert_eq!(result["rows"], json!([]), "nothing committed: {body}");
 }

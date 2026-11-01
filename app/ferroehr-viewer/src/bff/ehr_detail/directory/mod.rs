@@ -661,7 +661,7 @@ mod tests {
             "_type":"FOLDER",
             "name":{"_type":"DV_TEXT","value":"root"},
             "uid":{"_type":"OBJECT_VERSION_ID","value":"abc::sys::2"},
-            "folders":[{"_type":"FOLDER","name":{"_type":"DV_TEXT","value":"a"},"folders":[],"items":[]}],
+            "folders":[{"_type":"FOLDER","name":{"_type":"DV_TEXT","value":"a"},"items":[]}],
             "items":[]
         }"#;
         let v = summarize_directory_version(body, 2, true);

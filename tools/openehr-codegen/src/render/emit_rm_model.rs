@@ -337,12 +337,13 @@ fn attributes_of(model: &Model, class: &BmmClass) -> Result<Vec<AttrModel>, Stri
                 type_params,
                 cardinality,
                 nonempty: !rp.prop.is_mandatory
-                    && crate::analyze::nonempty_optional_lists_cached(model)
+                    && (crate::analyze::nonempty_optional_lists_cached(model)
                         .iter()
                         .any(|(decl, attr)| {
                             attr == &rp.prop.name
                                 && (decl == &rp.owner || model.inherits(&rp.owner, decl))
-                        }),
+                        })
+                        || crate::plan::its_json_bounds::refuses_empty(&rp.owner, &rp.prop.name)),
                 ref_target,
             })
         })
