@@ -559,7 +559,7 @@ mod tests {
     use std::path::Path;
 
     use ferrohealth_ui::i18n::Locale;
-    use fluent_templates::fluent_bundle::FluentValue;
+    use fluent_templates::fluent_bundle::{FluentResource, FluentValue};
 
     use super::console::ConsoleMsg;
     use super::definitions::DefinitionsMsg;
@@ -641,6 +641,25 @@ mod tests {
                     "{part}/{tag} holds {}",
                     msg.id()
                 );
+            }
+        }
+    }
+
+    /// A catalog that does not parse whole panics on the first lookup of its
+    /// part, so each one is parsed here and its errors named.
+    #[test]
+    fn every_catalog_parses_without_an_error() {
+        for part in languages("") {
+            for tag in languages(&part) {
+                let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("locales")
+                    .join(&part)
+                    .join(&tag)
+                    .join(format!("{part}.ftl"));
+                let text = std::fs::read_to_string(&path).expect("a catalog");
+                if let Err((_, errors)) = FluentResource::try_new(text) {
+                    panic!("{} does not parse: {errors:?}", path.display());
+                }
             }
         }
     }

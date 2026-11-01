@@ -422,7 +422,6 @@ tag-set = Tag set
 tag-set-line = { $key } is on { $object }.
 tag-removed = Tag removed
 tag-removed-line = { $key } is gone from { $object }.
-}
 composition-not-committed = Not committed
 
 kind-person = Person
