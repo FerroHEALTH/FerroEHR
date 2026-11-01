@@ -53,5 +53,30 @@ pub mod testsupport;
 /// emitted (see `analyze::Model::assert_constructible`).
 #[must_use]
 pub fn run() -> std::process::ExitCode {
-    cli::run()
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let cmd = args.first().map_or("check", String::as_str);
+    let result = match cmd {
+        "check" => cli::cmd_check(),
+        "emit" => cli::cmd_emit(args.get(1).map(std::path::PathBuf::from)),
+        "check-xsd" => cli::cmd_check_xsd(),
+        "emit-xml" => cli::cmd_emit_xml(),
+        "emit-json" => cli::cmd_emit_json(),
+        "emit-rest" => cli::cmd_emit_rest(),
+        "emit-opt" => cli::cmd_emit_opt(),
+        "emit-aom2" => cli::cmd_emit_aom2(),
+        "emit-rm-model" => cli::cmd_emit_rm_model(),
+        "emit-validate" => cli::cmd_emit_validate(),
+        "model-query" => cli::cmd_model_query(args.get(1..).unwrap_or_default()),
+        other => {
+            eprintln!(
+                "unknown command {other:?}; use `check`, `emit [OUTDIR]`, `check-xsd`, `emit-xml`, `emit-json`, `emit-rest`, `emit-opt`, `emit-aom2`, `emit-rm-model`, `emit-validate`, or `model-query`"
+            );
+            return std::process::ExitCode::from(cli::EXIT_USAGE);
+        }
+    };
+    if let Err(e) = result {
+        eprintln!("error: {e}");
+        return std::process::ExitCode::FAILURE;
+    }
+    std::process::ExitCode::SUCCESS
 }

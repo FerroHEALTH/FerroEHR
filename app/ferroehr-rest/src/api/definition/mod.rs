@@ -25,6 +25,7 @@
 //! `DefinitionQueryService` + the wire-shaped `DefinitionAdapter` extension).
 
 pub(crate) mod archetype;
+pub(crate) mod conversion;
 pub(crate) mod dispatch;
 pub(crate) mod openapi_routes;
 mod stored_query;

@@ -217,7 +217,7 @@ fn expected_tsv(rows: &[[&str; 14]]) -> String {
 /// model states — and `Option<T>` for the optional single one).
 #[test]
 fn folder_rows_match_the_vendored_bmm() {
-    let report = testsupport::model_query(Some("rm"), Some("FOLDER"), None, "tsv")
+    let report = testsupport::model_query(Some("rm"), Some("FOLDER"), None, "tsv", false)
         .expect("the RM composition loads");
     assert_eq!(report, expected_tsv(&FOLDER));
 }
@@ -226,7 +226,7 @@ fn folder_rows_match_the_vendored_bmm() {
 /// class shape that abstractness produces.
 #[test]
 fn locatable_rows_match_the_vendored_bmm() {
-    let report = testsupport::model_query(Some("rm"), Some("LOCATABLE"), None, "tsv")
+    let report = testsupport::model_query(Some("rm"), Some("LOCATABLE"), None, "tsv", false)
         .expect("the RM composition loads");
     assert_eq!(report, expected_tsv(&LOCATABLE));
 }
@@ -234,7 +234,7 @@ fn locatable_rows_match_the_vendored_bmm() {
 /// An `--attribute` filter narrows to that one attribute of the class.
 #[test]
 fn an_attribute_filter_selects_one_row() {
-    let report = testsupport::model_query(Some("rm"), Some("FOLDER"), Some("items"), "tsv")
+    let report = testsupport::model_query(Some("rm"), Some("FOLDER"), Some("items"), "tsv", false)
         .expect("the RM composition loads");
     let items = FOLDER
         .iter()
@@ -249,10 +249,10 @@ fn an_attribute_filter_selects_one_row() {
 #[test]
 fn the_report_is_deterministic() {
     for format in ["table", "tsv", "json"] {
-        let first =
-            testsupport::model_query(None, None, None, format).expect("every composition loads");
-        let second =
-            testsupport::model_query(None, None, None, format).expect("every composition loads");
+        let first = testsupport::model_query(None, None, None, format, false)
+            .expect("every composition loads");
+        let second = testsupport::model_query(None, None, None, format, false)
+            .expect("every composition loads");
         assert_eq!(first, second, "{format}: two runs differ");
     }
 }
@@ -262,7 +262,7 @@ fn the_report_is_deterministic() {
 #[test]
 fn the_report_covers_every_component() {
     let report =
-        testsupport::model_query(None, None, None, "tsv").expect("every composition loads");
+        testsupport::model_query(None, None, None, "tsv", false).expect("every composition loads");
     let rows: Vec<&str> = report.lines().skip(1).collect();
     assert!(rows.len() > 1000, "only {} attribute rows", rows.len());
     for key in testsupport::crate_keys() {
@@ -276,7 +276,7 @@ fn the_report_covers_every_component() {
 /// Every filter rejects an unknown value loudly, naming the valid ones.
 #[test]
 fn unknown_filter_values_are_rejected_with_the_valid_ones() {
-    let component = testsupport::model_query(Some("ehr"), None, None, "tsv")
+    let component = testsupport::model_query(Some("ehr"), None, None, "tsv", false)
         .expect_err("`ehr` is not a composition key")
         .to_string();
     assert!(component.contains("unknown component"), "{component}");
@@ -285,19 +285,20 @@ fn unknown_filter_values_are_rejected_with_the_valid_ones() {
         "{component}"
     );
 
-    let class = testsupport::model_query(Some("rm"), Some("Folder"), None, "tsv")
+    let class = testsupport::model_query(Some("rm"), Some("Folder"), None, "tsv", false)
         .expect_err("class names are the BMM's own spelling")
         .to_string();
     assert!(class.contains("unknown class"), "{class}");
     assert!(class.contains("FOLDER"), "{class}");
 
-    let attribute = testsupport::model_query(Some("rm"), Some("FOLDER"), Some("nope"), "tsv")
-        .expect_err("`nope` is not a FOLDER attribute")
-        .to_string();
+    let attribute =
+        testsupport::model_query(Some("rm"), Some("FOLDER"), Some("nope"), "tsv", false)
+            .expect_err("`nope` is not a FOLDER attribute")
+            .to_string();
     assert!(attribute.contains("unknown attribute"), "{attribute}");
     assert!(attribute.contains("details, folders, items"), "{attribute}");
 
-    let format = testsupport::model_query(None, None, None, "yaml")
+    let format = testsupport::model_query(None, None, None, "yaml", false)
         .expect_err("`yaml` is not a report format")
         .to_string();
     assert!(format.contains("table, tsv, json"), "{format}");
@@ -314,9 +315,9 @@ fn unknown_filter_values_are_rejected_with_the_valid_ones() {
 /// `LOCATABLE` as the declaring class.
 #[test]
 fn the_flattened_view_reports_inherited_attributes_per_carrier() {
-    let declared = testsupport::model_query_view(Some("rm"), None, Some("links"), "tsv", false)
+    let declared = testsupport::model_query(Some("rm"), None, Some("links"), "tsv", false)
         .expect("the rm composition loads");
-    let flattened = testsupport::model_query_view(Some("rm"), None, Some("links"), "tsv", true)
+    let flattened = testsupport::model_query(Some("rm"), None, Some("links"), "tsv", true)
         .expect("the rm composition loads");
     let rows = |report: &str| report.lines().skip(1).count();
     assert_eq!(
@@ -345,7 +346,7 @@ fn the_flattened_view_reports_inherited_attributes_per_carrier() {
 /// so a future emitter change that breaks the uniformity is caught here.
 #[test]
 fn a_uniformly_inherited_container_emits_one_shape_for_every_carrier() {
-    let report = testsupport::model_query_view(Some("rm"), None, Some("links"), "tsv", true)
+    let report = testsupport::model_query(Some("rm"), None, Some("links"), "tsv", true)
         .expect("the rm composition loads");
     let shapes: std::collections::BTreeSet<&str> = report
         .lines()

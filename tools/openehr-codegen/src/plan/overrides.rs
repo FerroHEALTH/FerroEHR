@@ -979,26 +979,16 @@ pub(crate) const SPEC_CONTRADICTIONS: &[SpecContradiction] = &[SpecContradiction
     reason: "Reported upstream as a spec defect (tracker issue #3770); a leaf package or schema without `packages` reads as the empty map, which is omitted on write.",
 }];
 
-/// Whether `(owner, field)` carries an adjudicated contradiction of `kind`.
-fn contradicted(owner: &str, field: &str, kind: ContradictionKind) -> bool {
+/// Whether `(owner, field)` carries an adjudicated contradiction of `kind`: a
+/// vendored cardinality lower bound the emitter must NOT realize as a non-empty
+/// container ([`ContradictionKind::LowerBound`]), or a vendored `1..1` existence
+/// whose mandatory `Hash` field reads an absent key as the empty map and omits
+/// the empty map on write ([`ContradictionKind::Existence`]).
+#[must_use]
+pub(crate) fn contradicted(owner: &str, field: &str, kind: ContradictionKind) -> bool {
     SPEC_CONTRADICTIONS
         .iter()
         .any(|c| c.owner == owner && c.field == field && c.kind == kind)
-}
-
-/// Whether `(owner, field)`'s vendored cardinality lower bound is an adjudicated
-/// contradiction that the emitter must NOT realize as a non-empty container.
-#[must_use]
-pub(crate) fn cardinality_contradicted(owner: &str, field: &str) -> bool {
-    contradicted(owner, field, ContradictionKind::LowerBound)
-}
-
-/// Whether `(owner, field)`'s vendored `1..1` existence is an adjudicated
-/// contradiction: the mandatory `Hash` field reads an absent key as the empty
-/// map and omits the empty map on write.
-#[must_use]
-pub(crate) fn existence_contradicted(owner: &str, field: &str) -> bool {
-    contradicted(owner, field, ContradictionKind::Existence)
 }
 
 /// The default expression for a resolved property, or `None`.

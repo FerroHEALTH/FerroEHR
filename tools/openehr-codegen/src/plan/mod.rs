@@ -23,7 +23,7 @@ pub(crate) mod rest_tagged;
 use crate::analyze::Model;
 use crate::load::bmm::{BmmClass, BmmEnumeration, BmmPropKind, BmmSchema, BmmType};
 use crate::plan::overrides::{
-    back_reference, cardinality_contradicted, existence_contradicted, field_default, primitive,
+    ContradictionKind, back_reference, contradicted, field_default, primitive,
 };
 use crate::render::naming;
 use std::collections::BTreeSet;
@@ -228,7 +228,7 @@ pub(crate) enum JsonFieldKind {
     Optional,
     /// `Vec<T>` (a mandatory container), or the `BTreeMap` of a mandatory
     /// `Hash` under an adjudicated existence contradiction
-    /// ([`crate::plan::overrides::existence_contradicted`]) — read as empty when
+    /// ([`crate::plan::overrides::contradicted`]) — read as empty when
     /// absent, omitted when empty.
     Container,
     /// `NonEmptyVec<T>` (a mandatory `1..*` container) — always present, and
@@ -327,14 +327,16 @@ impl Model {
                 let lower_bound_one = matches!(&p.kind,
                     BmmPropKind::Container { cardinality, .. }
                         if cardinality.as_ref().is_some_and(|c| c.lower >= 1))
-                    && !cardinality_contradicted(&rp.owner, &p.name);
+                    && !contradicted(&rp.owner, &p.name, ContradictionKind::LowerBound);
                 let kind = if multiple {
                     match (p.is_mandatory, lower_bound_one) {
                         (true, true) => JsonFieldKind::NonEmptyContainer,
                         (true, false) => JsonFieldKind::Container,
                         (false, _) => JsonFieldKind::OptionalContainer,
                     }
-                } else if p.is_mandatory && existence_contradicted(&rp.owner, &p.name) {
+                } else if p.is_mandatory
+                    && contradicted(&rp.owner, &p.name, ContradictionKind::Existence)
+                {
                     // A `1..1` `Hash` whose existence the syntax chapter
                     // contradicts takes the mandatory-container door: absent
                     // reads as empty, empty is omitted on write.
@@ -506,7 +508,7 @@ impl Model {
                             && matches!(&p.kind,
                                 BmmPropKind::Container { cardinality, .. }
                                     if cardinality.as_ref().is_some_and(|c| c.lower >= 1))
-                            && !cardinality_contradicted(&rp.owner, &p.name))
+                            && !contradicted(&rp.owner, &p.name, ContradictionKind::LowerBound))
                             // An OPTIONAL container carrying a
                             // present-implies-non-empty invariant emits
                             // `Option<NonEmptyVec<T>>`, so its reader

@@ -49,22 +49,14 @@ pub struct SyslogTlsListener {
 }
 
 impl SyslogTlsListener {
-    /// Binds a listener on a free port and starts accepting connections.
+    /// Binds a listener on a free port and starts accepting connections. It
+    /// drops its first `refused` connections before any TLS handshake, as a
+    /// repository that is going down does, and accepts every one after them.
     ///
     /// # Errors
     /// [`ListenerError`] when the PKI is unusable, the port cannot be bound or
     /// the CA file cannot be written.
-    pub async fn bind() -> Result<Self, ListenerError> {
-        Self::bind_refusing(0).await
-    }
-
-    /// Binds a listener that drops its first `refused` connections before any
-    /// TLS handshake, as a repository that is going down does, and accepts
-    /// every one after them.
-    ///
-    /// # Errors
-    /// [`ListenerError`] as [`Self::bind`].
-    pub async fn bind_refusing(refused: usize) -> Result<Self, ListenerError> {
+    pub async fn bind(refused: usize) -> Result<Self, ListenerError> {
         let pki = Pki::mint()?;
         let acceptor = TlsAcceptor::from(pki.server_config()?);
         let listener = TcpListener::bind(("127.0.0.1", 0)).await?;

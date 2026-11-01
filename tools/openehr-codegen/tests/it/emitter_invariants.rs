@@ -253,7 +253,7 @@ fn mirroring_reemitted_classes_land_at_source_package_path() {
 /// into the AM 2.4 output.
 #[test]
 fn downstream_closure_contains_the_beom_bmm3_resource_set() {
-    let closure = testsupport::v2_4_reemit_closure().unwrap();
+    let closure = testsupport::reemit_closure("am", "v2_4").unwrap();
     // beom expression/statement subtree (LANG-origin, extended by AM's rules):
     for expected in [
         "EXPRESSION",

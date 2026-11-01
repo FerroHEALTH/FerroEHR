@@ -116,9 +116,9 @@ containers take. Where no such rule exists (`FOLDER.items`/`folders`,
 non-empty rule), both states are real and the type must carry both.
 
 The `1..*` cardinality source is the BMM, minus the `LowerBound` entries of
-`plan/overrides.rs` `SPEC_CONTRADICTIONS` (`cardinality_contradicted`) — an
+`plan/overrides.rs` `SPEC_CONTRADICTIONS` (`contradicted`, `ContradictionKind::LowerBound`) — an
 attribute whose bound the release's own syntax chapter contradicts. The map's
-`Existence` entries (`existence_contradicted`) do the same for a mandatory
+`Existence` entries (`contradicted`, `ContradictionKind::Existence`) do the same for a mandatory
 `Hash`: it stays a `BTreeMap`, absent reads as empty, and empty is omitted on
 write (`P_BMM_PACKAGE_CONTAINER.packages`).
 

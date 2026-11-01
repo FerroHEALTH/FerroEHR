@@ -271,6 +271,47 @@ Properties worth knowing before you build on these:
   read-only role is refused **403** before the store is touched. Uploads that do
   not parse or fail the phase-1 validity catalogue are **422**.
 
+### Converting ADL 1.4 to ADL 2 (a FerroEHR extension)
+
+Two read-only routes, also under the extensions root, convert what you
+stored in ADL 1.4 to ADL 2:
+
+| Route | What it converts |
+|---|---|
+| `GET /definition/archetype/adl1.4/{archetype_id}/adl2` | A stored ADL 1.4 archetype |
+| `GET /definition/template/adl1.4/{template_id}/adl2` | A stored ADL 1.4 operational template, one ADL 2 archetype per archetype root it embeds |
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "$FERROEHR/ferroehr/rest/extensions/v1/definition/template/adl1.4/vital_signs.v1/adl2"
+```
+
+The answer is `application/json`:
+
+- `roots`: one entry per converted archetype. For a template, the top root
+  comes first and the embedded roots follow in document order. Each entry
+  carries:
+  - `archetype_id`;
+  - the ADL 2 source in `adl2`;
+  - the conversion `log`: the at-codes minted for external terms, the
+    value-set codes and the notes;
+  - `conversion_details`: everything the conversion dropped or changed, such
+    as a term binding outside the root's codes or an occurrences cap.
+- `structure`: the slot fills that joined the roots in the template. An ADL
+  1.4 template embeds each archetype, and the converted roots replace the
+  embedded child with a slot, so this list keeps which archetype filled
+  which slot. It is empty for an archetype.
+
+An id nothing is stored under answers **404**. A stored source that no
+longer converts answers **422**, the status an archetype upload answers
+for a source it cannot accept. The routes only read, so the read-only role
+may call them.
+
+**No openEHR specification defines a conversion.** The ADL 2 specification
+says ADL 1.4 archetypes must be convertible, but no released text sets the
+algorithm or a route for it. Both routes and the conversion are FerroEHR's own
+design, and they are excluded from openEHR wire conformance.
+
 ## The WebTemplate
 
 The **WebTemplate** is a JSON description of a template that is far easier for
