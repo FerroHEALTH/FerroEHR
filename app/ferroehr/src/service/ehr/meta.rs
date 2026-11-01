@@ -4,7 +4,7 @@
 //! Shared version-metadata helpers: the glue every versioned kind
 //! (`EHR_STATUS`, COMPOSITION, DIRECTORY) needs to turn a loaded
 //! [`VersionRead`] into a wire [`ServiceResponse`] and its [`ResourceMeta`],
-//! plus the default commit-audit builder.
+//! plus the commit-audit builder of a direct write.
 //!
 //! The `OBJECT_VERSION_ID` law is RM common
 //! `master06-change_control_package.adoc` §Version Identification and BASE
@@ -22,7 +22,6 @@
 
 use crate::ids::{EhrId, VoId};
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use openehr_rm::prelude::{DvIdentifier, PartyIdentified, PartyIdentifiedData, PartyProxy};
 use serde_json::Value;
 
 use crate::service::FerroEhrService;
@@ -37,7 +36,7 @@ use crate::versioning::read::VersionRead;
 /// name, so the product identifies itself.
 ///
 /// NOTE: no openEHR spec governs the value — our own design/extension (see
-/// [`committer`]).
+/// [`crate::service::committer::default_committer`]).
 pub(in crate::service) const LOCAL_ISSUER: &str = "ferroehr";
 
 impl FerroEhrService {
@@ -258,50 +257,10 @@ impl FerroEhrService {
             system_id: self.effective_system_id(),
             change_type: change_type.to_owned(),
             description: Some(crate::versioning::audit::dv_text(description)),
-            committer: committer(),
+            committer: crate::service::committer::request_committer(),
             attestation: None,
         }
     }
-}
-
-/// The committer `PARTY_PROXY` for an audit, from the authenticated committer
-/// of the current request (published by the protocol adapter into the
-/// [`crate::service::committer`] context). A write with no authenticated
-/// principal (auth disabled, or an internal/system write) is attributed to the
-/// system identity (RM common master04 `AUDIT_DETAILS.committer` 1..1).
-pub(in crate::service) fn committer() -> PartyProxy {
-    let party = match crate::service::committer::current_committer() {
-        Some(identity) if identity.person => {
-            return crate::service::committer::person_committer(identity);
-        }
-        Some(identity) => PartyIdentifiedData {
-            external_ref: None,
-            name: Some(identity.subject.clone()),
-            identifiers: Some(openehr_base::containers::NonEmptyVec::of(DvIdentifier {
-                // DV_IDENTIFIER.issuer is the "authority which issues the kind
-                // of id used in the id field of this object" (RM data_types
-                // UML/classes/org.openehr.rm.data_types.dv_identifier.adoc
-                // §Attributes). For a federated principal that authority is the
-                // token issuer, not this server, so the identity carries it
-                // through; a locally-held credential (Basic) has no other
-                // authority and takes this deployment's product name.
-                //
-                // NOTE: no openEHR spec governs which string names the issuing
-                // authority — our own design (RM common master04 §Audit Details
-                // says only "in the form of a system login identifier").
-                issuer: Some(identity.issuer.unwrap_or_else(|| LOCAL_ISSUER.to_owned())),
-                assigner: None,
-                id: identity.subject,
-                r#type: Some(identity.id_type.to_owned()),
-            })),
-        },
-        None => PartyIdentifiedData {
-            external_ref: None,
-            name: Some(crate::service::SYSTEM_COMMITTER_NAME.to_owned()),
-            identifiers: None,
-        },
-    };
-    PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party))
 }
 
 // ── ITS-REST version-metadata adapter (adapter-support extension) ─────────────
