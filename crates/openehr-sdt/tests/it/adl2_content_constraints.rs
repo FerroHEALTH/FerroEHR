@@ -37,6 +37,7 @@ use openehr_sdt::flat::convert::{
     composition_from_flat, composition_from_structured, composition_to_flat,
     composition_to_structured,
 };
+use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::validation::validate_archetype_conformance;
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
@@ -69,9 +70,8 @@ fn workflows(doc: &Value) -> &[Value] {
         .as_slice()
 }
 
-/// Every setup template, built into its Web Template and keyed by the upload
-/// workflow a case names in `dependsOn`.
-fn templates() -> BTreeMap<String, WebTemplate> {
+/// The ADL 2 source of every setup template, keyed by its upload workflow.
+fn sources() -> BTreeMap<String, String> {
     let setup = yaml(&corpus().join("_setup/content_templates_adl2.arazzo.yaml"));
     workflows(&setup)
         .iter()
@@ -79,21 +79,36 @@ fn templates() -> BTreeMap<String, WebTemplate> {
             let id = wf
                 .pointer("/workflowId")
                 .and_then(Value::as_str)
-                .expect("workflowId")
-                .to_owned();
+                .expect("workflowId");
             let source = wf
                 .pointer("/steps/0/requestBody/payload")
                 .and_then(Value::as_str)
                 .expect("ADL 2 payload");
-            let archetype = parse_artefact(source, Dialect::Adl2)
-                .unwrap_or_else(|e| panic!("parse {id}: {e:?}"));
-            let Archetype::AuthoredArchetype(authored) = archetype else {
-                panic!("{id} is not an authored archetype");
-            };
-            let AuthoredArchetype::OperationalTemplate(opt) = *authored else {
-                panic!("{id} is not an operational template");
-            };
-            let wt = build_web_template_v2_4(&opt).unwrap_or_else(|e| panic!("build {id}: {e}"));
+            (id.to_owned(), source.to_owned())
+        })
+        .collect()
+}
+
+/// The Web Template of the operational template `source`, named `id`.
+fn web_template(id: &str, source: &str) -> WebTemplate {
+    let archetype =
+        parse_artefact(source, Dialect::Adl2).unwrap_or_else(|e| panic!("parse {id}: {e:?}"));
+    let Archetype::AuthoredArchetype(authored) = archetype else {
+        panic!("{id} is not an authored archetype");
+    };
+    let AuthoredArchetype::OperationalTemplate(opt) = *authored else {
+        panic!("{id} is not an operational template");
+    };
+    build_web_template_v2_4(&opt).unwrap_or_else(|e| panic!("build {id}: {e}"))
+}
+
+/// Every setup template, built into its Web Template and keyed by the upload
+/// workflow a case names in `dependsOn`.
+fn templates() -> BTreeMap<String, WebTemplate> {
+    sources()
+        .into_iter()
+        .map(|(id, source)| {
+            let wt = web_template(&id, &source);
             (id, wt)
         })
         .collect()
@@ -313,6 +328,82 @@ fn count_case_with(edit: impl FnOnce(&mut Value)) -> (Value, WebTemplate) {
     (body, wt)
 }
 
+/// A `C_INTEGER` or `C_REAL` constraint made of several non-point intervals is
+/// a union of ranges and admits a value inside any one of them (AOM2
+/// `master04.5` §"Conformance semantics: C_ORDERED"; AM
+/// `org.openehr.am.aom2.c_integer.adoc` §`constraint`): the template pass
+/// admits a value inside one range and refuses one between the ranges or
+/// outside them all.
+#[test]
+fn a_union_of_ranges_admits_a_value_inside_one_of_them() {
+    let sources = sources();
+    let cases = cases();
+    let rows = [
+        (
+            "adl2-dv_count-validate_range-accepted",
+            (
+                "magnitude matches {|10..20|}",
+                "magnitude matches {|0..5|, |10..15|}",
+            ),
+            "magnitude",
+            [
+                (Value::from(3), true),
+                (Value::from(12), true),
+                (Value::from(7), false),
+                (Value::from(20), false),
+                (Value::from(-1), false),
+            ],
+        ),
+        (
+            "adl2-dv_proportion-validate_ratio_range-accepted",
+            (
+                "numerator matches {|5.0..20.0|}",
+                "numerator matches {|5.0..10.0|, |15.0..20.0|}",
+            ),
+            "numerator",
+            [
+                (Value::from(7.5), true),
+                (Value::from(17.5), true),
+                (Value::from(12.5), false),
+                (Value::from(25.0), false),
+                (Value::from(1.0), false),
+            ],
+        ),
+    ];
+    for (workflow, (from, to), datum, values) in rows {
+        let case = cases
+            .iter()
+            .find(|c| c.workflow == workflow)
+            .expect(workflow);
+        let source = sources.get(&case.template).expect("the case's template");
+        assert_eq!(source.matches(from).count(), 1, "{workflow}: {from}");
+        let wt = web_template(&case.template, &source.replace(from, to));
+        for (value, admitted) in values {
+            let mut body = case.body.clone();
+            let field = body
+                .pointer_mut(&format!(
+                    "/content/0/data/events/0/data/items/0/value/{datum}"
+                ))
+                .expect("the ELEMENT's datum");
+            field.clone_from(&value);
+            let findings = validate_archetype_conformance(&body, &wt);
+            assert_eq!(
+                findings.is_empty(),
+                admitted,
+                "{workflow}: {datum} {value} against {to}: {findings:?}"
+            );
+            if !admitted {
+                assert!(
+                    findings
+                        .iter()
+                        .all(|f| f.kind == ValidationKind::RangeError),
+                    "{workflow}: {datum} {value}: {findings:?}"
+                );
+            }
+        }
+    }
+}
+
 /// An archetype root the template did not inline is refused: an OPT2 inlines
 /// every slot filler (AM OPT2 `master03-opt_raw.adoc` §Flattening), so a
 /// version of the archetype other than the one the template names is a node
@@ -482,26 +573,28 @@ fn the_simplified_read_keeps_the_content_below_a_full_archetype_reference() {
     );
 }
 
-/// The admitted catalogue cases whose ELEMENT holds a `DV_INTERVAL` the
-/// template constrains the parts of.
+/// The admitted catalogue cases whose ELEMENT holds a `DV_INTERVAL`: 8 whose
+/// template constrains the interval's parts and 9 (`validate_open`) whose
+/// template leaves them open.
 fn interval_cases() -> Vec<Case> {
     let rows: Vec<Case> = cases()
         .into_iter()
         .filter(|c| c.status == StatusCode::CREATED && c.workflow.starts_with("adl2-dv_interval_"))
-        .filter(|c| !c.workflow.contains("-validate_open-"))
         .collect();
-    assert_eq!(
-        rows.len(),
-        8,
-        "the catalogue's 8 admitted constrained interval cases"
-    );
+    assert_eq!(rows.len(), 17, "the catalogue's 17 admitted interval cases");
+    let open = rows
+        .iter()
+        .filter(|c| c.workflow.contains("-validate_open-"))
+        .count();
+    assert_eq!(open, 9, "the catalogue's 9 admitted open interval cases");
     rows
 }
 
-/// Every admitted `DV_INTERVAL` case [`interval_cases`] names reads back in FLAT and STRUCTURED with
-/// its value: the composition built back from either form holds the ELEMENT
-/// unchanged. The FLAT format reaches the interval's parts as `/lower` and
-/// `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
+/// Every admitted `DV_INTERVAL` case [`interval_cases`] names reads back in
+/// FLAT and STRUCTURED with its value, whether or not its template constrains
+/// the interval's parts: the composition built back from either form holds the
+/// ELEMENT unchanged. The FLAT format reaches the interval's parts as `/lower`
+/// and `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
 /// §DV_INTERVAL).
 #[test]
 fn every_interval_case_reads_back_with_its_value() {
@@ -542,9 +635,8 @@ fn every_interval_case_reads_back_with_its_value() {
     }
 }
 
-/// The `DV_INTERVAL` node of `wt` and its parts, each as its id, RM type and
-/// path below the ELEMENT that holds the interval as its `value`.
-fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
+/// The first `DV_INTERVAL` node of `wt`.
+fn interval_node(wt: &WebTemplate) -> &WebTemplateNode {
     fn find(node: &WebTemplateNode) -> Option<&WebTemplateNode> {
         node.children.iter().find_map(|child| {
             if child.rm_type.starts_with("DV_INTERVAL") {
@@ -554,7 +646,13 @@ fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
             }
         })
     }
-    let interval = find(&wt.tree).expect("an interval node");
+    find(&wt.tree).expect("an interval node")
+}
+
+/// The `DV_INTERVAL` node of `wt` and its parts, each as its id, RM type and
+/// path below the ELEMENT that holds the interval as its `value`.
+fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
+    let interval = interval_node(wt);
     let element = interval
         .aql_path
         .strip_suffix("/value")
@@ -605,4 +703,54 @@ fn the_interval_aql_paths_match_the_adl14_web_template() {
             "{workflow}"
         );
     }
+}
+
+/// An ADL 1.4 template that leaves a `DV_INTERVAL<DV_COUNT>`'s parts open gives
+/// the interval node its `lower` and `upper`, each an open `DV_COUNT` (RM
+/// `data_types` §DV_INTERVAL), and a composition holding such an interval reads
+/// back in FLAT and STRUCTURED with its value (ITS-REST
+/// `simplified_formats/master05-rm_mapping.adoc` §DV_INTERVAL).
+#[test]
+fn an_open_adl14_interval_reads_back_with_its_value() {
+    let path = corpus().join("../../templates/interval_count_open.opt");
+    let xml = std::fs::read_to_string(&path).expect("the ADL 1.4 template");
+    let opt = openehr_its::opt14::from_xml(&xml).expect("the ADL 1.4 OPT parses");
+    let wt = build_web_template(&opt).expect("the ADL 1.4 Web Template");
+    assert_eq!(
+        interval_paths(&wt),
+        [
+            ("value", "DV_INTERVAL<DV_COUNT>", "/value"),
+            ("lower", "DV_COUNT", "/value/lower"),
+            ("upper", "DV_COUNT", "/value/upper"),
+        ]
+        .map(|(id, rm, p)| (id.to_owned(), rm.to_owned(), p.to_owned()))
+    );
+    let built = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    let stored = elements(&built);
+    let [(_, value)] = stored.values().collect::<Vec<_>>()[..] else {
+        panic!("one interval ELEMENT in {stored:?}");
+    };
+    for part in ["lower", "upper"] {
+        assert_eq!(
+            value.pointer(&format!("/{part}/_type")),
+            Some(&Value::from("DV_COUNT")),
+            "the interval's {part} in {value}"
+        );
+    }
+    let now = "2026-01-01T10:00:00Z";
+    let read = composition_to_flat(&built, &wt).expect("FLAT read");
+    let structured = composition_to_structured(&built, &wt).expect("STRUCTURED read");
+    let from_flat = composition_from_flat(&read, &wt, now).expect("FLAT build back");
+    let from_structured =
+        composition_from_structured(&structured, &wt, now).expect("STRUCTURED build back");
+    assert_eq!(
+        elements(&from_flat),
+        stored,
+        "the FLAT read loses the interval"
+    );
+    assert_eq!(
+        elements(&from_structured),
+        stored,
+        "the STRUCTURED read loses the interval"
+    );
 }

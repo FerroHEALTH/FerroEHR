@@ -156,19 +156,10 @@ impl FerroEhrService {
                         // EHR_ACCESS keeps the default `532|complete|`.
                         lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
                         attestations: Vec::new(),
+                        other_input_version_uids: Vec::new(),
                     },
                 ),
-                (
-                    audit.clone(),
-                    Change::Create {
-                        kind: Kind::EhrAccess,
-                        canonical: super::access::initial_ehr_access(),
-                        template_id: None,
-                        signature: None,
-                        lifecycle_state: None,
-                        attestations: Vec::new(),
-                    },
-                ),
+                (audit.clone(), super::access::initial_ehr_access_change()),
             ],
             Vec::new(),
             &self.signing_ctx(),

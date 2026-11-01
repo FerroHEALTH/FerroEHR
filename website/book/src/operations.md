@@ -1304,7 +1304,9 @@ surface an operator or a user reads:
 
 `ferroehr report` writes one JSON file naming what a deployment runs: the
 version, commit and build date, the enabled features, the specification pins
-and `openehr-*` crate versions, the schema migration level, the deployment
+and `openehr-*` crate versions (the published ones in a release build, the
+source tree's in any other, as `openehr_crates_origin` says), the schema
+migration level, the deployment
 posture, the licence summary, the manufacturer and the effective
 configuration with every secret redacted. Attach it to a complaint or a
 serious-incident report; see

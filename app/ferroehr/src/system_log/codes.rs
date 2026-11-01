@@ -271,10 +271,15 @@ impl AtnaObject for ObjectClass {
 
     /// Whether this class carries an object-URI participant (in addition to the
     /// patient one, for the patient-centric classes) when an object id is known.
+    ///
+    /// An EHR-class record names its object when it has one, as the FHIR
+    /// `AuditEvent` of the same record does: the held composition of an EHDS
+    /// Art. 3(3) access delay (`access-delay:<vo>`), or the EHR a read served.
     fn has_object_uri(&self) -> bool {
         matches!(
             self,
-            ObjectClass::Composition
+            ObjectClass::Ehr
+                | ObjectClass::Composition
                 | ObjectClass::Contribution
                 | ObjectClass::Directory
                 | ObjectClass::Template

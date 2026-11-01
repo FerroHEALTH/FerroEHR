@@ -3,6 +3,7 @@
 
 //! The AOM2 `C_INTEGER`/`C_REAL` interval readings the `v2_4` Web Template
 //! front end ([`super::builder_v2_4`]) turns into input ranges and value lists,
+//! and the `defaultValue` an assumed value gives when its intervals admit it,
 //! and the occurrences, existence and cardinality intervals it turns into a
 //! node's `min` and `max`.
 //!
@@ -16,8 +17,11 @@
               Formats), so serde_json::Value is the subject matter (#1694)"
 )]
 
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_integer::CInteger;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_real::CReal;
 use openehr_base::prelude::{Interval, MultiplicityInterval, ProperInterval};
 
+use super::inputs::default_string;
 use super::model::WebTemplateRange;
 
 fn json_f64(v: f64) -> serde_json::Value {
@@ -46,6 +50,25 @@ pub(super) fn point_list<T: Clone>(constraint: Option<&Vec<Interval<T>>>) -> Opt
             Interval::ProperInterval(_) => None,
         })
         .collect()
+}
+
+/// The ranges of a constraint made of two or more intervals that are not all
+/// points, a union of ranges admitting a value inside any one of them (AOM2
+/// `master04.5-constraint_model-class_definitions.adoc` §"Conformance
+/// semantics: C_ORDERED"); `None` for any other constraint, and when one of
+/// the intervals is unbounded at both ends, which admits every value.
+pub(super) fn range_union<T>(
+    constraint: Option<&Vec<Interval<T>>>,
+    range: fn(&Interval<T>) -> Option<WebTemplateRange>,
+) -> Option<Vec<WebTemplateRange>> {
+    let ivs = constraint.filter(|ivs| ivs.len() > 1)?;
+    if ivs
+        .iter()
+        .all(|iv| matches!(iv, Interval::PointInterval(_)))
+    {
+        return None;
+    }
+    ivs.iter().map(range).collect()
 }
 
 /// A `WebTemplateRange` from a `C_REAL` interval (bounds + inclusivity ops).
@@ -141,4 +164,122 @@ pub(super) fn occ(iv: &MultiplicityInterval) -> (Option<i32>, i32) {
         iv.upper.unwrap_or_else(|| iv.lower.unwrap_or(0))
     };
     (min, max)
+}
+
+/// Whether an AOM2 interval-list constraint admits `value`: an absent or empty
+/// list is no constraint, else any member interval must `has` it
+/// (AM `UML/classes/org.openehr.am.aom2.c_integer.adoc` §`constraint`).
+pub(super) fn admits<T: PartialOrd>(constraint: Option<&Vec<Interval<T>>>, value: &T) -> bool {
+    constraint.is_none_or(|intervals| {
+        intervals.is_empty() || intervals.iter().any(|interval| interval.has(value))
+    })
+}
+
+/// The `defaultValue` of a `C_INTEGER`: its assumed value when integral and
+/// admitted (the generated AOM2 model carries `assumed_value` as a Real).
+pub(super) fn integer_default(ci: &CInteger) -> Option<serde_json::Value> {
+    let rendered = ci.assumed_value?.to_string();
+    let value = rendered.parse::<i32>().ok()?;
+    admits(ci.constraint.as_ref(), &value).then(|| default_string(&value))
+}
+
+/// The `defaultValue` of a `C_REAL`: its assumed value when admitted.
+pub(super) fn real_default(cr: &CReal) -> Option<serde_json::Value> {
+    cr.assumed_value
+        .filter(|v| admits(cr.constraint.as_ref(), v))
+        .map(|v| default_string(&v))
+}
+
+#[cfg(test)]
+mod default_value_tests {
+    use openehr_am::v2_4::aom2::constraint_model::primitive::c_integer::CInteger;
+    use openehr_am::v2_4::aom2::constraint_model::primitive::c_real::CReal;
+    use openehr_base::prelude::{Interval, PointInterval, ProperInterval, ProperIntervalData};
+
+    use super::{integer_default, real_default};
+
+    fn up_to<T>(lower: T, upper: T) -> Interval<T> {
+        Interval::ProperInterval(ProperInterval::ProperInterval(ProperIntervalData {
+            lower: Some(lower),
+            upper: Some(upper),
+            lower_unbounded: false,
+            upper_unbounded: false,
+            lower_included: true,
+            upper_included: true,
+        }))
+    }
+
+    fn integer(assumed: Option<f64>, constraint: Vec<Interval<i32>>) -> CInteger {
+        CInteger {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: "Integer".to_owned(),
+            occurrences: None,
+            node_id: "id9999".to_owned(),
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value: assumed,
+            is_enumerated_type_constraint: None,
+            constraint: Some(constraint),
+        }
+    }
+
+    fn real(assumed: Option<f64>, constraint: Vec<Interval<f64>>) -> CReal {
+        CReal {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: "Real".to_owned(),
+            occurrences: None,
+            node_id: "id9999".to_owned(),
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value: assumed,
+            is_enumerated_type_constraint: None,
+            constraint: Some(constraint),
+        }
+    }
+
+    fn text(v: Option<serde_json::Value>) -> Option<String> {
+        v.and_then(|v| v.as_str().map(str::to_owned))
+    }
+
+    /// AOM2 `C_PRIMITIVE_OBJECT.assumed_value` becomes `defaultValue` only when
+    /// the interval constraint admits it (AM `org.openehr.am.aom2.c_integer.adoc`).
+    #[test]
+    fn numeric_assumed_values_are_offered_when_admitted() {
+        assert_eq!(
+            text(integer_default(&integer(Some(3.0), vec![up_to(0, 10)]))),
+            Some("3".to_owned())
+        );
+        assert_eq!(
+            text(integer_default(&integer(Some(30.0), vec![up_to(0, 10)]))),
+            None
+        );
+        let points = vec![Interval::PointInterval(PointInterval {
+            lower: Some(2),
+            upper: Some(2),
+            lower_unbounded: false,
+            upper_unbounded: false,
+            lower_included: true,
+            upper_included: true,
+        })];
+        assert_eq!(
+            text(integer_default(&integer(Some(2.0), points))),
+            Some("2".to_owned())
+        );
+        assert_eq!(text(integer_default(&integer(Some(2.5), Vec::new()))), None);
+        assert_eq!(
+            text(real_default(&real(Some(0.21), vec![up_to(0.0, 1.0)]))),
+            Some("0.21".to_owned())
+        );
+        assert_eq!(
+            text(real_default(&real(Some(21.0), vec![up_to(0.0, 1.0)]))),
+            None
+        );
+        assert_eq!(text(real_default(&real(None, Vec::new()))), None);
+    }
 }

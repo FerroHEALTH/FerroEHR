@@ -39,6 +39,9 @@ set -euo pipefail
 # superset: the overlays and the configuration they are written against.
 # ci workflows (#2373): the recipe of the cargo lanes.
 # ci vex (#2370): the OpenVEX documents and the checks the deny job runs.
+# ci cache (#4546): what the rust-cache key hashes, every manifest, the
+# lockfile, the toolchain, the cargo configuration, and the recipe's env, so a
+# push that moves one writes main's cargo caches again.
 # docs: the site sources and every input of the build's own gates.
 # sonar: the scanned trees, their manifests, the scan scope and the recipe.
 # conformance (#4449): the server build (never the viewer), the party set,
@@ -54,6 +57,7 @@ ci|helm|^(deploy/helm/|\.github/workflows/ci\.yml$)
 ci|chart_boot|^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|app/ferroehr-rest/src/config\.rs$|app/ferroehr/src/report\.rs$)
 ci|workflows|^\.github/workflows/ci\.yml$
 ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)
+ci|cache|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/config\.toml$|^\.github/workflows/ci\.yml$
 docs|docs|^(website/|docs/conformance/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
 sonar|code|^(app/|crates/|tools/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|clippy\.toml$|sonar-project\.properties$|\.github/workflows/sonar\.yml$)
 conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|scripts/conformance\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
@@ -110,8 +114,9 @@ self_test() {
     done
   done <<'CASES'
 a crate source runs the cargo lanes|ci|crates/openehr-rm/src/lib.rs|code
-a nested manifest moves the msrv|ci|crates/openehr-rm/Cargo.toml|code,msrv
-the lockfile reaches the viewer and the msrv|ci|Cargo.lock|code,msrv,viewer
+a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|code,msrv,cache
+the lockfile reaches the viewer, the msrv and the cache|ci|Cargo.lock|code,msrv,viewer,cache
+the cargo configuration moves the cache|ci|.cargo/config.toml|code,cache
 the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,viewer
 any other script runs no lane|ci|scripts/watch/eu-acts.sh|
 the deploy probe runs the deploy lane|ci|scripts/deploy-probe.sh|deploy
@@ -119,7 +124,7 @@ the server Dockerfile reaches five lanes|ci|docker/Dockerfile|deploy,viewer,serv
 the viewer Dockerfile reaches its own image lane|ci|docker/viewer/Dockerfile|deploy,viewer,viewer_dockerfile
 the chart runs helm and chart boot|ci|deploy/helm/ferroehr/values.yaml|helm,chart_boot
 the configuration tree reboots the chart|ci|app/ferroehr/src/config/mod.rs|code,viewer,chart_boot
-the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,workflows
+the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,workflows,cache
 a VEX document runs the vex lane|ci|security/vex/rust.openvex.json|vex
 a book page builds the site|docs|website/book/src/index.md|docs
 a crate source does not build the site|docs|crates/openehr-rm/src/lib.rs|
@@ -144,7 +149,7 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (22 paths classified first and last in a 2000-path list; the pipe form fails on it)."
+  echo "change-lanes: self-test OK (23 paths classified first and last in a 2000-path list; the pipe form fails on it)."
 }
 
 case "${1-}" in

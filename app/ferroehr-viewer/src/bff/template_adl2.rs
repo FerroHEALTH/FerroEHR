@@ -100,28 +100,58 @@ impl Compiled {
 const VARXR: &str = "VARXR";
 
 /// The archetype ids a `422` problem names as missing constituents: each
-/// `errors` entry whose `path` is the rule code `VARXR` carries one id as
-/// its `detail`.
+/// violation whose rule is `VARXR` carries one id as its `detail`.
 ///
 /// The shape is the CDR's own refusal of a stored template it cannot compile;
 /// no openEHR spec governs it (our own design).
 #[must_use]
 pub fn missing_constituents(body: &str) -> Vec<String> {
-    let Ok(problem) = serde_json::from_str::<Problem>(body) else {
-        return Vec::new();
-    };
-    let mut ids: Vec<String> = problem
-        .errors
+    let mut ids: Vec<String> = violations(body)
         .into_iter()
-        .filter(|entry| entry.path == VARXR)
-        .map(|entry| entry.detail)
+        .filter(|violation| violation.rule == VARXR)
+        .map(|violation| violation.detail)
         .collect();
     ids.sort();
     ids.dedup();
     ids
 }
 
-/// The members of a refusal [`missing_constituents`] reads.
+/// One violation the CDR found in an ADL 2 artefact: the AOM2 rule it breaks
+/// and what the CDR says about it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Violation {
+    /// The rule code (AOM2 `master04.5` §Validity Rules), such as `VARXR`.
+    pub rule: String,
+    /// The CDR's own words for this occurrence.
+    pub detail: String,
+}
+
+/// The violations a refusal's `errors` member lists, in the CDR's order;
+/// none when the body is no problem or carries no `errors`.
+///
+/// The CDR names the rule code of an ADL 2 violation in the entry's `path`
+/// and lists the entries only to a request that prefers the representation
+/// (ITS-REST `Requests_and_responses.md` §HTTP status codes). The shape is
+/// the CDR's own; no openEHR spec governs it (our own design).
+#[must_use]
+pub fn violations(body: &str) -> Vec<Violation> {
+    // NOTE: our own design: a body that is no problem document lists no
+    // violation, and the caller draws the refusal from the status instead.
+    let Ok(problem) = serde_json::from_str::<Problem>(body) else {
+        return Vec::new();
+    };
+    problem
+        .errors
+        .into_iter()
+        .filter(|entry| !entry.path.is_empty() || !entry.detail.is_empty())
+        .map(|entry| Violation {
+            rule: entry.path,
+            detail: entry.detail,
+        })
+        .collect()
+}
+
+/// The members of a refusal [`violations`] reads.
 #[derive(Debug, serde::Deserialize)]
 struct Problem {
     /// Every violation, when the request preferred the representation.
@@ -293,7 +323,30 @@ pub async fn fetch_adl2_example(
 
 #[cfg(test)]
 mod tests {
-    use super::missing_constituents;
+    use super::{Violation, missing_constituents, violations};
+
+    #[test]
+    fn the_violations_are_the_errors_of_the_problem_in_order() {
+        let body = r#"{"type":"validation-failed","status":422,"detail":"fails","errors":[
+            {"path":"VARXR","detail":"external reference \"openEHR-EHR-OBSERVATION.a.v1\" does not resolve"},
+            {"path":"VCORMT","detail":"the occurrences do not conform (at id5)"}]}"#;
+        assert_eq!(
+            violations(body),
+            vec![
+                Violation {
+                    rule: "VARXR".to_owned(),
+                    detail: "external reference \"openEHR-EHR-OBSERVATION.a.v1\" does not resolve"
+                        .to_owned(),
+                },
+                Violation {
+                    rule: "VCORMT".to_owned(),
+                    detail: "the occurrences do not conform (at id5)".to_owned(),
+                },
+            ]
+        );
+        assert_eq!(violations(r#"{"status":422,"detail":"fails"}"#), Vec::new());
+        assert_eq!(violations("not json"), Vec::new());
+    }
 
     #[test]
     fn the_missing_constituents_are_the_varxr_entries_of_the_problem() {

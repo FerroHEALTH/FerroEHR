@@ -61,7 +61,10 @@ record says and where it is stored.
   shipped as RFC 5424 syslog over RFC 5425 TLS per IHE ITI-20 when the syslog
   sink is enabled, with the optional `EventOutcomeDescription`,
   `AuditSourceTypeCode` (`4`, an application server) and each participant
-  object's `ParticipantObjectDataLifeCycle`.
+  object's `ParticipantObjectDataLifeCycle`. A record about a patient's data
+  names the patient (`Patient Number`) and, when it has one, its object as a
+  System Object with the ID type URI (PS3.15 Tables A.5.1.2.2-1 and
+  A.5.1.2.4-1), the same id the FHIR form names.
   Dedicated DICOM event ids are used throughout: Patient Record (110110),
   Query (110112), Export/Import (110106/110107, the EHR-Extract directions),
   User Authentication (110114, with the Login `EventTypeCode` 110122).
@@ -468,8 +471,8 @@ hold is in force:
 | Sink or stream | What it carries during a hold | Why it is not filtered |
 |---|---|---|
 | `[audit.store]`, read without the `patient` scope | every record, the hold's own included | The unscoped ITI-81 read is the controller's, under the admin role |
-| `[audit.syslog]` | every record, sent as it is written: the commit and each read name the composition, and the placing of the hold names the patient | An ITI-20 feed goes to an Audit Record Repository, which "receives event audit reports and stores them" ([IHE ITI TF-1 §9.1.1.3](https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html)) |
-| `[audit.fhir_feed]` | the same records as FHIR `AuditEvent` resources, `POST`ed as they are written; here the hold's own record names the composition too | The same ITI-20 repository, over ATX: FHIR Feed; the reader of a BALP `AuditEvent` is an Audit Consumer ([BALP §1:52.1](https://profiles.ihe.net/ITI/BALP/volume-1.html)) |
+| `[audit.syslog]` | every record, sent as it is written: the commit, each read and the hold's own record name the composition, the last as `access-delay:<vo>` beside the patient | An ITI-20 feed goes to an Audit Record Repository, which "receives event audit reports and stores them" ([IHE ITI TF-1 §9.1.1.3](https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html)) |
+| `[audit.fhir_feed]` | the same records as FHIR `AuditEvent` resources, `POST`ed as they are written, the hold's own record naming the same `access-delay:<vo>` | The same ITI-20 repository, over ATX: FHIR Feed; the reader of a BALP `AuditEvent` is an Audit Consumer ([BALP §1:52.1](https://profiles.ihe.net/ITI/BALP/volume-1.html)) |
 | [Change events](beyond-core/amqp.md) (`[events]`) | the commit of the held composition: its `vo_id`, kind, change type and template | The broker serves the deployment's own services; the stream withholds what binds them, a restriction or objection (GDPR Art. 18 and 21, EHDS Art. 8), and the Art. 3(3) hold binds only the person's access |
 
 EHDS Art. 9(2) gives the person the access information "through electronic
