@@ -33,7 +33,7 @@ use openehr_base::prelude::{Cardinality, MultiplicityInterval};
 
 use crate::aom::access::common_mut;
 use crate::aom::build::{
-    cobject_to_primitive, complex_object, cstring_regex, into_archetype_root, mult, tuple_member,
+    PrimitiveNode, cobject_to_primitive, complex_object, into_archetype_root, mult, tuple_member,
 };
 use crate::error::SyntaxErrorCode;
 use crate::odin::{is_interval, odin_to_json};
@@ -418,7 +418,9 @@ impl Parser<'_> {
                 self.pos += 1;
                 let span = self.span_at(self.pos - 1);
                 let (regex, assumed) = self.contained_regexp_parts(&raw, span)?;
-                vec![CObject::CString(cstring_regex(regex, assumed))]
+                vec![CObject::CString(
+                    PrimitiveNode::inline("String").c_string(vec![regex], assumed),
+                )]
             } else {
                 self.expect(
                     |t| matches!(t, Token::LCurly),
@@ -733,7 +735,9 @@ impl Parser<'_> {
                 self.pos += 1;
                 let span = self.span_at(self.pos - 1);
                 let (regex, assumed) = self.contained_regexp_parts(&raw, span)?;
-                items.push(CPrimitiveObject::CString(cstring_regex(regex, assumed)));
+                items.push(CPrimitiveObject::CString(
+                    PrimitiveNode::inline("String").c_string(vec![regex], assumed),
+                ));
             } else {
                 self.expect(
                     |t| matches!(t, Token::LCurly),

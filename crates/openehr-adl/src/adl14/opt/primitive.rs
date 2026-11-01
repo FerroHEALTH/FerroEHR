@@ -9,15 +9,6 @@ use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
     CComplexObject, CComplexObjectData,
 };
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_boolean::CBoolean;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_date::CDate;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_date_time::CDateTime;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_duration::CDuration;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_integer::CInteger;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_real::CReal;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_terminology_code::CTerminologyCode;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_time::CTime;
 use openehr_base::prelude::{
     Interval, Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso8601Time, PointInterval,
     ProperInterval, ProperIntervalData,
@@ -26,6 +17,7 @@ use openehr_its::opt14;
 
 use super::RootCx;
 use super::value::{enumerated_and_range, int_interval, map_mult, real_interval};
+use crate::aom::build::PrimitiveNode;
 
 pub(super) fn complex(
     rm_type_name: &str,
@@ -48,27 +40,47 @@ pub(super) fn complex(
     }))
 }
 
+/// The `v2_4` primitive node of a 1.4 object: its RM type, its node id and
+/// its occurrences, which every 1.4 `C_OBJECT` carries.
+fn primitive_node(
+    rm_type_name: &str,
+    node_id: &str,
+    occurrences: &opt14::types::Intervalofinteger,
+) -> PrimitiveNode {
+    PrimitiveNode {
+        rm_type_name: rm_type_name.to_owned(),
+        node_id: node_id.to_owned(),
+        occurrences: Some(map_mult(occurrences)),
+    }
+}
+
 pub(super) fn terminology_code(
     rm_type_name: &str,
     node_id: &str,
     occurrences: &opt14::types::Intervalofinteger,
     constraint: String,
 ) -> CObject {
-    CObject::CTerminologyCode(CTerminologyCode {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: rm_type_name.to_owned(),
-        occurrences: Some(map_mult(occurrences)),
-        node_id: node_id.to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint,
-        constraint_status: None,
-    })
+    CObject::CTerminologyCode(
+        primitive_node(rm_type_name, node_id, occurrences)
+            .c_terminology_code(constraint, None, None),
+    )
+}
+
+/// The six facets of a 1.4 `IntervalOf*` temporal range, for
+/// [`temporal_interval`]: the XSD types share these fields and no Rust type.
+macro_rules! range_facets {
+    ($range:expr) => {
+        $range.as_ref().map(|r| {
+            (
+                r.lower.clone(),
+                r.upper.clone(),
+                r.lower_unbounded,
+                r.upper_unbounded,
+                r.lower_included,
+                r.upper_included,
+            )
+        })
+    };
 }
 
 /// Maps a `C_PRIMITIVE_OBJECT` (its wrapped `C_PRIMITIVE`) to the matching
@@ -79,10 +91,6 @@ pub(super) fn terminology_code(
 /// `rm_type_name` names (`unconstrained_primitive`); a name that is no AOM 1.4
 /// primitive type maps to an unconstrained object of that type, reported in
 /// `conversion_details`.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one arm per primitive C_* struct literal — a flat mapping table"
-)]
 pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut RootCx) -> CObject {
     let rm = c.rm_type_name.as_str();
     let node_id = c.node_id.as_str();
@@ -105,6 +113,7 @@ pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut 
         );
         return complex(rm, node_id, occ, Vec::new());
     };
+    let node = primitive_node(rm, node_id, occ);
     match item {
         opt14::types::CPrimitive::CBoolean(p) => {
             let mut constraint = Vec::new();
@@ -114,20 +123,7 @@ pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut 
             if p.false_valid {
                 constraint.push(false);
             }
-            CObject::CBoolean(CBoolean {
-                parent: None,
-                soc_parent: None,
-                rm_type_name: rm.to_owned(),
-                occurrences: Some(map_mult(occ)),
-                node_id: node_id.to_owned(),
-                alternative_ids: openehr_base::containers::present(Vec::new()),
-                is_deprecated: None,
-                sibling_order: None,
-                default_value: None,
-                assumed_value: p.assumed_value,
-                is_enumerated_type_constraint: None,
-                constraint: openehr_base::containers::present(constraint),
-            })
+            CObject::CBoolean(node.c_boolean(constraint, p.assumed_value))
         }
         opt14::types::CPrimitive::CString(p) => {
             let constraint = if !p.list.is_empty() {
@@ -137,180 +133,44 @@ pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut 
             } else {
                 Vec::new()
             };
-            c_string(rm, node_id, occ, constraint, p.assumed_value.clone())
+            CObject::CString(node.c_string(constraint, p.assumed_value.clone()))
         }
-        opt14::types::CPrimitive::CInteger(p) => {
-            let constraint = openehr_base::containers::present(enumerated_and_range(
-                &p.list,
-                p.range.as_ref().map(int_interval),
-            ));
-            CObject::CInteger(CInteger {
-                parent: None,
-                soc_parent: None,
-                rm_type_name: rm.to_owned(),
-                occurrences: Some(map_mult(occ)),
-                node_id: node_id.to_owned(),
-                alternative_ids: openehr_base::containers::present(Vec::new()),
-                is_deprecated: None,
-                sibling_order: None,
-                default_value: None,
-                assumed_value: p.assumed_value.map(f64::from),
-                is_enumerated_type_constraint: None,
-                constraint,
-            })
-        }
-        opt14::types::CPrimitive::CReal(p) => {
-            let constraint = openehr_base::containers::present(enumerated_and_range(
-                &p.list,
-                p.range.as_ref().map(real_interval),
-            ));
-            CObject::CReal(CReal {
-                parent: None,
-                soc_parent: None,
-                rm_type_name: rm.to_owned(),
-                occurrences: Some(map_mult(occ)),
-                node_id: node_id.to_owned(),
-                alternative_ids: openehr_base::containers::present(Vec::new()),
-                is_deprecated: None,
-                sibling_order: None,
-                default_value: None,
-                assumed_value: p.assumed_value,
-                is_enumerated_type_constraint: None,
-                constraint,
-            })
-        }
-        opt14::types::CPrimitive::CDate(p) => CObject::CDate(CDate {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: rm.to_owned(),
-            occurrences: Some(map_mult(occ)),
-            node_id: node_id.to_owned(),
-            alternative_ids: openehr_base::containers::present(Vec::new()),
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value: p.assumed_value.clone().map(|value| Iso8601Date { value }),
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(temporal_interval(
-                p.range.as_ref().map(|r| {
-                    (
-                        r.lower.clone(),
-                        r.upper.clone(),
-                        r.lower_unbounded,
-                        r.upper_unbounded,
-                        r.lower_included,
-                        r.upper_included,
-                    )
-                }),
-                |value| Iso8601Date { value },
-            )),
-            pattern_constraint: date_time_pattern(
-                p.pattern.clone(),
-                p.range.is_some(),
-                rm,
-                node_id,
-                cx,
+        opt14::types::CPrimitive::CInteger(p) => CObject::CInteger(node.c_integer(
+            enumerated_and_range(&p.list, p.range.as_ref().map(int_interval)),
+            p.assumed_value.map(f64::from),
+        )),
+        opt14::types::CPrimitive::CReal(p) => CObject::CReal(node.c_real(
+            enumerated_and_range(&p.list, p.range.as_ref().map(real_interval)),
+            p.assumed_value,
+        )),
+        opt14::types::CPrimitive::CDate(p) => CObject::CDate(node.c_date(
+            temporal_interval(range_facets!(p.range), |value| Iso8601Date { value }),
+            date_time_pattern(p.pattern.clone(), p.range.is_some(), rm, node_id, cx),
+            p.assumed_value.clone().map(|value| Iso8601Date { value }),
+        )),
+        opt14::types::CPrimitive::CDateTime(p) => CObject::CDateTime(
+            node.c_date_time(
+                temporal_interval(range_facets!(p.range), |value| Iso8601DateTime { value }),
+                date_time_pattern(p.pattern.clone(), p.range.is_some(), rm, node_id, cx),
+                p.assumed_value
+                    .clone()
+                    .map(|value| Iso8601DateTime { value }),
             ),
-        }),
-        opt14::types::CPrimitive::CDateTime(p) => CObject::CDateTime(CDateTime {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: rm.to_owned(),
-            occurrences: Some(map_mult(occ)),
-            node_id: node_id.to_owned(),
-            alternative_ids: openehr_base::containers::present(Vec::new()),
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value: p
-                .assumed_value
-                .clone()
-                .map(|value| Iso8601DateTime { value }),
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(temporal_interval(
-                p.range.as_ref().map(|r| {
-                    (
-                        r.lower.clone(),
-                        r.upper.clone(),
-                        r.lower_unbounded,
-                        r.upper_unbounded,
-                        r.lower_included,
-                        r.upper_included,
-                    )
-                }),
-                |value| Iso8601DateTime { value },
-            )),
-            pattern_constraint: date_time_pattern(
+        ),
+        opt14::types::CPrimitive::CDuration(p) => CObject::CDuration(
+            node.c_duration(
+                temporal_interval(range_facets!(p.range), |value| Iso8601Duration { value }),
                 p.pattern.clone(),
-                p.range.is_some(),
-                rm,
-                node_id,
-                cx,
+                p.assumed_value
+                    .clone()
+                    .map(|value| Iso8601Duration { value }),
             ),
-        }),
-        opt14::types::CPrimitive::CDuration(p) => CObject::CDuration(CDuration {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: rm.to_owned(),
-            occurrences: Some(map_mult(occ)),
-            node_id: node_id.to_owned(),
-            alternative_ids: openehr_base::containers::present(Vec::new()),
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value: p
-                .assumed_value
-                .clone()
-                .map(|value| Iso8601Duration { value }),
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(temporal_interval(
-                p.range.as_ref().map(|r| {
-                    (
-                        r.lower.clone(),
-                        r.upper.clone(),
-                        r.lower_unbounded,
-                        r.upper_unbounded,
-                        r.lower_included,
-                        r.upper_included,
-                    )
-                }),
-                |value| Iso8601Duration { value },
-            )),
-            pattern_constraint: p.pattern.clone(),
-        }),
-        opt14::types::CPrimitive::CTime(p) => CObject::CTime(CTime {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: rm.to_owned(),
-            occurrences: Some(map_mult(occ)),
-            node_id: node_id.to_owned(),
-            alternative_ids: openehr_base::containers::present(Vec::new()),
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            assumed_value: p.assumed_value.clone().map(|value| Iso8601Time { value }),
-            is_enumerated_type_constraint: None,
-            constraint: openehr_base::containers::present(temporal_interval(
-                p.range.as_ref().map(|r| {
-                    (
-                        r.lower.clone(),
-                        r.upper.clone(),
-                        r.lower_unbounded,
-                        r.upper_unbounded,
-                        r.lower_included,
-                        r.upper_included,
-                    )
-                }),
-                |value| Iso8601Time { value },
-            )),
-            pattern_constraint: date_time_pattern(
-                p.pattern.clone(),
-                p.range.is_some(),
-                rm,
-                node_id,
-                cx,
-            ),
-        }),
+        ),
+        opt14::types::CPrimitive::CTime(p) => CObject::CTime(node.c_time(
+            temporal_interval(range_facets!(p.range), |value| Iso8601Time { value }),
+            date_time_pattern(p.pattern.clone(), p.range.is_some(), rm, node_id, cx),
+            p.assumed_value.clone().map(|value| Iso8601Time { value }),
+        )),
     }
 }
 
@@ -457,18 +317,7 @@ pub(super) fn c_string(
     constraint: Vec<String>,
     assumed_value: Option<String>,
 ) -> CObject {
-    CObject::CString(CString {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: rm_type_name.to_owned(),
-        occurrences: Some(map_mult(occurrences)),
-        node_id: node_id.to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value,
-        is_enumerated_type_constraint: None,
-        constraint: openehr_base::containers::present(constraint),
-    })
+    CObject::CString(
+        primitive_node(rm_type_name, node_id, occurrences).c_string(constraint, assumed_value),
+    )
 }
