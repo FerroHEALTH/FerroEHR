@@ -631,14 +631,14 @@ async fn archetype_lineage_from_the_stored_adl2_family() {
     // The stored family: `hdl_result` specialises `lipid_panel`. The child's
     // concept is NOT a `lipid_panel-…` extension, so only the declared
     // `specialize` edge can connect them.
-    svc.upload_artefact(adl2_source(
+    svc.template_adl2_upload(adl2_source(
         "archetype",
         "openEHR-EHR-OBSERVATION.lipid_panel.v1.0.0",
         None,
     ))
     .await
     .expect("upload the ADL2 parent archetype");
-    svc.upload_artefact(adl2_source(
+    svc.template_adl2_upload(adl2_source(
         "archetype",
         "openEHR-EHR-OBSERVATION.hdl_result.v1.0.0",
         Some("openEHR-EHR-OBSERVATION.lipid_panel.v1"),
@@ -829,14 +829,14 @@ async fn archetype_predicate_specialised_child_by_parent_version() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    svc.upload_artefact(adl2_source(
+    svc.template_adl2_upload(adl2_source(
         "archetype",
         "openEHR-EHR-OBSERVATION.spec_parent.v1.2.0",
         None,
     ))
     .await
     .expect("upload the ADL2 parent archetype");
-    svc.upload_artefact(adl2_source(
+    svc.template_adl2_upload(adl2_source(
         "archetype",
         "openEHR-EHR-OBSERVATION.spec_child.v1.0.0",
         Some("openEHR-EHR-OBSERVATION.spec_parent.v1.2.0"),
@@ -910,7 +910,7 @@ async fn archetype_predicate_child_releases_follow_their_own_parent_release() {
             Some("openEHR-EHR-OBSERVATION.rel_parent.v1.3.0"),
         ),
     ] {
-        svc.upload_artefact(adl2_source("archetype", hrid, parent))
+        svc.template_adl2_upload(adl2_source("archetype", hrid, parent))
             .await
             .unwrap_or_else(|e| panic!("upload {hrid}: {e:?}"));
     }

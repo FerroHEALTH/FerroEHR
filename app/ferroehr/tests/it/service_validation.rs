@@ -547,16 +547,11 @@ async fn deleting_a_template_invalidates_its_web_template_cache() {
         "example is a COMPOSITION"
     );
 
-    // Delete the OPT through the real native path (opt_delete), which invalidates
-    // the cache entry.
-    let opt_uuid = svc
-        .list_opts_adl14(ferroehr::service::list::Page::all())
+    // Delete the OPT through the admin delete, which invalidates the cache
+    // entry.
+    svc.admin_template_delete(template_id.clone())
         .await
-        .expect("list opts")
-        .into_iter()
-        .next()
-        .expect("one stored OPT uuid");
-    svc.delete_opt(opt_uuid).await.expect("delete opt");
+        .expect("delete opt");
 
     // A commit against the now-deleted template resolves to the clean
     // "template not known" 422 — only reachable if the stale WebTemplate was
@@ -694,10 +689,10 @@ async fn direct_route_commit_against_an_adl2_template_stamps_and_guards() {
         .expect("CNF count archetype source");
     let opt2 = std::fs::read_to_string(artifacts.join("adl2/opt/flat_parity_a.adls"))
         .expect("CNF FLAT-parity OPT2 source");
-    svc.upload_artefact(archetype)
+    svc.template_adl2_upload(archetype)
         .await
         .expect("upload the ADL2 archetype");
-    svc.upload_artefact(opt2)
+    svc.template_adl2_upload(opt2)
         .await
         .expect("upload the ADL2 operational template");
 

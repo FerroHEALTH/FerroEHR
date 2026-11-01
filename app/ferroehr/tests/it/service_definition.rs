@@ -11,7 +11,6 @@
 #![expect(
     clippy::panic,
     clippy::string_slice,
-    let_underscore_drop,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions and direct \
@@ -48,23 +47,32 @@ const OPT_TEMPLATE_ID: &str = "IDCR Allergies List.v0";
 // ── ADL 1.4 archetypes ───────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn archetype_upload_get_list_match_replace_delete() {
+async fn archetype_upload_get_list_replace_delete() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let adl = fixture(ARCHETYPE_REL);
 
     // Precondition: not present yet.
     assert!(!svc.has_archetype(ARCHETYPE_ID.to_owned()).await.unwrap());
-    assert_eq!(svc.archetypes_count_adl14().await.unwrap(), 0);
+    assert_eq!(
+        svc.list_archetypes_adl14(Page::all()).await.unwrap(),
+        Vec::<String>::new()
+    );
 
-    // valid_archetype on good vs bad source.
-    assert!(svc.valid_archetype(&adl).unwrap());
-    assert!(!svc.valid_archetype("not an archetype").unwrap());
+    // A source that is no archetype is refused and stores nothing.
+    assert!(
+        svc.upload_archetype("not an archetype".to_owned())
+            .await
+            .is_err()
+    );
 
     // upload → the archetype is present.
     svc.upload_archetype(adl.clone()).await.expect("upload");
     assert!(svc.has_archetype(ARCHETYPE_ID.to_owned()).await.unwrap());
-    assert_eq!(svc.archetypes_count_adl14().await.unwrap(), 1);
+    assert_eq!(
+        svc.list_archetypes_adl14(Page::all()).await.unwrap().len(),
+        1
+    );
 
     // get returns the source verbatim.
     let got = svc
@@ -73,19 +81,9 @@ async fn archetype_upload_get_list_match_replace_delete() {
         .expect("get");
     assert_eq!(got, adl, "stored ADL source is byte-identical");
 
-    // list + list_matching (regex).
+    // list names the stored archetype.
     let list = svc.list_archetypes_adl14(Page::all()).await.unwrap();
     assert_eq!(list, vec![ARCHETYPE_ID.to_owned()]);
-    let matched = svc
-        .list_matching_archetypes("COMPOSITION\\.prescription".to_owned(), Page::all())
-        .await
-        .unwrap();
-    assert_eq!(matched, vec![ARCHETYPE_ID.to_owned()]);
-    let none = svc
-        .list_matching_archetypes("OBSERVATION".to_owned(), Page::all())
-        .await
-        .unwrap();
-    assert_eq!(none, Vec::<String>::new());
 
     // upload_archetype replaces if the id already exists (spec: "replace it").
     let replacement = format!("{adl}\n-- replaced\n");
@@ -93,7 +91,7 @@ async fn archetype_upload_get_list_match_replace_delete() {
         .await
         .expect("replace");
     assert_eq!(
-        svc.archetypes_count_adl14().await.unwrap(),
+        svc.list_archetypes_adl14(Page::all()).await.unwrap().len(),
         1,
         "replace, not insert"
     );
@@ -108,7 +106,10 @@ async fn archetype_upload_get_list_match_replace_delete() {
         .await
         .expect("delete");
     assert!(!svc.has_archetype(ARCHETYPE_ID.to_owned()).await.unwrap());
-    assert_eq!(svc.archetypes_count_adl14().await.unwrap(), 0);
+    assert_eq!(
+        svc.list_archetypes_adl14(Page::all()).await.unwrap(),
+        Vec::<String>::new()
+    );
 }
 
 /// An ADL 1.4 archetype carrying the optional `revision_history` section
@@ -127,11 +128,9 @@ async fn archetype_with_revision_history_section_uploads() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let adl = fixture(REVISION_HISTORY_ARCHETYPE_REL);
 
-    assert!(
-        svc.valid_archetype(&adl).unwrap(),
-        "a 1.4 archetype with a revision_history section is valid"
-    );
-    svc.upload_archetype(adl.clone()).await.expect("upload");
+    svc.upload_archetype(adl.clone())
+        .await
+        .expect("a 1.4 archetype with a revision_history section is valid and uploads");
     assert!(
         svc.has_archetype(REVISION_HISTORY_ARCHETYPE_ID.to_owned())
             .await
@@ -196,23 +195,6 @@ async fn archetype_errors() {
         ),
         "got {del_missing:?}"
     );
-
-    // Uncompilable regex → 400 invalid_id_pattern (unbalanced group), not the
-    // generic `precondition_violation`.
-    let bad_re = svc
-        .list_matching_archetypes("(".to_owned(), Page::all())
-        .await
-        .expect_err("invalid pattern");
-    assert!(
-        matches!(
-            bad_re,
-            StatusError {
-                status: ServiceStatus::InvalidIdPattern,
-                ..
-            }
-        ),
-        "got {bad_re:?}"
-    );
 }
 
 #[tokio::test]
@@ -228,10 +210,6 @@ async fn archetype_semantic_validity_runs_the_14_engine() {
     // Break VARDT: the id is a COMPOSITION, the definition root now claims
     // OBSERVATION.
     let bad = adl.replacen("COMPOSITION[at0000]", "OBSERVATION[at0000]", 1);
-    assert!(
-        !svc.valid_archetype(&bad).unwrap(),
-        "a VARDT-violating 1.4 source must be invalid"
-    );
     let err = svc
         .upload_archetype(bad)
         .await
@@ -253,7 +231,10 @@ async fn archetype_semantic_validity_runs_the_14_engine() {
         err.message
     );
     // Nothing was stored (validation gates the write).
-    assert_eq!(svc.archetypes_count_adl14().await.unwrap(), 0);
+    assert_eq!(
+        svc.list_archetypes_adl14(Page::all()).await.unwrap(),
+        Vec::<String>::new()
+    );
 }
 
 #[tokio::test]
@@ -304,46 +285,78 @@ async fn adl14_convert_to_adl2_migration_round_trip() {
     );
 }
 
-// ── ADL 1.4 OPTs (on template_store, UUID-keyed) ─────────────────────────────
+// ── ADL 1.4 OPTs (on template_store, keyed by template_id on the wire) ─────
+
+/// The `template_id` of every summary a wire template list returns.
+fn listed_template_ids(list: &[serde_json::Value]) -> Vec<String> {
+    list.iter()
+        .map(|t| {
+            t["template_id"]
+                .as_str()
+                .unwrap_or_else(|| panic!("a template summary names its template_id: {t}"))
+                .to_owned()
+        })
+        .collect()
+}
 
 #[tokio::test]
-async fn opt_upload_has_get_list_match_delete() {
+async fn opt_upload_get_list_filter_delete() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let xml = fixture(OPT_REL);
 
-    // valid_opt on good vs bad XML.
-    assert!(svc.valid_opt(&xml).unwrap());
-    assert!(!svc.valid_opt("<not-a-template/>").unwrap());
-    assert_eq!(svc.opts_count_adl14().await.unwrap(), 0);
-
-    // upload_opt (valid OPT).
-    svc.upload_opt(xml.clone()).await.expect("upload opt");
-    assert_eq!(svc.opts_count_adl14().await.unwrap(), 1);
-
-    // list_opts yields the OPT's UUID; use it for has/get/delete (UUID-keyed).
-    let opts = svc.list_opts_adl14(Page::all()).await.unwrap();
-    assert_eq!(opts.len(), 1);
-    let uuid = opts[0].clone();
+    // An XML document that is no OPT is refused and stores nothing.
     assert!(
-        uuid::Uuid::parse_str(&uuid).is_ok(),
-        "list_opts returns a UUID"
+        svc.template_adl14_upload("<not-a-template/>".to_owned())
+            .await
+            .is_err()
     );
-    assert!(svc.has_opt(uuid.clone()).await.unwrap());
-    let got = svc.get_opt(uuid.clone()).await.expect("get opt");
-    assert_eq!(got, xml, "stored OPT XML is byte-identical");
+    assert_eq!(
+        svc.template_adl14_list(TemplateListFilter::default(), Page::all())
+            .await
+            .unwrap(),
+        Vec::<serde_json::Value>::new()
+    );
 
-    // list_matching_opts matches on the template_id (spec return-type defect —
-    // we return template ids, per the NOTE).
-    let matched = svc
-        .list_matching_opts("IDCR.*Allergies".to_owned(), Page::all())
+    // upload (valid OPT).
+    svc.template_adl14_upload(xml.clone())
+        .await
+        .expect("upload opt");
+    let listed = svc
+        .template_adl14_list(TemplateListFilter::default(), Page::all())
         .await
         .unwrap();
-    assert_eq!(matched, vec![OPT_TEMPLATE_ID.to_owned()]);
+    assert_eq!(
+        listed_template_ids(&listed),
+        vec![OPT_TEMPLATE_ID.to_owned()]
+    );
+
+    // get by the wire address returns the stored XML verbatim.
+    let got = svc
+        .template_adl14_get(OPT_TEMPLATE_ID.to_owned())
+        .await
+        .expect("get opt");
+    assert_eq!(got, xml, "stored OPT XML is byte-identical");
+
+    // A template_id pattern matches the stored template.
+    let matched = svc
+        .template_adl14_list(
+            TemplateListFilter {
+                template_id: Some("IDCR*Allergies*".to_owned()),
+                ..TemplateListFilter::default()
+            },
+            Page::all(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        listed_template_ids(&matched),
+        vec![OPT_TEMPLATE_ID.to_owned()]
+    );
 
     // Re-uploading the same template_id conflicts (wire's CNF-tested rule wins).
     let conflict = svc
-        .upload_opt(xml.clone())
+        .template_adl14_upload(xml.clone())
         .await
         .expect_err("duplicate opt");
     assert!(
@@ -357,28 +370,37 @@ async fn opt_upload_has_get_list_match_delete() {
         "got {conflict:?}"
     );
 
-    // delete_opt (present, then removed).
-    svc.delete_opt(uuid.clone()).await.expect("delete opt");
-    assert!(!svc.has_opt(uuid.clone()).await.unwrap());
-    assert_eq!(svc.opts_count_adl14().await.unwrap(), 0);
+    // delete (present, then removed).
+    svc.admin_template_delete(OPT_TEMPLATE_ID.to_owned())
+        .await
+        .expect("delete opt");
+    assert!(
+        svc.template_adl14_get(OPT_TEMPLATE_ID.to_owned())
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        svc.template_adl14_list(TemplateListFilter::default(), Page::all())
+            .await
+            .unwrap(),
+        Vec::<serde_json::Value>::new()
+    );
 }
 
-/// The `delete_opt` path refuses (409) while a committed version still
-/// references the template — the same integrity guard as the admin wire
-/// delete, so a physical delete never orphans clinical data. The refusal is
-/// our own integrity design. Pointing an existing `version` at the template
-/// exercises the FK-reference guard directly (lighter than a full validated
-/// commit, which the guard does not need).
+/// The template delete refuses (409) while a committed version still
+/// references the template, so a physical delete never orphans clinical
+/// data. The refusal is our own integrity design. Pointing an existing
+/// `version` at the template exercises the FK-reference guard directly
+/// (lighter than a full validated commit, which the guard does not need).
 #[tokio::test]
 async fn opt_delete_refuses_while_referenced() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    svc.upload_opt(fixture(OPT_REL)).await.expect("upload opt");
-    let opts = svc.list_opts_adl14(Page::all()).await.unwrap();
-    assert_eq!(opts.len(), 1);
-    let uuid = opts[0].clone();
+    svc.template_adl14_upload(fixture(OPT_REL))
+        .await
+        .expect("upload opt");
 
     // Reference the template from a committed version row.
     let ehr: uuid::Uuid = Box::pin(svc.create_ehr_meta(None, None))
@@ -399,7 +421,7 @@ async fn opt_delete_refuses_while_referenced() {
     );
 
     // Referenced → refused with the friendly 409 naming the count.
-    let res = svc.delete_opt(uuid.clone()).await;
+    let res = svc.admin_template_delete(OPT_TEMPLATE_ID.to_owned()).await;
     match res {
         Err(StatusError {
             status: ServiceStatus::Conflict,
@@ -414,7 +436,9 @@ async fn opt_delete_refuses_while_referenced() {
         other => panic!("referenced template must be refused (409), got {other:?}"),
     }
     assert!(
-        svc.has_opt(uuid.clone()).await.unwrap(),
+        svc.template_adl14_get(OPT_TEMPLATE_ID.to_owned())
+            .await
+            .is_ok(),
         "a refused delete leaves the template in place"
     );
 
@@ -424,8 +448,14 @@ async fn opt_delete_refuses_while_referenced() {
         .execute(&pool)
         .await
         .expect("dereference template");
-    svc.delete_opt(uuid.clone()).await.expect("delete opt");
-    assert!(!svc.has_opt(uuid).await.unwrap());
+    svc.admin_template_delete(OPT_TEMPLATE_ID.to_owned())
+        .await
+        .expect("delete opt");
+    assert!(
+        svc.template_adl14_get(OPT_TEMPLATE_ID.to_owned())
+            .await
+            .is_err()
+    );
 }
 
 /// The ITS-REST `definition_template_adl1.4_list` filter + pagination params
@@ -715,25 +745,12 @@ async fn opt_errors() {
         "got {bad:?}"
     );
 
-    // Unparseable UUID → 400.
-    let bad_uuid = svc
-        .has_opt("not-a-uuid".to_owned())
+    // An absent template_id → get/delete 404.
+    let absent = "IDCR Absent.v0".to_owned();
+    let get_missing = svc
+        .template_adl14_get(absent.clone())
         .await
-        .expect_err("bad uuid");
-    assert!(
-        matches!(
-            bad_uuid,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
-                ..
-            }
-        ),
-        "got {bad_uuid:?}"
-    );
-
-    // Absent (well-formed) UUID → get/delete 404.
-    let absent = uuid::Uuid::now_v7().to_string();
-    let get_missing = svc.get_opt(absent.clone()).await.expect_err("absent opt");
+        .expect_err("absent opt");
     assert!(
         matches!(
             get_missing,
@@ -744,7 +761,10 @@ async fn opt_errors() {
         ),
         "got {get_missing:?}"
     );
-    let del_missing = svc.delete_opt(absent).await.expect_err("delete absent opt");
+    let del_missing = svc
+        .admin_template_delete(absent)
+        .await
+        .expect_err("delete absent opt");
     assert!(
         matches!(
             del_missing,
@@ -764,11 +784,11 @@ const ADL2_ARCH_HRID: &str = "openEHR-EHR-OBSERVATION.bp.v1.0.0";
 const ADL2_TMPL_HRID: &str = "openEHR-EHR-COMPOSITION.t_vitals.v2.0.0";
 
 #[tokio::test]
-async fn adl2_upload_get_list_by_kind_match_replace_delete() {
+async fn adl2_upload_get_list_by_kind_delete() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // Preconditions: empty, and valid_artefact on good vs bad source.
+    // Preconditions: empty, and a source that is no ADL2 is refused.
     assert_eq!(svc.artefacts_count().await.unwrap(), 0);
     let adl2_opt = adl2_source(
         "operational_template",
@@ -777,40 +797,44 @@ async fn adl2_upload_get_list_by_kind_match_replace_delete() {
     );
     let adl2_arch = adl2_source("archetype", ADL2_ARCH_HRID, None);
     let adl2_tmpl = adl2_source("template", ADL2_TMPL_HRID, None);
-    assert!(svc.valid_artefact(&adl2_opt).unwrap());
-    assert!(!svc.valid_artefact("this is not adl2").unwrap());
+    assert!(
+        svc.template_adl2_upload("this is not adl2".to_owned())
+            .await
+            .is_err()
+    );
+    assert_eq!(svc.artefacts_count().await.unwrap(), 0);
 
-    // upload_artefact (OPT) → the artefact is present (keyed by ARCHETYPE_HRID).
+    // upload (OPT) → the artefact is present (keyed by ARCHETYPE_HRID).
     assert!(!svc.has_artefact(ADL2_OPT_HRID.to_owned()).await.unwrap());
-    svc.upload_artefact(adl2_opt.clone())
+    svc.template_adl2_upload(adl2_opt.clone())
         .await
         .expect("upload opt");
     assert!(svc.has_artefact(ADL2_OPT_HRID.to_owned()).await.unwrap());
 
-    // get_artefact returns the source verbatim.
+    // get returns the source verbatim.
     assert_eq!(
-        svc.get_artefact(ADL2_OPT_HRID.to_owned()).await.unwrap(),
+        svc.template_adl2_source(ADL2_OPT_HRID.to_owned(), None)
+            .await
+            .unwrap()
+            .payload,
         adl2_opt,
         "stored ADL2 source is byte-identical"
     );
 
     // Upload one artefact of each other kind.
-    svc.upload_artefact(adl2_arch.clone())
+    svc.template_adl2_upload(adl2_arch.clone())
         .await
         .expect("upload archetype");
-    svc.upload_artefact(adl2_tmpl.clone())
+    svc.template_adl2_upload(adl2_tmpl.clone())
         .await
         .expect("upload template");
 
-    // Counts by concrete type. `archetypes_count`/`opts_count` (and
-    // `list_archetypes`/`list_opts`) are declared on both the ADL 1.4 and ADL2
-    // Definitions traits, so calls on the concrete service are qualified.
+    // Counts: all artefacts, and the archetype kind.
     assert_eq!(svc.artefacts_count().await.unwrap(), 3);
     assert_eq!(svc.archetypes_count_adl2().await.unwrap(), 1);
-    assert_eq!(svc.templates_count().await.unwrap(), 1);
-    assert_eq!(svc.opts_count_adl2().await.unwrap(), 1);
 
-    // list_artefacts = all HRIDs; per-kind lists partition them.
+    // list_artefacts = all HRIDs; the archetype list and the template list
+    // partition them.
     let all = svc.list_artefacts(Page::all()).await.unwrap();
     assert_eq!(all.len(), 3);
     assert!(all.contains(&ADL2_OPT_HRID.to_owned()));
@@ -818,35 +842,34 @@ async fn adl2_upload_get_list_by_kind_match_replace_delete() {
         svc.list_archetypes_adl2(Page::all()).await.unwrap(),
         vec![ADL2_ARCH_HRID.to_owned()]
     );
-    assert_eq!(
-        svc.list_templates_adl2(Page::all()).await.unwrap(),
-        vec![ADL2_TMPL_HRID.to_owned()]
+    let mut templates = listed_template_ids(
+        &svc.template_adl2_list(TemplateListFilter::default(), Page::all())
+            .await
+            .unwrap(),
     );
+    templates.sort();
     assert_eq!(
-        svc.list_opts_adl2(Page::all()).await.unwrap(),
-        vec![ADL2_OPT_HRID.to_owned()]
+        templates,
+        vec![ADL2_OPT_HRID.to_owned(), ADL2_TMPL_HRID.to_owned()]
     );
 
-    // list_matching_artefacts (regex on the HRID).
-    let obs = svc
-        .list_matching_artefacts("OBSERVATION".to_owned(), Page::all())
-        .await
-        .unwrap();
-    assert_eq!(obs, vec![ADL2_ARCH_HRID.to_owned()]);
-
-    // upload_artefact replaces if the HRID already exists (spec: "replace it").
+    // A second upload of a stored HRID conflicts and leaves the source as it
+    // was.
     let replacement = format!("{adl2_opt}-- replaced\n");
-    svc.upload_artefact(replacement.clone())
-        .await
-        .expect("replace");
-    assert_eq!(
-        svc.artefacts_count().await.unwrap(),
-        3,
-        "replace, not insert"
+    assert!(
+        matches!(
+            svc.template_adl2_upload(replacement).await,
+            Err(ServiceError::Conflict(_))
+        ),
+        "a stored HRID is never replaced"
     );
+    assert_eq!(svc.artefacts_count().await.unwrap(), 3);
     assert_eq!(
-        svc.get_artefact(ADL2_OPT_HRID.to_owned()).await.unwrap(),
-        replacement
+        svc.template_adl2_source(ADL2_OPT_HRID.to_owned(), None)
+            .await
+            .unwrap()
+            .payload,
+        adl2_opt
     );
 
     // delete_artefact → Post: gone.
@@ -867,10 +890,11 @@ async fn adl2_errors() {
     // "could not be parsed or is invalid (e.g. ... syntactically invalid ...
     // content)"), not the semantic 422 that AOM2 validation-phase failures
     // carry.
-    let bad = svc
-        .upload_artefact("concept\nopenEHR-EHR-OBSERVATION.bp.v1.0.0".to_owned())
-        .await
-        .expect_err("invalid artefact rejected");
+    let bad = StatusError::from(
+        svc.template_adl2_upload("concept\nopenEHR-EHR-OBSERVATION.bp.v1.0.0".to_owned())
+            .await
+            .expect_err("invalid artefact rejected"),
+    );
     assert!(
         matches!(
             bad,
@@ -883,10 +907,11 @@ async fn adl2_errors() {
     );
 
     // Recognised header but a malformed HRID fails the grammar → 400 too.
-    let bad_hrid = svc
-        .upload_artefact("archetype\nnot-an-hrid".to_owned())
-        .await
-        .expect_err("malformed hrid rejected");
+    let bad_hrid = StatusError::from(
+        svc.template_adl2_upload("archetype\nnot-an-hrid".to_owned())
+            .await
+            .expect_err("malformed hrid rejected"),
+    );
     assert!(
         matches!(
             bad_hrid,
@@ -899,15 +924,16 @@ async fn adl2_errors() {
     );
 
     // get / delete of an absent artefact → 404.
-    let missing = svc
-        .get_artefact("openEHR-EHR-OBSERVATION.absent.v1.0.0".to_owned())
-        .await
-        .expect_err("absent artefact");
+    let missing = StatusError::from(
+        svc.template_adl2_source("openEHR-EHR-OBSERVATION.absent.v1.0.0".to_owned(), None)
+            .await
+            .expect_err("absent artefact"),
+    );
     assert!(
         matches!(
             missing,
             StatusError {
-                status: ServiceStatus::ArtefactDoesNotExist,
+                status: ServiceStatus::TemplateDoesNotExist,
                 ..
             }
         ),
@@ -927,25 +953,21 @@ async fn adl2_errors() {
         ),
         "got {del_missing:?}"
     );
-
-    // Uncompilable regex → 400 invalid_id_pattern.
-    let bad_re = svc
-        .list_matching_artefacts("(".to_owned(), Page::all())
-        .await
-        .expect_err("invalid pattern");
-    assert!(
-        matches!(
-            bad_re,
-            StatusError {
-                status: ServiceStatus::InvalidIdPattern,
-                ..
-            }
-        ),
-        "got {bad_re:?}"
-    );
 }
 
 // ── registered queries ───────────────────────────────────────────────────────
+
+/// The `name` of every stored query a wire query list returns.
+fn listed_query_names(list: &[serde_json::Value]) -> Vec<String> {
+    list.iter()
+        .map(|q| {
+            q["name"]
+                .as_str()
+                .unwrap_or_else(|| panic!("a stored query names itself: {q}"))
+                .to_owned()
+        })
+        .collect()
+}
 
 #[tokio::test]
 #[expect(
@@ -953,67 +975,82 @@ async fn adl2_errors() {
     reason = "one full registered-query lifecycle exercised end to end on a \
               single container"
 )]
-async fn query_valid_store_list_match_delete() {
+async fn query_store_get_list_delete() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let good = "SELECT c FROM COMPOSITION c";
+    let precondition = |e: &StatusError| e.status == ServiceStatus::PreconditionViolation;
 
-    // valid_query: formalism equivalence + parse.
-    assert!(svc.valid_query(good, "aql").unwrap());
-    assert!(svc.valid_query(good, "AQL::1").unwrap());
-    assert!(!svc.valid_query(good, "cql").unwrap());
-    assert!(!svc.valid_query("this is not aql", "AQL").unwrap());
-    assert_eq!(svc.queries_count().await.unwrap(), 0);
-
-    // store_query with no name → a generated `misc::q_<uuid>` name.
-    let desc = svc
-        .store_query(good.to_owned(), "aql".to_owned(), None)
-        .await
-        .expect("store generated");
-    assert!(
-        desc.qualified_query_name.starts_with("misc::q_"),
-        "generated name: {}",
-        desc.qualified_query_name
-    );
-    assert_eq!(desc.formalism, "aql");
-    assert_eq!(desc.source.as_deref(), Some(good));
-    assert!(desc.version.is_some());
-    // Post: the generated query is registered.
-    assert!(
-        svc.has_query(desc.qualified_query_name.clone())
+    // The formalism: AQL in any case and at major version 1 stores; any other
+    // formalism, or a text that is no AQL, is refused and stores nothing.
+    for (name, formalism) in [("f::lower", "aql"), ("f::major", "AQL::1")] {
+        svc.query_store(name.to_owned(), None, formalism.to_owned(), good.to_owned())
             .await
-            .unwrap()
+            .unwrap_or_else(|e| panic!("{formalism} stores: {e:?}"));
+        svc.admin_query_delete(name.to_owned(), "1.0.0".to_owned())
+            .await
+            .expect("delete the formalism probe");
+    }
+    let cql = svc
+        .query_store("f::cql".to_owned(), None, "cql".to_owned(), good.to_owned())
+        .await
+        .expect_err("cql is no supported formalism");
+    assert!(precondition(&cql), "got {cql:?}");
+    let not_aql = svc
+        .query_store(
+            "f::not_aql".to_owned(),
+            None,
+            "AQL".to_owned(),
+            "this is not aql".to_owned(),
+        )
+        .await
+        .expect_err("a text that is no AQL is refused");
+    assert!(precondition(&not_aql), "got {not_aql:?}");
+    assert_eq!(
+        svc.query_list(String::new()).await.unwrap(),
+        Vec::<serde_json::Value>::new()
     );
 
-    // store_query with an explicit qualified name.
-    let named = svc
-        .store_query(
-            good.to_owned(),
+    // store under an explicit qualified name.
+    let version = svc
+        .query_store(
+            "ehr::over_50".to_owned(),
+            None,
             "AQL".to_owned(),
-            Some("ehr::over_50".to_owned()),
+            good.to_owned(),
         )
         .await
         .expect("store named");
-    assert_eq!(named.qualified_query_name, "ehr::over_50");
-    assert!(svc.has_query("ehr::over_50".to_owned()).await.unwrap());
-    // A bare name gets the "misc" namespace applied.
-    let _ = svc
-        .store_query(
-            good.to_owned(),
-            "aql".to_owned(),
-            Some("bare_name".to_owned()),
-        )
+    let named = svc
+        .query_version_get("ehr::over_50".to_owned(), version.clone())
         .await
-        .expect("store bare");
-    assert!(svc.has_query("bare_name".to_owned()).await.unwrap());
-    assert!(svc.has_query("misc::bare_name".to_owned()).await.unwrap());
+        .expect("the named query is registered");
+    assert_eq!(named["name"], "ehr::over_50");
+    assert_eq!(named["q"], good);
+    // A bare name gets the "misc" namespace applied.
+    svc.query_store(
+        "bare_name".to_owned(),
+        None,
+        "aql".to_owned(),
+        good.to_owned(),
+    )
+    .await
+    .expect("store bare");
+    for name in ["bare_name", "misc::bare_name"] {
+        assert!(
+            svc.query_version_get(name.to_owned(), "1".to_owned())
+                .await
+                .is_ok(),
+            "{name} addresses the bare-name store"
+        );
+    }
 
     // ── ONE canonical key across every surface (bare name → the "misc"
     // namespace) ─────────────────────────────────────────────────────────────
-    // The WIRE store of a bare name must land on the SAME row the native calls,
-    // the by-name wire GET, the list, and the admin delete address — the
-    // former asymmetry keyed the wire store under ('', name) and made the
-    // query undeletable/unfindable under the name it was created with.
+    // The WIRE store of a bare name must land on the SAME row the by-name wire
+    // GET, the list, and the admin delete address — the former asymmetry
+    // keyed the wire store under ('', name) and made the query
+    // undeletable/unfindable under the name it was created with.
     svc.query_store(
         "wire_bare".to_owned(),
         Some("1.0.0".to_owned()),
@@ -1023,12 +1060,10 @@ async fn query_valid_store_list_match_delete() {
     .await
     .expect("wire store of a bare name");
     assert!(
-        svc.has_query("wire_bare".to_owned()).await.unwrap(),
-        "the native has_query sees the wire-stored bare name"
-    );
-    assert!(
-        svc.has_query("misc::wire_bare".to_owned()).await.unwrap(),
-        "…under its canonical misc:: form too"
+        svc.query_version_get("wire_bare".to_owned(), "1.0.0".to_owned())
+            .await
+            .is_ok(),
+        "the bare name addresses the wire-stored bare name"
     );
     let fetched = svc
         .query_version_get("misc::wire_bare".to_owned(), "1.0.0".to_owned())
@@ -1039,48 +1074,34 @@ async fn query_valid_store_list_match_delete() {
         .await
         .expect("admin delete addresses the same canonical row by the bare name");
     assert!(
-        !svc.has_query("wire_bare".to_owned()).await.unwrap(),
+        svc.query_version_get("wire_bare".to_owned(), "1.0.0".to_owned())
+            .await
+            .is_err(),
         "deleted everywhere"
     );
 
-    // queries_count = distinct qualified names (3 stored).
-    assert_eq!(svc.queries_count().await.unwrap(), 3);
-
-    // list_queries has all three.
-    let all = svc.list_queries(Page::all()).await.unwrap();
-    assert_eq!(all.len(), 3);
-
-    // list_matching_queries: id regex on the qualified name.
-    let ehr_only = svc
-        .list_matching_queries("^ehr::".to_owned(), None, Page::all())
-        .await
-        .unwrap();
-    assert_eq!(ehr_only.len(), 1);
-    assert_eq!(ehr_only[0].qualified_query_name, "ehr::over_50");
-    // artefact pattern scans the source: `COMPOSITION` matches all.
-    let by_artefact = svc
-        .list_matching_queries(".*".to_owned(), Some("COMPOSITION".to_owned()), Page::all())
-        .await
-        .unwrap();
-    assert_eq!(by_artefact.len(), 3);
-    let by_artefact_none = svc
-        .list_matching_queries(".*".to_owned(), Some("OBSERVATION".to_owned()), Page::all())
-        .await
-        .unwrap();
+    // The list holds the two stored queries; a name prefix narrows it.
+    let mut all = listed_query_names(&svc.query_list(String::new()).await.unwrap());
+    all.sort();
+    assert_eq!(all, vec!["ehr::over_50", "misc::bare_name"]);
     assert_eq!(
-        by_artefact_none,
-        Vec::<ferroehr::service::definition::types::QueryDescriptor>::new()
+        listed_query_names(&svc.query_list("ehr::".to_owned()).await.unwrap()),
+        vec!["ehr::over_50"]
     );
 
-    // delete_query removes by name → the query is gone.
-    svc.delete_query("ehr::over_50".to_owned())
+    // delete → the query is gone.
+    svc.admin_query_delete("ehr::over_50".to_owned(), version.clone())
         .await
         .expect("delete");
-    assert!(!svc.has_query("ehr::over_50".to_owned()).await.unwrap());
-    assert_eq!(svc.queries_count().await.unwrap(), 2);
+    assert!(
+        svc.query_version_get("ehr::over_50".to_owned(), version.clone())
+            .await
+            .is_err()
+    );
+    assert_eq!(svc.query_list(String::new()).await.unwrap().len(), 1);
     // Deleting an absent query → 404.
     let del_missing = svc
-        .delete_query("ehr::over_50".to_owned())
+        .admin_query_delete("ehr::over_50".to_owned(), version)
         .await
         .expect_err("delete absent");
     assert!(
@@ -1093,62 +1114,11 @@ async fn query_valid_store_list_match_delete() {
         ),
         "got {del_missing:?}"
     );
-
-    // store_query on invalid AQL → 422 invalid_query.
-    let bad = svc
-        .store_query("nonsense".to_owned(), "aql".to_owned(), None)
-        .await
-        .expect_err("invalid query rejected");
-    assert!(
-        matches!(
-            bad,
-            StatusError {
-                status: ServiceStatus::InvalidQuery,
-                ..
-            }
-        ),
-        "got {bad:?}"
-    );
-
-    // Bad id-pattern regex → 400 invalid_id_pattern.
-    let bad_re = svc
-        .list_matching_queries("(".to_owned(), None, Page::all())
-        .await
-        .expect_err("bad regex");
-    assert!(
-        matches!(
-            bad_re,
-            StatusError {
-                status: ServiceStatus::InvalidIdPattern,
-                ..
-            }
-        ),
-        "got {bad_re:?}"
-    );
-}
-
-#[tokio::test]
-async fn query_store_set_not_implemented() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    // store_query_set is a spec TODO → 501 (trait default, NOTE).
-    let err = svc.store_query_set(None).expect_err("not implemented");
-    assert!(
-        matches!(
-            err,
-            StatusError {
-                status: ServiceStatus::NotImplemented,
-                ..
-            }
-        ),
-        "got {err:?}"
-    );
 }
 
 /// The REST adapter surface for ADL2 template upload: a duplicate HRID is a
 /// conflict (`409_template_already_exists`, `definition-codegen.openapi.yaml`
-/// `/definition/template/adl2` POST) and invalid source is a 400 — while the
-/// native `upload_artefact` keeps replace semantics.
+/// `/definition/template/adl2` POST) and invalid source is a 400.
 #[tokio::test]
 async fn adl2_template_upload_wire_conflicts_on_duplicate() {
     let db = testkit::db().await.expect("testkit database");
@@ -1169,9 +1139,6 @@ async fn adl2_template_upload_wire_conflicts_on_duplicate() {
         matches!(&dup, ServiceError::Conflict(e) if e.message.contains("already exists")),
         "got {dup:?}"
     );
-
-    // The native upload still replaces.
-    svc.upload_artefact(tmpl).await.expect("native replace");
 
     // A source that fails the ADL2 grammar (missing mandatory sections →
     // S-codes) is *syntactically invalid content* — the released 400 branch
@@ -1337,7 +1304,9 @@ async fn adl2_template_resolves_on_the_commit_path_and_validates() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
     let opt = adl2_source("operational_template", HRID, None);
-    svc.upload_artefact(opt).await.expect("upload ADL2 OPT");
+    svc.template_adl2_upload(opt)
+        .await
+        .expect("upload ADL2 OPT");
 
     // Gap 2: the runtime resolver used by the FLAT/STRUCTURED commit path now
     // resolves the ADL2 template (before #269: `ServiceError::Unprocessable`).
@@ -1424,10 +1393,10 @@ async fn adl2_template_with_filler_projects_the_filled_web_template() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    svc.upload_artefact(ARCH.to_owned())
+    svc.template_adl2_upload(ARCH.to_owned())
         .await
         .expect("upload the filler archetype");
-    svc.upload_artefact(TMPL.to_owned())
+    svc.template_adl2_upload(TMPL.to_owned())
         .await
         .expect("upload the template");
 
@@ -1463,7 +1432,7 @@ async fn definitions_valid_resolves_archetype_ids_against_the_stored_repositorie
     svc.upload_archetype(fixture(ARCHETYPE_REL))
         .await
         .expect("upload the ADL 1.4 archetype");
-    svc.upload_artefact(adl2_source("archetype", ADL2_HRID, None))
+    svc.template_adl2_upload(adl2_source("archetype", ADL2_HRID, None))
         .await
         .expect("upload the ADL 2 archetype");
 
