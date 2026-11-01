@@ -676,14 +676,12 @@ const FIRST_GENERATION_SETS: &[FirstGenerationSet] = &[
 
 /// The extension the schema needs, installed by the bootstrap.
 ///
-/// `btree_gist` is the only one: it backs the temporal
-/// `UNIQUE (... WITHOUT OVERLAPS)` of `linkage/0002_subject_ehr.sql`, which
-/// every database applies before `linkage/0006_drop_subject_ehr.sql` drops the
-/// table, and PostgreSQL enforces that key as a `GiST` index over its operator
-/// classes
+/// `btree_gist` is the only one: `linkage/0002_subject_ehr.sql`, applied
+/// before `linkage/0006_drop_subject_ehr.sql` drops the table, declares a
+/// temporal `UNIQUE (... WITHOUT OVERLAPS)` that PostgreSQL enforces as a `GiST`
+/// index over its operator classes
 /// (<https://www.postgresql.org/docs/18/sql-createtable.html>), and installing
-/// it here is what lets a plain PostgreSQL 18 database serve with nothing
-/// preinstalled.
+/// it here lets a plain PostgreSQL 18 database serve with nothing preinstalled.
 const BOOTSTRAP_EXTENSION: &str = "CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA ext";
 
 /// The schemas a database's preparation creates, in [`Domain::ALL`] order:
