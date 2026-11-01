@@ -1888,7 +1888,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::agent::Agent {
                     details: __s8.flatten(),
                     reverse_relationships: __s9,
                     relationships: __s10,
-                    languages: __s11,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s11,
+                        "languages",
+                    )?,
                     roles: __s12,
                 })
             }
@@ -16282,7 +16285,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::group::Group {
                     details: __s8.flatten(),
                     reverse_relationships: __s9,
                     relationships: __s10,
-                    languages: __s11,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s11,
+                        "languages",
+                    )?,
                     roles: __s12,
                 })
             }
@@ -16582,7 +16588,7 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
                         period: __s7.flatten(),
                         duration: __s8.flatten(),
                         summary: __s9.flatten(),
-                        events: __s10,
+                        events: ::openehr_base::serde_support::refuse_empty_list(__s10, "events")?,
                     },
                 )
             }
@@ -21891,7 +21897,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::organisation::
                     details: __s8.flatten(),
                     reverse_relationships: __s9,
                     relationships: __s10,
-                    languages: __s11,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s11,
+                        "languages",
+                    )?,
                     roles: __s12,
                 })
             }
@@ -24147,7 +24156,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::person::Person
                     details: __s8.flatten(),
                     reverse_relationships: __s9,
                     relationships: __s10,
-                    languages: __s11,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s11,
+                        "languages",
+                    )?,
                     roles: __s12,
                 })
             }
@@ -32116,7 +32128,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::agent::Agent {
                     contacts: __s7,
                     details: __s8.flatten(),
                     relationships: __s9,
-                    languages: __s10,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s10,
+                        "languages",
+                    )?,
                     roles: __s11,
                 })
             }
@@ -46065,7 +46080,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::group::Group {
                     contacts: __s7,
                     details: __s8.flatten(),
                     relationships: __s9,
-                    languages: __s10,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s10,
+                        "languages",
+                    )?,
                     roles: __s11,
                 })
             }
@@ -46365,7 +46383,7 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
                         period: __s7.flatten(),
                         duration: __s8.flatten(),
                         summary: __s9.flatten(),
-                        events: __s10,
+                        events: ::openehr_base::serde_support::refuse_empty_list(__s10, "events")?,
                     },
                 )
             }
@@ -51635,7 +51653,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::organisation::
                     contacts: __s7,
                     details: __s8.flatten(),
                     relationships: __s9,
-                    languages: __s10,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s10,
+                        "languages",
+                    )?,
                     roles: __s11,
                 })
             }
@@ -53852,7 +53873,10 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::person::Person
                     contacts: __s7,
                     details: __s8.flatten(),
                     relationships: __s9,
-                    languages: __s10,
+                    languages: ::openehr_base::serde_support::refuse_empty_list(
+                        __s10,
+                        "languages",
+                    )?,
                     roles: __s11,
                 })
             }
