@@ -45,7 +45,7 @@
 //!    kinds no build can ship a rule for ([`detect`]). A `DV_IDENTIFIER`
 //!    whose `type` declares an item rather than a person, and one in a
 //!    feeder audit's item-id lists that declares no person, is not scanned
-//!    ([`identifier_kind`]).
+//!    (`identifier_kind`).
 //!
 //! A finding never carries the offending VALUE, only its RM path and the rule
 //! that matched: a refusal travels into an error body, an access log and a
