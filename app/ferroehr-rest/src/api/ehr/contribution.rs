@@ -135,12 +135,9 @@ pub(super) async fn run(
             // `Prefer: resolve_refs` (Requests_and_responses §Representation
             // details negotiation): versions as full ORIGINAL_VERSIONs.
             let body = if negotiate::prefers_resolve_refs(h) {
-                state
-                    .backend()
-                    .get_contribution_resolved(ehr_id, cid)
-                    .await?
+                state.backend().ehr_contribution(ehr_id, cid, true).await?
             } else {
-                state.backend().get_contribution(ehr_id, cid).await?
+                state.backend().ehr_contribution(ehr_id, cid, false).await?
             };
             // A weak `ETag` on the contribution uid plus `Last-Modified` from
             // `audit.time_committed`: the released 200_CONTRIBUTION declares

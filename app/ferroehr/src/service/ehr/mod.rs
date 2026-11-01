@@ -63,8 +63,9 @@ pub mod access_types;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use serde_json::Value;
 
+use crate::service::error::ServiceError;
+use crate::service::refusal::Missing;
 use crate::service::response::ResourceMeta;
-use crate::service::status::StatusError;
 
 /// The committed version's full [`ResourceMeta`] (version uid + commit
 /// time), for write paths whose wire response carries `ETag` **and**
@@ -72,9 +73,9 @@ use crate::service::status::StatusError;
 /// SHOULD accompany versioned resources).
 fn committed_meta(
     resp: crate::service::response::ServiceResponse,
-) -> Result<ResourceMeta, StatusError> {
+) -> Result<ResourceMeta, ServiceError> {
     resp.meta
-        .ok_or_else(|| StatusError::exception("write produced no version metadata"))
+        .ok_or_else(|| ServiceError::fault("write produced no version metadata"))
 }
 
 /// Verify a version-addressed READ returned the VERSION the caller named:
@@ -89,12 +90,12 @@ fn committed_meta(
 fn ensure_addressed_version(
     addressed: &openehr_base::prelude::ObjectVersionId,
     served_uid: &str,
-) -> Result<(), crate::service::error::ServiceError> {
+) -> Result<(), ServiceError> {
     if composite_ids_equal(served_uid, addressed.value()) {
         Ok(())
     } else {
-        Err(crate::service::error::ServiceError::new(
-            crate::service::status::ServiceStatus::ObjectVersionDoesNotExist,
+        Err(ServiceError::not_found(
+            Missing::ObjectVersion,
             format!("version {}", addressed.value()),
         ))
     }
@@ -108,7 +109,7 @@ fn ensure_addressed_version(
 fn ensure_if_match(
     preceding: Option<&openehr_base::prelude::ObjectVersionId>,
     latest: Option<&ResourceMeta>,
-) -> Result<(), crate::service::error::ServiceError> {
+) -> Result<(), ServiceError> {
     let Some(pre) = preceding else {
         return Ok(());
     };
@@ -117,13 +118,11 @@ fn ensure_if_match(
         // base_types master05 §"Composite Identifiers and Case": two
         // identifiers identical apart from case identify the same thing).
         Some(meta) if composite_ids_equal(&meta.uid, pre.value()) => Ok(()),
-        Some(meta) => Err(crate::service::error::ServiceError::version_conflict(
-            format!(
-                "If-Match {:?} does not match the current latest version {:?}",
-                pre.value(),
-                meta.uid
-            ),
-        )),
+        Some(meta) => Err(ServiceError::version_conflict(format!(
+            "If-Match {:?} does not match the current latest version {:?}",
+            pre.value(),
+            meta.uid
+        ))),
         None => Ok(()),
     }
 }
@@ -188,7 +187,7 @@ fn resolve_envelope(
     operation_change_type: &str,
     default_description: &str,
     system_id: &str,
-) -> Result<CommitParts, crate::service::error::ServiceError> {
+) -> Result<CommitParts, ServiceError> {
     let openehr_its::rest::generated::common::UpdateVersion {
         lifecycle_state,
         attestations,
@@ -214,9 +213,7 @@ fn resolve_envelope(
     // RM common master06 §Logical Deletion: only a deleting version carries no
     // data, and these direct writes create or update content.
     let canonical = data.ok_or_else(|| {
-        crate::service::error::ServiceError::precondition(
-            "the version carries no data, and this operation writes content",
-        )
+        ServiceError::precondition("the version carries no data, and this operation writes content")
     })?;
     let lifecycle = lifecycle_state.defining_code.code_string;
     Ok(CommitParts {

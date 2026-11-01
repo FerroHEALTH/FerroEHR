@@ -25,13 +25,13 @@ use openehr_its::rest::generated::ehr::{
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::EhrStatus;
 
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::response::ServiceResponse;
-use ferroehr::service::status::ServiceStatus;
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
-use crate::overview::error::{RestError, status_api_error};
+use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid, require_if_match};
 use crate::state::AppState;
 
@@ -158,7 +158,7 @@ pub(super) async fn run(
                     stored_tags.echo(&mut resp);
                     Ok(resp)
                 }
-                Err(e) if e.status == ServiceStatus::VersionMismatch => {
+                Err(e @ ServiceError::VersionConflict(_)) => {
                     let meta = state
                         .backend()
                         .ehr_status_latest_meta(ehr_id)
@@ -166,7 +166,7 @@ pub(super) async fn run(
                         .ok()
                         .flatten();
                     Ok(negotiate::error_with_meta(
-                        status_api_error(e),
+                        ApiError::from(e),
                         &base,
                         Some("ehr_status"),
                         meta.as_ref(),

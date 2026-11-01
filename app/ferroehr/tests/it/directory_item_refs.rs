@@ -11,7 +11,8 @@
 
 use serde_json::{Value, json};
 
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::Invalid;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 
 use crate::fixtures::{composition, uv};
@@ -36,16 +37,21 @@ fn folder_with_item(namespace: &str, id_value: &str) -> Value {
     })
 }
 
-fn assert_unresolvable(err: &StatusError, expected_path_fragment: &str) {
-    assert_eq!(
-        err.status,
-        ServiceStatus::ContentInvalid,
+fn assert_unresolvable(err: &ServiceError, expected_path_fragment: &str) {
+    assert!(
+        matches!(
+            err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
         "an unresolvable this-system reference is content-invalid (→ 422), got {err:?}"
     );
     assert!(
-        err.message.contains(expected_path_fragment),
+        err.message().contains(expected_path_fragment),
         "the refusal names the dangling reference's tree path; got: {}",
-        err.message
+        err.message()
     );
 }
 
@@ -247,10 +253,5 @@ async fn contribution_path_gates_this_system_refs() {
         .create_ehr_contribution(ehr_uuid, dangling)
         .await
         .expect_err("a dangling this-system reference refuses the whole set");
-    assert_eq!(
-        err.status,
-        ServiceStatus::ContentInvalid,
-        "contribution refusal is content-invalid, got {err:?}"
-    );
-    assert!(err.message.contains("/items[0]"), "got: {}", err.message);
+    assert_unresolvable(&err, "/items[0]");
 }

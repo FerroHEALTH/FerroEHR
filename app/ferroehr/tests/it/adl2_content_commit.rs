@@ -417,7 +417,7 @@ async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost
             .await
             .unwrap_or_else(|e| panic!("{}: commit: {e:?}", case.workflow));
         let stored = svc
-            .composition_latest_response(ehr, committed.vo_id)
+            .read_composition_raw(ehr, committed.vo_id, None)
             .await
             .unwrap_or_else(|e| panic!("{}: read: {e:?}", case.workflow))
             .body
@@ -556,7 +556,7 @@ async fn a_simplified_commit_stores_the_names_and_archetype_details_of_the_canon
                 .await
                 .unwrap_or_else(|e| panic!("{} {format}: commit: {e:?}", case.workflow));
             let stored = svc
-                .composition_latest_response(ehr, committed.vo_id)
+                .read_composition_raw(ehr, committed.vo_id, None)
                 .await
                 .unwrap_or_else(|e| panic!("{} {format}: read: {e:?}", case.workflow))
                 .body
@@ -610,7 +610,7 @@ async fn aql_finds_a_flat_adl2_commit_by_interface_and_full_archetype_ids() {
         .await
         .expect("the FLAT commit");
     let stored = svc
-        .composition_latest_response(ehr, committed.vo_id)
+        .read_composition_raw(ehr, committed.vo_id, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the stored composition");

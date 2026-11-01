@@ -37,8 +37,7 @@ use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Refusal};
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::{Clash, Invalid, Refusal};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
@@ -129,7 +128,7 @@ async fn composition_validation_gates_persistence() {
     let vo_id = ovid.split("::").next().unwrap().to_owned();
 
     let fetched = svc
-        .composition_latest_response(ehr_uuid, vo_id.parse().expect("vo uuid"))
+        .read_composition_raw(ehr_uuid, vo_id.parse().expect("vo uuid"), None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("valid composition persisted");
@@ -238,7 +237,7 @@ async fn composition_update_is_validated() {
     );
 
     let current = svc
-        .composition_latest_response(ehr_uuid, vo_uuid)
+        .read_composition_raw(ehr_uuid, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("current still readable");
@@ -428,8 +427,8 @@ async fn incomplete_lifecycle_relaxes_lower_bounds_but_not_wrongness() {
     assert!(
         matches!(
             wrong,
-            Err(StatusError {
-                status: ServiceStatus::ContentInvalid,
+            Err(ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             })
         ),

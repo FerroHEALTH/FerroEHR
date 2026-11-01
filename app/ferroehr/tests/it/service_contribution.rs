@@ -29,6 +29,7 @@
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::version_update::lifecycle_state_coded;
@@ -242,10 +243,10 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
+            })
         ),
         "got {err:?}"
     );
@@ -274,8 +275,8 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
         ),
@@ -306,10 +307,10 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
+            })
         ),
         "got {err:?}"
     );
@@ -338,10 +339,10 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
+            })
         ),
         "got {err:?}"
     );
@@ -373,10 +374,10 @@ async fn attestation_error_cases() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
+            })
         ),
         "got {err:?}"
     );
@@ -431,13 +432,18 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
         .create_ehr_contribution(ehr_uuid, attest(None))
         .await
         .expect_err("an attestation member without lifecycle_state is refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "the refusal is the 400, got {err:?}"
     );
     assert!(
-        err.message
+        err.message()
             .contains("missing field `lifecycle_state` (at $.versions[0])"),
         "the refusal names the member and the attribute, got {err:?}"
     );
@@ -446,10 +452,19 @@ async fn attestation_member_without_lifecycle_state_is_refused() {
         .create_ehr_contribution(ehr_uuid, attest(Some(change_type("999", "nonsense"))))
         .await
         .expect_err("an out-of-group lifecycle_state is refused");
-    assert_eq!(err.status, ServiceStatus::ContentInvalid, "got {err:?}");
     assert!(
-        err.message.contains("versions[0]/lifecycle_state")
-            && err.message.contains("version_lifecycle_state"),
+        matches!(
+            &err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "got {err:?}"
+    );
+    assert!(
+        err.message().contains("versions[0]/lifecycle_state")
+            && err.message().contains("version_lifecycle_state"),
         "got {err:?}"
     );
 
@@ -509,13 +524,18 @@ async fn attestation_without_committer_is_refused() {
         )
         .await
         .expect_err("a 666 member without a committer is refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "got {err:?}"
     );
     assert!(
-        err.message.contains("(at $.versions[0].commit_audit)"),
+        err.message().contains("(at $.versions[0].commit_audit)"),
         "got {err:?}"
     );
 
@@ -543,13 +563,18 @@ async fn attestation_without_committer_is_refused() {
         )
         .await
         .expect_err("an accompanying attestation without a committer is refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "got {err:?}"
     );
     assert!(
-        err.message.contains("(at $.versions[0].attestations[0])"),
+        err.message().contains("(at $.versions[0].attestations[0])"),
         "got {err:?}"
     );
 }
@@ -589,24 +614,34 @@ async fn non_canonical_committer_is_refused_with_400() {
             .create_ehr_contribution(ehr_uuid, body(bad.clone(), committer("author")))
             .await
             .expect_err("a non-canonical CONTRIBUTION committer is refused");
-        assert_eq!(
-            err.status,
-            ServiceStatus::PreconditionViolation,
+        assert!(
+            matches!(
+                &err,
+                ServiceError::BadRequest(Refusal {
+                    kind: Malformed::Precondition,
+                    ..
+                })
+            ),
             "{bad}: got {err:?}"
         );
-        assert!(err.message.contains("(at $.audit)"), "{bad}: got {err:?}");
+        assert!(err.message().contains("(at $.audit)"), "{bad}: got {err:?}");
 
         let err = svc
             .create_ehr_contribution(ehr_uuid, body(committer("author"), bad.clone()))
             .await
             .expect_err("a non-canonical member committer is refused");
-        assert_eq!(
-            err.status,
-            ServiceStatus::PreconditionViolation,
+        assert!(
+            matches!(
+                &err,
+                ServiceError::BadRequest(Refusal {
+                    kind: Malformed::Precondition,
+                    ..
+                })
+            ),
             "{bad}: got {err:?}"
         );
         assert!(
-            err.message.contains("(at $.versions[0].commit_audit)"),
+            err.message().contains("(at $.versions[0].commit_audit)"),
             "{bad}: got {err:?}"
         );
     }
@@ -621,7 +656,16 @@ async fn non_canonical_committer_is_refused_with_400() {
         )
         .await
         .expect_err("an identity-less member committer is refused");
-    assert_eq!(err.status, ServiceStatus::ContentInvalid, "got {err:?}");
+    assert!(
+        matches!(
+            &err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "got {err:?}"
+    );
 }
 
 /// A `666|attestation|` member whose `UPDATE_ATTESTATION` payload fails its
@@ -678,9 +722,18 @@ async fn attestation_member_refusal_names_its_index() {
         )
         .await
         .expect_err("an attestation member with an out-of-group reason is refused");
-    assert_eq!(err.status, ServiceStatus::ContentInvalid, "got {err:?}");
     assert!(
-        err.message
+        matches!(
+            &err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "got {err:?}"
+    );
+    assert!(
+        err.message()
             .contains("versions[1]/ATTESTATION.reason.defining_code"),
         "the refusal names the member index, got {err:?}"
     );
@@ -715,10 +768,10 @@ async fn ehr_read_with_its_counts() {
     let ghost = "00000000-0000-7000-8000-0000000000ff";
     assert!(matches!(
         svc.ehr_read(ghost.parse().expect("uuid")).await,
-        Err(StatusError {
-            status: ServiceStatus::EhrIdDoesNotExist,
+        Err(ServiceError::NotFound(Refusal {
+            kind: Missing::Ehr,
             ..
-        })
+        }))
     ));
 
     // Seed: (1) EHR creation, (2) an EHR_STATUS update, (3) a composition — three
@@ -805,10 +858,10 @@ async fn ehr_contribution_list_page_extension() {
     assert!(matches!(
         svc.ehr_contribution_list_page(ghost.parse().expect("uuid"), 0, 20)
             .await,
-        Err(StatusError {
-            status: ServiceStatus::EhrIdDoesNotExist,
+        Err(ServiceError::NotFound(Refusal {
+            kind: Missing::Ehr,
             ..
-        })
+        }))
     ));
 
     // Seed three contributions: EHR create, an EHR_STATUS update, a composition.
@@ -952,9 +1005,10 @@ async fn contribution_honors_the_five_lifecycle_states() {
     assert_eq!(ov1["data"]["_type"], "COMPOSITION");
     // The latest read returns 200 with data (not the deleted 204 path).
     let latest = svc
-        .composition_latest_response(
+        .read_composition_raw(
             ehr_id.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
+            None,
         )
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
@@ -986,11 +1040,11 @@ async fn contribution_honors_the_five_lifecycle_states() {
     assert!(
         matches!(
             illegal,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
-        ) && illegal.message.contains("state machine"),
+        ) && illegal.message().contains("state machine"),
         "expected the 422 naming the state machine, got {illegal:?}"
     );
 
@@ -1047,11 +1101,11 @@ async fn contribution_honors_the_five_lifecycle_states() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
-        ) && err.message.contains("version_lifecycle_state"),
+        ) && err.message().contains("version_lifecycle_state"),
         "expected content_invalid naming version_lifecycle_state, got {err:?}"
     );
 
@@ -1076,9 +1130,10 @@ async fn contribution_honors_the_five_lifecycle_states() {
     .expect("delete (523) → 201");
     // The now-current version is a deletion: lifecycle 523.
     let del = svc
-        .composition_latest_response(
+        .read_composition_raw(
             ehr_id.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
+            None,
         )
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
@@ -1281,13 +1336,18 @@ async fn member_commit_audit_without_committer_is_refused() {
             .create_ehr_contribution(ehr_uuid, body(commit_audit.clone()))
             .await
             .expect_err("a member commit_audit without a committer is refused");
-        assert_eq!(
-            err.status,
-            ServiceStatus::PreconditionViolation,
+        assert!(
+            matches!(
+                &err,
+                ServiceError::BadRequest(Refusal {
+                    kind: Malformed::Precondition,
+                    ..
+                })
+            ),
             "{commit_audit}: the refusal is the 400, got {err:?}"
         );
         assert!(
-            err.message.contains("(at $.versions[1].commit_audit)"),
+            err.message().contains("(at $.versions[1].commit_audit)"),
             "{commit_audit}: the refusal names the member, got {err:?}"
         );
     }
@@ -1329,14 +1389,17 @@ async fn contribution_resolve_refs() {
         .parse::<uuid::Uuid>()
         .expect("contribution uuid");
 
-    let plain = svc.get_contribution(ehr_uuid, cid).await.expect("plain");
+    let plain = svc
+        .ehr_contribution(ehr_uuid, cid, false)
+        .await
+        .expect("plain");
     assert_eq!(
         plain["versions"][0]["_type"], "OBJECT_REF",
         "unresolved versions are OBJECT_REFs: {plain}"
     );
 
     let resolved = svc
-        .get_contribution_resolved(ehr_uuid, cid)
+        .ehr_contribution(ehr_uuid, cid, true)
         .await
         .expect("resolved");
     let v = &resolved["versions"][0];
@@ -1394,7 +1457,7 @@ async fn contribution_supplied_uid() {
         .create_ehr_contribution(ehr_uuid, body)
         .await
         .expect_err("duplicate uid rejected");
-    assert!(dup.message.contains("already in use"), "got {dup:?}");
+    assert!(dup.message().contains("already in use"), "got {dup:?}");
 }
 
 /// The combined EHR-existence + content-writability create gate
@@ -1586,7 +1649,7 @@ async fn contribution_cannot_delete_the_ehr_status() {
         .await
         .expect_err("EHR_STATUS delete member refused");
     assert!(
-        err.message.contains("EHR_STATUS cannot be deleted"),
+        err.message().contains("EHR_STATUS cannot be deleted"),
         "message names the mandatory-status ground, got {err:?}"
     );
 
@@ -1654,11 +1717,11 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
-        ) && err.message.contains("Logical Deletion"),
+        ) && err.message().contains("Logical Deletion"),
         "expected the 422 naming §Logical Deletion, got {err:?}"
     );
 
@@ -1685,7 +1748,7 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
     // Neither refusal wrote anything: the composition is still at version 1
     // and still readable (no 523 row with node rows behind it).
     let live = svc
-        .composition_latest_response(ehr_uuid, vo_uuid)
+        .read_composition_raw(ehr_uuid, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("still live");
@@ -1762,12 +1825,12 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
-        ) && err.message.contains("Logical Deletion")
-            && err.message.contains("contradicts change_type"),
+            })
+        ) && err.message().contains("Logical Deletion")
+            && err.message().contains("contradicts change_type"),
         "expected the 400 naming §Logical Deletion, got {err:?}"
     );
 
@@ -1779,17 +1842,17 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
-        ) && err.message.contains("version_lifecycle_state"),
+        ) && err.message().contains("version_lifecycle_state"),
         "expected the 422 naming version_lifecycle_state, got {err:?}"
     );
 
     // Neither refusal committed anything: the composition is still live at v1.
     let live = svc
-        .composition_latest_response(ehr_uuid, vo_uuid)
+        .read_composition_raw(ehr_uuid, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("still live");
@@ -1801,7 +1864,7 @@ async fn a_delete_member_with_a_contradictory_lifecycle_state_is_refused() {
         .await
         .expect("the 523-declaring delete member commits");
     let del = svc
-        .composition_latest_response(ehr_uuid, vo_uuid)
+        .read_composition_raw(ehr_uuid, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get deleted");
@@ -1860,11 +1923,11 @@ async fn deleting_an_already_deleted_composition_is_refused_on_both_routes() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
-        ) && err.message.contains("already deleted"),
+            })
+        ) && err.message().contains("already deleted"),
         "expected the 400 already-deleted refusal, got {err:?}"
     );
 
@@ -1989,10 +2052,10 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
+            })
         ),
         "expected 400 for the complete twin, got {err:?}"
     );
@@ -2009,8 +2072,8 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
         ),
@@ -2026,8 +2089,8 @@ async fn incomplete_admits_missing_composition_data_but_never_wrong_data() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
         ),
@@ -2085,10 +2148,10 @@ async fn incomplete_relaxes_the_folder_kind_too() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
+            })
         ),
         "expected 400 for the complete FOLDER twin, got {err:?}"
     );
@@ -2123,11 +2186,11 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
-        ) && err.message.contains("lifecycle_state"),
+            })
+        ) && err.message().contains("lifecycle_state"),
         "expected the 400 naming lifecycle_state, got {err:?}"
     );
 
@@ -2222,9 +2285,18 @@ async fn merge_provenance_on_a_member_is_recorded_and_served() {
         .create_ehr_contribution(ehr_uuid, member(&v2, Some(json!([{ "value": "sysB::2" }]))))
         .await
         .expect_err("a malformed merge input is refused");
-    assert_eq!(err.status, ServiceStatus::ContentInvalid, "{err:?}");
     assert!(
-        err.message.contains("other_input_version_uids"),
+        matches!(
+            &err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "{err:?}"
+    );
+    assert!(
+        err.message().contains("other_input_version_uids"),
         "the refusal names the member, got {err:?}"
     );
 
@@ -2309,11 +2381,11 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
         assert!(
             matches!(
                 err,
-                StatusError {
-                    status: ServiceStatus::PreconditionViolation,
+                ServiceError::BadRequest(Refusal {
+                    kind: Malformed::Precondition,
                     ..
-                }
-            ) && err.message.contains(&format!("versions[0]/{key}")),
+                })
+            ) && err.message().contains(&format!("versions[0]/{key}")),
             "expected the 400 naming versions[0]/{key}, got {err:?}"
         );
     }
@@ -2444,7 +2516,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_ref
             .await
             .expect_err("a server-assigned member must be refused");
         assert!(
-            err.message.contains(&format!("versions[0]/{key}")),
+            err.message().contains(&format!("versions[0]/{key}")),
             "the refusal names the key at its member path, got {err:?}"
         );
     }
@@ -2495,13 +2567,18 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         )
         .await
         .expect_err("a CONTRIBUTION audit without a change type must be refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "the refusal is the 400 row, got {err:?}"
     );
     assert!(
-        err.message
+        err.message()
             .contains("missing field `change_type` (at $.audit)"),
         "the refusal names the missing attribute, got {err:?}"
     );
@@ -2521,13 +2598,18 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         )
         .await
         .expect_err("a CONTRIBUTION audit without a committer must be refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "the refusal is the 400 row, got {err:?}"
     );
     assert!(
-        err.message
+        err.message()
             .contains("missing field `committer` (at $.audit)"),
         "the refusal names the missing attribute, got {err:?}"
     );
@@ -2538,13 +2620,18 @@ async fn contribution_audit_change_type_is_required_not_derived() {
         .create_ehr_contribution(ehr_uuid, json!({ "versions": [member()] }))
         .await
         .expect_err("a CONTRIBUTION with no audit at all must be refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "got {err:?}"
     );
     assert!(
-        err.message.contains("missing field `audit`"),
+        err.message().contains("missing field `audit`"),
         "the refusal names the missing audit, got {err:?}"
     );
 
@@ -2607,9 +2694,9 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         .await
         .expect_err("a non-decoding member is refused");
     assert!(
-        err.message.contains("versions[1]"),
+        err.message().contains("versions[1]"),
         "the parse refusal names the member: {}",
-        err.message
+        err.message()
     );
 
     // (b) the second member's change_type contradicts its shape — 422 naming
@@ -2628,9 +2715,9 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         .await
         .expect_err("creation with a preceding version is refused");
     assert!(
-        err.message.contains("versions[1]"),
+        err.message().contains("versions[1]"),
         "the change-type refusal names the member: {}",
-        err.message
+        err.message()
     );
 
     // (c) the second member names a template the store does not hold — the
@@ -2656,9 +2743,9 @@ async fn member_scoped_refusals_name_the_offending_version_index() {
         .await
         .expect_err("an unknown template is refused");
     assert!(
-        err.message.contains("versions[1]") && err.message.contains("no_such_template.v1"),
+        err.message().contains("versions[1]") && err.message().contains("no_such_template.v1"),
         "the template refusal names the member and the template: {}",
-        err.message
+        err.message()
     );
 }
 
@@ -2765,7 +2852,7 @@ async fn reactivating_contribution_unlocks_its_own_content() {
         .await
         .expect_err("content against a deactivated EHR is refused");
     assert!(
-        blocked.message.contains("not modifiable"),
+        blocked.message().contains("not modifiable"),
         "the deactivated-EHR refusal names the cause: {blocked:?}"
     );
 
@@ -2847,7 +2934,7 @@ async fn concurrent_deactivation_is_seen_by_the_content_commit() {
         .expect("the racing task completes")
         .expect_err("the content commit observes the concurrent deactivation");
     assert!(
-        refused.message.contains("not modifiable"),
+        refused.message().contains("not modifiable"),
         "the refusal names the deactivation: {refused:?}"
     );
 }
@@ -2928,13 +3015,18 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         .create_ehr_contribution(ehr_uuid, set)
         .await
         .expect_err("content into a deactivated EHR is refused");
-    assert_eq!(
-        refused.status,
-        ServiceStatus::Conflict,
+    assert!(
+        matches!(
+            &refused,
+            ServiceError::Conflict(Refusal {
+                kind: Clash::State,
+                ..
+            })
+        ),
         "the state conflict comes first, got {refused:?}"
     );
     assert!(
-        refused.message.contains("not modifiable"),
+        refused.message().contains("not modifiable"),
         "the refusal names the EHR state: {refused:?}"
     );
 
@@ -2956,9 +3048,14 @@ async fn a_deactivated_ehr_reports_the_state_conflict_before_a_content_defect() 
         .create_ehr_contribution(ehr_uuid, reactivating)
         .await
         .expect_err("the defective body is refused");
-    assert_ne!(
-        refused.status,
-        ServiceStatus::Conflict,
+    assert!(
+        !matches!(
+            refused,
+            ServiceError::Conflict(Refusal {
+                kind: Clash::State,
+                ..
+            })
+        ),
         "a reactivating set is judged on its content, got {refused:?}"
     );
 }
@@ -2993,9 +3090,14 @@ async fn assert_shape_refused(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId, 
         .create_ehr_contribution(ehr, body.clone())
         .await
         .expect_err("a shape the released schema does not define is refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "{body}: the refusal is the 400, got {err:?}"
     );
 }
@@ -3204,7 +3306,16 @@ async fn audit_refusals_agree_on_both_audits_and_undeclared_members_commit() {
             .create_ehr_contribution(ehr, body.clone())
             .await
             .expect_err("an empty system_id is refused");
-        assert_eq!(err.status, ServiceStatus::ContentInvalid, "{body}: {err:?}");
+        assert!(
+            matches!(
+                &err,
+                ServiceError::Unprocessable {
+                    kind: Invalid::Content,
+                    ..
+                }
+            ),
+            "{body}: {err:?}"
+        );
     }
     let mut undeclared = typed_body(
         lifecycle("532"),
@@ -3258,12 +3369,17 @@ async fn an_attestation_member_carries_its_attestations() {
         .create_ehr_contribution(ehr, attest(json!([])))
         .await
         .expect_err("a 666 member without attestations is refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "got {err:?}"
     );
-    assert!(err.message.starts_with("versions[0]:"), "got {err:?}");
+    assert!(err.message().starts_with("versions[0]:"), "got {err:?}");
 
     let mut stated = attestation("authorised", false);
     stated["system_id"] = json!("attesting.system");

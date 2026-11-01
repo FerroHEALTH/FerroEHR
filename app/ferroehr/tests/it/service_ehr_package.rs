@@ -229,9 +229,9 @@ async fn tag_targets_must_be_within_the_same_ehr() {
         .await
         .expect_err("cross-EHR tag target must be rejected");
     assert!(
-        err.message.contains("same EHR"),
+        err.message().contains("same EHR"),
         "should cite the same-EHR duty, got: {}",
-        err.message
+        err.message()
     );
 }
 

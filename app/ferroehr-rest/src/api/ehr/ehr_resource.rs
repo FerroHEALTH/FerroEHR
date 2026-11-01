@@ -103,7 +103,12 @@ pub(super) async fn run(
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let tags = state
                 .backend()
-                .ehr_tags_get(ehr_id, p.tag_key, p.tag_value, p.tag_target_path)
+                .ehr_tags_get(
+                    ehr_id,
+                    p.tag_key.as_deref(),
+                    p.tag_value.as_deref(),
+                    p.tag_target_path.as_deref(),
+                )
                 .await?;
             Ok(negotiate::respond(
                 h,

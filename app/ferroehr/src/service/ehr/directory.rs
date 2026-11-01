@@ -11,7 +11,7 @@
 //! [`crate::versioning`]; the FOLDER-tree commit validation lives in
 //! [`validation`](super::validation).
 //!
-//! NOTE: the read side is multi-hierarchy (the `ehr_summary` folder refs) while
+//! NOTE: the read side is multi-hierarchy (the `ehr_read` folder refs) while
 //! the write side manages the single directory slot (`folders[1]`) only —
 //! additional `EHR.folders` hierarchies are committable through a CONTRIBUTION,
 //! the only committal path the release describes for them (RM ehr
@@ -27,9 +27,9 @@
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
+use crate::service::refusal::Missing;
 use crate::service::response::ResourceMeta;
 use crate::service::response::ServiceResponse;
-use crate::service::status::{ServiceStatus, StatusError};
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::Folder;
@@ -155,8 +155,8 @@ impl FerroEhrService {
         }
         .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("directory for EHR {ehr_id}"),
             )
         })?;
@@ -177,8 +177,8 @@ impl FerroEhrService {
             Some(path) => select_subfolder(&folder, path)
                 .map(|sub| ServiceResponse::new(sub, meta))
                 .ok_or_else(|| {
-                    ServiceError::new(
-                        ServiceStatus::VersionedObjectDoesNotExist,
+                    ServiceError::not_found(
+                        Missing::VersionedObject,
                         format!("folder path {path:?}"),
                     )
                 }),
@@ -206,10 +206,7 @@ impl FerroEhrService {
             .await?
             .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::VersionDoesNotExist,
-                    format!("directory {vo_id} v{version}"),
-                )
+                ServiceError::not_found(Missing::Version, format!("directory {vo_id} v{version}"))
             })?;
         if read.deleted() {
             return Ok(ServiceResponse::plain(Value::Null));
@@ -217,10 +214,7 @@ impl FerroEhrService {
         let mut response = self.version_response(ehr_id, vo_id, read)?;
         if let Some(path) = path.map(str::trim).filter(|p| !p.is_empty() && *p != "/") {
             response.body = select_subfolder(&response.body, path).ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::VersionedObjectDoesNotExist,
-                    format!("folder path {path:?}"),
-                )
+                ServiceError::not_found(Missing::VersionedObject, format!("folder path {path:?}"))
             })?;
         }
         Ok(response)
@@ -350,14 +344,12 @@ impl FerroEhrService {
         Ok(self.committed_response(ehr_id, &committed))
     }
 
-    /// The current directory FOLDER version metadata (for a `412`
-    /// `ETag`/`Location`). Resolves `EHR.directory` (= `folders.item(1)`, RM
-    /// ehr §EHR Class `Directory_in_folders`) rather than assuming a single
-    /// FOLDER versioned object.
+    /// The current directory FOLDER version metadata of an EHR, or `None` when
+    /// the EHR indexes no directory hierarchy.
     ///
     /// # Errors
-    /// [`ServiceError::Database`] if the metadata read fails.
-    pub(in crate::service) async fn directory_meta(
+    /// [`ServiceError`] if the metadata read fails.
+    pub async fn directory_latest_meta(
         &self,
         ehr_id: EhrId,
     ) -> Result<Option<ResourceMeta>, ServiceError> {
@@ -421,8 +413,8 @@ impl FerroEhrService {
     /// The EHR's directory versioned-object id, or `NotFound`.
     async fn directory_vo(&self, ehr_id: EhrId) -> Result<VoId, ServiceError> {
         self.directory_vo_opt(ehr_id).await?.ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("directory for EHR {ehr_id}"),
             )
         })
@@ -455,15 +447,19 @@ impl FerroEhrService {
     /// the wire's `ETag`/`Last-Modified`).
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR does not exist (404-equivalent), the FOLDER
+    /// [`ServiceError`] when the EHR does not exist (404-equivalent), the FOLDER
     /// tree is invalid (422-equivalent), the EHR is not modifiable or already
     /// has a directory (409-equivalent), or the commit fails.
     pub async fn create_directory(
         &self,
         an_ehr_id: EhrId,
         a_dir_struct: UpdateVersion<Folder>,
-    ) -> Result<ResourceMeta, StatusError> {
-        super::committed_meta(self.commit_new_directory(an_ehr_id, a_dir_struct).await?)
+    ) -> Result<ResourceMeta, ServiceError> {
+        super::committed_meta(
+            self.commit_new_directory(an_ehr_id, a_dir_struct)
+                .await
+                .map_err(ServiceError::flattened)?,
+        )
     }
 
     /// The directory FOLDER
@@ -473,18 +469,17 @@ impl FerroEhrService {
     /// Last-Modified": both SHOULD accompany versioned resources).
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed `a_time` (400-equivalent), a missing
+    /// [`ServiceError`] for a malformed `a_time` (400-equivalent), a missing
     /// directory/version/path (404-equivalent), or a read failure.
     pub async fn get_directory_at_time(
         &self,
         an_ehr_id: EhrId,
         a_time: Option<String>,
         a_path: Option<String>,
-    ) -> Result<ServiceResponse, StatusError> {
+    ) -> Result<ServiceResponse, ServiceError> {
         let at = a_time.as_deref().map(parse_at_time).transpose()?;
-        Ok(self
-            .directory_at_time(an_ehr_id, at, a_path.as_deref())
-            .await?)
+        self.directory_at_time(an_ehr_id, at, a_path.as_deref())
+            .await
     }
 
     /// Commit a new directory version,
@@ -492,7 +487,7 @@ impl FerroEhrService {
     /// the wire's `ETag`/`Last-Modified`).
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR has no directory (404-equivalent), the
+    /// [`ServiceError`] when the EHR has no directory (404-equivalent), the
     /// `preceding_version_uid` mismatches the current latest (412-equivalent),
     /// the FOLDER tree is invalid (422-equivalent), the EHR is not modifiable
     /// (409-equivalent), or the commit fails.
@@ -500,17 +495,16 @@ impl FerroEhrService {
         &self,
         an_ehr_id: EhrId,
         a_dir_struct: UpdateVersion<Folder>,
-    ) -> Result<ResourceMeta, StatusError> {
+    ) -> Result<ResourceMeta, ServiceError> {
         // The slot vo_id, its current version metadata and the EHR's
         // is_modifiable flag resolve ONCE here and are threaded into the write,
         // so neither the slot JOIN nor the writability probe runs twice.
         let Some((vo_id, is_modifiable, latest)) = self.directory_meta_with_vo(an_ehr_id).await?
         else {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("directory for EHR {an_ehr_id}"),
-            )
-            .into());
+            ));
         };
         ensure_if_match(a_dir_struct.preceding_version_uid.as_ref(), Some(&latest))?;
         let expected = a_dir_struct
@@ -520,7 +514,8 @@ impl FerroEhrService {
             .transpose()?;
         super::committed_meta(
             self.commit_directory_update(an_ehr_id, vo_id, a_dir_struct, expected, is_modifiable)
-                .await?,
+                .await
+                .map_err(ServiceError::flattened)?,
         )
     }
 
@@ -532,7 +527,7 @@ impl FerroEhrService {
     /// resources.
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR has no directory (404-equivalent), the
+    /// [`ServiceError`] when the EHR has no directory (404-equivalent), the
     /// `preceding_version_uid` mismatches the current latest (412-equivalent),
     /// the EHR is not modifiable (409-equivalent), or the commit fails.
     pub async fn delete_directory(
@@ -540,14 +535,13 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         preceding_version_uid: Option<ObjectVersionId>,
         update_audit: Option<&openehr_its::rest::generated::common::UpdateAudit>,
-    ) -> Result<ServiceResponse, StatusError> {
+    ) -> Result<ServiceResponse, ServiceError> {
         let Some((vo_id, is_modifiable, latest)) = self.directory_meta_with_vo(an_ehr_id).await?
         else {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("directory for EHR {an_ehr_id}"),
-            )
-            .into());
+            ));
         };
         ensure_if_match(preceding_version_uid.as_ref(), Some(&latest))?;
         let expected = preceding_version_uid
@@ -566,14 +560,14 @@ impl FerroEhrService {
     /// slash-separated FOLDER names; an unresolved path is 404-equivalent).
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
+    /// [`ServiceError`] for a malformed `OBJECT_VERSION_ID`, an unknown version
     /// or unresolved path (404-equivalent), or a read failure.
     pub async fn get_directory_at_version(
         &self,
         an_ehr_id: EhrId,
         a_version_uid: ObjectVersionId,
         a_path: Option<&str>,
-    ) -> Result<ServiceResponse, StatusError> {
+    ) -> Result<ServiceResponse, ServiceError> {
         let (vo_id, version) = components(&a_version_uid)?;
         let resp = self
             .directory_version(an_ehr_id, vo_id, version, a_path)

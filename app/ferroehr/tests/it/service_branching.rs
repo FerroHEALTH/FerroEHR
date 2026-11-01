@@ -206,7 +206,7 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
     // (2) The container current (latest trunk, master06 latest_trunk_version)
     // is STILL the imported foreign trunk v2 — the branch coexists.
     let current = svc
-        .composition_latest_response(target, vo_id)
+        .read_composition_raw(target, vo_id, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("current composition");
@@ -505,7 +505,7 @@ async fn a_version_tree_with_branches_reexports_and_reimports_whole() {
     assert_eq!(ov["item"]["uid"]["value"], json!(branch_uid));
     assert_eq!(ov["item"]["_type"], json!("ORIGINAL_VERSION"));
     let trunk = third_svc
-        .composition_latest_response(third, vo_id)
+        .read_composition_raw(third, vo_id, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("re-imported trunk current");

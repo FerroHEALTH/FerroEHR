@@ -31,15 +31,15 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::{ServiceStatus, StatusError};
+use crate::service::refusal::Missing;
 use crate::versioning::object_version_id::{VersionIdError, parse_uid_based_id};
 
 impl FerroEhrService {
-    /// All tags in an EHR, optionally filtered by key / value / target path.
+    /// `GET /ehr/{ehr_id}/tags` — all tags in an EHR, optionally filtered.
     ///
     /// # Errors
-    /// [`ServiceError::Database`] if the tag listing fails.
-    pub(in crate::service) async fn ehr_tags(
+    /// [`ServiceError`] if the tag listing fails.
+    pub async fn ehr_tags_get(
         &self,
         ehr_id: EhrId,
         key: Option<&str>,
@@ -185,8 +185,8 @@ impl FerroEhrService {
         target_type: &str,
     ) -> Result<(), ServiceError> {
         let not_found = || {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            ServiceError::not_found(
+                Missing::VersionedObject,
                 format!(
                     "tag target {target_vo_id} does not exist in EHR {ehr_id} \
                      (tag targets can only be within the same EHR)"
@@ -213,8 +213,8 @@ impl FerroEhrService {
             )
             .await?
             {
-                return Err(ServiceError::new(
-                    ServiceStatus::ObjectVersionDoesNotExist,
+                return Err(ServiceError::not_found(
+                    Missing::ObjectVersion,
                     format!("tag target version {}", version.value()),
                 ));
             }
@@ -256,8 +256,8 @@ impl FerroEhrService {
         )
         .await?
         {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("item tag {key:?}"),
             ));
         }
@@ -372,38 +372,17 @@ pub(in crate::service) fn item_tag_refusal(
 // ── The ITS-REST tags call surface ────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// `GET /ehr/{ehr_id}/tags` — all tags in an EHR, optionally filtered.
-    ///
-    /// # Errors
-    /// [`StatusError`] if the tag listing fails.
-    pub async fn ehr_tags_get(
-        &self,
-        an_ehr_id: EhrId,
-        key: Option<String>,
-        value: Option<String>,
-        target_path: Option<String>,
-    ) -> Result<Vec<ItemTag>, StatusError> {
-        Ok(self
-            .ehr_tags(
-                an_ehr_id,
-                key.as_deref(),
-                value.as_deref(),
-                target_path.as_deref(),
-            )
-            .await?)
-    }
-
     /// `GET …/{uid_based_id}/tags` — the tags on one target object.
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed `uid_based_id` (400-equivalent) or a
+    /// [`ServiceError`] for a malformed `uid_based_id` (400-equivalent) or a
     /// failing tag listing.
     pub async fn target_tags_get(
         &self,
         an_ehr_id: EhrId,
         uid_based_id: String,
         target_type: &str,
-    ) -> Result<Vec<ItemTag>, StatusError> {
+    ) -> Result<Vec<ItemTag>, ServiceError> {
         let (vo_id, version) = parse_tag_target(&uid_based_id)?;
         // The released 404 trigger — "when the `uid_based_id` does not
         // exist" — plus the EHR scope and the route-kind discipline
@@ -411,16 +390,15 @@ impl FerroEhrService {
         // target with no tags stays an empty 200 list.
         self.ensure_tag_target(an_ehr_id, vo_id, version.as_ref(), target_type)
             .await?;
-        Ok(self
-            .target_tags(an_ehr_id, vo_id, tag_target_tail(version.as_ref()))
-            .await?)
+        self.target_tags(an_ehr_id, vo_id, tag_target_tail(version.as_ref()))
+            .await
     }
 
     /// `PUT …/{uid_based_id}/tags` — full-collection replace of a target's
     /// tags, returning the collection after the write.
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed `uid_based_id`, a missing EHR or target
+    /// [`ServiceError`] for a malformed `uid_based_id`, a missing EHR or target
     /// (404-equivalent), an invalid tag (422-equivalent), or a storage
     /// failure.
     pub async fn target_tags_replace(
@@ -429,17 +407,16 @@ impl FerroEhrService {
         uid_based_id: String,
         target_type: &str,
         tags: Vec<UpdateItemTag>,
-    ) -> Result<Vec<ItemTag>, StatusError> {
+    ) -> Result<Vec<ItemTag>, ServiceError> {
         let (vo_id, version) = parse_tag_target(&uid_based_id)?;
-        Ok(self
-            .replace_tags(an_ehr_id, vo_id, version.as_ref(), target_type, &tags)
-            .await?)
+        self.replace_tags(an_ehr_id, vo_id, version.as_ref(), target_type, &tags)
+            .await
     }
 
     /// `DELETE …/{uid_based_id}/tags/{key}` — delete one tag by key.
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed `uid_based_id`, a missing tag
+    /// [`ServiceError`] for a malformed `uid_based_id`, a missing tag
     /// (404-equivalent), or a storage failure.
     pub async fn target_tag_delete(
         &self,
@@ -447,7 +424,7 @@ impl FerroEhrService {
         uid_based_id: String,
         target_type: &str,
         key: String,
-    ) -> Result<(), StatusError> {
+    ) -> Result<(), ServiceError> {
         let (vo_id, version) = parse_tag_target(&uid_based_id)?;
         self.delete_tag(an_ehr_id, vo_id, version.as_ref(), target_type, &key)
             .await?;
@@ -469,11 +446,11 @@ impl FerroEhrService {
 /// ([`tag_target_tail`]).
 ///
 /// # Errors
-/// [`StatusError`] (precondition, → `400`) when the value is neither a UUID nor a
+/// [`ServiceError`] (precondition, → `400`) when the value is neither a UUID nor a
 /// well-formed `OBJECT_VERSION_ID`.
 pub(in crate::service) fn parse_tag_target(
     uid_based_id: &str,
-) -> Result<(VoId, Option<ObjectVersionId>), StatusError> {
+) -> Result<(VoId, Option<ObjectVersionId>), ServiceError> {
     let decoded = parse_uid_based_id(uid_based_id)?;
     Ok((decoded.vo_id, decoded.version))
 }
