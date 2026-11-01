@@ -79,7 +79,7 @@ pub(crate) mod change_type {
 /// never store, an out-of-group change type).
 pub(crate) fn change_type_code(token: &str) -> Option<String> {
     let t = openehr();
-    if t.is_valid_audit_change_type(token) {
+    if t.is_valid_code("audit_change_type", token) {
         return Some(token.to_owned());
     }
     t.concepts_in_group(AUDIT_CHANGE_TYPE)

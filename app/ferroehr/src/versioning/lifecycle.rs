@@ -47,7 +47,7 @@ pub(crate) mod state {
 /// Lifecycle: the five values `532/553/523/800/801`).
 pub(crate) fn lifecycle_state_code(token: &str) -> Option<String> {
     let t = openehr();
-    if t.is_valid_version_lifecycle_state(token) {
+    if t.is_valid_code("version_lifecycle_state", token) {
         return Some(token.to_owned());
     }
     t.concepts_in_group(VERSION_LIFECYCLE_STATE)
@@ -226,7 +226,10 @@ mod tests {
         ];
         let t = openehr();
         for code in all {
-            assert!(t.is_valid_version_lifecycle_state(code), "code {code}");
+            assert!(
+                t.is_valid_code("version_lifecycle_state", code),
+                "code {code}"
+            );
             // `code_string` must be numeric (the group's wire form).
             assert!(code.chars().all(|c| c.is_ascii_digit()), "code {code}");
         }

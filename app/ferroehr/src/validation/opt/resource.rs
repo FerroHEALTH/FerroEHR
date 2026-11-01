@@ -290,7 +290,7 @@ fn check_language(
     invariant: &'static str,
     what: &str,
 ) -> Result<(), RuleViolation> {
-    if terminology.is_valid_language(code) {
+    if terminology.is_valid_external_code("languages", code) {
         Ok(())
     } else {
         Err(RuleViolation::new(
