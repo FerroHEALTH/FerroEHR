@@ -110,6 +110,7 @@ exceptions = [
   { allow = ["BUSL-1.1"], crate = "ferroehr" },
   { allow = ["BUSL-1.1"], crate = "ferroehr-rest" },
   { allow = ["BUSL-1.1"], crate = "ferroehr-server" },
+  { allow = ["BUSL-1.1"], crate = "forwarders" },
   { allow = ["BUSL-1.1"], crate = "ferroehr-ext" },
   { allow = ["BUSL-1.1"], crate = "ferroehr-viewer" },
   { allow = ["BUSL-1.1"], crate = "openehr-codegen" },

@@ -981,10 +981,12 @@ and development profiles and their README badges (#4503); and the
 
 ### Left open on 2026-11-01, for 5.6.0-rc6
 
-- The conformance run on `main` still has known red rows under the released
-  profile, tracked on #4455; two of them are Veredictum's
-  (Vernum-Projecten/Veredictum#964 and Vernum-Projecten/Veredictum#965). The
-  badges show the run as it stands, and no text claims a green record.
+- The conformance run on `main` still had known red rows under the released
+  profile; two of them were Veredictum's (Vernum-Projecten/Veredictum#964 and
+  Vernum-Projecten/Veredictum#965). The badges showed the run as it stood, and
+  no text claimed a green record. Closed on 2026-11-01 with #4455: on
+  Veredictum 0.3.3 the released profile runs green, and its verdict gates the
+  merge queue and the release.
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
 
