@@ -20,11 +20,13 @@
 
 use std::fmt::Write;
 
-use openehr_adl::artefact::ArchetypeRepository;
+use openehr_adl::artefact::{ArchetypeRepository, resolve_hrid};
 use openehr_adl::assemble::parse_artefact;
+use openehr_adl::hrid::parse_hrid;
 use openehr_adl::opt::create_opt;
 use openehr_adl::parse::Dialect;
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
+use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
 
 const FAMILY: &str = "openEHR-EHR-OBSERVATION.repo_obs";
@@ -203,4 +205,66 @@ fn inserting_a_held_version_again_replaces_it() {
     repo.insert(archetype(&id("1.0.1")));
     assert_eq!(resolved(&repo, &id("1")), Some(id("1.0.1")));
     assert_eq!(resolved(&repo, &id("1.0.0")), Some(id("1.0.0")));
+}
+
+/// The identifier `reference` resolves to among the bare `ids`.
+fn resolved_hrid(ids: &[String], reference: &str, referrer: Option<&str>) -> Option<String> {
+    let held: Vec<_> = ids
+        .iter()
+        .map(|id| parse_hrid(id).expect("a held id parses"))
+        .collect();
+    resolve_hrid(reference, referrer, &held).map(ArchetypeHrid::physical_id)
+}
+
+#[test]
+fn a_release_beside_its_release_candidate_resolves_the_same_in_either_order() {
+    let ids = [id("1.0.0"), id("1.0.0-rc.1")];
+    for order in [ids.to_vec(), ids.iter().rev().cloned().collect()] {
+        let repo = holding(&order);
+        for reference in [FAMILY.to_owned(), id("1"), id("1.0"), id("1.0.0")] {
+            assert_eq!(resolved(&repo, &reference), Some(id("1.0.0")), "{order:?}");
+        }
+        assert_eq!(
+            resolved(&repo, &id("1.0.0-rc.1")),
+            Some(id("1.0.0-rc.1")),
+            "{order:?}: a pre-release is read by its full identifier"
+        );
+    }
+}
+
+#[test]
+fn bare_identifiers_resolve_by_the_repository_rule() {
+    let ids = [
+        id("1.0.0"),
+        id("1.0.0-rc.1"),
+        id("1.3.0-rc.2"),
+        id("1.0.0-alpha"),
+        id("2.0.0"),
+        format!("org.example::{}", id("1.5.0")),
+    ];
+    let references = [
+        FAMILY.to_owned(),
+        id("1"),
+        id("1.0"),
+        id("1.0.0"),
+        id("1.0.0-rc.1"),
+        id("1.3"),
+        id("1.0.0-alpha"),
+        id("2"),
+        id("3"),
+        format!("org.example::{}", id("1")),
+        format!("org.other::{}", id("1")),
+    ];
+    for order in [ids.to_vec(), ids.iter().rev().cloned().collect()] {
+        let repo = holding(&order);
+        for reference in &references {
+            for referrer in [None, Some("org.example")] {
+                assert_eq!(
+                    resolved_hrid(&order, reference, referrer),
+                    repo.resolve(reference, referrer).map(id_of),
+                    "{reference} from {referrer:?} over {order:?}"
+                );
+            }
+        }
+    }
 }
