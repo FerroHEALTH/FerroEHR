@@ -4,8 +4,6 @@
 //! The domain-type attribute tuples (`DV_ORDINAL`, `DV_QUANTITY`) and the
 //! single-valued occurrences cap.
 
-/// The `C_ATTRIBUTE` definition member of an attribute tuple (empty children —
-/// the constraints live in the tuple rows).
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
@@ -14,118 +12,47 @@ use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_tuple::CPrimitiveTuple;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_integer::CInteger;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_real::CReal;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_terminology_code::CTerminologyCode;
-use openehr_base::prelude::{Interval, PointInterval};
+use openehr_base::prelude::Interval;
 use openehr_its::opt14;
 
 use super::RootCx;
 use super::primitive::{c_string, complex, terminology_code};
 use super::value::{code_constraint, int_interval, map_mult, real_interval};
+use crate::aom::build::{PrimitiveNode, point_interval, tuple_member};
 
-pub(super) fn tuple_member(rm_attribute_name: &str) -> CAttribute {
-    CAttribute {
-        parent: None,
-        soc_parent: None,
-        rm_attribute_name: rm_attribute_name.to_owned(),
-        existence: None,
-        children: openehr_base::containers::present(Vec::new()),
-        differential_path: None,
-        cardinality: None,
-        is_multiple: false,
+/// The node of a tuple-row member: unnamed, its occurrences unstated.
+fn tuple_node(rm_type_name: &str) -> PrimitiveNode {
+    PrimitiveNode {
+        rm_type_name: rm_type_name.to_owned(),
+        node_id: String::new(),
+        occurrences: None,
     }
 }
 
 /// A tuple-row `C_INTEGER` member (point value, or unconstrained when `None`).
 pub(super) fn tuple_integer(value: Option<i32>, range: Option<Interval<i32>>) -> CPrimitiveObject {
-    CPrimitiveObject::CInteger(CInteger {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "Integer".to_owned(),
-        occurrences: None,
-        node_id: String::new(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint: openehr_base::containers::present(
-            value
-                .map(|v| {
-                    Interval::PointInterval(PointInterval {
-                        lower: Some(v),
-                        upper: Some(v),
-                        lower_unbounded: false,
-                        upper_unbounded: false,
-                        lower_included: true,
-                        upper_included: true,
-                    })
-                })
-                .into_iter()
-                .chain(range)
-                .collect::<Vec<_>>(),
-        ),
-    })
+    let constraint = value.map(point_interval).into_iter().chain(range).collect();
+    CPrimitiveObject::CInteger(tuple_node("Integer").c_integer(constraint, None))
 }
 
 /// A tuple-row `C_REAL` member (range, or unconstrained when `None`).
 pub(super) fn tuple_real(range: Option<Interval<f64>>) -> CPrimitiveObject {
-    CPrimitiveObject::CReal(CReal {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "Real".to_owned(),
-        occurrences: None,
-        node_id: String::new(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint: openehr_base::containers::present(range.into_iter().collect()),
-    })
+    CPrimitiveObject::CReal(tuple_node("Real").c_real(range.into_iter().collect(), None))
 }
 
 /// A tuple-row `C_STRING` member (single-value list).
 pub(super) fn tuple_string(value: &str) -> CPrimitiveObject {
-    CPrimitiveObject::CString(CString {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "String".to_owned(),
-        occurrences: None,
-        node_id: String::new(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint: Some(vec![value.to_owned()]),
-    })
+    CPrimitiveObject::CString(tuple_node("String").c_string(vec![value.to_owned()], None))
 }
 
 /// A tuple-row `C_TERMINOLOGY_CODE` member carrying the 1.4
 /// `terminology::code` encoding the converter core rewrites (shifting local
 /// at-codes, minting external ones).
 pub(super) fn tuple_code(terminology: Option<&str>, code: &str) -> CPrimitiveObject {
-    CPrimitiveObject::CTerminologyCode(CTerminologyCode {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "CODE_PHRASE".to_owned(),
-        occurrences: None,
-        node_id: String::new(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint: code_constraint(terminology, std::slice::from_ref(&code.to_owned()), None),
-        constraint_status: None,
-    })
+    let constraint = code_constraint(terminology, std::slice::from_ref(&code.to_owned()), None);
+    CPrimitiveObject::CTerminologyCode(
+        tuple_node("CODE_PHRASE").c_terminology_code(constraint, None, None),
+    )
 }
 
 /// `DV_STATE`: the 1.4 constrainer carries a state machine; the vendored AM
@@ -210,7 +137,10 @@ pub(super) fn ordinal_tuple(c: &opt14::types::CDvOrdinal, cx: &mut RootCx) -> CO
         Vec::new()
     } else {
         vec![CAttributeTuple {
-            members: Some(vec![tuple_member("value"), tuple_member("symbol")]),
+            members: Some(vec![
+                tuple_member("value".to_owned()),
+                tuple_member("symbol".to_owned()),
+            ]),
             tuples: openehr_base::containers::present(tuples),
         }]
     };
@@ -308,9 +238,12 @@ pub(super) fn quantity_tuple(c: &opt14::types::CDvQuantity, cx: &mut RootCx) -> 
                 CPrimitiveTuple { members }
             })
             .collect::<Vec<_>>();
-        let mut members = vec![tuple_member("units"), tuple_member("magnitude")];
+        let mut members = vec![
+            tuple_member("units".to_owned()),
+            tuple_member("magnitude".to_owned()),
+        ];
         if all_precision {
-            members.push(tuple_member("precision"));
+            members.push(tuple_member("precision".to_owned()));
         }
         attribute_tuples.push(CAttributeTuple {
             members: openehr_base::containers::present(members),

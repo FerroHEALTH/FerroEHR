@@ -30,12 +30,19 @@ use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
 };
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_boolean::CBoolean;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_date::CDate;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_date_time::CDateTime;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_duration::CDuration;
 use openehr_am::v2_4::aom2::constraint_model::primitive::c_integer::CInteger;
 use openehr_am::v2_4::aom2::constraint_model::primitive::c_real::CReal;
 use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_terminology_code::CTerminologyCode;
+use openehr_am::v2_4::aom2::constraint_model::primitive::c_time::CTime;
+use openehr_am::v2_4::aom2::constraint_model::primitive::constraint_status::ConstraintStatus;
 use openehr_base::prelude::{
-    Interval, MultiplicityInterval, PointInterval, ProperInterval, ProperIntervalData,
-    TerminologyCode,
+    Interval, Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso8601Time, MultiplicityInterval,
+    PointInterval, ProperInterval, ProperIntervalData, TerminologyCode,
 };
 use openehr_base::v1_3::base_types::definitions::definitions_impl::LOCAL_TERMINOLOGY_ID;
 
@@ -209,75 +216,234 @@ pub(crate) fn cattr_empty(name: &str) -> CAttribute {
     }
 }
 
-/// A `C_STRING` carrying a single regex constraint (`/re/`, delimiters kept).
-pub(crate) fn cstring_regex(regex: String, assumed: Option<String>) -> CString {
-    CString {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "String".to_owned(),
-        occurrences: None,
-        node_id: "Primitive_node_id".to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: assumed,
-        is_enumerated_type_constraint: None,
-        constraint: Some(vec![regex]),
-    }
+/// The `C_OBJECT` identity of a primitive constraint node: the only inherited
+/// fields a parsed or converted `C_PRIMITIVE_OBJECT` sets
+/// (`AOM2/master04.5` §`C_OBJECT`, §`C_PRIMITIVE_OBJECT`). The builders leave
+/// every other inherited field unset.
+#[derive(Debug)]
+pub(crate) struct PrimitiveNode {
+    /// The constrained RM type name.
+    pub(crate) rm_type_name: String,
+    /// The node id, `Primitive_node_id` for the inline form.
+    pub(crate) node_id: String,
+    /// The occurrences, set only where the source states them.
+    pub(crate) occurrences: Option<MultiplicityInterval>,
 }
 
-/// A `C_STRING` carrying a literal value list.
-pub(crate) fn cstring_values(values: &[String]) -> CString {
-    CString {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "String".to_owned(),
-        occurrences: None,
-        node_id: "Primitive_node_id".to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint: openehr_base::containers::present(values.to_vec()),
+impl PrimitiveNode {
+    /// An inline primitive of `rm_type_name`, whose node id is the special
+    /// value `Primitive_node_id` (`AOM2/master04.5` §`C_OBJECT`, `node_id`).
+    pub(crate) fn inline(rm_type_name: &str) -> Self {
+        Self {
+            rm_type_name: rm_type_name.to_owned(),
+            node_id: "Primitive_node_id".to_owned(),
+            occurrences: None,
+        }
     }
-}
 
-/// A `C_REAL` carrying an interval-list constraint.
-pub(crate) fn creal_values(constraint: Vec<Interval<f64>>) -> CReal {
-    CReal {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "Real".to_owned(),
-        occurrences: None,
-        node_id: "Primitive_node_id".to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint: openehr_base::containers::present(constraint),
+    /// A `C_BOOLEAN` over this node.
+    pub(crate) fn c_boolean(self, constraint: Vec<bool>, assumed_value: Option<bool>) -> CBoolean {
+        CBoolean {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+        }
     }
-}
 
-/// A `C_INTEGER` carrying an interval-list constraint.
-pub(crate) fn cinteger_values(constraint: Vec<Interval<i32>>) -> CInteger {
-    CInteger {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "Integer".to_owned(),
-        occurrences: None,
-        node_id: "Primitive_node_id".to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint: openehr_base::containers::present(constraint),
+    /// A `C_STRING` over this node; a regex constraint keeps its delimiters.
+    pub(crate) fn c_string(
+        self,
+        constraint: Vec<String>,
+        assumed_value: Option<String>,
+    ) -> CString {
+        CString {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+        }
+    }
+
+    /// A `C_INTEGER` over this node.
+    pub(crate) fn c_integer(
+        self,
+        constraint: Vec<Interval<i32>>,
+        assumed_value: Option<f64>,
+    ) -> CInteger {
+        CInteger {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+        }
+    }
+
+    /// A `C_REAL` over this node.
+    pub(crate) fn c_real(
+        self,
+        constraint: Vec<Interval<f64>>,
+        assumed_value: Option<f64>,
+    ) -> CReal {
+        CReal {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+        }
+    }
+
+    /// A `C_DATE` over this node, with its value list or its pattern.
+    pub(crate) fn c_date(
+        self,
+        constraint: Vec<Interval<Iso8601Date>>,
+        pattern_constraint: Option<String>,
+        assumed_value: Option<Iso8601Date>,
+    ) -> CDate {
+        CDate {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+            pattern_constraint,
+        }
+    }
+
+    /// A `C_TIME` over this node, with its value list or its pattern.
+    pub(crate) fn c_time(
+        self,
+        constraint: Vec<Interval<Iso8601Time>>,
+        pattern_constraint: Option<String>,
+        assumed_value: Option<Iso8601Time>,
+    ) -> CTime {
+        CTime {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+            pattern_constraint,
+        }
+    }
+
+    /// A `C_DATE_TIME` over this node, with its value list or its pattern.
+    pub(crate) fn c_date_time(
+        self,
+        constraint: Vec<Interval<Iso8601DateTime>>,
+        pattern_constraint: Option<String>,
+        assumed_value: Option<Iso8601DateTime>,
+    ) -> CDateTime {
+        CDateTime {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+            pattern_constraint,
+        }
+    }
+
+    /// A `C_DURATION` over this node, with its value list, its pattern, or
+    /// both in the mixed `pattern/interval` form.
+    pub(crate) fn c_duration(
+        self,
+        constraint: Vec<Interval<Iso8601Duration>>,
+        pattern_constraint: Option<String>,
+        assumed_value: Option<Iso8601Duration>,
+    ) -> CDuration {
+        CDuration {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint: openehr_base::containers::present(constraint),
+            pattern_constraint,
+        }
+    }
+
+    /// A `C_TERMINOLOGY_CODE` over this node.
+    pub(crate) fn c_terminology_code(
+        self,
+        constraint: String,
+        constraint_status: Option<ConstraintStatus>,
+        assumed_value: Option<TerminologyCode>,
+    ) -> CTerminologyCode {
+        CTerminologyCode {
+            parent: None,
+            soc_parent: None,
+            rm_type_name: self.rm_type_name,
+            occurrences: self.occurrences,
+            node_id: self.node_id,
+            alternative_ids: None,
+            is_deprecated: None,
+            sibling_order: None,
+            default_value: None,
+            assumed_value,
+            is_enumerated_type_constraint: None,
+            constraint,
+            constraint_status,
+        }
     }
 }
 
