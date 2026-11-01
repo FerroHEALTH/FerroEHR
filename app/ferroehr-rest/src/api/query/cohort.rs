@@ -6,8 +6,9 @@
 //! **OUR OWN EXTENSION: no openEHR spec governs this route.** ITS-REST 1.1.0
 //! publishes an ad-hoc and a stored query and nothing else; AQL is defined over
 //! the clinical domain alone and has no demographic source. The operation
-//! selects a population in the demographic domain, resolves it to EHRs through
-//! the linkage domain, and runs the caller's AQL over exactly those EHRs —
+//! selects a population in the demographic domain, resolves it to the EHRs
+//! whose `EHR_STATUS` subject names it, and runs the caller's AQL over exactly
+//! those EHRs —
 //! [`ferroehr::service::linkage::cohort`] carries the design and the
 //! separations that make it safe.
 //!

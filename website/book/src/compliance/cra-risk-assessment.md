@@ -404,7 +404,7 @@ corruptions"
   `the_current_digest_covers_every_column`,
   `every_hashed_column_is_tamper_evident`);
   `app/ferroehr/migrations/clinical/0014_bookkeeping_read_only.sql` and its
-  party and linkage twins;
+  party twin;
   `app/ferroehr/src/config/strict.rs`;
   [tamper evidence](../audit.md#tamper-evidence);
   [verifying releases](../verifying-releases.md).
@@ -531,12 +531,12 @@ to other products or systems, ensure that this is done in a secure manner"
 
 - **Applies:** yes.
 - **How:** `ferroehr db erase --confirm <instance>` removes all data and
-  settings in one operation: every multimedia blob, then the five schemas with
+  settings in one operation: every multimedia blob, then the four schemas with
   every domain, the access log, the stored settings and the instance id. Run
   without `--confirm` it erases nothing and prints what it would remove and the
   value that confirms it. `DELETE {base}/admin/ehr/{ehr_id}` and
-  `DELETE {base}/admin/ehr/all` remove single EHRs with every version, the
-  linkage row and orphaned multimedia; template and stored-query deletes
+  `DELETE {base}/admin/ehr/all` remove single EHRs with every version and
+  orphaned multimedia; template and stored-query deletes
   exist. Transfer runs over the authenticated API and `/ferroehr/rest/extensions/v1/admin/dump`,
   over TLS when the deployment enables it.
 - **Evidence:** `app/ferroehr/src/decommission.rs`;

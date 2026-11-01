@@ -501,13 +501,12 @@ YAML
 # The pseudonymisation domains, and the ONE place every probe below takes its
 # role names, schema names and dump identity from.
 #
-# Four enumerations were spelled out by hand here before the third domain
+# Four enumerations were spelled out by hand here before a third domain
 # arrived (#3220): the role roll-call, the NOINHERIT set, the roles the
 # boundary reads with, and the schemas it reads into. A probe that enumerates a
 # role set which no longer matches the database reports green about a boundary
-# it is not testing — which is exactly what happened when `linkage` landed. So
-# the enumeration exists once and every probe derives from it, and a fourth
-# domain is one line here rather than an escape.
+# it is not testing. So the enumeration exists once and every probe derives
+# from it, and a domain is one line here rather than an escape.
 #
 # One record per domain, `|`-separated:
 #
@@ -526,7 +525,6 @@ YAML
 PROBE_DOMAINS=(
   "clinical|ferroehr_clinical ferroehr_clinical_reader|clinical|clinical version"
   "party|ferroehr_party ferroehr_party_reader|party|party version;party national_identifier"
-  "linkage|ferroehr_linkage|linkage|linkage _sqlx_migrations"
 )
 
 # Field <n> of a domain record.
@@ -683,11 +681,10 @@ probes_domain_roles() {
      any probe is a real DEPLOYMENT on two DSNs: a container booting with
      FERROEHR__STORAGE__PARTY__URL_FILE mounted, schema preparation by a role that is
      neither runtime credential, and the chart's database.party.existingSecret
-     and database.linkage.existingSecret wiring the three. The server opens four
-     pools (db::connect_domains over [storage.clinical], [storage.party],
-     [storage.linkage] and [storage.audit], each defaulting to [db] url) and the
-     boundary suite exercises all three credentials in-process; no probe here boots a
-     container on three DSNs."
+     wiring the two. The server opens three pools (db::connect_domains over
+     [storage.clinical], [storage.party] and [storage.audit], each defaulting to
+     [db] url) and the boundary suite exercises both credentials in-process; no
+     probe here boots a container on two DSNs."
   uncovered "role provisioning on a managed database" \
     "the compose init creates the domain roles as the bootstrap superuser. A managed
      PostgreSQL where the migrator holds no CREATEROLE takes the documented manual

@@ -55,7 +55,7 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
 - **The refusal is a SIGNATURE, not a schema name.** Where this build owns no
   set of that name (`ehr`, `demographic`), any bookkeeping in the schema is the
   signature. Where the name survives the rewrite (`ext`, `linkage`, `audit`),
-  bookkeeping exists in both generations, so the signature is the description
+  bookkeeping exists in more than one generation, so the signature is the description
   sqlx recorded for VERSION 1 — the file that set was opened with. Without
   that half, an old set reaches its own migrator and fails on a checksum
   mismatch instead of the remedy.
@@ -78,8 +78,8 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
   `sqlx migrate add --source app/ferroehr/migrations/<schema> --sequential <desc>`,
   written as modern PG 18 SQL (`uuidv7()`, temporal `WITHOUT OVERLAPS`,
   `RETURNING OLD/NEW` where the design calls for them).
-- `ferroehr::db::prepare` bootstraps schemas + extensions and runs the sets in
-  order (`ext`, `clinical`, `party`, `linkage`, `audit`); each keeps its own
+- `ferroehr::db::prepare` bootstraps the schemas and runs the sets in
+  order (`ext`, `clinical`, `party`, `audit`); each keeps its own
   `_sqlx_migrations` table, and a database whose bookkeeping matches a
   `FIRST_GENERATION_SETS` signature is refused at boot as predating the storage
   rewrite.

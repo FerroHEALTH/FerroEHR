@@ -81,8 +81,6 @@ pub enum KeyDomain {
     Ehr,
     /// The identities of record subjects (the `party` domain).
     Demographic,
-    /// The party-to-EHR resolve map.
-    Linkage,
 }
 
 impl KeyDomain {
@@ -95,7 +93,6 @@ impl KeyDomain {
         match self {
             KeyDomain::Ehr => "ehr",
             KeyDomain::Demographic => "demographic",
-            KeyDomain::Linkage => "linkage",
         }
     }
 }
@@ -369,24 +366,21 @@ mod tests {
         // are separate artefacts under separate keys rather than two files.
         let demographic = DomainKeys::derive(&root(ROOT), KeyDomain::Demographic);
         let clinical = DomainKeys::derive(&root(ROOT), KeyDomain::Ehr);
-        let linkage = DomainKeys::derive(&root(ROOT), KeyDomain::Linkage);
         let (nonce, ciphertext) = demographic.seal("nl-bsn", VALUE).expect("seal");
 
-        for (other, domain) in [(&clinical, "clinical"), (&linkage, "linkage")] {
-            assert!(
-                matches!(
-                    other.open("nl-bsn", &nonce, &ciphertext),
-                    Err(CryptoError::Open)
-                ),
-                "the {domain} domain's key must not open a demographic record"
-            );
-            assert_ne!(
-                other.lookup_digest("nl-bsn", VALUE),
-                demographic.lookup_digest("nl-bsn", VALUE),
-                "the {domain} domain must not be able to reproduce the lookup digest either, \
-                 which is what would let it ask whether a known identifier is present"
-            );
-        }
+        assert!(
+            matches!(
+                clinical.open("nl-bsn", &nonce, &ciphertext),
+                Err(CryptoError::Open)
+            ),
+            "the clinical domain's key must not open a demographic record"
+        );
+        assert_ne!(
+            clinical.lookup_digest("nl-bsn", VALUE),
+            demographic.lookup_digest("nl-bsn", VALUE),
+            "the clinical domain must not be able to reproduce the lookup digest either, \
+             which is what would let it ask whether a known identifier is present"
+        );
 
         // And the same-root/same-domain derivation is stable, so the refusals
         // above are the domain doing the work rather than a derivation that
@@ -406,7 +400,6 @@ mod tests {
         // strings are pinned here as the key-material inputs they are.
         assert_eq!(KeyDomain::Ehr.as_str(), "ehr");
         assert_eq!(KeyDomain::Demographic.as_str(), "demographic");
-        assert_eq!(KeyDomain::Linkage.as_str(), "linkage");
     }
 
     #[test]

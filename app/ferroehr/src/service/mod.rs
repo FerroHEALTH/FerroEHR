@@ -13,8 +13,8 @@
 //! in [`crate::storage`] (no openEHR spec governs the SQL — our own design);
 //! this layer orchestrates.
 //!
-//! [`linkage`] is our own extension, the map
-//! from a demographic party to the EHR whose subject it is (GDPR Art. 4(5)).
+//! [`linkage`] is our own extension: the crossings between the demographic
+//! and the clinical domain, and the access record each one owes.
 //!
 //! The root modules beside the chapters carry the cross-chapter service
 //! vocabulary: the call-status model ([`status`]), the service error and
@@ -262,10 +262,9 @@ impl FerroEhrService {
     /// spawns that pool's sqlx maintenance task, which panics outside a tokio
     /// runtime: this constructor opens nothing and spawns nothing, so it cannot
     /// panic, and the caller builds the pools where a runtime is in scope
-    /// ([`DomainPools::from_shared`] derives all four from one existing pool).
-    /// The clinical pool serves this service, the party pool the demographic
-    /// chapter and the linkage pool the EHR Index, so the SCHEMA separation is
-    /// always on. A deployment that separates the runtime ROLES, tunes a pool,
+    /// ([`DomainPools::from_shared`] derives all three from one existing pool).
+    /// The clinical pool serves this service and the party pool the demographic
+    /// chapter, so the SCHEMA separation is always on. A deployment that separates the runtime ROLES, tunes a pool,
     /// or enables tenancy passes pools of its own, or replaces one afterwards
     /// with [`Self::with_demographic_pool`].
     #[must_use]

@@ -227,6 +227,28 @@ async fn a_predicate_is_refused_under_an_identity_source() {
     );
 }
 
+/// The refusal above rests on the one subject source (#4684): under an
+/// identity source an `EHR_STATUS` subject is a pseudonym of the declared
+/// clinical namespace, so no EHR can name a party, and a predicate, which
+/// selects parties, could only ever match nothing.
+#[tokio::test]
+async fn under_an_identity_source_no_ehr_names_a_party() {
+    let pix = MockServer::start().await;
+    let db = testkit::db().await.expect("testkit database");
+    let svc = service(&db, &pix.uri());
+    let party = Uuid::now_v7().to_string();
+
+    let refused = Box::pin(svc.create_ehr_meta(
+        Some(crate::fixtures::status_naming(&party, "local", "PERSON")),
+        None,
+    ))
+    .await;
+    assert!(
+        refused.is_err(),
+        "an EHR_STATUS naming a party outside the clinical pseudonym namespace is refused"
+    );
+}
+
 /// A failing identity source is the cohort's failure, never an empty cohort,
 /// and a service with no provider refuses a named subject.
 #[tokio::test]

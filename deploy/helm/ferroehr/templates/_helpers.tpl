@@ -117,7 +117,7 @@ block and a name in the list.
 */}}
 {{- define "ferroehr.hasInlineDomainDsn" -}}
 {{- $found := false -}}
-{{- range $domain := list "clinical" "party" "linkage" "audit" -}}
+{{- range $domain := list "clinical" "party" "audit" -}}
 {{- $dsn := index $.Values.database $domain -}}
 {{- if and (not $dsn.existingSecret) $dsn.url -}}
 {{- $found = true -}}
@@ -135,7 +135,7 @@ creating a Secret of its own.
 */}}
 {{- define "ferroehr.hasDomainSecret" -}}
 {{- $found := false -}}
-{{- range $domain := list "clinical" "party" "linkage" "audit" -}}
+{{- range $domain := list "clinical" "party" "audit" -}}
 {{- $dsn := index $.Values.database $domain -}}
 {{- if or $dsn.existingSecret $dsn.migrateExistingSecret -}}
 {{- $found = true -}}
@@ -257,7 +257,7 @@ The SecretUrl leaves are matched by PATH because their name (`url`) carries
 no shape a classifier can see — a URL's userinfo component is the credential.
 */}}
 {{- define "ferroehr.secretScan" -}}
-{{- $urlPaths := list "db.url" "storage.clinical.url" "storage.party.url" "storage.linkage.url" "storage.audit.url" "events.url" "audit.fhir_feed.url" -}}
+{{- $urlPaths := list "db.url" "storage.clinical.url" "storage.party.url" "storage.audit.url" "events.url" "audit.fhir_feed.url" -}}
 {{- $node := .node -}}
 {{- $path := .path -}}
 {{- $kind := kindOf $node -}}

@@ -74,7 +74,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     let applied = |schema: &'static str| {
         let pool = pool.clone();
         async move {
-            // The schema name is one of five literals below, never input.
+            // The schema name is one of four literals below, never input.
             sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(format!(
                 "SELECT count(*) FROM {schema}._sqlx_migrations"
             )))
@@ -88,8 +88,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(applied("ext").await, 9);
     assert_eq!(applied("clinical").await, 29);
     assert_eq!(applied("party").await, 20);
-    assert_eq!(applied("linkage").await, 6);
-    assert_eq!(applied("audit").await, 20);
+    assert_eq!(applied("audit").await, 21);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();
@@ -233,7 +232,7 @@ async fn no_relation_carries_a_tenant_column_and_no_row_policy_exists() {
 
     let tenant_columns: Vec<(String, String)> = sqlx::query_as(
         "SELECT table_schema, table_name FROM information_schema.columns \
-         WHERE table_schema IN ('clinical', 'party', 'linkage', 'audit', 'ext') \
+         WHERE table_schema IN ('clinical', 'party', 'audit', 'ext') \
            AND column_name = 'tenant_id' ORDER BY 1, 2",
     )
     .fetch_all(&pool)
@@ -246,7 +245,7 @@ async fn no_relation_carries_a_tenant_column_and_no_row_policy_exists() {
 
     let policies: Vec<(String, String, String)> = sqlx::query_as(
         "SELECT schemaname, tablename, policyname FROM pg_policies \
-         WHERE schemaname IN ('clinical', 'party', 'linkage', 'audit', 'ext') ORDER BY 1, 2, 3",
+         WHERE schemaname IN ('clinical', 'party', 'audit', 'ext') ORDER BY 1, 2, 3",
     )
     .fetch_all(&pool)
     .await
@@ -309,36 +308,64 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
     );
 }
 
-/// The linkage schema holds no relation and no function: which EHR belongs to
-/// which subject is the EHR's own `EHR_STATUS.subject` (RM ehr master04 §EHR
-/// Status), so `linkage/0006_drop_subject_ehr.sql` dropped the cross-reference
-/// and its erasure function.
+/// The linkage domain is gone: `audit/0021_drop_linkage_domain.sql` drops its
+/// schema and, once nothing in the database names it, its role.
+///
+/// The file runs once more here, as a second database of the cluster would run
+/// it, so it is idempotent. Roles are per cluster and other tests prepare
+/// databases beside this one, where `ext/0001_schema_and_roles.sql` creates the
+/// role again; so the role is either gone or still named by a grant in another
+/// database, and never by anything in this one.
 #[tokio::test]
-async fn the_linkage_schema_holds_no_cross_reference() {
+async fn the_linkage_domain_is_dropped() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-
-    let relations: Vec<String> = sqlx::query_scalar(
-        "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace \
-         WHERE n.nspname = 'linkage' AND c.relkind IN ('r', 'p') \
-           AND c.relname <> '_sqlx_migrations' ORDER BY 1",
-    )
-    .fetch_all(&pool)
+    sqlx::raw_sql(include_str!(
+        "../../migrations/audit/0021_drop_linkage_domain.sql"
+    ))
+    .execute(&pool)
     .await
-    .expect("linkage relations");
-    assert!(
-        relations.is_empty(),
-        "linkage holds no relation: {relations:?}"
-    );
+    .expect("the drop runs again without error");
 
-    let functions: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace \
-         WHERE n.nspname = 'linkage'",
+    let schema: bool =
+        sqlx::query_scalar("SELECT EXISTS (SELECT FROM pg_namespace WHERE nspname = 'linkage')")
+            .fetch_one(&pool)
+            .await
+            .expect("probe the schema");
+    assert!(!schema, "no linkage schema remains");
+
+    let (here, elsewhere): (i64, i64) = sqlx::query_as(
+        "SELECT count(*) FILTER (WHERE d.dbid = db.oid), \
+                count(*) FILTER (WHERE d.dbid <> db.oid AND d.dbid <> 0) \
+         FROM pg_roles r \
+         JOIN pg_shdepend d ON d.refclassid = 'pg_authid'::regclass AND d.refobjid = r.oid \
+         CROSS JOIN (SELECT oid FROM pg_database WHERE datname = current_database()) db \
+         WHERE r.rolname = 'ferroehr_linkage'",
     )
     .fetch_one(&pool)
     .await
-    .expect("linkage functions");
-    assert_eq!(functions, 0, "linkage holds no function");
+    .expect("read what still names the role");
+    assert_eq!(here, 0, "nothing in this database names ferroehr_linkage");
+    let role: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_linkage')",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("probe the role");
+    assert!(
+        !role || elsewhere > 0,
+        "ferroehr_linkage is dropped unless another database still grants it something"
+    );
+
+    let extension: bool =
+        sqlx::query_scalar("SELECT EXISTS (SELECT FROM pg_extension WHERE extname = 'btree_gist')")
+            .fetch_one(&pool)
+            .await
+            .expect("probe the extension");
+    assert!(
+        !extension,
+        "btree_gist, which only the linkage table needed, is gone"
+    );
 }
 
 /// A database created by a release older than the storage rewrite is refused at
@@ -396,8 +423,9 @@ async fn a_database_from_before_the_storage_rewrite_is_refused_with_the_remedy()
 /// typed error, on the description of its version 1.
 ///
 /// Those three schema NAMES survive the rewrite, so their bookkeeping exists in
-/// both generations and its mere presence proves nothing; which migration ran
-/// first does. Without this the old set would reach its own migrator and fail
+/// more than one generation and its mere presence proves nothing; which
+/// migration ran first does. The `linkage` bookkeeping is seeded, because this
+/// build drops the schema. Without this the old set would reach its own migrator and fail
 /// on a checksum mismatch — an error about a hash where the operator needs the
 /// remedy.
 #[tokio::test]
@@ -411,6 +439,7 @@ async fn a_first_generation_set_in_a_surviving_schema_is_refused_by_its_first_mi
     for (schema, first_generation, second_generation) in SIGNATURES {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
+        seed_linkage_bookkeeping(&pool, schema).await;
         set_first_description(&pool, schema, first_generation).await;
         let error = db::run_migrations(&pool)
             .await
@@ -429,11 +458,28 @@ async fn a_first_generation_set_in_a_surviving_schema_is_refused_by_its_first_mi
         // again is the no-op it should be.
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
+        seed_linkage_bookkeeping(&pool, schema).await;
         set_first_description(&pool, schema, second_generation).await;
         db::run_migrations(&pool)
             .await
             .unwrap_or_else(|e| panic!("{schema}: a generation-2 set must pass the guard: {e}"));
     }
+}
+
+/// Give `schema` a one-row bookkeeping table when it is `linkage`, the one
+/// surviving name this build creates no schema for.
+async fn seed_linkage_bookkeeping(pool: &PgPool, schema: &str) {
+    if schema != "linkage" {
+        return;
+    }
+    sqlx::raw_sql(
+        "CREATE SCHEMA linkage; \
+         CREATE TABLE linkage._sqlx_migrations (version bigint PRIMARY KEY, description text NOT NULL); \
+         INSERT INTO linkage._sqlx_migrations VALUES (1, '')",
+    )
+    .execute(pool)
+    .await
+    .expect("seed the linkage bookkeeping");
 }
 
 /// Rewrite the version-1 description of `schema`'s existing bookkeeping.
@@ -1289,7 +1335,7 @@ async fn a_pooled_connection_applies_the_configured_statement_timeout() {
 }
 
 /// A partially wiped database comes back whole (#3298): the sandbox reset drops
-/// the clinical, audit and ext schemas and leaves the party and linkage sets
+/// the clinical, audit and ext schemas and leaves the party set
 /// applied, so the clinical set has to rebuild everything the write path needs
 /// or every update fails on the placement read with 42P01.
 #[tokio::test]

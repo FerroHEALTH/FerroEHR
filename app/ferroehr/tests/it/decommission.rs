@@ -29,8 +29,8 @@ use crate::fixtures::{composition, uv};
 use crate::pseudonymisation_boundary::a_person;
 use crate::typed_body::typed;
 
-/// The five schemas the migrations create, as `erase_schema` drops them.
-const SCHEMAS: [&str; 5] = ["audit", "linkage", "party", "clinical", "ext"];
+/// The four schemas the migrations create, as `erase_schema` drops them.
+const SCHEMAS: [&str; 4] = ["audit", "party", "clinical", "ext"];
 
 /// A decommissioning over the testkit clone, every domain on its one DSN.
 fn decommission(db: &testkit::TestDb) -> Decommission {
@@ -43,8 +43,8 @@ fn decommission(db: &testkit::TestDb) -> Decommission {
     )
 }
 
-/// Writes one record into every domain: an EHR with a composition, a party,
-/// a linkage row and an audit record.
+/// Writes one record into every domain: an EHR with a composition, a party
+/// and an audit record.
 async fn seed_every_domain(pool: &PgPool) {
     let service = FerroEhrService::new(&DomainPools::from_shared(pool));
     let ehr = Box::pin(service.create_ehr_meta(None, None))

@@ -381,12 +381,11 @@ of no other, so a privilege cannot arrive through a membership.
 
 | Credential | Reaches | Cannot reach |
 |---|---|---|
-| `ferroehr_clinical` | `clinical`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation` and on `ehr`, to keep their planner statistics; the `ext.posture` stamp, and `SELECT` on `ext.posture` for the subject pseudonym guard; `USAGE` on `ext`; in `audit`, record an event, stamp it forwarded, run the retention reaper and verify the chain | `party` and `linkage`, revoked explicitly and in both directions |
-| `ferroehr_clinical_reader` | `SELECT` on `clinical`; `USAGE` on `ext`; read the `audit` repository and verify the chain | the same two schemas |
-| `ferroehr_party` | `party`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`, the sealed `national_identifier` rows included; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation`, to keep their planner statistics; `EXECUTE` on `party.resolve_national_identifier` | `clinical` and `linkage`, revoked explicitly and in both directions |
-| `ferroehr_party_reader` | `SELECT` on `party`. On `national_identifier` the table-level grant is revoked and re-granted column by column, so it reads `id`, `party_id`, `scheme`, `created_at` and `retired_at` and never `lookup_digest`, `nonce` or `ciphertext` | `clinical` and `linkage` |
-| `ferroehr_linkage` | `linkage`, which holds no relation since its `0006` migration; `USAGE` on `ext` | `clinical`, `party`, and `party.resolve_national_identifier` by its own revoke |
-| The schema-preparation credential (`[db] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all five migration sets and reads all five `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
+| `ferroehr_clinical` | `clinical`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation` and on `ehr`, to keep their planner statistics; the `ext.posture` stamp, and `SELECT` on `ext.posture` for the subject pseudonym guard; `USAGE` on `ext`; in `audit`, record an event, stamp it forwarded, run the retention reaper and verify the chain | `party`, revoked explicitly and in both directions |
+| `ferroehr_clinical_reader` | `SELECT` on `clinical`; `USAGE` on `ext`; read the `audit` repository and verify the chain | `party` |
+| `ferroehr_party` | `party`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`, the sealed `national_identifier` rows included; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation`, to keep their planner statistics; `EXECUTE` on `party.resolve_national_identifier` | `clinical`, revoked explicitly and in both directions |
+| `ferroehr_party_reader` | `SELECT` on `party`. On `national_identifier` the table-level grant is revoked and re-granted column by column, so it reads `id`, `party_id`, `scheme`, `created_at` and `retired_at` and never `lookup_digest`, `nonce` or `ciphertext` | `clinical` |
+| The schema-preparation credential (`[db] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all four migration sets and reads all four `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
 
 A schema's `_sqlx_migrations` bookkeeping, the record of which migrations ran
 that the boot check compares, is read-only to every runtime role, the writer
@@ -398,11 +397,11 @@ event, stamps it forwarded, runs the retention reaper and verifies the chain;
 `ferroehr_clinical_reader` reads it).
 The local Audit Record Repository is written on the clinical pool, so a login
 role that is a member of `ferroehr_clinical` alone writes its own access log. The
-audit trail is not a pseudonymisation domain: the demographic and linkage
-roles hold no privilege there, and the trail carries record identifiers, never
+audit trail is not a pseudonymisation domain: the demographic roles hold no
+privilege there, and the trail carries record identifiers, never
 a subject's data.
 
-The five domain roles are checked at every boot. The server reads the
+The four domain roles are checked at every boot. The server reads the
 catalogue for every table, partitioned table, view, materialized view, foreign
 table, sequence and function each of them can reach in a domain it does not
 own, and refuses to serve when it finds one, naming the role, the object kind
@@ -414,7 +413,7 @@ the same check from outside the deployment.
 **Residual risk.**
 
 - **The grants are only a boundary once the credentials are separated.** With
-  every `[storage.<domain>] url` unset, all four pools
+  every `[storage.<domain>] url` unset, all three pools
   authenticate as `[db] url` and the split is a schema split. The
   `shared_credential` gap of `deployment_profile` is what names that.
 - **A login role can be a member of several domain roles.** The compose stacks
@@ -427,8 +426,8 @@ the same check from outside the deployment.
 ### Backup artefacts
 
 A dump leaves the database with none of the grants attached, so the chart takes
-one per domain rather than one per cluster: `clinical` with `ext` and `audit`;
-`party`; `linkage` on its own. Each job authenticates as its own read-only
+one per domain rather than one per cluster: `clinical` with `ext` and `audit`,
+and `party` on its own. Each job authenticates as its own read-only
 role, because every domain role is revoked from the other domains and a dump
 taken through a runtime credential would be silently partial. Each writes to
 its own claim, and the chart refuses to render when two domains name the same
@@ -440,14 +439,14 @@ one.
   composition. The demographic one holds every party and the sealed identifier
   columns with them, which stay sealed only while
   `[demographic.identifier_protection] key` lives somewhere the dump does not.
-- **Two dumps together are worth more than twice one.** `demographic` beside
-  `linkage` says which person holds which record id; add the clinical dump and
-  the record is re-identified. Who may read each claim is the control, and it
+- **Two dumps together are worth more than twice one.** The demographic dump
+  beside the clinical one says which person each record belongs to: the
+  record is re-identified. Who may read each claim is the control, and it
   is yours.
-- **A cluster-wide artefact spans all three.** A physical base backup and an
+- **A cluster-wide artefact spans every domain.** A physical base backup and an
   instance-wide point-in-time recovery are bridges no grant closes. That is
-  the `shared_cluster` gap, and running the three domains on one cluster
-  accepts it by name.
+  the `shared_cluster` gap, and running the domains on one cluster accepts it
+  by name.
 - **Nothing prunes old dumps, and no network policy of ours selects the dump
   pods.**
 
@@ -585,10 +584,10 @@ so the same person in two instances is two pseudonyms.
 
 ### The audit trail as a re-identification surface
 
-**Control.** Access records live in `audit`, outside all three domains, and
+**Control.** Access records live in `audit`, outside both domains, and
 retrieval is the admin-gated ITI-81 route. A `linkage` event names the party
-and the purpose, not the EHR that was returned, so the trail is not a second
-copy of the map.
+and the purpose, not the EHR that was returned, so the trail is not a map from
+parties to their EHRs.
 
 **Residual risk.** The records name subjects, actors, organisations, roles and
 what they read, which is sensitive in its own right and is a disclosure

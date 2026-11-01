@@ -17,12 +17,12 @@
 # The separations, one per gap the server evaluates (the gap tokens are what
 # `deployment_accepts` takes):
 #
-#   shared_credential            made: the clinical, party and linkage domains
-#                                each connect on their own Secret below.
+#   shared_credential            made: the clinical and party domains each
+#                                connect on their own Secret below.
 #   shared_cluster               made BY YOU: the server compares the cluster
 #                                identity each domain pool reaches
 #                                (pg_control_system().system_identifier), so the
-#                                four DSNs must reach four different PostgreSQL
+#                                three DSNs must reach three different PostgreSQL
 #                                clusters. Pointing them at one cluster is refused;
 #                                accept `shared_cluster` by name only as a
 #                                recorded decision. Each cluster is prepared on
@@ -74,14 +74,6 @@ database:
     # verifies it. Drop it only when party shares the clinical cluster.
     migrateExistingSecret: ferroehr-db-party-migrate
     migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__PARTY__URL
-  linkage:
-    # Role ferroehr_linkage: the map from a party to its EHR.
-    existingSecret: ferroehr-db-linkage
-    existingSecretKey: FERROEHR__STORAGE__LINKAGE__URL
-    # The migrator of the linkage cluster. That cluster also receives the
-    # party migration set (schema only, no rows), which the linkage set needs.
-    migrateExistingSecret: ferroehr-db-linkage-migrate
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL
   audit:
     # The audit repository, kept apart from the system that processes the data.
     existingSecret: ferroehr-db-audit

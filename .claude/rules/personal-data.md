@@ -1,13 +1,13 @@
 ---
-paths: ["app/ferroehr/src/service/demographic/**", "app/ferroehr/src/service/linkage/**", "app/ferroehr/migrations/demographic/**", "app/ferroehr/migrations/linkage/**", "app/ferroehr*/src/**/identifier_scan*", "app/ferroehr*/src/**/outbox*"]
+paths: ["app/ferroehr/src/service/demographic/**", "app/ferroehr/src/service/linkage/**", "app/ferroehr/migrations/demographic/**", "app/ferroehr*/src/**/identifier_scan*", "app/ferroehr*/src/**/outbox*"]
 ---
 
 # Personal data and the pseudonymisation boundary
 
 The server keeps clinical content and the identities it belongs to in separate
 schemas, reachable by separate database roles. The paths this rule is scoped to
-are the boundary itself: the demographic and linkage schemas, the services over
-them, the identifier scanner, and the outbox payload builders that carry data
+are the boundary itself: the demographic schema, the services over it and the
+crossings between the domains, the identifier scanner, and the outbox payload builders that carry data
 out of the process. A change here is a change to what can be re-identified, and
 GDPR Art. 25 makes that a design-time duty
 (https://eur-lex.europa.eu/eli/reg/2016/679/oj). No openEHR spec governs any of
@@ -33,7 +33,7 @@ this: our own design.
   `GRANT` names the role it serves and stays inside one domain. Widening an
   existing role across the boundary is the same defect written differently.
 - **A read of personal data emits an access event:** a new code path that reads
-  demographic or linkage data records who read what, through the access-event
+  demographic data, or resolves a party or subject to its EHRs, records who read what, through the access-event
   model. A read with no event is a boundary crossing nobody can reconstruct
   afterwards.
 

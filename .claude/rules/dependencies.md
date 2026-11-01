@@ -6,11 +6,10 @@ paths: ["Cargo.toml", "**/Cargo.toml", "Cargo.lock", "deny.toml", "rust-toolchai
 
 Toolchain: Rust stable **1.99** (1.99.1), MSRV 1.98, **edition 2024**,
 resolver v3. Pin via `rust-toolchain.toml`.
-Database: **PostgreSQL 18** (target 18.6+): `uuidv7()`, the temporal `WITHOUT
-OVERLAPS` key on `linkage.subject_ehr`, the SQL/JSON path functions, and the
-planner-side gains (skip scan, AIO); `docs/postgres-features.md` says which
-features the code uses and which are available and deliberately not.
-Extension: `btree_gist` alone, which `db::prepare` installs itself.
+Database: **PostgreSQL 18** (target 18.6+): `uuidv7()`, the SQL/JSON path
+functions, and the planner-side gains (skip scan, AIO);
+`docs/postgres-features.md` says which features the code uses and which are
+available and deliberately not. No extension.
 
 **The authoritative, fully-pinned dependency set lives in the root
 `Cargo.toml` `[workspace.dependencies]`, and every entry there is CONSUMED by
@@ -67,7 +66,7 @@ stuck on sea-query 0.32; dynamic SQL for the AQL→SQL engine — **not**
 sea-orm); `jiff-sqlx` for jiff↔Postgres on plain sqlx queries (sqlx has no
 `jiff` feature; the binder's with-jiff is unimplemented upstream);
 `deadpool-postgres` + `tokio-postgres` for an optional pipelined hot-read
-path. Migrations: five sets (`ext`, `clinical`, `party`, `linkage`, `audit`),
+path. Migrations: four sets (`ext`, `clinical`, `party`, `audit`),
 each a sequence of natural files with one concern apiece and its grants in
 the last file; new ones via `sqlx migrate add --sequential`, and a file the
 latest release tag or a pre-release tag above it carries is never edited

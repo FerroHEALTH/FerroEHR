@@ -27,8 +27,8 @@ pub enum ProviderKind {
     /// An IHE patient identity source asked over PIXm (ITI-83), the default.
     #[default]
     Ihe,
-    /// The in-instance `linkage` map: the subject-id and subject-namespace
-    /// model, which `EHR_STATUS.subject` reads directly.
+    /// The subject-id and subject-namespace model in this instance, which
+    /// `EHR_STATUS.subject` reads directly.
     Local,
 }
 

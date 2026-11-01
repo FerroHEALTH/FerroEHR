@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc7 -n ferroehr \
+  --version 21.0.0-rc8 -n ferroehr \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.0-rc7 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc7
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc8
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 21.0.0-rc7` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 21.0.0-rc8` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.6.0-rc7` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc7 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc8 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -308,8 +308,8 @@ separation that profile checks made, except one it accepts by name:
 
 | Gap | In the overlay |
 |---|---|
-| `shared_credential` | the clinical, party and linkage domains each read their own Secret (`database.existingSecret`, `database.party.existingSecret`, `database.linkage.existingSecret`), and the audit domain reads `database.audit.existingSecret` |
-| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is four DSNs on four PostgreSQL clusters. Each cluster is prepared on its own migrator: the migration Job applies the schema in every cluster, and the server verifies it there, on `database.<domain>.migrateExistingSecret` (`database.migrateExistingSecret` for the clinical cluster). The linkage cluster also receives the party migration set, schema only, because the linkage set names a function the party set creates |
+| `shared_credential` | the clinical and party domains each read their own Secret (`database.existingSecret`, `database.party.existingSecret`), and the audit domain reads `database.audit.existingSecret` |
+| `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is three DSNs on three PostgreSQL clusters. Each cluster is prepared on its own migrator: the migration Job applies the schema in every cluster, and the server verifies it there, on `database.<domain>.migrateExistingSecret` (`database.migrateExistingSecret` for the clinical cluster) |
 | `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
 | `audit_off`, `audit_fails_open` | the audit trail on with its local store, `config.audit.fail_mode: closed` |
@@ -335,7 +335,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc7 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc8 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -378,7 +378,7 @@ and `config.db.migrate` is where you choose:
   at all and refuses to boot against a database that has not been migrated to
   its build, so the two versions cannot race the schema. Recommended for
   production. It needs `database.migrateExistingSecret` as well, for the reason
-  the paragraph further down gives: `verify` reads all five bookkeeping tables,
+  the paragraph further down gives: `verify` reads all four bookkeeping tables,
   which a narrow runtime role cannot do.
 
 Set `migrations.job.enabled` and the chart runs (b) for you as a
@@ -401,7 +401,7 @@ config:
     migrate: verify
 ```
 
-The demographic and linkage domains take their own credentials the same way,
+The demographic domain takes its own credential the same way,
 and that is what turns the schema separation into a credential separation. One
 more goes with them, because no runtime credential can prepare the schema:
 
@@ -410,15 +410,13 @@ database:
   existingSecret: ferroehr-db             # postgres://ferroehr_clinical:…
   party:
     existingSecret: ferroehr-db-party     # postgres://ferroehr_party:…
-  linkage:
-    existingSecret: ferroehr-db-linkage   # postgres://ferroehr_linkage:…
   migrateExistingSecret: ferroehr-db-migrator        # postgres://ferroehr_migrator:…
 ```
 
-All four are mounted as files, so no DSN enters the pod's environment. Unset
-the demographic and linkage ones and those two pools share the first, which is
+All three are mounted as files, so no DSN enters the pod's environment. Unset
+the demographic one and that pool shares the first, which is
 the schema-only posture, still separated and still verified at boot. Creating
-the five domain
+the four domain
 roles is a database step the chart cannot do for you;
 [Operations](../operations.md#turning-the-schema-split-into-a-role-split) has
 the statements and what `ferroehr db verify` reports.
@@ -426,11 +424,11 @@ the statements and what `ferroehr db verify` reports.
 `database.migrateExistingSecret` is what the pod prepares the schema with, and
 it is required as soon as `database.existingSecret` is anything narrower than a
 credential reaching every schema. Preparation spans them all at once: the DDL
-of all five migration sets under `config.db.migrate: apply`, all five
+of all four migration sets under `config.db.migrate: apply`, all four
 `_sqlx_migrations` bookkeeping tables under `verify`. So **`verify` is not the
 exception**, and this is not only about the domain roles. `ferroehr_clinical` holds
 one pseudonymisation domain, `ferroehr_clinical` holds the clinical schemas, and
-neither can read the `demographic` or `linkage` bookkeeping at all; without
+neither can read the `party` bookkeeping at all; without
 this value the pod is refused on the first set it cannot read and does not
 start. It is normally the same credential
 `migrations.job.existingSecret` carries; the Job needs its own copy because it
@@ -444,19 +442,16 @@ migrator, which `database.<domain>.migrateExistingSecret` names:
 
 ```yaml
 database:
-  linkage:
-    existingSecret: ferroehr-db-linkage            # postgres://ferroehr_linkage:…@linkage-db/…
-    migrateExistingSecret: ferroehr-db-linkage-migrate   # postgres://ferroehr_migrator:…@linkage-db/…
+  party:
+    existingSecret: ferroehr-db-party            # postgres://ferroehr_party:…@party-db/…
+    migrateExistingSecret: ferroehr-db-party-migrate   # postgres://ferroehr_migrator:…@party-db/…
 ```
 
 The migration Job mounts it and applies the schema in that database; the server
 mounts it and verifies the schema there under `config.db.migrate: verify`. The
 domain's own role cannot do either, because it holds one domain and cannot read
 the `ext` set's bookkeeping. The server refuses to start when the two DSNs of
-one domain reach different databases. A database that holds the linkage domain
-without the party domain also receives the party migration set, its schema and
-grants and never a row, because the linkage set names a function the party set
-creates.
+one domain reach different databases.
 
 Give the migrator DSN a short `lock_timeout`
 (`?options=-c%20lock_timeout%3D5s`) so DDL blocked behind live traffic fails
@@ -811,7 +806,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc7 -n ferroehr --reuse-values \
+  --version 21.0.0-rc8 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -983,7 +978,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc7 -n ferroehr --reuse-values \
+  --version 21.0.0-rc8 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1210,29 +1205,26 @@ pod inside it. FerroBRIDGE's own deployment documentation is at
 
 `backup.enabled` renders one CronJob per pseudonymisation domain:
 `backup.clinical.schedule` dumps the clinical schemas, `backup.party.schedule`
-dumps the identities, `backup.linkage.schedule` dumps the party-to-EHR map, and
-each writes to its own existing claim (`backup.clinical.persistentVolumeClaim`,
-`backup.party.persistentVolumeClaim`,
-`backup.linkage.persistentVolumeClaim`).
+dumps the identities, and each writes to its own existing claim
+(`backup.clinical.persistentVolumeClaim`, `backup.party.persistentVolumeClaim`).
 The image is `backup.image.repository`, which carries `pg_dump`.
 
-**A fourth job renders for the audit domain when `database.audit.existingSecret`
+**A third job renders for the audit domain when `database.audit.existingSecret`
 gives it a database of its own.** While the trail shares the clinical database
 the clinical dump names its schema and nothing more is needed; once it is
 somewhere else, that dump cannot reach it and nothing else would take it, so
 `backup.audit.schedule`, `backup.audit.existingSecret` and
 `backup.audit.persistentVolumeClaim` become required the same way the other
-three are, and the clinical dump stops naming the `audit` schema.
+two are, and the clinical dump stops naming the `audit` schema.
 
 The chart refuses to render rather than let the separation collapse quietly: a
 missing claim is an error naming the value, and naming the **same** claim for
-any two domains is an error too, because one volume holding two of them — the
-clinical record, the identities, or the map that joins them — is the state
-per-domain backups exist to prevent.
+any two domains is an error too, because one volume holding the clinical record
+beside the identities is the state per-domain backups exist to prevent.
 
 Each job needs **its own backup credential**, named by
-`backup.clinical.existingSecret`, `backup.party.existingSecret`,
-`backup.linkage.existingSecret` and, when it renders,
+`backup.clinical.existingSecret`, `backup.party.existingSecret` and, when it
+renders,
 `backup.audit.existingSecret`, and
 the render is refused without them. It cannot be the pool's credential: each
 domain's runtime role is revoked from the other domains, so a dump taken through
@@ -1320,7 +1312,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc7 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.0-rc8 \
   -n ferroehr -f my-values.yaml | less
 ```
 

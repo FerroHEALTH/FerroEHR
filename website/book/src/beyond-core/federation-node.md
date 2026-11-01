@@ -38,7 +38,8 @@ The node answers an ITS-REST `RESULT_SET` (N17). It runs `WHERE`, `ORDER BY`,
 the patient's identifier in the query: the gateway resolves the patient to
 `{node, local ehr_id}` pairs outside AQL, through IHE PIXm or a record locator
 (FerroPIX). The node's own cross-reference is the IHE identity source asked
-over PIXm, or the local linkage map ([Demographics](demographics.md)).
+over PIXm, or the `EHR_STATUS` subject of the node's own EHRs
+([Demographics](demographics.md)).
 
 **A node does not have to store a directly identifying identifier** in
 `EHR_STATUS.subject` (N5). With `[privacy] subject_namespaces` it keeps only a

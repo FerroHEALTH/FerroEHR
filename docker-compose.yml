@@ -213,24 +213,22 @@ services:
       start_period: 10s
 
   # ── Per-domain logical backups (opt-in: `--profile backup`) ────────────────
-  # Three one-shot dump jobs, one per pseudonymisation domain, writing to three
+  # Two one-shot dump jobs, one per pseudonymisation domain, writing to two
   # SEPARATE host directories. Splitting the dump is the point: an artefact
-  # carrying the pseudonymised clinical record, the identities of its subjects,
-  # or the map between the two alongside either side re-joins what the schema
-  # separation exists to keep apart (GDPR Art. 4(5),
+  # carrying the pseudonymised clinical record beside the identities of its
+  # subjects re-joins what the schema separation exists to keep apart (GDPR Art. 4(5),
   # https://eur-lex.europa.eu/eli/reg/2016/679/oj; the EDPB reads the
   # separation as defining the pseudonymisation domain in Guidelines 01/2025).
   # Art. 32(1)(c) is why they exist at all. No openEHR spec governs backups —
   # our own design/extension.
   #
-  # Run one, or all three:
+  # Run one, or both:
   #   docker compose --profile backup run --rm ferroehr-backup-clinical
   #   docker compose --profile backup run --rm ferroehr-backup-party
-  #   docker compose --profile backup run --rm ferroehr-backup-linkage
   #
-  # The three targets are ordinary directories, so they take ordinary
+  # The two targets are ordinary directories, so they take ordinary
   # permissions: give them different owners, ship them to different buckets,
-  # hand the party and linkage ones to smaller groups. That is the
+  # hand the party one to a smaller group. That is the
   # "separately access-controlled" half, and this file cannot enforce it for
   # you — it can only stop them from landing in one file.
   #
@@ -313,50 +311,6 @@ services:
         --file=/backup/party-$$(date -u +%Y%m%dT%H%M%SZ).dump
     volumes:
       - ${FERROEHR_BACKUP_PARTY_DIR:-./backups/party}:/backup
-    cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
-
-  ferroehr-backup-linkage:
-    profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc7}
-    depends_on:
-      ferroehr-postgres:
-        condition: service_healthy
-    # The third domain gets its OWN dump rather than a place in either of the
-    # other two, and that is the whole point: `linkage.subject_ehr` is the map
-    # from a party to its EHR, so an artefact carrying it together with either
-    # side rebuilds exactly the join the schema split withholds (GDPR
-    # Art. 4(5)). Three domains, three dumps, three destinations, and — in a
-    # deployment that runs more than this stack's single credential — three
-    # backup roles.
-    environment:
-      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    # Same reason as its two twins above.
-    user: "${FERROEHR_BACKUP_USER:-0:0}"
-    cap_add: [DAC_OVERRIDE]
-    # `--extension=btree_gist` is not decoration. A `--schema` dump carries no
-    # extension ("pg_dump makes no attempt to dump any other database objects
-    # that the selected schema(s) might depend upon" — PostgreSQL 18, pg_dump
-    # §Notes), and the temporal PRIMARY KEY … WITHOUT OVERLAPS on
-    # linkage.subject_ehr is a GiST index needing that extension's operator
-    # classes. Measured 2026-09-11 on PostgreSQL 18.6: without the flag the
-    # restore reports "data type uuid has no default operator class for access
-    # method gist", pg_restore ignores the error by default, and the table
-    # comes back WITHOUT the key that admits one open mapping per party. The
-    # flag makes the artefact self-sufficient for its own constraints.
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - >-
-        pg_dump --host=ferroehr-postgres --username=postgres
-        --dbname=${PG_INIT_DB:-ferroehr} --format=custom --no-owner
-        --strict-names --schema=linkage --extension=btree_gist
-        --file=/backup/linkage-$$(date -u +%Y%m%dT%H%M%SZ).dump
-    volumes:
-      - ${FERROEHR_BACKUP_LINKAGE_DIR:-./backups/linkage}:/backup
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true

@@ -270,8 +270,8 @@ compile is a boot error naming it.
 ## `[cohort]`
 
 Cross-domain **cohort queries**: select a population in the demographic domain,
-resolve it to EHRs through the linkage domain, and run AQL over exactly those
-EHRs. A FerroEHR extension — no openEHR spec governs it. The wire contract and a
+resolve it to the EHRs whose `EHR_STATUS` subject names it, and run AQL over
+exactly those EHRs. A FerroEHR extension — no openEHR spec governs it. The wire contract and a
 worked example are in [Querying with AQL](../querying-aql.md#cohort-queries-across-the-pseudonymisation-boundary).
 
 **Off until a predicate is bound.** Which demographic leaf may be selected on is

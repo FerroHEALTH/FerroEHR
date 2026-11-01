@@ -65,7 +65,7 @@ wait_healthy() {
 migration_count() {
   # Query as the bootstrap superuser (peer auth over the container's unix
   # socket maps the postgres OS user to the postgres role). The second
-  # generation keeps one ledger per migration set, so the count sums the five
+  # generation keeps one ledger per migration set, so the count sums the four
   # (`ferroehr::db::prepare` runs them in this order); a set that failed to
   # apply shows as a smaller total, never as a missing relation.
   "${COMPOSE[@]}" exec -T ferroehr-postgres \
@@ -73,7 +73,6 @@ migration_count() {
     "SELECT (SELECT count(*) FROM ext._sqlx_migrations)
           + (SELECT count(*) FROM clinical._sqlx_migrations)
           + (SELECT count(*) FROM party._sqlx_migrations)
-          + (SELECT count(*) FROM linkage._sqlx_migrations)
           + (SELECT count(*) FROM audit._sqlx_migrations)" | tr -d '[:space:]'
 }
 

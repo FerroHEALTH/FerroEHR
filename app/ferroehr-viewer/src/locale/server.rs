@@ -35,8 +35,8 @@ crate::locale::messages! {
         AccessNotRecordedDurableAuditTrail = "access-not-recorded-durable-audit-trail",
         /// `two domains reach the same PostgreSQL cluster`
         TwoDomainsReachSamePostgresqlCluster = "two-domains-reach-same-postgresql-cluster",
-        /// `the clinical, demographic and linkage domains share one database credential`
-        ClinicalDemographicLinkageDomainsShareOne = "clinical-demographic-linkage-domains-share-one",
+        /// `the clinical and demographic domains share one database credential`
+        ClinicalDemographicDomainsShareOne = "clinical-demographic-domains-share-one",
         /// `text/csv; charset=utf-8`
         TextCsvCharsetUtf8 = "text-csv-charset-utf-8",
         /// `parameters must be a JSON object`

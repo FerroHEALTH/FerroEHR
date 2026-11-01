@@ -47,7 +47,7 @@ Its essential functions, in the sense of CRA Annex II point 4:
 - validating every write against the operational template it claims and the
   Reference Model invariants ([templates and validation](../templates-validation.md));
 - keeping the identity of the record subject apart from the clinical record,
-  in a separate demographic domain and a separate linkage domain
+  in a separate demographic domain
   ([the pseudonymisation boundary](../security.md#the-pseudonymisation-boundary));
 - authenticating every caller and deciding every request
   ([authentication](../security.md#authentication),
@@ -86,8 +86,8 @@ references to an imaging archive; FerroEHR implements no DICOM image transfer.
 roles) and their identifiers, with national identifiers optionally sealed
 under AES-256-GCM ([the sealed identifier](../threat-model.md#the-sealed-identifier-and-its-lookup-digest)).
 
-**The link between the two**, in the linkage domain: which party an EHR
-belongs to.
+**The link between the two**: which party an EHR belongs to, as the EHR's own
+`EHR_STATUS.subject` in the clinical domain.
 
 **The access log**: who accessed which record, when, from which origin and in
 which priority category. It names health professionals and patients.

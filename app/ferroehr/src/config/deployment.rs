@@ -108,10 +108,10 @@ impl std::str::FromStr for DeploymentProfile {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentGap {
-    /// The clinical, party and linkage domains do not each connect on their own
+    /// The clinical and party domains do not each connect on their own
     /// database credential.
     SharedCredential,
-    /// Two of the four domains reach the same `PostgreSQL` cluster, read from
+    /// Two of the three domains reach the same `PostgreSQL` cluster, read from
     /// `pg_control_system().system_identifier` on each pool, never from the
     /// DSN text: two DSNs can reach one cluster through different names, a
     /// proxy or a pooler.
@@ -232,14 +232,14 @@ impl DeploymentGap {
     pub const fn describe(self) -> &'static str {
         match self {
             Self::SharedCredential => {
-                "the clinical, party and linkage domains share a database credential; set \
-                 [storage.party] url and [storage.linkage] url (or [storage.clinical] url) to \
-                 roles that hold one domain each"
+                "the clinical and party domains share a database credential; set \
+                 [storage.party] url (or [storage.clinical] url) to roles that hold one \
+                 domain each"
             }
             Self::SharedCluster => {
                 "two domains reach the same PostgreSQL cluster (pg_control_system().system_identifier \
-                 is equal); give the party, linkage and audit domains their own clusters through \
-                 [storage.party], [storage.linkage] and [storage.audit] url"
+                 is equal); give the party and audit domains their own clusters through \
+                 [storage.party] and [storage.audit] url"
             }
             Self::OpenSubjectNamespace => {
                 "[privacy] subject_namespaces is empty, so an EHR_STATUS subject may carry a real \
@@ -326,11 +326,9 @@ pub struct ClusterIdentities {
     pub clinical: Option<String>,
     /// The party pool's cluster.
     pub party: Option<String>,
-    /// The linkage pool's cluster.
-    pub linkage: Option<String>,
     /// The audit pool's cluster.
     ///
-    /// Measured like the other three, because the audit trail's separation is
+    /// Measured like the other two, because the audit trail's separation is
     /// its own duty rather than a consequence of theirs:
     /// `docs/law/ch/dpo/text-de.html Art. 4 Abs. 5` keeps the log "getrennt vom
     /// System, in welchem die Personendaten bearbeitet werden".
@@ -341,7 +339,7 @@ impl ClusterIdentities {
     /// Whether any two known identifiers are equal.
     #[must_use]
     pub fn any_shared(&self) -> bool {
-        let known: Vec<&String> = [&self.clinical, &self.party, &self.linkage, &self.audit]
+        let known: Vec<&String> = [&self.clinical, &self.party, &self.audit]
             .into_iter()
             .flatten()
             .collect();
@@ -532,10 +530,6 @@ mod tests {
                     url: Some(SecretUrl::new("postgres://d@h/x")),
                     url_file: None,
                 },
-                linkage: crate::db::domain::DomainDsn {
-                    url: Some(SecretUrl::new("postgres://l@h/x")),
-                    url_file: None,
-                },
                 ..crate::db::domain::StorageConfig::default()
             },
             privacy: crate::privacy::config::PrivacyConfig {
@@ -577,7 +571,6 @@ mod tests {
             clusters: ClusterIdentities {
                 clinical: Some("1".to_owned()),
                 party: Some("2".to_owned()),
-                linkage: Some("3".to_owned()),
                 audit: Some("4".to_owned()),
             },
             prepared_on_runtime_credential: Vec::new(),
@@ -605,7 +598,6 @@ mod tests {
         let clusters = ClusterIdentities {
             clinical: Some("1".to_owned()),
             party: Some("1".to_owned()),
-            linkage: Some("1".to_owned()),
             audit: Some("1".to_owned()),
         };
         let posture = DeploymentPosture::evaluate(&config, &on(clusters));
@@ -637,7 +629,6 @@ mod tests {
         ClusterIdentities {
             clinical: Some(id.to_owned()),
             party: Some(id.to_owned()),
-            linkage: Some(id.to_owned()),
             audit: Some(id.to_owned()),
         }
     }
@@ -675,7 +666,7 @@ mod tests {
         );
     }
 
-    /// A fully separated deployment on four clusters boots as `production`
+    /// A fully separated deployment on three clusters boots as `production`
     /// with nothing open.
     #[test]
     fn a_separated_deployment_boots_as_production() {
@@ -694,7 +685,6 @@ mod tests {
         let same_cluster = on(ClusterIdentities {
             clinical: Some("7".to_owned()),
             party: Some("7".to_owned()),
-            linkage: Some("8".to_owned()),
             audit: Some("9".to_owned()),
         });
         let posture = DeploymentPosture::evaluate(&config, &same_cluster);
@@ -886,7 +876,6 @@ mod tests {
         let audit_with_clinical = on(ClusterIdentities {
             clinical: Some("1".to_owned()),
             party: Some("2".to_owned()),
-            linkage: Some("3".to_owned()),
             audit: Some("1".to_owned()),
         });
         let posture = DeploymentPosture::evaluate(&config, &audit_with_clinical);

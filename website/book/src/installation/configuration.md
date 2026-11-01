@@ -249,8 +249,8 @@ ticked by being present:
 
 | Gap token | What `production` requires |
 |---|---|
-| `shared_credential` | `[storage.party] url` and `[storage.linkage] url` set, so the domains connect on their own database roles |
-| `shared_cluster` | The four pools reach four different PostgreSQL clusters, read from `pg_control_system().system_identifier` on each pool, never from the DSN text. The audit pool counts: Swiss law keeps the access log on a system separate from the one processing the data |
+| `shared_credential` | `[storage.party] url` (or `[storage.clinical] url`) set, so the two domains connect on their own database roles |
+| `shared_cluster` | The three pools reach three different PostgreSQL clusters, read from `pg_control_system().system_identifier` on each pool, never from the DSN text. The audit pool counts: Swiss law keeps the access log on a system separate from the one processing the data |
 | `open_subject_namespace` | `[privacy] subject_namespaces` declared, so an `EHR_STATUS` subject is an opaque pseudonym |
 | `audit_off` | `[audit]` enabled with a durable sink (the local store, syslog or the FHIR feed) |
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |

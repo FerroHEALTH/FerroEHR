@@ -114,7 +114,7 @@ Each record additionally carries:
 
 | Field | What it holds |
 |---|---|
-| `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage`, or `system` for an operation that touches no domain. |
+| `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage` for a crossing that resolves a party or a subject to its EHRs, or `system` for an operation that touches no domain. |
 | `organisation` | The organisation the caller acted for, read from the access token's `[authz.abac] organization_claim` — the same claim the ABAC layer decides on, so no second setting can name a different one. The recording does not depend on that layer being switched on. A Basic-authenticated caller and an unconfigured claim both leave it empty. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
 | `emergency_access` | `true` when the declared purpose is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |

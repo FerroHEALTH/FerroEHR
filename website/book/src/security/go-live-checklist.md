@@ -13,19 +13,16 @@ organisational half stays yours.
 
 ## 1. Role separation, verified from outside
 
-Create the five domain roles, give each login role membership of exactly one,
+Create the four domain roles, give each login role membership of exactly one,
 and point each pool at its own DSN:
 
 ```toml
 [db]
 url             = "postgres://app_ehr:***@pg:5432/ferroehr"
+migrate_url     = "postgres://ferroehr_migrator:***@pg:5432/ferroehr"
 
 [storage.party]
 url = "postgres://app_party:***@pg:5432/ferroehr"
-
-[storage.linkage]
-url = "postgres://app_linkage:***@pg:5432/ferroehr"
-migrate_url     = "postgres://ferroehr_migrator:***@pg:5432/ferroehr"
 ```
 
 Then check it:
@@ -51,7 +48,7 @@ and [the threat model](../threat-model.md#what-each-database-credential-can-reac
 > `ferroehr_clinical` also covers the local Audit Record Repository, which that
 > role writes; it holds no grant in the other two domains.
 
-- [ ] Five domain roles exist, each `NOINHERIT` and a member of no other.
+- [ ] Four domain roles exist, each `NOINHERIT` and a member of no other.
 - [ ] Each login role is a member of exactly one domain role.
 - [ ] `ferroehr db verify` exits 0.
 
@@ -179,12 +176,9 @@ backup:
   clinical:
     existingSecret: ferroehr-backup-clinical
     persistentVolumeClaim: ferroehr-backup-clinical
-  demographic:
+  party:
     existingSecret: ferroehr-backup-party
     persistentVolumeClaim: ferroehr-backup-party
-  linkage:
-    existingSecret: ferroehr-backup-linkage
-    persistentVolumeClaim: ferroehr-backup-linkage
 ```
 
 Each credential is a read-only role on its own domain, and it cannot be the
@@ -196,8 +190,9 @@ puts the join back together.
 Three things the chart does not do: it provisions no storage, it prunes no old
 dumps, and no network policy of ours selects the dump pods.
 
-- [ ] Three dumps, three credentials, three volumes.
-- [ ] The demographic and linkage volumes have the narrower audience.
+- [ ] Two dumps, two credentials, two volumes, and a third set for the audit
+  domain when it has a database of its own.
+- [ ] The demographic volume has the narrower audience.
 - [ ] A restore has been rehearsed, and the rehearsal is recorded.
 - [ ] Retention and pruning of the dumps is somebody's job, and they know it.
 
@@ -258,8 +253,8 @@ SELECT * FROM audit.verify_audit_chain();
 
 ## 7. Schema preparation runs on its own credential
 
-Preparing the schema spans every schema at once: the DDL of all five migration
-sets under `migrate = "apply"`, all five `_sqlx_migrations` bookkeeping tables
+Preparing the schema spans every schema at once: the DDL of all four migration
+sets under `migrate = "apply"`, all four `_sqlx_migrations` bookkeeping tables
 under `"verify"`. No least-privilege runtime role can do either, `ferroehr_clinical`
 included, so `[db] migrate_url` names the credential that can. Unset, it falls
 back to `[db] url`, which is the single-credential posture.

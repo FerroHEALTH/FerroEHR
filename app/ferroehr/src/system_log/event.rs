@@ -281,7 +281,8 @@ pub enum AccessDomain {
     Ehr,
     /// The `party` schema: parties and their change control.
     Demographic,
-    /// The `linkage` schema: the party-to-EHR resolve map.
+    /// A crossing between the demographic and the clinical domain: a party
+    /// or a named subject resolved to its EHRs.
     Linkage,
     /// An operation that touches no pseudonymisation domain: authentication,
     /// template provisioning, node management.

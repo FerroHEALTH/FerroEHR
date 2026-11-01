@@ -35,7 +35,7 @@ feature sets below; we run the latest patch (18.6) for the fixes.
 | Feature | Status | Where, or why not |
 |---|---|---|
 | **`uuidv7()` (native)** | **used** for database-minted ids | `commit_audit.id`, `contribution.id` (fallback), `vo_attestation.id`, `item_tag.id`. Versioned-object and EHR ids are minted in Rust as v7 with the licence stamp, so `(vo_id, sys_version)` keys are NOT append-ordered. |
-| **Temporal `PRIMARY KEY`/`UNIQUE` `WITHOUT OVERLAPS`** | **used** on `linkage.subject_ehr` | one mapping in force per party; a merge closes a row rather than deleting it. The key is enforced as a GiST exclusion (`sql-createtable.html`), which is why `btree_gist` is installed. It is the `UNIQUE` form rather than the `PRIMARY KEY` one because the keyed column is nullable — a row may record an EHR Index association naming no party — and an exclusion constraint never conflicts on a NULL key part. NOT used on `version`, which carries no interval at all: the store is append-only and validity is derived from `committed_at`. |
+| **Temporal `PRIMARY KEY`/`UNIQUE` `WITHOUT OVERLAPS`** | not used | the one relation that carried it, `linkage.subject_ehr`, is gone, and with it the need for `btree_gist`. NOT used on `version`, which carries no interval at all: the store is append-only and validity is derived from `committed_at`. |
 | **Temporal `FOREIGN KEY`** | not used | NO ACTION only, and the pseudonymisation boundary refuses cross-domain foreign keys anyway. |
 | **`RETURNING OLD/NEW`** | not used | the commit path is one CTE chain with plain `RETURNING id`; nothing reads `old.`/`new.`. |
 | **Virtual generated columns** | not usable here | a virtual column "must not reference user-defined functions or types" (`ddl-generated-columns.html`), so it cannot call `ext.*`; a STORED one may call IMMUTABLE `openehr_magnitude` but never the STABLE timestamp parser. The promoted `node` columns are populated by the decomposer at write time. |
@@ -52,8 +52,7 @@ feature sets below; we run the latest patch (18.6) for the fixes.
 - **Persistence / service layer:** `uuidv7()` for database-minted ids; one
   CTE chain per Contribution with `INSERT … ON CONFLICT` for the idempotent
   rows and the head-row upsert; heap-only updates on `vo_head`; list
-  partitioning by tier on the change-control relations; the temporal key on
-  `linkage.subject_ehr`.
+  partitioning by tier on the change-control relations.
 - **AQL engine:** `jsonb_path_query_first`, lateral `jsonb_path_query`,
   `ext.openehr_magnitude`, `ext.openehr_timestamp`, integer nested-set joins,
   promoted btree columns, `= ANY` lists (`.claude/rules/aql-engine.md`). Each

@@ -103,7 +103,6 @@ rollback cannot outrun the schema.
 Backups: one CronJob per pseudonymisation domain.
   clinical     {{ .Values.backup.clinical.schedule }}  → claim "{{ .Values.backup.clinical.persistentVolumeClaim }}"  ({{ if .Values.database.audit.existingSecret }}clinical, ext{{ else }}clinical, ext, audit{{ end }})
   party        {{ .Values.backup.party.schedule }}  → claim "{{ .Values.backup.party.persistentVolumeClaim }}"  (party)
-  linkage      {{ .Values.backup.linkage.schedule }}  → claim "{{ .Values.backup.linkage.persistentVolumeClaim }}"  (linkage)
 {{ if .Values.database.audit.existingSecret -}}
   audit        {{ .Values.backup.audit.schedule }}  → claim "{{ .Values.backup.audit.persistentVolumeClaim }}"  (audit)
      database.audit names a Secret of its own, so the trail is in another
@@ -117,7 +116,7 @@ Backups: one CronJob per pseudonymisation domain.
 {{ end -}}
   A claim per domain, no two the same, is enforced at render. WHO MAY READ EACH
   is not, and it is the half that matters: restrict the volumes behind the
-  party, linkage and audit claims to smaller groups than the clinical one.
+  party and audit claims to smaller groups than the clinical one.
   Nothing here prunes old dumps.
 {{ else -}}
 NOTE: backup.enabled=false — this release takes no logical backups. Per-domain

@@ -208,18 +208,16 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `search_path`, so one set of storage code serves both; a `CHECK` on each side
   refuses the other's rows. GDPR Art. 4(5) and Art. 32(1)(a); no openEHR spec
   governs storage layout or database roles.
-- **`linkage`** — the third pseudonymisation domain: `subject_ehr`, the EHR id /
-  demographic subject cross-reference (the EHR index) —
-  which party and which subject identifier name which EHR, temporal under a
-  PG18 `UNIQUE … WITHOUT OVERLAPS` so a merge or split closes a row rather than
-  deleting it. Identifiers and their association metadata, no attributes;
-  `linkage.erase_ehr` is the `SECURITY DEFINER` function the admin delete calls
-  so erasure reaches the map without the role holding `DELETE`. The service
-  reaches it through its own pool, never through the clinical or party one.
+- **Which EHR belongs to which subject** is the `ehr` table's subject columns,
+  promoted from `EHR_STATUS.subject.external_ref` on every EHR create and
+  `EHR_STATUS` update. A cohort, the AQL demographic join and the EHR index
+  resolve a party or a subject through them; `service::linkage` holds those
+  crossings and the access record each one owes. The linkage schema that held a
+  cross-reference before is gone (`audit/0021_drop_linkage_domain.sql`).
 - **One pool and one DSN per storage domain.** `[storage.clinical]`,
-  `[storage.party]`, `[storage.linkage]` and `[storage.audit]` each carry a
+  `[storage.party]` and `[storage.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[db].url`, and
-  `db::connect_domains` opens the four pools each with only its own schema on
+  `db::connect_domains` opens the three pools each with only its own schema on
   its `search_path`. A domain whose DSN names another host lives in a database
   or cluster of its own, which is the separation a schema cannot make (a base
   backup, WAL archiving and physical replication carry every schema of a
@@ -231,20 +229,19 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   kept between its statements and returns to the pool when the request
   answers, so the access checks and the read or commit of one request queue
   for the pool once, and the pool's release round trip is paid once. A background task outside a scope checks out per statement.
-- **Five `NOINHERIT` runtime roles** hold the domains: `ferroehr_clinical` and
-  its read-only twin hold `clinical`, `ferroehr_party` and its twin hold
-  `party`, and `ferroehr_linkage` holds `linkage` alone. Each is revoked from
+- **Four `NOINHERIT` runtime roles** hold the domains: `ferroehr_clinical` and
+  its read-only twin hold `clinical`, and `ferroehr_party` and its twin hold
+  `party`. Each is revoked from
   the domains it does not own, in both directions, and the boot gate
   (`db::verify_domain_isolation`) refuses to serve when any of them can read
   across, when two separately-configured domains authenticate as one role, or —
   under `deployment_profile = "production"` — when a domain role is missing.
-- Migrations via `sqlx migrate add` (official CLI): five sets, run per database
-  in order — `ext`, then `clinical`, `party`, `linkage`, `audit` — each with
+- Migrations via `sqlx migrate add` (official CLI): four sets, run per database
+  in order — `ext`, then `clinical`, `party`, `audit` — each with
   its own `_sqlx_migrations` table, each a sequence of natural files with one
   concern apiece and its grants in the last file of the set, so a relation file
-  stays a declaration of shape. The five schemas and `btree_gist`, the one
-  extension the DDL needs, are created by the server before the first migrator
-  runs. A database carrying the first generation's `ehr` or
+  stays a declaration of shape. The four schemas are created by the server
+  before the first migrator runs; the DDL needs no extension. A database carrying the first generation's `ehr` or
   `demographic` bookkeeping is refused at boot, by name, with the remedy.
 
 ## AQL engine (ours)
@@ -277,9 +274,9 @@ pool, whose `search_path` names the `party` schema rendered from the same DDL,
 without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, ABAC subject
 scope). An `EHR` operand directly under the root is the join to the EHR the
 party is the subject of: `aql::join` cuts the AST into a party half and a
-clinical half, the service runs the party half on the party pool, reads the
-map in force on the linkage pool, runs the clinical half scoped to the linked
-EHRs on the clinical pool, and joins, orders (each key by the rank its own
+clinical half, the service runs the party half on the party pool, finds the
+EHRs whose subject names those parties, runs the clinical half scoped to them
+on the clinical pool, and joins, orders (each key by the rank its own
 half's `ORDER BY` assigned) and pages the rows in memory, each half bounded
 by the result ceiling. Any other mix of a demographic root with `EHR` or
 clinical classes is refused.
@@ -398,8 +395,6 @@ issues for triage.
 ## PostgreSQL 18
 
 We target **PG 18** (18.6+). In use: `uuidv7()` for database-minted ids,
-the temporal `UNIQUE … WITHOUT OVERLAPS` on `linkage.subject_ehr` (enforced
-as a GiST exclusion over `btree_gist`, the one extension the DDL needs),
 `PARTITION BY LIST (tier)` on `version`, `node` and `vo_attestation` with the
 cold partition pruned at plan time, the SQL/JSON path functions
 (`jsonb_path_query*`, PG 17), and the planner-side gains that need no code
@@ -474,7 +469,7 @@ adapter (`ferroehr-rest`) calls directly:
 | Validity checking | `service::validity` | RM and AM invariants at commit |
 | System log | `ferroehr::system_log` (dual DICOM PS3.15 + FHIR `AuditEvent`/BALP rendering, written and sent by the shared FerroAUDIT crates `ihe-atna` and `ehds-logging`; local Audit Record Repository in the `audit` schema, on by default; syslog + ITI-20 ATX:FHIR Feed forwarding sinks; the ITI-81 retrieval as the read side; ITI-19 mTLS via `[server.tls]`) | IHE ATNA, BALP |
 | Admin | `service::admin` (+archive/dump-load) | ITS-REST Admin API plus our own extension routes |
-| EHR index | `service::ehr_index` over `linkage.subject_ehr` | our own extension |
+| EHR index | `service::ehr_index` over the `ehr` subject columns or an IHE PIX Manager | our own extension |
 | Terminology | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, reached through the published `ferrobridge-term` client with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | TERM, AQL terminology function |
 | Message | `service::message` | `/message` extension (RM EHR Extract) |
 

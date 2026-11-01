@@ -103,7 +103,7 @@ impl SandboxNotice {
 #[must_use]
 pub fn gap_text(code: &str) -> String {
     match code {
-        "shared_credential" => tr(ServerMsg::ClinicalDemographicLinkageDomainsShareOne),
+        "shared_credential" => tr(ServerMsg::ClinicalDemographicDomainsShareOne),
         "shared_cluster" => tr(ServerMsg::TwoDomainsReachSamePostgresqlCluster),
         "open_subject_namespace" => tr(ServerMsg::NoSubjectPseudonymNamespaceDeclaredSo),
         "audit_off" => tr(ServerMsg::AccessNotRecordedDurableAuditTrail),
@@ -151,13 +151,13 @@ mod tests {
         assert_eq!(
             notice.gaps,
             [
-                "the clinical, demographic and linkage domains share one database credential",
+                "the clinical and demographic domains share one database credential",
                 "access is not recorded to a durable audit trail",
             ]
         );
         assert_eq!(
             notice.gaps_sentence(),
-            "Open: the clinical, demographic and linkage domains share one database \
+            "Open: the clinical and demographic domains share one database \
              credential; access is not recorded to a durable audit trail."
         );
         assert!(

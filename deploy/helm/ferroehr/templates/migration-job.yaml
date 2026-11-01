@@ -126,7 +126,7 @@ spec:
             # child process — OWASP Kubernetes Security Cheat Sheet).
             - name: FERROEHR__DB__URL_FILE
               value: {{ printf "%s/db.url" (include "ferroehr.secretMountPath" .) | quote }}
-            {{- range $domain := list "clinical" "party" "linkage" "audit" }}
+            {{- range $domain := list "clinical" "party" "audit" }}
             {{- $dsn := index $.Values.database $domain }}
             {{- if $dsn.migrateExistingSecret }}
             # The migrator of the database this domain lives in: the Job applies
@@ -161,7 +161,7 @@ spec:
                   items:
                     - key: {{ .Values.migrations.job.existingSecretKey }}
                       path: db.url
-              {{- range $domain := list "clinical" "party" "linkage" "audit" }}
+              {{- range $domain := list "clinical" "party" "audit" }}
               {{- $dsn := index $.Values.database $domain }}
               {{- if $dsn.migrateExistingSecret }}
               - secret:
