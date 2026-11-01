@@ -177,7 +177,8 @@ mod tests {
     #[test]
     fn major_version_ignores_minor_and_patch() {
         // A full hrid_ref (major.minor.patch) still yields the major only — the
-        // significant part for interface-reference matching (AM master07).
+        // significant part for interface-reference matching (BASE Artefact
+        // Identification §Referencing).
         let a = aid("openEHR-EHR-OBSERVATION.pulse.v1.2.3");
         assert_eq!(a.version_id(), "1.2.3");
         assert_eq!(a.major_version(), "1");

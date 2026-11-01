@@ -48,8 +48,8 @@ pub struct NodeRow {
     /// `architecture_overview` master10 §Design-time Relationships).
     pub arch_concept: Option<String>,
     /// Major version (`.v` major) of a full archetype HRID; `None` on at/id-code
-    /// nodes. The interface-reference major boundary is hard (AM master07
-    /// §Querying).
+    /// nodes. The interface-reference major boundary is hard (BASE Artefact
+    /// Identification §Referencing).
     pub arch_major: Option<i32>,
     /// `name/value`.
     pub name: Option<String>,

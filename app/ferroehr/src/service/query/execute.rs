@@ -188,8 +188,8 @@ impl FerroEhrService {
             limit,
             offset,
             // The stored specialisation graph an archetype predicate widens a
-            // parent query through (AM `Identification` master07 §Supporting
-            // Archetype-based Querying): resolved here, once per execution,
+            // parent query through (BASE Artefact Identification
+            // §Supporting Archetype-based Querying): resolved here, once per execution,
             // because SQL building is synchronous.
             archetype_lineage: self.archetype_lineage().await,
         };
