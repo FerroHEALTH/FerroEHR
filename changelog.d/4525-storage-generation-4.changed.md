@@ -1,0 +1,1 @@
+- `ext.storage_generation()` reports `generation-4`, the storage generation with the node header columns, and the storage benchmark records for it are committed under `docs/benchmarks/storage/generation-4/`. Migration `ext/0008` changes only the label; nothing in the serving path reads it.
