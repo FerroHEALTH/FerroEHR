@@ -55,19 +55,6 @@ pub(super) fn kind_of(kind: PartyKind) -> Kind {
     }
 }
 
-/// The REST [`PartyKind`] for a versioned-object [`Kind`], or `None` for a
-/// non-party kind (COMPOSITION / `EHR_STATUS` / … / `PARTY_RELATIONSHIP`).
-pub(super) fn party_kind_of(kind: Kind) -> Option<PartyKind> {
-    match kind {
-        Kind::Agent => Some(PartyKind::Agent),
-        Kind::Group => Some(PartyKind::Group),
-        Kind::Organisation => Some(PartyKind::Organisation),
-        Kind::Person => Some(PartyKind::Person),
-        Kind::Role => Some(PartyKind::Role),
-        _ => None,
-    }
-}
-
 /// Inject the `uid` (`OBJECT_VERSION_ID`) into a versioned object's JSON on read
 /// — PARTY `Uid_mandatory` (`demographic.party.adoc`), the party's identity
 /// copied from its enclosing VERSION.

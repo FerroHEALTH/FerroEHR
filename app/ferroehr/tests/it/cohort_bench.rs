@@ -210,14 +210,16 @@ async fn seed_corpus(svc: &Arc<FerroEhrService>, n: usize) -> Vec<EhrId> {
             let svc = Arc::clone(svc);
             let cities = cohort_values(index, n);
             async move {
-                let party = Box::pin(svc.create_party(uv(
-                    &person(&format!("p{index}"), &cities),
-                    "249",
-                    None,
-                )))
+                let party = crate::fixtures::create_party(
+                    &svc,
+                    uv(&person(&format!("p{index}"), &cities), "249", None),
+                )
                 .await
                 .unwrap_or_else(|e| panic!("create_party ({index}): {e:?}"));
-                let ehr = svc.create_ehr(None).await.expect("create_ehr");
+                let ehr = Box::pin(svc.create_ehr_meta(None, None))
+                    .await
+                    .map(|(id, _)| id)
+                    .expect("create_ehr");
                 svc.link(party, ehr).await.expect("link");
                 svc.create_composition(ehr, uv(&composition(&format!("c{index}")), "249", None))
                     .await

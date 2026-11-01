@@ -106,22 +106,6 @@ impl FerroEhrService {
         .ok_or_else(miss)
     }
 
-    /// The stored [`PartyKind`] of a versioned object, for the kind-agnostic
-    /// party calls (which address parties by versioned-object id only). A
-    /// non-party id (COMPOSITION, `PARTY_RELATIONSHIP`, …) or unknown id is `404`
-    /// (`versioned_object_does_not_exist`).
-    pub(super) async fn party_kind_at(&self, vo_id: VoId) -> Result<PartyKind, ServiceError> {
-        object_kind(&self.demographic_pool, vo_id)
-            .await?
-            .and_then(support::party_kind_of)
-            .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::VersionedObjectDoesNotExist,
-                    format!("versioned party {vo_id}"),
-                )
-            })
-    }
-
     /// Confirm `vo_id` is some party (any of the five kinds) — the check for the
     /// kind-agnostic `versioned_party` reads. A non-party id (COMPOSITION, …) or
     /// unknown id is `404`, reported with the caller-supplied granular
@@ -204,8 +188,7 @@ impl FerroEhrService {
         }
     }
 
-    /// `get_party` / `get_party_at_time`: retrieve a party by
-    /// its versioned-object id, optionally at a specific version (`version`) or
+    /// Retrieve a party by its versioned-object id, optionally at a specific version (`version`) or
     /// instant (`at`; else the latest). A deleted current version resolves to
     /// `Value::Null` (→ `204`, mirroring COMPOSITION). A wrong-kind object (a
     /// PERSON under the `agent` route, or a COMPOSITION) is `404`.
@@ -249,35 +232,10 @@ impl FerroEhrService {
         }))
     }
 
-    /// Commit a new party version. Resolves the
-    /// current version once (kind + existence gate) and delegates to
-    /// [`Self::commit_party_update`]. The wire seam (the `api` module) resolves
-    /// for `If-Match` and calls `commit_party_update` directly, threading its
-    /// handle so the target is resolved only once across the request.
-    /// `expected` (from `If-Match`) enforces optimistic concurrency.
-    pub(super) async fn update_party_version(
-        &self,
-        kind: PartyKind,
-        vo_id: VoId,
-        body: Value,
-        expected: Option<TreeId>,
-        committal: Option<&Committal>,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
-                format!("{} {vo_id}", kind.rm_type()),
-            )
-        })?;
-        self.commit_party_update(current, body, expected, committal)
-            .await
-    }
-
     /// Commit a new version of an already-resolved party. `current` is the lean
-    /// current-version handle (threaded from the dispatcher's `If-Match` resolve
-    /// or from [`Self::update_party_version`]); a deleted current is `404` (pre
-    /// `has_party`). The write response is built
-    /// from the commit result (see [`Self::commit_new_party`]).
+    /// current-version handle (threaded from the dispatcher's `If-Match`
+    /// resolve); a deleted current is `404`. The write response is built from
+    /// the commit result (see [`Self::commit_new_party`]).
     pub(super) async fn commit_party_update(
         &self,
         current: CurrentParty,
@@ -331,35 +289,9 @@ impl FerroEhrService {
         }
     }
 
-    /// Logically delete a party (a new
-    /// `523|deleted|` version — RM common master06 §Logical Deletion; post
-    /// `not has_party` holds, a deleted party reads `Null`). Resolves the target
-    /// once and delegates to [`Self::commit_party_delete`]; the wire seam
-    /// threads its `If-Match` resolve instead. `expected` is the
-    /// caller-supplied trunk version (from `If-Match` or the path
-    /// `OBJECT_VERSION_ID`); when `Some`, a mismatch with the current version →
-    /// `409`; when `None`, the current version is deleted unconditionally. An
-    /// already-deleted target → `400`.
-    pub(super) async fn delete_party_version(
-        &self,
-        kind: PartyKind,
-        vo_id: VoId,
-        expected: Option<TreeId>,
-        update_audit: Option<&UpdateAudit>,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
-                format!("{} {vo_id}", kind.rm_type()),
-            )
-        })?;
-        self.commit_party_delete(current, expected, update_audit)
-            .await
-    }
-
-    /// Commit the logical delete of an already-resolved party (see
-    /// [`Self::delete_party_version`] for the `expected` semantics). Returns
-    /// the deleted version's `ETag`/`Location` metadata.
+    /// Commit the logical delete of an already-resolved party; `expected` is
+    /// the trunk version the caller names, checked against the current one.
+    /// Returns the deleted version's `ETag`/`Location` metadata.
     pub(super) async fn commit_party_delete(
         &self,
         current: CurrentParty,

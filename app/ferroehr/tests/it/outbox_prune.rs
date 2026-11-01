@@ -35,7 +35,10 @@ async fn seqs(pool: &PgPool) -> Vec<i64> {
 async fn seed_published_rows(pool: &PgPool) -> Vec<i64> {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool));
     for _ in 0..5 {
-        svc.create_ehr(None).await.expect("create_ehr");
+        Box::pin(svc.create_ehr_meta(None, None))
+            .await
+            .map(|(id, _)| id)
+            .expect("create_ehr");
     }
     sqlx::query("UPDATE clinical.event_outbox SET published_at = now() - interval '30 days'")
         .execute(pool)

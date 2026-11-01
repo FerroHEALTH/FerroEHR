@@ -139,7 +139,10 @@ fn assert_phi_free(envelope: &Value) {
 }
 
 async fn create_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
-    svc.create_ehr(None).await.expect("create_ehr")
+    Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
 }
 
 // ── (1) atomic writes on every commit path ───────────────────────────────────
@@ -290,8 +293,9 @@ async fn rolled_back_commit_writes_no_outbox_row() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    svc.create_ehr(Some(typed(&status)))
+    Box::pin(svc.create_ehr_meta(Some(typed(&status)), None))
         .await
+        .map(|(id, _)| id)
         .expect("first EHR for subject-42");
     let baseline = total_count(&pool).await;
     assert_eq!(baseline, 1, "first EHR creation wrote one row");
@@ -299,8 +303,9 @@ async fn rolled_back_commit_writes_no_outbox_row() {
     // A second EHR for the SAME subject violates uq_ehr_subject during the
     // EHR_STATUS write, aborting the whole transaction (the commit path,
     // including its outbox insert) — a rolled-back commit.
-    svc.create_ehr(Some(typed(&status)))
+    Box::pin(svc.create_ehr_meta(Some(typed(&status)), None))
         .await
+        .map(|(id, _)| id)
         .expect_err("duplicate subject must conflict");
     assert_eq!(
         total_count(&pool).await,
@@ -475,18 +480,22 @@ async fn import_writes_one_phi_free_outbox_row() {
     ));
 
     // Seed a source EHR with an EHR_STATUS (EHR creation + the auto EHR_ACCESS).
-    let ehr = source.create_ehr(None).await.expect("source ehr");
+    let ehr = Box::pin(source.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("source ehr");
     // Give it a second EHR_STATUS version so the import carries real content.
     let mut status = source
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("status");
     let ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
     status.as_object_mut().unwrap().remove("uid");
     status["is_modifiable"] = json!(false);
-    source
-        .replace_ehr_status(ehr, uv(&status, "251", Some(&ovid)))
+    Box::pin(source.replace_ehr_status_meta(ehr, uv(&status, "251", Some(&ovid))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     let mut extracts = source.extract_ehrs(ehr).await.expect("export");

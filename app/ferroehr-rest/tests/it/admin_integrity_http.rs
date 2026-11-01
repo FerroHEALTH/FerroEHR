@@ -55,7 +55,10 @@ async fn app_with_impossible_timeout() -> (
     BoxCloneService<Request<Body>, Response, std::convert::Infallible>,
 ) {
     let (pg, service) = common::test_service().await;
-    service.create_ehr(None).await.expect("seed an EHR");
+    Box::pin(service.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("seed an EHR");
     let router = common::router_with(common::api_config(true), service).await;
     let stack = tower::ServiceBuilder::new()
         .layer(TimeoutLayer::with_status_code(
@@ -157,7 +160,10 @@ fn rebuild(query: &str) -> Request<Body> {
 #[tokio::test]
 async fn the_rebuild_answers_a_report_over_an_undamaged_repository() {
     let (_pg, service) = common::test_service().await;
-    service.create_ehr(None).await.expect("seed an EHR");
+    Box::pin(service.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("seed an EHR");
     let app = common::router_with(common::api_config(true), service).await;
 
     let (status, body) = common::send_body(&app, rebuild("")).await;

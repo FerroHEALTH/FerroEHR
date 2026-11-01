@@ -248,8 +248,9 @@ pub(crate) async fn set_not_queryable(
     ehr: ferroehr::ids::EhrId,
 ) {
     let mut body = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("the current EHR_STATUS reads");
     let if_match = body["uid"]["value"]
         .as_str()
@@ -258,7 +259,90 @@ pub(crate) async fn set_not_queryable(
     let status = body.as_object_mut().expect("an EHR_STATUS object");
     status.remove("uid");
     status.insert("is_queryable".to_owned(), json!(false));
-    svc.replace_ehr_status(ehr, uv(&body, "251", Some(&if_match)))
+    Box::pin(svc.replace_ehr_status_meta(ehr, uv(&body, "251", Some(&if_match))))
         .await
+        .map(|m| m.uid)
         .expect("the EHR_STATUS update to is_queryable = false commits");
+}
+
+/// Whether `ehr` exists, read through the `GET /ehr/{ehr_id}` service call: a
+/// read refused as `ehr_id_does_not_exist` is `false`, any other failure fails
+/// the test.
+pub(crate) async fn ehr_exists(
+    svc: &ferroehr::service::FerroEhrService,
+    ehr: ferroehr::ids::EhrId,
+) -> bool {
+    match svc.ehr_read(ehr).await {
+        Ok(_) => true,
+        Err(e) => {
+            assert_eq!(
+                e.status,
+                ferroehr::service::status::ServiceStatus::EhrIdDoesNotExist,
+                "the EHR read fails only as an unknown EHR: {e}"
+            );
+            false
+        }
+    }
+}
+
+/// The [`Committal`](ferroehr::service::version_update::Committal) an
+/// `UPDATE_VERSION` envelope carries, as the wire's `openehr-version` and
+/// `openehr-audit-details` headers carry it: the audit plus a stated
+/// `lifecycle_state` code.
+pub(crate) fn envelope_committal<T>(
+    version: &UpdateVersion<T>,
+) -> ferroehr::service::version_update::Committal {
+    ferroehr::service::version_update::Committal {
+        audit: version.commit_audit.clone(),
+        lifecycle_state: Some(version.lifecycle_state.defining_code.code_string.clone())
+            .filter(|code| !code.is_empty()),
+    }
+}
+
+/// The versioned object a write response names, read off its
+/// `OBJECT_VERSION_ID`.
+pub(crate) fn written_vo(
+    response: &ferroehr::service::response::ServiceResponse,
+) -> ferroehr::ids::VoId {
+    let uid = &response
+        .meta
+        .as_ref()
+        .expect("a write answers its version")
+        .uid;
+    ferroehr::ids::VoId(vo_of(uid).parse().expect("a uuid versioned object id"))
+}
+
+/// Creates the PARTY an `UPDATE_VERSION` envelope carries through the
+/// `POST /demographic/{kind}` service call, routed by the body's RM type,
+/// returning the new versioned object.
+pub(crate) async fn create_party(
+    svc: &ferroehr::service::FerroEhrService,
+    version: UpdateVersion<openehr_rm::prelude::Party>,
+) -> Result<ferroehr::ids::VoId, ferroehr::service::status::StatusError> {
+    use ferroehr::service::demographic::types::PartyKind;
+    use openehr_rm::prelude::Party;
+    let committal = envelope_committal(&version);
+    let body = version.data.expect("a create carries a PARTY");
+    let kind = match &body {
+        Party::Agent(_) => PartyKind::Agent,
+        Party::Group(_) => PartyKind::Group,
+        Party::Organisation(_) => PartyKind::Organisation,
+        Party::Person(_) => PartyKind::Person,
+        Party::Role(_) => PartyKind::Role,
+    };
+    let created = Box::pin(svc.party_create(kind, body, Some(committal))).await?;
+    Ok(written_vo(&created))
+}
+
+/// Creates the `PARTY_RELATIONSHIP` an `UPDATE_VERSION` envelope carries
+/// through the service call the REST relationship create makes, returning the
+/// new versioned object.
+pub(crate) async fn create_relationship(
+    svc: &ferroehr::service::FerroEhrService,
+    version: UpdateVersion<openehr_rm::prelude::PartyRelationship>,
+) -> Result<ferroehr::ids::VoId, ferroehr::service::status::StatusError> {
+    let committal = envelope_committal(&version);
+    let body = version.data.expect("a create carries a PARTY_RELATIONSHIP");
+    let created = svc.party_relationship_create(body, Some(committal)).await?;
+    Ok(written_vo(&created))
 }

@@ -167,44 +167,78 @@ fn uv<T: serde::de::DeserializeOwned>(data: &Value, preceding: Option<&str>) -> 
     openehr_its::json::from_canonical_value(&v).expect("UpdateVersion")
 }
 
-/// The typed party calls (Uuid/version arguments), not the wire seam:
-/// `create_party` → `has_party`/`get_party`/`get_party_at_version` →
-/// `update_party` → `delete_party`, checking that a deleted party is no
-/// longer present.
+/// Whether a live PERSON is served under `vo_id`: the read answers a body,
+/// where a deleted current version reads empty and an unknown id is not found.
+async fn person_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId) -> bool {
+    match svc
+        .party_get(PartyKind::Person, vo_id.to_string(), None)
+        .await
+    {
+        Ok(read) => !read.is_empty(),
+        Err(e) => {
+            let shown = format!("{e:?}");
+            assert!(
+                matches!(
+                    ferroehr::service::error::ServiceError::from(e),
+                    ferroehr::service::error::ServiceError::NotFound(_)
+                ),
+                "the party read fails only as not found: {shown}"
+            );
+            false
+        }
+    }
+}
+
+/// The party round trip through the service calls the REST routes make:
+/// create → read (current, by version) → update → delete, checking that a
+/// deleted party is no longer present.
 #[tokio::test]
 async fn party_typed_calls_round_trip() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
-    // create_party(UV_PARTY) → the new VERSIONED_OBJECT's id.
-    // Boxed: the typed `UPDATE_VERSION<PARTY>` argument rides the future
-    // (clippy `large_futures`).
-    let vo_id = Box::pin(svc.create_party(uv(&person("Jane"), None)))
+    // The create → the new VERSIONED_OBJECT's id.
+    let vo_id = crate::fixtures::create_party(&svc, uv(&person("Jane"), None))
         .await
         .expect("create_party");
 
-    // has_party true; get_party returns the current PERSON.
-    assert!(svc.has_party(vo_id).await.expect("has_party"), "live party");
-    let got = svc.get_party(vo_id).await.expect("get_party");
+    // The party is live; the read returns the current PERSON.
+    assert!(person_is_live(&svc, vo_id).await, "live party");
+    let got = svc
+        .party_get(PartyKind::Person, vo_id.to_string(), None)
+        .await
+        .expect("party_get")
+        .body;
     assert_eq!(got["_type"], "PERSON");
     assert_eq!(got["name"]["value"], "Jane");
 
-    // The current version id — has_party_version_id + get_party_at_version.
+    // The current version id — the version read + get_party_at_version.
     let v1 = got["uid"]["value"].as_str().expect("uid.value").to_owned();
     assert!(v1.ends_with("::1"), "first version, got {v1}");
     assert!(
-        svc.has_party_version_id(v1.clone())
+        svc.versioned_party_version_get_by_id(vo_id.to_string(), v1.clone())
             .await
-            .expect("has_party_version_id")
+            .is_ok(),
+        "the current version reads"
     );
     let by_ver = svc
         .get_party_at_version(v1.clone())
         .await
         .expect("get_party_at_version");
     assert_eq!(by_ver["_type"], "ORIGINAL_VERSION");
-    // An unknown version id → false / object_version_does_not_exist.
+    // An unknown version id → not found / object_version_does_not_exist.
     let bogus = format!("{vo_id}::ferroehr.local::9");
-    assert!(!svc.has_party_version_id(bogus.clone()).await.expect("has"));
+    let unread = svc
+        .versioned_party_version_get_by_id(vo_id.to_string(), bogus.clone())
+        .await
+        .expect_err("an unknown version does not read");
+    assert!(
+        matches!(
+            ferroehr::service::error::ServiceError::from(unread),
+            ferroehr::service::error::ServiceError::NotFound(_)
+        ),
+        "an unknown version is not found"
+    );
     let miss = svc.get_party_at_version(bogus).await;
     assert!(
         matches!(
@@ -217,38 +251,61 @@ async fn party_typed_calls_round_trip() {
         "unknown version → object_version_does_not_exist, got {miss:?}"
     );
 
-    // update_party(UV_PARTY with preceding_version_uid) → the new version uid.
-    let v2 = Box::pin(svc.update_party(vo_id, uv(&person("Jane Roe"), Some(&v1))))
-        .await
-        .expect("update_party");
+    // The update under `If-Match` = the current version → the new version uid.
+    let update = uv(&person("Jane Roe"), Some(&v1));
+    let committal = crate::fixtures::envelope_committal(&update);
+    let v2 = Box::pin(svc.party_update(
+        PartyKind::Person,
+        vo_id.to_string(),
+        v1.clone(),
+        update.data.expect("a PERSON"),
+        Some(committal),
+    ))
+    .await
+    .expect("update_party")
+    .meta
+    .expect("the update answers its version")
+    .uid;
     assert!(v2.ends_with("::2"), "second version, got {v2}");
-    let got2 = svc.get_party(vo_id).await.expect("get after update");
+    let got2 = svc
+        .party_get(PartyKind::Person, vo_id.to_string(), None)
+        .await
+        .expect("get after update")
+        .body;
     assert_eq!(got2["name"]["value"], "Jane Roe");
 
-    // delete_party → post-condition `not has_party`.
-    let del = svc.delete_party(vo_id).await.expect("delete_party");
+    // The delete of the latest version → the party is no longer present.
+    let del = svc
+        .party_delete(PartyKind::Person, v2.clone(), None, None)
+        .await
+        .expect("delete_party")
+        .meta
+        .map(|meta| meta.uid)
+        .unwrap_or_default();
     assert!(!del.is_empty(), "delete returns the deleted version uid");
     assert!(
-        !svc.has_party(vo_id).await.expect("has_party after delete"),
+        !person_is_live(&svc, vo_id).await,
         "a deleted party is no longer present"
     );
-    // get_party on a deleted (no live current) party → versioned_object_does_not_exist.
-    let after = svc.get_party(vo_id).await;
+    // A deleted (no live current) party reads empty, served as `204`.
+    let after = svc
+        .party_get(PartyKind::Person, vo_id.to_string(), None)
+        .await
+        .expect("a deleted party reads");
     assert!(
-        matches!(
-            after,
-            Err(StatusError {
-                status: ServiceStatus::VersionedObjectDoesNotExist,
-                ..
-            })
-        ),
-        "get_party after delete → 404, got {after:?}"
+        after.is_empty(),
+        "the read after delete serves no body, got {after:?}"
     );
 
-    // A never-seen id: has_party false, get_party 404.
+    // A never-seen id: not live, and the read fails.
     let never = ferroehr::ids::VoId(uuid::Uuid::now_v7());
-    assert!(!svc.has_party(never).await.expect("has_party unknown"));
-    assert!(svc.get_party(never).await.is_err(), "unknown party → error");
+    assert!(!person_is_live(&svc, never).await);
+    assert!(
+        svc.party_get(PartyKind::Person, never.to_string(), None)
+            .await
+            .is_err(),
+        "unknown party → error"
+    );
 }
 
 #[tokio::test]

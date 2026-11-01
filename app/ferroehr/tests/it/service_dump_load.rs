@@ -140,8 +140,9 @@ async fn counts(pool: &PgPool, ehr_id: Uuid) -> (i64, i64, i64, i64) {
 /// comparison surface.
 async fn canonical_snapshot(svc: &FerroEhrService, ehr_id: EhrId) -> (String, String) {
     let status = svc
-        .get_ehr_status_at_time(ehr_id, None)
+        .ehr_status_at_time_response(ehr_id, None)
         .await
+        .map(|r| r.body)
         .expect("status read");
     let directory = svc
         .get_directory_at_time(ehr_id, None, None)
@@ -264,10 +265,11 @@ async fn load_promotes_the_subject_from_the_loaded_status() {
     let (_src_db, src_pool, source) = repository().await;
     let (_dst_db, _dst_pool, target) = repository().await;
 
-    let ehr = source
-        .create_ehr(Some(typed(&status_for_subject("patient-dump-1"))))
-        .await
-        .expect("source EHR for the subject");
+    let ehr =
+        Box::pin(source.create_ehr_meta(Some(typed(&status_for_subject("patient-dump-1"))), None))
+            .await
+            .map(|(id, _)| id)
+            .expect("source EHR for the subject");
 
     // Fixture: clear the promoted projection, leaving the subject only in the
     // EHR_STATUS content — what an EHR landed without promotion looks like.
@@ -318,17 +320,19 @@ async fn load_reports_an_ehr_whose_subject_the_repository_already_holds() {
     let (_src_db, _src_pool, source) = repository().await;
     let (_dst_db, _dst_pool, target) = repository().await;
 
-    let clashing = source
-        .create_ehr(Some(typed(&status_for_subject("patient-dump-2"))))
-        .await
-        .expect("source EHR for the subject");
+    let clashing =
+        Box::pin(source.create_ehr_meta(Some(typed(&status_for_subject("patient-dump-2"))), None))
+            .await
+            .map(|(id, _)| id)
+            .expect("source EHR for the subject");
     let innocent = seed_full_ehr(&source).await;
 
     // The target already holds that subject under a DIFFERENT EHR.
-    let owner = target
-        .create_ehr(Some(typed(&status_for_subject("patient-dump-2"))))
-        .await
-        .expect("target EHR for the same subject");
+    let owner =
+        Box::pin(target.create_ehr_meta(Some(typed(&status_for_subject("patient-dump-2"))), None))
+            .await
+            .map(|(id, _)| id)
+            .expect("target EHR for the same subject");
 
     let dir = archive_dir();
     source
@@ -353,11 +357,11 @@ async fn load_reports_an_ehr_whose_subject_the_repository_already_holds() {
 
     // The clashing record was skipped whole; everything else loaded.
     assert!(
-        !target.has_ehr(clashing).await.expect("has_ehr"),
+        !crate::fixtures::ehr_exists(&target, clashing).await,
         "a reported record must not be partially loaded"
     );
     assert!(
-        target.has_ehr(innocent).await.expect("has_ehr"),
+        crate::fixtures::ehr_exists(&target, innocent).await,
         "the rest of the archive still loads"
     );
     let found = target
@@ -484,11 +488,15 @@ async fn sevenz_compressed_export_round_trips_through_the_detected_container() {
 ///
 /// Returns the EHR and the `OBJECT_VERSION_ID`s of every COMPOSITION version.
 async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
-    let ehr = svc.create_ehr(None).await.expect("ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     let mut status = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = uid(&status).to_owned();
     let status_vo = status_ovid.split("::").next().unwrap().to_owned();
@@ -550,8 +558,9 @@ async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
     // (`is_modifiable = false`, RM ehr master04 §EHR Active Status), which
     // forbids every content write above.
     status["is_modifiable"] = json!(false);
-    svc.replace_ehr_status(ehr, uv(&status, "251", Some(&status_ovid)))
+    Box::pin(svc.replace_ehr_status_meta(ehr, uv(&status, "251", Some(&status_ovid))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     (ehr, vec![created, updated, doomed, deleted])
@@ -759,7 +768,7 @@ async fn a_corrupt_version_document_reports_that_record_and_commits_nothing() {
         "a reported record must not be partially loaded"
     );
     assert!(
-        target.has_ehr(intact).await.expect("has_ehr"),
+        crate::fixtures::ehr_exists(&target, intact).await,
         "the rest of the archive still loads"
     );
 
@@ -954,8 +963,9 @@ async fn an_imported_version_round_trips_through_the_archive() {
         .expect("VERSIONED_EHR_STATUS");
     let vo_id: ferroehr::ids::VoId = uid(&status_vo.body).parse().expect("container uid");
     let version = middle
-        .ehr_status_revision_history(ehr)
+        .ehr_status_revision_history_response(ehr)
         .await
+        .map(|r| r.body)
         .expect("REVISION_HISTORY")["items"][0]["version_id"]["value"]
         .as_str()
         .expect("version id")
@@ -1064,7 +1074,10 @@ async fn attestations_round_trip_and_the_restored_signature_verifies() {
     let (_dst_db, dst_pool, target) = repository().await;
     let target = target.with_signer(Arc::new(Signer::from_config(&config).expect("signer")));
 
-    let ehr_id = source.create_ehr(None).await.expect("ehr");
+    let ehr_id = Box::pin(source.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
     let contribution = attested_contribution();
 
     let created = source
@@ -1147,7 +1160,7 @@ async fn an_archived_ehr_and_party_round_trip_with_their_marker_and_tier() {
     let (_dst_db, dst_pool, target) = repository().await;
 
     let ehr = seed_full_ehr(&source).await;
-    let person_vo = Box::pin(source.create_party(wave_uv(&wave_person("Archie"))))
+    let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Archie")))
         .await
         .expect("create_party");
     source
@@ -1307,22 +1320,33 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
     // Seed an EHR (so the archive carries both waves), a standalone person and
     // a relationship whose source is that person's container.
     let ehr = seed_full_ehr(&source).await;
-    let person_vo = Box::pin(source.create_party(wave_uv(&wave_person("Wava"))))
+    let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Wava")))
         .await
         .expect("create_party");
-    let rel_vo = source
-        .create_party_relationship(wave_uv(&wave_relationship(
+    let rel_vo = Box::pin(crate::fixtures::create_relationship(
+        &source,
+        wave_uv(&wave_relationship(
             "parent-of",
             &person_vo.to_string(),
             "33333333-3333-4333-8333-333333333333",
-        )))
-        .await
-        .expect("create_party_relationship");
+        )),
+    ))
+    .await
+    .expect("create_party_relationship");
 
-    let src_person = source.get_party(person_vo).await.expect("source party");
-    let src_rel = source
-        .get_party_relationship(rel_vo)
+    let src_person = source
+        .party_get(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            person_vo.to_string(),
+            None,
+        )
         .await
+        .map(|r| r.body)
+        .expect("source party");
+    let src_rel = source
+        .party_relationship_get(rel_vo.to_string(), None)
+        .await
+        .map(|r| r.body)
         .expect("source relationship");
     let src_ehr_snapshot = canonical_snapshot(&source, ehr).await;
 
@@ -1341,14 +1365,23 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
     // module documents).
     assert_eq!(canonical_snapshot(&target, ehr).await, src_ehr_snapshot);
     assert_eq!(
-        target.get_party(person_vo).await.expect("loaded party"),
+        target
+            .party_get(
+                ferroehr::service::demographic::types::PartyKind::Person,
+                person_vo.to_string(),
+                None,
+            )
+            .await
+            .map(|r| r.body)
+            .expect("loaded party"),
         src_person,
         "the standalone PARTY must round-trip verbatim"
     );
     assert_eq!(
         target
-            .get_party_relationship(rel_vo)
+            .party_relationship_get(rel_vo.to_string(), None)
             .await
+            .map(|r| r.body)
             .expect("loaded relationship"),
         src_rel,
         "the PARTY_RELATIONSHIP must round-trip verbatim"
@@ -1371,21 +1404,32 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
     let (_src_db, _src_pool, source) = repository().await;
     let (_dst_db, _dst_pool, target) = repository().await;
 
-    let person_vo = Box::pin(source.create_party(wave_uv(&wave_person("Xara"))))
+    let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Xara")))
         .await
         .expect("create_party");
-    let rel_vo = source
-        .create_party_relationship(wave_uv(&wave_relationship(
+    let rel_vo = Box::pin(crate::fixtures::create_relationship(
+        &source,
+        wave_uv(&wave_relationship(
             "cares-for",
             &person_vo.to_string(),
             "44444444-4444-4444-8444-444444444444",
-        )))
+        )),
+    ))
+    .await
+    .expect("create_party_relationship");
+    let src_person = source
+        .party_get(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            person_vo.to_string(),
+            None,
+        )
         .await
-        .expect("create_party_relationship");
-    let src_person = source.get_party(person_vo).await.expect("source party");
+        .map(|r| r.body)
+        .expect("source party");
     let src_rel = source
-        .get_party_relationship(rel_vo)
+        .party_relationship_get(rel_vo.to_string(), None)
         .await
+        .map(|r| r.body)
         .expect("source relationship");
 
     let dir = archive_dir();
@@ -1404,14 +1448,23 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
     assert_clean(&load_reports, "load");
 
     assert_eq!(
-        target.get_party(person_vo).await.expect("loaded party"),
+        target
+            .party_get(
+                ferroehr::service::demographic::types::PartyKind::Person,
+                person_vo.to_string(),
+                None,
+            )
+            .await
+            .map(|r| r.body)
+            .expect("loaded party"),
         src_person,
         "the canonical-XML demographic wave must round-trip the PARTY verbatim"
     );
     assert_eq!(
         target
-            .get_party_relationship(rel_vo)
+            .party_relationship_get(rel_vo.to_string(), None)
             .await
+            .map(|r| r.body)
             .expect("loaded relationship"),
         src_rel,
         "the canonical-XML demographic wave must round-trip the relationship verbatim"
@@ -1426,21 +1479,32 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
     let (_dst_db, _dst_pool, target) = repository().await;
 
     let ehr = seed_full_ehr(&source).await;
-    let person_vo = Box::pin(source.create_party(wave_uv(&wave_person("Zena"))))
+    let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Zena")))
         .await
         .expect("create_party");
-    let rel_vo = source
-        .create_party_relationship(wave_uv(&wave_relationship(
+    let rel_vo = Box::pin(crate::fixtures::create_relationship(
+        &source,
+        wave_uv(&wave_relationship(
             "employs",
             &person_vo.to_string(),
             "55555555-5555-4555-8555-555555555555",
-        )))
+        )),
+    ))
+    .await
+    .expect("create_party_relationship");
+    let src_person = source
+        .party_get(
+            ferroehr::service::demographic::types::PartyKind::Person,
+            person_vo.to_string(),
+            None,
+        )
         .await
-        .expect("create_party_relationship");
-    let src_person = source.get_party(person_vo).await.expect("source party");
+        .map(|r| r.body)
+        .expect("source party");
     let src_rel = source
-        .get_party_relationship(rel_vo)
+        .party_relationship_get(rel_vo.to_string(), None)
         .await
+        .map(|r| r.body)
         .expect("source relationship");
     let src_ehr_snapshot = canonical_snapshot(&source, ehr).await;
 
@@ -1460,14 +1524,23 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
 
     assert_eq!(canonical_snapshot(&target, ehr).await, src_ehr_snapshot);
     assert_eq!(
-        target.get_party(person_vo).await.expect("loaded party"),
+        target
+            .party_get(
+                ferroehr::service::demographic::types::PartyKind::Person,
+                person_vo.to_string(),
+                None,
+            )
+            .await
+            .map(|r| r.body)
+            .expect("loaded party"),
         src_person,
         "the demographic wave must round-trip through the 7z container verbatim"
     );
     assert_eq!(
         target
-            .get_party_relationship(rel_vo)
+            .party_relationship_get(rel_vo.to_string(), None)
             .await
+            .map(|r| r.body)
             .expect("loaded relationship"),
         src_rel,
         "the relationship must round-trip through the 7z container verbatim"

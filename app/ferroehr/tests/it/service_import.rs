@@ -83,11 +83,15 @@ async fn db_now(pool: &sqlx::PgPool) -> jiff::Timestamp {
 /// `FOLDER`, and the auto-created `EHR_ACCESS` — the same shape the export tests
 /// seed. Returns the EHR id.
 async fn seed_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
-    let ehr_uuid = svc.create_ehr(None).await.expect("ehr");
+    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
 
     let mut status = svc
-        .get_ehr_status_at_time(ehr_uuid, None)
+        .ehr_status_at_time_response(ehr_uuid, None)
         .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
     status.as_object_mut().expect("status obj").remove("uid");
@@ -113,8 +117,9 @@ async fn seed_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
     .expect("directory");
 
     status["is_modifiable"] = json!(false);
-    svc.replace_ehr_status(ehr_uuid, uv(&status, "251", Some(&status_ovid)))
+    Box::pin(svc.replace_ehr_status_meta(ehr_uuid, uv(&status, "251", Some(&status_ovid))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     ehr_uuid
@@ -214,8 +219,9 @@ async fn import_ehr_clone_into_fresh_target_reuses_source_id() {
 
     let ehr = seed_ehr(&source).await;
     let source_status = source
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("source status");
 
     // No fixed id → the clone reuses the source EHR id (master06 §Copying Case 1).
@@ -225,8 +231,9 @@ async fn import_ehr_clone_into_fresh_target_reuses_source_id() {
     // The clone exists under the *same* EHR id in the target, which holds no
     // other EHR.
     let target_status = target
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("cloned status readable under the reused ehr_id");
 
     // The wrapped ORIGINAL_VERSION was preserved verbatim: identical uid
@@ -351,10 +358,12 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     ))
     .with_ehr_index(EhrIndexProvider::Local);
 
-    let ehr = source
-        .create_ehr(Some(typed(&status_for_subject("patient-import-1"))))
-        .await
-        .expect("source EHR for the subject");
+    let ehr = Box::pin(
+        source.create_ehr_meta(Some(typed(&status_for_subject("patient-import-1"))), None),
+    )
+    .await
+    .map(|(id, _)| id)
+    .expect("source EHR for the subject");
     let extract = export_one(&source, ehr).await;
     target.import_ehr(None, extract).await.expect("import_ehr");
 
@@ -381,12 +390,12 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     // The subject is now taken in the target — under the "local" namespace
     // the extract normalized it to — so a later create naming that same
     // (id, namespace) pair is a 409.
-    let dup = target
-        .create_ehr(Some(typed(&status_for_subject_in(
-            "patient-import-1",
-            "local",
-        ))))
-        .await;
+    let dup = Box::pin(target.create_ehr_meta(
+        Some(typed(&status_for_subject_in("patient-import-1", "local"))),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id);
     assert!(
         matches!(
             dup,
@@ -417,17 +426,19 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
     // The import will carry the subject under namespace "local" (the
     // extract's master09 §Creation Semantics OBJECT_REF rewrite), so the
     // pre-existing holder must own it under that namespace to collide.
-    let owner = target
-        .create_ehr(Some(typed(&status_for_subject_in(
-            "patient-import-2",
-            "local",
-        ))))
-        .await
-        .expect("the target already holds the subject");
-    let ehr = source
-        .create_ehr(Some(typed(&status_for_subject("patient-import-2"))))
-        .await
-        .expect("source EHR for the same subject");
+    let owner = Box::pin(target.create_ehr_meta(
+        Some(typed(&status_for_subject_in("patient-import-2", "local"))),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect("the target already holds the subject");
+    let ehr = Box::pin(
+        source.create_ehr_meta(Some(typed(&status_for_subject("patient-import-2"))), None),
+    )
+    .await
+    .map(|(id, _)| id)
+    .expect("source EHR for the same subject");
     let extract = export_one(&source, ehr).await;
 
     let err = target
@@ -443,7 +454,7 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
 
     // Rolled back: the clone left nothing behind, and the owner is untouched.
     assert!(
-        !target.has_ehr(ehr).await.expect("has_ehr"),
+        !crate::fixtures::ehr_exists(&target, ehr).await,
         "a rejected import must not leave a partial EHR"
     );
     let found = target
@@ -467,8 +478,9 @@ async fn import_ehr_into_fixed_fresh_id() {
 
     let ehr = seed_ehr(&source).await;
     let source_status = source
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("source status");
 
     // A caller-provided fixed id (the same patient in another EHR system): the
@@ -490,8 +502,9 @@ async fn import_ehr_into_fixed_fresh_id() {
         ServiceStatus::EhrIdDoesNotExist
     );
     let mut target_status = target
-        .get_ehr_status_at_time(fixed, None)
+        .ehr_status_at_time_response(fixed, None)
         .await
+        .map(|r| r.body)
         .expect("status under the fixed id");
 
     // The versioned-object identity (uid) is preserved regardless of the target
@@ -586,7 +599,10 @@ async fn import_ehr_extract_adds_a_versioned_object_and_rejects_re_import() {
             .expect("folder EXTRACT");
 
     // A fresh target EHR (its own EHR_STATUS/EHR_ACCESS, no directory yet).
-    let tgt_ehr = target.create_ehr(None).await.expect("target ehr");
+    let tgt_ehr = Box::pin(target.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("target ehr");
     target
         .import_ehr_extract(tgt_ehr, folder_extract.clone())
         .await
@@ -768,8 +784,9 @@ async fn an_imported_container_reports_the_local_chronology() {
     // audit of the version IN THIS CONTAINER, which for an imported version is
     // the IMPORTED_VERSION's own, i.e. the local import act.
     let history = target
-        .ehr_status_revision_history(ehr)
+        .ehr_status_revision_history_response(ehr)
         .await
+        .map(|r| r.body)
         .expect("REVISION_HISTORY");
     let audit = &history["items"][0]["audits"][0];
     let logged = audit["time_committed"]["value"]
@@ -940,9 +957,9 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
     .with_system_id(TARGET_SYSTEM);
 
     let ehr = seed_ehr(&source).await;
-    let source_summary = source.get_ehr(ehr).await.expect("source summary");
+    let source_summary = source.ehr_read(ehr).await.expect("source summary").body;
     assert_eq!(
-        source_summary.system_id, SOURCE_SYSTEM,
+        source_summary["system_id"]["value"], SOURCE_SYSTEM,
         "fixture: the source EHR really was created by the other system"
     );
 
@@ -951,13 +968,13 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
         .import_ehr(None, export_one(&source, ehr).await)
         .await
         .expect("import_ehr");
-    let clone = target.get_ehr(ehr).await.expect("clone summary");
+    let clone = target.ehr_read(ehr).await.expect("clone summary").body;
     assert_eq!(
-        clone.ehr_id, source_summary.ehr_id,
+        clone["ehr_id"], source_summary["ehr_id"],
         "the clone re-uses the source EHR identifier"
     );
     assert_eq!(
-        clone.system_id, TARGET_SYSTEM,
+        clone["system_id"]["value"], TARGET_SYSTEM,
         "EHR.system_id is the receiving (cloning) system's, never the source's"
     );
 
@@ -969,13 +986,13 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
     ))
     .with_system_id(TARGET_SYSTEM);
     third
-        .create_ehr_with_id(ehr, None)
+        .create_ehr_with_id_meta(ehr, None, None)
         .await
         .expect("create with a client-supplied id");
-    let by_id = third.get_ehr(ehr).await.expect("summary");
-    assert_eq!(by_id.ehr_id, source_summary.ehr_id);
+    let by_id = third.ehr_read(ehr).await.expect("summary").body;
+    assert_eq!(by_id["ehr_id"], source_summary["ehr_id"]);
     assert_eq!(
-        by_id.system_id, TARGET_SYSTEM,
+        by_id["system_id"]["value"], TARGET_SYSTEM,
         "a client-supplied EHR id never carries a foreign system_id with it"
     );
 }
@@ -1005,7 +1022,10 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
     ));
 
     // A plain modifiable source EHR (the seeded fixture ends non-modifiable).
-    let ehr = source.create_ehr(None).await.expect("source ehr");
+    let ehr = Box::pin(source.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("source ehr");
     let composition_uid = source
         .create_composition(ehr, uv(&composition("as-of"), "249", None))
         .await
@@ -1035,16 +1055,18 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
 
     // At the pre-import instant the container held nothing locally.
     let illusion = target
-        .get_composition_at_time(ehr, vo_id, Some(before_import.clone()))
-        .await;
+        .composition_at_time_response(ehr, vo_id, Some(before_import.clone()))
+        .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     assert!(
         illusion.is_err(),
         "an as-of read before the local committal must not see the copied version, got {illusion:?}"
     );
     // …while an as-of read now does see it.
     target
-        .get_composition_at_time(ehr, vo_id, None)
+        .composition_at_time_response(ehr, vo_id, None)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the imported version is current now");
     // The control: the source's own committal instant IS retained, inside the
     // wrapped original (master06 §Committal and Audits), and it precedes the
@@ -1511,10 +1533,14 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
 
     // An EHR whose EHR_STATUS names that party as its subject, in the
     // `demographic` namespace the extract builder follows.
-    let ehr = source.create_ehr(None).await.expect("ehr");
-    let mut status = source
-        .get_ehr_status_at_time(ehr, None)
+    let ehr = Box::pin(source.create_ehr_meta(None, None))
         .await
+        .map(|(id, _)| id)
+        .expect("ehr");
+    let mut status = source
+        .ehr_status_at_time_response(ehr, None)
+        .await
+        .map(|r| r.body)
         .expect("status get");
     let status_ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
     status.as_object_mut().expect("status obj").remove("uid");
@@ -1527,9 +1553,9 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
             "id": { "_type": "HIER_OBJECT_ID", "value": party.to_string() }
         }
     });
-    source
-        .replace_ehr_status(ehr, uv(&status, "251", Some(&status_ovid)))
+    Box::pin(source.replace_ehr_status_meta(ehr, uv(&status, "251", Some(&status_ovid))))
         .await
+        .map(|m| m.uid)
         .expect("status update");
 
     let exported = source.extract_ehrs(ehr).await.expect("export_ehrs");

@@ -409,7 +409,11 @@ async fn unserved_demographic_constructs_are_refused() {
     }
 
     // An EHR scope cannot apply to a party query.
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr").to_string();
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string();
     let err = refuse(
         &svc,
         "SELECT p/uid/value FROM PERSON p",
@@ -441,7 +445,10 @@ async fn linked(svc: &FerroEhrService, name: &str, id: &str, compositions: &[&st
             .and_then(|s| s.parse().ok())
             .expect("party id"),
     );
-    let ehr = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     svc.link(party, ehr)
         .await
         .expect("link the party to its EHR");
@@ -473,7 +480,10 @@ async fn a_party_joins_to_the_content_of_its_ehr() {
         .await
         .expect("delete");
     // An EHR with content and no party.
-    let orphan = svc.create_ehr(None).await.expect("create_ehr");
+    let orphan = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     svc.create_composition(
         orphan,
         crate::fixtures::uv(&crate::fixtures::composition("visit e"), "249", None),
@@ -560,7 +570,10 @@ async fn a_join_leaves_out_a_non_queryable_ehr() {
             .and_then(|s| s.parse().ok())
             .expect("party id"),
     );
-    let hidden = svc.create_ehr(None).await.expect("create_ehr");
+    let hidden = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     svc.link(bram_party, hidden)
         .await
         .expect("link the party to its EHR");
@@ -629,10 +642,10 @@ async fn subject_ehr(
     class: &str,
     composition: &str,
 ) -> ferroehr::ids::EhrId {
-    let ehr = svc
-        .create_ehr(Some(status_naming(id, namespace, class)))
+    let ehr = Box::pin(svc.create_ehr_meta(Some(status_naming(id, namespace, class)), None))
         .await
-        .unwrap_or_else(|e| panic!("create_ehr naming {class} {id}: {e:?}"));
+        .unwrap_or_else(|e| panic!("create_ehr naming {class} {id}: {e:?}"))
+        .0;
     svc.create_composition(
         ehr,
         crate::fixtures::uv(&crate::fixtures::composition(composition), "249", None),

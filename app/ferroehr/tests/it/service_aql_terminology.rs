@@ -121,7 +121,11 @@ fn composition_coded(name: &str, terminology_id: &str, code: &str) -> Value {
 }
 
 async fn create_ehr(svc: &FerroEhrService) -> String {
-    svc.create_ehr(None).await.expect("create_ehr").to_string()
+    Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr")
+        .to_string()
 }
 
 async fn create_coded(

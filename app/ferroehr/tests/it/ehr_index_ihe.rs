@@ -133,8 +133,9 @@ async fn a_subject_is_resolved_through_the_pix_manager() {
     assert!(svc.has_ehr_for_subject(red_subject()).await.expect("has"));
 
     let stored = svc
-        .get_ehr_status_at_time(ehr, None)
+        .ehr_status_at_time_response(ehr, None)
         .await
+        .map(|r| r.body)
         .expect("the status reads");
     assert_eq!(
         stored.pointer("/subject/external_ref/namespace"),

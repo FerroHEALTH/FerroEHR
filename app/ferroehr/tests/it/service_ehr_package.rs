@@ -97,7 +97,10 @@ const REPORT: &str = "openEHR-EHR-COMPOSITION.report.v1";
 async fn versioned_composition_cannot_switch_archetype() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = svc.create_ehr(None).await.expect("ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
     let v1 = svc
         .create_composition(
             ehr,
@@ -144,7 +147,10 @@ async fn versioned_composition_cannot_switch_archetype() {
 async fn versioned_composition_cannot_flip_persistence() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = svc.create_ehr(None).await.expect("ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
     let v1 = svc
         .create_composition(
             ehr,
@@ -186,8 +192,14 @@ async fn versioned_composition_cannot_flip_persistence() {
 async fn tag_targets_must_be_within_the_same_ehr() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_a = svc.create_ehr(None).await.expect("ehr A");
-    let ehr_b = svc.create_ehr(None).await.expect("ehr B");
+    let ehr_a = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr A");
+    let ehr_b = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr B");
     let v1 = svc
         .create_composition(
             ehr_a,
@@ -240,7 +252,10 @@ async fn tag_targets_must_be_within_the_same_ehr() {
 async fn tagging_does_not_re_version_or_contribute() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = svc.create_ehr(None).await.expect("ehr");
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr");
     let v1 = svc
         .create_composition(
             ehr,
@@ -258,8 +273,9 @@ async fn tagging_does_not_re_version_or_contribute() {
         .await
         .expect("contribution count before");
     let history_before = svc
-        .composition_revision_history(ehr, vo)
+        .composition_revision_history_response(ehr, vo)
         .await
+        .map(|r| r.body)
         .expect("revision history before");
     assert_eq!(
         history_before["items"].as_array().map(Vec::len),
@@ -302,8 +318,9 @@ async fn tagging_does_not_re_version_or_contribute() {
 
     // No new VERSION …
     let history_after = svc
-        .composition_revision_history(ehr, vo)
+        .composition_revision_history_response(ehr, vo)
         .await
+        .map(|r| r.body)
         .expect("revision history after");
     assert_eq!(
         history_after, history_before,

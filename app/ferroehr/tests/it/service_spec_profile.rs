@@ -102,7 +102,10 @@ fn stable_service(pool: &sqlx::PgPool) -> FerroEhrService {
 
 /// Commit one COMPOSITION into a fresh EHR under the DEVELOPMENT profile.
 async fn commit(svc: &FerroEhrService, body: &Value) -> (EhrId, VoId) {
-    let ehr_id = svc.create_ehr(None).await.expect("ehr_create");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("ehr_create");
     let committed = svc
         .create_composition(ehr_id, uv(body, "249", None))
         .await
@@ -125,14 +128,16 @@ async fn a_released_surface_composition_stamps_true_and_reads_under_both_profile
     );
 
     let under_development = svc
-        .get_composition_latest(ehr_id, vo_id)
+        .composition_latest_response(ehr_id, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("served under the development profile");
     assert_eq!(under_development["_type"], "COMPOSITION");
 
     let under_stable = stable_service(&db.pool())
-        .get_composition_latest(ehr_id, vo_id)
+        .composition_latest_response(ehr_id, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("served under the stable profile");
     assert_eq!(under_stable, under_development);
 }
@@ -153,14 +158,16 @@ async fn a_development_only_composition_stamps_false_and_is_refused_under_stable
     );
 
     let served = svc
-        .get_composition_latest(ehr_id, vo_id)
+        .composition_latest_response(ehr_id, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("served under the development profile that accepted it");
     assert_eq!(served["content"][0]["data"]["_type"], "CLUSTER");
 
     let refused = stable_service(&db.pool())
-        .get_composition_latest(ehr_id, vo_id)
-        .await;
+        .composition_latest_response(ehr_id, vo_id)
+        .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     let Err(StatusError {
         status: ServiceStatus::Conflict,
         message,
@@ -195,10 +202,14 @@ async fn an_unstamped_row_is_assessed_on_the_fly() {
 
     let stable = stable_service(&db.pool());
     stable
-        .get_composition_latest(clean_ehr, clean_vo)
+        .composition_latest_response(clean_ehr, clean_vo)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("an unstamped released-surface body is assessed and served");
-    let refused = stable.get_composition_latest(dirty_ehr, dirty_vo).await;
+    let refused = stable
+        .composition_latest_response(dirty_ehr, dirty_vo)
+        .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     assert!(
         matches!(
             refused,
@@ -240,8 +251,9 @@ async fn archive_and_restore_preserve_the_stamp() {
 
     // An archived object stays retrievable, and the gate still applies to it.
     let refused = stable_service(&db.pool())
-        .get_composition_latest(ehr_id, vo_id)
-        .await;
+        .composition_latest_response(ehr_id, vo_id)
+        .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     assert!(
         matches!(
             refused,
@@ -261,8 +273,9 @@ async fn archive_and_restore_preserve_the_stamp() {
         Some(false),
         "the restored row carries the stamp it was archived with"
     );
-    svc.get_composition_latest(ehr_id, vo_id)
+    svc.composition_latest_response(ehr_id, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the restored object reads under the development profile");
 }
 
@@ -329,14 +342,16 @@ async fn dump_and_load_into_a_fresh_repository_preserve_the_stamp() {
     // The profile gate lands the same way in the repository that never saw the
     // commit: served under `development`, refused under `stable`.
     let served = target
-        .get_composition_latest(ehr_id, vo_id)
+        .composition_latest_response(ehr_id, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the loaded body is served under the development profile");
     assert_eq!(served["content"][0]["data"]["_type"], "CLUSTER");
 
     let refused = stable_service(&target_db.pool())
-        .get_composition_latest(ehr_id, vo_id)
-        .await;
+        .composition_latest_response(ehr_id, vo_id)
+        .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     let Err(StatusError {
         status: ServiceStatus::Conflict,
         message,
@@ -382,12 +397,14 @@ async fn dump_and_load_keep_a_released_surface_body_readable_under_stable() {
         "a loaded released-surface body must not read as stable-INcompatible"
     );
     let under_development = target
-        .get_composition_latest(ehr_id, vo_id)
+        .composition_latest_response(ehr_id, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("served under the development profile");
     let under_stable = stable_service(&target_db.pool())
-        .get_composition_latest(ehr_id, vo_id)
+        .composition_latest_response(ehr_id, vo_id)
         .await
+        .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("served under the stable profile");
     assert_eq!(under_stable, under_development);
 

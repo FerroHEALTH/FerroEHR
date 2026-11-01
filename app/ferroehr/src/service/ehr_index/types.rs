@@ -61,16 +61,6 @@ impl ResourceInstanceType {
             ResourceInstanceType::Supplementary => "Supplementary",
         }
     }
-
-    /// Parse a stored token, defaulting unknown values to `Primary`.
-    #[must_use]
-    pub fn from_str_or_primary(s: &str) -> Self {
-        match s {
-            "Duplicate" => ResourceInstanceType::Duplicate,
-            "Supplementary" => ResourceInstanceType::Supplementary,
-            _ => ResourceInstanceType::Primary,
-        }
-    }
 }
 
 /// `RESOURCE_STATUS` — the status of a reference to a resource.

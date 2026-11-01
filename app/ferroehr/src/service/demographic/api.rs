@@ -32,40 +32,10 @@ use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::{ServiceStatus, StatusError};
 use crate::service::version_update::Committal;
 use crate::versioning::object_version_id::{
-    components, expected_from_if_match, if_match_token, parse_uid_based_id, parse_version_uid,
+    expected_from_if_match, if_match_token, parse_uid_based_id, parse_version_uid,
 };
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
+use openehr_its::rest::generated::common::UpdateAudit;
 use openehr_rm::prelude::{Party, PartyRelationship};
-
-/// The `version_uid` a write produced (the new/deleted `OBJECT_VERSION_ID`),
-/// pulled from the response metadata.
-fn version_uid(resp: ServiceResponse) -> String {
-    resp.meta.map(|m| m.uid).unwrap_or_default()
-}
-
-/// The refusal of a create or update whose version carries no data: only a
-/// logical deletion has none (RM common master06 §Logical Deletion).
-fn no_party_data() -> StatusError {
-    StatusError::precondition("the version carries no data, and this operation writes content")
-}
-
-/// The [`PartyKind`] a commit envelope routes to, read off the RM `PARTY`
-/// subtype it carries: parties are addressed by their concrete RM type.
-///
-/// Total and infallible: `PARTY` is a closed subtype set in the generated RM,
-/// so every value names exactly one resource family. [`PartyKind`] is OUR
-/// route key (the `/demographic/{segment}` URL family + the stored kind
-/// discriminator — `service::demographic::types`), which no openEHR spec or
-/// generated type carries; this is the one mapping between the two.
-fn party_kind_of(body: &Party) -> PartyKind {
-    match body {
-        Party::Agent(_) => PartyKind::Agent,
-        Party::Group(_) => PartyKind::Group,
-        Party::Organisation(_) => PartyKind::Organisation,
-        Party::Person(_) => PartyKind::Person,
-        Party::Role(_) => PartyKind::Role,
-    }
-}
 
 /// Verifies a full-`OBJECT_VERSION_ID` `If-Match` precondition, which must
 /// answer `412 Precondition Failed` when it evaluates false (ITS-REST overview
@@ -102,21 +72,6 @@ fn ensure_full_ovid_if_match(
             meta.uid
         ))),
         None => Ok(()),
-    }
-}
-
-/// The [`Committal`] an `UPDATE_VERSION` envelope carries: its `UPDATE_AUDIT`
-/// attributes plus its VERSION `lifecycle_state`, so a typed demographic commit
-/// honours the same two halves the wire's committal headers do (ITS-REST
-/// overview `Requests_and_responses.md`
-/// §"openehr-version and openehr-audit-details"; RM common master06 §Version
-/// Lifecycle). An empty code means the caller stated none, leaving the
-/// operation default.
-fn envelope_committal<T>(a_version: &UpdateVersion<T>) -> Committal {
-    Committal {
-        audit: a_version.commit_audit.clone(),
-        lifecycle_state: Some(a_version.lifecycle_state.defining_code.code_string.clone())
-            .filter(|code| !code.is_empty()),
     }
 }
 
@@ -161,127 +116,6 @@ impl FerroEhrService {
 
     // ── typed party operations ──────────────────────────────────────────────
 
-    /// Commit the first version
-    /// of a new PARTY.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `content_invalid` — the payload `_type` is absent or not a
-    ///   demographic party type (AGENT/GROUP/ORGANISATION/PERSON/ROLE).
-    /// - [`StatusError`] `content_invalid` — the body fails RM validation for the
-    ///   resolved party kind (`validate::party_check`).
-    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — the
-    ///   versioned-create transaction fails (integrity conflict, pool
-    ///   exhaustion, or a storage/database fault).
-    /// - [`StatusError`] `precondition_violation` — the committed version uid does
-    ///   not parse (defensive; the uid is server-generated).
-    pub async fn create_party(&self, a_version: UpdateVersion<Party>) -> Result<VoId, StatusError> {
-        let kind = party_kind_of(a_version.data.as_ref().ok_or_else(no_party_data)?);
-        let a_version = crate::service::ehr::canonicalize(a_version);
-        let committal = envelope_committal(&a_version);
-        let resp = self
-            .commit_new_party(
-                kind,
-                a_version.data.ok_or_else(no_party_data)?,
-                Some(&committal),
-            )
-            .await?;
-        let (vo_id, _) = parse_version_uid(&version_uid(resp))?;
-        Ok(vo_id)
-    }
-
-    /// True iff a *live* party of some kind exists under this versioned-object
-    /// id (a logically deleted party reads `Null` → `false`).
-    ///
-    /// # Errors
-    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — a
-    ///   storage/database fault while resolving the party kind or reading its
-    ///   current version. A *not-found* on either resolves to `Ok(false)`, not
-    ///   an error.
-    pub async fn has_party(&self, a_versioned_party_id: VoId) -> Result<bool, StatusError> {
-        // True iff a *live* party of some kind exists (a logically deleted party
-        // reads `Null`, satisfying the delete post-condition `not has_party`).
-        match self.party_kind_at(a_versioned_party_id).await {
-            Ok(kind) => match self
-                .read_party(kind, a_versioned_party_id, None, None)
-                .await
-            {
-                Ok(resp) => Ok(!resp.is_empty()),
-                Err(ServiceError::NotFound(_)) => Ok(false),
-                Err(e) => Err(e.into()),
-            },
-            Err(ServiceError::NotFound(_)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// True iff a specific party `OBJECT_VERSION_ID` exists. An unparseable id
-    /// or a missing version resolve to `false`.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — a
-    ///   storage/database fault while reading the version. A malformed id or a
-    ///   *not-found* version resolves to `Ok(false)`, not an error.
-    pub async fn has_party_version_id(
-        &self,
-        a_party_version_id: String,
-    ) -> Result<bool, StatusError> {
-        let Ok((vo_id, tree)) = parse_version_uid(&a_party_version_id) else {
-            return Ok(false);
-        };
-        match self.party_version(vo_id, tree).await {
-            Ok(_) => Ok(true),
-            Err(ServiceError::NotFound(_)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// The current version's body.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party with
-    ///   this id exists (`party_kind_at`), or its current version is logically
-    ///   deleted / absent (the read is empty).
-    /// - [`StatusError`] `conflict` / `service_overloaded` / `exception` — a
-    ///   storage/database fault during kind resolution or read.
-    pub async fn get_party(&self, a_versioned_party_id: VoId) -> Result<Value, StatusError> {
-        let kind = self.party_kind_at(a_versioned_party_id).await?;
-        let resp = self
-            .read_party(kind, a_versioned_party_id, None, None)
-            .await?;
-        if resp.is_empty() {
-            // Pre `has_party` failed (deleted / no current version).
-            return Err(StatusError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
-                format!("party {a_versioned_party_id} has no current version"),
-            ));
-        }
-        Ok(resp.body)
-    }
-
-    /// The Version of a Party current at
-    /// `a_time` (an extended-ISO-8601 datetime; the timezone is optional and
-    /// its absence means the server's local one — `crate::service::datetime`).
-    /// A deleted version at that instant reads `Null`.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party
-    ///   with this id exists, or no version existed at `a_time`.
-    /// - [`StatusError`] `precondition_violation` — `a_time` does not parse as an
-    ///   ISO-8601 timestamp.
-    /// - [`StatusError`] on a storage/database fault during kind resolution or read.
-    pub async fn get_party_at_time(
-        &self,
-        a_versioned_party_id: VoId,
-        a_time: String,
-    ) -> Result<Value, StatusError> {
-        let kind = self.party_kind_at(a_versioned_party_id).await?;
-        let at = parse_at_time(&a_time)?;
-        let resp = self
-            .read_party(kind, a_versioned_party_id, None, Some(at))
-            .await?;
-        Ok(resp.body)
-    }
-
     /// The `ORIGINAL_VERSION` named by
     /// a full party `OBJECT_VERSION_ID`.
     ///
@@ -302,65 +136,9 @@ impl FerroEhrService {
         Ok(self.party_version(vo_id, tree).await?)
     }
 
-    /// Commit a new version of an existing
-    /// party; returns the new version's `OBJECT_VERSION_ID`.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `content_invalid` — the payload `_type` is absent / not a
-    ///   party type, or the body fails RM validation for that kind.
-    /// - [`StatusError`] `precondition_violation` — `preceding_version_uid` does
-    ///   not parse as an `OBJECT_VERSION_ID`.
-    /// - [`StatusError`] `versioned_object_does_not_exist` — no live party of the
-    ///   payload's kind exists under this id (unknown, wrong-kind, or deleted).
-    /// - [`StatusError`] `conflict` — the preceding version is stale (optimistic
-    ///   concurrency), or the write transaction fails.
-    pub async fn update_party(
-        &self,
-        a_versioned_party_id: VoId,
-        a_version: UpdateVersion<Party>,
-    ) -> Result<String, StatusError> {
-        let kind = party_kind_of(a_version.data.as_ref().ok_or_else(no_party_data)?);
-        let a_version = crate::service::ehr::canonicalize(a_version);
-        let expected = match &a_version.preceding_version_uid {
-            Some(ovid) => Some(components(ovid)?.1),
-            None => None,
-        };
-        let committal = envelope_committal(&a_version);
-        let resp = self
-            .update_party_version(
-                kind,
-                a_versioned_party_id,
-                a_version.data.ok_or_else(no_party_data)?,
-                expected,
-                Some(&committal),
-            )
-            .await?;
-        Ok(version_uid(resp))
-    }
-
-    /// Logically delete the party's current
-    /// version (post `not has_party`); returns the deleted version's
-    /// `OBJECT_VERSION_ID`. The call takes no version argument — the current
-    /// version is deleted unconditionally.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `versioned_object_does_not_exist` — no versioned party
-    ///   with this id exists.
-    /// - [`StatusError`] mapped from `400` — the party is already deleted.
-    /// - [`StatusError`] on a storage/database fault during the delete transaction.
-    pub async fn delete_party(&self, a_versioned_party_id: VoId) -> Result<String, StatusError> {
-        // No version argument: delete the current version unconditionally.
-        let kind = self.party_kind_at(a_versioned_party_id).await?;
-        let resp = self
-            .delete_party_version(kind, a_versioned_party_id, None, None)
-            .await?;
-        Ok(version_uid(resp))
-    }
-
     // ── PARTY CRUD (wire seam) ────────────────────────────────────────────────
 
-    /// Create a party of the routed [`PartyKind`] (the wire seam of
-    /// `create_party`), with the party's stored `ITEM_TAG`s surfaced on the
+    /// Create a party of the routed [`PartyKind`], with the party's stored `ITEM_TAG`s surfaced on the
     /// response metadata for the `openehr-item-tag` headers (a fresh party has
     /// none yet; the wire adapter persists any request-header tags and
     /// re-populates the seam afterwards).
@@ -751,181 +529,9 @@ impl FerroEhrService {
 impl FerroEhrService {
     // ── typed relationship operations ───────────────────────────────────────
 
-    /// Commit the
-    /// first version of a new `PARTY_RELATIONSHIP`.
-    ///
-    /// # Errors
-    /// - [`StatusError`] mapped from `422` — the body is not a valid
-    ///   `PARTY_RELATIONSHIP` (missing/invalid `source`/`target` `PARTY_REF`s,
-    ///   `validate::relationship_check`).
-    /// - [`StatusError`] `precondition_violation` — the committed version uid does
-    ///   not parse (defensive; server-generated).
-    /// - [`StatusError`] on a storage/database fault during the create transaction.
-    pub async fn create_party_relationship(
-        &self,
-        a_version: UpdateVersion<PartyRelationship>,
-    ) -> Result<VoId, StatusError> {
-        let a_version = crate::service::ehr::canonicalize(a_version);
-        let committal = envelope_committal(&a_version);
-        let resp = self
-            .create_relationship(a_version.data.ok_or_else(no_party_data)?, Some(&committal))
-            .await?;
-        let (vo_id, _) = parse_version_uid(&version_uid(resp))?;
-        Ok(vo_id)
-    }
-
-    /// True iff a *live* relationship exists under this versioned-object id (a
-    /// logically deleted one reads `Null` → `false`, satisfying the delete
-    /// post-condition).
-    ///
-    /// # Errors
-    /// [`StatusError`] on a storage/database fault while reading the current
-    /// version. A *not-found* resolves to `Ok(false)`, not an error.
-    pub async fn has_party_relationship(
-        &self,
-        a_versioned_party_rel_id: VoId,
-    ) -> Result<bool, StatusError> {
-        // True iff a *live* relationship exists (a logically deleted one reads
-        // `Null`, satisfying the delete post-condition).
-        match self
-            .read_relationship(a_versioned_party_rel_id, None, None)
-            .await
-        {
-            Ok(resp) => Ok(!resp.is_empty()),
-            Err(ServiceError::NotFound(_)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
-    }
-
-    /// The current
-    /// version's body.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `versioned_object_does_not_exist` — no relationship with
-    ///   this id exists, or its current version is logically deleted / absent
-    ///   (the read is empty).
-    /// - [`StatusError`] on a storage/database fault during the read.
-    pub async fn get_party_relationship(
-        &self,
-        a_versioned_party_rel_id: VoId,
-    ) -> Result<Value, StatusError> {
-        let resp = self
-            .read_relationship(a_versioned_party_rel_id, None, None)
-            .await?;
-        if resp.is_empty() {
-            return Err(StatusError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
-                format!("party relationship {a_versioned_party_rel_id} has no current version"),
-            ));
-        }
-        Ok(resp.body)
-    }
-
-    /// The
-    /// Version current at `a_time`. A deleted version at that instant reads
-    /// `Null`.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `precondition_violation` — `a_time` does not parse as an
-    ///   ISO-8601 timestamp.
-    /// - [`StatusError`] `versioned_object_does_not_exist` — no relationship with
-    ///   this id, or no version existed at `a_time`.
-    /// - [`StatusError`] on a storage/database fault during the read.
-    pub async fn get_party_relationship_at_time(
-        &self,
-        a_versioned_party_rel_id: VoId,
-        a_time: String,
-    ) -> Result<Value, StatusError> {
-        let at = parse_at_time(&a_time)?;
-        let resp = self
-            .read_relationship(a_versioned_party_rel_id, None, Some(at))
-            .await?;
-        Ok(resp.body)
-    }
-
-    /// The
-    /// `ORIGINAL_VERSION` named by a full relationship `OBJECT_VERSION_ID`.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `precondition_violation` — the id does not parse.
-    /// - [`StatusError`] `object_version_does_not_exist` — the object is not a
-    ///   relationship or holds no such version.
-    /// - [`StatusError`] on a storage/database fault or a signing failure.
-    pub async fn get_party_relationship_at_version(
-        &self,
-        a_party_rel_version_id: String,
-    ) -> Result<Value, StatusError> {
-        let (vo_id, tree) = parse_version_uid(&a_party_rel_version_id)?;
-        // The version-addressed read carries `object_version_does_not_exist`
-        // itself (`ServiceError` round-trips the granular status losslessly).
-        Ok(self.relationship_version(vo_id, tree).await?)
-    }
-
-    /// Commit a new
-    /// relationship version; returns the new version's `OBJECT_VERSION_ID`.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `precondition_violation` — `preceding_version_uid` does
-    ///   not parse as an `OBJECT_VERSION_ID`.
-    /// - [`StatusError`] mapped from `404` — no live relationship under this id
-    ///   (unknown, wrong-kind, or deleted).
-    /// - [`StatusError`] mapped from `422` — the body fails RM validation.
-    /// - [`StatusError`] mapped from `409` — the preceding version is stale.
-    pub async fn update_party_relationship(
-        &self,
-        a_versioned_party_rel_id: VoId,
-        a_version: UpdateVersion<PartyRelationship>,
-    ) -> Result<String, StatusError> {
-        let a_version = crate::service::ehr::canonicalize(a_version);
-        let expected = match &a_version.preceding_version_uid {
-            Some(ovid) => Some(components(ovid)?.1),
-            None => None,
-        };
-        let committal = envelope_committal(&a_version);
-        let resp = self
-            .update_relationship(
-                a_versioned_party_rel_id,
-                a_version.data.ok_or_else(no_party_data)?,
-                expected,
-                Some(&committal),
-            )
-            .await?;
-        Ok(version_uid(resp))
-    }
-
-    /// Logically
-    /// delete the relationship's current version; returns the deleted version's
-    /// `OBJECT_VERSION_ID`. The call takes no version argument — the current
-    /// version is deleted unconditionally.
-    ///
-    /// # Errors
-    /// - [`StatusError`] `versioned_object_does_not_exist` — no relationship with
-    ///   this id has a current version.
-    /// - [`StatusError`] mapped from `400` — the relationship is already deleted.
-    /// - [`StatusError`] on a storage/database fault during the delete transaction.
-    pub async fn delete_party_relationship(
-        &self,
-        a_versioned_party_rel_id: VoId,
-    ) -> Result<String, StatusError> {
-        // No version argument: resolve the current version once and delete it
-        // unconditionally.
-        let current = self
-            .relationship_current(a_versioned_party_rel_id)
-            .await?
-            .ok_or_else(|| {
-                StatusError::new(
-                    ServiceStatus::VersionedObjectDoesNotExist,
-                    format!("party relationship {a_versioned_party_rel_id}"),
-                )
-            })?;
-        let resp = self.commit_relationship_delete(current, None, None).await?;
-        Ok(version_uid(resp))
-    }
-
     // ── the relationship wire seam ────────────────────────────────────────────
 
-    /// Create a `PARTY_RELATIONSHIP` (the wire seam of
-    /// `create_party_relationship`).
+    /// Create a `PARTY_RELATIONSHIP`.
     ///
     /// # Errors
     /// - [`StatusError`] mapped from `422` — the body's `_type` is not

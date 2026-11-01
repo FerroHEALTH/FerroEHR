@@ -23,8 +23,7 @@ use crate::ids::EhrId;
 use crate::service::list::Page;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::StatusError;
-use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
-use openehr_its::rest::generated::ehr::{NewContribution, Versionable};
+use openehr_its::rest::generated::ehr::NewContribution;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -116,24 +115,6 @@ impl FerroEhrService {
 // ── The CONTRIBUTION call surface ─────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// Whether the CONTRIBUTION
-    /// exists in the EHR.
-    ///
-    /// # Errors
-    /// [`StatusError`] if the retrieval fails (a missing CONTRIBUTION is
-    /// `Ok(false)`).
-    pub async fn has_contribution(
-        &self,
-        an_ehr_id: EhrId,
-        a_contrib_id: Uuid,
-    ) -> Result<bool, StatusError> {
-        match self.ehr_contribution(an_ehr_id, a_contrib_id, false).await {
-            Ok(_) => Ok(true),
-            Err(ServiceError::NotFound(_)) => Ok(false),
-            Err(e) => Err(e.into()),
-        }
-    }
-
     /// The stored `CONTRIBUTION`
     /// (its `versions` as `OBJECT_REF`s).
     ///
@@ -163,27 +144,6 @@ impl FerroEhrService {
         a_contrib_id: Uuid,
     ) -> Result<Value, StatusError> {
         Ok(self.ehr_contribution(an_ehr_id, a_contrib_id, true).await?)
-    }
-
-    /// Commit a typed change
-    /// set atomically, returning the new CONTRIBUTION uid.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the typed shapes fail to serialize, or the commit
-    /// fails classification, content validation, the optimistic lock, or its
-    /// storage write.
-    pub async fn commit_contribution(
-        &self,
-        an_ehr_id: EhrId,
-        versions: Vec<UpdateVersion<Versionable>>,
-        an_audit: UpdateAudit,
-    ) -> Result<String, StatusError> {
-        // Each member's content is encoded once into its canonical fragment,
-        // the form the one change-set engine (`commit_version_set`) reads.
-        let versions = versions.into_iter().map(super::canonicalize).collect();
-        let committed =
-            commit_version_set(self, Some(an_ehr_id), None, versions, &an_audit, false).await?;
-        Ok(committed.id.to_string())
     }
 
     /// The EHR's CONTRIBUTION

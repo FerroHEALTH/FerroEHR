@@ -145,13 +145,16 @@ fn assert_refused_service(error: &ServiceError, expected_path: &str) {
 async fn an_opaque_subject_in_a_configured_namespace_is_stored_as_the_promoted_key() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let ehr_id = svc
-        .create_ehr(Some(typed_status(&status_with_subject(
+    let ehr_id = Box::pin(svc.create_ehr_meta(
+        Some(typed_status(&status_with_subject(
             PSEUDONYM_NS,
             OPAQUE_SUBJECT,
-        ))))
-        .await
-        .expect("an opaque subject in a declared namespace is accepted");
+        ))),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect("an opaque subject in a declared namespace is accepted");
 
     let row = sqlx::query("SELECT subject_id, subject_namespace FROM ehr WHERE id = $1")
         .bind(ehr_id)
@@ -172,13 +175,16 @@ async fn an_opaque_subject_in_a_configured_namespace_is_stored_as_the_promoted_k
 async fn a_non_uuid_subject_id_is_refused_and_the_value_never_reaches_the_wire() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let error = svc
-        .create_ehr(Some(typed_status(&status_with_subject(
+    let error = Box::pin(svc.create_ehr_meta(
+        Some(typed_status(&status_with_subject(
             PSEUDONYM_NS,
             SYNTHETIC_BSN,
-        ))))
-        .await
-        .expect_err("a national identifier as the subject must be refused");
+        ))),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect_err("a national identifier as the subject must be refused");
     assert_refused(&error, "EHR_STATUS/subject/external_ref/id/value");
     assert!(
         !error.message.contains(SYNTHETIC_BSN),
@@ -191,13 +197,16 @@ async fn a_non_uuid_subject_id_is_refused_and_the_value_never_reaches_the_wire()
 async fn an_unconfigured_namespace_is_refused() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let error = svc
-        .create_ehr(Some(typed_status(&status_with_subject(
+    let error = Box::pin(svc.create_ehr_meta(
+        Some(typed_status(&status_with_subject(
             "uk.org.nmc",
             OPAQUE_SUBJECT,
-        ))))
-        .await
-        .expect_err("a namespace outside the pseudonymisation domain must be refused");
+        ))),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect_err("a namespace outside the pseudonymisation domain must be refused");
     assert_refused(&error, "EHR_STATUS/subject/external_ref/namespace");
 }
 
@@ -205,30 +214,33 @@ async fn an_unconfigured_namespace_is_refused() {
 async fn the_subject_rule_also_binds_the_ehr_status_update_path() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &enforcing());
-    let ehr_id = svc
-        .create_ehr(Some(typed_status(&status_with_subject(
+    let ehr_id = Box::pin(svc.create_ehr_meta(
+        Some(typed_status(&status_with_subject(
             PSEUDONYM_NS,
             OPAQUE_SUBJECT,
-        ))))
-        .await
-        .expect("create");
+        ))),
+        None,
+    ))
+    .await
+    .map(|(id, _)| id)
+    .expect("create");
     let status = svc.get_ehr_status(ehr_id).await.expect("read the status");
     let preceding = status["uid"]["value"]
         .as_str()
         .expect("the stored status carries its version uid")
         .to_owned();
 
-    let error = svc
-        .replace_ehr_status(
-            ehr_id,
-            uv(
-                &status_with_subject(PSEUDONYM_NS, SYNTHETIC_BSN),
-                "251",
-                Some(&preceding),
-            ),
-        )
-        .await
-        .expect_err("the update path enforces the same rule as the create path");
+    let error = Box::pin(svc.replace_ehr_status_meta(
+        ehr_id,
+        uv(
+            &status_with_subject(PSEUDONYM_NS, SYNTHETIC_BSN),
+            "251",
+            Some(&preceding),
+        ),
+    ))
+    .await
+    .map(|m| m.uid)
+    .expect_err("the update path enforces the same rule as the create path");
     assert_refused(&error, "EHR_STATUS/subject/external_ref/id/value");
 }
 
@@ -247,7 +259,10 @@ async fn the_subject_rule_also_binds_the_ehr_status_update_path() {
 async fn a_named_composer_is_accepted_by_default() {
     let db = testkit::db().await.expect("testkit database");
     let strict = service(&db, &PrivacyConfig::default());
-    let ehr_id = strict.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(strict.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     let named = composition("privacy composition");
     strict
@@ -267,7 +282,10 @@ async fn a_named_composer_is_accepted_by_default() {
 async fn composer_identifiers_are_accepted_and_a_self_party_needs_the_opt_in() {
     let db = testkit::db().await.expect("testkit database");
     let strict = service(&db, &PrivacyConfig::default());
-    let ehr_id = strict.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(strict.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     let mut identified = composition("privacy composition");
     identified["composer"]["identifiers"] =
@@ -358,7 +376,10 @@ fn composition_with_text(name: &str, text: &str) -> Value {
 async fn strict_mode_refuses_a_composition_carrying_a_synthetic_bsn() {
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     let carrying = composition_with_text(
         "scanner strict",
@@ -389,7 +410,10 @@ async fn warn_mode_accepts_the_same_composition() {
             ..PrivacyConfig::default()
         },
     );
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
     let carrying = composition_with_text(
         "scanner warn",
         &format!("referral note for {SYNTHETIC_BSN}"),
@@ -405,7 +429,10 @@ async fn an_identifier_from_another_jurisdiction_is_refused_by_the_same_default(
     // every jurisdiction the build ships.
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     let carrying = composition_with_text(
         "scanner cross-border",
@@ -431,7 +458,10 @@ async fn a_terminology_code_satisfying_a_checksum_is_not_refused() {
     // string attribute — a structural carve-out, not a per-country one.
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &PrivacyConfig::default());
-    let ehr_id = svc.create_ehr(None).await.expect("create_ehr");
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
 
     let mut coded = composition_with_text("coded", "a clinical synopsis");
     coded["content"][0]["data"]["items"][0]["value"] = json!({
