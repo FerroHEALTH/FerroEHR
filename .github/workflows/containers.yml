@@ -512,9 +512,6 @@ jobs:
     with:
       server-image: ${{ case(needs.app-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr@{0}', needs.app-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr:main') }}
       postgres-image: ${{ case(needs.postgres-image.result == 'success', format('ghcr.io/ferrohealth/ferroehr-postgres@{0}', needs.postgres-image.outputs.digest), 'ghcr.io/ferrohealth/ferroehr-postgres:main') }}
-      # THE SWITCH (#4455): delete this line to make a red verdict fail the
-      # run, once the released run on main is green.
-      advisory: true
 
   # The pushed VIEWER artifact was once assembled from two jobs (the per-arch
   # binary and a separately built site bundle), and an assembly that
