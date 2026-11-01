@@ -235,6 +235,13 @@ fn build_objects(
     objects
 }
 
+/// The object a record names by its URI: a System Object (type `2`), its
+/// role left out, and the ID type `12` URI.
+///
+/// DICOM PS3.15 Annex A.5, Tables A.5.1.2.2-1 and A.5.1.2.4-1: the
+/// `ParticipantObjectTypeCodeRole` "may be omitted", and URI is a System
+/// Object's ID type. ITI-20 carries the message as written (IHE ITI TF-2
+/// §3.20.4.1.2).
 fn uri_object(id: String) -> ParticipantObject {
     object(id, OBJECT_TYPE_SYSTEM, None, codes::OBJ_ID_URI)
 }
@@ -336,6 +343,57 @@ mod tests {
         assert!(xml.contains(r#"UserID="john doe""#));
         assert!(xml.contains(r#"UserID="ferroehr""#));
         assert_audit_snapshot!("ehr_create_C", xml);
+    }
+
+    /// The record of an EHDS Art. 3(3) access delay names the patient and the
+    /// held composition, the object its FHIR `AuditEvent` names: a System
+    /// Object with no role and the ID type URI (DICOM PS3.15 Tables
+    /// A.5.1.2.2-1 and A.5.1.2.4-1).
+    #[test]
+    fn an_access_delay_record_names_the_patient_and_the_held_composition() {
+        let mut e = event(
+            EventActionCode::Create,
+            ObjectClass::Ehr,
+            EventOutcome::Success,
+        );
+        e.ehr_id = Some("7d44b88c-4199-4bad-9765-99c1b0a5f9d3".to_owned());
+        e.object_id = Some("access-delay:0b2c5f1e-8d4a-4c6b-9e7f-3a1d2c4b5e6f".to_owned());
+        let objects: Vec<_> = build(&e, &ctx(), Some("patient-42"))
+            .objects
+            .iter()
+            .map(|o| {
+                (
+                    o.id.expose_secret().to_owned(),
+                    o.type_code,
+                    o.type_code_role,
+                    o.id_type_code.code.clone(),
+                    o.id_type_code.system_name.clone(),
+                    o.data_life_cycle,
+                )
+            })
+            .collect();
+        let owned = |s: &str| s.to_owned();
+        assert_eq!(
+            objects,
+            vec![
+                (
+                    owned("patient-42"),
+                    Some("1"),
+                    Some("1"),
+                    owned("2"),
+                    owned("RFC-3881"),
+                    Some("1"),
+                ),
+                (
+                    owned("access-delay:0b2c5f1e-8d4a-4c6b-9e7f-3a1d2c4b5e6f"),
+                    Some("2"),
+                    None,
+                    owned("12"),
+                    owned("RFC-3881"),
+                    Some("1"),
+                ),
+            ]
+        );
     }
 
     #[test]
