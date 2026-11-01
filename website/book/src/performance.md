@@ -316,25 +316,49 @@ instrument. It earns no class and touches no conformance artifact; the record's
 shape is documented in `docs/benchmarks/storage/README.md`. Records are local by
 default, and the committed baseline is what this page renders.
 
-### Running it against a committed baseline
+### Comparing two builds on one runner
 
 A dispatch-only workflow (`.github/workflows/storage-bench.yml`) runs the same
-benchmark on a GitHub-hosted runner, against a PostgreSQL 18 service with its
-durability left on, and compares every operation with the record committed for
-that schema generation. The dispatch picks the corpus class and the tolerance.
-The run summary lists each operation with its baseline p50 and p99, the
-measured pair, the delta and a verdict, and a p50 or p99 that rose further than
-the tolerance fails the run. Both machines are named in the summary, because a
-hosted runner is shared hardware and a latency measured there is read against
-the box it came from.
+benchmark on one GitHub-hosted runner, against a PostgreSQL 18 service with its
+durability left on, for two builds: a baseline and a candidate. The candidate
+is the dispatched ref, and the baseline is its merge base with `main` unless
+the dispatch names another revision, so a dispatch on `main` measures the same
+code twice and shows the lane's own noise. The two builds run in turn, several
+rounds each (eight by default), in alternating order, and each round seeds a
+fresh database and runs `ANALYZE` before it measures anything. A runner that
+slows down part way through then slows both builds alike.
+
+Both builds are measured on the same machine because a latency compared with a
+record from another runner says little: two hosted runs of the same bench code
+read 20 of 27 operations 40 to 156 % apart. Two verdicts come out of the
+rounds, and either one fails the run:
+
+- **The plan verdict** reads pages per call, the buffer hits and reads per
+  call, which do not depend on the speed of the machine. An operation fails
+  when the candidate's median rose more than the page tolerance (10 % by
+  default), and by at least one page, above the highest baseline round.
+- **The time verdict** first divides each round by its machine factor, so a
+  round where the whole runner ran slow does not read as the code. An
+  operation regresses only when its median p50 or p99 rose more than the
+  tolerance (15 % by default) and every candidate round is slower than every
+  baseline round at that percentile. A rise whose rounds overlap the
+  baseline's is reported as within the noise of the rounds.
+
+The candidate's storage sizes do not depend on the machine, so they are judged
+against the record committed for its schema generation and class: bytes per
+composition version or per node row that grew more than the size budget (5 %
+by default) fail the run. A generation and class with no committed record fails
+the run, with the error in the job summary, so the change that moves the schema
+generation commits the new generation's records with it (#4291). The run
+summary lists every round with its machine factor, and each operation with its
+pages per call and its raw and adjusted change.
 
 That lane is exploration, never a conformance record. It earns no performance
 class, publishes no number, and writes nothing back to the repository: the
-fresh record leaves as a run artifact, and the committed baseline under
+round records leave as a run artifact, and the committed baseline under
 `docs/benchmarks/storage/<generation>/` moves only in a pull request that says
-which machine measured it. A generation with no committed record is reported as
-such and the run passes; a run whose class differs from the baseline's shows the
-deltas and judges nothing, since the two measured different corpora.
+which run measured it. `docs/benchmarks/storage/README.md` records the numbers
+behind each bound (#4318).
 
 {{#include ../generated/storage-bench.md}}
 

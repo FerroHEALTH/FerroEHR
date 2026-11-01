@@ -106,7 +106,8 @@ pub struct SqlCtx {
     pub offset: Option<i64>,
     /// The stored archetype specialisation graph the `archetype_node_id`
     /// predicate resolves an AOM2-era identifier's descendants through
-    /// (AM `Identification` master07 §Supporting Archetype-based Querying: for
+    /// (BASE Artefact Identification, Referencing §Supporting Archetype-based
+    /// Querying: for
     /// specialised archetypes the lineage "can only be obtained from the
     /// operational form of the archetype"). Resolved once per execution from
     /// the ADL2/OPT2 artefact store (the query service's cached

@@ -76,8 +76,8 @@ serde_json.workspace = true
 # of the template XML that rejects foreign / duplicated top-level elements the
 # tolerant opt14 codec would otherwise accept (CNF master04 upload_opt-invalid_opt).
 quick-xml.workspace = true
-# ADL 1.4 / OPT / stored-query id-pattern matching (SM-2 `list_matching_*`):
-# RE2-class regexes for the `I_DEFINITION_*` regex-pattern list calls.
+# ADL 1.4 / OPT / stored-query id-pattern matching (`list_matching_*`):
+# RE2-class regexes for the definition service's regex-pattern list calls.
 regex.workspace = true
 # The ITS-REST `version` path parameter is "a SEMVER version number", judged
 # by the Semantic Versioning 2.0.0 grammar this crate implements.
@@ -103,9 +103,9 @@ base64.workspace = true
 # gateway, any S3 endpoint in prod); the blob payload plumbing (`bytes`)
 # lives in `ferroehr-ext`.
 object_store.workspace = true
-# `service::admin::dump_load`: the SM COMPRESSION_FORMAT member `zip`
-# (docs/specs/openehr/SM/docs/UML/classes/compression_format.adoc) — the dump
-# archive packed as one ZIP container instead of loose segment files.
+# `service::admin::dump_load`: the `zip` compression format of our own dump/load
+# extension, the dump archive packed as one ZIP container instead of loose
+# segment files.
 zip.workspace = true
 # ... and the `7z` member (owner-approved 2026-07-29).
 sevenz-rust2.workspace = true
@@ -117,7 +117,7 @@ sevenz-rust2.workspace = true
 # hands `rand::rngs::OsRng` to `pgp`'s DetachedSignature signing call, so the
 # types must come from the same rand major. `pgp 0.20` requires rand 0.8.7.
 rand = "0.8"
-# `system_log` module (IHE ATNA audit trail, SM `I_SYSTEM_LOG`): the shared
+# `system_log` module (IHE ATNA audit trail): the shared
 # FerroAUDIT crates write it. `ihe-atna` (`atna`) builds the DICOM audit
 # message and sends it as RFC 5424 syslog over RFC 5425 TLS; `ehds-logging`
 # classifies each access by the Art 14(1) categories and holds the Art 9(2)

@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # VERSIONED_OBJECT read operations (versioned_ehr_status / versioned_composition) — file map
 
 Companion to [[ehr-status-ops-location]] (the non-versioned EHR_STATUS ops +

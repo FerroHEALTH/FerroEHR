@@ -5,15 +5,16 @@
 //! `archetype_node_id` predicate, and the one reading of a queried archetype
 //! identifier that predicate and the index share.
 //!
-//! AM `Identification` master07 §Supporting Archetype-based Querying fixes the
-//! matching set as X, its previous minor or patch variants, its specialisation
-//! parents and their previous variants, and adds that "for specialised
-//! archetypes, the specialisation lineage can only be obtained from the
-//! operational form of the archetype, found in the template used to create the
-//! data". AM `Identification` master03 §Legacy ADL 1.4 Semantics removes the
-//! lineage meaning of the `-` separator for AOM2-era identifiers ("the level of
-//! specialisation can no longer be determined from the identifier"), so their
-//! lineage is only what the stored artefacts declare.
+//! BASE Artefact Identification (Referencing §Supporting Archetype-based
+//! Querying) fixes the matching set as X, its previous minor or patch variants,
+//! its specialisation parents and their previous variants, and adds that "for
+//! specialised archetypes, the specialisation lineage can only be obtained from
+//! the operational form of the archetype, found in the template used to create
+//! the data". BASE Artefact Identification (Source Artefact Identification
+//! §Legacy ADL 1.4 Semantics) removes the lineage meaning of the `-` separator
+//! for AOM2-era identifiers ("the level of specialisation can no longer be
+//! determined from the identifier"), so their lineage is only what the stored
+//! artefacts declare.
 //!
 //! This module is the read-only side of that: a resolved child-to-parent graph
 //! over the stored ADL2 and OPT2 family, inverted into parent-to-children, which
@@ -195,10 +196,10 @@ pub fn decompose_hrid(hrid: &str) -> Option<QueriedArchetype> {
 /// artefacts that declare it (transitively) as their specialisation parent.
 ///
 /// Built from the `specialize` parent references of the stored ADL2/OPT2
-/// family, the only lineage source AM `Identification` master07 §Supporting
-/// Archetype-based Querying recognises for specialised archetypes. An empty
-/// index (nothing stored, or nothing specialised) resolves every identifier to
-/// itself.
+/// family, the only lineage source BASE Artefact Identification (Referencing
+/// §Supporting Archetype-based Querying) recognises for specialised
+/// archetypes. An empty index (nothing stored, or nothing specialised)
+/// resolves every identifier to itself.
 #[derive(Debug, Clone, Default)]
 pub struct ArchetypeLineage {
     /// parent identity → the identities that directly specialise it, each with
@@ -263,7 +264,7 @@ impl ArchetypeLineage {
     /// A direct child joins when one of its declared parent references names a
     /// release `form` admits ([`ReferenceForm::admits_reference`]): data of the
     /// child may be queried with "any previous minor or patch variant of any of
-    /// the specialisation parents" (AM `Identification` master07 §Supporting
+    /// the specialisation parents" (BASE Artefact Identification, Referencing §Supporting
     /// Archetype-based Querying). Below it every descendant joins, since the
     /// query names none of their own parents.
     ///
@@ -391,8 +392,8 @@ mod tests {
 
     /// The lineage walk is transitive: a query naming the root reaches a
     /// grandchild, and each intermediate identity reaches only what is below
-    /// it (AM master07 §Supporting Archetype-based Querying, "any of the
-    /// specialisation parents of X").
+    /// it (BASE Artefact Identification, Referencing §Supporting
+    /// Archetype-based Querying: "any of the specialisation parents of X").
     #[test]
     fn descendants_are_transitive() {
         let lineage = ArchetypeLineage::from_parent_edges([

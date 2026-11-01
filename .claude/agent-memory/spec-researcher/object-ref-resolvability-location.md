@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 OBJECT_REF **resolvability** (does a committed reference have to point at something that
 exists?) — the cross-component navigation map. Short answer the text supports: NO released
 clause requires resolvability anywhere; the only scope constraint that exists is on

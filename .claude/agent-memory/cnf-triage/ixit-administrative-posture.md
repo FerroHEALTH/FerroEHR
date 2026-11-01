@@ -5,14 +5,18 @@ metadata:
   type: project
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 From veredictum 0.1.4, a case whose premise is a role boundary states
 `requires: instances: { sut: { administrative: false } }` and SELECTION checks
 it against `instances.<name>.administrative` in the party ixit
 (`schemas/ixit.schema.json`; "Absent => undeclared, never a default").
-Undeclared or opposite ⇒ `not_applicable`, citing SM
-`docs/openehr_platform/master02-overview.adoc` §Functional Style (access
-control is delegated to the implementation, so nothing on the wire discloses a
-principal's roles) — register AMB-228.
+Undeclared or opposite ⇒ `not_applicable` — our own design, since nothing on
+the wire discloses a principal's roles (SM
+`docs/openehr_platform/master02-overview.adoc` §Functional Style says access
+control is delegated to the implementation; reference text only) — register
+AMB-228.
 
 **Six** cases carry it: `I_ADMIN_ARCHIVE.archive_ehrs-forbidden`,
 `I_ADMIN_ARCHIVE.archive_parties-forbidden`,

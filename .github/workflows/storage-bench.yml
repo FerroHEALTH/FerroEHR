@@ -69,7 +69,7 @@ on:
         default: "5"
         type: string
       rounds:
-        description: "Interleaved rounds per build (4 to 8); the spread of the rounds is the noise band"
+        description: "Interleaved rounds per build (4 to 8, and 8 for class s); the spread of the rounds is the noise band"
         required: false
         default: "8"
         type: string
@@ -132,10 +132,17 @@ jobs:
         env:
           BASELINE: ${{ inputs.baseline }}
           CANDIDATE: ${{ inputs.candidate }}
+          CLASS: ${{ inputs.class }}
           ROUNDS: ${{ inputs.rounds }}
         run: |
           set -euo pipefail
           [[ "$ROUNDS" =~ ^[4-8]$ ]] || { echo "::error::rounds takes 4 to 8, not '$ROUNDS'"; exit 1; }
+          # At class s, contains_population's pages per call spread so far
+          # that fewer rounds fail unchanged code (#4627, the storage README).
+          if [ "$CLASS" = s ] && [ "$ROUNDS" -lt 8 ]; then
+            echo "::error::class s runs 8 rounds a build, not $ROUNDS (#4627)"
+            exit 1
+          fi
           candidate="$(git rev-parse --verify "${CANDIDATE:-HEAD}^{commit}")"
           if [ -n "$BASELINE" ]; then
             baseline="$(git rev-parse --verify "${BASELINE}^{commit}")"

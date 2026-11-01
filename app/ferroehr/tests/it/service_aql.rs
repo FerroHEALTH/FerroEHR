@@ -594,7 +594,7 @@ async fn archetype_specialisation_subsumption() {
     );
 
     // (d) a different major does NOT match — the interface-reference major
-    // boundary is hard (AM master07 §Referencing/§Querying).
+    // boundary is hard (BASE Artefact Identification §Referencing).
     assert_eq!(
         count_obs(&svc, &ehr_id, "openEHR-EHR-OBSERVATION.laboratory.v2").await,
         0,
@@ -607,13 +607,14 @@ async fn archetype_specialisation_subsumption() {
 /// concept shares nothing with the parent's — the lineage comes solely from the
 /// stored ADL2 family.
 ///
-/// Spec: AM `Identification` master07 §Supporting Archetype-based Querying —
-/// "for specialised archetypes, the specialisation lineage can only be obtained
-/// from the operational form of the archetype, found in the template used to
-/// create the data"; AM `Identification` master03 §Legacy ADL 1.4 Semantics —
-/// for AOM2-era identifiers the `-` separator "no longer has any semantic
-/// significance", so a `.vMAJOR.MINOR.PATCH` query must NOT subsume by concept
-/// prefix, while the major-only ADL 1.4 form keeps that rule (BASE
+/// Spec: BASE Artefact Identification, Referencing §Supporting Archetype-based
+/// Querying — "for specialised archetypes, the specialisation lineage can only
+/// be obtained from the operational form of the archetype, found in the template
+/// used to create the data"; BASE Artefact Identification, Source Artefact
+/// Identification §Legacy ADL 1.4 Semantics — for AOM2-era identifiers the `-`
+/// separator "no longer has any semantic significance", so a
+/// `.vMAJOR.MINOR.PATCH` query must NOT subsume by concept prefix, while the
+/// major-only ADL 1.4 form keeps that rule (BASE
 /// `architecture_overview` master10 §Design-time Relationships).
 #[tokio::test]
 async fn archetype_lineage_from_the_stored_adl2_family() {
@@ -669,7 +670,8 @@ async fn archetype_lineage_from_the_stored_adl2_family() {
         count_obs(&svc, &ehr_id, "openEHR-EHR-OBSERVATION.lipid_panel.v1.0.0").await,
         1,
         "an AOM2-era parent query retrieves data committed under its stored \
-         specialisation child (AM master07 §Supporting Archetype-based Querying)"
+         specialisation child (BASE Artefact Identification §Supporting \
+         Archetype-based Querying)"
     );
 
     // (b) the AOM2-era form does NOT subsume by concept prefix — the
@@ -696,7 +698,7 @@ async fn archetype_lineage_from_the_stored_adl2_family() {
     );
 
     // (e) the interface-reference major boundary stays hard for the lineage
-    // path too (AM master07 §Referencing).
+    // path too (BASE Artefact Identification §Referencing).
     assert_eq!(
         count_obs(&svc, &ehr_id, "openEHR-EHR-OBSERVATION.lipid_panel.v2.0.0").await,
         0,

@@ -30,8 +30,9 @@ and Simplified Formats is what this crate implements.
   terminology passes, `validate_composition` composes the template-driven pass
   of `flat::validation` over them, and both report `ValidationMessage` values.
 
-The SM SIM-B and SDF model documents are DEVELOPMENT-state and are not
-implemented; their terse string encodings are not accepted. No vendor
+The crate follows the ITS-REST Simplified Formats specification
+(`docs/simplified_formats/` of ITS-REST) and accepts no other simplified
+encoding, so a terse string encoding of a value is refused. No vendor
 implementation is used as an oracle.
 
 ## Features

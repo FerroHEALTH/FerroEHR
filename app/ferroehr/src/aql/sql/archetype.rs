@@ -51,15 +51,16 @@ const STORED_PATCH: &str = r"\.v[0-9]+\.[0-9]+\.([0-9]+)(-[^:]*)?$";
 /// `lineage`, the stored specialisation graph ([`ArchetypeLineage`]), since
 /// "for specialised archetypes, the specialisation lineage can only be obtained
 /// from the operational form of the archetype, found in the template used to
-/// create the data" (AM `Identification` master07). Every stored descendant
+/// create the data" (BASE Artefact Identification, Referencing). Every stored descendant
 /// joins on its own namespace, entity, major and concept, every release of it.
 ///
 /// For at- and id-codes, arbitrary strings and params resolving to non-HRIDs the
 /// predicate is the case-folded equality on `archetype`.
 //
 // The `-`-prefix rule is exact for an ADL 1.4-form id (lineage encoded in the
-// concept) and is applied ONLY to that form: AM `Identification` master03
-// §Legacy ADL 1.4 Semantics strips the separator of meaning for AOM2-era ids.
+// concept) and is applied ONLY to that form: BASE Artefact Identification
+// (Source Artefact Identification §Legacy ADL 1.4 Semantics) strips the
+// separator of meaning for AOM2-era ids.
 // NOTE: QUERY master03 §Archetype predicate equates the predicate to
 // `archetype_node_id` string equality; we implement BASE/AM subsumption instead,
 // since a parent archetype must retrieve its children (master10).
@@ -215,7 +216,8 @@ mod tests {
     /// subsumption condition (parent + specialisation children, same
     /// namespace, entity and major); an at-code keeps the case-folded
     /// equality. BASE `architecture_overview` master10 §Design-time
-    /// Relationships; AM master07 §Querying.
+    /// Relationships; BASE Artefact Identification, Referencing §Supporting
+    /// Archetype-based Querying.
     #[test]
     fn archetype_predicate_subsumption_sql() {
         let parent = predicate_sql("openEHR-EHR-OBSERVATION.laboratory.v1");
@@ -328,7 +330,7 @@ mod tests {
 
     /// A stored specialisation family joins as one `= ANY(…)` set per
     /// interface boundary, every release of each child, beside the queried
-    /// identity and its own version bound (AM master07 §Supporting
+    /// identity and its own version bound (BASE Artefact Identification, Referencing §Supporting
     /// Archetype-based Querying).
     #[test]
     fn stored_lineage_widens_the_matching_set() {

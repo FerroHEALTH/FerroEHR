@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # `LOCATABLE.uid` on top-level objects + `VERSIONED_OBJECT.owner_id` — where the sentences are
 
 ## The uid-population NOTE lives in FIVE RM class tables, not one

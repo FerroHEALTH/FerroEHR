@@ -404,14 +404,20 @@ async fn run(
 /// Read the mandatory `a_service` query parameter as a [`PlatformService`];
 /// absent or unknown → `400`.
 fn platform_service(query: Option<&str>) -> Result<PlatformService, RestError> {
+    let members = PlatformService::ALL
+        .iter()
+        .map(|member| member.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
     let raw = params::query_param(query, "a_service").ok_or_else(|| {
-        RestError::from(ApiError::BadRequest(
-            "query parameter `a_service` is required (a PLATFORM_SERVICE member)".to_owned(),
-        ))
+        RestError::from(ApiError::BadRequest(format!(
+            "query parameter `a_service` is required: one of {members}"
+        )))
     })?;
     raw.parse::<PlatformService>().map_err(|()| {
         RestError::from(ApiError::BadRequest(format!(
-            "query parameter `a_service` names no PLATFORM_SERVICE member: {raw:?}"
+            "query parameter `a_service` names no platform service: {raw:?} \
+             (expected one of {members})"
         )))
     })
 }

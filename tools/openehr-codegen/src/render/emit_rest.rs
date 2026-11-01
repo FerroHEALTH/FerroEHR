@@ -162,13 +162,13 @@ pub(crate) struct RmNames {
     pub base: BTreeMap<String, String>,
 }
 
-/// Component schemas the OAS declares GENERIC through a discriminator-typed
-/// field, per the SM's own class definition — the one live case is
-/// `UPDATE_VERSION<T>` (SM `update_version.adoc`: "An object representing an
-/// update to an existing `VERSION` … The back-end will construct a full
-/// `VERSION<T>` object"), whose OAS rendering flattens `T` into the per-group
-/// `data: Versionable` ref. The hoisted shared module emits the struct with
-/// the real generic parameter; each group aliases it at its own `Versionable`.
+/// Component schemas the OAS declares once per group, identical but for one
+/// discriminator-typed field. The one live case is `UPDATE_VERSION`: ITS-REST
+/// `schemas/demographic/UpdateVersion.yaml` is a "copy of same schema from
+/// `ehr`, as we need to redefine to use only demographic types", so only its
+/// `data` ref differs from `schemas/ehr/UpdateVersion.yaml`. The hoisted shared
+/// module emits the struct generic over that field; each group aliases it at
+/// its own `Versionable`.
 const GENERIC_OVER: &[(&str, &str)] = &[ENVELOPE];
 
 /// The one [`GENERIC_OVER`] envelope and its generic field.
@@ -345,7 +345,7 @@ pub(crate) fn hoist_set(bundles: &[(&str, Oas)], names: &RmNames) -> BTreeSet<St
 /// Emit the shared `common` module: the cross-group hoisted DTOs (byte-identical
 /// component schemas whose ref closure is self-contained — [`hoist_set`]), each
 /// emitted exactly once. The one genericized schema ([`GENERIC_OVER`]) emits
-/// with its real SM generic parameter; the groups alias it at their own type
+/// with its generic parameter; the groups alias it at their own type
 /// argument.
 #[must_use]
 pub(crate) fn emit_common(oas: &Oas, names: &RmNames, hoisted: &BTreeSet<String>) -> String {
@@ -898,7 +898,7 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
     {
         let ty_name = dto_type(name);
         let (props, required) = ctx.merged_object(schema);
-        // The SM-generic hoisted schema ([`GENERIC_OVER`]) emits with its real
+        // The generic hoisted schema ([`GENERIC_OVER`]) emits with its real
         // type parameter in the shared module; the flattened field types as
         // `T` and each group binds it via a local alias.
         let generic = if ctx.in_common {
