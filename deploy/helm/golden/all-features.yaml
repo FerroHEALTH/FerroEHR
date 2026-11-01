@@ -1623,8 +1623,6 @@ spec:
               value: "/etc/ferroehr-secrets/db.url"
             - name: FERROEHR__STORAGE__PARTY__URL_FILE
               value: "/etc/ferroehr-secrets/storage.party.url"
-            - name: FERROEHR__STORAGE__LINKAGE__URL_FILE
-              value: "/etc/ferroehr-secrets/storage.linkage.url"
             - name: FERROEHR__STORAGE__AUDIT__URL_FILE
               value: "/etc/ferroehr-secrets/storage.audit.url"
             - name: FERROEHR__DB__MIGRATE_URL_FILE
@@ -1749,13 +1747,6 @@ spec:
                   items:
                     - key: FERROEHR__STORAGE__PARTY__URL
                       path: storage.party.url
-              # One storage domain's own Secret, a different credential from the
-              # shared DSN above and projected as its own file.
-              - secret:
-                  name: ferroehr-db-linkage
-                  items:
-                    - key: FERROEHR__STORAGE__LINKAGE__URL
-                      path: storage.linkage.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
@@ -2182,109 +2173,6 @@ spec:
             - name: backup
               persistentVolumeClaim:
                 claimName: ferroehr-backup-party
----
-# Source: ferroehr/templates/backup-cronjob.yaml
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: ferroehr-backup-linkage
-  annotations:
-    kubernetes.io/description: >-
-      Logical backup of the linkage storage domain: pg_dump of linkage into the ferroehr-backup-linkage claim, under that domain's own backup DSN. Separate claim, separate credential and separate schedule from every other domain, so no one artefact carries two of the clinical record, the identities, the map between them and the access log.
-  labels:
-    helm.sh/chart: ferroehr-21.0.0-rc7
-    app.kubernetes.io/name: ferroehr-backup-linkage
-    app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.0-rc7"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: ferroehr
-    app.kubernetes.io/component: backup
-spec:
-  schedule: "15 2 * * *"
-  timeZone: "Europe/Amsterdam"
-  concurrencyPolicy: Forbid
-  startingDeadlineSeconds: 3600
-  jobTemplate:
-    spec:
-      backoffLimit: 2
-      activeDeadlineSeconds: 7200
-      ttlSecondsAfterFinished: 86400
-      podFailurePolicy:
-        rules:
-          - action: Ignore
-            onPodConditions:
-              - type: DisruptionTarget
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: ferroehr-backup-linkage
-            app.kubernetes.io/instance: ferroehr
-            app.kubernetes.io/component: backup
-        spec:
-          restartPolicy: Never
-          serviceAccountName: ferroehr
-          automountServiceAccountToken: false
-          # pg_dump reads no Service link variable, and the release's other pods
-          # disable them, so the posture stays one posture
-          # (https://kubernetes.io/docs/concepts/services-networking/service/#environment-variables).
-          enableServiceLinks: false
-          hostUsers: false
-          securityContext:
-            fsGroup: 65532
-            fsGroupChangePolicy: OnRootMismatch
-            runAsGroup: 65532
-            runAsNonRoot: true
-            runAsUser: 65532
-            seccompProfile:
-              type: RuntimeDefault
-            supplementalGroupsPolicy: Strict
-          containers:
-            - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc7"
-              imagePullPolicy: IfNotPresent
-              securityContext:
-                allowPrivilegeEscalation: false
-                capabilities:
-                  drop:
-                  - ALL
-                privileged: false
-                readOnlyRootFilesystem: true
-                runAsNonRoot: true
-                runAsUser: 65532
-                seccompProfile:
-                  type: RuntimeDefault
-              command:
-                - /bin/sh
-                - -ec
-              args:
-                - "pg_dump --dbname=\"$(cat /etc/ferroehr-secrets/db.url)\" --format=custom --no-owner --schema=linkage --extension=btree_gist --file=/backup/linkage-$(date -u +%Y%m%dT%H%M%SZ).dump"
-              volumeMounts:
-                # readOnlyRootFilesystem=true → give the process a writable scratch dir.
-                - name: tmp
-                  mountPath: /tmp
-                - name: dsn
-                  mountPath: /etc/ferroehr-secrets
-                  readOnly: true
-                - name: backup
-                  mountPath: /backup
-              resources:
-                {}
-          volumes:
-            - name: tmp
-              emptyDir: {}
-            # This domain's DSN, mounted as db.url whichever Secret it came from,
-            # so the command is the same for every domain and only the
-            # credential differs.
-            - name: dsn
-              secret:
-                secretName: ferroehr-backup-linkage-dsn
-                defaultMode: 0440
-                items:
-                  - key: FERROEHR__STORAGE__LINKAGE__URL
-                    path: db.url
-            - name: backup
-              persistentVolumeClaim:
-                claimName: ferroehr-backup-linkage
 ---
 # Source: ferroehr/templates/backup-cronjob.yaml
 apiVersion: batch/v1

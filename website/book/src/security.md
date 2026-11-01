@@ -897,24 +897,20 @@ organisational measures", and Art. 32(1)(a) names it a security measure for
 health data. EDPB Guidelines 01/2025 require that separation to hold against
 internal actors, operators with database access included.
 
-Three domains hold the three parts, each behind its own role:
+Two domains hold the two parts, each behind its own role:
 
 ```mermaid
 flowchart LR
     server["FerroEHR server"]
     server -->|ferroehr_clinical| ehr[("clinical<br/>versions and nodes,<br/>keyed by an opaque subject pseudonym")]
     server -->|ferroehr_party| demo[("party<br/>parties, and national identifiers<br/>sealed under a per-domain key")]
-    server -->|ferroehr_linkage| link[("linkage<br/>which party is the subject<br/>of which EHR")]
     server -->|audit writer| audit[("audit<br/>ATNA record repository")]
     ehr -. barred .- demo
-    ehr -. barred .- link
-    demo -. barred .- link
 ```
 
 Read one domain and you hold a clinical record whose subject is an opaque
-identifier, or a set of people with no records attached, or a table of two
-identifier columns naming neither. Only the three together re-identify
-anything, and no credential the server uses holds more than one of them. The
+identifier, or a set of people with no records attached. Only the two together
+re-identify anything, and no credential the server uses holds both. The
 migrations create the roles, grant each its own schema, and **revoke every
 other domain explicitly, in both directions**; each role is `NOINHERIT` and a
 member of no other, so a grant cannot arrive through a membership.
@@ -934,12 +930,11 @@ the clinical side; see
 schema split by default: giving the demographic domain its own
 `[storage.party] url` is what turns it into a credential split, which is the
 deployment step described in
-[Operations](operations.md#database-roles-and-least-privilege). The linkage
-domain takes its own credential from `[storage.linkage] url` the same way.
+[Operations](operations.md#database-roles-and-least-privilege).
 
 ### Resolving across the boundary
 
-One question needs all three domains at once: *which record belongs to this
+One question needs both domains at once: *which record belongs to this
 person?* The server answers it in exactly one place — the linkage service —
 and answers it in the application, over two connections, never in the
 database.
@@ -956,27 +951,12 @@ the boot check refuses to serve a database where either has been given one. The 
 application step that can be audited, rather than as a query anyone holding
 one password could write.
 
-Every resolution — and every write that opens, merges or splits a mapping —
-records an access event in the `linkage` domain, naming who asked, the purpose
-of use they declared, and whether anything matched. A miss is recorded like a
-hit: it says someone asked whether this deployment holds a record for that
-person. The event deliberately does **not** name the EHR that came back. The
-audit trail lives in its own schema, outside the linkage role, so a record
-pairing a party with its EHR would be a second copy of the map the split
-exists to hold apart.
-
-Merges and splits are period-closing writes. A mapping that stops being true
-gets an end date rather than a deletion, and the linkage role holds no
-`DELETE` privilege to delete it with. "Which party was the subject of this EHR
-when that composition was written" therefore still has an answer after two
-person records have been merged. The database enforces one mapping in force per
-party with a temporal primary key, so the rule holds against any code path, not
-only the intended one.
-
-Erasure is the one exception, and the role still cannot perform it: physically
-deleting an EHR calls a `SECURITY DEFINER` function that removes the rows
-naming that one EHR id, in force or historical. A row that survived would go
-on asserting whose record an erased EHR was.
+Every resolution records an access event in the `linkage` domain, naming who
+asked, the purpose of use they declared, and whether anything matched. A miss
+is recorded like a hit: it says someone asked whether this deployment holds a
+record for that person. The event deliberately does **not** name the EHR that
+came back. A record pairing a party with its EHR would make the audit trail a
+map from parties to their EHRs, which the split exists to withhold.
 
 Looking an EHR up by subject (`GET /ehr?subject_id=…&subject_namespace=…`)
 does **not** go through any of this. That operation matches the EHR's own

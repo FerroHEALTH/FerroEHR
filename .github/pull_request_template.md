@@ -15,7 +15,7 @@ Closes #<!-- tracker issue number — the merge into main auto-closes it -->
 
 ## Privacy boundary
 
-<!-- Required when this change touches the demographic or linkage migrations,
+<!-- Required when this change touches the demographic migrations,
 `service::demographic`, `service::linkage`, the identifier scanner, the
 access-event model or an outbox payload builder; the privacy-boundary-guard job
 checks it then. Rules: CONTRIBUTING.md § Personal data. -->

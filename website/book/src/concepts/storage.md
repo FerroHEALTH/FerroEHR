@@ -45,18 +45,17 @@ flowchart LR
     node -. "AQL: interval joins + promoted columns" .-> rest
 ```
 
-The database is PostgreSQL 18, split into five schemas:
+The database is PostgreSQL 18, split into four schemas:
 
 | Schema | Holds |
 |---|---|
 | `ext` | FerroEHR's own `IMMUTABLE` helper functions (`openehr_magnitude`, `openehr_timestamp`), the runtime roles and the deployment posture |
 | `clinical` | the clinical CDR: versions, heads, nodes, EHRs, contributions, templates, queries, tags |
 | `party` | the demographic pseudonymisation domain: party versions, heads, nodes, contributions, commit audits, and the sealed `national_identifier` values |
-| `linkage` | the linkage pseudonymisation domain, which holds no relation since its `0006` migration |
 | `audit` | the IHE ATNA Audit Record Repository (`audit_event`) |
 
 Each carries its own migration set and its own `_sqlx_migrations` bookkeeping
-table, applied in that order. The archival tier is not a sixth schema: it is a
+table, applied in that order. The archival tier is not a fifth schema: it is a
 partition of the relations it archives, described below.
 
 The instance is **single-tenant**. No relation carries a tenant column and no
@@ -87,12 +86,13 @@ unchanged, and no SQL in the server names a domain schema. A test renders both
 files and refuses any difference beyond the kind `CHECK` and the foreign keys
 into the `ehr` relation, which the party domain has none of.
 
-The third domain holds no relation. Which EHR belongs to which subject is the
-EHR's own `EHR_STATUS.subject.external_ref` (RM ehr §EHR Status), which the
-`ehr` relation promotes to its subject columns on every EHR create and
-`EHR_STATUS` update, so the cohort, the AQL demographic join and the subject
-lookups all read it there. The `linkage` migration set's `0006` dropped the
-cross-reference table that held these associations before.
+Which EHR belongs to which subject is the EHR's own
+`EHR_STATUS.subject.external_ref` (RM ehr §EHR Status), which the `ehr`
+relation promotes to its subject columns on every EHR create and `EHR_STATUS`
+update, so the cohort, the AQL demographic join and the subject lookups all
+read it there. Releases before 5.6.0 kept a third domain, `linkage`, for a
+cross-reference table; `audit/0021_drop_linkage_domain.sql` drops what was
+left of it.
 
 The wire is unaffected. The ITS-REST Demographic API, the RM change-control
 semantics and every version identifier are exactly what they were; only where

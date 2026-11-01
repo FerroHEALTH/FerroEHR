@@ -27,20 +27,19 @@ provisioning and migration:
 | owner | owns the database | provisioning only |
 | `ferroehr_migrator` | runs the schema migrations; owns the helper functions | the migration step |
 
-and five cover serving, split by **pseudonymisation domain** — the clinical
-record, the identity of its subject, and the linkage domain:
+and four cover serving, split by **pseudonymisation domain**, the clinical
+record and the identity of its subject:
 
 | Role | Reads and writes | Barred from |
 |---|---|---|
-| `ferroehr_clinical` | `clinical`, archival tier included | `party`, `linkage` |
-| `ferroehr_party` | `party`, archival tier included | `clinical`, `linkage` |
-| `ferroehr_clinical_reader` | read-only over `clinical` | `party`, `linkage` |
-| `ferroehr_party_reader` | read-only over `party` | `clinical`, `linkage` |
-| `ferroehr_linkage` | `linkage`, which holds no relation since its `0006` migration | `clinical`, `party` |
+| `ferroehr_clinical` | `clinical`, archival tier included | `party` |
+| `ferroehr_party` | `party`, archival tier included | `clinical` |
+| `ferroehr_clinical_reader` | read-only over `clinical` | `party` |
+| `ferroehr_party_reader` | read-only over `party` | `clinical` |
 
 The migrations create these roles idempotently, apply the per-schema grants,
 **and revoke every other domain explicitly in both directions**, and revoke the
-ability to create objects in the public schema. All five are `NOINHERIT` and
+ability to create objects in the public schema. All four are `NOINHERIT` and
 none is a member of another, so a boundary cannot be crossed by picking up a
 membership. GDPR Art. 4(5) defines pseudonymisation as processing where
 attribution to a person needs additional information "kept separately and
@@ -68,25 +67,20 @@ hold it.
 ### Turning the schema split into a role split
 
 The **schema** separation is unconditional: the server always reads and writes
-parties in `party`, whatever it authenticates as, and each of the four pools
+parties in `party`, whatever it authenticates as, and each of the three pools
 carries only its own schema on its `search_path`. The **role** separation is a
 deployment choice, and it is one configuration table per domain:
 
 ```toml
 [storage.party]
 url = "postgres://ferroehr_party:***@pg:5432/ferroehr"
-
-[storage.linkage]
-url = "postgres://ferroehr_linkage:***@pg:5432/ferroehr"
 ```
 
 (or `url_file`, for a mounted secret). With a domain's `url` set the server
 opens that pool on that credential, and a flaw that reaches one of them reaches
 one domain. Left unset, the domain uses `[db].url` and the separation is
-schema-only. `linkage` holds which party is the subject of which EHR — the one
-map that re-joins the other two — so `ferroehr_linkage` is barred from both of
-them and both of them from it. Set every domain and no credential the server
-uses can perform that join in SQL; the crossing happens in the application, over
+schema-only. Set both domains and no credential the server uses can join a
+party to its EHR in SQL; the crossing happens in the application, over
 two connections, and is recorded as an access event (see [Security → Resolving
 across the boundary](security.md#resolving-across-the-boundary)).
 
@@ -94,10 +88,7 @@ A DSN that names another host moves the domain to a **database or cluster of its
 own**, which is the separation a schema cannot make: a base backup, WAL
 archiving and physical replication carry every schema of a database together
 ([PostgreSQL 18, Backup and
-Restore](https://www.postgresql.org/docs/18/backup-dump.html)). A database that
-holds the `linkage` domain without the `party` domain also receives the party
-migration set, its schema and grants and never a row, because the linkage set
-revokes a function the party set creates.
+Restore](https://www.postgresql.org/docs/18/backup-dump.html)).
 
 Two boot checks make the posture honest. Two domains configured on **different**
 DSNs that authenticate as the **same** database role are refused — a separation
@@ -115,7 +106,7 @@ and their `_sqlx_migrations` bookkeeping tables under `"verify"` — a read, but
 read across the whole database. Each runtime role holds exactly one domain, so
 none can do it, and `verify` is not the exception: a role that is a member of
 `ferroehr_clinical` and nothing else is refused on the very first set: it
-cannot read the `ext`, `party`, `linkage` or `audit` bookkeeping.
+cannot read the `ext`, `party` or `audit` bookkeeping.
 
 So the credential that prepares the schema is named separately, and the server
 uses it for that one boot step:
@@ -127,9 +118,6 @@ migrate_url = "postgres://ferroehr_migrator:***@pg:5432/ferroehr"
 
 [storage.party]
 url = "postgres://ferroehr_party:***@pg:5432/ferroehr"
-
-[storage.linkage]
-url = "postgres://ferroehr_linkage:***@pg:5432/ferroehr"
 ```
 
 `migrate_url` prepares every domain that reaches the same DATABASE it does,
@@ -162,7 +150,7 @@ Either way the server **refuses to boot** when the grants themselves are wrong:
 a self-check enumerates every table, view, sequence and function in each
 domain and fails, naming the role and the object, if either runtime role can
 read across the boundary. `ferroehr db verify` runs the same check. When the
-five roles do not exist at all (the development, compose and test-harness case,
+four roles do not exist at all (the development, compose and test-harness case,
 where the migrator holds no `CREATEROLE`) the check warns rather than inventing
 a failure — under `deployment_profile = "production"` it refuses, because absent
 roles mean absent grants and there is then nothing to measure.
@@ -175,8 +163,6 @@ database:
   existingSecret: ferroehr-db                 # postgres://ferroehr_clinical:…
   party:
     existingSecret: ferroehr-db-party         # postgres://ferroehr_party:…
-  linkage:
-    existingSecret: ferroehr-db-linkage       # postgres://ferroehr_linkage:…
   audit:
     existingSecret: ferroehr-db-audit         # the audit repository's own DSN
   migrateExistingSecret: ferroehr-db-migrator # postgres://ferroehr_migrator:…
@@ -185,7 +171,7 @@ database:
 Leave a domain's block unset and that pool uses the shared DSN, which is the
 schema-only posture.
 
-Provisioning the five roles is yours in both cases. The migrations create them
+Provisioning the four roles is yours in both cases. The migrations create them
 only when the migrator holds `CREATEROLE` and skip them with a `NOTICE`
 otherwise, so on a managed database — where the migrator usually does not —
 create them before the first deploy:
@@ -195,11 +181,14 @@ CREATE ROLE ferroehr_clinical NOLOGIN NOINHERIT;
 CREATE ROLE ferroehr_party NOLOGIN NOINHERIT;
 CREATE ROLE ferroehr_clinical_reader NOLOGIN NOINHERIT;
 CREATE ROLE ferroehr_party_reader NOLOGIN NOINHERIT;
+-- The released grant files still name this role, so a first install needs it
+-- while they apply. The last migration drops it again where it may; a migrator
+-- without CREATEROLE may not, so drop it yourself after the first boot.
 CREATE ROLE ferroehr_linkage NOLOGIN NOINHERIT;
 ```
 
-then give each login role membership of exactly one of them. `ferroehr db
-verify` tells you whether the boundary holds afterwards.
+then give each login role membership of exactly one of the first four.
+`ferroehr db verify` tells you whether the boundary holds afterwards.
 
 The local Audit Record Repository is written on its own pool
 (`[storage.audit]`), and the `audit` schema is granted to `ferroehr_clinical`
@@ -207,9 +196,10 @@ The local Audit Record Repository is written on its own pool
 chain) and to `ferroehr_clinical_reader` (read it and verify the chain). A
 clinical login role that is a member of `ferroehr_clinical` alone writes its own
 access log; no extra membership is needed. The audit trail is not a
-pseudonymisation domain, so this grant adds no reach into `party` or `linkage`.
+pseudonymisation domain, so this grant adds no reach into `party`.
 
-The compose stacks create all five and grant the clinical and party domains to
+The compose stacks create the four domain roles, and `ferroehr_linkage` for the
+released grant files, and grant the clinical and party domains to
 the single dev login role, which owns the database. That
 demonstrates the schema separation and exercises the boot self-check; it is
 deliberately **not** the credential separation, because one container with one
@@ -225,20 +215,17 @@ Exercised against a real PostgreSQL 18:
   each of the server's own pools refused every relation of the other domain
   (`app/ferroehr-rest/tests/it/credential_separation.rs`), and the single-DSN
   fallback still serving both.
-- Three runtime credentials across the whole identity-to-party-to-EHR
-  crossing, with the linkage credential refused the identifier map
+- All four domain roles refused every relation in the domain they do not own,
+  enumerated from `information_schema` rather than from a written list
   (`app/ferroehr/tests/it/pseudonymisation_boundary.rs`).
-- All five domain roles refused every relation in the domains they do not own,
-  enumerated from `information_schema` rather than from a written list (same
-  file).
 - The boot sequence on separated credentials with `[db] migrate_url`, under
   both `verify` and `apply`, and the single-DSN fallback under both
   (`app/ferroehr/tests/it/schema_preparation_credential.rs`).
-- The linkage domain relocated to a second database, prepared and verified
-  there on `[storage.migrate.linkage]`, with the companion party set, and the
+- The party domain relocated to a second database, prepared and verified
+  there on `[storage.migrate.party]`, and the
   refusal when the domain's two DSNs reach different databases
   (`app/ferroehr/tests/it/relocated_domain_preparation.rs`).
-- The chart's production overlay on four PostgreSQL clusters, one per domain,
+- The chart's production overlay on three PostgreSQL clusters, one per domain,
   prepared by the migration Job and booting under `production`
   (`scripts/deploy-probe-k8s.sh --production-only`, probes P-K8S-PROD-BOOT and
   P-K8S-PROD-SHARED).
@@ -248,12 +235,9 @@ Exercised against a real PostgreSQL 18:
 
 Not exercised by anything, and stated rather than left to inference:
 
-- **A separated `migrate_url` alongside the linkage credential in one boot.**
-  The preparation tests configure the clinical and party DSNs.
 - **A real deployment on separated DSNs**: a container booting with the DSN
   files mounted, and the chart wiring them through
-  `database.party.existingSecret`, `database.linkage.existingSecret` and
-  `database.migrateExistingSecret`. What is covered is the in-process half.
+  `database.party.existingSecret` and `database.migrateExistingSecret`. What is covered is the in-process half.
 - **Role provisioning on a managed database** where the migrator holds no
   `CREATEROLE` and the roles are created by the manual step above.
 
@@ -261,8 +245,7 @@ Which posture you actually get depends on `db.migrate`, because the server's
 embedded migrations are DDL: a self-migrating deployment necessarily runs as a
 role that can execute DDL. The single-container quickstart takes that path: its
 DSN authenticates as a non-superuser role that owns the database and is a member
-of `ferroehr_migrator`, `ferroehr_clinical`, `ferroehr_party` and
-`ferroehr_linkage`.
+of `ferroehr_migrator`, `ferroehr_clinical` and `ferroehr_party`.
 
 ## Applying migrations
 
@@ -373,8 +356,8 @@ not analyze. Grant the role `MAINTAIN` on those tables, or run the same
 A wipe that removes *some* of the server's schemas is not a fresh start, and the
 server cannot tell it from one.
 
-The server owns five schemas: `ext`, `clinical`, `party`, `linkage` and `audit`.
-A fresh start drops all five. Each domain's cold archival tier is a **partition**
+The server owns four schemas: `ext`, `clinical`, `party` and `audit`.
+A fresh start drops all four. Each domain's cold archival tier is a **partition**
 of the relation it archives, inside that domain's own schema, so a
 `DROP SCHEMA clinical CASCADE` takes the archived rows with the live ones. There
 is no separate mirror schema left to survive a wipe of the tier it mirrors.
@@ -402,8 +385,58 @@ start the server against it.
 > When you wipe a FerroEHR database deliberately, drop the **database**, not a
 > schema. `DROP DATABASE` cannot leave half a repository behind, and it is the
 > only wipe with no partial-state failure mode. `ferroehr db erase` drops all
-> five schemas of a database in one transaction, for taking an instance out of
+> four schemas of a database in one transaction, for taking an instance out of
 > service ([Decommissioning](operations-decommissioning.md)).
+
+### Upgrading past the linkage domain
+
+Releases before 5.6.0 ran a third storage domain, `linkage`, with its own
+schema, role (`ferroehr_linkage`), `[storage.linkage]` and
+`[storage.migrate.linkage]` configuration, pool and backup job. It held no
+relation once which EHR belongs to which subject became the EHR's own
+`EHR_STATUS.subject`, and this release removes it.
+
+Before you upgrade, delete `[storage.linkage]` and `[storage.migrate.linkage]`
+from the configuration, and the `linkage` blocks under `database` and `backup`
+from the chart values: the server now refuses both tables as unknown keys, and
+the chart schema refuses both blocks.
+
+On a co-located database (no `[storage.<domain>]` naming another database) the
+first boot does the rest. Migration `audit/0021_drop_linkage_domain.sql` drops
+the `linkage` schema, revokes what the role held on `ext`, drops the role when
+nothing else in the cluster names it, and drops the `btree_gist` extension.
+When it cannot drop the role or the extension, it says so in a `NOTICE` and the
+boot carries on.
+
+The migration runs in the database that holds the audit domain, so it does not
+reach every layout. Run the following by hand, as a superuser or a member of
+`ferroehr_linkage`, when either applies:
+
+- the linkage domain lived in a database of its own, or `[storage.audit]` names
+  a database other than the one that held `linkage`;
+- the cluster holds more than one FerroEHR database, which keeps the role named
+  in the others.
+
+In every such database:
+
+```sql
+DROP SCHEMA IF EXISTS linkage CASCADE;
+REVOKE ALL ON SCHEMA ext FROM ferroehr_linkage;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ext FROM ferroehr_linkage;
+ALTER DEFAULT PRIVILEGES IN SCHEMA ext REVOKE EXECUTE ON FUNCTIONS FROM ferroehr_linkage;
+DROP OWNED BY ferroehr_linkage;
+DROP EXTENSION IF EXISTS btree_gist;
+```
+
+Then, once per cluster:
+
+```sql
+DROP ROLE ferroehr_linkage;
+```
+
+A database that held only the linkage domain holds nothing the server reads
+any more; drop it with `DROP DATABASE` once you no longer need it. Drop the
+login roles that were members of `ferroehr_linkage` as well.
 
 ## TLS and database security
 
@@ -429,24 +462,23 @@ tables are never `UNLOGGED`. Test your restore, not just your backup.
 
 ### Dump each domain separately
 
-A logical backup is where the three pseudonymisation domains are easiest to
+A logical backup is where the two pseudonymisation domains are easiest to
 re-join by accident. One `pg_dump` of the whole database produces a single file
-holding the pseudonymised clinical record, the identities of its subjects and
-the map between them, and whoever can read that file can re-identify every
-record in it — which is the separation the schema split and the database roles
-exist to maintain. **Three domains, three dumps**, into targets with different
-access control.
+holding the pseudonymised clinical record beside the identities of its
+subjects, and whoever can read that file can re-identify every record in it,
+which is the separation the schema split and the database roles exist to
+maintain. **Two domains, two dumps**, into targets with different access
+control.
 
 **How many dumps, by DSN layout.** The number of dumps follows the domains, not
-the databases: co-located, the four domains share one database and are dumped
+the databases: co-located, the three domains share one database and are dumped
 `--schema` by `--schema` as below; relocated, each database is dumped for the
-domains that live in it. What never changes is that the clinical record, the
-identities and the map land in three different artefacts with three different
-audiences. `ferroehr config check` prints the resolved layout, which is the
+domains that live in it. What never changes is that the clinical record and the
+identities land in two different artefacts with two different audiences. `ferroehr config check` prints the resolved layout, which is the
 list a backup runbook is written from. The audit repository travels with the
 clinical dump while it shares that database (`--schema=audit` below) and needs a
 dump of its own once `[storage.audit]` names another one. On Kubernetes that
-fourth dump is not yours to schedule: the chart renders a `backup.audit`
+third dump is not yours to schedule: the chart renders a `backup.audit`
 CronJob as soon as `database.audit` carries a Secret of its own, and drops
 `--schema=audit` from the clinical job in the same render.
 
@@ -461,11 +493,6 @@ pg_dump --dbname="$PARTY_DSN" --format=custom --no-owner \
   --schema=party \
   --file=/backups/party/party-$(date -u +%Y%m%dT%H%M%SZ).dump
 
-# The linkage domain's migration record
-pg_dump --dbname="$LINKAGE_DSN" --format=custom --no-owner \
-  --schema=linkage \
-  --file=/backups/linkage/linkage-$(date -u +%Y%m%dT%H%M%SZ).dump
-
 # The audit trail, ONLY when [storage.audit] names a database of its own —
 # co-located it is in the clinical dump above, and dumping it twice is a second
 # copy of who read what
@@ -474,22 +501,19 @@ pg_dump --dbname="$AUDIT_DSN" --format=custom --no-owner \
   --file=/backups/audit/audit-$(date -u +%Y%m%dT%H%M%SZ).dump
 ```
 
-The linkage domain has held no relation since its `0006` migration: which EHR
-belongs to which subject is the EHR's own `EHR_STATUS.subject`, so it travels
-in the clinical dump. The linkage dump carries that domain's migration record,
-which `ferroehr db verify` reads after a restore.
+Which EHR belongs to which subject is the EHR's own `EHR_STATUS.subject`, so
+it travels in the clinical dump.
 
-All three examples ship. In Compose they are the opt-in `backup` profile:
+The clinical and party examples ship. In Compose they are the opt-in `backup`
+profile:
 
 ```bash
 docker compose --profile backup run --rm ferroehr-backup-clinical
 docker compose --profile backup run --rm ferroehr-backup-party
-docker compose --profile backup run --rm ferroehr-backup-linkage
 ```
 
-Set `FERROEHR_BACKUP_CLINICAL_DIR`, `FERROEHR_BACKUP_PARTY_DIR` and
-`FERROEHR_BACKUP_LINKAGE_DIR` to the three targets; they default to
-`./backups/clinical`, `./backups/party` and `./backups/linkage`.
+Set `FERROEHR_BACKUP_CLINICAL_DIR` and `FERROEHR_BACKUP_PARTY_DIR` to the two
+targets; they default to `./backups/clinical` and `./backups/party`.
 Run it as yourself — `FERROEHR_BACKUP_USER="$(id -u):$(id -g)"` — and the dump
 lands owned by you. Left unset, the job runs as root inside the container and
 keeps one capability, `DAC_OVERRIDE`, because that is what writing a directory
@@ -508,14 +532,14 @@ Under Kubernetes the chart renders one `CronJob` per domain — see the chart's
 > its own domain and nothing else.
 
 Two further properties are yours to arrange, because no configuration file can
-enforce them: the three targets carry **different** access control, and the
+enforce them: the two targets carry **different** access control, and the
 credential each job uses reaches **one** domain. Give the demographic job the demographic
 DSN once you run two ([Deploying](installation/kubernetes.md)); with a single
 credential you have separated the artefacts but not the authority to produce
 them.
 
 > [!NOTE]
-> Point-in-time recovery stays instance-wide. All three domains live in one
+> Point-in-time recovery stays instance-wide. All the domains live in one
 > cluster, so a WAL archive covers them together and a recovery target restores
 > them together. The separation this section is about is the logical dump.
 
@@ -530,7 +554,6 @@ server starts, then let the server check them:
 createdb ferroehr_restored
 pg_restore --dbname=ferroehr_restored --no-owner clinical-….dump
 pg_restore --dbname=ferroehr_restored --no-owner demographic-….dump
-pg_restore --dbname=ferroehr_restored --no-owner linkage-….dump
 # then, before anything serves traffic:
 ferroehr db verify
 ```
@@ -539,7 +562,7 @@ Restore the clinical dump first. It is the one carrying the `ext` schema, whose
 helper functions the other domains' relations depend on.
 
 `ferroehr db verify` issues no DDL. It checks that the database carries exactly
-this build's migrations, **all five sets**, so a restore that skipped a domain
+this build's migrations, **all four sets**, so a restore that skipped a domain
 is refused by name, and that no runtime role can read across the domain
 boundary, exiting non-zero when either is untrue. It is the same check the
 server runs at boot, which is why a server pointed at a badly restored database
@@ -713,7 +736,7 @@ SELECT n.nspname || '.' || c.relname                           AS relation,
 FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE c.relkind = 'r'
-  AND n.nspname IN ('clinical', 'party', 'linkage', 'audit', 'ext')
+  AND n.nspname IN ('clinical', 'party', 'audit', 'ext')
 ORDER BY pg_total_relation_size(c.oid) DESC
 LIMIT 15;
 ```

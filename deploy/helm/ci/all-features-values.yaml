@@ -5,17 +5,13 @@ database:
   existingSecret: ferroehr-db
   existingSecretKey: FERROEHR__DB__URL
   # One credential per storage domain (#3343): the party pool, and the party
-  # backup CronJob, read a secret the clinical side never mounts; the linkage
-  # domain holds which party is the subject of which EHR, barred from both
-  # domains it joins; the audit domain is the one a deployment most often moves
+  # backup CronJob, read a secret the clinical side never mounts; the audit
+  # domain is the one a deployment most often moves
   # to a server of its own. Exercised here because a branch no overlay renders
   # is a branch no golden and no boot check ever sees.
   party:
     existingSecret: ferroehr-db-party
     existingSecretKey: FERROEHR__STORAGE__PARTY__URL
-  linkage:
-    existingSecret: ferroehr-db-linkage
-    existingSecretKey: FERROEHR__STORAGE__LINKAGE__URL
   audit:
     existingSecret: ferroehr-db-audit
     existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
@@ -264,8 +260,8 @@ migrations:
 
 # Per-domain logical backups, so every CronJob reaches a golden render and the
 # restricted-profile gate — the claims are render fixtures, nothing provisions
-# them here. Four DIFFERENT claim names: any two domains sharing a claim is
-# refused. The fourth job is the audit one, which this overlay reaches because
+# them here. Three DIFFERENT claim names: any two domains sharing a claim is
+# refused. The third job is the audit one, which this overlay reaches because
 # `database.audit.existingSecret` above gives that domain a database of its
 # own; the clinical job then stops naming the audit schema.
 backup:
@@ -280,11 +276,6 @@ backup:
   party:
     persistentVolumeClaim: ferroehr-backup-party
     existingSecret: ferroehr-backup-party-dsn
-  linkage:
-    # The narrowest of the three: this dump is the map that re-identifies a
-    # pseudonymised record, so it gets its own claim and its own role.
-    persistentVolumeClaim: ferroehr-backup-linkage
-    existingSecret: ferroehr-backup-linkage-dsn
   audit:
     # The trail lives in its own database here, so nothing else would dump it.
     persistentVolumeClaim: ferroehr-backup-audit

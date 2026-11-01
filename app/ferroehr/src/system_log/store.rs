@@ -1497,7 +1497,7 @@ impl<'a> SubjectColumns<'a> {
 /// names no EHR.
 ///
 /// NOTE: no specification governs this: our own design; a linkage record names a party, and
-/// the EHR beside it would make the audit store a second copy of the linkage map.
+/// the EHR beside it would make the audit store a map from parties to their EHRs.
 fn access_ehr_id(event: &AuditEvent) -> Option<&str> {
     event.category.as_ref().and(event.ehr_id.as_deref())
 }

@@ -31,7 +31,7 @@ FerroEHR publishes three container images to GHCR:
 | Image | Contents |
 |---|---|
 | `ghcr.io/ferrohealth/ferroehr` | The `ferroehr` server binary on a distroless, non-root, shell-less multi-arch base (amd64 + arm64). Configured by a mounted TOML file and/or `FERROEHR__*` environment variables. |
-| `ghcr.io/ferrohealth/ferroehr-postgres` | `postgres:18.6` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the eight `NOLOGIN` group roles (`ferroehr_migrator`, `ferroehr_clinical`, `ferroehr_clinical_reader`, and the five domain roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`, `ferroehr_linkage`), the database, the schemas (`clinical`, `ext`, `audit`) and the one extension the schema needs, `btree_gist`, so the app role never needs superuser. |
+| `ghcr.io/ferrohealth/ferroehr-postgres` | `postgres:18.6` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the `NOLOGIN` group roles (`ferroehr_migrator` and the four domain roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`, plus `ferroehr_linkage`, which the released grant files still name), the database and the schemas (`clinical`, `ext`, `audit`), so the app role never needs superuser. |
 | `ghcr.io/ferrohealth/ferroehr-viewer` | The [viewer](../viewer/index.md), a standalone web application that talks to the CDR strictly over ITS-REST. Optional; see the `viewer` profile below. |
 
 Each image is published under several tags:
@@ -60,7 +60,7 @@ separation honestly.
 A least-privilege deployment sets `db.migrate = "verify"`, runs
 `ferroehr db migrate` out of band under the migrator DSN, and serves on a
 narrow runtime credential. It also has to name the credential that prepares
-the schema, in `[db] migrate_url`: preparation reads all five
+the schema, in `[db] migrate_url`: preparation reads all four
 `_sqlx_migrations` bookkeeping tables even under `verify`, which no
 least-privilege role can do, `ferroehr_clinical` included. Unset, `migrate_url`
 falls back to `[db] url`, which is what the quickstart runs. See
@@ -68,11 +68,9 @@ falls back to `[db] url`, which is what the quickstart runs. See
 schema](../operations.md#which-credential-prepares-the-schema) and
 [Applying migrations](../operations.md#applying-migrations).
 
-The PostgreSQL image is **init-scripts only**: it creates roles, schemas and
-`btree_gist`, and bakes in no migration state. That extension is the only one
-the schema needs, and the server installs it itself at boot
-(`CREATE EXTENSION IF NOT EXISTS btree_gist`), so a plain PostgreSQL 18 with a
-superuser-capable migration credential serves just as well. The server owns the schema content
+The PostgreSQL image is **init-scripts only**: it creates roles and schemas,
+and bakes in no migration state. The schema needs no extension, so a plain
+PostgreSQL 18 serves just as well. The server owns the schema content
 and applies its migrations idempotently at every boot, so a fresh database
 self-provisions and a restart is a no-op.
 
@@ -529,20 +527,18 @@ you ask for them:
   production, point the multimedia settings at a real, credentialed, HTTPS S3
   endpoint instead; see [S3 multimedia](../beyond-core/s3-multimedia.md).
 
-- **`ferroehr-backup-clinical`, `ferroehr-backup-party` and
-  `ferroehr-backup-linkage`** (`--profile backup`): one `pg_dump` job per
+- **`ferroehr-backup-clinical` and `ferroehr-backup-party`**
+  (`--profile backup`): one `pg_dump` job per
   pseudonymisation domain, run on demand rather than started with the stack:
 
   ```shell
   docker compose --profile backup run --rm ferroehr-backup-clinical
   docker compose --profile backup run --rm ferroehr-backup-party
-  docker compose --profile backup run --rm ferroehr-backup-linkage
   ```
 
   Each writes a timestamped custom-format dump into its own host directory
-  (`FERROEHR_BACKUP_CLINICAL_DIR`, `FERROEHR_BACKUP_PARTY_DIR`,
-  `FERROEHR_BACKUP_LINKAGE_DIR`, defaulting to `./backups/clinical`,
-  `./backups/demographic` and `./backups/linkage`). Set
+  (`FERROEHR_BACKUP_CLINICAL_DIR` and `FERROEHR_BACKUP_PARTY_DIR`, defaulting
+  to `./backups/clinical` and `./backups/party`). Set
   `FERROEHR_BACKUP_USER="$(id -u):$(id -g)"` and the files land owned by you;
   unset, the job runs as root inside the container with one capability,
   `DAC_OVERRIDE`, which is what writing a directory it does not own actually
@@ -639,7 +635,6 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `FERROEHR_S3_PORT` | `8333` | Host port mapped to the S3 gateway (the `s3` profile). |
 | `FERROEHR_BACKUP_CLINICAL_DIR` | `./backups/clinical` | Host directory the clinical dump job writes to (the `backup` profile). |
 | `FERROEHR_BACKUP_PARTY_DIR` | `./backups/party` | Host directory the party dump job writes to. |
-| `FERROEHR_BACKUP_LINKAGE_DIR` | `./backups/linkage` | Host directory the linkage dump job writes to. |
 | `FERROEHR_BACKUP_USER` | `0:0` (root in the container) | `uid:gid` the dump jobs run as. Set it to `$(id -u):$(id -g)` and the files land owned by you. |
 | `FERROEHR_CPUS` / `FERROEHR_MEM` | `4` / `4G` | Server container resource ceiling. |
 | `FERROEHR_DB_CPUS` / `FERROEHR_DB_MEM` | `4` / `4G` | Database container resource ceiling. |

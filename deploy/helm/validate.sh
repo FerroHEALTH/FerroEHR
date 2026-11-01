@@ -630,21 +630,18 @@ refusal_registry_gate() {
     "networkpolicy.yaml|networkPolicy.ingressAllowAll=false with an empty|${base}|--set networkPolicy.ingressAllowAll=false|networkPolicy.ingressFrom;hardening-network-policy.md"
     "networkpolicy.yaml|with no destination for the database|${base}|--set networkPolicy.egress.enabled=true|networkPolicy.egress.database.to;hardening-network-policy.md"
     "viewer.yaml|viewer.networkPolicy.ingressAllowAll=false with an empty|${viewer}|--set viewer.networkPolicy.ingressAllowAll=false|viewer.networkPolicy.ingressFrom;hardening-network-policy.md"
-    "backup-cronjob.yaml|persistentVolumeClaim is empty|${base}|--set backup.enabled=true --set backup.party.persistentVolumeClaim=party-dumps --set backup.linkage.persistentVolumeClaim=linkage-dumps|backup.clinical.persistentVolumeClaim"
-    "backup-cronjob.yaml|persistentVolumeClaim is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.linkage.persistentVolumeClaim=linkage-dumps|backup.party.persistentVolumeClaim"
-    "backup-cronjob.yaml|persistentVolumeClaim is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps|backup.linkage.persistentVolumeClaim"
-    "backup-cronjob.yaml|name the same claim|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=one-claim --set backup.party.persistentVolumeClaim=one-claim --set backup.linkage.persistentVolumeClaim=linkage-dumps|backup.clinical.persistentVolumeClaim;backup.party.persistentVolumeClaim"
-    "backup-cronjob.yaml|name the same claim|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=one-claim --set backup.linkage.persistentVolumeClaim=one-claim|backup.party.persistentVolumeClaim;backup.linkage.persistentVolumeClaim"
-    "backup-cronjob.yaml|existingSecret is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.linkage.persistentVolumeClaim=linkage-dumps|backup.clinical.existingSecret;silently partial"
-    "backup-cronjob.yaml|existingSecret is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.linkage.persistentVolumeClaim=linkage-dumps --set backup.clinical.existingSecret=clinical-backup-dsn|backup.party.existingSecret;its own role"
-    "backup-cronjob.yaml|existingSecret is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.linkage.persistentVolumeClaim=linkage-dumps --set backup.clinical.existingSecret=clinical-backup-dsn --set backup.party.existingSecret=party-backup-dsn|backup.linkage.existingSecret;narrowest of the three"
+    "backup-cronjob.yaml|persistentVolumeClaim is empty|${base}|--set backup.enabled=true --set backup.party.persistentVolumeClaim=party-dumps|backup.clinical.persistentVolumeClaim"
+    "backup-cronjob.yaml|persistentVolumeClaim is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps|backup.party.persistentVolumeClaim"
+    "backup-cronjob.yaml|name the same claim|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=one-claim --set backup.party.persistentVolumeClaim=one-claim|backup.clinical.persistentVolumeClaim;backup.party.persistentVolumeClaim"
+    "backup-cronjob.yaml|existingSecret is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps|backup.clinical.existingSecret;silently partial"
+    "backup-cronjob.yaml|existingSecret is empty|${base}|--set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.clinical.existingSecret=clinical-backup-dsn|backup.party.existingSecret;its own role"
     # The audit domain joins the same three refusals, and only when
     # database.audit gives it a database of its own: without that set, the
-    # three probes above already pass with no audit claim and no audit secret,
-    # which is what proves the fourth job is conditional rather than always on.
-    "backup-cronjob.yaml|persistentVolumeClaim is empty|${base}|--set database.audit.existingSecret=audit-dsn --set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.linkage.persistentVolumeClaim=linkage-dumps|backup.audit.persistentVolumeClaim;nothing backs up the access log"
-    "backup-cronjob.yaml|name the same claim|${base}|--set database.audit.existingSecret=audit-dsn --set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.linkage.persistentVolumeClaim=one-claim --set backup.audit.persistentVolumeClaim=one-claim|backup.linkage.persistentVolumeClaim;backup.audit.persistentVolumeClaim"
-    "backup-cronjob.yaml|existingSecret is empty|${base}|--set database.audit.existingSecret=audit-dsn --set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.linkage.persistentVolumeClaim=linkage-dumps --set backup.audit.persistentVolumeClaim=audit-dumps --set backup.clinical.existingSecret=clinical-backup-dsn --set backup.party.existingSecret=party-backup-dsn --set backup.linkage.existingSecret=linkage-backup-dsn|backup.audit.existingSecret;not where this trail lives"
+    # probes above already pass with no audit claim and no audit secret,
+    # which is what proves the third job is conditional rather than always on.
+    "backup-cronjob.yaml|persistentVolumeClaim is empty|${base}|--set database.audit.existingSecret=audit-dsn --set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps|backup.audit.persistentVolumeClaim;nothing backs up the access log"
+    "backup-cronjob.yaml|name the same claim|${base}|--set database.audit.existingSecret=audit-dsn --set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=one-claim --set backup.audit.persistentVolumeClaim=one-claim|backup.party.persistentVolumeClaim;backup.audit.persistentVolumeClaim"
+    "backup-cronjob.yaml|existingSecret is empty|${base}|--set database.audit.existingSecret=audit-dsn --set backup.enabled=true --set backup.clinical.persistentVolumeClaim=clinical-dumps --set backup.party.persistentVolumeClaim=party-dumps --set backup.audit.persistentVolumeClaim=audit-dumps --set backup.clinical.existingSecret=clinical-backup-dsn --set backup.party.existingSecret=party-backup-dsn|backup.audit.existingSecret;not where this trail lives"
   )
 
   local record values probe wants want out refused=0
@@ -787,7 +784,6 @@ schema_gate() {
     "backup.enabled=maybe|/backup/enabled"
     "backup.clinical.schedule=17|/backup/clinical/schedule"
     "backup.party.schedule=daily|/backup/party/schedule"
-    "backup.linkage.schedule=weekly|/backup/linkage/schedule"
     "backup.audit.schedule=nightly|/backup/audit/schedule"
     "backup.backoffLimit=-1|/backup/backoffLimit"
     "config.audit.store.retention_years=three|/config/audit/store/retention_years"
@@ -1064,8 +1060,8 @@ CLAIMS
   grep -qE '^ *subject_namespaces = \[".+"' <<<"$toml" \
     || { red "  privacy.subject_namespaces is empty: open_subject_namespace would refuse the boot"; missing=1; }
   local file
-  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__LINKAGE__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE \
-    STORAGE__MIGRATE__PARTY__URL_FILE STORAGE__MIGRATE__LINKAGE__URL_FILE STORAGE__MIGRATE__AUDIT__URL_FILE; do
+  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE \
+    STORAGE__MIGRATE__PARTY__URL_FILE STORAGE__MIGRATE__AUDIT__URL_FILE; do
     [[ "$(yq -r "select(.kind == \"Deployment\" and .metadata.name == \"${RELEASE_NAME}\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__${file}\") | .name" <<<"$rendered")" == "FERROEHR__${file}" ]] \
       || { red "  the Deployment does not carry FERROEHR__${file}: a domain or the migrator shares a credential"; missing=1; }
   done
@@ -1161,12 +1157,12 @@ migration_job_gate() {
     || { red "  the hook ServiceAccount's delete policy is not before-hook-creation alone: a failed hook would delete it under a running Job"; missing=1; }
   [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "${RELEASE_NAME}-migrate" ]] \
     || { red "  with serviceAccount.create the Job does not run under the hook account"; missing=1; }
-  for domain in PARTY LINKAGE AUDIT; do
+  for domain in PARTY AUDIT; do
     [[ "$(yq -r "select(.kind == \"Job\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE\") | .name" <<<"$rendered")" == "FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE" ]] \
       || { red "  the Job lacks FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE: it cannot prepare that domain's cluster"; missing=1; }
   done
-  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.volumes[] | select(.name == "migrator-secret") | .projected.sources | length' <<<"$rendered")" -eq 4 ]] \
-    || { red "  the Job's migrator volume does not project four Secrets (the shared migrator and three domain migrators)"; missing=1; }
+  [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.volumes[] | select(.name == "migrator-secret") | .projected.sources | length' <<<"$rendered")" -eq 3 ]] \
+    || { red "  the Job's migrator volume does not project three Secrets (the shared migrator and two domain migrators)"; missing=1; }
   rendered="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
     --set serviceAccount.create=false --set serviceAccount.name=operator-account)"
   # The FerroPIX dependency's account is that chart's own (ferropix.serviceAccount).

@@ -22,7 +22,7 @@
 #   scripts/deploy-probe-k8s.sh --production-only  # only the P-K8S-PROD-* family
 #   scripts/deploy-probe-k8s.sh --render-check # no cluster: render the production
 #                                              # install this harness performs and
-#                                              # assert it wires the four domains
+#                                              # assert it wires the three domains
 #
 # Env:
 #   PROBE_K8S_IMAGE   repo:tag of the server image under probe. Defaults to a
@@ -52,9 +52,9 @@
 #                     release whose pods do not run with `hostUsers: false` is
 #                     recorded as not exercised, by name.
 #   PROBE_K8S_PROD_PORT_BASE
-#                     first host port of the four PostgreSQL clusters the
+#                     first host port of the three PostgreSQL clusters the
 #                     production probes bring up, one per storage domain
-#                     (default 15441; the next three follow it).
+#                     (default 15441; the next two follow it).
 #   PROBE_K8S_DB_HOST the address pods reach the host databases at, when none of
 #                     the candidates the harness tries answers (a kind node on
 #                     podman reaches the podman machine through the gateway of
@@ -86,20 +86,20 @@ COMPOSE_PROJECT="ferroehr-probe-k8s"
 # shellcheck source=scripts/deploy-probes/kubernetes.sh
 . scripts/deploy-probes/kubernetes.sh
 
-# ── The production overlay against four database clusters ────────────────────
+# ── The production overlay against three database clusters ────────────────────
 # deploy/helm/ci/boot-check.sh has the server judge values-production.yaml from
 # its configuration alone, which cannot see the two facts the server measures
 # over live connections: `shared_cluster` (each domain pool's
 # pg_control_system().system_identifier) and the database a relocated domain is
-# prepared and verified in. These probes install the overlay against four
+# prepared and verified in. These probes install the overlay against three
 # compose PostgreSQL clusters, one per storage domain, read the posture back
-# with `ferroehr report` inside the running pod, then point all four domains at one
+# with `ferroehr report` inside the running pod, then point all three domains at one
 # cluster and watch the boot refuse. No openEHR spec governs deployment
 # posture; this is our own design.
 K8S_PROD_NS="${K8S_NS}-production"
 K8S_PROD_RELEASE="ferroehr"
 K8S_PROD_PORT_BASE="${PROBE_K8S_PROD_PORT_BASE:-15441}"
-K8S_PROD_DOMAINS=(clinical party linkage audit)
+K8S_PROD_DOMAINS=(clinical party audit)
 K8S_PROD_VALUES="deploy/helm/ferroehr/values-production.yaml"
 K8S_PROD_OVERRIDES="$PROBE_TMP/production-probe-values.yaml"
 K8S_PROD_PASSWORD="probe-only-not-a-secret"
@@ -227,7 +227,7 @@ k8s_prod_owner_dsn() {
   k8s_prod_dsn "${PG_INIT_USER:-ferroehr}" "${PG_INIT_PASSWORD:-ferroehr}" "$cluster"
 }
 
-# Four clusters, each initialised on its own, so four system identifiers.
+# Three clusters, each initialised on its own, so three system identifiers.
 k8s_prod_db_up() {
   local domain
   for domain in "${K8S_PROD_DOMAINS[@]}"; do
@@ -271,10 +271,10 @@ k8s_prod_secret() {
     | kp apply -f - >/dev/null
 }
 
-# k8s_prod_secrets <separate|shared>: the eight credentials the overlay names,
+# k8s_prod_secrets <separate|shared>: the six credentials the overlay names,
 # a runtime login per domain, the clinical cluster's migrator, and the migrator
 # of each other domain's cluster. `separate` puts each domain on its own
-# cluster; `shared` puts all four on the clinical cluster, each still on its
+# cluster; `shared` puts all three on the clinical cluster, each still on its
 # own login role.
 k8s_prod_secrets() {
   local layout="$1" domain cluster
@@ -324,8 +324,6 @@ database:
   existingSecretKey: dsn
   party: {existingSecret: probe-db-party, existingSecretKey: dsn,
     migrateExistingSecret: probe-db-party-migrate, migrateExistingSecretKey: dsn}
-  linkage: {existingSecret: probe-db-linkage, existingSecretKey: dsn,
-    migrateExistingSecret: probe-db-linkage-migrate, migrateExistingSecretKey: dsn}
   audit: {existingSecret: probe-db-audit, existingSecretKey: dsn,
     migrateExistingSecret: probe-db-audit-migrate, migrateExistingSecretKey: dsn}
   migrateExistingSecret: probe-db-migrate
@@ -361,10 +359,10 @@ k8s_prod_teardown() {
 }
 
 probes_k8s_production() {
-  bold "the production overlay against four database clusters"
+  bold "the production overlay against three database clusters"
   if ! k8s_prod_db_up; then
     uncovered "P-K8S-PROD-BOOT and P-K8S-PROD-SHARED" \
-      "the four compose PostgreSQL clusters never became ready, a harness problem rather than a finding"
+      "the three compose PostgreSQL clusters never became ready, a harness problem rather than a finding"
     return 0
   fi
   local domain ids
@@ -373,12 +371,12 @@ probes_k8s_production() {
   done | sort -u | grep -c .)"
   if [[ "$ids" -ne 4 ]] || ! k8s_prod_roles; then
     uncovered "P-K8S-PROD-BOOT and P-K8S-PROD-SHARED" \
-      "the harness could not stand up four clusters with four system identifiers and the domain login roles (identifiers seen: ${ids})"
+      "the harness could not stand up three clusters with three system identifiers and the domain login roles (identifiers seen: ${ids})"
     return 0
   fi
   if ! k8s_prod_tls; then
     uncovered "P-K8S-PROD-TLS, P-K8S-PROD-BOOT and P-K8S-PROD-SHARED" \
-      "the harness could not give the four clusters a certificate from one probe CA, a harness problem rather than a finding"
+      "the harness could not give the three clusters a certificate from one probe CA, a harness problem rather than a finding"
     return 0
   fi
   kubectl create namespace "$K8S_PROD_NS" >/dev/null 2>&1 || true
@@ -388,7 +386,7 @@ probes_k8s_production() {
   k8s_prod_secrets separate
 
   probe "P-K8S-PROD-TLS-REFUSE" "broken" "compose" "#3788" \
-    "each of the four clusters refuses a connection without encryption, so only TLS reaches them"
+    "each of the three clusters refuses a connection without encryption, so only TLS reaches them"
   for domain in "${K8S_PROD_DOMAINS[@]}"; do
     k8s_prod_plaintext_refused "$domain" \
       || probe_fail "cluster ${domain} refuses sslmode=disable with 'no encryption'" "it did not" \
@@ -397,7 +395,7 @@ probes_k8s_production() {
   probe_done
 
   probe "P-K8S-PROD-BOOT" "working" "server" "#3692" \
-    "the chart's migration Job prepares four clusters on their own migrators, and values-production.yaml then boots under production with migrate = verify, its only gap plaintext_listener, accepted by name"
+    "the chart's migration Job prepares three clusters on their own migrators, and values-production.yaml then boots under production with migrate = verify, its only gap plaintext_listener, accepted by name"
   local -a helm_args=()
   local line
   while IFS= read -r line; do helm_args+=("$line"); done < <(k8s_prod_helm_args)
@@ -406,7 +404,7 @@ probes_k8s_production() {
     helm uninstall "$K8S_PROD_RELEASE" -n "$K8S_PROD_NS" --wait >/dev/null 2>&1
   fi
   if ! helm upgrade --install "${helm_args[@]}" --set usageReport.enabled=false --set ferropix.usageReport.enabled=false --timeout 6m >"$PROBE_TMP/prod-helm.log" 2>&1; then
-    probe_fail "the release installed, its migration Job having prepared all four clusters" \
+    probe_fail "the release installed, its migration Job having prepared all three clusters" \
       "$(tail -4 "$PROBE_TMP/prod-helm.log")" \
       "a failed pre-install Job lands here: kubectl -n $K8S_PROD_NS logs job/${K8S_PROD_RELEASE}-migrate"
     kp logs "job/${K8S_PROD_RELEASE}-migrate" --tail=8 2>&1 | sed 's/^/      job: /'
@@ -424,7 +422,7 @@ probes_k8s_production() {
       assert_eq "production" "$(jq -r '.deployment.profile' <<<"$report" 2>/dev/null)" \
         "ferroehr report inside the running pod, over its live pools"
       assert_eq "plaintext_listener" "$gaps" \
-        "the measured gaps over four clusters: shared_cluster must not be among them"
+        "the measured gaps over three clusters: shared_cluster must not be among them"
       assert_eq "plaintext_listener" "$accepted" \
         "the overlay accepts exactly this one gap by name"
     fi
@@ -432,7 +430,7 @@ probes_k8s_production() {
   probe_done
 
   probe "P-K8S-PROD-TLS" "working" "server" "#3788" \
-    "the migration Job and the server reach all four clusters with sslmode=verify-full, the certificates checked against the CA the overlay mounts at /etc/ferroehr-db-ca"
+    "the migration Job and the server reach all three clusters with sslmode=verify-full, the certificates checked against the CA the overlay mounts at /etc/ferroehr-db-ca"
   if [[ "$installed" -eq 0 ]]; then
     probe_fail "an installed release" "the install failed above"
   elif [[ -z "${report:-}" ]]; then
@@ -452,7 +450,7 @@ probes_k8s_production() {
   k8s_record_host_users "$K8S_PROD_NS" "$K8S_PROD_RELEASE"
 
   probe "P-K8S-PROD-SHARED" "broken" "server" "#3692" \
-    "with all four domains on one cluster, each on its own role, the production boot refuses and names shared_cluster"
+    "with all three domains on one cluster, each on its own role, the production boot refuses and names shared_cluster"
   if [[ "$installed" -eq 0 ]]; then
     probe_fail "an installed release to re-point" "the install failed above"
     probe_done
@@ -477,7 +475,7 @@ probes_k8s_production() {
   assert_contains "$log" "shared_cluster" \
     "two pools on one cluster must refuse the production boot by name"
   assert_not_contains "$log" "shared_credential" \
-    "the domains still connect on four login roles; only the cluster is shared"
+    "the domains still connect on three login roles; only the cluster is shared"
   if kp rollout status "deploy/$K8S_PROD_RELEASE" --timeout=30s >/dev/null 2>&1; then
     probe_fail "the restarted Deployment never becomes ready" "the rollout completed"
   fi
@@ -508,17 +506,13 @@ render_check() {
     "name: probe-db-migrate" \
     "name: probe-db-clinical" \
     "name: probe-db-party" \
-    "name: probe-db-linkage" \
     "name: probe-db-audit" \
     "name: probe-db-party-migrate" \
-    "name: probe-db-linkage-migrate" \
     "name: probe-db-audit-migrate" \
     'value: "/etc/ferroehr-secrets/storage.party.url"' \
-    'value: "/etc/ferroehr-secrets/storage.linkage.url"' \
     'value: "/etc/ferroehr-secrets/storage.audit.url"' \
     'value: "/etc/ferroehr-secrets/db.migrate_url"' \
     'value: "/etc/ferroehr-secrets/storage.migrate.party.url"' \
-    'value: "/etc/ferroehr-secrets/storage.migrate.linkage.url"' \
     'value: "/etc/ferroehr-secrets/storage.migrate.audit.url"' \
     "name: ${K8S_PROD_RELEASE}-migrate" \
     "name: ${K8S_PROD_CA_CONFIGMAP}" \
@@ -531,10 +525,10 @@ render_check() {
     red "  the production install render still deploys FerroPIX, which no probe Secret backs"
     failed=1
   fi
-  [[ "$(grep -c -- '- key: dsn' <<<"$rendered")" -ge 12 ]] \
-    || { red "  fewer than twelve projections read the probe's 'dsn' key (the Deployment: four domains, three domain migrators, the migrator; the Job: the migrator and three domain migrators)"; failed=1; }
+  [[ "$(grep -c -- '- key: dsn' <<<"$rendered")" -ge 9 ]] \
+    || { red "  fewer than nine projections read the probe's 'dsn' key (the Deployment: three domains, two domain migrators, the migrator; the Job: the migrator and two domain migrators)"; failed=1; }
   [[ "$failed" -eq 0 ]] || exit 1
-  green "render-check: the production install wires four domain DSNs, four migrators and the Job to the probe's Secrets"
+  green "render-check: the production install wires three domain DSNs, three migrators and the Job to the probe's Secrets"
 }
 
 if [[ "$RENDER_CHECK" -eq 1 ]]; then
@@ -616,8 +610,8 @@ fi
 echo
 
 if [[ "$PRODUCTION_ONLY" -eq 1 ]]; then
-  bold "bringing up the four host databases the production probes point at"
-  k8s_prod_db_up || { red "FATAL: the four compose PostgreSQL clusters never became ready"; exit 1; }
+  bold "bringing up the three host databases the production probes point at"
+  k8s_prod_db_up || { red "FATAL: the three compose PostgreSQL clusters never became ready"; exit 1; }
   K8S_DB_PORT="$(k8s_prod_port clinical)"
 else
   bold "bringing up the host database the chart will be pointed at"
@@ -656,7 +650,7 @@ else
   uncovered "every probe after P-K8S-SERVE" \
     "the release did not come up, so nothing downstream could be observed"
 fi
-# Its own namespace and its own four clusters, so it runs whatever the release
+# Its own namespace and its own three clusters, so it runs whatever the release
 # above did.
 probes_k8s_production
 

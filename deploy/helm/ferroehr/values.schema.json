@@ -192,32 +192,6 @@
             }
           }
         },
-        "linkage": {
-          "description": "The linkage storage domain's own DSN. Empty uses the shared existingSecret / url, which is the schema-only posture.",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "existingSecret": {
-              "type": "string"
-            },
-            "existingSecretKey": {
-              "description": "A key name INSIDE existingSecret; the chart mounts that key as a file and passes only its path.",
-              "type": "string"
-            },
-            "url": {
-              "description": "Inline DSN (dev/test only). Ignored when existingSecret is set.",
-              "type": "string"
-            },
-            "migrateExistingSecret": {
-              "description": "A Secret holding the DSN of the credential that PREPARES the database the linkage domain lives in, when that is not the database database.migrateExistingSecret reaches. Mounted into the migration Job and the server as storage.migrate.linkage.url; the Job applies the schema there and the server verifies it there.",
-              "type": "string"
-            },
-            "migrateExistingSecretKey": {
-              "description": "A key name INSIDE migrateExistingSecret; the chart mounts that key as a file and passes only its path.",
-              "type": "string"
-            }
-          }
-        },
         "audit": {
           "description": "The audit storage domain's own DSN. Empty uses the shared existingSecret / url, which is the schema-only posture.",
           "type": "object",
@@ -317,7 +291,7 @@
       }
     },
     "backup": {
-      "description": "Per-domain logical backups: one CronJob per pseudonymisation domain (clinical, party, linkage), plus audit when database.audit gives that domain a database of its own. Off by default, and enabling it requires a DISTINCT existing PersistentVolumeClaim per rendered domain \u2014 the render is refused otherwise.",
+      "description": "Per-domain logical backups: one CronJob per pseudonymisation domain (clinical, party), plus audit when database.audit gives that domain a database of its own. Off by default, and enabling it requires a DISTINCT existing PersistentVolumeClaim per rendered domain \u2014 the render is refused otherwise.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -396,9 +370,6 @@
           "$ref": "#/definitions/backupDomain"
         },
         "party": {
-          "$ref": "#/definitions/backupDomain"
-        },
-        "linkage": {
           "$ref": "#/definitions/backupDomain"
         },
         "audit": {

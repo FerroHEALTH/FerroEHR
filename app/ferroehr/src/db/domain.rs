@@ -18,7 +18,7 @@
 //!
 //! So each domain carries its own `[storage.<domain>]` DSN, defaulting to the
 //! shared `[db].url`. The default is the co-located deployment, unchanged: one
-//! database, four schemas, the reciprocal grants and the boot gate
+//! database, three schemas, the reciprocal grants and the boot gate
 //! ([`crate::db::verify_domain_isolation`]). A regulated deployment moves a
 //! domain to its own database or cluster by editing one URL.
 //!
@@ -36,9 +36,8 @@ use ferrohealth_secret::secret_url::SecretUrl;
 /// One storage domain: the schema it owns, the pool that serves it, and the
 /// runtime roles that hold it.
 ///
-/// Three of the four are pseudonymisation domains ([`Self::Clinical`],
-/// [`Self::Party`], [`Self::Linkage`]) and are mutually barred; the fourth is
-/// the audit trail, which openEHR rules out of the EHR content altogether
+/// Two of the three are pseudonymisation domains ([`Self::Clinical`],
+/// [`Self::Party`]) and are mutually barred; the third is the audit trail, which openEHR rules out of the EHR content altogether
 /// (BASE `architecture_overview/master07-security.adoc` §Access logging) and
 /// which the clinical runtime role writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -48,17 +47,13 @@ pub enum Domain {
     Clinical,
     /// The identities: PARTY versioned objects and their change control.
     Party,
-    /// The map from a party to the EHR whose subject it is — the additional
-    /// information that re-attributes a pseudonymised record to a person
-    /// (GDPR Art. 4(5), <https://eur-lex.europa.eu/eli/reg/2016/679/oj>).
-    Linkage,
     /// The local IHE ATNA Audit Record Repository.
     Audit,
 }
 
 impl Domain {
     /// Every domain, in the order their migration sets apply.
-    pub const ALL: [Self; 4] = [Self::Clinical, Self::Party, Self::Linkage, Self::Audit];
+    pub const ALL: [Self; 3] = [Self::Clinical, Self::Party, Self::Audit];
 
     /// The configuration token, the `[storage.<domain>]` table name, and the
     /// `PostgreSQL` schema this domain owns, which the migration set and the
@@ -68,7 +63,6 @@ impl Domain {
         match self {
             Self::Clinical => "clinical",
             Self::Party => "party",
-            Self::Linkage => "linkage",
             Self::Audit => "audit",
         }
     }
@@ -86,7 +80,6 @@ impl Domain {
         match self {
             Self::Clinical => "SET search_path TO clinical, ext, public",
             Self::Party => "SET search_path TO party, ext, public",
-            Self::Linkage => "SET search_path TO linkage, ext, public",
             Self::Audit => "SET search_path TO audit, ext, public",
         }
     }
@@ -102,7 +95,6 @@ impl Domain {
         match self {
             Self::Clinical => &["ferroehr_clinical", "ferroehr_clinical_reader"],
             Self::Party => &["ferroehr_party", "ferroehr_party_reader"],
-            Self::Linkage => &["ferroehr_linkage"],
             Self::Audit => &[],
         }
     }
@@ -113,14 +105,13 @@ impl Domain {
     #[must_use]
     pub const fn barred_from(self) -> &'static [&'static str] {
         match self {
-            Self::Clinical => &["party", "linkage"],
-            Self::Party => &["clinical", "linkage"],
-            Self::Linkage => &["clinical", "party"],
+            Self::Clinical => &["party"],
+            Self::Party => &["clinical"],
             Self::Audit => &[],
         }
     }
 
-    /// Whether this domain is a pseudonymisation domain — one of the three the
+    /// Whether this domain is a pseudonymisation domain — one of the two the
     /// separation is about.
     ///
     /// The audit trail is not: openEHR rules the access log out of the EHR
@@ -132,44 +123,18 @@ impl Domain {
         !self.barred_from().is_empty()
     }
 
-    /// Returns the domain whose migration set must be applied before this
-    /// domain's set in every database this domain lives in.
-    ///
-    /// `linkage`'s grant file (`migrations/linkage/0004_grants.sql`) revokes
-    /// `party.resolve_national_identifier` from its own role, a function only
-    /// the party set creates, so a database holding the linkage domain without
-    /// the party domain is given the party SET as a companion: its schema,
-    /// relations and grants, and never a pool, a credential or a row. Nothing
-    /// else crosses: every other cross-domain statement names a SCHEMA, and the
-    /// bootstrap creates all four schema names in every database it prepares.
-    ///
-    /// The grant file is in a release, and a released migration is never
-    /// edited (sqlx refuses a database whose recorded checksum no longer
-    /// matches, <https://docs.rs/sqlx/latest/sqlx/migrate/struct.Migrator.html>),
-    /// and a later file cannot repair a statement that fails before it, so the
-    /// companion set is how the linkage domain reaches a database of its own.
-    #[must_use]
-    pub const fn prepares_with(self) -> Option<Self> {
-        match self {
-            Self::Linkage => Some(Self::Party),
-            _ => None,
-        }
-    }
-
     /// Returns the other domains whose SCHEMA this domain's migration set
     /// names, so that schema must exist while the set applies.
     ///
     /// The shipped grant files revoke the runtime roles from the other
     /// domains' schemas by name (`migrations/party/0008_grants.sql` from
-    /// `clinical`, `migrations/linkage/0004_grants.sql` from `clinical` and
-    /// `party`), and a `REVOKE` on a schema that does not exist fails. A
+    /// `clinical`), and a `REVOKE` on a schema that does not exist fails. A
     /// database that does not hold such a domain gets its schema only for the
     /// duration of the run, empty, and loses it again afterwards.
     #[must_use]
     pub const fn names_schemas_of(self) -> &'static [Self] {
         match self {
             Self::Party => &[Self::Clinical],
-            Self::Linkage => &[Self::Clinical, Self::Party],
             Self::Clinical | Self::Audit => &[],
         }
     }
@@ -220,8 +185,6 @@ pub struct MigrateDsns {
     pub clinical: DomainDsn,
     /// `[storage.migrate.party]` — prepares the party domain's database.
     pub party: DomainDsn,
-    /// `[storage.migrate.linkage]` — prepares the linkage domain's database.
-    pub linkage: DomainDsn,
     /// `[storage.migrate.audit]` — prepares the audit domain's database.
     pub audit: DomainDsn,
 }
@@ -233,7 +196,6 @@ impl MigrateDsns {
         match domain {
             Domain::Clinical => &self.clinical,
             Domain::Party => &self.party,
-            Domain::Linkage => &self.linkage,
             Domain::Audit => &self.audit,
         }
     }
@@ -244,7 +206,6 @@ impl MigrateDsns {
         match domain {
             Domain::Clinical => &mut self.clinical,
             Domain::Party => &mut self.party,
-            Domain::Linkage => &mut self.linkage,
             Domain::Audit => &mut self.audit,
         }
     }
@@ -254,7 +215,7 @@ impl MigrateDsns {
 /// that prepares a relocated domain's database.
 ///
 /// Every field defaults to unset, so a configuration file that names no
-/// `[storage]` table at all runs the four domains on `[db].url` — the compose
+/// `[storage]` table at all runs the three domains on `[db].url` — the compose
 /// quickstart and every existing configuration, unchanged.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -263,8 +224,6 @@ pub struct StorageConfig {
     pub clinical: DomainDsn,
     /// `[storage.party]` — the identities' DSN.
     pub party: DomainDsn,
-    /// `[storage.linkage]` — the party-to-EHR map's DSN.
-    pub linkage: DomainDsn,
     /// `[storage.audit]` — the audit repository's DSN.
     pub audit: DomainDsn,
     /// `[storage.migrate.<domain>]` — the migration credential of a relocated
@@ -290,7 +249,6 @@ impl StorageConfig {
         match domain {
             Domain::Clinical => &self.clinical,
             Domain::Party => &self.party,
-            Domain::Linkage => &self.linkage,
             Domain::Audit => &self.audit,
         }
     }
@@ -301,7 +259,6 @@ impl StorageConfig {
         match domain {
             Domain::Clinical => &mut self.clinical,
             Domain::Party => &mut self.party,
-            Domain::Linkage => &mut self.linkage,
             Domain::Audit => &mut self.audit,
         }
     }
@@ -323,26 +280,21 @@ impl StorageConfig {
         self.domain(domain).url.is_some()
     }
 
-    /// Whether the three pseudonymisation domains connect on three different
+    /// Whether the two pseudonymisation domains connect on two different
     /// DSNs.
     ///
-    /// Pairwise distinctness rather than "each one is set": two domains
-    /// relocated to the SAME second database still share a credential, and a
-    /// posture check that counted them as separated would report a separation
-    /// that does not exist. The audit trail is deliberately not counted — it is
+    /// Distinctness rather than "each one is set": both domains relocated to
+    /// the SAME second database still share a credential, and a posture check
+    /// that counted them as separated would report a separation that does not
+    /// exist. The audit trail is deliberately not counted — it is
     /// not a pseudonymisation domain, and requiring a fourth credential for it
     /// would make the check say something other than what it means.
     #[must_use]
     pub fn pseudonymisation_domains_are_separated(&self, db: &DbConfig) -> bool {
         let layout = self.layout(db);
-        let domains = [Domain::Clinical, Domain::Party, Domain::Linkage];
-        domains.iter().enumerate().all(|(index, domain)| {
-            domains.iter().skip(index + 1).all(|other| {
-                !layout
-                    .placement(*domain)
-                    .shares_dsn_with(layout.placement(*other))
-            })
-        })
+        !layout
+            .placement(Domain::Clinical)
+            .shares_dsn_with(layout.placement(Domain::Party))
     }
 
     /// The resolved layout: which DSN each domain connects on, and which
@@ -357,7 +309,6 @@ impl StorageConfig {
         DomainLayout {
             clinical: place(Domain::Clinical),
             party: place(Domain::Party),
-            linkage: place(Domain::Linkage),
             audit: place(Domain::Audit),
         }
     }
@@ -390,7 +341,7 @@ impl DomainPlacement {
     }
 }
 
-/// The resolved placement of all four domains — what `config check` prints and
+/// The resolved placement of all three domains — what `config check` prints and
 /// what the boot gate reads.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DomainLayout {
@@ -398,8 +349,6 @@ pub struct DomainLayout {
     clinical: DomainPlacement,
     /// Where the party domain is placed.
     party: DomainPlacement,
-    /// Where the linkage domain is placed.
-    linkage: DomainPlacement,
     /// Where the audit domain is placed.
     audit: DomainPlacement,
 }
@@ -411,15 +360,14 @@ impl DomainLayout {
         match domain {
             Domain::Clinical => &self.clinical,
             Domain::Party => &self.party,
-            Domain::Linkage => &self.linkage,
             Domain::Audit => &self.audit,
         }
     }
 
     /// Every placement, in [`Domain::ALL`] order.
     #[must_use]
-    pub const fn placements(&self) -> [&DomainPlacement; 4] {
-        [&self.clinical, &self.party, &self.linkage, &self.audit]
+    pub const fn placements(&self) -> [&DomainPlacement; 3] {
+        [&self.clinical, &self.party, &self.audit]
     }
 
     /// Returns the distinct DSNs, each with the domains placed on it, in domain
@@ -493,7 +441,7 @@ impl DomainGroup<'_> {
     }
 }
 
-/// The four connection pools the server runs on, one per storage domain.
+/// The three connection pools the server runs on, one per storage domain.
 ///
 /// They differ in `search_path` always, and in credential when the deployment
 /// gives a domain its own `[storage.<domain>].url`. Holding them in one value
@@ -505,8 +453,6 @@ pub struct DomainPools {
     pub clinical: PgPool,
     /// Serves the `party` schema.
     pub party: PgPool,
-    /// Serves the `linkage` schema.
-    pub linkage: PgPool,
     /// Serves the `audit` schema.
     pub audit: PgPool,
 }
@@ -518,13 +464,12 @@ impl DomainPools {
         match domain {
             Domain::Clinical => &self.clinical,
             Domain::Party => &self.party,
-            Domain::Linkage => &self.linkage,
             Domain::Audit => &self.audit,
         }
     }
 
-    /// Four lazily-opened pools over the DSN one existing pool already holds —
-    /// the co-located deployment's four domains, for a caller that has a
+    /// Three lazily-opened pools over the DSN one existing pool already holds —
+    /// the co-located deployment's three domains, for a caller that has a
     /// [`PgPool`] and no configuration.
     ///
     /// [`crate::db::domain_pool_from`] per domain: pool defaults rather than a
@@ -534,7 +479,6 @@ impl DomainPools {
         Self {
             clinical: crate::db::domain_pool_from(pool, Domain::Clinical),
             party: crate::db::domain_pool_from(pool, Domain::Party),
-            linkage: crate::db::domain_pool_from(pool, Domain::Linkage),
             audit: crate::db::domain_pool_from(pool, Domain::Audit),
         }
     }
@@ -590,10 +534,7 @@ mod tests {
         let layout = storage.layout(&DbConfig::default());
         let groups = layout.groups();
         assert_eq!(groups.len(), 2, "{groups:?}");
-        assert_eq!(
-            groups[0].domains,
-            vec![Domain::Clinical, Domain::Linkage, Domain::Audit]
-        );
+        assert_eq!(groups[0].domains, vec![Domain::Clinical, Domain::Audit]);
         assert_eq!(groups[1].domains, vec![Domain::Party]);
         assert!(layout.placement(Domain::Party).separated);
         assert!(
@@ -603,11 +544,26 @@ mod tests {
         );
     }
 
+    /// The linkage domain is gone (#4684): a configuration that still names it
+    /// is refused like any unknown key, never run without the separation it
+    /// asked for.
+    #[test]
+    fn the_retired_linkage_storage_keys_are_refused() {
+        for body in [
+            "[storage.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
+            "[storage.migrate.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
+        ] {
+            let err =
+                toml::from_str::<crate::config::FerroEhrConfig>(body).expect_err("an unknown key");
+            assert!(err.to_string().contains("linkage"), "{body}: {err}");
+        }
+    }
+
     #[test]
     fn the_layout_description_never_carries_a_dsn() {
         let storage = StorageConfig {
-            linkage: DomainDsn {
-                url: Some(SecretUrl::new("postgres://secret:pw@host/linkage")),
+            party: DomainDsn {
+                url: Some(SecretUrl::new("postgres://secret:pw@host/party")),
                 url_file: None,
             },
             ..StorageConfig::default()

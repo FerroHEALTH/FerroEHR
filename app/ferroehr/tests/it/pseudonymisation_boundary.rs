@@ -144,17 +144,14 @@ async fn the_boundary_refuses_an_ehr_scoped_object_in_the_demographic_schema() {
 /// Each runtime role, with a short per-test login suffix and the schemas the
 /// pseudonymisation boundary bars it from.
 ///
-/// Three domains, mutually barred: the clinical roles are barred from the
-/// demographic domain and its cold tier and from the linkage map; the
-/// demographic roles from the clinical ones and from the map; the linkage role
-/// from both of the domains its rows join. No openEHR spec governs database
-/// roles — our own design/extension.
+/// Two domains, mutually barred: the clinical roles are barred from the
+/// demographic domain, and the demographic roles from the clinical one. No
+/// openEHR spec governs database roles — our own design/extension.
 const BARRIERS: &[(&str, &str, &[&str])] = &[
-    ("ew", "ferroehr_clinical", &["party", "linkage"]),
-    ("er", "ferroehr_clinical_reader", &["party", "linkage"]),
-    ("dw", "ferroehr_party", &["clinical", "linkage"]),
-    ("dr", "ferroehr_party_reader", &["clinical", "linkage"]),
-    ("lk", "ferroehr_linkage", &["clinical", "party"]),
+    ("ew", "ferroehr_clinical", &["party"]),
+    ("er", "ferroehr_clinical_reader", &["party"]),
+    ("dw", "ferroehr_party", &["clinical"]),
+    ("dr", "ferroehr_party_reader", &["clinical"]),
 ];
 
 /// `SQLSTATE` 42501 `insufficient_privilege` — what `PostgreSQL` reports for a
@@ -470,16 +467,9 @@ async fn the_boot_self_check_refuses_a_cross_domain_grant() {
             "GRANT SELECT ON SEQUENCE",
             "REVOKE SELECT ON SEQUENCE",
         ),
-        // The linkage role reaching a domain it separates.
+        // The party role reaching the clinical domain: the other direction.
         (
-            "ferroehr_linkage",
-            "party.version",
-            "table",
-            "GRANT SELECT ON",
-            "REVOKE SELECT ON",
-        ),
-        (
-            "ferroehr_linkage",
+            "ferroehr_party",
             "clinical.version",
             "table",
             "GRANT SELECT ON",

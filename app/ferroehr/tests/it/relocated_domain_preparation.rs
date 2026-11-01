@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Schema preparation for a storage domain in a database of its own: the
-//! linkage domain prepared and verified in a second database, on that
-//! database's `[storage.migrate.linkage]` credential.
+//! party domain prepared and verified in a second database, on that
+//! database's `[storage.migrate.party]` credential.
 //!
 //! The second database comes from `testkit::empty_db()`, because preparing an
 //! empty database IS the behaviour under test; the first is an ordinary
@@ -44,18 +44,18 @@ async fn login(db: &testkit::TestDb, suffix: &str, domain_role: &str) -> (String
     (login, password)
 }
 
-/// The first database's DSN for every domain but linkage, and the second
-/// database for linkage: on its runtime login, and on the harness credential
+/// The first database's DSN for every domain but party, and the second
+/// database for party: on its runtime login, and on the harness credential
 /// as that database's migrator.
-fn relocated_linkage(runtime: &str, migrator: &str) -> StorageConfig {
+fn relocated_party(runtime: &str, migrator: &str) -> StorageConfig {
     let mut storage = StorageConfig {
-        linkage: DomainDsn {
+        party: DomainDsn {
             url: Some(SecretUrl::new(runtime)),
             url_file: None,
         },
         ..StorageConfig::default()
     };
-    storage.migrate.linkage.url = Some(SecretUrl::new(migrator));
+    storage.migrate.party.url = Some(SecretUrl::new(migrator));
     storage
 }
 
@@ -72,26 +72,26 @@ async fn exists(pool: &sqlx::PgPool, relation: &str) -> bool {
 async fn schemas_of_this_build(pool: &sqlx::PgPool) -> Vec<String> {
     sqlx::query_scalar(
         "SELECT nspname::text FROM pg_namespace \
-         WHERE nspname IN ('ext', 'clinical', 'party', 'linkage', 'audit') ORDER BY 1",
+         WHERE nspname IN ('ext', 'clinical', 'party', 'audit') ORDER BY 1",
     )
     .fetch_all(pool)
     .await
     .expect("read the schemas")
 }
 
-/// The linkage domain alone in a second database is prepared under `apply`,
+/// The party domain alone in a second database is prepared under `apply`,
 /// verified under `verify`, and boots under both.
 ///
-/// The linkage grant file revokes a function only the party set creates, so
-/// the second database receives the party set as a companion: its schema and
-/// bookkeeping, and no clinical relation at all.
+/// The party grant file revokes its roles from the clinical schema by name, so
+/// the second database holds an empty clinical schema while the set applies,
+/// and loses it again afterwards.
 #[tokio::test]
-async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
+async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
     let db = testkit::db().await.expect("testkit database");
     let second = testkit::empty_db().await.expect("a second, empty database");
-    let (linkage_login, password) = login(&db, "rellink", "ferroehr_linkage").await;
-    let storage = relocated_linkage(
-        &with_role(second.url(), &linkage_login, &password),
+    let (party_login, password) = login(&db, "relparty", "ferroehr_party").await;
+    let storage = relocated_party(
+        &with_role(second.url(), &party_login, &password),
         second.url(),
     );
     let applying = DbConfig {
@@ -101,25 +101,18 @@ async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
 
     ferroehr::db::apply_schema(&applying, &storage)
         .await
-        .expect("`apply` prepares the linkage domain in its own database");
+        .expect("`apply` prepares the party domain in its own database");
     let relocated = second.pool();
-    assert!(
-        !exists(&relocated, "linkage.subject_ehr").await,
-        "the linkage set ends with the cross-reference dropped"
-    );
-    assert!(exists(&relocated, "linkage._sqlx_migrations").await);
-    assert!(
-        exists(&relocated, "party._sqlx_migrations").await,
-        "the companion party set is applied beside linkage"
-    );
+    assert!(exists(&relocated, "party._sqlx_migrations").await);
+    assert!(exists(&relocated, "party.version").await);
     assert!(
         !exists(&relocated, "clinical.version").await,
-        "and nothing of the clinical domain reaches the linkage database"
+        "and nothing of the clinical domain reaches the party database"
     );
     assert_eq!(
         schemas_of_this_build(&relocated).await,
-        ["ext", "linkage", "party"],
-        "the linkage database holds ext and its own sets' schemas, not an empty \
+        ["ext", "party"],
+        "the party database holds ext and its own set's schema, not an empty \
          clinical or audit schema"
     );
 
@@ -129,7 +122,7 @@ async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
     };
     ferroehr::db::verify_schema(&verifying, &storage)
         .await
-        .expect("`verify` accepts the linkage domain in its own database");
+        .expect("`verify` accepts the party domain in its own database");
 
     // The binary's own boot sequence, in both modes.
     let pools = ferroehr::db::connect_domains(&verifying, &storage)
@@ -141,24 +134,24 @@ async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
             .expect("the relocated layout boots");
     }
     let applied: i64 = sqlx::query_scalar("SELECT count(*) FROM _sqlx_migrations")
-        .fetch_one(&pools.linkage)
+        .fetch_one(&pools.party)
         .await
-        .expect("the linkage pool reads its own domain in the second database");
-    assert_eq!(applied, 6, "the linkage set is applied whole");
+        .expect("the party pool reads its own domain in the second database");
+    assert_eq!(applied, 20, "the party set is applied whole");
     pools.close().await;
 
     let inventory = ferroehr::db::erase_inventory(&applying, &storage)
         .await
         .expect("the erasure inventory reaches both databases");
-    let linkage_database = inventory
+    let party_database = inventory
         .databases
         .iter()
-        .find(|database| database.domains == [Domain::Linkage])
+        .find(|database| database.domains == [Domain::Party])
         .expect("the second database is its own entry");
     assert_eq!(
-        linkage_database.schemas,
-        ["linkage", "party", "ext"],
-        "an erasure drops the companion set's schema too"
+        party_database.schemas,
+        ["party", "ext"],
+        "an erasure drops the party schema and ext"
     );
 }
 
@@ -169,9 +162,9 @@ async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
 async fn a_relocated_domain_without_its_migrator_names_the_remedy() {
     let db = testkit::db().await.expect("testkit database");
     let second = testkit::empty_db().await.expect("a second, empty database");
-    let (linkage_login, password) = login(&db, "relnomig", "ferroehr_linkage").await;
-    let prepared = relocated_linkage(
-        &with_role(second.url(), &linkage_login, &password),
+    let (party_login, password) = login(&db, "relnomig", "ferroehr_party").await;
+    let prepared = relocated_party(
+        &with_role(second.url(), &party_login, &password),
         second.url(),
     );
     let settings = DbConfig {
@@ -183,7 +176,7 @@ async fn a_relocated_domain_without_its_migrator_names_the_remedy() {
         .expect("prepare the second database");
 
     let mut runtime_only = prepared;
-    runtime_only.migrate.linkage.url = None;
+    runtime_only.migrate.party.url = None;
     let error = ferroehr::db::verify_schema(
         &DbConfig {
             migrate: MigrationMode::Verify,
@@ -192,13 +185,13 @@ async fn a_relocated_domain_without_its_migrator_names_the_remedy() {
         &runtime_only,
     )
     .await
-    .expect_err("a linkage runtime role cannot read the ext bookkeeping");
+    .expect_err("a party runtime role cannot read the ext bookkeeping");
     let rendered = error.to_string();
     let DbError::SchemaUnreadable { schema, role, .. } = error else {
         panic!("a privilege refusal must not surface as a bare driver error: {rendered}")
     };
     assert_eq!(schema, "ext");
-    assert_eq!(role, linkage_login);
+    assert_eq!(role, party_login);
     assert!(
         rendered.contains("[storage.migrate.<domain>] url"),
         "the refusal names the relocated domain's migrator: {rendered}"
@@ -212,19 +205,19 @@ async fn a_relocated_domain_without_its_migrator_names_the_remedy() {
 async fn a_migrator_reaching_another_database_is_refused() {
     let db = testkit::db().await.expect("testkit database");
     let second = testkit::empty_db().await.expect("a second, empty database");
-    let storage = relocated_linkage(
-        &format!("{}?application_name=linkage", db.url()),
+    let storage = relocated_party(
+        &format!("{}?application_name=party", db.url()),
         second.url(),
     );
 
     let error = ferroehr::db::apply_schema(&DbConfig::new(db.url()), &storage)
         .await
-        .expect_err("the two linkage credentials reach two databases");
+        .expect_err("the two party credentials reach two databases");
     assert!(
         matches!(
             error,
             DbError::DomainMigratorElsewhere {
-                domain: Domain::Linkage
+                domain: Domain::Party
             }
         ),
         "{error}"
@@ -235,17 +228,17 @@ async fn a_migrator_reaching_another_database_is_refused() {
     );
 }
 
-/// Prepares the first database with every domain but linkage and a second,
-/// empty one with linkage alone, and returns the settings, the layout and the
+/// Prepares the first database with every domain but party and a second,
+/// empty one with party alone, and returns the settings, the layout and the
 /// second database.
-async fn prepared_relocated_linkage(
+async fn prepared_relocated_party(
     db: &testkit::TestDb,
     suffix: &str,
 ) -> (DbConfig, StorageConfig, testkit::TestDb) {
     let second = testkit::empty_db().await.expect("a second, empty database");
-    let (linkage_login, password) = login(db, suffix, "ferroehr_linkage").await;
-    let storage = relocated_linkage(
-        &with_role(second.url(), &linkage_login, &password),
+    let (party_login, password) = login(db, suffix, "ferroehr_party").await;
+    let storage = relocated_party(
+        &with_role(second.url(), &party_login, &password),
         second.url(),
     );
     let settings = DbConfig {
@@ -259,12 +252,12 @@ async fn prepared_relocated_linkage(
 }
 
 /// The grant sweep runs in every database a pool reaches: a cross-domain grant
-/// made in the relocated linkage database refuses the boot, although the first
+/// made in the relocated party database refuses the boot, although the first
 /// database's grants are intact.
 #[tokio::test]
 async fn the_grant_sweep_reaches_a_relocated_database() {
     let db = testkit::db().await.expect("testkit database");
-    let (settings, storage, second) = prepared_relocated_linkage(&db, "relsweep").await;
+    let (settings, storage, second) = prepared_relocated_party(&db, "relsweep").await;
     let pools = ferroehr::db::connect_domains(&settings, &storage)
         .await
         .expect("the domain pools connect");
@@ -276,7 +269,7 @@ async fn the_grant_sweep_reaches_a_relocated_database() {
     .await
     .expect("both databases hold the boundary as prepared");
 
-    sqlx::query("GRANT SELECT ON party.version TO ferroehr_linkage")
+    sqlx::query("GRANT SELECT ON party.version TO ferroehr_clinical")
         .execute(&second.pool())
         .await
         .expect("breach the boundary in the second database only");
@@ -286,25 +279,25 @@ async fn the_grant_sweep_reaches_a_relocated_database() {
         DeploymentProfile::Sandbox,
     )
     .await
-    .expect_err("the breach in the linkage database refuses the boot");
+    .expect_err("the breach in the party database refuses the boot");
     pools.close().await;
     let DbError::DomainIsolationBreached { role, relation, .. } = error else {
         panic!("a cross-domain grant must surface as a breach: {error}")
     };
-    assert_eq!(role, "ferroehr_linkage");
+    assert_eq!(role, "ferroehr_clinical");
     assert!(relation.starts_with("party."), "{relation}");
 }
 
 /// An erasure of the relocated layout leaves no schema of this build in the
-/// linkage database, and drops every set the first database is prepared with.
+/// party database, and drops every set the first database is prepared with.
 ///
 /// The first database is a migrated clone, so it also carries a populated
-/// `linkage` schema this layout places elsewhere; an erasure never drops a
+/// `party` schema this layout places elsewhere; an erasure never drops a
 /// schema that holds objects outside its plan, so that one stays.
 #[tokio::test]
 async fn an_erasure_empties_the_relocated_database() {
     let db = testkit::db().await.expect("testkit database");
-    let (settings, storage, second) = prepared_relocated_linkage(&db, "relerase").await;
+    let (settings, storage, second) = prepared_relocated_party(&db, "relerase").await;
     ferroehr::db::erase_schema(&settings, &storage)
         .await
         .expect("the erasure runs");
@@ -314,7 +307,7 @@ async fn an_erasure_empties_the_relocated_database() {
     );
     assert_eq!(
         schemas_of_this_build(&db.pool()).await,
-        vec!["linkage".to_owned()]
+        vec!["party".to_owned()]
     );
 }
 
@@ -330,13 +323,12 @@ async fn a_runtime_role_cannot_write_its_migration_bookkeeping() {
     for (suffix, role, schema) in [
         ("bkclin", "ferroehr_clinical", "clinical"),
         ("bkparty", "ferroehr_party", "party"),
-        ("bklink", "ferroehr_linkage", "linkage"),
     ] {
         let (login, password) = login(&db, suffix, role).await;
         let pool = sqlx::PgPool::connect(&with_role(db.url(), &login, &password))
             .await
             .expect("connect as the runtime login");
-        // The schema name is one of the three literals above, never input.
+        // The schema name is one of the two literals above, never input.
         let read: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
             "SELECT count(*) FROM {schema}._sqlx_migrations"
         )))

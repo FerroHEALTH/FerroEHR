@@ -133,7 +133,7 @@ database:
   caConfigMapKey: ca.crt
 
   # ── one credential per storage domain ──────────────────────────────────────
-  # The four storage domains — clinical, party, linkage, audit — are separated
+  # The three storage domains — clinical, party, audit — are separated
   # by schema unconditionally, and the server refuses to boot if a runtime role
   # can read across. What the blocks below add is the CREDENTIAL separation, and
   # with it the ability to move a domain to a database or cluster of its own:
@@ -150,25 +150,25 @@ database:
   # replication carry every schema together. No openEHR spec governs database
   # roles — our own design.
   #
-  # The five runtime roles (ferroehr_clinical, ferroehr_party and a read-only
-  # twin of each, plus ferroehr_linkage) are created by the migrations ONLY when
-  # the migrator holds CREATEROLE; otherwise they are skipped with a NOTICE and
-  # provisioning them is yours. `ferroehr db verify` reports whether the
+  # The four runtime roles (ferroehr_clinical, ferroehr_party and a read-only
+  # twin of each) are created by the migrations ONLY when the migrator holds
+  # CREATEROLE; otherwise they are skipped with a NOTICE and provisioning them
+  # is yours. The released grant files also name ferroehr_linkage, so a first
+  # install without CREATEROLE needs that role too while the migrations run;
+  # the last migration drops it, or tells you to when it cannot. `ferroehr db verify` reports whether the
   # boundary holds, and `deployment_profile: production` refuses to boot while a
   # domain role is missing.
   #
-  # Set every domain and no credential the server uses can join an identity to a
-  # record in SQL: ferroehr_linkage is revoked from the clinical and party
-  # schemas and both are revoked from linkage, in both directions. The crossing
-  # then happens in the application, over two connections, and every resolution
-  # is recorded as a linkage-domain access event.
+  # Set both pseudonymisation domains and no credential the server uses can
+  # join an identity to a record in SQL: each domain's roles are revoked from
+  # the other's schema. The crossing then happens in the application, over two
+  # connections, and every resolution is recorded as a linkage-domain access
+  # event.
   #
   # A domain may live in a database or cluster of its own. Such a database is
   # prepared, and verified, on ITS migration credential: give the domain a
   # `migrateExistingSecret` below, and the migration Job and the server both
-  # mount it. A database holding linkage without party also receives the
-  # party migration set (its schema only, never a pool or a row), because the
-  # linkage set names a function the party set creates.
+  # mount it.
 
   clinical:
     # -- Reference an existing Secret holding the CLINICAL-role DSN
@@ -212,27 +212,6 @@ database:
     migrateExistingSecret: ""
     # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
     migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__PARTY__URL
-
-  linkage:
-    # -- Reference an existing Secret holding the LINKAGE-role DSN
-    # (`postgres://ferroehr_linkage:...@host:5432/ferroehr`), a third
-    # credential distinct from the two above.
-    existingSecret: ""
-    # -- Key WITHIN it holding that DSN. Mounted as a file.
-    existingSecretKey: FERROEHR__STORAGE__LINKAGE__URL
-    # -- Inline linkage DSN (DEV/TEST ONLY). Ignored when
-    # `linkage.existingSecret` is set.
-    url: ""
-    # -- Reference an existing Secret holding the DSN that PREPARES the database
-    # this domain lives in, when it is not the database
-    # `database.migrateExistingSecret` reaches (a migrator of THAT database).
-    # Mounted into the migration Job, which applies the schema there, and into
-    # the server, which verifies it there under `config.db.migrate=verify`.
-    # Empty: such a database is prepared on this domain's own DSN, which a
-    # DML-only role cannot do.
-    migrateExistingSecret: ""
-    # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL
 
   audit:
     # -- Reference an existing Secret holding the DSN the audit repository is
@@ -349,20 +328,14 @@ migrations:
 # https://eur-lex.europa.eu/eli/reg/2016/679/oj), and the restore capability is
 # Art. 32(1)(c). The mechanism is `pg_dump --schema`
 # (https://www.postgresql.org/docs/18/app-pgdump.html): the clinical job dumps
-# clinical and ext, the party job dumps party, and the linkage job dumps
-# linkage. THE AUDIT DOMAIN IS A FOURTH JOB, rendered only when
+# clinical and ext, and the party job dumps party. THE AUDIT DOMAIN IS A THIRD
+# JOB, rendered only when
 # `database.audit.existingSecret` gives that domain a database of its own: there
 # the clinical dump cannot reach the trail and nothing else would take it. While
 # the audit domain shares the clinical database it has no job of its own and the
 # clinical dump names its schema instead. Each domain's archival tier is a
 # partition inside its own schema, so it travels with it. No openEHR spec
 # governs backups — our own design/extension.
-#
-# THE LINKAGE DOMAIN IS A THIRD ARTEFACT, not a place in either of the other
-# two. `linkage.subject_ehr` is the map from a party to its EHR, so a dump
-# carrying it beside the identities — or beside the clinical record — hands one
-# holder the join the schema split withholds. Three domains, three dumps, three
-# credentials.
 #
 # EACH JOB NEEDS ITS OWN BACKUP CREDENTIAL, and it is not the pool's. Each
 # domain's runtime role is revoked from the other domains, so it cannot read a
@@ -373,7 +346,7 @@ migrations:
 # an environment variable.
 #
 # The chart keeps the dumps apart; ACCESS CONTROL over them is yours. Back the
-# claims with different volumes and give the party and linkage ones the narrower
+# claims with different volumes and give the party one the narrower
 # audience — any two domains sharing a claim is refused at render, because that
 # is the state this whole section exists to prevent.
 #
@@ -383,7 +356,7 @@ migrations:
 # not point-in-time recovery — PITR is instance-wide and stays database-side.
 # ─────────────────────────────────────────────────────────────────────────────
 backup:
-  # -- Render the per-domain backup CronJobs: clinical, party, linkage, and
+  # -- Render the per-domain backup CronJobs: clinical, party, and
   # audit when `database.audit.existingSecret` gives it a database of its own.
   # Each rendered domain then needs its own `persistentVolumeClaim` below, or
   # the render is refused.
@@ -454,30 +427,9 @@ backup:
     # (two domains sharing a claim is refused at render). This is the volume
     # that carries identifying data; give it the narrower audience.
     persistentVolumeClaim: ""
-  linkage:
-    # -- Cron schedule for the linkage dump (schema linkage). Offset from the
-    # other two by default so no two dumps read the database in the same minute.
-    schedule: "15 2 * * *"
-    # -- REQUIRED when enabled: Secret holding the linkage BACKUP DSN — a role
-    # read-only on the linkage schema, and a DIFFERENT role from the other two.
-    # This credential reads the map from a party to its EHR, the additional
-    # information that re-identifies a pseudonymised record, so it is the
-    # narrowest of the three.
-    existingSecret: ""
-    # -- Key within `existingSecret` carrying that DSN. The name follows its two
-    # siblings and matches the server's own `database.linkage.existingSecretKey`
-    # for the linkage POOL, but this must be a different Secret holding the
-    # backup role's DSN: the pool's credential cannot dump the table. The probe
-    # restores this dump and checks the map's temporal key and forced row policy.
-    existingSecretKey: FERROEHR__STORAGE__LINKAGE__URL
-    # -- REQUIRED when enabled: an EXISTING PersistentVolumeClaim for the linkage
-    # dumps, and a DIFFERENT one from the other two claims (two domains sharing a
-    # claim is refused at render). A volume holding this dump beside either other
-    # domain's rebuilds the join the split exists to withhold.
-    persistentVolumeClaim: ""
   audit:
     # -- Cron schedule for the audit dump (schema audit). Offset from the other
-    # three by default so no two dumps read a database in the same minute. Only
+    # two by default so no two dumps read a database in the same minute. Only
     # read when `database.audit.existingSecret` is set; otherwise the trail
     # travels with the clinical dump and no audit job renders.
     schedule: "45 2 * * *"

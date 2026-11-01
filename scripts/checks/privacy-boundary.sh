@@ -20,8 +20,8 @@
 # of this - our own design.
 #
 # THE PATH LIST IS A SET OF PATTERNS MATCHED AGAINST THE DIFF, NEVER AN
-# ASSERTION THAT THE PATHS EXIST. The demographic and linkage schemas, the
-# linkage service, the identifier scanner and the access-event model are being
+# ASSERTION THAT THE PATHS EXIST. The demographic schema, the linkage
+# service, the identifier scanner and the access-event model are being
 # built (issues #3153, #3158, #3154, #3156). The guard has to pass cleanly on a
 # tree where those paths are absent and fire the moment the first of them
 # appears, so it matches names rather than checking a directory listing.
@@ -65,7 +65,7 @@ cd "$(dirname "$0")/../.."
 # The privacy boundary, as path patterns (extended regular expressions, matched
 # against the repository-relative path).
 readonly BOUNDARY_PATTERNS=(
-  '(^|/)migrations/(demographic|linkage)/'
+  '(^|/)migrations/demographic/'
   '^app/ferroehr/src/service/demographic/'
   '^app/ferroehr/src/service/linkage/'
   '^app/ferroehr[^/]*/src/.*identifier_scan'
@@ -228,7 +228,6 @@ self_test() {
 
   # The path patterns, including the paths that do not exist yet.
   expect_path hit 'app/ferroehr/migrations/demographic/0001_baseline.sql'
-  expect_path hit 'app/ferroehr/migrations/linkage/0001_baseline.sql'
   expect_path hit 'app/ferroehr/src/service/linkage/mod.rs'
   expect_path hit 'app/ferroehr/src/service/demographic/party.rs'
   expect_path hit 'app/ferroehr/src/scan/identifier_scanner.rs'

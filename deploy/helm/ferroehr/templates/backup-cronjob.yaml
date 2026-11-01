@@ -2,10 +2,9 @@
 {{- /*
 Per-domain logical backups: one CronJob per pseudonymisation domain, each
 dumping only its own schemas, to its own claim, under its own credential, plus
-a fourth for the audit domain when that domain has a database of its own.
+a third for the audit domain when that domain has a database of its own.
 
-Keeping the clinical record, the identifying data and the map between them in
-separate artefacts is the separation pseudonymisation rests on (GDPR Art. 4(5),
+Keeping the clinical record and the identifying data in separate artefacts is the separation pseudonymisation rests on (GDPR Art. 4(5),
 https://eur-lex.europa.eu/eli/reg/2016/679/oj); the dumps themselves are the
 restore capability of Art. 32(1)(c). `pg_dump --schema` is the mechanism
 (https://www.postgresql.org/docs/18/app-pgdump.html). No openEHR spec governs
@@ -22,7 +21,7 @@ THE AUDIT DOMAIN IS CONDITIONAL, and on one condition: `database.audit`
 naming a Secret of its own. Co-located, the audit schema sits in the clinical
 database and travels with the clinical dump, which is why that job names it.
 Given a DSN of its own the schema is in another database, where the clinical
-dump cannot reach it and nothing else would take it, so the fourth CronJob
+dump cannot reach it and nothing else would take it, so the third CronJob
 renders and the clinical job stops naming a schema it would dump empty. An
 inline `database.audit.url` does not reach this branch: it is a dev/test value
 that lands in the chart-managed Secret beside the others.
@@ -37,7 +36,6 @@ that lands in the chart-managed Secret beside the others.
             "claim" .Values.backup.clinical.persistentVolumeClaim
             "secret" .Values.backup.clinical.existingSecret
             "schemas" (ternary (list "clinical" "ext") (list "clinical" "ext" "audit") $auditElsewhere)
-            "extensions" (list)
             "claimWhy" "name an EXISTING PersistentVolumeClaim for the clinical dump (schemas clinical and ext, plus audit while the audit domain shares this database). The chart provisions no storage — a dump with nowhere to write is a backup that silently does not exist."
             "secretWhy" "name a Secret holding a BACKUP DSN for the clinical domain — a read-only role on the schemas this job dumps. It cannot be the pool's credential: each domain's runtime role is revoked from the others, so a dump taken through it would be silently partial.")
       (dict "name" "party"
@@ -45,17 +43,8 @@ that lands in the chart-managed Secret beside the others.
             "claim" .Values.backup.party.persistentVolumeClaim
             "secret" .Values.backup.party.existingSecret
             "schemas" (list "party")
-            "extensions" (list)
             "claimWhy" "name an EXISTING PersistentVolumeClaim for the party dump (schema party). It must be a different volume from every other domain's — that separation is what this feature is for (GDPR Art. 4(5))."
-            "secretWhy" "name a Secret holding a BACKUP DSN for the party domain — a read-only role on party. Give it its own role, not the clinical backup one: a single credential that dumps two domains re-joins in one identity what the split exists to separate (GDPR Art. 4(5)).")
-      (dict "name" "linkage"
-            "schedule" .Values.backup.linkage.schedule
-            "claim" .Values.backup.linkage.persistentVolumeClaim
-            "secret" .Values.backup.linkage.existingSecret
-            "schemas" (list "linkage")
-            "extensions" (list "btree_gist")
-            "claimWhy" "name an EXISTING PersistentVolumeClaim for the linkage dump (schema linkage). It must be a different volume from the other two: linkage.subject_ehr is the map from a party to its EHR, so a volume holding it beside either side of that map hands one holder the join the split withholds (GDPR Art. 4(5))."
-            "secretWhy" "name a Secret holding a BACKUP DSN for the linkage domain — a read-only role on linkage, and a different role from the other two. This credential reads the map that re-identifies a pseudonymised record, so it is the narrowest of the three.") }}
+            "secretWhy" "name a Secret holding a BACKUP DSN for the party domain — a read-only role on party. Give it its own role, not the clinical backup one: a single credential that dumps two domains re-joins in one identity what the split exists to separate (GDPR Art. 4(5)).") }}
 {{- if $auditElsewhere }}
 {{- $domains = append $domains
       (dict "name" "audit"
@@ -63,14 +52,13 @@ that lands in the chart-managed Secret beside the others.
             "claim" .Values.backup.audit.persistentVolumeClaim
             "secret" .Values.backup.audit.existingSecret
             "schemas" (list "audit")
-            "extensions" (list)
             "claimWhy" "name an EXISTING PersistentVolumeClaim for the audit dump (schema audit). database.audit names a Secret of its own, so the audit trail is in another database and the clinical dump cannot reach it: without this claim nothing backs up the access log at all."
             "secretWhy" "name a Secret holding a BACKUP DSN for the audit domain — a read-only role on audit in the database database.audit points at. The clinical backup credential is not it: that DSN names the clinical database, which is not where this trail lives.") }}
 {{- end }}
 {{- /* Every domain needs a destination of its own, and no two may share one.
        The collision is checked PAIRWISE rather than against the clinical claim
-       only: "party and linkage on one volume" is the same re-identification
-       artefact as any other pair. Destinations are checked before credentials
+       only: any two domains on one volume are the same re-identification
+       artefact. Destinations are checked before credentials
        so an operator enabling the feature is told about every missing claim
        before being sent to look for roles. */}}
 {{- range $domain := $domains }}
@@ -81,7 +69,7 @@ that lands in the chart-managed Secret beside the others.
 {{- range $i, $domain := $domains }}
 {{- range $j, $other := $domains }}
 {{- if and (lt $i $j) (eq $domain.claim $other.claim) }}
-{{- fail (printf "backup.%s.persistentVolumeClaim and backup.%s.persistentVolumeClaim name the same claim: one volume carrying two storage domains is the state per-domain backups exist to prevent (GDPR Art. 4(5)). Give each domain its own claim, and the party and linkage ones the narrower audience." $domain.name $other.name) }}
+{{- fail (printf "backup.%s.persistentVolumeClaim and backup.%s.persistentVolumeClaim name the same claim: one volume carrying two storage domains is the state per-domain backups exist to prevent (GDPR Art. 4(5)). Give each domain its own claim, and the party one the narrower audience." $domain.name $other.name) }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -93,15 +81,6 @@ that lands in the chart-managed Secret beside the others.
 {{- range $domain := $domains }}
 {{- $args := "" }}
 {{- range $schema := $domain.schemas }}{{ $args = printf "%s --schema=%s" $args $schema }}{{ end }}
-{{- /* A `--schema` dump carries no extension ("pg_dump makes no attempt to dump
-       any other database objects that the selected schema(s) might depend
-       upon" — PostgreSQL 18, pg_dump §Notes), so a domain whose DDL needs one
-       names it here. linkage.subject_ehr's temporal UNIQUE … WITHOUT
-       OVERLAPS is a GiST index over btree_gist operator classes: measured
-       2026-09-11 on 18.6, a restore without the extension fails that one
-       statement, pg_restore ignores the error by default, and the table comes
-       back without the key. */}}
-{{- range $extension := $domain.extensions }}{{ $args = printf "%s --extension=%s" $args $extension }}{{ end }}
 {{- /* The DSN is read from its mounted file at call time: only the PATH is in
        the pod spec, so the credential is never an environment variable an
        operator can read back off the object or a child process inherits

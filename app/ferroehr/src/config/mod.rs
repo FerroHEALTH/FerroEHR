@@ -73,7 +73,7 @@ pub struct FerroEhrConfig {
     /// `[db]` — the shared `PostgreSQL` DSN, pool tuning and migration mode.
     pub db: crate::db::DbConfig,
     /// `[storage]` — one DSN per storage domain (`clinical`, `party`,
-    /// `linkage`, `audit`), each defaulting to `[db].url`.
+    /// `audit`), each defaulting to `[db].url`.
     pub storage: crate::db::domain::StorageConfig,
     /// `[telemetry]`: the console, the request log and the OpenTelemetry
     /// export, the family's shared section.
@@ -1836,7 +1836,7 @@ mod tests {
              migrate_url_file = \"/dev/null\"\n",
             "[storage.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
-            "[storage.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n\
+            "[storage.audit]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
             "[storage.migrate.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
@@ -1889,7 +1889,7 @@ mod tests {
                     &migrate.path().display().to_string(),
                 ),
                 (
-                    "FERROEHR__STORAGE__MIGRATE__LINKAGE__URL_FILE",
+                    "FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE",
                     &migrate.path().display().to_string(),
                 ),
             ]),
@@ -1904,7 +1904,7 @@ mod tests {
              falling back to db.url as an unwired key would"
         );
         assert_eq!(
-            c.storage.migrate_dsn(crate::db::domain::Domain::Linkage),
+            c.storage.migrate_dsn(crate::db::domain::Domain::Audit),
             Some("postgres://m:p@h:5432/d"),
             "a relocated domain's migration credential arrives through the env grammar"
         );
@@ -1941,7 +1941,7 @@ mod tests {
         c.db.migrate_url = Some(leaky(2));
         c.storage.clinical.url = Some(leaky(3));
         c.storage.party.url = Some(leaky(4));
-        c.storage.linkage.url = Some(leaky(5));
+        c.storage.migrate.clinical.url = Some(leaky(5));
         c.storage.audit.url = Some(leaky(6));
         c.storage.migrate.party.url = Some(leaky(15));
         c.events.url = leaky(7);

@@ -63,19 +63,17 @@ module.**
   `search_path` (`db::connect_domain`,
   `FerroEhrService::demographic_pool`). Never schema-qualify a domain relation
   in SQL; `service::demographic/**` and the party-scoped `service::admin` paths
-  take `demographic_pool`, everything else takes `pool`. A third domain,
-  `linkage`, holds the party-to-EHR map under its own `ferroehr_linkage` role.
+  take `demographic_pool`, everything else takes `pool`. Which EHR belongs to
+  which subject is the `ehr` table's subject columns, and `service::linkage`
+  holds the crossings between the two domains with their access records.
   `db::verify_domain_isolation` is the boot gate over every runtime role
-  (`ferroehr_clinical`/`_reader`, `ferroehr_party`/`_reader`,
-  `ferroehr_linkage`).
+  (`ferroehr_clinical`/`_reader`, `ferroehr_party`/`_reader`).
 - **One pool and one DSN per domain** (`db/domain.rs`): `[storage.<domain>]`
-  carries `url`/`url_file` for `clinical`, `party`, `linkage` and `audit`, each
-  defaulting to `[db].url`, and `db::connect_domains` opens the four
+  carries `url`/`url_file` for `clinical`, `party` and `audit`, each
+  defaulting to `[db].url`, and `db::connect_domains` opens the three
   (`db::DomainPools`). Preparation is per DATABASE, on that database's migration
   credential (`[db].migrate_url`, or `[storage.migrate.<domain>]` for a database
-  of its own): the `ext` set, then each resident domain's set, plus the party
-  set as a companion where linkage lives without party (the shipped linkage
-  grant file revokes a party function). No statement
+  of its own): the `ext` set, then each resident domain's set. No statement
   ever names two domains' relations; `tests/it/one_schema_per_statement.rs`
   refuses one that does.
 - **AQL engine** (`src/aql/`): typed IR over the BMM-generated RM model, lowered

@@ -40,7 +40,7 @@ the Art. 30 fields, in
    an audit entry in the same transaction, and no version is overwritten.
 3. **Query** over stored content, in AQL.
 4. **Identity and linkage**: parties, protected national identifiers, and the
-   map from a party to the EHR whose subject it is.
+   resolution of a party or a subject to the EHRs whose subject it is.
 5. **Access logging**: one record per access, in DICOM PS3.15 and FHIR
    `AuditEvent` renderings.
 6. **Change-event publication**: a PHI-free envelope per commit, drained to a
@@ -51,20 +51,19 @@ reporting) operates on definitions rather than on people.
 
 ## 2. Data categories, by schema
 
-The database is split so that no single runtime credential holds two of the
-three parts. Each schema is a separate category of data with its own role.
+The database is split so that no single runtime credential holds both the
+clinical record and the identities. Each schema is a separate category of data with its own role.
 
 | Schema | Personal data it holds | GDPR category |
 |---|---|---|
 | `clinical` | Clinical content: compositions, EHR status, folders, contributions, attestations, item tags. The subject appears as `EHR_STATUS.subject.external_ref`, which is an opaque pseudonym once `[privacy] subject_namespaces` is declared | Art. 9 special-category health data |
 | `party` | Parties: persons, organisations, groups, agents, roles and their relationships, with names, addresses and contacts as the operational template defines them. Protected national identifiers live in `national_identifier`, sealed under a per-domain key with a keyed digest beside them | Art. 4(1) personal data; a national identifier is Art. 87 national identification number |
-| `linkage` | No relation since its `0006` migration: which EHR belongs to which subject is the EHR's own `EHR_STATUS.subject` in `clinical` | — |
 | `audit` | One record per access: who, from which organisation, under which roles, what they read or wrote, the declared purpose, the outcome and the time | Art. 4(1) personal data about both the subject and the accessing person |
 | `ext` | No personal data. Helper functions, the runtime roles and the deployment posture | — |
 
 ## 3. Roles and the credentials that serve them
 
-Five runtime database roles, each holding one domain and revoked from the
+Four runtime database roles, each holding one domain and revoked from the
 others in both directions, plus a migration credential used for one boot step.
 The full grant-by-grant table, and what a backup artefact per schema is worth
 to a holder, is
@@ -83,25 +82,22 @@ flowchart LR
     subgraph dom ["The pseudonymisation domain"]
         clin[("clinical<br/>clinical record,<br/>keyed by an opaque pseudonym")]
         demo[("party<br/>the person, and sealed<br/>national identifiers")]
-        link[("linkage<br/>which party and which subject<br/>identifier name which EHR")]
     end
     aud[("audit<br/>who reached what, when")]
     subject -.-> demo
     clin -. barred .- demo
-    clin -. barred .- link
-    demo -. barred .- link
-    link -->|"application-level crossing,<br/>two pools, recorded"| aud
+    clin -->|"application-level crossing,<br/>two pools, recorded"| aud
 ```
 
 Read one domain and you hold a clinical record whose subject is an opaque
-identifier, or a set of people with no records attached, or two identifier
-columns naming neither. Only the three together re-identify anything.
+identifier, or a set of people with no records attached. Only the two together
+re-identify anything.
 
-One call crosses the boundary. `resolve_ehr_for_identity` asks the demographic
-pool for the party holding a sealed identifier, by keyed digest and without
-decrypting, then asks the linkage pool for that party's EHR. The two hops are
-two connections in the application, so no statement performs the join and no
-credential could issue one. Every crossing writes an access record naming the
+A cohort and the AQL demographic join cross the boundary. Each selects parties
+on the demographic pool, then finds the EHRs whose `EHR_STATUS.subject` names
+those parties on the clinical pool. The two hops are two connections in the
+application, so no statement performs the join and no credential could issue
+one. Every crossing writes an access record naming the
 actor, the declared purpose and whether anything matched.
 
 ## 5. Retention
@@ -114,7 +110,6 @@ the controller's judgement rather than a default.
 |---|---|---|
 | Clinical content and its versions | Kept until an administrator deletes it. Archiving moves a record to the cold tier without expiring it | the admin API |
 | Demographic parties | The same | the admin API |
-| Linkage mappings | Kept while the EHR exists: a merge, a split or an index correction closes the period and opens a successor, and the linkage role holds no `DELETE`. Erasing the EHR erases them, through a `SECURITY DEFINER` function the role may execute but whose reach is one EHR id, so no additional information outlives the record it was additional to (Art. 17(1)) | the admin API |
 | Access records | Kept forever by default; reaped hourly when a retention is set | `[audit.store] retention_days` |
 | Change-event envelopes | Published rows pruned after seven days by default | `[events] retention_days` |
 
@@ -136,10 +131,10 @@ assessment has to size.
 
 | # | Risk | Shipped control | What remains |
 |---|---|---|---|
-| R1 | A clinical record and the identity of its subject are held together, so one credential re-identifies everyone | Three schemas, five `NOINHERIT` roles, explicit revokes in both directions, and a boot self-check that refuses to serve when a role can read across | With every `[storage.<domain>] url` unset, all four pools use one credential and the split is a schema split. A superuser and a cluster-wide restore span everything |
+| R1 | A clinical record and the identity of its subject are held together, so one credential re-identifies everyone | Two schemas, four `NOINHERIT` roles, explicit revokes in both directions, and a boot self-check that refuses to serve when a role can read across | With every `[storage.<domain>] url` unset, all three pools use one credential and the split is a schema split. A superuser and a cluster-wide restore span everything |
 | R2 | A national identifier is written into clinical content | The identifier scanner over every string leaf of every clinical write, `strict` by default, with all eight shipped rules active; the subject rule; the refusal of identifying party proxies; and a database trigger on `ehr` once the namespaces are declared | A rule matches a checksummed number, not a name, an address or a local record number. `subject_namespaces` is empty by default, which leaves the subject rule and the trigger out of force |
 | R3 | A national identifier is readable in the party store, in a backup or on a replica | AES-256-GCM per record with the scheme bound in, a keyed HMAC-SHA-256 digest for lookup, per-domain subkeys, and a `SECURITY DEFINER` resolve function only the party role may execute | Protection is off by default. An identifier whose scheme is not configured stays in the versioned body. The root key held beside a dump defeats all of it |
-| R4 | Someone re-identifies a record and nobody can tell afterwards | Every resolve, link, merge and split writes a `linkage`-domain access record naming the actor, purpose and outcome, including a miss | Recording is not prevention. An actor entitled to the crossing re-identifies by design |
+| R4 | Someone re-identifies a record and nobody can tell afterwards | Every resolution of a party or a subject to its EHRs writes a `linkage`-domain access record naming the actor, purpose and outcome, including a miss | Recording is not prevention. An actor entitled to the crossing re-identifies by design |
 | R5 | Content identifies a person without carrying an identifier | Small-cell suppression on the cohort query: a result serving fewer distinct EHRs than `cohort.small_cell_threshold` (default `5`) withholds its rows and says so | A rare diagnosis with a date and a place identifies without any identifier field. The threshold covers the cohort query alone; an ordinary AQL execution takes none |
 | R6 | One organisation reads another's rows | One instance per organisation: its own database, its own domain roles, and no relation, policy or session setting that two organisations could share. openEHR puts multi-tenancy at the layer hosting several systems rather than inside one (BASE `architecture_overview` `master06-design_of_the_ehr.adoc` §The EHR System) | The separation is now a deployment property, so two organisations pointed at one instance share everything and nothing in the software will catch it |
 | R7 | Access records are altered or lost | Records are hash-chained and `audit.verify_audit_chain()` names any that changed; the runtime role can insert and stamp delivery and nothing more; syslog and FHIR-feed forwarding put copies off the box | The chain is evidence, not prevention. A local repository shares the blast radius of the database it audits, and a read made straight against the database appears nowhere |
@@ -167,7 +162,6 @@ control is irrelevant to that source.
 | National identifiers sealed, looked up by keyed digest, resolved under audit | [#3155](https://github.com/FerroHEALTH/FerroEHR/issues/3155) | Art. 32(1)(a) | — | — | NEN 7510-2 cryptographic controls |
 | Per-domain access logging for reads and queries | [#3156](https://github.com/FerroHEALTH/FerroEHR/issues/3156) | — | — | Art. 9 | NEN 7513 event content |
 | Separate encryption keys and per-schema backup handling | [#3157](https://github.com/FerroHEALTH/FerroEHR/issues/3157) | Art. 4(5), Art. 32(1)(c) | — | — | — |
-| The linkage map as its own schema and role | [#3158](https://github.com/FerroHEALTH/FerroEHR/issues/3158) | Art. 4(5) | pseudonymisation domain | — | — |
 | The declared deployment profile: `production` refuses what it cannot prove | [#3226](https://github.com/FerroHEALTH/FerroEHR/issues/3226) | Art. 32(1) | — | — | — |
 | The server mints the subject pseudonym; no caller value becomes one | [#3232](https://github.com/FerroHEALTH/FerroEHR/issues/3232) | Art. 4(5) | — | — | — |
 | A jurisdictional floor under access-log retention | [#3242](https://github.com/FerroHEALTH/FerroEHR/issues/3242) | Art. 5(1)(e) | — | — | NEN 7513 retention |

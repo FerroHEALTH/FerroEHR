@@ -252,7 +252,7 @@ boot_one() {
       # overlay could set database.<domain>.existingSecret without failing this
       # check, so the branch that gives each domain its own credential would
       # stay unexercised by construction.
-      storage.clinical.url|storage.party.url|storage.linkage.url|storage.audit.url)
+      storage.clinical.url|storage.party.url|storage.audit.url)
         printf 'postgres://ferroehr_%s:pw@postgres:5432/ferroehr' \
           "$(printf '%s' "$base" | cut -d. -f2)" > "${secdir}/${base}" ;;
       # The credential that prepares the schema (#3224), for the same reason:
@@ -263,7 +263,7 @@ boot_one() {
         printf 'postgres://ferroehr_migrator:pw@postgres:5432/ferroehr' > "${secdir}/${base}" ;;
       # The migrator of a domain on a cluster of its own (#3762), which
       # database.<domain>.migrateExistingSecret supplies.
-      storage.migrate.clinical.url|storage.migrate.party.url|storage.migrate.linkage.url|storage.migrate.audit.url)
+      storage.migrate.clinical.url|storage.migrate.party.url|storage.migrate.audit.url)
         printf 'postgres://ferroehr_migrator:pw@postgres-%s:5432/ferroehr' \
           "$(printf '%s' "$base" | cut -d. -f3)" > "${secdir}/${base}" ;;
       *)

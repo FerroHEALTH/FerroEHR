@@ -9,7 +9,7 @@
 //! crate obtains a database handle. [`DbConfig`] (the `[db]` config section)
 //! carries the shared DSN and the pool tuning; [`domain::StorageConfig`] (the
 //! `[storage]` section) carries one DSN per storage domain, each defaulting to
-//! the shared one. [`connect_domains`] opens the four pools
+//! the shared one. [`connect_domains`] opens the three pools
 //! ([`domain::DomainPools`]) and [`prepare`] brings each database they reach to
 //! the state this build requires — on the migration DSN
 //! ([`DbConfig::migrate_dsn`]) for every domain that reaches the same database
@@ -517,7 +517,7 @@ pub async fn connect(settings: &DbConfig) -> Result<PgPool, DbError> {
     connect_domain(settings, &StorageConfig::default(), Domain::Clinical).await
 }
 
-/// Create all four domain pools.
+/// Create all three domain pools.
 ///
 /// The boot path's one call: every domain gets its own pool, its own
 /// `search_path` and — where the deployment named one — its own credential.
@@ -533,7 +533,6 @@ pub async fn connect_domains(
     Ok(DomainPools {
         clinical: connect_domain(settings, storage, Domain::Clinical).await?,
         party: connect_domain(settings, storage, Domain::Party).await?,
-        linkage: connect_domain(settings, storage, Domain::Linkage).await?,
         audit: connect_domain(settings, storage, Domain::Audit).await?,
     })
 }
@@ -586,15 +585,6 @@ static CLINICAL_MIGRATOR: Migrator = sqlx::migrate!("migrations/clinical");
 /// schema and both must exist.
 static PARTY_MIGRATOR: Migrator = sqlx::migrate!("migrations/party");
 
-/// The `linkage` schema — the linkage pseudonymisation domain: the map from a
-/// party to the EHR whose subject it is, the additional information that
-/// re-joins a pseudonymised record to a person (GDPR Art. 4(5) and
-/// Art. 32(1)(a); no openEHR spec governs storage layout — our own design).
-/// Runs after `party`: its grants revoke the clinical and party roles from
-/// this schema and this schema's role from theirs, so both sets of relations
-/// must already exist.
-static LINKAGE_MIGRATOR: Migrator = sqlx::migrate!("migrations/linkage");
-
 /// The `audit` schema — the local IHE ATNA Audit Record Repository (the
 /// `audit_event` table and its tamper chain). Strictly outside the EHR content
 /// (BASE `architecture_overview/master07-security.adoc` §Access logging:
@@ -607,7 +597,6 @@ const fn domain_migrator(domain: Domain) -> (&'static str, &'static Migrator) {
     match domain {
         Domain::Clinical => ("clinical", &CLINICAL_MIGRATOR),
         Domain::Party => ("party", &PARTY_MIGRATOR),
-        Domain::Linkage => ("linkage", &LINKAGE_MIGRATOR),
         Domain::Audit => ("audit", &AUDIT_MIGRATOR),
     }
 }
@@ -618,8 +607,8 @@ const fn domain_migrator(domain: Domain) -> (&'static str, &'static Migrator) {
 struct FirstGenerationSet {
     /// The schema the first generation's migration set ran in.
     schema: &'static str,
-    /// The description sqlx recorded for that set's version 1, when this build
-    /// also owns a set of the same name; `None` when the schema itself is
+    /// The description sqlx recorded for that set's version 1, when a later
+    /// generation reused the schema name; `None` when the schema itself is
     /// first-generation and any bookkeeping in it is the signature.
     ///
     /// sqlx derives the description from the file name after the version
@@ -641,8 +630,10 @@ struct FirstGenerationSet {
 /// lack, and its description names the file: the first generation opened `ext`
 /// with `0001_openehr_functions.sql` where this one opens it with
 /// `0001_schema_and_roles.sql`, and opened `linkage`/`audit` with
-/// `0001_baseline.sql` where this one opens them with `0001_schema_and_role`
-/// and `0001_schema_and_roles`. For `ehr` and `demographic`, which this build
+/// `0001_baseline.sql` where the second opened them with `0001_schema_and_role`
+/// and `0001_schema_and_roles`. A second-generation `linkage` schema is not
+/// refused: `audit/0021_drop_linkage_domain.sql` drops it. For `ehr` and
+/// `demographic`, which this build
 /// owns no set for, any bookkeeping at all is the signature — a bare schema of
 /// the same name is not, because `CREATE SCHEMA` is cheap and someone may have
 /// made one, while the bookkeeping table is written only by a migrator that ran
@@ -674,16 +665,6 @@ const FIRST_GENERATION_SETS: &[FirstGenerationSet] = &[
     },
 ];
 
-/// The extension the schema needs, installed by the bootstrap.
-///
-/// `btree_gist` is the only one: `linkage/0002_subject_ehr.sql`, applied
-/// before `linkage/0006_drop_subject_ehr.sql` drops the table, declares a
-/// temporal `UNIQUE (... WITHOUT OVERLAPS)` that PostgreSQL enforces as a `GiST`
-/// index over its operator classes
-/// (<https://www.postgresql.org/docs/18/sql-createtable.html>), and installing
-/// it here lets a plain PostgreSQL 18 database serve with nothing preinstalled.
-const BOOTSTRAP_EXTENSION: &str = "CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA ext";
-
 /// The schemas a database's preparation creates, in [`Domain::ALL`] order:
 /// each set's own, and each schema a set's statements name
 /// ([`Domain::names_schemas_of`]).
@@ -701,8 +682,7 @@ fn bootstrap_schemas(sets: &[Domain]) -> Vec<Domain> {
 }
 
 /// Bootstrap done outside the migrations, for a database where `sets` apply:
-/// the `ext` schema, the schemas [`bootstrap_schemas`] names, and
-/// [`BOOTSTRAP_EXTENSION`].
+/// the `ext` schema and the schemas [`bootstrap_schemas`] names.
 ///
 /// Every test proves it: `testkit` builds its template databases by running
 /// exactly this path, over every set, against a fresh database.
@@ -713,7 +693,6 @@ fn bootstrap_statements(sets: &[Domain]) -> Vec<String> {
             .into_iter()
             .map(|domain| format!("CREATE SCHEMA IF NOT EXISTS {}", domain.as_str())),
     );
-    statements.push(BOOTSTRAP_EXTENSION.to_owned());
     statements
 }
 
@@ -773,7 +752,7 @@ pub fn migration_fingerprint() -> String {
 /// Returns [`DbError::Acquire`] when no connection can be acquired within the
 /// acquire timeout, [`DbError::Sqlx`] when a bootstrap/`search_path` statement
 /// fails (e.g. the
-/// role lacks `CREATE` on the database, or `btree_gist` is unavailable), and
+/// role lacks `CREATE` on the database), and
 /// [`DbError::Migrate`] when a migration fails to apply or an
 /// already-applied migration fails checksum validation against the embedded
 /// source.
@@ -824,28 +803,6 @@ struct PreparationGroup {
     credential: PreparationCredential,
     /// The domains resident in it, in [`Domain::ALL`] order.
     domains: Vec<Domain>,
-}
-
-impl PreparationGroup {
-    /// The domain sets `apply` runs in this database, in [`Domain::ALL`] order:
-    /// each resident domain's, plus each companion set a resident one needs
-    /// ([`Domain::prepares_with`]).
-    ///
-    /// `verify` compares the resident sets only: a companion set serves no
-    /// pool, and the resident set that needs it could not have been applied
-    /// without it.
-    fn sets(&self) -> Vec<Domain> {
-        let mut sets = self.domains.clone();
-        for domain in &self.domains {
-            if let Some(required) = domain.prepares_with()
-                && !sets.contains(&required)
-            {
-                sets.push(required);
-            }
-        }
-        sets.sort_unstable();
-        sets
-    }
 }
 
 /// The database a connection reaches: its cluster and the database inside it.
@@ -974,8 +931,7 @@ async fn preparation_plan(
 /// reach.
 ///
 /// The `ext` set is applied in every such database, then each resident
-/// domain's set and any companion set one of them needs
-/// ([`Domain::prepares_with`]), on the credential the plan chose for that
+/// domain's set, on the credential the plan chose for that
 /// database: the migration DSN where it reaches it, a domain's
 /// `[storage.migrate.<domain>]` credential elsewhere, and a relocated domain's
 /// runtime DSN when neither is named.
@@ -991,7 +947,7 @@ async fn preparation_plan(
 pub async fn apply_schema(settings: &DbConfig, storage: &StorageConfig) -> Result<(), DbError> {
     for group in preparation_plan(settings, storage).await? {
         let mut conn = migration_connection(&group.dsn).await?;
-        let outcome = apply_migrations(&mut conn, &group.sets()).await;
+        let outcome = apply_migrations(&mut conn, &group.domains).await;
         close_quietly(conn).await;
         outcome?;
     }
@@ -1153,7 +1109,6 @@ pub async fn database_facts(
     let clusters = crate::config::deployment::ClusterIdentities {
         clinical: Some(cluster_identity(&pools.clinical).await?),
         party: Some(cluster_identity(&pools.party).await?),
-        linkage: Some(cluster_identity(&pools.linkage).await?),
         audit: Some(cluster_identity(&pools.audit).await?),
     };
     Ok(crate::config::deployment::DatabaseFacts {
@@ -1866,7 +1821,7 @@ async fn stored_instance_id(conn: &mut PgConnection) -> Result<Option<uuid::Uuid
 /// nothing.
 ///
 /// It connects as [`apply_schema`] does, one credential per database, and
-/// lists the schemas of every set `apply` runs there, companion sets included.
+/// lists the schemas of every set `apply` runs there.
 /// No openEHR spec governs this — our own design.
 ///
 /// # Errors
@@ -1888,7 +1843,7 @@ pub async fn erase_inventory(
             let database: String = sqlx::query_scalar("SELECT current_database()::text")
                 .fetch_one(&mut conn)
                 .await?;
-            let schemas = erasable_schemas(&mut conn, &group.sets()).await?;
+            let schemas = erasable_schemas(&mut conn, &group.domains).await?;
             let instance_id = if group.domains.contains(&Domain::Clinical) {
                 stored_instance_id(&mut conn).await?
             } else {
@@ -1913,10 +1868,10 @@ pub async fn erase_inventory(
 /// and with them every row they hold and the stored instance id.
 ///
 /// Per database, one transaction runs `DROP SCHEMA … CASCADE` for the `ext`
-/// schema and each resident domain's schema (`clinical`, `party`, `linkage`,
-/// `audit`), so a database is either erased whole or left as it was
+/// schema and each resident domain's schema (`clinical`, `party`, `audit`),
+/// so a database is either erased whole or left as it was
 /// (<https://www.postgresql.org/docs/18/sql-dropschema.html>). The cascade takes
-/// the `btree_gist` extension installed in `ext`, the cold-tier partitions and
+/// any extension installed in `ext`, the cold-tier partitions and
 /// the default privileges granted in those schemas. Cluster-wide objects stay:
 /// the `ferroehr_*` roles, and the database itself. Another domain's schema of
 /// this build that a database holds empty, as an earlier release left in a
@@ -1946,7 +1901,7 @@ pub async fn erase_schema(
     };
     for group in preparation_plan(settings, storage).await? {
         let mut conn = migration_connection(&group.dsn).await?;
-        let outcome = drop_owned_schemas(&mut conn, &group.sets()).await;
+        let outcome = drop_owned_schemas(&mut conn, &group.domains).await;
         close_quietly(conn).await;
         let (database, schemas, instance_id) = outcome?;
         report.instance_id = report.instance_id.or(instance_id);
@@ -2119,31 +2074,6 @@ mod tests {
         let source = error.source().expect("the divergence is the source");
         assert!(source.downcast_ref::<SchemaMismatch>().is_some());
         assert!(!error.to_string().contains(&mismatch_text), "{error}");
-    }
-
-    /// A database holding linkage without party applies the party set as a
-    /// companion; one holding both, or neither, applies only its own.
-    #[test]
-    fn the_linkage_set_brings_the_party_set_as_a_companion() {
-        let group = |domains: Vec<Domain>| PreparationGroup {
-            dsn: String::new(),
-            credential: PreparationCredential::DomainMigrator,
-            domains,
-        };
-        assert_eq!(
-            group(vec![Domain::Linkage]).sets(),
-            [Domain::Party, Domain::Linkage]
-        );
-        assert_eq!(
-            group(vec![Domain::Linkage, Domain::Audit]).sets(),
-            [Domain::Party, Domain::Linkage, Domain::Audit]
-        );
-        assert_eq!(
-            group(vec![Domain::Party, Domain::Linkage]).sets(),
-            [Domain::Party, Domain::Linkage]
-        );
-        assert_eq!(group(vec![Domain::Audit]).sets(), [Domain::Audit]);
-        assert_eq!(group(Domain::ALL.to_vec()).sets(), Domain::ALL);
     }
 
     /// With no domain relocated and no domain migrator named, the plan is the

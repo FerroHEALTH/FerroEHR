@@ -128,8 +128,8 @@ in the repository.
 - **No grant across the domains:** a database role reaches one of the three
   pseudonymisation domains, never a second. A migration granting across them
   rejoins the identities to the records the split exists to separate.
-- **A review step at the boundary:** a change touching the demographic or
-  linkage migrations, the demographic or linkage services, the identifier
+- **A review step at the boundary:** a change touching the demographic
+  migrations, the demographic or linkage services, the identifier
   scanner, the access-event model or an outbox payload builder describes its
   data flow, names the roles involved, and ticks the "Privacy boundary"
   checklist in the pull request template.

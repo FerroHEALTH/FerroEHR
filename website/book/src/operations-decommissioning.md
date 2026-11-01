@@ -62,7 +62,7 @@ status 1:
 $ ferroehr db erase
 `ferroehr db erase --confirm` would permanently delete:
   12 multimedia blob(s) in bucket `openehr-multimedia`
-  database `ferroehr`: schemas audit, linkage, party, clinical, ext
+  database `ferroehr`: schemas audit, party, clinical, ext
 instance id: 0b5e3c1e-6f4a-4d1b-9a43-2b7c5f1d8e90
 to erase, run: ferroehr db erase --confirm 0b5e3c1e-6f4a-4d1b-9a43-2b7c5f1d8e90
 Error: dry run: nothing was erased
@@ -99,10 +99,9 @@ The command runs in this order:
    objects at the bucket root named by a 64-character lowercase hex SHA-256;
    any other object in the bucket is left alone.
 4. For each database, in one transaction, it drops the schemas `ext`,
-   `clinical`, `party`, `linkage` and `audit` that live there, with
+   `clinical`, `party` and `audit` that live there, with
    `DROP SCHEMA … CASCADE`. The cascade takes every table, row, function,
-   partition and stored setting in them, and the `btree_gist` extension
-   installed in `ext`. A database is either erased whole or left as it was.
+   partition and stored setting in them. A database is either erased whole or left as it was.
 
 It connects as `ferroehr db migrate` does: on `[db] migrate_url` (or
 `[db] url` when that is unset) for every domain in that database, and on a
@@ -127,8 +126,7 @@ following are outside them, and removing them is your job.
 Your `pg_dump` files, base backups and volume snapshots still hold everything.
 With the chart's backup CronJobs (`backup.enabled`), the dumps are on the
 PersistentVolumeClaims you named in `backup.clinical.persistentVolumeClaim`,
-`backup.party.persistentVolumeClaim`, `backup.linkage.persistentVolumeClaim`
-and, when the audit domain has its own database,
+`backup.party.persistentVolumeClaim` and, when the audit domain has its own database,
 `backup.audit.persistentVolumeClaim`. The chart created none of these claims,
 so `helm uninstall` leaves them. Keep the ones your retention duties require
 and delete the rest.
@@ -152,18 +150,19 @@ DROP DATABASE ferroehr WITH (FORCE);
 
 Run it as the owner or a superuser, connected to another database
 ([DROP DATABASE](https://www.postgresql.org/docs/18/sql-dropdatabase.html)).
-Repeat it for every database `[storage.party]`, `[storage.linkage]` or
-`[storage.audit]` names.
+Repeat it for every database `[storage.party]` or `[storage.audit]` names.
 
 The roles are cluster-wide, so neither command removes them: the migrations
 create `ferroehr_migrator`, `ferroehr_clinical`, `ferroehr_clinical_reader`,
-`ferroehr_party`, `ferroehr_party_reader` and `ferroehr_linkage`, and you
-created the login roles your DSNs use. Drop them when no other database on the
-cluster uses them:
+`ferroehr_party` and `ferroehr_party_reader`, and you created the login roles
+your DSNs use. `ferroehr_linkage` is there too when a migrator without
+`CREATEROLE` could not drop it. Drop them when no other database on the cluster
+uses them:
 
 ```sql
 DROP ROLE ferroehr_clinical, ferroehr_clinical_reader, ferroehr_party,
-          ferroehr_party_reader, ferroehr_linkage, ferroehr_migrator;
+          ferroehr_party_reader, ferroehr_migrator;
+DROP ROLE IF EXISTS ferroehr_linkage;
 ```
 
 [DROP ROLE](https://www.postgresql.org/docs/18/sql-droprole.html) refuses a
@@ -250,7 +249,7 @@ The other two ways to remove a party:
 The integration suite of the `ferroehr` crate writes an EHR with a composition,
 a party, a party-to-EHR mapping, an audit record and an instance id into a
 database, checks that a wrong confirmation changes nothing, erases, and checks
-that none of the five schemas, and so no row, remains and that a second run is
+that none of the four schemas, and so no row, remains and that a second run is
 a no-op. A second test deletes blobs from an in-memory store, and a third shows
 that an unreachable store stops the erase before the database is touched. The
 command has not been run against a real S3 bucket, a multi-database layout or a

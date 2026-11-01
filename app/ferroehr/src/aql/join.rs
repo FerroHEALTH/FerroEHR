@@ -14,14 +14,14 @@
 //! FROM PERSON p CONTAINS (<party classes> AND EHR e [CONTAINS <clinical classes>])
 //! ```
 //!
-//! with `ORGANISATION` or `ROLE` as the root too. The party, the linkage map
-//! and the clinical content each live behind their own pool and role, so no
+//! with `ORGANISATION` or `ROLE` as the root too. The parties and the clinical
+//! content each live behind their own pool and role, so no
 //! statement can answer the query; [`split`] cuts it into a party query (the
 //! root, its party classes, the `WHERE` conjuncts and columns that read them)
 //! and a clinical query (the `EHR` and what it contains, likewise), each an
 //! ordinary single-domain AQL statement the engine plans and runs unchanged.
-//! The caller joins the two answers on the party-to-EHR map and on the
-//! `EHR_STATUS.subject` references that name the party: a row is a party row
+//! The caller joins the two answers on the `EHR_STATUS.subject` references
+//! that name the party: a row is a party row
 //! and a clinical row of an EHR that party is the subject of, so a party with
 //! no EHR and an EHR with no party answer nothing.
 //!

@@ -597,10 +597,6 @@ spec:
               value: "/etc/ferroehr-secrets/storage.party.url"
             - name: FERROEHR__STORAGE__MIGRATE__PARTY__URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.party.url"
-            - name: FERROEHR__STORAGE__LINKAGE__URL_FILE
-              value: "/etc/ferroehr-secrets/storage.linkage.url"
-            - name: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL_FILE
-              value: "/etc/ferroehr-secrets/storage.migrate.linkage.url"
             - name: FERROEHR__STORAGE__AUDIT__URL_FILE
               value: "/etc/ferroehr-secrets/storage.audit.url"
             - name: FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE
@@ -720,19 +716,6 @@ spec:
                   items:
                     - key: FERROEHR__STORAGE__MIGRATE__PARTY__URL
                       path: storage.migrate.party.url
-              # One storage domain's own Secret, a different credential from the
-              # shared DSN above and projected as its own file.
-              - secret:
-                  name: ferroehr-db-linkage
-                  items:
-                    - key: FERROEHR__STORAGE__LINKAGE__URL
-                      path: storage.linkage.url
-              # The migration credential of the database this domain lives in.
-              - secret:
-                  name: ferroehr-db-linkage-migrate
-                  items:
-                    - key: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL
-                      path: storage.migrate.linkage.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
@@ -935,10 +918,6 @@ spec:
               value: "/etc/ferroehr-secrets/storage.migrate.party.url"
             # The migrator of the database this domain lives in: the Job applies
             # the schema in every database the configuration places a domain in.
-            - name: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL_FILE
-              value: "/etc/ferroehr-secrets/storage.migrate.linkage.url"
-            # The migrator of the database this domain lives in: the Job applies
-            # the schema in every database the configuration places a domain in.
             - name: FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.audit.url"
             # This pod's job IS the DDL, whatever the server's posture is.
@@ -972,11 +951,6 @@ spec:
                   items:
                     - key: FERROEHR__STORAGE__MIGRATE__PARTY__URL
                       path: storage.migrate.party.url
-              - secret:
-                  name: ferroehr-db-linkage-migrate
-                  items:
-                    - key: FERROEHR__STORAGE__MIGRATE__LINKAGE__URL
-                      path: storage.migrate.linkage.url
               - secret:
                   name: ferroehr-db-audit-migrate
                   items:

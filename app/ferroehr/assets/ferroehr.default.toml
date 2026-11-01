@@ -175,7 +175,7 @@ acquire_timeout_secs = 30
 statement_timeout_ms = 60000
 
 # ── [storage] — one DSN per storage domain ───────────────────────────────────
-# Each domain always lives in its own schema (clinical, party, linkage, audit)
+# Each domain always lives in its own schema (clinical, party, audit)
 # and every pool carries only its own on its search_path. Set a url here to give
 # a domain its own database ROLE as well — and, if the DSN names another host, a
 # database or cluster of its own: a schema separates a domain inside one
@@ -191,18 +191,13 @@ statement_timeout_ms = 60000
 # reaches, and a domain in a database of its own is prepared on that database's
 # migration credential, [storage.migrate.<domain>] url, for both migrate =
 # "apply" and "verify". Unset, it falls back to the domain's own url, which a
-# DML-only runtime role cannot use. A database holding linkage without party
-# also receives the party migration set (empty, no pool), because the linkage
-# set names a function the party set creates.
+# DML-only runtime role cannot use.
 #? [storage.clinical]
 #? url = "postgres://ferroehr_clinical:...@localhost:5432/ferroehr"
 #? url_file = "/run/secrets/db-clinical-dsn"
 #? [storage.party]
 #? url = "postgres://ferroehr_party:...@localhost:5432/ferroehr"
 #? url_file = "/run/secrets/db-party-dsn"
-#? [storage.linkage]
-#? url = "postgres://ferroehr_linkage:...@localhost:5432/ferroehr"
-#? url_file = "/run/secrets/db-linkage-dsn"
 #? [storage.audit]
 #? url = "postgres://ferroehr_audit:...@localhost:5432/ferroehr_audit"
 #? url_file = "/run/secrets/db-audit-dsn"
@@ -212,9 +207,6 @@ statement_timeout_ms = 60000
 #? [storage.migrate.party]
 #? url = "postgres://ferroehr_migrator:...@party-db:5432/ferroehr"
 #? url_file = "/run/secrets/db-party-migrate-dsn"
-#? [storage.migrate.linkage]
-#? url = "postgres://ferroehr_migrator:...@linkage-db:5432/ferroehr"
-#? url_file = "/run/secrets/db-linkage-migrate-dsn"
 #? [storage.migrate.audit]
 #? url = "postgres://ferroehr_migrator:...@audit-db:5432/ferroehr_audit"
 #? url_file = "/run/secrets/db-audit-migrate-dsn"
@@ -752,8 +744,8 @@ rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-b
 patterns = []
 
 # ── [cohort] — cross-domain cohort queries ────────────────────────────────────
-# Select a population in the demographic domain, resolve it to EHRs through the
-# linkage domain, and run AQL over exactly those EHRs. No openEHR spec governs
+# Select a population in the demographic domain, resolve it to the EHRs whose
+# EHR_STATUS subject names it, and run AQL over exactly those EHRs. No openEHR spec governs
 # this — our own extension. OFF until a predicate is bound below: which
 # demographic leaf may be selected on is a deployment fact about the archetypes
 # in use, never something the server can infer.

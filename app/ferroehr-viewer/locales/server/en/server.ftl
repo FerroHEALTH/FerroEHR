@@ -19,7 +19,7 @@ requests-served-without-authentication = requests are served without authenticat
 schema-preparation-runs-clinical-runtime-credential = schema preparation runs on the clinical runtime credential
 access-not-recorded-durable-audit-trail = access is not recorded to a durable audit trail
 two-domains-reach-same-postgresql-cluster = two domains reach the same PostgreSQL cluster
-clinical-demographic-linkage-domains-share-one = the clinical, demographic and linkage domains share one database credential
+clinical-demographic-domains-share-one = the clinical and demographic domains share one database credential
 text-csv-charset-utf-8 = text/csv; charset=utf-8
 parameters-must-json-object = parameters must be a JSON object
 no-stored-query-run-open-one = no stored query to run: open one from the stored-query list

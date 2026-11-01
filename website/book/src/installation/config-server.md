@@ -340,7 +340,7 @@ govern.
 ## `[storage]`
 
 One DSN per storage domain. Every domain always lives in its own schema
-(`clinical`, `party`, `linkage`, `audit`) and every pool carries only its own on
+(`clinical`, `party`, `audit`) and every pool carries only its own on
 its `search_path`, so no statement can reach another domain's relations without
 naming a schema it is not granted. Setting a `url` here adds the CREDENTIAL
 separation, and — if the DSN names another host — lets the domain live in a
@@ -349,16 +349,12 @@ database or cluster of its own.
 ```toml
 [storage.party]
 url_file = "/run/secrets/db-party-dsn"
-
-[storage.linkage]
-url_file = "/run/secrets/db-linkage-dsn"
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `storage.clinical.url` | secret URL | unset | DSN the clinical domain connects on (role `ferroehr_clinical`). Unset, it uses `db.url`. |
 | `storage.party.url` | secret URL | unset | DSN the party (demographic) domain connects on (role `ferroehr_party`). Unset, it uses `db.url`. |
-| `storage.linkage.url` | secret URL | unset | DSN the linkage domain connects on (role `ferroehr_linkage`) — the map from a party to the EHR whose subject it is, barred from both domains it joins and they from it. Unset, it uses `db.url`. |
 | `storage.audit.url` | secret URL | unset | DSN the audit repository is written through. Unset, it uses `db.url`. |
 | `storage.<domain>.url_file` | path | unset | Read that domain's DSN from a file instead, for a mounted secret. At most one of the pair. |
 
@@ -389,10 +385,10 @@ there, and verified there under `migrate = "verify"`, on the credential named in
 `[storage.migrate.<domain>]`:
 
 ```toml
-[storage.linkage]
-url_file = "/run/secrets/db-linkage-dsn"           # postgres://ferroehr_linkage:…@linkage-db/…
-[storage.migrate.linkage]
-url_file = "/run/secrets/db-linkage-migrate-dsn"   # postgres://ferroehr_migrator:…@linkage-db/…
+[storage.party]
+url_file = "/run/secrets/db-party-dsn"           # postgres://ferroehr_party:…@party-db/…
+[storage.migrate.party]
+url_file = "/run/secrets/db-party-migrate-dsn"   # postgres://ferroehr_migrator:…@party-db/…
 ```
 
 | Key | Type | Default | Description |
@@ -401,10 +397,10 @@ url_file = "/run/secrets/db-linkage-migrate-dsn"   # postgres://ferroehr_migrato
 | `storage.migrate.<domain>.url_file` | path | unset | Read it from a file instead, for a mounted secret. At most one of the pair. |
 
 The server refuses to start when a domain's `url` and its `storage.migrate`
-URL reach different databases. A database that holds the `linkage` domain
-without the `party` domain also receives the party migration set, its schema
-and grants and never a row, because the linkage set revokes a function the
-party set creates.
+URL reach different databases. `[storage.linkage]` and
+`[storage.migrate.linkage]` are refused as unknown keys: the linkage domain is
+gone ([Operations → Upgrading past the linkage
+domain](../operations.md#upgrading-past-the-linkage-domain)).
 
 ## `[telemetry]`
 
