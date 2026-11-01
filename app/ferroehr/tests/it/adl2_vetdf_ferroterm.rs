@@ -34,7 +34,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::ServiceStatus;
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use testcontainers::core::{ContainerPort, Mount};
@@ -166,7 +166,7 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     // 1. A SNOMED CT concept URI on a server that serves no SNOMED CT: the
     //    binding is unverifiable, so the archetype is accepted (the sandbox
     //    seed's five refused archetypes, #3311).
-    svc.upload_artefact(archetype(
+    svc.template_adl2_upload(archetype(
         "snomed_unserved",
         "SNOMED-CT",
         "http://snomed.info/id/50121007",
@@ -181,7 +181,7 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     );
 
     // 2. A concept the served shaped system defines: accepted.
-    svc.upload_artefact(archetype(
+    svc.template_adl2_upload(archetype(
         "shaped_member",
         "CNF-SHAPED",
         &format!("{SHAPED_SYSTEM}/id/{SHAPED_MEMBER}"),
@@ -190,14 +190,15 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     .expect("a concept the served system defines resolves");
 
     // 3. A concept the served shaped system does not define: VETDF.
-    let err = svc
-        .upload_artefact(archetype(
+    let err = StatusError::from(
+        svc.template_adl2_upload(archetype(
             "shaped_absent",
             "CNF-SHAPED",
             &format!("{SHAPED_SYSTEM}/id/{SHAPED_ABSENT}"),
         ))
         .await
-        .expect_err("a concept absent from a served system is refused");
+        .expect_err("a concept absent from a served system is refused"),
+    );
     assert_eq!(err.status, ServiceStatus::ContentInvalid);
     assert!(
         err.message.contains("VETDF") && err.message.contains(SHAPED_ABSENT),
@@ -230,7 +231,7 @@ async fn a_ckm_archetype_with_snomed_bindings_uploads_when_snomed_is_not_served(
         ),
     )
     .expect("the vendored CKM archetype");
-    svc.upload_artefact(source)
+    svc.template_adl2_upload(source)
         .await
         .expect("SNOMED CT bindings on a server without SNOMED CT are unverifiable, not invalid");
     assert!(

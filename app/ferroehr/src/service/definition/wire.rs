@@ -146,9 +146,8 @@ impl FerroEhrService {
     ///
     /// Returns [`ServiceError`] rather than `StatusError` so a semantic-validation
     /// failure keeps its structured per-code violations for the ITS-REST `Error`
-    /// body. Duplicate handling diverges by surface: the REST contract declares
-    /// `409_template_already_exists.yaml` while the native `upload_artefact`
-    /// replaces, so an existing HRID is a `409` here.
+    /// body. The REST contract declares `409_template_already_exists.yaml`, so
+    /// an existing HRID is a `409`.
     ///
     /// # Errors
     ///

@@ -98,7 +98,7 @@ fn change_type_constants_are_the_complete_group() {
     ];
     let t = openehr();
     for code in all {
-        assert!(t.is_valid_audit_change_type(code), "code {code}");
+        assert!(t.is_valid_code("audit_change_type", code), "code {code}");
         // code_string must be numeric (AUDIT_DETAILS.Change_type_valid).
         assert!(code.chars().all(|c| c.is_ascii_digit()));
     }

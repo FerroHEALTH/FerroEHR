@@ -15,14 +15,9 @@
 //!   (keyed by `ARCHETYPE_HRID`).
 //! - `lineage` — the archetype specialisation graph over those artefacts (their
 //!   `specialize` edges), memoised for the AQL archetype predicate.
-//! - `opt14_convert` — the OPT-1.4 → ADL2 decomposition front end (a
-//!   service-only capability, no wire): reads a stored OPT's `opt14` model,
-//!   decomposes it into one 1.4-shaped `v2_4` source per embedded archetype
-//!   root, and runs each through the `openehr_adl::adl14` converter.
-//! - `query` — query registration + `QueryDescriptor` + the stored-query
-//!   CRUD. DEFINITION *owns* query
-//!   registration (`master04` §Registered Queries); the Query service only
-//!   resolves + executes it, so the stored-query store folds in here.
+//! - `query` — query registration: the stored-query CRUD. DEFINITION *owns*
+//!   query registration (`master04` §Registered Queries); the Query service
+//!   only resolves + executes it, so the stored-query store folds in here.
 //! - `wire`  — the ITS-REST wire-shaped extension methods (rich
 //!   template/query shapes). Their route
 //!   wiring is the ITS-REST layer's concern; behaviour rides on the logic
@@ -30,7 +25,7 @@
 //! - `version_selector` — the ITS-REST `version` path parameter: its SEMVER
 //!   grammar, checked before any versioned read resolves, and its matching.
 //! - [`types`] — the shared data shapes ([`types::TemplateListFilter`],
-//!   [`types::QueryDescriptor`]) the REST adapter consumes.
+//!   [`types::Adl2Template`]) the REST adapter consumes.
 //!
 //! NOTE: ITS-REST Definition API exchanges the artefact's serialization (ADL
 //! 1.4 / ADL2 source text and OPT 1.4 canonical XML), which is what these calls
@@ -52,19 +47,13 @@ mod adl2_resolution;
 mod adl2_terminology;
 mod binding_uri;
 pub(super) mod lineage;
-mod opt14_convert;
 mod query;
 mod version_selector;
 mod wire;
 
 pub mod types;
 
-use regex::Regex;
-
 use crate::service::list::Page;
-use crate::service::status::{ServiceStatus, StatusError};
-
-use crate::service::error::ServiceError;
 
 /// Apply a [`Page`] to an iterator: skip `offset`, take `limit` (`None` ⇒
 /// all).
@@ -85,50 +74,4 @@ pub(super) fn page_bounds(page: Page) -> (i64, Option<i64>) {
     let offset = i64::try_from(page.offset()).unwrap_or(i64::MAX);
     let limit = page.limit().and_then(|l| i64::try_from(l).ok());
     (offset, limit)
-}
-
-/// Compile an id-pattern regex; an uncompilable pattern is `invalid_id_pattern`
-/// (`400`).
-///
-/// NOTE: no specification governs this: our own design; the `regex` crate is
-/// RE2-class, so a pattern with backreferences or lookaround is refused as
-/// `invalid_id_pattern`.
-pub(super) fn compile_pattern(pattern: &str) -> Result<Regex, ServiceError> {
-    Regex::new(pattern).map_err(|e| {
-        let message = format!("invalid id pattern: {e}");
-        ServiceError::BadRequest(
-            StatusError::new(ServiceStatus::InvalidIdPattern, message).with_source(e),
-        )
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::compile_pattern;
-    use crate::service::error::ServiceError;
-    use crate::service::status::ServiceStatus;
-
-    /// An uncompilable id pattern reports `invalid_id_pattern` and carries the
-    /// `regex` compile
-    /// failure as a walkable cause
-    /// ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)).
-    #[test]
-    fn an_uncompilable_pattern_is_invalid_id_pattern_and_carries_its_cause() {
-        use std::error::Error;
-
-        let err = compile_pattern("(").expect_err("an unbalanced group must not compile");
-        let ServiceError::BadRequest(err) = &err else {
-            panic!("an unusable pattern is a 400, got {err:?}");
-        };
-        assert_eq!(err.status, ServiceStatus::InvalidIdPattern);
-        // `BadRequest` is transparent, so the first hop is the `StatusError`'s own
-        // source: the concrete compile failure.
-        let hops = std::iter::successors(Error::source(&err), |e| Error::source(*e))
-            .map(|e| e.downcast_ref::<regex::Error>().is_some())
-            .collect::<Vec<_>>();
-        assert!(
-            hops.contains(&true),
-            "walking the chain must reach the concrete regex::Error, got {err:?}"
-        );
-    }
 }

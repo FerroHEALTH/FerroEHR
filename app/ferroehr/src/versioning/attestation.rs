@@ -481,7 +481,7 @@ pub(crate) fn complete_attestation(
 /// # Errors
 /// [`ServiceError::Unprocessable`] when `code` is not a group member.
 fn reason_code_valid(code: &str) -> Result<(), ServiceError> {
-    if openehr_term::bundle::openehr().is_valid_attestation_reason(code) {
+    if openehr_term::bundle::openehr().is_valid_code("attestation_reason", code) {
         return Ok(());
     }
     Err(ServiceError::content_invalid(

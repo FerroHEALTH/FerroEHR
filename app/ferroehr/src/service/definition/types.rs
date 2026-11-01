@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The DEFINITION data shapes shared with the REST adapter: the wire
-//! template-list filter and the stored-query descriptor.
+//! template-list filter and the served ADL2 template.
 
 /// The template-list filter carried by the ITS-REST
 /// `definition_template_*_list` operations.
@@ -50,24 +50,4 @@ pub struct Adl2Template {
     /// The rendered representation (ADL2 source, or the
     /// `OperationalTemplateV2` canonical JSON).
     pub payload: String,
-}
-
-/// The registration record `store_query` / `list_queries` return.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QueryDescriptor {
-    /// `qualified_query_name [1]` — "Unique qualified name of query.
-    /// Qualified names follow patterns such as `<namespace>::<query_name>`,
-    /// e.g. `ehr::all_over_50_women`."
-    pub qualified_query_name: String,
-    /// `version [0..1]` — "Query semver.org version number."
-    pub version: Option<String>,
-    /// `registration_time [1]` — "Time query was registered in the service"
-    /// (ISO-8601).
-    pub registration_time: String,
-    /// `formalism [1]` — "Formalism of the query, matching one of: 'aql';
-    /// any other string value."
-    pub formalism: String,
-    /// `source [0..1]` — "Source query text to be executed (prior to
-    /// parameter substitution)."
-    pub source: Option<String>,
 }

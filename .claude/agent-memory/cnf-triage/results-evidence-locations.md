@@ -8,13 +8,14 @@ metadata:
 Reference text only where it cites the Service Model: SM is not an authority
 (owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
 
-For the committed ferroehr run, per-row observation is in
-`docs/conformance/ferroehr/results.json` under `outcomes[]`: each entry has
-`case`, `status` (passed/failed/not_applicable), `failing_step`, `reason`
-(e.g. "expected `created`, observed `validation_failed`"). Long `reason`
-strings are TRUNCATED in the committed file (…), so reproduce on the wire for
-the full diff. `run-exceptions.json` = the not_applicable/unrealized list only.
-`verdicts.json` = computed capability/profile roll-up.
+For the committed ferroehr run (a Veredictum 0.3.3 released-profile record),
+per-row observation is in `docs/conformance/ferroehr/results.json` under
+`rows[]`: each entry has `case`, `row`, `status` (passed, failed, warning,
+errored, skipped), its `inputs`, and for a skipped row `skip.reason` with the
+citation. `outline.cases` places each case (chapter, folder, BASE or option
+standing, TRIAL mark). `summary.md` beside it opens every red row up to the
+step, expected against received, and the cited sentence. The exchanges
+themselves are in `recording.har`, which is never committed.
 
 - Case cores: Veredictum's `artifacts/schedule/<family>/<CASE>.yaml`
   (SM operation + outcome kinds + spec_refs + often a self-documenting TODO

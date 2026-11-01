@@ -443,7 +443,7 @@ cut, after the texts in scope have been read.
 | 2026-10-24 | 5.4.0, after `de38ec433` | none | nothing |
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
-| 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars still count the CNF TDD cases, which only a new measured run removes (#4204) |
+| 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars counted the CNF TDD cases until the Veredictum 0.3.3 record, which carries none, replaced them (#4204) |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -677,8 +677,9 @@ Keycloak overlay trusts its CA through `ca_file` and signs the viewer in
 
 ### Left open on 2026-10-27, for 5.5.0
 
-- The conformance chapter bars still show the CNF TDD cases from the last
-  measured run; the record drops them only when the campaign runs again (#4204).
+- The conformance chapter bars showed the CNF TDD cases from the last
+  measured run until the Veredictum 0.3.3 record, which carries none, replaced
+  the record and the bars (#4204).
 
 ## The review of 2026-10-28, for 5.6.0-rc1
 
@@ -981,10 +982,10 @@ and development profiles and their README badges (#4503); and the
 
 ### Left open on 2026-11-01, for 5.6.0-rc6
 
-- The conformance run on `main` still has known red rows under the released
-  profile, tracked on #4455; two of them are Veredictum's
-  (Vernum-Projecten/Veredictum#964 and Vernum-Projecten/Veredictum#965). The
-  badges show the run as it stands, and no text claims a green record.
+- The conformance run on `main` had known red rows under the released
+  profile; two of them were Veredictum's (Vernum-Projecten/Veredictum#964 and
+  Vernum-Projecten/Veredictum#965). The triage on #4455 attributed every row,
+  and the Veredictum 0.3.3 released-profile run on `main` has none left.
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
 

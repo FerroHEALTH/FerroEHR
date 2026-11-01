@@ -438,8 +438,7 @@ pub(crate) async fn admin_ehr_delete(
 /// conformance-profile claim.
 ///
 /// The route is addressed by the wire `template_id` (matched
-/// case-insensitively, overview §"Composite Identifiers and Case"), while the
-/// native `delete_opt` is keyed by the OPT's internal id.
+/// case-insensitively, overview §"Composite Identifiers and Case").
 ///
 /// The delete is guarded: it refuses with `409` while any committed version
 /// still references the template, so a physical delete can never orphan

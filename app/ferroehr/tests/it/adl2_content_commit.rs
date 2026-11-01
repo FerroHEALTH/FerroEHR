@@ -162,7 +162,7 @@ async fn upload(svc: &FerroEhrService, cases: &[&Case]) {
         let source = sources
             .get(name)
             .unwrap_or_else(|| panic!("no setup template {name}"));
-        svc.upload_artefact(source.clone())
+        svc.template_adl2_upload(source.clone())
             .await
             .unwrap_or_else(|e| panic!("upload {name}: {e:?}"));
     }
@@ -323,7 +323,7 @@ async fn a_value_outside_every_range_of_a_union_is_refused() {
         .remove(&accepted.template)
         .expect("the DV_COUNT range template");
     assert_eq!(source.matches(from).count(), 1, "the one magnitude range");
-    svc.upload_artefact(source.replace(from, to))
+    svc.template_adl2_upload(source.replace(from, to))
         .await
         .expect("the union template uploads");
     let ehr = new_ehr(&svc).await;

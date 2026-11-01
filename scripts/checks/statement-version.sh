@@ -4,8 +4,7 @@
 # The ferroehr party statement's product version must equal the workspace
 # version (#2576): the statement is the published conformance claim for THE
 # product this repo ships, and it sat at 3.6.0 while the record reached
-# 3.20.0 — the rendered CONFORMANCE_STATEMENT.md contradicted the report
-# beside it for fourteen releases with nothing failing. The release cut
+# 3.20.0 for fourteen releases with nothing failing. The release cut
 # bumps both in one PR (.claude/rules/changelog.md); this guard is the
 # failing check that keeps them together.
 #

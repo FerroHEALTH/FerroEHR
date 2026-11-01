@@ -279,7 +279,7 @@ always re-read the cited file rather than trusting the entry.
   register prose + `src/schema.rs`/`validate.rs`).
 - **Option gating is the single key `option:` on a case** (not `options:`); the
   ferroehr statement declares one arm per family, so AMB-167's nine re-grounded
-  415 WRITE rows land as not-applicable in `docs/conformance/ferroehr/CONFORMANCE_REPORT.md`
+  415 WRITE rows landed as not-applicable in the Veredictum 0.1.6 report
   ("option …-unsupported: the ICS does not declare this register branch").
 - The 13 released operations carrying the ITEM_TAG echo sentence = composition
   create/update, ehr_status_update, and create+update for the five party types

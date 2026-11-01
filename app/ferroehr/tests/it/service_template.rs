@@ -68,17 +68,10 @@ async fn template_upload_list_get_roundtrip() {
     );
 
     // Retrieve returns the stored OPT XML verbatim.
-    // NOTE: `get_opt` is UUID-keyed (OPTs are stored
-    // UUID-keyed; `list_matching_opts` still matches on `template_id`) and
-    // returns the OPT XML as a `String`, so resolve the uuid via `list_opts`.
-    let opt_uuid = svc
-        .list_opts_adl14(Page::all())
+    let got = svc
+        .template_adl14_get(TEMPLATE_ID.to_owned())
         .await
-        .expect("list opts")
-        .into_iter()
-        .next()
-        .expect("one stored OPT uuid");
-    let got = svc.get_opt(opt_uuid.clone()).await.expect("get");
+        .expect("get");
     assert_eq!(
         got, xml,
         "retrieved OPT XML is byte-identical to the upload"
@@ -116,7 +109,7 @@ async fn template_upload_list_get_roundtrip() {
         "conflicting re-upload did not duplicate"
     );
     let still = svc
-        .get_opt(opt_uuid.clone())
+        .template_adl14_get(TEMPLATE_ID.to_owned())
         .await
         .expect("get after conflict");
     assert_eq!(
@@ -129,10 +122,9 @@ async fn template_upload_list_get_roundtrip() {
 async fn get_unknown_template_is_not_found() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    // NOTE: `get_opt` is UUID-keyed at the service seam, so an unknown OPT is an
-    // absent (well-formed) uuid → 404 (`template_does_not_exist`).
+    // An unknown template_id → 404 (`template_does_not_exist`).
     let err = svc
-        .get_opt(uuid::Uuid::now_v7().to_string())
+        .template_adl14_get("unknown template.v0".to_owned())
         .await
         .expect_err("expected not-found");
     assert!(
@@ -310,8 +302,8 @@ async fn example_with_invalid_detail_level_is_bad_request() {
 }
 
 /// The OPT-1.4 → ADL2 conversion capability (service-only, no wire): a stored
-/// operational template is loaded by UUID, decomposed into one 1.4-shaped source
-/// per embedded archetype root, and each is converted to ADL2 source text. No
+/// operational template is loaded by `template_id`, decomposed into one
+/// 1.4-shaped source per embedded archetype root, and each is converted to ADL2 source text. No
 /// openEHR spec governs 1.4 → 2 conversion — our own design/extension.
 #[tokio::test]
 async fn opt_converts_to_adl2_sources() {
@@ -319,20 +311,17 @@ async fn opt_converts_to_adl2_sources() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     // A minimal template: a COMPOSITION root with one embedded OBSERVATION root.
     let xml = corpus_opt("knowledge/opt/minimal_observation.opt");
-    svc.upload_opt(xml).await.expect("upload opt");
-    let opt_uuid = svc
-        .list_opts_adl14(Page::all())
-        .await
-        .expect("list opts")
-        .into_iter()
-        .next()
-        .expect("one stored OPT uuid");
+    let summary = svc.template_adl14_upload(xml).await.expect("upload opt");
+    let template_id = summary["template_id"]
+        .as_str()
+        .expect("the upload names its template_id")
+        .to_owned();
 
-    // The service loads the stored OPT by UUID, decomposes + converts it, and
+    // The service loads the stored OPT by template_id, decomposes + converts it, and
     // returns one ADL2 source per embedded archetype root (>= 2 here: the
     // COMPOSITION root and the embedded OBSERVATION).
     let sources = svc
-        .adl14_convert_opt_to_adl2(opt_uuid)
+        .adl14_convert_opt_to_adl2(template_id)
         .await
         .expect("convert stored OPT to ADL2");
     assert!(
@@ -350,7 +339,7 @@ async fn opt_converts_to_adl2_sources() {
 
     // An unknown OPT id is a 404 (`template_does_not_exist`).
     let missing = svc
-        .adl14_convert_opt_to_adl2("00000000-0000-0000-0000-000000000000".to_owned())
+        .adl14_convert_opt_to_adl2("unknown template.v0".to_owned())
         .await
         .expect_err("unknown OPT id must 404");
     assert!(

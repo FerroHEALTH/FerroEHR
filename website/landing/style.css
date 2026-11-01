@@ -186,12 +186,11 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
   flex-wrap: wrap;
   margin-bottom: 1.75rem;
 }
-.proof-grid {
-  display: block;
-  max-width: 1024px;
-  margin: 0 auto 1.75rem;
-}
-.proof-grid img { width: 100%; height: auto; display: block; }
+.proof-record { text-align: center; color: var(--rs-muted); margin: 0 auto 1.5rem; }
+.proof-badges { display: grid; gap: 0.75rem; justify-items: center; margin: 0 auto 1.75rem; }
+.proof-badge-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 0.5rem; }
+.proof-badge-label { flex-basis: 100%; text-align: center; color: var(--rs-muted); font-size: 0.85rem; }
+.proof-badge-row img { display: block; height: 20px; width: auto; max-width: 100%; }
 .proof-num { text-align: center; }
 .proof-num .n {
   font-size: clamp(2rem, 5vw, 3rem);

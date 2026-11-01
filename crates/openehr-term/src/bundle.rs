@@ -326,104 +326,6 @@ impl OpenehrTerminology {
             .is_some_and(|codes| codes.contains_key(code))
     }
 
-    // ── Convenience validators for the RM-mandated groups ─────────────────────
-
-    /// `COMPOSITION.category` — the `composition_category` group
-    /// (`431` persistent, `451` episodic, `433` event, `815` report).
-    #[must_use]
-    pub fn is_valid_composition_category(&self, code: &str) -> bool {
-        self.is_valid_code("composition_category", code)
-    }
-
-    /// Alias of [`Self::is_valid_composition_category`] (the RM attribute is `category`).
-    #[must_use]
-    pub fn is_valid_category(&self, code: &str) -> bool {
-        self.is_valid_composition_category(code)
-    }
-
-    /// `EVENT_CONTEXT.setting` — the `setting` group.
-    #[must_use]
-    pub fn is_valid_setting(&self, code: &str) -> bool {
-        self.is_valid_code("setting", code)
-    }
-
-    /// `ELEMENT.null_flavour` — the `null_flavours` group
-    /// (`271` no information, `253` unknown, `272` masked, `273` not applicable).
-    #[must_use]
-    pub fn is_valid_null_flavour(&self, code: &str) -> bool {
-        self.is_valid_code("null_flavours", code)
-    }
-
-    /// `ISM_TRANSITION.current_state` — the `instruction_states` group.
-    #[must_use]
-    pub fn is_valid_instruction_state(&self, code: &str) -> bool {
-        self.is_valid_code("instruction_states", code)
-    }
-
-    /// `ISM_TRANSITION.transition` — the `instruction_transitions` group.
-    #[must_use]
-    pub fn is_valid_instruction_transition(&self, code: &str) -> bool {
-        self.is_valid_code("instruction_transitions", code)
-    }
-
-    /// `PARTICIPATION.function` — the `participation_function` group.
-    #[must_use]
-    pub fn is_valid_participation_function(&self, code: &str) -> bool {
-        self.is_valid_code("participation_function", code)
-    }
-
-    /// `PARTICIPATION.mode` — the `participation_mode` group.
-    #[must_use]
-    pub fn is_valid_participation_mode(&self, code: &str) -> bool {
-        self.is_valid_code("participation_mode", code)
-    }
-
-    /// `ATTESTATION.reason` — the `attestation_reason` group
-    /// (`240` signed, `648` witnessed).
-    #[must_use]
-    pub fn is_valid_attestation_reason(&self, code: &str) -> bool {
-        self.is_valid_code("attestation_reason", code)
-    }
-
-    /// `VERSION.lifecycle_state` — the `version_lifecycle_state` group.
-    ///
-    /// NOTE: SPECPR-51 — code `532` is `complete` here and `completed` in
-    /// `instruction_states`.
-    #[must_use]
-    pub fn is_valid_version_lifecycle_state(&self, code: &str) -> bool {
-        self.is_valid_code("version_lifecycle_state", code)
-    }
-
-    /// `AUDIT_DETAILS.change_type` — the `audit_change_type` group.
-    #[must_use]
-    pub fn is_valid_audit_change_type(&self, code: &str) -> bool {
-        self.is_valid_code("audit_change_type", code)
-    }
-
-    /// `PARTY_RELATED.relationship` — the `subject_relationship` group.
-    #[must_use]
-    pub fn is_valid_subject_relationship(&self, code: &str) -> bool {
-        self.is_valid_code("subject_relationship", code)
-    }
-
-    /// `TERM_MAPPING.purpose` — the `term_mapping_purpose` group.
-    #[must_use]
-    pub fn is_valid_term_mapping_purpose(&self, code: &str) -> bool {
-        self.is_valid_code("term_mapping_purpose", code)
-    }
-
-    /// `EVENT.math_function` — the `event_math_function` group.
-    #[must_use]
-    pub fn is_valid_event_math_function(&self, code: &str) -> bool {
-        self.is_valid_code("event_math_function", code)
-    }
-
-    /// `DV_QUANTITY.property` (and related) — the `property` group.
-    #[must_use]
-    pub fn is_valid_property(&self, code: &str) -> bool {
-        self.is_valid_code("property", code)
-    }
-
     // ── Internal code sets (openehr_terminology.xml <codeset>) ────────────────
 
     /// An internal code set by openEHR id (e.g. `"normal_statuses"`,
@@ -481,31 +383,6 @@ impl OpenehrTerminology {
         self.external_codes
             .get(openehr_id)
             .is_some_and(|codes| codes.contains(code))
-    }
-
-    /// A valid ISO 639-1 language code (e.g. `"en"`). Used by `DV_TEXT.language`,
-    /// `COMPOSITION.language`, `EHR_STATUS`, etc.
-    #[must_use]
-    pub fn is_valid_language(&self, code: &str) -> bool {
-        self.is_valid_external_code("languages", code)
-    }
-
-    /// A valid ISO 3166-1 country code (e.g. `"US"`).
-    #[must_use]
-    pub fn is_valid_country(&self, code: &str) -> bool {
-        self.is_valid_external_code("countries", code)
-    }
-
-    /// A valid IANA character-set name (`DV_TEXT.encoding`).
-    #[must_use]
-    pub fn is_valid_character_set(&self, code: &str) -> bool {
-        self.is_valid_external_code("character_sets", code)
-    }
-
-    /// A valid IANA media type (`DV_MULTIMEDIA.media_type`).
-    #[must_use]
-    pub fn is_valid_media_type(&self, code: &str) -> bool {
-        self.is_valid_external_code("media_types", code)
     }
 
     // ── Property ↔ unit data (PropertyUnitData.xml) ───────────────────────────
@@ -711,20 +588,20 @@ mod tests {
     fn composition_category_codes() {
         let t = openehr();
         // 431 persistent, 451 episodic, 433 event, 815 report.
-        assert!(t.is_valid_composition_category("431"));
-        assert!(t.is_valid_category("451")); // alias
-        assert!(t.is_valid_composition_category("433"));
-        assert!(t.is_valid_composition_category("815"));
-        assert!(!t.is_valid_composition_category("999"));
+        assert!(t.is_valid_code("composition_category", "431"));
+        assert!(t.is_valid_code("composition_category", "451"));
+        assert!(t.is_valid_code("composition_category", "433"));
+        assert!(t.is_valid_code("composition_category", "815"));
+        assert!(!t.is_valid_code("composition_category", "999"));
     }
 
     #[test]
     fn null_flavour_codes_and_rubric() {
         let t = openehr();
-        assert!(t.is_valid_null_flavour("271")); // no information
-        assert!(t.is_valid_null_flavour("253")); // unknown
-        assert!(t.is_valid_null_flavour("273")); // not applicable
-        assert!(!t.is_valid_null_flavour("999"));
+        assert!(t.is_valid_code("null_flavours", "271")); // no information
+        assert!(t.is_valid_code("null_flavours", "253")); // unknown
+        assert!(t.is_valid_code("null_flavours", "273")); // not applicable
+        assert!(!t.is_valid_code("null_flavours", "999"));
         assert_eq!(
             t.rubric("null_flavours", "271", "en"),
             Some("no information")
@@ -738,51 +615,51 @@ mod tests {
     #[test]
     fn setting_codes_and_rubric() {
         let t = openehr();
-        assert!(t.is_valid_setting("225")); // home
-        assert!(t.is_valid_setting("238")); // other care
-        assert!(!t.is_valid_setting("999"));
+        assert!(t.is_valid_code("setting", "225")); // home
+        assert!(t.is_valid_code("setting", "238")); // other care
+        assert!(!t.is_valid_code("setting", "999"));
         assert_eq!(t.rubric("setting", "225", "en"), Some("home"));
     }
 
     #[test]
     fn instruction_states_and_transitions() {
         let t = openehr();
-        assert!(t.is_valid_instruction_state("245")); // active
-        assert!(t.is_valid_instruction_state("532")); // completed
-        assert!(!t.is_valid_instruction_state("999"));
-        assert!(t.is_valid_instruction_transition("535")); // initiate
-        assert!(t.is_valid_instruction_transition("548")); // finish
-        assert!(!t.is_valid_instruction_transition("999"));
+        assert!(t.is_valid_code("instruction_states", "245")); // active
+        assert!(t.is_valid_code("instruction_states", "532")); // completed
+        assert!(!t.is_valid_code("instruction_states", "999"));
+        assert!(t.is_valid_code("instruction_transitions", "535")); // initiate
+        assert!(t.is_valid_code("instruction_transitions", "548")); // finish
+        assert!(!t.is_valid_code("instruction_transitions", "999"));
     }
 
     #[test]
     fn participation_function_and_mode() {
         let t = openehr();
-        assert!(t.is_valid_participation_function("253")); // unknown (only member)
-        assert!(!t.is_valid_participation_function("216"));
-        assert!(t.is_valid_participation_mode("216")); // face-to-face communication
+        assert!(t.is_valid_code("participation_function", "253")); // unknown (only member)
+        assert!(!t.is_valid_code("participation_function", "216"));
+        assert!(t.is_valid_code("participation_mode", "216")); // face-to-face communication
         assert_eq!(
             t.rubric("participation_mode", "216", "en"),
             Some("face-to-face communication")
         );
-        assert!(!t.is_valid_participation_mode("999"));
+        assert!(!t.is_valid_code("participation_mode", "999"));
     }
 
     #[test]
     fn attestation_reason_and_audit_change_type() {
         let t = openehr();
-        assert!(t.is_valid_attestation_reason("240")); // signed
-        assert!(t.is_valid_attestation_reason("648")); // witnessed
-        assert!(!t.is_valid_attestation_reason("999"));
-        assert!(t.is_valid_audit_change_type("249")); // creation
-        assert!(t.is_valid_audit_change_type("250")); // amendment
+        assert!(t.is_valid_code("attestation_reason", "240")); // signed
+        assert!(t.is_valid_code("attestation_reason", "648")); // witnessed
+        assert!(!t.is_valid_code("attestation_reason", "999"));
+        assert!(t.is_valid_code("audit_change_type", "249")); // creation
+        assert!(t.is_valid_code("audit_change_type", "250")); // amendment
     }
 
     #[test]
     fn version_lifecycle_state_specpr51_quirk() {
         let t = openehr();
-        assert!(t.is_valid_version_lifecycle_state("532"));
-        assert!(t.is_valid_version_lifecycle_state("553")); // incomplete
+        assert!(t.is_valid_code("version_lifecycle_state", "532"));
+        assert!(t.is_valid_code("version_lifecycle_state", "553")); // incomplete
         // SPECPR-51: code 532 is "complete" in version_lifecycle_state but
         // "completed" in instruction_states — group-scoped rubrics prove it.
         assert_eq!(
@@ -802,7 +679,7 @@ mod tests {
         let t = openehr();
         assert!(t.is_valid_code("subject_relationship", "0")); // self
         assert!(t.is_valid_code("event_math_function", "146")); // mean
-        assert!(t.is_valid_property("122")); // Length
+        assert!(t.is_valid_code("property", "122")); // Length
         assert!(!t.is_valid_code("event_math_function", "999"));
         assert!(!t.is_valid_code("no_such_group", "146"));
     }
@@ -860,15 +737,15 @@ mod tests {
     #[test]
     fn external_languages_countries_charsets_media() {
         let t = openehr();
-        assert!(t.is_valid_language("en"));
-        assert!(t.is_valid_language("es"));
-        assert!(!t.is_valid_language("zz"));
-        assert!(t.is_valid_country("US"));
-        assert!(t.is_valid_country("AF"));
-        assert!(!t.is_valid_country("ZZ"));
-        assert!(t.is_valid_character_set("UTF-8"));
-        assert!(!t.is_valid_character_set("NOT-A-CHARSET"));
-        assert!(t.is_valid_media_type("audio/G722"));
+        assert!(t.is_valid_external_code("languages", "en"));
+        assert!(t.is_valid_external_code("languages", "es"));
+        assert!(!t.is_valid_external_code("languages", "zz"));
+        assert!(t.is_valid_external_code("countries", "US"));
+        assert!(t.is_valid_external_code("countries", "AF"));
+        assert!(!t.is_valid_external_code("countries", "ZZ"));
+        assert!(t.is_valid_external_code("character_sets", "UTF-8"));
+        assert!(!t.is_valid_external_code("character_sets", "NOT-A-CHARSET"));
+        assert!(t.is_valid_external_code("media_types", "audio/G722"));
     }
 
     #[test]
