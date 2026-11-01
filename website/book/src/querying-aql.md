@@ -352,18 +352,20 @@ extension — no openEHR spec governs it: AQL is defined over the clinical domai
 and has no demographic source, and ITS-REST publishes an ad-hoc and a stored
 query and nothing else.
 
-**How it runs.** Three steps, each on its own database credential:
+**How it runs.** Three steps:
 
 1. A predicate from the deployment's allow-list selects **parties** in the
    demographic domain. It reads one archetype leaf and returns identifiers,
    nothing else — no name, address or national identifier leaves that domain.
-2. The linkage domain resolves those parties to the **EHRs** they are the
-   subject of. Identifiers in, identifiers out.
+2. Those parties resolve to the **EHRs** whose `EHR_STATUS.subject` names
+   them: the `external_ref` whose `id.value` is the party's uid without
+   `::<system>::<version>`, the reference `POST /ehr` stores. Identifiers in,
+   identifiers out.
 3. Your AQL runs on the clinical pool, scoped to exactly those EHRs.
 
-The three statements never meet. With `[storage.party] url` and `[storage.linkage] url`
-set, each pool authenticates as a role revoked from the other two, and the
-server refuses to boot if one can read across. You never receive a party
+The demographic and the clinical statements never meet. With
+`[storage.party] url` set, each pool authenticates as a role revoked from the
+other, and the server refuses to boot if one can read across. You never receive a party
 identifier: the response carries what your AQL projected, plus counts.
 
 **The allow-list.** A cohort predicate can only name something the deployment
@@ -377,20 +379,23 @@ keys and their defaults.
 
 **Naming subjects by identifier.** With `[cohort] subjects = true` a request
 may carry `subjects`, a list of `{ "id": …, "namespace": … }` identifiers in
-any identifier domain (an optional `type` defaults to `PERSON`). Each one is
-resolved to its EHRs through the `[ehr_index]` provider, and the result
-intersects with what `cohort` selects. Under the local map the map answers.
-Under an IHE patient identity source FerroEHR asks the PIX Manager to translate
-the identifier forward into its own clinical domain (ITI-83 with
-`targetSystem` set to that domain) and finds the EHR whose `EHR_STATUS`
-carries that pseudonym. A subject no EHR belongs to adds nothing. A subject
+any identifier domain (an optional `type` defaults to `PERSON`). Each one
+resolves to the EHR whose `EHR_STATUS.subject.external_ref` names it, after the
+`[ehr_index]` provider has put it in the clinical domain, and the result
+intersects with what `cohort` selects. Under `provider = "local"` the
+identifier names itself, so an EHR created over `POST /ehr` with that subject
+in its `EHR_STATUS` is found. Under an IHE patient identity source FerroEHR
+asks the PIX Manager to translate the identifier forward into its own clinical
+domain (ITI-83 with `targetSystem` set to that domain) and finds the EHR whose
+`EHR_STATUS` carries that pseudonym. A subject no EHR belongs to adds nothing. A subject
 that cannot be resolved, because the identity source fails or no provider is
 installed, fails the whole query rather than shrinking the cohort.
 
-**Under an IHE patient identity source, cohorts name their subjects.** That
-provider keeps no party-to-EHR map, and FerroEHR never asks it to translate a
-pseudonym back into another domain (openEHR RM `EHR_STATUS.subject`; GDPR
-Art. 4(5) and Art. 25). A demographic predicate would need one or the other,
+**Under an IHE patient identity source, cohorts name their subjects.** There an
+`EHR_STATUS` names its patient by the clinical pseudonym, never by a party of
+this server, and FerroEHR never asks the source to translate a pseudonym back
+into another domain (openEHR RM `EHR_STATUS.subject`; GDPR
+Art. 4(5) and Art. 25). A demographic predicate would need that,
 so a request with a non-empty `cohort` is refused `400` there, before any
 domain or the PIX Manager is asked. The cohort digest takes each subject by
 its namespace alone, so the access record carries no identifier value.
@@ -531,30 +536,26 @@ WHERE p/details[at0001]/items[at0002]/value/id = $identifier
 ORDER BY c/context/start_time/value DESC
 ```
 
-A party is the subject of an EHR when either of these holds:
+A party is the subject of an EHR when the EHR's current `EHR_STATUS.subject`
+is a `PARTY_SELF` whose `external_ref` names the party: its `id.value` is the
+party's uid without `::<system>::<version>`, and its `type` is the root class
+or one of its abstract RM ancestors (`ACTOR` for `PERSON` and `ORGANISATION`,
+`PARTY` for all three). This is the reference `POST /ehr` stores, so an EHR
+created with that subject joins with no other call.
 
-- the EHR's current `EHR_STATUS.subject` is a `PARTY_SELF` whose
-  `external_ref` names the party: its `id.value` is the party's uid without
-  `::<system>::<version>`, and its `type` is the root class or one of its
-  abstract RM ancestors (`ACTOR` for `PERSON` and `ORGANISATION`, `PARTY` for
-  all three). This is the reference `POST /ehr` stores, so an EHR created with
-  that subject joins with no other call;
-- the linkage service's party-to-EHR map holds the pair.
-
-An EHR that both name answers once. The `namespace` of the reference is not
+The `namespace` of the reference is not
 compared: BASE `OBJECT_REF.namespace` takes any name a deployment chooses
 (`local`, `demographic`, or your own), and the id and the class already name
 one party. A deployment that pseudonymises the subject stores a pseudonym in
-`id.value`, and a pseudonym is not a party uid, so its EHRs join only through
-the map.
+`id.value`, and a pseudonym is not a party uid, so its EHRs do not join.
 
 Party classes may sit beside the `EHR` in an `AND`
 (`PERSON p CONTAINS (CLUSTER id[…] AND EHR e CONTAINS COMPOSITION c)`). A row
 is a party row together with a clinical row of an EHR that party is the subject
 of, so a party with no EHR, and an EHR whose subject has no party, answer no
-row. FerroEHR runs the query as four statements, each on one database
-credential: the party half, the map, the EHRs whose subject names
-those parties, and the clinical half scoped to the EHRs the two reads name. It
+row. FerroEHR runs the query as three statements, each on one database
+credential: the party half, the EHRs whose subject names those parties, and
+the clinical half scoped to those EHRs. It
 then joins, orders and pages the rows. The rules that follow:
 
 - each column, each `WHERE` condition joined by `AND`, and each `ORDER BY` key

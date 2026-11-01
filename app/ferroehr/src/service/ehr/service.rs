@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The EHR operations and [`EhrSummary`]: EHR create (by id, minted, and for
-//! a subject), the subject lookups, the EHR reads, and the folder-hierarchy
-//! reads the `EHR` wire body needs.
+//! The EHR operations: EHR create (by id and minted), the subject lookup, the
+//! EHR reads, and the folder-hierarchy reads the `EHR` wire body needs.
 //!
 //! Spec: arch-overview `master06-design_of_the_ehr.adoc` §The EHR (EHR root,
 //! `system_id`, `EHR_ACCESS`, `EHR_STATUS`, directory, folders,
@@ -19,10 +18,6 @@
 
 use crate::db::acquire::acquire;
 use crate::ids::EhrId;
-use crate::service::ehr::handle::EhrSummary;
-use crate::service::ehr_index::IndexError;
-use crate::service::ehr_index::provider::EhrIndexProvider;
-use crate::service::ehr_index::types::SubjectRef;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::{ServiceStatus, StatusError};
 use crate::system_log::event::{
@@ -39,8 +34,6 @@ use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
 use crate::versioning::object_version_id::{VersionIdError, hier_object_id};
-
-use super::status_for_subject;
 
 impl FerroEhrService {
     /// Create an EHR (with the given id), its initial `EHR_STATUS`, and its
@@ -366,44 +359,6 @@ impl FerroEhrService {
             .with_last_modified(last_modified);
         Ok(ServiceResponse::new(body, meta))
     }
-
-    /// The [`EhrSummary`] of an EHR — all six attributes populated.
-    /// `system_id` is the stored `EHR.system_id`; `ehr_status` is the current
-    /// bare `EHR_STATUS`; `composition_count` is the number of "(versioned)
-    /// Compositions" — distinct versioned objects (`vo_id`), not versions.
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR or its current `EHR_STATUS` does
-    /// not exist; [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn summarize_ehr(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<EhrSummary, ServiceError> {
-        let (stored_system_id, time_created) =
-            crate::storage::ehr_repo::ehr_header(&self.pool, ehr_id)
-                .await?
-                .ok_or_else(|| {
-                    ServiceError::new(ServiceStatus::EhrIdDoesNotExist, format!("EHR {ehr_id}"))
-                })?;
-
-        // Copy of EHR.ehr_status: the current EHR_STATUS (bare, with its uid).
-        let ehr_status = self.status_at(ehr_id, None).await?.body;
-
-        let contribution_count =
-            crate::storage::version_repo::contribution::ehr_contribution_count(&self.pool, ehr_id)
-                .await?;
-        let composition_count =
-            crate::storage::version_repo::meta::composition_count(&self.pool, ehr_id).await?;
-
-        Ok(EhrSummary {
-            ehr_id: ehr_id.to_string(),
-            system_id: stored_system_id,
-            ehr_status,
-            time_created: time_created.to_string(),
-            contribution_count,
-            composition_count,
-        })
-    }
 }
 
 /// An `OBJECT_REF` to a version CONTAINER held in this system.
@@ -546,122 +501,6 @@ pub(in crate::service) fn archetyped(archetype_id: &str) -> Archetyped {
 // ── The EHR call surface ──────────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// Whether an EHR exists whose
-    /// current `EHR_STATUS` names the subject, as the installed EHR index
-    /// provider resolves it into the clinical domain
-    /// ([`crate::service::ehr_index::provider`]).
-    ///
-    /// # Errors
-    /// [`StatusError`] if no provider is installed, the identity source fails, or
-    /// the subject lookup fails (no matching EHR is `Ok(false)`).
-    pub async fn has_ehr_for_subject(&self, a_subject_id: SubjectRef) -> Result<bool, StatusError> {
-        let Some(subject) = self.clinical_subject(&a_subject_id).await? else {
-            return Ok(false);
-        };
-        Ok(self
-            .ehr_id_for_subject(&subject.id, &subject.namespace)
-            .await?
-            .is_some())
-    }
-
-    /// Create an EHR whose
-    /// `EHR_STATUS.subject` names the given subject, as the installed EHR index
-    /// provider resolves it into the clinical domain: the subject itself under
-    /// the local map, the identifier the clinical domain holds for it under an
-    /// IHE patient identity source.
-    ///
-    /// NOTE: no committal argument. ITS-REST 1.1.0 binds EHR creation to
-    /// exactly two operations — `ehr_create` (`POST /ehr`) and
-    /// `ehr_create_with_id` (`PUT /ehr/{ehr_id}`), both of which route through
-    /// [`Self::create_ehr_meta`] / [`Self::create_ehr_with_id_meta`]; the
-    /// subject-scoped creates have no wire binding and therefore no
-    /// request headers to merge.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the subject already owns an EHR (409-equivalent), the
-    /// status is invalid, or storage fails.
-    pub async fn create_ehr_for_subject(
-        &self,
-        a_subject_id: SubjectRef,
-        an_ehr_status: Option<Value>,
-    ) -> Result<EhrId, StatusError> {
-        let ehr_id = EhrId::minted(self.stamp());
-        self.create_ehr_for_subject_with_id(ehr_id, a_subject_id, an_ehr_status)
-            .await
-    }
-
-    /// Subject-scoped
-    /// creation under a caller-supplied EHR id, the subject resolved as
-    /// [`Self::create_ehr_for_subject`] resolves it.
-    ///
-    /// No committal argument, for the reason given on
-    /// [`Self::create_ehr_for_subject`].
-    ///
-    /// # Errors
-    /// [`StatusError`] when no provider is installed, the identity source fails or
-    /// knows no clinical identifier for the subject (`subject_id_does_not_exist`),
-    /// the EHR already exists, the subject already owns an EHR, the status is
-    /// invalid, or storage fails.
-    pub async fn create_ehr_for_subject_with_id(
-        &self,
-        an_ehr_id: EhrId,
-        a_subject_id: SubjectRef,
-        an_ehr_status: Option<Value>,
-    ) -> Result<EhrId, StatusError> {
-        let subject = self
-            .clinical_subject(&a_subject_id)
-            .await?
-            .ok_or_else(|| IndexError::SubjectDoesNotExist(a_subject_id.clone()))?;
-        let status = status_for_subject(an_ehr_status.unwrap_or_else(initial_ehr_status), &subject);
-        // Under the local provider the map is what the subject reads consult
-        // (`subject_ehrs`, a subject cohort), so the EHR enters it with its
-        // creation; an IHE source resolves the subject through `EHR_STATUS`.
-        let mut linkage = match self.ehr_index {
-            EhrIndexProvider::Local => Some(
-                acquire(&self.linkage_pool)
-                    .await
-                    .map_err(IndexError::from)?,
-            ),
-            EhrIndexProvider::Unconfigured | EhrIndexProvider::Ihe(_) => None,
-        };
-        let staged = match linkage.as_mut() {
-            Some(conn) => Some(
-                self.stage_created_association(conn, an_ehr_id, &subject)
-                    .await?,
-            ),
-            None => None,
-        };
-        self.commit_new_ehr(an_ehr_id, status, None).await?;
-        if let Some(tx) = staged {
-            self.finish_created_association(tx, an_ehr_id, &subject)
-                .await?;
-        }
-        Ok(an_ehr_id)
-    }
-
-    /// The `EHR_SUMMARY` list for a
-    /// subject as the installed EHR index provider resolves it (≤1 under the
-    /// one-EHR-per-subject rule; see the note on `Self::ehr_by_subject`).
-    ///
-    /// # Errors
-    /// [`StatusError`] if no provider is installed, the identity source fails, or
-    /// a read fails.
-    pub async fn get_ehrs_for_subject(
-        &self,
-        a_subject_id: SubjectRef,
-    ) -> Result<Vec<EhrSummary>, StatusError> {
-        let Some(subject) = self.clinical_subject(&a_subject_id).await? else {
-            return Ok(Vec::new());
-        };
-        match self
-            .ehr_id_for_subject(&subject.id, &subject.namespace)
-            .await?
-        {
-            Some(ehr_id) => Ok(vec![self.summarize_ehr(ehr_id).await?]),
-            None => Ok(Vec::new()),
-        }
-    }
-
     /// The canonical RM `EHR` wire object (`GET /ehr/{ehr_id}` — an ITS-REST
     /// shape, not the summary).
     ///

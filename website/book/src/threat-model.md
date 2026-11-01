@@ -42,7 +42,7 @@ What an attacker wants, in the order the loss hurts:
 |---|---|---|
 | **Clinical payload:** compositions, EHR status, folders | the `clinical` schema's `node` and `version` tables, archival partitions included | this is PHI; disclosure is the primary harm and it is not undoable |
 | **Demographic parties and their identifiers** | the `party` schema, archival partitions included, with protected national identifiers sealed in `national_identifier` | who the people are, held apart from what is recorded about them |
-| **The EHR id / subject cross-reference** | `linkage.subject_ehr` | the additional information that re-attributes a pseudonymised record to a person; on its own it names neither |
+| **The EHR id / subject cross-reference** | the EHR's own `EHR_STATUS.subject.external_ref`, promoted to the `clinical.ehr` subject columns | the additional information that re-attributes a pseudonymised record to a person once joined to the party or the identity source |
 | **The audit trail** | the `audit` schema, plus any configured forwarding sink | it is the evidence that everything else happened; an attacker who can edit it can make an access disappear |
 | **Version history and its integrity** | `version`, `vo_head`, `contribution`, attestations | an openEHR record's value is that it is *append-only and attributable*; a silently rewritten prior version is worse than a deleted one |
 | **Signing keys** | the configured signing key material for commit attestation | forging an attestation forges provenance of clinical content |
@@ -385,7 +385,7 @@ of no other, so a privilege cannot arrive through a membership.
 | `ferroehr_clinical_reader` | `SELECT` on `clinical`; `USAGE` on `ext`; read the `audit` repository and verify the chain | the same two schemas |
 | `ferroehr_party` | `party`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`, the sealed `national_identifier` rows included; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation`, to keep their planner statistics; `EXECUTE` on `party.resolve_national_identifier` | `clinical` and `linkage`, revoked explicitly and in both directions |
 | `ferroehr_party_reader` | `SELECT` on `party`. On `national_identifier` the table-level grant is revoked and re-granted column by column, so it reads `id`, `party_id`, `scheme`, `created_at` and `retired_at` and never `lookup_digest`, `nonce` or `ciphertext` | `clinical` and `linkage` |
-| `ferroehr_linkage` | `linkage.subject_ehr` with `SELECT`, `INSERT` and `UPDATE`; `EXECUTE` on `linkage.erase_ehr`; `USAGE` on `ext` | `clinical`, `party`, and `party.resolve_national_identifier` by its own revoke. It holds no `DELETE` anywhere, so the only rows it can remove are the ones the definer function deletes for an erased EHR, one EHR id at a time |
+| `ferroehr_linkage` | `linkage`, which holds no relation since its `0006` migration; `USAGE` on `ext` | `clinical`, `party`, and `party.resolve_national_identifier` by its own revoke |
 | The schema-preparation credential (`[db] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all five migration sets and reads all five `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
 
 A schema's `_sqlx_migrations` bookkeeping, the record of which migrations ran
@@ -502,32 +502,27 @@ small a population a plain `POST /query/aql` returned. For that surface, who
 may run AQL, for what purpose, and over which EHRs are the controls, and they
 are configuration rather than arithmetic.
 
-### The map that rejoins the two domains
+### The reference that rejoins the two domains
 
-**Control.** `linkage.subject_ehr` holds a party id, an EHR id, the subject
-identifier the clinical side carries, the association metadata and a
-validity period. No name, no address and no plaintext attribute, because a
-row here is already the additional information that re-attributes a record.
-Its role is barred from both domains it joins and both of them from it. It
-holds anything only when a FerroEHR run on its own opts in to it with
-`[ehr_index] provider = "local"`; by default the cross-reference lives in an
-IHE patient identity source that FerroEHR asks over PIXm (ITI-83), and the map
-stays empty. FerroEHR matches, links and merges no patients in either mode.
-Each EHR Index operation writes a `linkage`-domain access event naming the
-actor, the declared purpose of use and whether anything matched, and that
-event deliberately does not name the subject identifier. Erasure is the one
-deletion, and the role still cannot delete: `linkage.erase_ehr` is a
-`SECURITY DEFINER` function that removes the rows naming one erased EHR, which
-the admin delete calls once the clinical delete has committed.
+**Control.** An EHR names its subject in its own
+`EHR_STATUS.subject.external_ref`: a party id, or the opaque pseudonym an IHE
+patient identity source answers for the clinical domain once
+`[privacy] subject_namespaces` is declared. No name, no address and no
+plaintext attribute. A cohort and the AQL demographic join resolve a party or
+a named subject to its EHR through that reference, and each crossing writes a
+`linkage`-domain access event naming the actor, the declared purpose of use
+and how many EHRs it reached; the event deliberately does not name the subject
+identifier. FerroEHR matches, links and merges no patients.
 
 **Residual risk.**
 
 - **The identity source holds the re-identifying link.** Its controls, who
   may resolve a pseudonym back to a person, are the source's, and FerroEHR
   never asks for that resolution.
-- **Under the local map, nothing populates it.** What it holds is what an
-  `I_EHR_INDEX` caller wrote, so a deployment that never writes it has no map,
-  and one that writes it from a batch job has whatever that job decided.
+- **A party id as subject re-identifies within the instance.** Without declared
+  pseudonym namespaces, an `EHR_STATUS` may name a party of this server
+  directly; the demographic and clinical credentials still never meet in one
+  statement.
 - **A miss is as informative as a hit.** Asking whether this deployment holds
   a record for a person is itself a disclosure, which is why the miss is
   recorded too.

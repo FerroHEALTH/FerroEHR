@@ -118,17 +118,6 @@ pub struct FerroEhrService {
     /// Art. 32(1)(a)); no openEHR spec governs storage layout — our own
     /// design/extension.
     pub(crate) demographic_pool: PgPool,
-    /// The pool serving the **linkage** pseudonymisation domain — the same
-    /// database (or, when a deployment separates the runtime roles, a third
-    /// DSN), with `search_path` pointing at the `linkage` schema.
-    ///
-    /// Only [`crate::service::linkage`] reads or writes through it. It holds
-    /// which party is the subject of which EHR — the additional information
-    /// that re-attributes a pseudonymised record to a person (GDPR Art. 4(5)
-    /// and Art. 32(1)(a)) — so it is kept apart from BOTH domains it joins,
-    /// and no statement issued on it can reach either. No openEHR spec governs
-    /// storage layout — our own design/extension.
-    pub(crate) linkage_pool: PgPool,
     system_id: String,
     /// The ACTIVE openEHR specification generation set (`spec_profile`).
     /// Boot-fixed; the AQL planner's profile gate and the ingress acceptance
@@ -283,7 +272,6 @@ impl FerroEhrService {
     pub fn new(pools: &DomainPools) -> Self {
         Self {
             demographic_pool: pools.party.clone(),
-            linkage_pool: pools.linkage.clone(),
             pool: pools.clinical.clone(),
             system_id: DEFAULT_SYSTEM_ID.to_owned(),
             spec_profile: crate::config::profile::SpecProfile::default(),
@@ -394,19 +382,6 @@ impl FerroEhrService {
     #[must_use]
     pub fn with_demographic_pool(mut self, pool: PgPool) -> Self {
         self.demographic_pool = pool;
-        self
-    }
-
-    /// Install the pool serving the linkage pseudonymisation domain.
-    ///
-    /// The third credential, and the one that completes the split: with
-    /// `[db].linkage_url` set, the pool authenticates as `ferroehr_linkage`,
-    /// which holds neither the clinical nor the demographic grants and which
-    /// neither of them holds. Without it, [`Self::new`]'s derived pool runs the
-    /// same schema separation over the clinical credential.
-    #[must_use]
-    pub fn with_linkage_pool(mut self, pool: PgPool) -> Self {
-        self.linkage_pool = pool;
         self
     }
 

@@ -56,7 +56,6 @@ use crate::typed_body::typed;
 use ferroehr::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
-use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::status::ServiceStatus;
 use openehr_its::rest::generated::common::UpdateVersion;
 
@@ -261,7 +260,7 @@ async fn load_promotes_the_subject_from_the_loaded_status() {
     // them from the loaded status instead of trusting the archived projection:
     // an archive whose projection is absent — the shape an EHR landed by a path
     // that never promoted has — still yields an EHR the subject lookup finds
-    // (`get_ehrs_for_subject`).
+    // (the EHR read by subject).
     let (_src_db, src_pool, source) = repository().await;
     let (_dst_db, _dst_pool, target) = repository().await;
 
@@ -279,10 +278,8 @@ async fn load_promotes_the_subject_from_the_loaded_status() {
         .await
         .expect("clear the promoted subject columns");
     assert!(
-        source
-            .get_ehrs_for_subject(SubjectRef::person("patient-dump-1", "patients"))
+        crate::fixtures::subject_ehr_ids(&source, "patient-dump-1", "patients")
             .await
-            .expect("source lookup")
             .is_empty(),
         "fixture: the source no longer finds the EHR by subject"
     );
@@ -295,16 +292,13 @@ async fn load_promotes_the_subject_from_the_loaded_status() {
     let reports = target.load_ehrs(dir.clone()).await.expect("load");
     assert_clean(&reports, "load");
 
-    let found = target
-        .get_ehrs_for_subject(SubjectRef::person("patient-dump-1", "patients"))
-        .await
-        .expect("target lookup");
+    let found = crate::fixtures::subject_ehr_ids(&target, "patient-dump-1", "patients").await;
     assert_eq!(
         found.len(),
         1,
         "the loaded EHR must be found by the subject its EHR_STATUS names"
     );
-    assert_eq!(found[0].ehr_id, ehr.to_string());
+    assert_eq!(found[0], ehr.to_string());
 
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -364,12 +358,9 @@ async fn load_reports_an_ehr_whose_subject_the_repository_already_holds() {
         crate::fixtures::ehr_exists(&target, innocent).await,
         "the rest of the archive still loads"
     );
-    let found = target
-        .get_ehrs_for_subject(SubjectRef::person("patient-dump-2", "patients"))
-        .await
-        .expect("target lookup");
+    let found = crate::fixtures::subject_ehr_ids(&target, "patient-dump-2", "patients").await;
     assert_eq!(found.len(), 1, "the subject still resolves to its holder");
-    assert_eq!(found[0].ehr_id, owner.to_string());
+    assert_eq!(found[0], owner.to_string());
 
     let _ = std::fs::remove_dir_all(&dir);
 }

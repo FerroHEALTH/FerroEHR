@@ -49,11 +49,14 @@ its maximum to the implementation. A bulk consumer pages with `offset` and a
 
 ## `[ehr_index]`
 
-Who holds the cross-reference from a patient to the EHR that records them (the
-EHR index). No openEHR specification governs where it lives: the
-RM's `PARTY_SELF` section says the association "may be done elsewhere for
-security reasons", and FerroEHR's design puts it in an IHE patient identity
-source.
+Who translates a patient identifier into the clinical domain, so the EHR that
+records the patient can be found (the EHR index). The EHR itself always says
+whose record it is: its `EHR_STATUS.subject.external_ref` names the subject,
+and FerroEHR finds a subject's EHR by matching that reference, which it keeps
+indexed beside the EHR on every EHR create and `EHR_STATUS` update. No openEHR
+specification governs where the patient's other identifiers live: the RM's
+`PARTY_SELF` section says the association "may be done elsewhere for security
+reasons", and FerroEHR's design puts it in an IHE patient identity source.
 
 **The IHE patient identity source is the default.** FerroEHR asks a PIX
 Manager, as a PIXm Patient Identifier Cross-reference Consumer
@@ -64,19 +67,19 @@ another domain's identifier names. That identifier is the pseudonym
 conformant PIX Manager serves; FerroPIX is the one the compose quickstart and
 the Helm chart run.
 
-**The in-instance map, `provider = "local"`, is the other supported
+**`provider = "local"`, with no identity source, is the other supported
 posture**, for production as much as for development, tests and the
 conformance suites: the subject-id and subject-namespace model. A client names
 a patient in `EHR_STATUS.subject.external_ref` by any namespace and identifier
 (`benchmark` / `1793131381`), as `OBJECT_REF.namespace` and a local
-`GENERIC_ID.scheme` allow, and the map answers the openEHR REST API's
-`GET /ehr?subject_id=…&subject_namespace=…` lookup over `EHR_STATUS` content,
-matching both exactly. An EHR created for a subject through the service's
-`create_ehr_for_subject` enters the map with its creation, as a `Primary`
-association with no location, so a subject cohort finds it; an EHR created
-over `POST /ehr` or `PUT /ehr/{ehr_id}` enters the map only through
-`add_ehr_subject`. **With neither** provider configured, the server refuses to
-start and the refusal names both choices.
+`GENERIC_ID.scheme` allow, and a subject resolves to itself: the openEHR REST
+API's `GET /ehr?subject_id=…&subject_namespace=…` lookup and a cohort that
+names its subjects both find the EHR whose `EHR_STATUS` names the subject,
+matching namespace and identifier exactly. An EHR created over `POST /ehr` or
+`PUT /ehr/{ehr_id}` is found from the moment it is created, and an
+`EHR_STATUS` update that changes the subject moves it. **With neither**
+provider configured, the server refuses to start and the refusal names both
+choices.
 
 What the local posture means for pseudonymisation: with no
 `[privacy] subject_namespaces` declared, the server stores a subject reference
@@ -93,14 +96,14 @@ subject-id posture by accepting the `open_subject_namespace` gap by name
 **`provider` alone switches the index**, in the file or as
 `FERROEHR__EHR_INDEX__PROVIDER`. The keys of the provider not chosen are kept
 and not used, and boot names them, so a configuration written for the IHE
-source runs on the local map with `FERROEHR__EHR_INDEX__PROVIDER=local` and no
+source runs locally with `FERROEHR__EHR_INDEX__PROVIDER=local` and no
 other change; its declared pseudonym namespaces stay in force. The compose
 quickstart selects its local configuration with one variable
 ([The local EHR index](compose.md#the-local-ehr-index)).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `provider` | enum{ihe,local} | `ihe` | Which provider holds the cross-reference. |
+| `provider` | enum{ihe,local} | `ihe` | Who translates a subject into the clinical domain. |
 | `pixm_url` | secret URL | required for `ihe` | The PIX Manager's FHIR base, `[base]` of `[base]/Patient/$ihe-pix`. Credentials embedded in it are masked in every rendering. |
 | `assigning_authority` | URI | required for `ihe` | The clinical domain, such as `urn:oid:2.999.7.1`: the `targetSystem` of every ITI-83 query and the namespace the answered pseudonym is stored under. It must be one of `privacy.subject_namespaces`. |
 | `invocation` | enum{post,get} | `post` | `post` sends a `Parameters` body, so a patient identifier never appears in a URL or an access log; `get` is the form ITI-83 prescribes, for a PIX Manager that accepts no `POST`. |
@@ -133,19 +136,21 @@ platform roots for a PIX Manager behind a private PKI, `client_identity_file`
 (or `client_identity` inline), the chain and key presented for mutual TLS, and
 `min_version` (`"1.3"`, or `"1.2"`).
 
-What each operation asks:
+How a subject a cohort names is resolved:
 
-| Operation | Under `ihe` | Under `local` |
+| Step | Under `ihe` | Under `local` |
 |---|---|---|
-| `has_ehr_for_subject`, `create_ehr_for_subject` | the subject's clinical pseudonym, asked of the source; a subject already in the clinical domain names itself | the subject as given |
-| the EHRs of a subject | the one EHR whose `EHR_STATUS` names the subject's pseudonym | the in-instance map |
-| the subjects of an EHR | the pseudonym its `EHR_STATUS` carries; the source is never asked to resolve it back | the in-instance map |
-| writing the index (`add`, `update`, `remove`) | refused: the source holds the cross-reference | the in-instance map |
+| the subject in the clinical domain | its clinical pseudonym, asked of the source; a subject already in the clinical domain names itself | the subject as given |
+| the EHR of that subject | the one EHR whose `EHR_STATUS` names it | the one EHR whose `EHR_STATUS` names it |
+
+The source is never asked to resolve a pseudonym back to another domain's
+identifier.
 
 **No fallback.** At start the server reads the source's
 `CapabilityStatement` and refuses to start when it does not answer. A request
 the source then fails, refuses or times out on answers with an error that
-carries what the source said, and nothing is answered from the in-instance map.
+carries what the source said, and nothing is answered from the `EHR_STATUS`
+subject instead.
 An answered pseudonym the `[privacy]` subject rule refuses, or more than one
 identifier in the clinical domain, is refused too.
 

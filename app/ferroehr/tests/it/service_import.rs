@@ -373,19 +373,13 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     // subject is patient-import-1@local — the promoted columns follow
     // the STORED status, exactly as the fix requires.
     let subject = SubjectRef::person("patient-import-1", "local");
+    let found = crate::fixtures::subject_ehr_ids(&target, &subject.id, &subject.namespace).await;
     assert!(
-        target
-            .has_ehr_for_subject(subject.clone())
-            .await
-            .expect("has_ehr_for_subject"),
+        !found.is_empty(),
         "the imported clone must be visible to the subject lookup"
     );
-    let found = target
-        .get_ehrs_for_subject(subject)
-        .await
-        .expect("get_ehrs_for_subject");
     assert_eq!(found.len(), 1, "one EHR per subject");
-    assert_eq!(found[0].ehr_id, ehr.to_string());
+    assert_eq!(found[0], ehr.to_string());
 
     // The subject is now taken in the target — under the "local" namespace
     // the extract normalized it to — so a later create naming that same
@@ -457,12 +451,9 @@ async fn import_ehr_conflicting_subject_is_rejected_and_rolled_back() {
         !crate::fixtures::ehr_exists(&target, ehr).await,
         "a rejected import must not leave a partial EHR"
     );
-    let found = target
-        .get_ehrs_for_subject(SubjectRef::person("patient-import-2", "local"))
-        .await
-        .expect("get_ehrs_for_subject");
+    let found = crate::fixtures::subject_ehr_ids(&target, "patient-import-2", "local").await;
     assert_eq!(found.len(), 1);
-    assert_eq!(found[0].ehr_id, owner.to_string());
+    assert_eq!(found[0], owner.to_string());
 }
 
 #[tokio::test]

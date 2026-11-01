@@ -3,12 +3,13 @@
 
 //! The seam every subject-to-EHR resolution goes through.
 //!
-//! [`EhrIndexProvider`] selects who holds the cross-reference: an IHE patient
-//! identity source asked over PIXm ([`super::ihe`]), or the in-instance
-//! `linkage` map a FerroEHR run on its own opts in to. A service that was
-//! given neither refuses every subject-scoped operation, and a configured
-//! identity source that fails is reported as the failure it is, never answered
-//! from the local map.
+//! [`EhrIndexProvider`] selects who translates a subject into the clinical
+//! domain: an IHE patient identity source asked over PIXm ([`super::ihe`]), or
+//! nobody, for a FerroEHR run on its own (`local`), where a subject names
+//! itself. Either way the EHR is the one whose `EHR_STATUS.subject` names the
+//! clinical subject, read from the `ehr` table's promoted subject columns. A
+//! service that was given neither refuses every subject-scoped operation, and
+//! a configured identity source that fails is reported as the failure it is.
 //!
 //! NOTE: no openEHR spec governs where the cross-reference lives (RM common
 //! master04 §`PARTY_SELF`): our own design.
@@ -20,9 +21,7 @@ use crate::service::FerroEhrService;
 use crate::service::ehr_index::IndexError;
 use crate::service::ehr_index::config::{EhrIndexConfig, ProviderKind};
 use crate::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
-use crate::service::ehr_index::types::{EhrIndexEntry, ResourceStatus, SubjectRef};
-use crate::service::error::ServiceError;
-use crate::storage::ehr_repo;
+use crate::service::ehr_index::types::SubjectRef;
 
 /// Who holds the subject-to-EHR cross-reference.
 #[derive(Debug, Clone, Default)]
@@ -32,9 +31,9 @@ pub enum EhrIndexProvider {
     /// the binary never serves in it.
     #[default]
     Unconfigured,
-    /// The in-instance `linkage` map, the explicit opt-in for a FerroEHR run
-    /// on its own: a subject resolves to itself and is matched against
-    /// `EHR_STATUS` content.
+    /// No identity source, the explicit opt-in for a FerroEHR run on its own:
+    /// a subject resolves to itself and is matched against `EHR_STATUS`
+    /// content.
     Local,
     /// An IHE patient identity source asked over PIXm (ITI-83).
     Ihe(Arc<IheIdentitySource>),
@@ -82,8 +81,8 @@ impl EhrIndexProvider {
 impl FerroEhrService {
     /// Install the provider that holds the subject-to-EHR cross-reference.
     ///
-    /// Without it the service refuses every subject-scoped EHR call and every
-    /// EHR-index call; the binary installs the one
+    /// Without it the service refuses every subject-scoped call; the binary
+    /// installs the one
     /// `[ehr_index]` names, and a test opts in to [`EhrIndexProvider::Local`]
     /// explicitly.
     #[must_use]
@@ -143,97 +142,23 @@ impl FerroEhrService {
         }
     }
 
-    /// The subjects associated with an EHR, as the installed provider holds
-    /// them.
-    ///
-    /// Under an identity source, the one subject is the clinical identifier
-    /// the EHR's `EHR_STATUS` carries, with a `Primary` status and no
-    /// location: the source holds no `RESOURCE_STATUS` or `LOCATION_DESC`,
-    /// and FerroEHR invents none beyond the default instance type. The source
-    /// is never asked which identifiers other
-    /// domains hold for that pseudonym: resolving it back would hand the CDR
-    /// the additional information GDPR Art. 4(5) keeps separately. An EHR
-    /// whose subject is in no clinical-domain namespace has none to answer.
-    ///
-    /// # Errors
-    /// [`IndexError::Unconfigured`] with no provider installed, and
-    /// [`IndexError::Service`] on a storage fault.
-    pub(in crate::service) async fn provider_ehr_subjects(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<Vec<EhrIndexEntry>, IndexError> {
-        let source = match &self.ehr_index {
-            EhrIndexProvider::Unconfigured => return Err(IndexError::Unconfigured),
-            EhrIndexProvider::Local => return self.index_ehr_subjects(ehr_id).await,
-            EhrIndexProvider::Ihe(source) => source,
-        };
-        let columns = ehr_repo::ehr_subject_columns(&self.pool, ehr_id)
-            .await
-            .map_err(ServiceError::from)?;
-        let Some((Some(clinical), Some(namespace))) = columns else {
-            return Ok(Vec::new());
-        };
-        if namespace != source.domain() {
-            return Ok(Vec::new());
-        }
-        Ok(vec![EhrIndexEntry {
-            ehr_id: ehr_id.to_string(),
-            subject: SubjectRef::person(clinical, namespace),
-            status: ResourceStatus::default(),
-            location: None,
-        }])
-    }
-
-    /// The EHRs associated with a subject, as the installed provider holds
-    /// them: under an identity source, the one EHR whose `EHR_STATUS` names
-    /// the subject's clinical identifier, with a `Primary` status and no
-    /// location.
+    /// The EHR whose `EHR_STATUS` names `subject` once the installed provider
+    /// has resolved it into the clinical domain ([`Self::clinical_subject`]),
+    /// matched on the EHR's promoted subject columns; `None` when no EHR
+    /// names it or the identity source knows no clinical identifier for it.
     ///
     /// # Errors
     /// As [`Self::clinical_subject`], and [`IndexError::Service`] on a storage
     /// fault.
-    pub(in crate::service) async fn provider_subject_ehrs(
+    pub(in crate::service) async fn subject_ehr(
         &self,
         subject: &SubjectRef,
-    ) -> Result<Vec<EhrIndexEntry>, IndexError> {
-        match &self.ehr_index {
-            EhrIndexProvider::Unconfigured => Err(IndexError::Unconfigured),
-            EhrIndexProvider::Local => self.index_subject_ehrs(subject).await,
-            EhrIndexProvider::Ihe(_) => {
-                let Some(clinical) = self.clinical_subject(subject).await? else {
-                    return Ok(Vec::new());
-                };
-                let found = self
-                    .ehr_id_for_subject(&clinical.id, &clinical.namespace)
-                    .await?;
-                Ok(found
-                    .map(|ehr_id| EhrIndexEntry {
-                        ehr_id: ehr_id.to_string(),
-                        subject: subject.clone(),
-                        status: ResourceStatus::default(),
-                        location: None,
-                    })
-                    .into_iter()
-                    .collect())
-            }
-        }
-    }
-
-    /// Refuse an EHR-index call the installed provider does not serve
-    /// from the local map.
-    ///
-    /// # Errors
-    /// [`IndexError::Unconfigured`] with no provider installed, and
-    /// [`IndexError::HeldBySource`] under an identity source, which holds the
-    /// cross-reference itself.
-    pub(in crate::service) fn local_index(
-        &self,
-        operation: &'static str,
-    ) -> Result<(), IndexError> {
-        match &self.ehr_index {
-            EhrIndexProvider::Local => Ok(()),
-            EhrIndexProvider::Unconfigured => Err(IndexError::Unconfigured),
-            EhrIndexProvider::Ihe(_) => Err(IndexError::HeldBySource { operation }),
-        }
+    ) -> Result<Option<EhrId>, IndexError> {
+        let Some(clinical) = self.clinical_subject(subject).await? else {
+            return Ok(None);
+        };
+        Ok(self
+            .ehr_id_for_subject(&clinical.id, &clinical.namespace)
+            .await?)
     }
 }

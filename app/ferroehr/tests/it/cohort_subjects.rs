@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Cohort queries that name their subjects by identifier, under each EHR
-//! index provider: the local map, and an IHE patient identity source asked
-//! over PIXm (ITI-83) through the stub of the `ehr_index_ihe` suite.
+//! index provider: the local provider, and an IHE patient identity source
+//! asked over PIXm (ITI-83) through the stub of the `ehr_index_ihe` suite. The
+//! EHRs are created over the `POST /ehr` service call with the subject in
+//! `EHR_STATUS`, the one source of a subject's EHR.
 //!
 //! Under the identity source the server holds only the pseudonym `EHR_STATUS`
 //! carries in its own clinical domain (RM ehr master04 §EHR Status,
 //! `EHR_STATUS.subject`), so a named subject is translated forward into that
-//! domain and a demographic predicate, which would need the party-to-EHR map,
-//! is refused. No openEHR spec governs the cohort surface: our own design.
+//! domain and a demographic predicate, which would need the reverse
+//! translation, is refused. No openEHR spec governs the cohort surface: our own design.
 
 #![expect(
     clippy::panic,
@@ -95,10 +97,11 @@ fn served(outcome: &ferroehr::service::linkage::cohort::CohortOutcome) -> Vec<St
     ehrs
 }
 
-/// Under the local map the named subjects resolve through the map, and an
-/// EHR whose subject the cohort does not name is never served.
+/// Under the local provider the named subjects resolve through the subject
+/// each EHR's `EHR_STATUS` names, and an EHR whose subject the cohort does not
+/// name is never served.
 #[tokio::test]
-async fn named_subjects_resolve_through_the_local_map() {
+async fn named_subjects_resolve_through_the_ehr_status_subject() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_ehr_index(EhrIndexProvider::Local)
@@ -107,10 +110,7 @@ async fn named_subjects_resolve_through_the_local_map() {
     let mut expected = Vec::new();
     for value in ["4114-a", "4114-b", "4114-c"] {
         let subject = SubjectRef::person(value, LOCAL_DOMAIN);
-        let ehr = svc
-            .create_ehr_for_subject(subject.clone(), None)
-            .await
-            .expect("an EHR for the subject");
+        let ehr = crate::fixtures::create_ehr_subject(&svc, &subject).await;
         commit(&svc, ehr, value).await;
         if value != "4114-c" {
             named.push(subject);
@@ -167,21 +167,18 @@ async fn a_named_subject_is_translated_forward_under_an_identity_source() {
         .await;
     let db = testkit::db().await.expect("testkit database");
     let svc = service(&db, &pix.uri()).with_cohort(cohort_config());
-    let ehr = svc
-        .create_ehr_for_subject(red_subject(), None)
-        .await
-        .expect("an EHR under the clinical pseudonym");
+    // The EHR names the clinical pseudonym the identity source answers.
+    let ehr =
+        crate::fixtures::create_ehr_subject(&svc, &SubjectRef::person(&pseudonym, CLINICAL)).await;
     commit(&svc, ehr, "named").await;
     // An EHR of another clinical pseudonym, which the cohort does not name.
     let local = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_ehr_index(EhrIndexProvider::Local);
-    let other = local
-        .create_ehr_for_subject(
-            SubjectRef::person(Uuid::now_v7().to_string(), CLINICAL),
-            None,
-        )
-        .await
-        .expect("an EHR of another subject");
+    let other = crate::fixtures::create_ehr_subject(
+        &local,
+        &SubjectRef::person(Uuid::now_v7().to_string(), CLINICAL),
+    )
+    .await;
     commit(&svc, other, "unnamed").await;
 
     let outcome = svc
@@ -215,7 +212,7 @@ async fn a_predicate_is_refused_under_an_identity_source() {
     let refused = svc
         .execute_cohort_query(predicated)
         .await
-        .expect_err("a predicate needs the map");
+        .expect_err("a predicate needs the reverse translation");
     assert!(
         matches!(refused, CohortError::IdentityNotHeld),
         "{refused:?}"
@@ -300,10 +297,7 @@ async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
         "4247-objecting",
     ] {
         let subject = SubjectRef::person(value, LOCAL_DOMAIN);
-        let ehr = svc
-            .create_ehr_for_subject(subject.clone(), None)
-            .await
-            .expect("an EHR for the subject");
+        let ehr = crate::fixtures::create_ehr_subject(&svc, &subject).await;
         commit(&svc, ehr, value).await;
         subjects.push(subject);
         ehrs.push(ehr);

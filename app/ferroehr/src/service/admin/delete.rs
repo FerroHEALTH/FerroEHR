@@ -186,7 +186,7 @@ impl FerroEhrService {
     /// Physically delete one EHR and every trace of it.
     ///
     /// The sequence, in order, is the erasure reach: one clinical transaction,
-    /// then the linkage domain, then the object store.
+    /// then the object store.
     ///
     /// 1. `DELETE FROM ehr` cascades through `vo_head`, `version` (both tier
     ///    partitions), `node`, `vo_attestation`, `contribution`,
@@ -200,9 +200,7 @@ impl FerroEhrService {
     ///    transaction commits, so every registered reader is told what to
     ///    delete downstream (Art. 19: the controller communicates an erasure
     ///    "to each recipient to whom the personal data have been disclosed").
-    /// 3. `linkage.erase_ehr` runs once the clinical delete has committed, so
-    ///    no cross-reference row outlives the record it named.
-    /// 4. The externalized blobs this EHR referenced and no surviving version
+    /// 3. The externalized blobs this EHR referenced and no surviving version
     ///    still does are removed from the object store.
     ///
     /// The access records naming the EHR stay: Art. 17(3)(b) withholds erasure
@@ -267,15 +265,6 @@ impl FerroEhrService {
 
         tx.commit().await?;
 
-        // Erasure reaches the cross-reference, on the linkage pool and after
-        // the clinical delete has committed. A row there naming an erased EHR
-        // is the additional information of GDPR Art. 4(5) outliving the data it
-        // was additional to, and Art. 17(1) reaches it
-        // (https://eur-lex.europa.eu/eli/reg/2016/679/oj).
-        self.erase_ehr_linkage(ehr_id)
-            .await
-            .map_err(|error| ServiceError::internal("erase the EHR's linkage map", error))?;
-
         // The EHR and its versions are gone; GC any blob this EHR referenced
         // that no *surviving* version still references (content-addressed dedup
         // means a blob shared with another EHR or a party must be kept).
@@ -288,8 +277,7 @@ impl FerroEhrService {
     /// the count of EHRs actually deleted is returned.
     ///
     /// The reach is the same, chunked: one transaction per chunk carries the
-    /// cascade and the erasure tombstones, and the linkage erasure runs per
-    /// EHR once that transaction has committed.
+    /// cascade and the erasure tombstones.
     ///
     /// NOTE: the idempotent skip-missing semantics + returned count are
     /// our own design (no openEHR spec governs bulk-delete internals); a
@@ -342,11 +330,6 @@ impl FerroEhrService {
             let removed_ids: Vec<EhrId> = removed.iter().copied().map(EhrId).collect();
             self.write_erase_tombstones(&mut tx, &removed_ids).await?;
             tx.commit().await?;
-            for ehr_id in &removed_ids {
-                self.erase_ehr_linkage(*ehr_id).await.map_err(|error| {
-                    ServiceError::internal("erase the EHR's linkage map", error)
-                })?;
-            }
             #[expect(
                 clippy::as_conversions,
                 reason = "the removed-row count widens exactly: usize is at most 64 bits \

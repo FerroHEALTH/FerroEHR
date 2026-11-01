@@ -216,11 +216,7 @@ async fn seed_corpus(svc: &Arc<FerroEhrService>, n: usize) -> Vec<EhrId> {
                 )
                 .await
                 .unwrap_or_else(|e| panic!("create_party ({index}): {e:?}"));
-                let ehr = Box::pin(svc.create_ehr_meta(None, None))
-                    .await
-                    .map(|(id, _)| id)
-                    .expect("create_ehr");
-                svc.link(party, ehr).await.expect("link");
+                let ehr = crate::fixtures::create_ehr_for_party(&svc, party).await;
                 svc.create_composition(ehr, uv(&composition(&format!("c{index}")), "249", None))
                     .await
                     .unwrap_or_else(|e| panic!("create_composition ({index}): {e:?}"));

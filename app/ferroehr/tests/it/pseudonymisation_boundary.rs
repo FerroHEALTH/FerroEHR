@@ -470,23 +470,7 @@ async fn the_boot_self_check_refuses_a_cross_domain_grant() {
             "GRANT SELECT ON SEQUENCE",
             "REVOKE SELECT ON SEQUENCE",
         ),
-        // The linkage map, in both directions: a clinical role that can read
-        // it holds the join, and so does the linkage role that can read a
-        // clinical relation.
-        (
-            "ferroehr_clinical",
-            "linkage.subject_ehr",
-            "table",
-            "GRANT SELECT ON",
-            "REVOKE SELECT ON",
-        ),
-        (
-            "ferroehr_party",
-            "linkage.subject_ehr",
-            "table",
-            "GRANT SELECT ON",
-            "REVOKE SELECT ON",
-        ),
+        // The linkage role reaching a domain it separates.
         (
             "ferroehr_linkage",
             "party.version",
@@ -501,13 +485,13 @@ async fn the_boot_self_check_refuses_a_cross_domain_grant() {
             "GRANT SELECT ON",
             "REVOKE SELECT ON",
         ),
-        // A function is the fourth breach shape, and the erasure definer is
-        // the one that matters: it runs as its owner and deletes rows the
-        // caller cannot, so a clinical role holding EXECUTE reaches into the
-        // linkage domain without holding a single grant on its table.
+        // A function is the fourth breach shape: the identifier resolution
+        // runs as its owner and reads rows the caller cannot, so a clinical
+        // role holding EXECUTE reaches into the party domain without holding
+        // a single grant on its table.
         (
             "ferroehr_clinical",
-            "linkage.erase_ehr(uuid)",
+            "party.resolve_national_identifier(text, bytea)",
             "function",
             "GRANT EXECUTE ON FUNCTION",
             "REVOKE EXECUTE ON FUNCTION",
@@ -1781,79 +1765,6 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
     assert_eq!(left, 0, "the erasure removes every sealed row of the party");
 }
 
-/// `SQLSTATE` 23P01 `exclusion_violation` — what `PostgreSQL` reports when a
-/// key carrying `WITHOUT OVERLAPS` is violated, because such a key is enforced
-/// by a `GiST` exclusion index (`PostgreSQL` docs § Appendix A "`PostgreSQL`
-/// Error Codes", class 23; `CREATE TABLE`, "`PRIMARY KEY`").
-const SQLSTATE_EXCLUSION_VIOLATION: &str = "23P01";
-
-/// One party holds at most one mapping to an EHR at any one instant, enforced
-/// by the temporal primary key rather than by whichever code path writes.
-///
-/// The second half of the test is what makes the first half mean something: a
-/// plain `UNIQUE (party_id)` would also refuse the overlapping row,
-/// and would then wrongly refuse the mapping a merge opens after closing the
-/// previous one. Both must hold, or the constraint is the wrong one.
-#[tokio::test]
-async fn one_party_holds_one_open_mapping_at_a_time() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let party = Uuid::now_v7();
-
-    sqlx::query("INSERT INTO linkage.subject_ehr (party_id, ehr_id) VALUES ($1, $2)")
-        .bind(party)
-        .bind(Uuid::now_v7())
-        .execute(&pool)
-        .await
-        .expect("the first mapping is accepted");
-
-    let refused = sqlx::query("INSERT INTO linkage.subject_ehr (party_id, ehr_id) VALUES ($1, $2)")
-        .bind(party)
-        .bind(Uuid::now_v7())
-        .execute(&pool)
-        .await;
-    let error = refused.expect_err("a second mapping open at the same instant must be refused");
-    let code = error
-        .as_database_error()
-        .and_then(sqlx::error::DatabaseError::code)
-        .map(std::borrow::Cow::into_owned);
-    assert_eq!(
-        code.as_deref(),
-        Some(SQLSTATE_EXCLUSION_VIOLATION),
-        "the overlap must be refused by the temporal key, not fail some other way: {error}"
-    );
-
-    // Close the first mapping, the way a merge or a split does, and the next
-    // one is accepted: the periods meet at an instant and do not overlap.
-    sqlx::query(
-        "UPDATE linkage.subject_ehr SET sys_period = tstzrange(lower(sys_period), now(), '[)') \
-         WHERE party_id = $1",
-    )
-    .bind(party)
-    .execute(&pool)
-    .await
-    .expect("close the mapping");
-
-    sqlx::query("INSERT INTO linkage.subject_ehr (party_id, ehr_id) VALUES ($1, $2)")
-        .bind(party)
-        .bind(Uuid::now_v7())
-        .execute(&pool)
-        .await
-        .expect("a successor mapping is accepted once the previous one is closed");
-
-    let history: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM linkage.subject_ehr WHERE party_id = $1")
-            .bind(party)
-            .fetch_one(&pool)
-            .await
-            .expect("count the party's mappings");
-    assert_eq!(
-        history, 2,
-        "the closed mapping is kept, so which party was the subject when a \
-         composition was written stays answerable"
-    );
-}
-
 /// A sealed identifier seals and resolves on the SEPARATED demographic
 /// credential.
 ///
@@ -1928,124 +1839,6 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
         "and an identifier nobody holds still resolves to nothing, so the \
          assertion above cannot be met by a resolve that answers everything"
     );
-}
-
-/// One linkage access record: domain, principal, purpose, result count and
-/// the FHIR rendering as text.
-type LinkageAccessRow = (String, Option<String>, Option<String>, Option<i64>, String);
-
-/// Resolving a party to its EHR is recorded as a linkage-domain access,
-/// naming the actor, the declared purpose and what it resolved.
-///
-/// Asserted from the stored record rather than from a log line: a log line is
-/// not the access log, and the question NEN 7513 and EHDS Art. 9 put — who
-/// re-attributed this record to a person — is answered by the repository or
-/// not at all.
-#[tokio::test]
-async fn resolving_a_party_to_its_ehr_is_recorded_as_an_access() {
-    use ferroehr::system_log::config::{AuditConfig, StoreConfig};
-    use ferroehr::system_log::sender::{AuditHandle, start};
-
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let audit_config = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
-    let (sender, _handle): (_, AuditHandle) = start(audit_config, None, Some(pool.clone()))
-        .await
-        .expect("the audit sender");
-    let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-        .with_audit(sender);
-
-    let party = ferroehr::ids::VoId(Uuid::now_v7());
-    let ehr = ferroehr::ids::EhrId(Uuid::now_v7());
-    service.link(party, ehr).await.expect("the mapping opens");
-
-    // Under a request scope, so the record carries the actor and the purpose
-    // the adapter publishes rather than the empty values a background task has.
-    let committer = ferroehr::service::committer::CommitterIdentity {
-        subject: "dr.house".to_owned(),
-        id_type: "basic",
-        issuer: None,
-        client: Some("dr.house".to_owned()),
-        person: false,
-    };
-    let resolved = ferroehr::service::committer::with_committer(
-        Some(committer),
-        ferroehr::system_log::access_context::with_purpose(
-            Some("TREAT".to_owned()),
-            service.resolve_ehr_for_party(party),
-        ),
-    )
-    .await
-    .expect("the resolution runs");
-    assert_eq!(resolved, Some(ehr), "the mapping resolves");
-
-    let object_id = format!("party-ehr:{party}");
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-    let record = loop {
-        let found: Option<LinkageAccessRow> = sqlx::query_as(
-            "SELECT domain, principal, purpose, result_count, to_jsonb(e)::text \
-             FROM audit.audit_event e \
-             WHERE domain = 'linkage' AND action = 'R' AND resource_id = $1 \
-             ORDER BY recorded_at DESC LIMIT 1",
-        )
-        .bind(&object_id)
-        .fetch_optional(&pool)
-        .await
-        .expect("read the access log");
-        if let Some(row) = found {
-            break row;
-        }
-        assert!(
-            std::time::Instant::now() < deadline,
-            "the resolution was not recorded within the drain window"
-        );
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    };
-
-    assert_eq!(
-        record.0, "linkage",
-        "a resolution is a linkage-domain access"
-    );
-    assert_eq!(
-        record.1.as_deref(),
-        Some("dr.house"),
-        "the record names the actor who resolved"
-    );
-    assert_eq!(
-        record.2.as_deref(),
-        Some("TREAT"),
-        "and the purpose of use the caller declared"
-    );
-    assert_eq!(record.3, Some(1), "one mapping was resolved");
-    assert!(
-        !record.4.contains(&ehr.to_string()),
-        "the trail lives outside this domain's role, so a record pairing the \
-         party with its EHR would be a second copy of the map: {}",
-        record.4
-    );
-
-    // The opening write is recorded too: a map nobody can see being written is
-    // as unanswerable as one nobody can see being read.
-    let written: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM audit.audit_event \
-         WHERE domain = 'linkage' AND action = 'C' AND resource_id = $1",
-    )
-    .bind(&object_id)
-    .fetch_one(&pool)
-    .await
-    .expect("count the opening record");
-    assert_eq!(written, 1, "opening the mapping is recorded as well");
 }
 
 /// The split clinical role writes and reads the audit trail (#3267).

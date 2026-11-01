@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end cohort queries against a real PostgreSQL 18 (shared testkit
-//! harness): seed parties in the demographic domain, link each to its own EHR
-//! through the linkage domain, then select a population by a demographic
+//! harness): seed parties in the demographic domain, each the subject of its
+//! own EHR's `EHR_STATUS`, then select a population by a demographic
 //! predicate and run AQL over exactly the EHRs it resolves to.
 //!
 //! **No openEHR spec governs the cohort surface — our own design/extension**
 //! (`ferroehr::service::linkage::cohort`). What the suite pins is the property
 //! the design exists for: the two statement families never cross the boundary,
-//! the crossing runs on three separated credentials, a small cell is withheld
+//! the crossing runs on separated credentials, a small cell is withheld
 //! rather than served, and every execution — suppressed ones included — leaves
 //! one access record naming the cohort by digest and never by value.
 
@@ -212,7 +212,7 @@ struct Subject {
     composition_uid: String,
 }
 
-/// Seed a party, its EHR, the mapping between them, and one composition.
+/// Seed a party, the EHR whose subject it is, and one composition.
 async fn seed(
     svc: &FerroEhrService,
     name: &str,
@@ -227,11 +227,7 @@ async fn seed(
     )
     .await
     .unwrap_or_else(|e| panic!("create_party ({name}): {e:?}"));
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
-    svc.link(party, ehr).await.expect("link party to ehr");
+    let ehr = crate::fixtures::create_ehr_for_party(svc, party).await;
     let composition_uid = svc
         .create_composition(ehr, uv(&composition(name), "249", None))
         .await
@@ -673,10 +669,10 @@ fn the_two_statements_never_cross_the_boundary() {
 /// which can reach another's schema.
 ///
 /// The separation is what makes the cohort surface safe to have at all: if one
-/// credential could run all three statements, the boundary would be a naming
-/// convention rather than a database fact.
+/// credential could run both the demographic and the clinical statements, the
+/// boundary would be a naming convention rather than a database fact.
 #[tokio::test]
-async fn the_crossing_runs_on_three_separated_credentials() {
+async fn the_crossing_runs_on_separated_credentials() {
     use ferroehr::db::DbConfig;
     use ferrohealth_secret::secret_url::SecretUrl;
 
@@ -692,38 +688,29 @@ async fn the_crossing_runs_on_three_separated_credentials() {
             )),
             url_file: None,
         },
-        linkage: ferroehr::db::domain::DomainDsn {
-            url: Some(SecretUrl::new(
-                crate::fixtures::dsn_as(&db, "cohlink", "ferroehr_linkage").await,
-            )),
-            url_file: None,
-        },
         ..ferroehr::db::domain::StorageConfig::default()
     };
     assert!(
-        storage.is_separated(ferroehr::db::domain::Domain::Party)
-            && storage.is_separated(ferroehr::db::domain::Domain::Linkage),
-        "the fixture must actually separate all three credentials, or this \
-         measures the shared-credential path again"
+        storage.is_separated(ferroehr::db::domain::Domain::Party),
+        "the fixture must actually separate the credentials, or this measures \
+         the shared-credential path again"
     );
 
     let pools = ferroehr::db::connect_domains(&settings, &storage)
         .await
         .expect("each pool connects on its own credential");
-    let linkage = pools.linkage.clone();
 
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
         &pools.clinical,
     ))
     .with_demographic_pool(pools.party.clone())
-    .with_linkage_pool(linkage.clone())
     .with_cohort(cohort_config(0));
     let corpus = seed_corpus(&svc).await;
 
     let outcome = svc
         .execute_cohort_query(request(&[("city", "Groningen")]))
         .await
-        .expect("the crossing runs on three credentials");
+        .expect("the crossing runs on separated credentials");
     assert_eq!(outcome.cohort_size, 3);
     let mut expected: Vec<String> = corpus[..3]
         .iter()
@@ -732,21 +719,21 @@ async fn the_crossing_runs_on_three_separated_credentials() {
     expected.sort();
     assert_eq!(served_uids(&outcome.query.result_set), expected);
 
-    // The credential that performed the crossing cannot perform either end of
-    // it, which is the property the separation buys.
-    assert!(
-        sqlx::query("SELECT count(*) FROM party.node")
-            .fetch_one(&linkage)
-            .await
-            .is_err(),
-        "the linkage credential must not be able to read the demographic domain"
-    );
+    // Neither credential can read the other's domain, which is the property
+    // the separation buys.
     assert!(
         sqlx::query("SELECT count(*) FROM clinical.node")
-            .fetch_one(&linkage)
+            .fetch_one(&pools.party)
             .await
             .is_err(),
-        "nor the clinical one"
+        "the demographic credential must not be able to read the clinical domain"
+    );
+    assert!(
+        sqlx::query("SELECT count(*) FROM party.node")
+            .fetch_one(&pools.clinical)
+            .await
+            .is_err(),
+        "nor the clinical credential the demographic one"
     );
 }
 

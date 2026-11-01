@@ -10,7 +10,8 @@
 //! domain's `targetIdentifier`, because the clinical identifier is the
 //! pseudonym `EHR_STATUS` carries (`[privacy] subject_namespaces`). No openEHR
 //! spec governs where the cross-reference lives (RM common master04
-//! §`PARTY_SELF`): our own design.
+//! §`PARTY_SELF`): our own design. A subject is resolved through the cohort
+//! query that names it, the production path a subject resolution takes.
 
 #![expect(
     clippy::expect_used,
@@ -35,7 +36,9 @@ use ferroehr::service::ehr_index::config::EhrIndexConfig;
 use ferroehr::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::status::ServiceStatus;
+use ferroehr::service::linkage::cohort::CohortQueryRequest;
+use ferroehr::service::linkage::cohort::config::CohortConfig;
+use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::tls_client::TlsClientSection;
 
@@ -108,8 +111,36 @@ pub(crate) fn red_subject() -> SubjectRef {
     SubjectRef::person(RED_ID, RED)
 }
 
-/// A subject named in another domain is created under the identifier the
-/// clinical domain holds for it, and found again through the same question.
+/// The EHRs a cohort naming `subject` resolves to, through the cohort query
+/// the `POST /query/cohort` route makes; a refused resolution is the refusal.
+async fn resolved(svc: &FerroEhrService, subject: SubjectRef) -> Result<Vec<String>, StatusError> {
+    let outcome = svc
+        .execute_cohort_query(CohortQueryRequest {
+            aql: "SELECT e/ehr_id/value FROM EHR e".to_owned(),
+            subjects: vec![subject],
+            ..CohortQueryRequest::default()
+        })
+        .await
+        .map_err(StatusError::from)?;
+    Ok(outcome
+        .query
+        .served_ehrs
+        .iter()
+        .map(|(ehr, _rows)| ehr.clone())
+        .collect())
+}
+
+/// Subject cohorts on, nothing suppressed.
+fn subject_cohorts() -> CohortConfig {
+    CohortConfig {
+        small_cell_threshold: 0,
+        subjects: true,
+        ..CohortConfig::default()
+    }
+}
+
+/// A subject named in another domain is found through the identifier the
+/// clinical domain holds for it, on the EHR whose `EHR_STATUS` carries it.
 #[tokio::test]
 async fn a_subject_is_resolved_through_the_pix_manager() {
     let pix = MockServer::start().await;
@@ -120,17 +151,17 @@ async fn a_subject_is_resolved_through_the_pix_manager() {
         .mount(&pix)
         .await;
     let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &pix.uri());
+    let svc = service(&db, &pix.uri()).with_cohort(subject_cohorts());
 
     assert!(
-        !svc.has_ehr_for_subject(red_subject()).await.expect("has"),
+        resolved(&svc, red_subject())
+            .await
+            .expect("the cohort runs")
+            .is_empty(),
         "no EHR carries the pseudonym yet"
     );
-    let ehr = svc
-        .create_ehr_for_subject(red_subject(), None)
-        .await
-        .expect("create for the red subject");
-    assert!(svc.has_ehr_for_subject(red_subject()).await.expect("has"));
+    let ehr =
+        crate::fixtures::create_ehr_subject(&svc, &SubjectRef::person(&pseudonym, CLINICAL)).await;
 
     let stored = svc
         .ehr_status_at_time_response(ehr, None)
@@ -145,14 +176,12 @@ async fn a_subject_is_resolved_through_the_pix_manager() {
     assert_eq!(
         stored.pointer("/subject/external_ref/id/value"),
         Some(&Value::from(pseudonym.as_str())),
-        "EHR_STATUS carries the pseudonym the source answered, never the red id"
+        "EHR_STATUS carries the pseudonym, never the red id"
     );
-    let found = svc
-        .get_ehrs_for_subject(red_subject())
+    let found = resolved(&svc, red_subject())
         .await
-        .expect("get for the red subject");
-    assert_eq!(found.len(), 1);
-    assert_eq!(found[0].ehr_id, ehr.to_string());
+        .expect("the cohort runs");
+    assert_eq!(found, vec![ehr.to_string()]);
 
     let requests = pix.received_requests().await.expect("recorded");
     assert!(
@@ -163,9 +192,9 @@ async fn a_subject_is_resolved_through_the_pix_manager() {
     );
 }
 
-/// The IG's not-found answer is an answer: no EHR, and no EHR is created.
+/// The IG's not-found answer is an answer: no EHR.
 #[tokio::test]
-async fn an_unknown_subject_has_no_ehr_and_gets_none() {
+async fn an_unknown_subject_has_no_ehr() {
     let pix = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path(OPERATION))
@@ -176,24 +205,16 @@ async fn an_unknown_subject_has_no_ehr_and_gets_none() {
         .mount(&pix)
         .await;
     let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &pix.uri());
+    let svc = service(&db, &pix.uri()).with_cohort(subject_cohorts());
 
-    assert!(!svc.has_ehr_for_subject(red_subject()).await.expect("has"));
-    assert!(
-        svc.get_ehrs_for_subject(red_subject())
-            .await
-            .expect("get")
-            .is_empty()
-    );
-    let refused = svc
-        .create_ehr_for_subject(red_subject(), None)
+    let found = resolved(&svc, red_subject())
         .await
-        .expect_err("no clinical identifier, no EHR");
-    assert_eq!(refused.status, ServiceStatus::SubjectIdDoesNotExist);
+        .expect("the cohort runs");
+    assert_eq!(found, Vec::<String>::new(), "no EHR for an unknown subject");
 }
 
 /// The IG's example identifier is no pseudonym, so the source answering it
-/// for the clinical domain is refused rather than written onto `EHR_STATUS`.
+/// for the clinical domain is refused rather than matched.
 #[tokio::test]
 async fn a_clinical_identifier_that_is_no_pseudonym_is_refused() {
     let pix = MockServer::start().await;
@@ -206,20 +227,19 @@ async fn a_clinical_identifier_that_is_no_pseudonym_is_refused() {
         .mount(&pix)
         .await;
     let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &pix.uri());
+    let svc = service(&db, &pix.uri()).with_cohort(subject_cohorts());
 
-    let refused = svc
-        .has_ehr_for_subject(red_subject())
+    let refused = resolved(&svc, red_subject())
         .await
         .expect_err("IHEBLUE-994 is no pseudonym");
     assert_eq!(refused.status, ServiceStatus::Exception);
     assert!(refused.message.contains("no pseudonym"), "{refused}");
 }
 
-/// An identity source that fails is an error, never an answer from the local
+/// An identity source that fails is an error, never an answer from the
 /// `EHR_STATUS` columns, even when an EHR carries the subject verbatim.
 #[tokio::test]
-async fn a_failing_source_never_falls_back_to_the_local_map() {
+async fn a_failing_source_never_falls_back_to_the_ehr_status_subject() {
     let pix = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path(OPERATION))
@@ -227,57 +247,26 @@ async fn a_failing_source_never_falls_back_to_the_local_map() {
         .mount(&pix)
         .await;
     let db = testkit::db().await.expect("testkit database");
-    // The verbatim subject is stored through the local map, so a fallback
-    // would find it.
+    // The verbatim subject is stored on an EHR, so a fallback would find it.
     let local = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_ehr_index(EhrIndexProvider::Local);
-    local
-        .create_ehr_for_subject(red_subject(), None)
-        .await
-        .expect("a locally stored subject");
+    crate::fixtures::create_ehr_subject(&local, &red_subject()).await;
 
-    let svc = service(&db, &pix.uri());
-    let refused = svc
-        .has_ehr_for_subject(red_subject())
-        .await
-        .expect_err("the source failed");
-    assert_eq!(refused.status, ServiceStatus::Exception);
-    let refused = svc
-        .subject_ehrs(red_subject())
+    let svc = service(&db, &pix.uri()).with_cohort(subject_cohorts());
+    let refused = resolved(&svc, red_subject())
         .await
         .expect_err("the source failed");
     assert_eq!(refused.status, ServiceStatus::Exception);
 }
 
-/// The identity source holds the cross-reference, so the EHR-index writes
-/// and the duplicate scan of the local map are refused, and a service with no
-/// provider refuses every subject-scoped call, naming both choices.
+/// A service with no provider refuses every subject-scoped call, naming both
+/// choices.
 #[tokio::test]
-async fn the_local_map_is_not_written_under_an_identity_source() {
-    let pix = MockServer::start().await;
+async fn a_service_without_a_provider_refuses_naming_both_choices() {
     let db = testkit::db().await.expect("testkit database");
-    let svc = service(&db, &pix.uri());
-    let ehr = Uuid::now_v7().to_string();
-
-    let refused = svc
-        .add_ehr_subject(ehr.clone(), red_subject(), None, None)
-        .await
-        .expect_err("held by the source");
-    assert_eq!(refused.status, ServiceStatus::NotImplemented);
-    let refused = svc
-        .remove_subject(red_subject())
-        .await
-        .expect_err("held by the source");
-    assert_eq!(refused.status, ServiceStatus::NotImplemented);
-    assert!(svc.index_conflicts().await.is_err());
-    assert!(
-        pix.received_requests().await.expect("recorded").is_empty(),
-        "a refused write asks the source nothing"
-    );
-
-    let bare = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let refused = bare
-        .has_ehr_for_subject(red_subject())
+    let bare = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_cohort(subject_cohorts());
+    let refused = resolved(&bare, red_subject())
         .await
         .expect_err("no provider installed");
     assert!(
@@ -285,42 +274,6 @@ async fn the_local_map_is_not_written_under_an_identity_source() {
         "{refused}"
     );
     assert!(refused.message.contains("pixm_url"), "{refused}");
-}
-
-/// The subjects of an EHR are the clinical pseudonym its `EHR_STATUS`
-/// carries, and the source is never asked to resolve that pseudonym back to
-/// another domain's identifier (GDPR Art. 4(5)).
-#[tokio::test]
-async fn the_subjects_of_an_ehr_are_its_pseudonym_alone() {
-    let pix = MockServer::start().await;
-    let pseudonym = Uuid::now_v7().to_string();
-    Mock::given(method("POST"))
-        .and(path(OPERATION))
-        .respond_with(answer(
-            200,
-            &ig("example/Parameters-pixm-response-mohralice-red-all.json"),
-        ))
-        .expect(0)
-        .mount(&pix)
-        .await;
-    let db = testkit::db().await.expect("testkit database");
-    let local = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
-        .with_ehr_index(EhrIndexProvider::Local);
-    let ehr = local
-        .create_ehr_for_subject(SubjectRef::person(pseudonym.clone(), CLINICAL), None)
-        .await
-        .expect("an EHR under the clinical pseudonym");
-
-    let svc = service(&db, &pix.uri());
-    let subjects = svc
-        .ehr_subjects(ehr.to_string())
-        .await
-        .expect("the subjects");
-    let named: Vec<(String, String)> = subjects
-        .into_iter()
-        .map(|entry| (entry.subject.namespace, entry.subject.id))
-        .collect();
-    assert_eq!(named, vec![(CLINICAL.to_owned(), pseudonym)]);
 }
 
 /// The boot check reads the PIX Manager's `CapabilityStatement`; a refusal and

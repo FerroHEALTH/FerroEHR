@@ -946,13 +946,13 @@ database.
 
 An external identity (a national identifier, say) is matched against the
 sealed `party.national_identifier` map by keyed digest, which returns a
-party without decrypting anything. That party is then looked up in
-`linkage.subject_ehr` on a second connection, with a second search path and,
-when `[storage.linkage] url` is set, a second database role. **No statement
-performs the join, because no credential could**: the linkage role holds no
-grant in `demographic` and the demographic role holds none in `linkage`, both
-revocations are explicit and in both directions, and the boot check refuses to
-serve a database where either has been given one. The crossing exists as an
+party without decrypting anything. The EHR whose `EHR_STATUS.subject` names
+that party is then looked up in `clinical` on a second connection, with a
+second search path and, when `[storage.party] url` is set, a second database
+role. **No statement performs the join, because no credential could**: the
+clinical role holds no grant in `demographic` and the demographic role holds
+none in `clinical`, both revocations are explicit and in both directions, and
+the boot check refuses to serve a database where either has been given one. The crossing exists as an
 application step that can be audited, rather than as a query anyone holding
 one password could write.
 

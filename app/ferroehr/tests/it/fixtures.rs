@@ -346,3 +346,94 @@ pub(crate) async fn create_relationship(
     let created = svc.party_relationship_create(body, Some(committal)).await?;
     Ok(written_vo(&created))
 }
+
+/// An `EHR_STATUS` whose subject is a `PARTY_SELF` with an `external_ref`
+/// naming `id` in `namespace` as an object of class `class` (RM ehr master04
+/// §EHR Status; BASE `OBJECT_REF`), written as `POST /ehr` receives it.
+pub(crate) fn status_naming(
+    id: &str,
+    namespace: &str,
+    class: &str,
+) -> openehr_rm::prelude::EhrStatus {
+    openehr_its::json::from_canonical_value(&json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": namespace,
+                "type": class,
+                "id": { "_type": "HIER_OBJECT_ID", "value": id }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    }))
+    .expect("the subject-bearing EHR_STATUS decodes")
+}
+
+/// Creates, through the `POST /ehr` service call, the EHR whose
+/// `EHR_STATUS.subject` names `subject`.
+pub(crate) async fn create_ehr_subject(
+    svc: &ferroehr::service::FerroEhrService,
+    subject: &ferroehr::service::ehr_index::types::SubjectRef,
+) -> ferroehr::ids::EhrId {
+    Box::pin(svc.create_ehr_meta(
+        Some(status_naming(
+            &subject.id,
+            &subject.namespace,
+            &subject.r#type,
+        )),
+        None,
+    ))
+    .await
+    .expect("the EHR naming its subject is created")
+    .0
+}
+
+/// Creates, through the `POST /ehr` service call, the EHR whose subject is the
+/// party `party` (its versioned-object id, as a `PERSON`).
+pub(crate) async fn create_ehr_for_party(
+    svc: &ferroehr::service::FerroEhrService,
+    party: ferroehr::ids::VoId,
+) -> ferroehr::ids::EhrId {
+    create_ehr_subject(
+        svc,
+        &ferroehr::service::ehr_index::types::SubjectRef::person(party.0.to_string(), "local"),
+    )
+    .await
+}
+
+/// The ids of the EHRs whose `EHR_STATUS.subject` names `id` in `namespace`,
+/// read through the `GET /ehr?subject_id=…&subject_namespace=…` service call:
+/// empty when the read answers `ehr_id_does_not_exist`, one id otherwise.
+pub(crate) async fn subject_ehr_ids(
+    svc: &ferroehr::service::FerroEhrService,
+    id: &str,
+    namespace: &str,
+) -> Vec<String> {
+    match svc.ehr_read_for_subject(id, namespace).await {
+        Ok(read) => vec![
+            read.body["ehr_id"]["value"]
+                .as_str()
+                .expect("the EHR carries its ehr_id")
+                .to_owned(),
+        ],
+        Err(e) => {
+            assert_eq!(
+                e.status,
+                ferroehr::service::status::ServiceStatus::EhrIdDoesNotExist,
+                "the subject read fails only as an unknown subject: {e}"
+            );
+            Vec::new()
+        }
+    }
+}

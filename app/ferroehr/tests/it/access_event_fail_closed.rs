@@ -27,11 +27,7 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 use uuid::Uuid;
 
-use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::ehr_index::provider::EhrIndexProvider;
-use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::linkage::LinkageError;
 use ferroehr::service::status::ServiceStatus;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use ferroehr::system_log::event::{
@@ -89,36 +85,6 @@ async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, Audit
     (sender, handle)
 }
 
-/// A resolution through the linkage map is withheld when its record is rejected.
-#[tokio::test]
-async fn a_linkage_resolution_is_withheld_when_its_record_is_rejected() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    // The mapping is opened under a healthy, fail-open sender so the fixture is
-    // not what is under test.
-    let open = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let party = VoId(Uuid::now_v7());
-    let ehr = EhrId(Uuid::now_v7());
-    open.link(party, ehr).await.expect("the mapping opens");
-
-    let (sender, _handle) = rejecting_sender().await;
-    let closed = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-        .with_audit(sender);
-
-    let refused = closed.resolve_ehr_for_party(party).await;
-    assert!(
-        matches!(refused, Err(LinkageError::Unrecorded(_))),
-        "the mapping resolved but the result is withheld: {refused:?}"
-    );
-    let refused = closed
-        .link(VoId(Uuid::now_v7()), EhrId(Uuid::now_v7()))
-        .await;
-    assert!(
-        matches!(refused, Err(LinkageError::Unrecorded(_))),
-        "a mapping opened with its record rejected reports so: {refused:?}"
-    );
-}
-
 /// The subject-to-EHR lookup is withheld when its record is rejected, and the
 /// status route reports the `service_overloaded` status the wire maps to `503`.
 #[tokio::test]
@@ -126,15 +92,10 @@ async fn a_subject_lookup_is_withheld_when_its_record_is_rejected() {
     let db = testkit::db().await.expect("testkit database");
     let (sender, _handle) = rejecting_sender().await;
     let closed = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
-        .with_audit(sender)
-        .with_ehr_index(EhrIndexProvider::Local);
+        .with_audit(sender);
 
     let refused = closed
-        .has_ehr_for_subject(SubjectRef {
-            id: Uuid::now_v7().to_string(),
-            namespace: "urn:example:pseudonym".to_owned(),
-            r#type: "PERSON".to_owned(),
-        })
+        .ehr_read_for_subject(&Uuid::now_v7().to_string(), "urn:example:pseudonym")
         .await;
     let error = refused.expect_err("a miss is still a lookup, and its record was rejected");
     assert_eq!(error.status, ServiceStatus::ServiceOverloaded, "{error}");
