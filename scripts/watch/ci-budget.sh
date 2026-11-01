@@ -7,6 +7,9 @@
 # WHY (#3131, #3490): a shard count fixes a lane for the suite it was measured
 # against and no longer. This reads the recent SUCCESSFUL main runs and, per
 # lane, takes the slowest matching job of each run and the median over runs.
+# For ci.yml those are its merge-queue runs: a push to main the queue passed
+# skips most of ci.yml's lanes (#4546), and every change merges through a
+# queue run of its own.
 #
 # A lane's figure is JOB time, `started_at` to `completed_at`, never the run's
 # wall clock. The run's clock also counts the time each job waited for a runner,
@@ -72,11 +75,13 @@ readonly SAMPLE=5
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-# The ids of the recent successful main runs of one workflow, newest first.
+# The ids of the recent successful main runs of one workflow, newest first:
+# ci.yml's merge-queue runs, the main pushes of any other workflow.
 runs_of() {
-  local file="$1"
+  local file="$1" scope="branch=main"
+  [[ "$file" == ci.yml ]] && scope="event=merge_group"
   [[ -s "$WORK/runs-$file" ]] || gh api \
-    "repos/$REPO/actions/workflows/$file/runs?branch=main&status=success&per_page=$SCANNED" \
+    "repos/$REPO/actions/workflows/$file/runs?$scope&status=success&per_page=$SCANNED" \
     --jq '.workflow_runs[].id' >"$WORK/runs-$file"
   cat "$WORK/runs-$file"
 }

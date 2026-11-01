@@ -100,8 +100,23 @@ env:
   # `pull_request` ALONE reads pull-request context the merge_group payload
   # does not carry — a `base..head` diff of the pull request, or one of the
   # escape-hatch labels — and it has already gated that pull request before
-  # the queue ever builds a group. Everything else is ungated by event and
-  # runs on all three.
+  # the queue ever builds a group. Everything else runs on all three, except
+  # on a push to main the merge queue already passed (#4546).
+  #
+  # The verified push, the rule behind every `queue_verified` in this file:
+  # the `changes` job sets it when a `merge_group` run of this workflow on the
+  # pushed commit passed `conclusion`. That run checked the same tree, so on
+  # such a push every lane is skipped except these, each kept for a cache
+  # pull requests read and only a main push can write:
+  #   * the rust-cache lanes (deny, clippy, feature-combos, its-wasm,
+  #     its-rest-features, doc, msrv, codegen-drift, test on one shard, build,
+  #     test-viewer), each only when `cache_refresh` names it: the key's
+  #     inputs moved, or main holds no entry for it;
+  #   * ui-e2e-binary and ui-e2e-viewer, on their own triggers: they write
+  #     the exact-key binary caches and main's sccache entries.
+  # A push no queue run passed (an administrator's bypass) runs every lane.
+  # No lane reads anything a queue run cannot: the conformance catalogue runs
+  # for a push in containers.yml, against the images it pushes.
   #
   # Cache policy (the ruff/polars `save-if` idiom): only main writes the
   # per-job rust-cache entries and the sccache entries; PR branches restore
@@ -148,6 +163,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      # The merge-queue runs of the pushed commit and main's cache entries,
+      # read by the `push` step below (#4546).
+      actions: read
     outputs:
       code: ${{ steps.filter.outputs.code }}
       viewer: ${{ steps.filter.outputs.viewer }}
@@ -160,6 +178,8 @@ jobs:
       vex: ${{ steps.filter.outputs.vex }}
       conformance: ${{ steps.filter.outputs.conformance }}
       msrv: ${{ steps.filter.outputs.msrv }}
+      queue_verified: ${{ steps.push.outputs.queue_verified }}
+      cache_refresh: ${{ steps.push.outputs.cache_refresh }}
       test_shards: ${{ steps.shards.outputs.test_list }}
       test_shard_count: ${{ steps.shards.outputs.test_count }}
       ui_e2e_shards: ${{ steps.shards.outputs.ui_list }}
@@ -169,20 +189,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      # Each lane's shard list and its divisor, both from the one constant, so a
-      # matrix and its `--partition n/N` can never disagree.
-      - id: shards
-        env:
-          TEST_COUNT: ${{ env.TEST_SHARDS }}
-          UI_COUNT: ${{ env.UI_E2E_SHARDS }}
-        run: |
-          set -euo pipefail
-          {
-            echo "test_count=$TEST_COUNT"
-            echo "test_list=[$(seq 1 "$TEST_COUNT" | paste -sd, -)]"
-            echo "ui_count=$UI_COUNT"
-            echo "ui_list=[$(seq 1 "$UI_COUNT" | paste -sd, -)]"
-          } >> "$GITHUB_OUTPUT"
       - name: The path classifier finds a match first and last in a 2000-path list
         run: bash scripts/lib/change-lanes.sh --self-test
       - id: filter
@@ -229,6 +235,7 @@ jobs:
               echo "deploy=true"
               echo "workflows=true"
               echo "vex=true"
+              echo "cache=true"
               echo "conformance=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
@@ -242,12 +249,97 @@ jobs:
           # The conformance lane (#4539): the catalogue runs in this workflow on a
           # pull request and in the merge queue.
           bash scripts/lib/change-lanes.sh conformance <<<"$changed" | tee -a "$GITHUB_OUTPUT"
+      # A push to main whose commit the merge queue already passed (#4546). The
+      # queue fast-forwards main to the commit its `merge_group` run checked,
+      # so the push carries the same tree, and a lane run again gives no new
+      # verdict. A push the queue did not check (an administrator's bypass, or
+      # an answer this step cannot read) runs every lane, as before.
+      #
+      # The push stays the only writer of main's cargo caches, which pull
+      # requests restore: a cache a queue run writes is scoped to its
+      # `gh-readonly-queue/` ref, which nothing else reads. So a verified push
+      # still runs each rust-cache lane whose entry it must write, every one
+      # when the key's inputs moved (the `cache` lane), and otherwise the ones
+      # whose entry main no longer holds (the 10 GB quota evicts them).
+      - id: push
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          CACHE_INPUTS: ${{ steps.filter.outputs.cache }}
+          # The jobs that save a rust-cache entry on main. rust-cache names it
+          # `v0-rust-<job id>-<os>-<arch>-…` (github.com/Swatinem/rust-cache).
+          CACHE_JOBS: deny clippy feature-combos its-wasm its-rest-features doc msrv codegen-drift test build test-viewer
+        run: |
+          set -euo pipefail
+          verified=false
+          stale=()
+          if [ "$EVENT_NAME" = "push" ]; then
+            if ! runs=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=merge_group&head_sha=$PUSH_SHA&per_page=100" --jq '.workflow_runs[].id'); then
+              echo "::warning::could not list the merge-queue runs of $PUSH_SHA, so every lane runs"
+              runs=""
+            fi
+            # The run's own conclusion is no answer: an advisory job (the
+            # conclusion step's ADVISORY list) can fail it while the required
+            # `conclusion` check passed.
+            while IFS= read -r run; do
+              [ -n "$run" ] || continue
+              if passed=$(gh api --paginate "repos/$REPO/actions/runs/$run/jobs?filter=latest&per_page=100" --jq '.jobs[] | select(.name == "conclusion") | .conclusion') \
+                && grep -qx success <<<"$passed"; then
+                verified=true
+                echo "Merge-queue run $run passed this tree."
+                break
+              fi
+            done <<<"$runs"
+          fi
+          if [ "$verified" = true ]; then
+            read -r -a jobs <<<"$CACHE_JOBS"
+            for job in "${jobs[@]}"; do
+              if [ "$CACHE_INPUTS" = true ]; then
+                stale+=("$job")
+              elif ! held=$(gh api "repos/$REPO/actions/caches?ref=refs/heads/main&key=v0-rust-$job-Linux-x64-&per_page=1" --jq '.total_count'); then
+                echo "::warning::could not read main's cache entry for $job, so it is written again"
+                stale+=("$job")
+              elif [ "$held" -eq 0 ]; then
+                stale+=("$job")
+              fi
+            done
+          fi
+          refresh=$(printf '%s\n' "${stale[@]}" | jq -Rnc '[inputs | select(length > 0)]')
+          echo "queue verified: $verified; cache lanes to run: $refresh"
+          {
+            echo "queue_verified=$verified"
+            echo "cache_refresh=$refresh"
+          } >> "$GITHUB_OUTPUT"
+      # Each lane's shard list and its divisor, both from the one constant, so a
+      # matrix and its `--partition n/N` can never disagree. A verified push
+      # runs the test lane for its cache alone, one entry every shard shares
+      # (rust-cache keys on the job id), so it runs one shard.
+      - id: shards
+        env:
+          TEST_COUNT: ${{ env.TEST_SHARDS }}
+          UI_COUNT: ${{ env.UI_E2E_SHARDS }}
+          QUEUE_VERIFIED: ${{ steps.push.outputs.queue_verified }}
+        run: |
+          set -euo pipefail
+          test_list="[$(seq 1 "$TEST_COUNT" | paste -sd, -)]"
+          if [ "$QUEUE_VERIFIED" = true ]; then
+            test_list="[1]"
+          fi
+          {
+            echo "test_count=$TEST_COUNT"
+            echo "test_list=$test_list"
+            echo "ui_count=$UI_COUNT"
+            echo "ui_list=[$(seq 1 "$UI_COUNT" | paste -sd, -)]"
+          } >> "$GITHUB_OUTPUT"
 
   # ── Required for code changes: formatting ───────────────────────────────────
   fmt:
     name: rustfmt
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -267,6 +359,8 @@ jobs:
   # ── Always required: no AI/Claude attribution in commit messages ────────────
   no-attribution:
     name: no attribution in commits
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -330,11 +424,13 @@ jobs:
   # persisting credentials without a recorded exception (artipacked), and no
   # context value spliced into a shell (template-injection).
   #
-  # Ungated on the `changes` filter on purpose: that filter excludes `.github/`,
-  # so a workflow-only pull request would otherwise skip the one check that reads
-  # workflows.
+  # Ungated on the `changes` filter's paths on purpose: that filter excludes
+  # `.github/`, so a workflow-only pull request would otherwise skip the one
+  # check that reads workflows. It needs `changes` for the verified push alone.
   workflow-audit:
     name: zizmor
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -373,6 +469,8 @@ jobs:
   # excludes `.github/`.
   workflow-lint:
     name: actionlint
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -574,6 +672,8 @@ jobs:
   # ratchet-tighten.yml lowers the baseline on main.
   stray-literals:
     name: stray-literals
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -851,6 +951,8 @@ jobs:
   # places; a fall passes, and ratchet-tighten.yml lowers the count on main.
   duplication:
     name: duplication
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -870,6 +972,8 @@ jobs:
   # grow; a shrink passes, and ratchet-tighten.yml lowers the entry on main.
   file-size:
     name: file-size
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -1113,7 +1217,7 @@ jobs:
     # `vex` because this job is where the two VEX gates run (#2370);
     # `workflows` because its recipe — those two extra steps — is authored
     # here (#2373).
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.vex == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.vex == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'deny'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1191,7 +1295,7 @@ jobs:
     needs: changes
     # The lane below is this file's own recipe, so a change to it runs it
     # (#2373).
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'clippy'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1231,7 +1335,7 @@ jobs:
     name: clippy (slim server feature combos)
     needs: changes
     # The feature sets ARE the test, and they are declared here (#2373).
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'feature-combos'))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -1278,7 +1382,7 @@ jobs:
     name: clippy (openehr-its + openehr-sdt on wasm32)
     needs: changes
     # The feature selection IS the test, and it is declared here (#2373).
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'its-wasm'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1314,7 +1418,7 @@ jobs:
     name: clippy (openehr-its REST features)
     needs: changes
     # The feature selections ARE the test, and they are declared here (#2373).
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'its-rest-features'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1368,8 +1472,10 @@ jobs:
     # DELTA, so a code commit whose run was cancelled or whose successor push
     # is docs-only would otherwise never have its docs evaluated at all. This
     # job is ~1/10 the length of the test job, so re-evaluating the whole tree
-    # on every main push is cheap insurance.
-    if: needs.changes.outputs.code == 'true' || github.ref == 'refs/heads/main'
+    # on every main push is cheap insurance. A push the merge queue verified
+    # needs none of it (the queue run is never cancelled, its group is the
+    # commit), so there it runs only to write its cache (#4546).
+    if: (needs.changes.outputs.code == 'true' || github.ref == 'refs/heads/main') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'doc'))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -1402,7 +1508,7 @@ jobs:
   msrv:
     name: msrv (cargo-hack)
     needs: changes
-    if: needs.changes.outputs.msrv == 'true'
+    if: needs.changes.outputs.msrv == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'msrv'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1423,7 +1529,7 @@ jobs:
   codegen-drift:
     name: codegen drift
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'codegen-drift'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1471,7 +1577,7 @@ jobs:
         shard: ${{ fromJSON(needs.changes.outputs.test_shards) }}
     # The service container, its pinned image and the env the suite runs
     # against are all this file's recipe (#2373).
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'test'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1536,7 +1642,7 @@ jobs:
   build:
     name: build (link every bin)
     needs: changes
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'build'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1557,7 +1663,7 @@ jobs:
   test-viewer:
     name: build & test (viewer)
     needs: changes
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.workflows == 'true') && (needs.changes.outputs.queue_verified != 'true' || contains(fromJSON(needs.changes.outputs.cache_refresh), 'test-viewer'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1590,7 +1696,7 @@ jobs:
   helm-golden:
     name: helm-golden
     needs: changes
-    if: needs.changes.outputs.helm == 'true'
+    if: needs.changes.outputs.helm == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1669,7 +1775,7 @@ jobs:
   chart-boot:
     name: chart-boot
     needs: [changes, ui-e2e-binary]
-    if: needs.changes.outputs.chart_boot == 'true'
+    if: needs.changes.outputs.chart_boot == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1716,7 +1822,7 @@ jobs:
   deploy-probe:
     name: deploy-probe
     needs: [changes, ui-e2e-binary]
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true'
+    if: (needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1769,7 +1875,7 @@ jobs:
   unused-deps:
     name: cargo-machete
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1829,6 +1935,8 @@ jobs:
   # The third (#4539) is the `conformance` job, on a pull request and in the
   # merge queue: it judges this binary, so the server compiles once per change.
   # A push to main judges the image containers.yml pushes instead.
+  # A push the merge queue verified keeps this job and skips its consumers:
+  # it is main's writer of the binary cache and the sccache entries (#4546).
   ui-e2e-binary:
     name: ui-e2e server binary
     needs: changes
@@ -1944,7 +2052,8 @@ jobs:
   # env!("CARGO_MANIFEST_DIR") paths at compile time — both jobs being
   # ubuntu-latest gives them the same glibc AND the same workspace path
   # (/home/runner/work/<repo>/<repo>), so the baked paths resolve. Keep this
-  # job and ui-e2e on the same runner image always.
+  # job and ui-e2e on the same runner image always. Kept on a verified push,
+  # like ui-e2e-binary, as main's writer of its exact-key cache (#4546).
   ui-e2e-viewer:
     name: ui-e2e viewer + test binaries
     needs: changes
@@ -2033,7 +2142,7 @@ jobs:
   ui-e2e:
     name: ui-e2e ${{ matrix.viewport }} ${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true'
+    if: needs.changes.outputs.viewer == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The battery runs once at the desktop width and once at a phone's 390 px,
@@ -2139,7 +2248,7 @@ jobs:
   ui-docs-shots:
     name: ui-docs-shots
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true'
+    if: needs.changes.outputs.viewer == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -2218,7 +2327,7 @@ jobs:
   viewer-login-smoke:
     name: viewer login smoke
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true'
+    if: needs.changes.outputs.viewer == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -2278,7 +2387,7 @@ jobs:
   server-image-from-source:
     name: server image (from source)
     needs: changes
-    if: needs.changes.outputs.server_dockerfile == 'true'
+    if: needs.changes.outputs.server_dockerfile == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     # A deliberate full cold in-image compile (no cache backend at all).
     timeout-minutes: 60
@@ -2303,7 +2412,7 @@ jobs:
   viewer-image-from-source:
     name: viewer image (from source)
     needs: changes
-    if: needs.changes.outputs.viewer_dockerfile == 'true'
+    if: needs.changes.outputs.viewer_dockerfile == 'true' && needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -2490,6 +2599,8 @@ jobs:
   # cannot deploy the image it selects.
   chart-appversion:
     name: chart-appversion-guard
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -2677,6 +2788,8 @@ jobs:
   # date-released (.claude/rules/changelog.md §Cutting a release).
   citation:
     name: citation-guard
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -2743,6 +2856,8 @@ jobs:
   # with the workspace version (.claude/rules/changelog.md §Cutting a release).
   compose-version-guard:
     name: compose-version-guard
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -2762,6 +2877,8 @@ jobs:
   # pinned image's `config check` over its block, on no network.
   quickstart-config:
     name: quickstart-config
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -2779,6 +2896,8 @@ jobs:
   # Dependabot entry for the quickstart pin then moves all three together.
   ferropix-pins:
     name: ferropix-pins
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -2816,6 +2935,8 @@ jobs:
 
   veredictum-action:
     name: veredictum-action
+    needs: changes
+    if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
