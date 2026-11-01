@@ -18,8 +18,24 @@ use crate::opt14::types::{
     CSingleAttribute, Cardinality, FlatArchetypeOntology, Intervalofinteger, OperationalTemplate,
 };
 
-/// Builds the operational template; see [`super::build`].
-pub(super) fn build(
+/// Builds the operational template of `definition` over `library`.
+///
+/// The root archetype becomes the OPT `definition`, a `C_ARCHETYPE_ROOT`
+/// carrying the template id; every filler becomes a `C_ARCHETYPE_ROOT` placed
+/// directly after its slot, or in the open attribute it names. Each root carries its archetype's term
+/// definitions in the template language and its term bindings, and
+/// `component_ontologies` carries every constituent's whole ontology, once
+/// per archetype id, in first-use order.
+///
+/// # Errors
+///
+/// Returns a [`WriteError`] when an archetype is missing from the library or
+/// lacks the template language, a path does not resolve, a slot refuses its
+/// filler, a constraint widens the archetype's or constrains an attribute
+/// that is taken or absent from the reference model, a redefinition names a
+/// type that does not conform or no single node, a clone is not admitted or
+/// not told apart by its name, or an internal reference is recursive.
+pub fn build(
     definition: &TemplateDefinition,
     library: &ArchetypeLibrary,
 ) -> Result<OperationalTemplate, WriteError> {

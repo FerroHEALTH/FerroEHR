@@ -498,13 +498,9 @@ pub(super) struct CodeUsage {
     pub(super) assumed_refs: Vec<(String, String, String)>,
 }
 
-pub(super) fn collect_usage(obj: &CObject, usage: &mut CodeUsage) {
-    collect_usage_at(obj, "", usage, None);
-}
-
 /// Collects the codes `obj` uses; with `roots`, a nested archetype root is
 /// recorded there and its subtree left to its own scope.
-fn collect_usage_at<'o>(
+pub(super) fn collect_usage_at<'o>(
     obj: &'o CObject,
     path: &str,
     usage: &mut CodeUsage,

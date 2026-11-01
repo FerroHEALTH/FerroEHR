@@ -626,7 +626,7 @@ fn dv_text_bad_language_and_encoding_reported() {
         "_type": "DV_TEXT", "value": "hi",
         "language": code_phrase("ISO_639-1", "zz"),
     });
-    let msgs = validate_rm_and_terminology(&bad_lang);
+    let msgs = validate_rm_and_terminology(&bad_lang, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Terminology && m.message.contains("language")),
@@ -637,7 +637,7 @@ fn dv_text_bad_language_and_encoding_reported() {
         "_type": "DV_TEXT", "value": "hi",
         "encoding": code_phrase("IANA_character-sets", "NOT-A-CHARSET"),
     });
-    let msgs = validate_rm_and_terminology(&bad_enc);
+    let msgs = validate_rm_and_terminology(&bad_enc, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Terminology && m.message.contains("character set")),
@@ -651,7 +651,8 @@ fn dv_text_bad_language_and_encoding_reported() {
         "encoding": code_phrase("IANA_character-sets", "UTF-8"),
     });
     assert!(
-        !kinds(&validate_rm_and_terminology(&good)).contains(&ValidationKind::Terminology),
+        !kinds(&validate_rm_and_terminology(&good, "COMPOSITION"))
+            .contains(&ValidationKind::Terminology),
         "valid en/UTF-8 should be clean"
     );
 }
@@ -664,7 +665,7 @@ fn composition_bad_territory_reported() {
         "language": code_phrase("ISO_639-1", "en"),
         "territory": code_phrase("ISO_3166-1", "ZZ"),
     });
-    let msgs = validate_rm_and_terminology(&inst);
+    let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Terminology && m.message.contains("country")),
@@ -680,7 +681,7 @@ fn entry_bad_encoding_reported() {
         "language": code_phrase("ISO_639-1", "en"),
         "encoding": code_phrase("IANA_character-sets", "BOGUS-CHARSET"),
     });
-    let msgs = validate_rm_and_terminology(&inst);
+    let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Terminology && m.message.contains("character set")),
@@ -698,7 +699,7 @@ fn ism_transition_bad_transition_reported() {
         "current_state": coded_text("openehr", "245"), // active (valid)
         "transition": coded_text("openehr", "99999"),  // invalid
     });
-    let msgs = validate_rm_and_terminology(&inst);
+    let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
     assert!(
         msgs.iter().any(|m| m.kind == ValidationKind::Terminology
             && m.message.contains("instruction transition")),
@@ -718,7 +719,7 @@ fn term_mapping_bad_purpose_reported() {
             "target": code_phrase("SNOMED-CT", "123"),
         }]
     });
-    let msgs = validate_rm_and_terminology(&inst);
+    let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Terminology
@@ -734,7 +735,7 @@ fn party_related_bad_relationship_reported() {
         "_type": "PARTY_RELATED",
         "relationship": coded_text("openehr", "99999"),
     });
-    let msgs = validate_rm_and_terminology(&inst);
+    let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Terminology
@@ -751,7 +752,7 @@ fn dv_ordered_bad_normal_status_reported() {
         "_type": "DV_QUANTITY", "magnitude": 1.0, "units": "kg",
         "normal_status": code_phrase("openehr", "X"),
     });
-    let msgs = validate_rm_and_terminology(&inst);
+    let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Terminology && m.message.contains("normal status")),
@@ -762,7 +763,10 @@ fn dv_ordered_bad_normal_status_reported() {
         "_type": "DV_QUANTITY", "magnitude": 1.0, "units": "kg",
         "normal_status": code_phrase("openehr", "N"),
     });
-    assert!(!kinds(&validate_rm_and_terminology(&good)).contains(&ValidationKind::Terminology));
+    assert!(
+        !kinds(&validate_rm_and_terminology(&good, "COMPOSITION"))
+            .contains(&ValidationKind::Terminology)
+    );
 }
 
 /// BASE `master06-time_types.adoc` §Primitive Time Types ("in openEHR, only
@@ -776,7 +780,7 @@ fn dv_duration_fractional_non_seconds_rejected() {
     // not-a-COMPOSITION, which would shadow the no-Invariant assertion below.
     for bad in ["P1Y3M4DT2.5H", "PT2H14.5M"] {
         let inst = json!({"_type": "DV_DURATION", "value": bad});
-        let msgs = validate_rm_and_terminology_as(&inst, "DV_DURATION");
+        let msgs = validate_rm_and_terminology(&inst, "DV_DURATION");
         assert!(
             msgs.iter()
                 .any(|m| m.kind == ValidationKind::Invariant && m.message.contains("Value_valid")),
@@ -786,7 +790,7 @@ fn dv_duration_fractional_non_seconds_rejected() {
     // A fraction on the seconds component is valid.
     let good = json!({"_type": "DV_DURATION", "value": "PT2H30M0.5S"});
     assert!(
-        !kinds(&validate_rm_and_terminology_as(&good, "DV_DURATION"))
+        !kinds(&validate_rm_and_terminology(&good, "DV_DURATION"))
             .contains(&ValidationKind::Invariant),
         "a fractional-seconds duration must be accepted"
     );
@@ -1551,7 +1555,7 @@ fn non_root_node_with_archetype_details_rejected() {
             "archetype_details": details,
             "items": []
         });
-        let msgs = validate_rm_and_terminology(&inst);
+        let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
         assert!(
             msgs.iter()
                 .any(|m| m.kind == ValidationKind::Invariant
@@ -1575,7 +1579,7 @@ fn non_root_node_with_archetype_details_rejected() {
                 .unwrap()
                 .insert("archetype_details".into(), details.clone());
         }
-        let msgs = validate_rm_and_terminology(&inst);
+        let msgs = validate_rm_and_terminology(&inst, "COMPOSITION");
         assert!(
             !msgs.iter().any(|m| m.message.contains("Archetyped_valid")),
             "root shape (details={with_details}) must not violate Archetyped_valid: {msgs:?}"
@@ -1597,7 +1601,7 @@ fn present_empty_lists_are_rejected() {
     });
     // Absent content: no Content_valid violation.
     assert!(
-        !validate_rm_and_terminology(&base)
+        !validate_rm_and_terminology(&base, "COMPOSITION")
             .iter()
             .any(|m| m.message.contains("Content_valid")),
         "absent content must not violate Content_valid"
@@ -1608,7 +1612,7 @@ fn present_empty_lists_are_rejected() {
         .as_object_mut()
         .unwrap()
         .insert("content".into(), json!([]));
-    let msgs = validate_rm_and_terminology(&empty);
+    let msgs = validate_rm_and_terminology(&empty, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.message.contains("content") && m.message.contains("at least one member")),
@@ -1624,7 +1628,7 @@ fn present_empty_lists_are_rejected() {
             "items": []
         }]),
     );
-    let msgs = validate_rm_and_terminology(&nested);
+    let msgs = validate_rm_and_terminology(&nested, "COMPOSITION");
     assert!(
         msgs.iter().any(|m| m.message.contains("items")
             && m.message.contains("at least one member")
@@ -1645,7 +1649,7 @@ fn data_structure_shapes_are_enforced() {
         "_type": "CLUSTER", "archetype_node_id": "at0001",
         "name": {"_type": "DV_TEXT", "value": "c"}
     });
-    let msgs = validate_rm_and_terminology(&cluster);
+    let msgs = validate_rm_and_terminology(&cluster, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.message.contains("CLUSTER.items is mandatory")),
@@ -1670,7 +1674,7 @@ fn data_structure_shapes_are_enforced() {
                        "name": {"_type": "DV_TEXT", "value": "d"}, "items": []} }
         ]
     });
-    let msgs = validate_rm_and_terminology(&history);
+    let msgs = validate_rm_and_terminology(&history, "COMPOSITION");
     assert!(
         msgs.iter()
             .any(|m| m.message.contains("same ITEM_STRUCTURE") && m.path.contains("events[1]")),
@@ -1861,7 +1865,9 @@ fn measure_ips_validation_full_cost() {
     // Public entry points only, so this harness compiles unchanged across the
     // item-31 rewrite (the internal pass signatures change; these do not).
     let iters = 50;
-    let t_rmterm = time_pass(iters, || validate_rm_and_terminology(&comp).len());
+    let t_rmterm = time_pass(iters, || {
+        validate_rm_and_terminology(&comp, "COMPOSITION").len()
+    });
     let t_walk = time_pass(iters, || validate_archetype_conformance(&comp, &wt).len());
     let t_all = time_pass(iters, || validate_composition(&comp, &wt).len());
 
@@ -1922,7 +1928,7 @@ fn non_locatable_context_matches_structurally_locatable_still_needs_node_id() {
 
 // ── the template-independent pass on a non-COMPOSITION root ────────────────────
 //
-// `validate_rm_and_terminology_as` runs the same two passes with a caller-named
+// `validate_rm_and_terminology` runs the same two passes with a caller-named
 // root RM type. The RM class invariants below are properties of the INSTANCE,
 // not of the resource kind, so they must fire identically under an `EHR_STATUS`
 // or FOLDER root.
@@ -1965,7 +1971,7 @@ fn folder_root() -> Value {
 #[test]
 fn valid_non_composition_roots_pass_the_template_independent_passes() {
     for (root, ty) in [(ehr_status_root(), "EHR_STATUS"), (folder_root(), "FOLDER")] {
-        let msgs = validate_rm_and_terminology_as(&root, ty);
+        let msgs = validate_rm_and_terminology(&root, ty);
         assert!(msgs.is_empty(), "{ty} baseline must be valid: {msgs:?}");
     }
 }
@@ -1978,7 +1984,7 @@ fn valid_non_composition_roots_pass_the_template_independent_passes() {
 fn empty_rm_version_is_refused_under_an_ehr_status_root() {
     let mut bad = ehr_status_root();
     bad["archetype_details"]["rm_version"] = json!("");
-    let msgs = validate_rm_and_terminology_as(&bad, "EHR_STATUS");
+    let msgs = validate_rm_and_terminology(&bad, "EHR_STATUS");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Invariant && m.message.contains("Rm_version_valid")),
@@ -2007,7 +2013,7 @@ fn folder_link_mandatory_attributes_are_enforced() {
         "type": { "_type": "DV_TEXT", "value": "issue" },
         "target": { "_type": "DV_EHR_URI", "value": "ehr://example.org/x" }
     }]));
-    let msgs = validate_rm_and_terminology_as(&good, "FOLDER");
+    let msgs = validate_rm_and_terminology(&good, "FOLDER");
     assert!(msgs.is_empty(), "a complete LINK is valid: {msgs:?}");
 
     // meaning absent — 1..1.
@@ -2016,7 +2022,7 @@ fn folder_link_mandatory_attributes_are_enforced() {
         "type": { "_type": "DV_TEXT", "value": "issue" },
         "target": { "_type": "DV_EHR_URI", "value": "ehr://example.org/x" }
     }]));
-    let msgs = validate_rm_and_terminology_as(&no_meaning, "FOLDER");
+    let msgs = validate_rm_and_terminology(&no_meaning, "FOLDER");
     assert!(
         msgs.iter().any(|m| m.message.contains("meaning")),
         "a LINK without meaning must be refused: {msgs:?}"
@@ -2029,7 +2035,7 @@ fn folder_link_mandatory_attributes_are_enforced() {
         "type": { "_type": "DV_TEXT", "value": "issue" },
         "target": { "_type": "DV_EHR_URI", "value": "http://example.org/x" }
     }]));
-    let msgs = validate_rm_and_terminology_as(&bad_scheme, "FOLDER");
+    let msgs = validate_rm_and_terminology(&bad_scheme, "FOLDER");
     assert!(
         !msgs.is_empty(),
         "a LINK target that is not an ehr:// URI must be refused"
@@ -2108,21 +2114,21 @@ fn composition_links_are_judged_at_root_and_entry_depth() {
     };
 
     let good = composition("ehr://example.org/root", "ehr://example.org/entry");
-    let msgs = validate_rm_and_terminology_as(&good, "COMPOSITION");
+    let msgs = validate_rm_and_terminology(&good, "COMPOSITION");
     assert!(
         msgs.is_empty(),
         "populated LINKs at both depths are valid: {msgs:?}"
     );
 
     let bad_root = composition("http://example.org/root", "ehr://example.org/entry");
-    let msgs = validate_rm_and_terminology_as(&bad_root, "COMPOSITION");
+    let msgs = validate_rm_and_terminology(&bad_root, "COMPOSITION");
     assert!(
         !msgs.is_empty(),
         "a root LINK target that is not an ehr:// URI must be refused"
     );
 
     let bad_entry = composition("ehr://example.org/root", "http://example.org/entry");
-    let msgs = validate_rm_and_terminology_as(&bad_entry, "COMPOSITION");
+    let msgs = validate_rm_and_terminology(&bad_entry, "COMPOSITION");
     assert!(
         !msgs.is_empty(),
         "an ENTRY LINK target that is not an ehr:// URI must be refused"
@@ -2156,7 +2162,7 @@ fn nested_empty_links_are_refused_under_an_ehr_status_root() {
             }]
         }),
     );
-    let msgs = validate_rm_and_terminology_as(&bad, "EHR_STATUS");
+    let msgs = validate_rm_and_terminology(&bad, "EHR_STATUS");
     assert!(
         msgs.iter()
             .any(|m| m.message.contains("links") && m.message.contains("at least one member")),
@@ -2180,7 +2186,7 @@ fn empty_feeder_system_id_is_refused_under_a_folder_root() {
             }
         }),
     );
-    let msgs = validate_rm_and_terminology_as(&bad, "FOLDER");
+    let msgs = validate_rm_and_terminology(&bad, "FOLDER");
     assert!(
         msgs.iter()
             .any(|m| m.kind == ValidationKind::Invariant && m.message.contains("System_id_valid")),
@@ -2202,7 +2208,7 @@ fn the_composition_wrapper_is_the_generalized_pass_at_composition() {
             "rm_version": "" }
     });
     assert_eq!(
-        validate_rm_and_terminology(&comp),
-        validate_rm_and_terminology_as(&comp, "COMPOSITION")
+        validate_rm_and_terminology(&comp, "COMPOSITION"),
+        validate_rm_and_terminology(&comp, "COMPOSITION")
     );
 }

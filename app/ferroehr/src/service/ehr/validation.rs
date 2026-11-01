@@ -203,7 +203,7 @@ impl FerroEhrService {
                     "COMPOSITION",
                 )
             } else {
-                openehr_sdt::rm_instance::validate_rm_and_terminology(composition)
+                openehr_sdt::rm_instance::validate_rm_and_terminology(composition, "COMPOSITION")
             }
         });
         let rm_terminology_failures = messages.len();
@@ -391,7 +391,7 @@ pub(in crate::service) fn validate_rm_invariants_for_commit(
     let messages = if incomplete {
         openehr_sdt::rm_instance::validate_rm_and_terminology_incomplete_as(data, declared)
     } else {
-        openehr_sdt::rm_instance::validate_rm_and_terminology_as(data, declared)
+        openehr_sdt::rm_instance::validate_rm_and_terminology(data, declared)
     };
     if messages.is_empty() {
         return Ok(());

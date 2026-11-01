@@ -610,7 +610,7 @@ const VERSIONS_PREFIX: &str = "versions/";
 /// (`openehr_its::xml::PUBLISHED_ROOTS`: `version` over the abstract
 /// `VERSION`, so the instance names its concrete type with `xsi:type` — the
 /// reason the archive serializes through
-/// [`openehr_its::xml::to_canonical_xml_declared`]).
+/// [`openehr_its::xml::runtime::to_xml_declared`]).
 const VERSION_ROOT_TAG: &str = "version";
 /// That element's declared (abstract) XSD type, from the same table.
 const VERSION_ROOT_TYPE: &str = "VERSION";
@@ -974,7 +974,7 @@ fn version_document_of<T: DeserializeOwned + ToXml>(
 ) -> Result<String, ServiceError> {
     let typed: OriginalVersion<T> = openehr_its::json::from_canonical_value(envelope)
         .map_err(|e| ServiceError::internal("typing the ORIGINAL_VERSION", e))?;
-    openehr_its::xml::to_canonical_xml_declared(
+    openehr_its::xml::runtime::to_xml_declared(
         &typed,
         VERSION_ROOT_TAG,
         VERSION_ROOT_TYPE,

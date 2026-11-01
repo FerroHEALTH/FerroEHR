@@ -839,9 +839,9 @@ where
             };
             let serialized = match declared_root_type(root_tag) {
                 Some(declared) => {
-                    openehr_its::xml::to_canonical_xml_declared(&typed, root_tag, declared, ns)
+                    openehr_its::xml::runtime::to_xml_declared(&typed, root_tag, declared, ns)
                 }
-                None => openehr_its::xml::to_canonical_xml_ns(&typed, root_tag, ns),
+                None => openehr_its::xml::runtime::to_xml(&typed, root_tag, ns),
             };
             match serialized {
                 Ok(xml) => xml_body_ns(status, xml, ns),
@@ -1619,7 +1619,7 @@ mod tests {
         )
         .expect("dv_text");
 
-        let xml = openehr_its::xml::to_canonical_xml(&dv, "value").expect("to xml");
+        let xml = openehr_its::xml::runtime::to_xml(&dv, "value", Namespace::V2).expect("to xml");
         let mut xml_headers = HeaderMap::new();
         xml_headers.insert(
             header::CONTENT_TYPE,
@@ -1854,7 +1854,7 @@ mod tests {
             ("application/xml; version=1", Namespace::V1),
             ("application/xml; version=2", Namespace::V2),
         ] {
-            let xml = openehr_its::xml::to_canonical_xml_ns(&dv, "value", ns).expect("to xml");
+            let xml = openehr_its::xml::runtime::to_xml(&dv, "value", ns).expect("to xml");
             let decoded = rm_value::<DvText>(
                 &headers(&[("content-type", declared)]),
                 &Bytes::from(xml.clone()),
@@ -1866,7 +1866,7 @@ mod tests {
             );
         }
 
-        let xml = openehr_its::xml::to_canonical_xml(&dv, "value").expect("to xml");
+        let xml = openehr_its::xml::runtime::to_xml(&dv, "value", Namespace::V2).expect("to xml");
         let err = rm_value::<DvText>(
             &headers(&[("content-type", "application/xml; version=3")]),
             &Bytes::from(xml),

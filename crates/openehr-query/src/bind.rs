@@ -25,10 +25,10 @@
 //! use openehr_query::printer::to_aql;
 //!
 //! let mut query = parse_str("SELECT c/uid/value FROM COMPOSITION c WHERE c/uid/value = $uid")?;
-//! let mut parameters = Parameters::new();
+//! let mut parameters = Parameters::default();
 //! parameters.insert("uid", Primitive::String("8849182c-82ad-4088-a07f-48ead4180515::node::1".into()));
 //! bind(&mut query, &parameters)?;
-//! assert!(to_aql(&query).ends_with("='8849182c-82ad-4088-a07f-48ead4180515::node::1'"));
+//! assert!(to_aql(&query, None).ends_with("='8849182c-82ad-4088-a07f-48ead4180515::node::1'"));
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
@@ -65,12 +65,6 @@ enum Supplied {
 }
 
 impl Parameters {
-    /// An empty parameter set.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Adds `value` under `name`, with or without its leading `$`.
     ///
     /// A name supplied twice is kept as a [`FaultKind::Duplicate`], so the

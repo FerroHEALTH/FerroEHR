@@ -24,7 +24,7 @@
 //!
 //! The crate has NO lexer of its own: the cADL token stream is the shared
 //! workspace lexical layer under its ADL reading
-//! ([`openehr_lang::v1_1::lexer::lex_adl`]), and ODIN sections go through the
+//! ([`openehr_lang::v1_1::lexer::lex`]), and ODIN sections go through the
 //! `openehr_lang::v1_1::odin` reader. The `rules` body and the slot
 //! include/exclude assertions are BEL expression trees ([`rules`]) whose string
 //! form is rendered back from the tree ([`print::assertion_text`]), never parsed

@@ -190,13 +190,13 @@ fn vasid_stated_parent_absent_from_the_repository() {
     // master03 §Validity Rules — VASID: the stated parent must be the identifier
     // of the immediate parent archetype; an id the repository cannot resolve is
     // not that, and phase 2 (master08) cannot run without the flat parent.
-    let empty = ArchetypeRepository::new();
+    let empty = ArchetypeRepository::default();
     let issues =
         validate_source_integrity(CHILD_WITH_DIFFERENTIAL_PATHS, Dialect::Adl2, Some(&empty))
             .unwrap();
     assert_raises(&issues, ValidationCode::Vasid);
 
-    let mut with_parent = ArchetypeRepository::new();
+    let mut with_parent = ArchetypeRepository::default();
     with_parent.insert(parse(BASE));
     let issues = validate_source_integrity(
         CHILD_WITH_DIFFERENTIAL_PATHS,
@@ -220,7 +220,7 @@ fn vasid_absent_parent_is_not_raised_for_an_operational_template() {
             "        /element_attr matches {\n            ELEMENT[id0.1]\n        }\n        /element_attr[id2]/element_attr matches {\n            ELEMENT[id0.2]\n        }\n",
             "        element_attr matches {\n            ELEMENT[id0.1]\n            ELEMENT[id0.2]\n        }\n",
         );
-    let empty = ArchetypeRepository::new();
+    let empty = ArchetypeRepository::default();
     let issues = validate_source_integrity(&src, Dialect::Adl2, Some(&empty)).unwrap();
     assert!(
         !mnemonics(&issues).contains(&"VASID"),
@@ -709,7 +709,7 @@ terminology
         >
     >
 "#;
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse(parent));
     let issues = validate_source_integrity(child, Dialect::Adl2, Some(&repo)).unwrap();
     assert_raises(&issues, ValidationCode::Valc);

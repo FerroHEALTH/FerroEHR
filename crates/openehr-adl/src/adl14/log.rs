@@ -32,12 +32,6 @@ pub struct ConversionLog {
 }
 
 impl ConversionLog {
-    /// A fresh, empty log.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// The synthesised at-code previously minted for `external_code`, if any.
     #[must_use]
     pub fn external_at_code(&self, external_code: &str) -> Option<&str> {

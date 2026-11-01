@@ -76,12 +76,6 @@ fn major_key(major: &str) -> String {
 }
 
 impl ArchetypeRepository {
-    /// A new, empty repository.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Register a parsed archetype under its namespace, family and major
     /// version, replacing an artefact of the same full version.
     pub fn insert(&mut self, archetype: Archetype) {
@@ -94,14 +88,6 @@ impl ArchetypeRepository {
             Some(slot) => *slot = archetype,
             None => held.push(archetype),
         }
-    }
-
-    /// Resolve a raw archetype reference (a `parent_archetype_id`, a
-    /// `use_archetype` or filler reference) in the namespace the reference
-    /// writes, or in no namespace when it writes none.
-    #[must_use]
-    pub fn get(&self, reference: &str) -> Option<&Archetype> {
-        self.resolve(reference, None)
     }
 
     /// Resolve a raw archetype reference made from an artefact in

@@ -38,7 +38,7 @@
 //! let directive = federated.directive.as_ref().ok_or("no directive")?;
 //! assert_eq!(directive.kind, DirectiveKind::Endpoint);
 //! assert_eq!(directive.ids, ["node_1", "node_2"]);
-//! assert_eq!(to_aql(&federated.query), "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
+//! assert_eq!(to_aql(&federated.query, None), "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
@@ -50,7 +50,7 @@ use std::fmt::Write as _;
 use crate::ast::{SelectQuery, Span};
 use crate::lexer::{SpannedTokens, Token, lex_spanned};
 use crate::parser::{ParseError, SyntaxFault, parse_spanned, unquote};
-use crate::printer::{escape_string, render};
+use crate::printer::{escape_string, to_aql};
 
 /// Which node selector a directive is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -201,7 +201,7 @@ fn fault(stream: &SpannedTokens, at: usize) -> ParseError {
 #[must_use]
 pub fn to_federated_aql(federated: &Federated) -> String {
     let Some(directive) = &federated.directive else {
-        return render(&federated.query, None);
+        return to_aql(&federated.query, None);
     };
     let mut prefix = String::from(match directive.kind {
         DirectiveKind::Endpoint => "ENDPOINT",
@@ -218,5 +218,5 @@ pub fn to_federated_aql(federated: &Federated) -> String {
         let _ = write!(prefix, "'{}'", escape_string(id));
     }
     prefix.push_str("] CONTAINS ");
-    render(&federated.query, Some(&prefix))
+    to_aql(&federated.query, Some(&prefix))
 }

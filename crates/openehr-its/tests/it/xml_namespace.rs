@@ -25,8 +25,9 @@
 //! `xml_xsd_validity`; the assertions below deliberately
 //! stay scoped to the serializer, which is all they ever proved.
 
+use openehr_its::xml::from_canonical_xml;
 use openehr_its::xml::runtime::Namespace;
-use openehr_its::xml::{from_canonical_xml, to_canonical_xml, to_canonical_xml_ns};
+use openehr_its::xml::runtime::to_xml;
 use openehr_rm::prelude::Composition;
 
 const V1_NS: &str = "xmlns=\"http://schemas.openehr.org/v1\"";
@@ -38,19 +39,14 @@ fn fixture() -> Composition {
     openehr_its::json::from_canonical_json(json).expect("deserialize composition JSON")
 }
 
-/// The default entry point emits the v2 lineage — the only vendored bundle
-/// whose schemas describe every RM 1.2.0 class this model emits, matching the
-/// served default (#2453, aligning with the #1666 ruling).
+/// The v2 lineage, the only vendored bundle whose schemas describe every RM
+/// 1.2.0 class this model emits and the served default (#2453, aligning with
+/// the #1666 ruling), writes the v2 namespace and never the v1 one.
 #[test]
-fn default_entry_point_emits_the_v2_lineage() {
-    let xml = to_canonical_xml(&fixture(), "composition").expect("serialize default");
-    assert!(xml.contains(V2_NS), "default lineage is v2: {xml:.200}");
-    assert!(!xml.contains(V1_NS), "default lineage is not v1");
-    assert_eq!(
-        xml,
-        to_canonical_xml_ns(&fixture(), "composition", Namespace::V2).expect("serialize v2"),
-        "to_canonical_xml is to_canonical_xml_ns(.., V2)"
-    );
+fn the_v2_lineage_writes_the_v2_namespace() {
+    let xml = to_xml(&fixture(), "composition", Namespace::V2).expect("serialize v2");
+    assert!(xml.contains(V2_NS), "the lineage is v2: {xml:.200}");
+    assert!(!xml.contains(V1_NS), "the lineage is not v1");
 }
 
 /// The v2 selection changes the SERIALIZED DOCUMENT's root namespace and
@@ -59,8 +55,8 @@ fn default_entry_point_emits_the_v2_lineage() {
 /// docs and `xml_xsd_validity`.)
 #[test]
 fn v2_selection_changes_only_the_root_namespace() {
-    let v1 = to_canonical_xml_ns(&fixture(), "composition", Namespace::V1).expect("serialize v1");
-    let v2 = to_canonical_xml_ns(&fixture(), "composition", Namespace::V2).expect("serialize v2");
+    let v1 = to_xml(&fixture(), "composition", Namespace::V1).expect("serialize v1");
+    let v2 = to_xml(&fixture(), "composition", Namespace::V2).expect("serialize v2");
 
     assert!(v2.starts_with("<composition"), "root element: {v2:.80}");
     assert!(v2.contains(V2_NS), "v2 namespace declared");
@@ -80,17 +76,17 @@ fn v2_selection_changes_only_the_root_namespace() {
 /// same generated codec and re-serializes to the same v2 bytes.
 #[test]
 fn v2_document_round_trips() {
-    let v2 = to_canonical_xml_ns(&fixture(), "composition", Namespace::V2).expect("serialize v2");
+    let v2 = to_xml(&fixture(), "composition", Namespace::V2).expect("serialize v2");
     let back: Composition = from_canonical_xml(&v2).expect("parse the v2 document");
     assert_eq!(
-        to_canonical_xml_ns(&back, "composition", Namespace::V2).expect("re-serialize v2"),
+        to_xml(&back, "composition", Namespace::V2).expect("re-serialize v2"),
         v2,
         "v2 → parse → v2 is lossless"
     );
     // …and the SAME parsed value re-serializes into the v1 lineage, which is
     // what makes namespace selection a pure presentation choice.
     assert!(
-        to_canonical_xml_ns(&back, "composition", Namespace::V1)
+        to_xml(&back, "composition", Namespace::V1)
             .expect("re-serialize v1")
             .contains(V1_NS),
         "a v2-parsed value can be emitted as v1"

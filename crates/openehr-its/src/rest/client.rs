@@ -862,38 +862,10 @@ impl<T: Transport> Client<T> {
         .await
     }
 
-    /// Sends `request` once under the base URL and returns whatever the
-    /// service answered, for an intermediary passing a request through.
-    ///
-    /// Nothing is classified and nothing is retried, except the one re-send
-    /// that answers a DPoP `use_dpop_nonce` challenge: a `401`, `403` or `5xx`
-    /// is an [`Answer`] like any other, and the status, every header (`ETag`,
-    /// `Location`) and the body bytes are as received. A `3xx` is returned,
-    /// never followed: [`ReqwestTransport`] is always built with redirects off,
-    /// and a caller's own [`Transport`] must not follow them either. The request goes out as
-    /// built — path, query ([`Request::raw_query`]), headers and body
-    /// ([`Request::raw_body`]) unchanged — except that the client's credentials,
-    /// when configured, set `Authorization` (and `DPoP`, under a
-    /// [`DpopProver`]), and `Accept` defaults to
-    /// `application/json` when absent. Stripping hop-by-hop fields (RFC 9110
-    /// §7.6.1) is the caller's.
-    ///
-    /// # Errors
-    /// Returns [`ClientError::Transport`] when the request did not complete,
-    /// [`ClientError::AnswerTooLarge`] when the answer body passed the engine's
-    /// limit, [`ClientError::DeadlineElapsed`] when its deadline has passed — with
-    /// `sent: false` before anything went out, and `sent: true` when it passed
-    /// before the re-send that answers a DPoP nonce challenge —,
-    /// [`ClientError::Credentials`] when the provider produced no credential,
-    /// and [`ClientError::Build`] when the parts do not form a request.
-    pub async fn forward(&self, request: Request) -> Result<Answer, ClientError> {
-        self.send_once(&request, false).await
-    }
-
     /// One attempt: send it, classify the general statuses; `sent` says
     /// whether an earlier attempt of the same call went out.
     async fn attempt(&self, request: &Request, sent: bool) -> Result<Answer, ClientError> {
-        let answer = self.send_once(request, sent).await?;
+        let answer = self.forward(request, sent).await?;
         if answer.status == StatusCode::UNAUTHORIZED {
             return Err(ClientError::Unauthorized {
                 method: answer.method,
@@ -920,10 +892,36 @@ impl<T: Transport> Client<T> {
         Ok(answer)
     }
 
-    /// One send of `request`: resolve the credential, build, hand the engine
-    /// the time left, and read the answer whole, unclassified; under DPoP, a
-    /// `use_dpop_nonce` challenge is answered with one re-send.
-    async fn send_once(&self, request: &Request, mut sent: bool) -> Result<Answer, ClientError> {
+    /// Sends `request` once under the base URL and returns whatever the
+    /// service answered, for an intermediary passing a request through.
+    ///
+    /// Nothing is classified and nothing is retried, except the one re-send
+    /// that answers a DPoP `use_dpop_nonce` challenge: a `401`, `403` or `5xx`
+    /// is an [`Answer`] like any other, and the status, every header (`ETag`,
+    /// `Location`) and the body bytes are as received. A `3xx` is returned,
+    /// never followed: [`ReqwestTransport`] is always built with redirects off,
+    /// and a caller's own [`Transport`] must not follow them either. The request goes out as
+    /// built — path, query ([`Request::raw_query`]), headers and body
+    /// ([`Request::raw_body`]) unchanged — except that the client's credentials,
+    /// when configured, set `Authorization` (and `DPoP`, under a
+    /// [`DpopProver`]), and `Accept` defaults to
+    /// `application/json` when absent. Stripping hop-by-hop fields (RFC 9110
+    /// §7.6.1) is the caller's.
+    ///
+    /// `sent` says whether an earlier attempt of the same call already went
+    /// out, which the [`ClientError::DeadlineElapsed`] and
+    /// [`ClientError::DpopProof`] it may return carry; a caller passing a
+    /// request through for the first time passes `false`.
+    ///
+    /// # Errors
+    /// Returns [`ClientError::Transport`] when the request did not complete,
+    /// [`ClientError::AnswerTooLarge`] when the answer body passed the engine's
+    /// limit, [`ClientError::DeadlineElapsed`] when its deadline has passed — with
+    /// `sent: false` before anything went out, and `sent: true` when it passed
+    /// before the re-send that answers a DPoP nonce challenge —,
+    /// [`ClientError::Credentials`] when the provider produced no credential,
+    /// and [`ClientError::Build`] when the parts do not form a request.
+    pub async fn forward(&self, request: &Request, mut sent: bool) -> Result<Answer, ClientError> {
         request.remaining(sent)?;
         let credentials =
             match self.credentials.as_ref() {

@@ -114,7 +114,7 @@ fn every_ckm_archetype_opt_passes_the_upload_validation() {
         if library.get(id).is_none() {
             continue;
         }
-        let built = openehr_its::opt14_writer::build(
+        let built = openehr_its::opt14_writer::assemble::build(
             &definition(id, archetype_use(id), &library),
             &library,
         )
@@ -165,9 +165,11 @@ fn an_imaging_report_template_passes_the_upload_validation() {
         }),
         filler: result,
     });
-    let built =
-        openehr_its::opt14_writer::build(&definition("Imaging report", root, &library), &library)
-            .expect("the imaging report builds");
+    let built = openehr_its::opt14_writer::assemble::build(
+        &definition("Imaging report", root, &library),
+        &library,
+    )
+    .expect("the imaging report builds");
     validate_opt_artefact(&built).expect("the upload accepts the imaging report");
 }
 
@@ -225,8 +227,10 @@ fn a_template_with_clones_and_redefinitions_passes_the_upload_validation() {
         path: "/items[at0010]/value".to_owned(),
         objects: vec![complex("DV_TEXT")],
     });
-    let built =
-        openehr_its::opt14_writer::build(&definition("Two streets", root, &library), &library)
-            .expect("the template builds");
+    let built = openehr_its::opt14_writer::assemble::build(
+        &definition("Two streets", root, &library),
+        &library,
+    )
+    .expect("the template builds");
     validate_opt_artefact(&built).expect("the upload accepts clones and redefinitions");
 }

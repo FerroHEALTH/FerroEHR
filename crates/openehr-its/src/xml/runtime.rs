@@ -295,7 +295,16 @@ impl Default for XmlWriter {
 /// Serialize a value as an openEHR canonical-XML document.
 ///
 /// `root_tag` is the root element name (e.g. `"composition"`); `ns` selects the
-/// wire lineage. The root carries no `xsi:type`.
+/// wire lineage, and only the root `xmlns` the document declares. The root
+/// carries no `xsi:type`. A caller with no reason to choose passes
+/// [`Namespace::V2`], the only vendored bundle whose schemas can describe every
+/// RM 1.2.0 class this model emits (#2453, matching the served default of
+/// #1666).
+///
+/// NOTE: OPT 1.4 operational templates are not written here: they are AM
+/// documents with their own `<template>` root, always in the v1 lineage
+/// (`crate::opt14::to_xml`), as `docs/specs/openehr/ITS-XML/README.adoc`
+/// §"Releases and IM Versions" keeps `Release-1.0.2` the STABLE bundle.
 ///
 /// # Errors
 /// Propagates serialization errors.
@@ -314,6 +323,11 @@ pub fn to_xml<T: ToXml + ?Sized>(
 ///
 /// This is the `declared`-aware sibling of [`to_xml`], for a published global
 /// element whose XSD type is abstract.
+/// `ALL/Version.xsd` publishes `<xs:element name="version" type="VERSION"/>` over
+/// an abstract `VERSION`, and XML Schema Part 1 forbids an element instance
+/// from using an abstract type directly
+/// (<https://www.w3.org/TR/xmlschema-1/#xsi_type>, §2.6.1 and §3.4.6), so the
+/// root names its concrete type with `xsi:type`.
 ///
 /// The value emits `xsi:type` through the same polymorphic-dispatch mechanism
 /// every nested slot uses, i.e. iff its concrete type differs from `declared`.

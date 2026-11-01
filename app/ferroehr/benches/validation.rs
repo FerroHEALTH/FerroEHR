@@ -86,7 +86,10 @@ fn commit_validation(c: &mut Criterion) {
         let (composition, web_template) = fixture(stem);
         c.bench_function(&format!("validate_rm_terminology/{stem}"), |b| {
             b.iter(|| {
-                openehr_sdt::rm_instance::validate_rm_and_terminology(black_box(&composition))
+                openehr_sdt::rm_instance::validate_rm_and_terminology(
+                    black_box(&composition),
+                    "COMPOSITION",
+                )
             });
         });
         c.bench_function(&format!("validate_archetype_conformance/{stem}"), |b| {
@@ -99,8 +102,10 @@ fn commit_validation(c: &mut Criterion) {
         });
         c.bench_function(&format!("validate_both_passes/{stem}"), |b| {
             b.iter(|| {
-                let mut messages =
-                    openehr_sdt::rm_instance::validate_rm_and_terminology(black_box(&composition));
+                let mut messages = openehr_sdt::rm_instance::validate_rm_and_terminology(
+                    black_box(&composition),
+                    "COMPOSITION",
+                );
                 messages.extend(
                     openehr_sdt::flat::validation::validate_archetype_conformance(
                         black_box(&composition),

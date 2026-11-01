@@ -119,7 +119,7 @@ fn a_definition_well_within_the_bound_parses() {
 #[test]
 fn a_specialisation_lineage_longer_than_the_bound_is_refused() {
     let length = MAX_NESTING_DEPTH + 2;
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     let mut leaf = None;
     for k in 0..length {
         let hrid = cluster_hrid(&format!("chain{k}"));
@@ -171,7 +171,7 @@ fn a_flat_form_composed_past_the_bound_is_refused() {
         &format!("CLUSTER[id1.1] matches {{ {path} matches {{ {child_chain} }} }}"),
     );
     on_big_stack(move || {
-        let mut repo = ArchetypeRepository::new();
+        let mut repo = ArchetypeRepository::default();
         repo.insert(parse(&parent_src));
         let child = parse(&child_src);
         let err =
@@ -199,7 +199,7 @@ fn fillers_referencing_each_other_are_a_typed_refusal() {
         None,
         &format!("CLUSTER[id1] matches {{ items matches {{ use_archetype CLUSTER[id2, {a}] }} }}"),
     );
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse(&b_src));
     let root = parse(&a_src);
     repo.insert(root.clone());
@@ -238,7 +238,7 @@ fn fillers_inlined_past_the_bound_are_a_typed_refusal() {
         ),
     );
     on_big_stack(move || {
-        let mut repo = ArchetypeRepository::new();
+        let mut repo = ArchetypeRepository::default();
         repo.insert(parse(&filler_src));
         let root = parse(&root_src);
         repo.insert(root.clone());

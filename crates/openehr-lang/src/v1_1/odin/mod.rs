@@ -17,7 +17,7 @@
 //!
 //! The lexical layer is NOT here: ODIN shares the one workspace token stream,
 //! [`crate::v1_1::lexer`], and this module reads it through
-//! [`crate::v1_1::lexer::lex_odin`].
+//! [`crate::v1_1::lexer::lex`].
 
 mod parser;
 
@@ -297,16 +297,17 @@ pub fn parse(src: &str) -> Result<OdinValue, OdinError> {
 /// Returns an [`OdinError`] (with line/column) on the first lexical or
 /// syntactic error.
 pub fn parse_document(src: &str) -> Result<OdinDocument, OdinError> {
-    let spanned = crate::v1_1::lexer::lex_odin(src).map_err(|failure| {
-        let (line, column) = line_col(src, failure.span.start);
-        OdinError {
-            kind: OdinErrorKind::UnrecognisedToken,
-            message: "unrecognised token".to_owned(),
-            line,
-            column,
-            span: failure.span,
-        }
-    })?;
+    let spanned =
+        crate::v1_1::lexer::lex(crate::v1_1::lexer::Language::Odin, src).map_err(|failure| {
+            let (line, column) = line_col(src, failure.span.start);
+            OdinError {
+                kind: OdinErrorKind::UnrecognisedToken,
+                message: "unrecognised token".to_owned(),
+                line,
+                column,
+                span: failure.span,
+            }
+        })?;
     if let Err((index, exceeded)) = crate::nesting::check_bracket_nesting(
         &spanned,
         |t| t.token == Token::SymLt,

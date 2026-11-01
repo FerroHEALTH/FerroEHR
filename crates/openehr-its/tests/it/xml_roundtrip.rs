@@ -6,7 +6,7 @@
 //! corpus, RM → XML → RM → XML must be stable, proving the generated `ToXml` and
 //! `FromXml` impls are mutually consistent on real data.
 use openehr_its::xml::runtime::from_xml;
-use openehr_its::xml::to_canonical_xml;
+use openehr_its::xml::runtime::to_xml;
 use openehr_rm::prelude::{Composition, FeederAuditDetails};
 use std::path::Path;
 
@@ -44,10 +44,20 @@ fn composition_xml_round_trips() {
             skipped += 1; // not a canonical composition
             continue;
         };
-        let xml1 = to_canonical_xml(&compo, "composition").expect("serialize 1");
+        let xml1 = to_xml(
+            &compo,
+            "composition",
+            openehr_its::xml::runtime::Namespace::V2,
+        )
+        .expect("serialize 1");
         match from_xml::<Composition>(&xml1) {
             Ok(compo2) => {
-                let xml2 = to_canonical_xml(&compo2, "composition").expect("serialize 2");
+                let xml2 = to_xml(
+                    &compo2,
+                    "composition",
+                    openehr_its::xml::runtime::Namespace::V2,
+                )
+                .expect("serialize 2");
                 if xml1 == xml2 {
                     ok += 1;
                 } else {
@@ -103,7 +113,12 @@ fn feeder_audit_details_other_details_round_trips() {
         "the canonical-JSON reader must carry other_details"
     );
 
-    let xml1 = to_canonical_xml(&details, "originating_system_audit").expect("serialize 1");
+    let xml1 = to_xml(
+        &details,
+        "originating_system_audit",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize 1");
     assert!(
         xml1.contains("<other_details"),
         "the emitted XML must carry the other_details element: {xml1}"
@@ -115,6 +130,11 @@ fn feeder_audit_details_other_details_round_trips() {
 
     let parsed: FeederAuditDetails = from_xml(&xml1).expect("parse back");
     assert_eq!(parsed, details, "other_details must survive the round trip");
-    let xml2 = to_canonical_xml(&parsed, "originating_system_audit").expect("serialize 2");
+    let xml2 = to_xml(
+        &parsed,
+        "originating_system_audit",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize 2");
     assert_eq!(xml1, xml2, "the round trip must be byte-stable");
 }

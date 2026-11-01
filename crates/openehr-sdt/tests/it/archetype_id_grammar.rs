@@ -37,7 +37,7 @@ fn composition(archetype_id: &str) -> Value {
 
 /// The `Value_valid` findings on the composition's `archetype_details.archetype_id`.
 fn archetype_id_findings(archetype_id: &str) -> Vec<String> {
-    validate_rm_and_terminology(&composition(archetype_id))
+    validate_rm_and_terminology(&composition(archetype_id), "COMPOSITION")
         .into_iter()
         .filter(|m| m.path == "/archetype_details/archetype_id")
         .map(|m| m.message)

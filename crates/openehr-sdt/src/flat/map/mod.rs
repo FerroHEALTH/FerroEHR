@@ -20,8 +20,8 @@
 //!
 //! ## The four entry points
 //!
-//! The RM⇄sim walkers call exactly [`emit_leaf`] / [`build_leaf`] for a single
-//! `DATA_VALUE` leaf and [`emit_rm_attrs`] / [`build_rm_attr`] for the
+//! The RM⇄sim walkers call exactly [`data_values::emit_leaf`] / [`build_leaf`] for a single
+//! `DATA_VALUE` leaf and [`structures::emit_rm_attrs`] / [`build_rm_attr`] for the
 //! `_`-prefixed optional RM-attribute families. The walker owns the tree
 //! structure and the template resolution; this layer owns the per-datum shape.
 //!
@@ -49,18 +49,6 @@ use serde_json::{Value, json};
 use crate::flat::error::FlatError;
 use crate::flat::sim::{SimChild, SimNode};
 use crate::flat::webtemplate::model::{WebTemplateCodedValue, WebTemplateNode};
-
-/// RM leaf value (canonical JSON) → datum parts on `out` (attrs only; the
-/// `|suffix` keys of master05, plus the bare `""` value where the type has one).
-///
-/// `list_open` is the `DV_CODED_TEXT` open-value-set marker from the web-template
-/// input (`None` = not coded / unknown): a `DV_TEXT` value in an *open*
-/// `DV_CODED_TEXT` slot is emitted via `|other` (master04 §"Open Value-Sets and
-/// the `|other` Suffix"). The `_`-prefixed sub-attribute families are emitted by
-/// [`emit_rm_attrs`], not here.
-pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out: &mut SimNode) {
-    data_values::emit_leaf(rm, rm_type, list_open, out);
-}
 
 /// Datum parts of `node` (+ its value-internal `_`-prefixed structural children:
 /// `_normal_range`, `_other_reference_ranges:i`, `_accuracy`, `_language`,
@@ -137,16 +125,6 @@ pub(crate) fn build_leaf(
         path: path.to_owned(),
         reason: format!("the datum parts do not form a valid {base}"),
     })
-}
-
-/// The `_`-prefixed optional RM-attribute families present on RM value `rm` →
-/// `_`-prefixed children/attrs on `out` (master04 §"RM Attributes prefix" and
-/// the per-class `_`-rows of master05). Field presence + `_type` gate which
-/// family applies, so one entry point serves every node kind (the LOCATABLE
-/// family, the ENTRY types, the `DV_ORDERED`/`DV_TEXT` value-internal families,
-/// PARTY, EVENT_CONTEXT).
-pub(crate) fn emit_rm_attrs(rm: &Value, rm_type: &str, out: &mut SimNode) {
-    structures::emit_rm_attrs(rm, rm_type, out);
 }
 
 /// One `_`-segment child of a sim node → `(rm_attribute_name, canonical JSON

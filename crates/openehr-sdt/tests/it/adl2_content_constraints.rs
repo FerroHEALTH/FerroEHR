@@ -193,7 +193,7 @@ fn assert_refused(kinds: &[&str]) {
         assert!(!rows.is_empty(), "no 422 case ends in {kind}");
         for case in rows {
             assert!(
-                validate_rm_and_terminology(&case.body).is_empty(),
+                validate_rm_and_terminology(&case.body, "COMPOSITION").is_empty(),
                 "{}: the RM pass refuses it, so the template is not what is tested",
                 case.workflow
             );
@@ -300,7 +300,7 @@ fn every_admitted_composition_passes() {
         .collect();
     assert!(!admitted.is_empty(), "the catalogue's 201 cases");
     for case in &admitted {
-        let mut findings = validate_rm_and_terminology(&case.body);
+        let mut findings = validate_rm_and_terminology(&case.body, "COMPOSITION");
         findings.extend(template_findings(case, &templates));
         assert!(
             findings.is_empty(),
@@ -869,7 +869,11 @@ fn the_category_carries_its_openehr_binding() {
             (Some("openehr"), Some("433")),
             "{id}"
         );
-        assert_eq!(validate_rm_and_terminology(&example), Vec::new(), "{id}");
+        assert_eq!(
+            validate_rm_and_terminology(&example, "COMPOSITION"),
+            Vec::new(),
+            "{id}"
+        );
 
         let mut flat = serde_json::Map::new();
         flat.insert(format!("{}/language|code", wt.tree.id), "en".into());

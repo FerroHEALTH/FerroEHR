@@ -34,7 +34,7 @@ fn an_endpoint_directive_is_lifted_out_of_the_from_clause() -> TestResult {
         written,
         Some(r#"ENDPOINT p [ "node_1", "node_2", 'node_3' ]"#)
     );
-    let node_side = to_aql(&federated.query);
+    let node_side = to_aql(&federated.query, None);
     assert!(!node_side.contains("ENDPOINT"));
     assert_eq!(
         federated.query,
@@ -57,7 +57,7 @@ fn an_organisation_directive_needs_no_variable_and_ignores_case() -> TestResult 
     assert_eq!(directive.variable, None);
     assert_eq!(directive.ids, ["org-a"]);
     assert_eq!(
-        to_aql(&federated.query),
+        to_aql(&federated.query, None),
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c"
     );
     Ok(())
@@ -78,7 +78,7 @@ fn every_corpus_query_parses_as_it_does_without_the_feature() -> Result<(), Pars
         let federated = parse_federated(&src)?;
         assert_eq!(federated.directive, None, "no directive in: {src}");
         assert_eq!(federated.query, parse_str(&src)?);
-        assert_eq!(to_federated_aql(&federated), to_aql(&federated.query));
+        assert_eq!(to_federated_aql(&federated), to_aql(&federated.query, None));
     }
     Ok(())
 }

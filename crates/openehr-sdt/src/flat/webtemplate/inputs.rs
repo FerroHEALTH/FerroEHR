@@ -735,10 +735,6 @@ fn code_phrases_under<'a>(co: &'a CObject, name: &str) -> Vec<&'a CObject> {
 
 // ── range helpers ────────────────────────────────────────────────────────────
 
-fn json_i32(v: i32) -> serde_json::Value {
-    serde_json::Value::from(v)
-}
-
 fn json_f64(v: f64) -> serde_json::Value {
     serde_json::Number::from_f64(v).map_or(serde_json::Value::Null, serde_json::Value::Number)
 }
@@ -806,9 +802,9 @@ fn int_range(iv: &Intervalofinteger) -> Option<WebTemplateRange> {
     }
     Some(WebTemplateRange {
         min_op: min.map(|_| ">=".to_owned()),
-        min: min.map(json_i32),
+        min: min.map(serde_json::Value::from),
         max_op: max.map(|_| "<=".to_owned()),
-        max: max.map(json_i32),
+        max: max.map(serde_json::Value::from),
     })
 }
 

@@ -152,7 +152,7 @@ fn spans_take_no_part_in_equality() -> Result<(), ParseError> {
 #[test]
 fn a_parse_over_bare_tokens_carries_no_spans() -> Result<(), ParseError> {
     let src = "SELECT e/ehr_id/value FROM EHR e WHERE e/time_created/value > '2026'";
-    let query = parse(&lex(src)?)?;
+    let query = parse(&lex(src)?, None)?;
     let mut spans = Spans {
         src,
         ..Spans::default()

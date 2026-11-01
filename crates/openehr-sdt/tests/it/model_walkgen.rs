@@ -404,7 +404,7 @@ fn cluster_no_items_fixture_is_refused() {
     )
     .expect("fixture exists");
     let doc: Value = serde_json::from_str(&text).expect("fixture parses");
-    let violations = openehr_sdt::rm_instance::validate_rm_and_terminology(&doc);
+    let violations = openehr_sdt::rm_instance::validate_rm_and_terminology(&doc, "COMPOSITION");
     assert!(
         violations
             .iter()

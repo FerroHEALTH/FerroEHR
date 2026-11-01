@@ -841,7 +841,7 @@ fn validate_all(
     adjudicated: &[ValidityRefusal],
     resolver: &dyn TerminologyResolver,
 ) -> ValidityOutcome {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     let mut out = ValidityOutcome {
         failures: Vec::new(),
         broken_adjudications: Vec::new(),

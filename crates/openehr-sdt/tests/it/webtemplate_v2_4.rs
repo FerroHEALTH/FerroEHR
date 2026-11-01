@@ -64,7 +64,7 @@ fn read(rel: &str) -> String {
 /// A repository over the whole `adl2-reference` tree so specialisation parents
 /// and `use_archetype` fillers resolve during `create_opt`.
 fn corpus_repo() -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     fn walk(dir: &Path, repo: &mut ArchetypeRepository) {
         for entry in std::fs::read_dir(dir).unwrap().flatten() {
             let p = entry.path();
@@ -189,7 +189,7 @@ fn example_generation_validates_at_every_level() {
         DetailLevel::Complete,
     ] {
         let comp = example_composition(&wt, level).expect("the example builds");
-        let msgs = validate_rm_and_terminology(&comp);
+        let msgs = validate_rm_and_terminology(&comp, "COMPOSITION");
         assert!(
             msgs.is_empty(),
             "example at {level:?} has RM/terminology violations: {msgs:?}"
@@ -532,7 +532,7 @@ terminology
 
 #[test]
 fn v2_4_template_filler_subtree_reaches_the_web_template() {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse_artefact(FILLER_ARCHETYPE, Dialect::Adl2).expect("parse filler archetype"));
     let template = parse_artefact(FILLER_TEMPLATE, Dialect::Adl2).expect("parse template");
     let opt = create_opt(&template, &repo).expect("create_opt inlines the filler");
@@ -611,7 +611,7 @@ terminology
 #[test]
 fn v2_4_slot_patterns_come_from_the_assertion_tree() {
     let archetype = parse_artefact(SLOT_ARCHETYPE, Dialect::Adl2).expect("parse ADL2");
-    let mut opt = create_opt(&archetype, &ArchetypeRepository::new()).expect("create_opt");
+    let mut opt = create_opt(&archetype, &ArchetypeRepository::default()).expect("create_opt");
     // Strip every `string_expression`: the attribute is optional in the model
     // and only a serialisation of the tree, so a probe reading the tree is
     // unaffected while a string scan goes blind.
@@ -827,7 +827,7 @@ terminology
 /// id open: our own design).
 #[test]
 fn a_node_under_a_template_overlay_carries_the_parent_archetype_id() {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse_artefact(OVERLAY_SECTION, Dialect::Adl2).expect("the section parses"));
     repo.insert(
         parse_artefact(OVERLAY_COMPOSITION, Dialect::Adl2).expect("the composition parses"),
@@ -994,7 +994,7 @@ terminology
 /// codes with their archetype rubrics and the assumed code as the default.
 #[test]
 fn an_adl14_qualified_term_constraint_reads_as_its_codes() {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(
         parse_artefact(ADL14_CODED_COMPOSITION, Dialect::Adl14).expect("the archetype parses"),
     );
@@ -1033,7 +1033,7 @@ fn an_adl14_qualified_term_constraint_reads_as_its_codes() {
 /// names, with the ordinal value beside it.
 #[test]
 fn an_adl14_ordinal_reads_as_its_symbols() {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(
         parse_artefact(ADL14_CODED_COMPOSITION, Dialect::Adl14).expect("the archetype parses"),
     );

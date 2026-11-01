@@ -41,7 +41,7 @@
 //! use openehr_its::opt14_writer::{ArchetypeLibrary, ArchetypeUse, TemplateDefinition};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let library = ArchetypeLibrary::new();
+//! let library = ArchetypeLibrary::default();
 //! let definition = TemplateDefinition {
 //!     template_id: TemplateId { value: "Example".to_owned() },
 //!     concept: "Example".to_owned(),
@@ -57,12 +57,12 @@
 //!     }),
 //! };
 //! // The library holds no archetype, so the writer refuses the definition.
-//! assert!(openehr_its::opt14_writer::build(&definition, &library).is_err());
+//! assert!(openehr_its::opt14_writer::assemble::build(&definition, &library).is_err());
 //! # Ok(())
 //! # }
 //! ```
 
-mod assemble;
+pub mod assemble;
 mod interval;
 mod leaf;
 mod path;
@@ -91,12 +91,6 @@ pub struct ArchetypeLibrary {
 }
 
 impl ArchetypeLibrary {
-    /// Creates an empty library.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Adds an archetype under its own `archetype_id`, returning the one it
     /// replaces.
     pub fn insert(&mut self, archetype: Archetype) -> Option<Archetype> {
@@ -500,41 +494,17 @@ pub enum WriteError {
     Xml(#[from] XmlError),
 }
 
-/// Builds the operational template of `definition` over `library`.
-///
-/// The root archetype becomes the OPT `definition`, a `C_ARCHETYPE_ROOT`
-/// carrying the template id; every filler becomes a `C_ARCHETYPE_ROOT` placed
-/// directly after its slot, or in the open attribute it names. Each root carries its archetype's term
-/// definitions in the template language and its term bindings, and
-/// `component_ontologies` carries every constituent's whole ontology, once
-/// per archetype id, in first-use order.
-///
-/// # Errors
-///
-/// Returns a [`WriteError`] when an archetype is missing from the library or
-/// lacks the template language, a path does not resolve, a slot refuses its
-/// filler, a constraint widens the archetype's or constrains an attribute
-/// that is taken or absent from the reference model, a redefinition names a
-/// type that does not conform or no single node, a clone is not admitted or
-/// not told apart by its name, or an internal reference is recursive.
-pub fn build(
-    definition: &TemplateDefinition,
-    library: &ArchetypeLibrary,
-) -> Result<OperationalTemplate, WriteError> {
-    assemble::build(definition, library)
-}
-
 /// Builds the operational template of `definition` and serializes it as OPT
 /// 1.4 XML (`Template.xsd`, root `<template>` in `http://schemas.openehr.org/v1`).
 ///
 /// # Errors
 ///
-/// Returns every refusal of [`build`], and [`WriteError::Xml`] when the
+/// Returns every refusal of [`assemble::build`], and [`WriteError::Xml`] when the
 /// template does not serialize.
 pub fn write(
     definition: &TemplateDefinition,
     library: &ArchetypeLibrary,
 ) -> Result<String, WriteError> {
-    let template = build(definition, library)?;
+    let template = assemble::build(definition, library)?;
     Ok(crate::opt14::to_xml(&template)?)
 }

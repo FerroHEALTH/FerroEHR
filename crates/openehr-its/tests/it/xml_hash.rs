@@ -5,7 +5,7 @@
 //! Verify `Hash<String,String>` (`StringDictionaryItem`) XML round-trips.
 use openehr_base::prelude::TranslationDetails;
 use openehr_its::xml::runtime::from_xml;
-use openehr_its::xml::to_canonical_xml;
+use openehr_its::xml::runtime::to_xml;
 
 #[test]
 fn string_hash_round_trips() {
@@ -17,7 +17,12 @@ fn string_hash_round_trips() {
     }"#;
     let td: TranslationDetails =
         openehr_its::json::from_canonical_json(json).expect("deserialize JSON");
-    let xml = to_canonical_xml(&td, "translations").expect("serialize");
+    let xml = to_xml(
+        &td,
+        "translations",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize");
     eprintln!("{xml}");
     assert!(
         xml.contains("<author id=\"name\">Dr. Ada</author>"),
@@ -31,6 +36,11 @@ fn string_hash_round_trips() {
         Some("openEHR")
     );
     // full XML round-trip stable
-    let xml2 = to_canonical_xml(&td2, "translations").expect("serialize 2");
+    let xml2 = to_xml(
+        &td2,
+        "translations",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize 2");
     assert_eq!(xml, xml2);
 }

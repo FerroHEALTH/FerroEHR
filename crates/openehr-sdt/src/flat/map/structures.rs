@@ -27,8 +27,13 @@ use crate::flat::sim::SimNode;
 
 // ── RM → sim ──────────────────────────────────────────────────────────────────
 
-/// Emit the `_`-prefixed families present on `rm` (see [`super::emit_rm_attrs`]).
-pub(super) fn emit_rm_attrs(rm: &Value, rm_type: &str, out: &mut SimNode) {
+/// The `_`-prefixed optional RM-attribute families present on RM value `rm` →
+/// `_`-prefixed children/attrs on `out` (master04 §"RM Attributes prefix" and
+/// the per-class `_`-rows of master05). Field presence + `_type` gate which
+/// family applies, so one entry point serves every node kind (the LOCATABLE
+/// family, the ENTRY types, the `DV_ORDERED`/`DV_TEXT` value-internal families,
+/// PARTY, EVENT_CONTEXT).
+pub(crate) fn emit_rm_attrs(rm: &Value, rm_type: &str, out: &mut SimNode) {
     let ty = rm
         .get("_type")
         .and_then(Value::as_str)

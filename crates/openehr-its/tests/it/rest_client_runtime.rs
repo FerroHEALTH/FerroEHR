@@ -89,7 +89,7 @@ async fn forward_passes_bytes_through_unchanged() -> TestResult {
         .headers_mut()
         .insert("prefer", HeaderValue::from_static("return=identifier"));
     request.raw_body(sent, Some(HeaderValue::from_static("application/json")));
-    let answer = client.forward(request).await?;
+    let answer = client.forward(&request, false).await?;
     assert_eq!(answer.status(), StatusCode::CREATED);
     assert_eq!(answer.header("Location"), Some(location));
     assert_eq!(
@@ -133,12 +133,12 @@ async fn forward_returns_every_status_as_an_answer() -> TestResult {
         max_backoff: Duration::from_millis(1),
     });
     let failed = client
-        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
         .await?;
     assert_eq!(failed.status(), StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(failed.into_body(), b"upstream down");
     let refused = client
-        .forward(Request::new(Method::GET, "/ehr".to_owned()))
+        .forward(&Request::new(Method::GET, "/ehr".to_owned()), false)
         .await?;
     assert_eq!(refused.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(
@@ -201,7 +201,7 @@ async fn forward_returns_a_redirect_as_received_over_every_constructor() -> Test
         let client = Client::new(transport, server.uri().parse()?)?
             .with_credentials(Credentials::bearer("onward-token".to_owned()));
         let seen = client
-            .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+            .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
             .await?;
         assert_eq!(seen.status(), StatusCode::SEE_OTHER, "{name}");
         assert_eq!(
@@ -214,7 +214,7 @@ async fn forward_returns_a_redirect_as_received_over_every_constructor() -> Test
             b"{}".to_vec(),
             Some(HeaderValue::from_static("application/json")),
         );
-        let seen = client.forward(post).await?;
+        let seen = client.forward(&post, false).await?;
         assert_eq!(seen.status(), StatusCode::TEMPORARY_REDIRECT, "{name}");
         assert_eq!(
             seen.header("Location").as_deref(),
@@ -242,7 +242,7 @@ async fn invalid_credentials_fail_before_sending() -> TestResult {
         .await;
     let client = client_for(&server)?.with_credentials(Credentials::basic("al:ice", "pw"));
     let failed = client
-        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
         .await;
     match failed {
         Err(error @ ClientError::InvalidCredentials { .. }) => {
@@ -524,7 +524,7 @@ async fn an_elapsed_deadline_fails_before_sending() -> TestResult {
     let mut request = Request::new(Method::GET, format!("/ehr/{EHR_ID}"));
     request.set_deadline(Instant::now());
     assert!(matches!(
-        client.forward(request).await,
+        client.forward(&request, false).await,
         Err(ClientError::DeadlineElapsed { sent: false, .. })
     ));
     Ok(())
@@ -645,7 +645,7 @@ async fn a_dpop_credential_sends_the_dpop_scheme_and_a_proof_over_the_final_url(
         .with_dpop_prover(std::sync::Arc::clone(&prover));
     let mut request = Request::new(Method::GET, format!("/ehr/{EHR_ID}"));
     request.query("version_at_time", "now");
-    let answer = client.forward(request).await?;
+    let answer = client.forward(&request, false).await?;
     assert_eq!(answer.status(), StatusCode::NO_CONTENT);
     assert_eq!(prover.proofs.load(Ordering::SeqCst), 1);
     Ok(())
@@ -726,7 +726,7 @@ async fn a_deadline_passed_before_the_nonce_resend_reports_a_sent_request() -> T
         .with_dpop_prover(std::sync::Arc::clone(&prover));
     let mut request = Request::new(Method::GET, format!("/ehr/{EHR_ID}"));
     request.set_deadline(Instant::now() + Duration::from_millis(200));
-    let result = client.forward(request).await;
+    let result = client.forward(&request, false).await;
     assert!(
         matches!(result, Err(ClientError::DeadlineElapsed { sent: true, .. })),
         "{result:?}"
@@ -776,7 +776,7 @@ async fn failing_prover_call(
         .with_credentials(Credentials::dpop("tok"))
         .with_dpop_prover(prover);
     let error = client
-        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
         .await
         .err()
         .ok_or("the call should fail on the proof")?;
@@ -835,7 +835,7 @@ async fn a_repeated_dpop_nonce_challenge_is_returned() -> TestResult {
         .with_credentials(Credentials::dpop("tok"))
         .with_dpop_prover(std::sync::Arc::clone(&prover));
     let answer = client
-        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
         .await?;
     assert_eq!(answer.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(prover.proofs.load(Ordering::SeqCst), 2);
@@ -858,7 +858,7 @@ async fn a_bearer_credential_never_asks_the_prover() -> TestResult {
         .with_credentials(Credentials::bearer("tok"))
         .with_dpop_prover(std::sync::Arc::clone(&prover));
     let answer = client
-        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
         .await?;
     assert_eq!(answer.status(), StatusCode::NO_CONTENT);
     let received = server
@@ -931,7 +931,7 @@ async fn a_head_answer_is_not_measured_by_its_declared_length() -> TestResult {
         .await;
     let client = limited_client(&server.uri(), 16)?;
     let answer = client
-        .forward(Request::new(Method::HEAD, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::HEAD, format!("/ehr/{EHR_ID}")), false)
         .await?;
     assert_eq!(answer.status(), StatusCode::OK);
     assert_eq!(answer.body(), b"");
@@ -985,7 +985,7 @@ async fn a_chunked_body_is_cut_off_at_the_limit() -> TestResult {
     let endless = chunked_server(None).await?;
     let started = Instant::now();
     let result = limited_client(&endless, 4096)?
-        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
         .await;
     assert!(
         matches!(
@@ -1001,7 +1001,7 @@ async fn a_chunked_body_is_cut_off_at_the_limit() -> TestResult {
     assert!(started.elapsed() < Duration::from_secs(5));
     let bounded = chunked_server(Some(4)).await?;
     let answer = limited_client(&bounded, 4096)?
-        .forward(Request::new(Method::GET, format!("/ehr/{EHR_ID}")))
+        .forward(&Request::new(Method::GET, format!("/ehr/{EHR_ID}")), false)
         .await?;
     assert_eq!(answer.status(), StatusCode::OK);
     assert_eq!(answer.body(), "z".repeat(4096).as_bytes());

@@ -22,7 +22,7 @@
 
 use crate::common::{corpus_files, corpus_rel, excluded};
 use openehr_its::json::{
-    from_canonical_json, to_canonical_json, to_canonical_value, validate_canonical,
+    SchemaRoot, from_canonical_json, to_canonical_json, to_canonical_value, validate_canonical,
 };
 use openehr_rm::prelude::{Composition, Contribution, EhrStatus, Folder, ItemTree};
 use std::fs;
@@ -348,7 +348,7 @@ fn generated_rm_output_validates_against_its_json_schema() {
             continue;
         };
         match reserialize(ty, &txt) {
-            Ok(output) => match validate_canonical(&output) {
+            Ok(output) => match validate_canonical(&output, SchemaRoot::Published) {
                 Ok(()) => ok += 1,
                 Err(errs) => failures.push((name, errs.join("; "))),
             },
@@ -378,14 +378,25 @@ fn preview_str(s: &str) -> String {
     }
 }
 
-/// `validate_canonical_class` judges a class the published root does not
-/// list (a FOLDER needs its `name`) and admits what the class leaves optional
+/// `validate_canonical` under `SchemaRoot::EveryClass` judges a class the
+/// published root does not list (a FOLDER needs its `name`) and admits what the class leaves optional
 /// (ITS-JSON `DV_URI.json` has `"required": []`); an unknown `_type` fails.
 #[test]
 fn validate_canonical_class_judges_every_class() {
-    use openehr_its::json::validate_canonical_class;
     let nameless = serde_json::json!({ "_type": "FOLDER", "archetype_node_id": "at0001" });
-    assert!(validate_canonical_class(&nameless).is_err());
-    assert!(validate_canonical_class(&serde_json::json!({ "_type": "DV_URI" })).is_ok());
-    assert!(validate_canonical_class(&serde_json::json!({ "_type": "NOT_A_CLASS" })).is_err());
+    assert!(validate_canonical(&nameless, SchemaRoot::EveryClass).is_err());
+    assert!(
+        validate_canonical(
+            &serde_json::json!({ "_type": "DV_URI" }),
+            SchemaRoot::EveryClass
+        )
+        .is_ok()
+    );
+    assert!(
+        validate_canonical(
+            &serde_json::json!({ "_type": "NOT_A_CLASS" }),
+            SchemaRoot::EveryClass
+        )
+        .is_err()
+    );
 }

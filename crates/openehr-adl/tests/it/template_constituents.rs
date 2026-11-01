@@ -50,7 +50,7 @@ fn template() -> String {
 /// The repository with the template's parent, and with the Apgar filler when
 /// `with_apgar`.
 fn repository(with_apgar: bool) -> ArchetypeRepository {
-    let mut repo = ArchetypeRepository::new();
+    let mut repo = ArchetypeRepository::default();
     repo.insert(parse(&read(
         "composition/openEHR-EHR-COMPOSITION.encounter.v1.0.0.adls",
     )));
@@ -130,7 +130,7 @@ fn every_missing_constituent_is_named_where_create_opt_stops_at_one() {
 #[test]
 fn a_missing_specialisation_parent_is_named_too() {
     let root = parse(&template());
-    let repo = ArchetypeRepository::new();
+    let repo = ArchetypeRepository::default();
     assert_eq!(
         unresolved_constituents(&root, &repo),
         vec![

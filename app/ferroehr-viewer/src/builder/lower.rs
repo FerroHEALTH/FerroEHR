@@ -121,7 +121,7 @@ pub fn lower(query: &BuilderQuery) -> Result<SelectQuery, BuilderError> {
 /// # Errors
 /// See [`lower`].
 pub fn to_aql(query: &BuilderQuery) -> Result<String, BuilderError> {
-    Ok(openehr_query::printer::to_aql(&lower(query)?))
+    Ok(openehr_query::printer::to_aql(&lower(query)?, None))
 }
 
 fn select_columns(query: &BuilderQuery) -> Result<Vec<SelectExpr>, BuilderError> {

@@ -15,7 +15,7 @@
 //! sections and the cADL definition rather than owned by either: the
 //! string/character literal decoding of `ADL2/master03-file_encoding.adoc`
 //! §File Encoding + §Special Character Sequences
-//! (`decode_string`/`decode_character` — delimiter stripping over
+//! (`decode_string` and `escape::decode_character_literal`, delimiter stripping over
 //! [`openehr_lang::v1_1::escape`], which owns the escape
 //! semantics for ODIN, BEL and cADL alike) and the delimited-regex handling of
 //! `AOM2/master04.5` §Class Definitions (`C_STRING`).
@@ -603,18 +603,6 @@ fn class_name(rm_type: &str) -> &str {
 /// literal's span.
 pub(crate) fn decode_string(raw: &str) -> Result<String, openehr_lang::v1_1::escape::EscapeError> {
     openehr_lang::v1_1::escape::decode_string_literal(raw)
-}
-
-/// Decode a single-quoted `CHARACTER` literal (delimiters included) into the
-/// one-character string that carries it (`base_lexer.g4` `CHARACTER`).
-///
-/// # Errors
-/// As [`decode_string`]. The lexer admits only the six quoted forms inside a
-/// character literal, so no `\u` escape reaches here in practice.
-pub(crate) fn decode_character(
-    raw: &str,
-) -> Result<String, openehr_lang::v1_1::escape::EscapeError> {
-    openehr_lang::v1_1::escape::decode_character_literal(raw)
 }
 
 // ── delimited regex (`AOM2/master04.5` §`C_STRING`) ───────────────────────

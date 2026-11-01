@@ -16,7 +16,7 @@
 //! `<archetype_node_id>…</archetype_node_id>` — invalid canonical XML.
 
 use openehr_its::xml::runtime::from_xml;
-use openehr_its::xml::to_canonical_xml;
+use openehr_its::xml::runtime::to_xml;
 use openehr_rm::prelude::{EhrAccess, EhrStatus, GenericContentItem, Person};
 
 /// Assert a serialized LOCATABLE subtype carries `archetype_node_id` as an XML
@@ -45,13 +45,23 @@ fn ehr_status_archetype_node_id_is_attribute() {
     }"#;
     let status: EhrStatus =
         openehr_its::json::from_canonical_json(json).expect("deserialize EHR_STATUS JSON");
-    let xml = to_canonical_xml(&status, "ehr_status").expect("serialize EHR_STATUS");
+    let xml = to_xml(
+        &status,
+        "ehr_status",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize EHR_STATUS");
     assert_archetype_node_id_is_attribute(&xml, "openEHR-EHR-EHR_STATUS.generic.v1");
     // FromXml must read the attribute back (same XSD-driven attr classification).
     let back: EhrStatus = from_xml(&xml).expect("parse EHR_STATUS");
     assert_eq!(back.archetype_node_id, "openEHR-EHR-EHR_STATUS.generic.v1");
     assert_eq!(
-        to_canonical_xml(&back, "ehr_status").expect("re-serialize"),
+        to_xml(
+            &back,
+            "ehr_status",
+            openehr_its::xml::runtime::Namespace::V2
+        )
+        .expect("re-serialize"),
         xml,
         "round-trip stable"
     );
@@ -66,7 +76,12 @@ fn ehr_access_archetype_node_id_is_attribute() {
     }"#;
     let access: EhrAccess =
         openehr_its::json::from_canonical_json(json).expect("deserialize EHR_ACCESS JSON");
-    let xml = to_canonical_xml(&access, "ehr_access").expect("serialize EHR_ACCESS");
+    let xml = to_xml(
+        &access,
+        "ehr_access",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize EHR_ACCESS");
     assert_archetype_node_id_is_attribute(&xml, "at0000");
     let back: EhrAccess = from_xml(&xml).expect("parse EHR_ACCESS");
     assert_eq!(back.archetype_node_id, "at0000");
@@ -98,7 +113,8 @@ fn demographic_person_archetype_node_id_is_attribute() {
     }"#;
     let person: Person =
         openehr_its::json::from_canonical_json(json).expect("deserialize PERSON JSON");
-    let xml = to_canonical_xml(&person, "person").expect("serialize PERSON");
+    let xml = to_xml(&person, "person", openehr_its::xml::runtime::Namespace::V2)
+        .expect("serialize PERSON");
     assert_archetype_node_id_is_attribute(&xml, "openEHR-DEMOGRAPHIC-PERSON.person.v1");
     let back: Person = from_xml(&xml).expect("parse PERSON");
     assert_eq!(
@@ -120,7 +136,12 @@ fn extract_generic_content_item_archetype_node_id_is_attribute() {
     }"#;
     let item: GenericContentItem = openehr_its::json::from_canonical_json(json)
         .expect("deserialize GENERIC_CONTENT_ITEM JSON");
-    let xml = to_canonical_xml(&item, "content_item").expect("serialize GENERIC_CONTENT_ITEM");
+    let xml = to_xml(
+        &item,
+        "content_item",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .expect("serialize GENERIC_CONTENT_ITEM");
     assert_archetype_node_id_is_attribute(&xml, "at0001");
     let back: GenericContentItem = from_xml(&xml).expect("parse GENERIC_CONTENT_ITEM");
     assert_eq!(back.archetype_node_id, "at0001");

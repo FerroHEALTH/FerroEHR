@@ -868,7 +868,7 @@ fn fragment_text(expr: &WhereExpr) -> String {
         order_by: Vec::new(),
         limit: None,
     };
-    let text = openehr_query::printer::to_aql(&probe);
+    let text = openehr_query::printer::to_aql(&probe, None);
     let tail = text.split_once(" WHERE ").map(|(_, tail)| tail.to_owned());
     tail.unwrap_or(text)
 }

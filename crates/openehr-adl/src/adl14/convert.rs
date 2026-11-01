@@ -227,7 +227,7 @@ impl<'a> Converter<'a> {
         //    synthesised).
         self.renumber_nodes(&mut data.definition);
         // 3. Convert every terminology-code constraint (local/external/list).
-        self.convert_constraints(&mut data.definition);
+        convert_constraints_cco(&mut data.definition, self, "");
         // 4. Write out the ADL 1.4 default occurrences where ADL 2 would infer a
         //    different one, then elide the RM-default cardinality/occurrences.
         //    Order matters: the materialisation reads the 1.4 cardinality, which
@@ -427,10 +427,6 @@ impl<'a> Converter<'a> {
     }
 
     // ── terminology-constraint conversion ────────────────────────────────────
-
-    fn convert_constraints(&mut self, def: &mut CComplexObject) {
-        convert_constraints_cco(def, self, "");
-    }
 
     /// Convert one 1.4 `C_TERMINOLOGY_CODE.constraint` encoding
     /// (`terminology::code[,code…][;assumed]`, or an already-ADL2 `at/ac` code)

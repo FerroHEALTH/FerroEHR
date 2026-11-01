@@ -133,7 +133,7 @@ impl FerroEhrService {
     /// - A database failure (`exception` → `500`).
     pub async fn adl14_convert_to_adl2(&self, an_id: String) -> Result<String, StatusError> {
         let source = self.archetype_get(&an_id).await?;
-        let mut log = ConversionLog::new();
+        let mut log = ConversionLog::default();
         let converted =
             parse_and_convert(&source, &ConvertConfig::default(), &mut log).map_err(|e| {
                 ServiceError::content_invalid(

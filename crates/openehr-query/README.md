@@ -19,8 +19,8 @@ ANTLR runtime.
   human; it names the token indices.
 - `lexer::lex_spanned` — the token stream with each token's source byte span,
   additive beside `lexer::lex`. `parser::parse_spanned` consumes it and is
-  what `parser::parse_str` runs; `parser::parse` over a bare `&[Token]` still
-  works and reports token indices only.
+  what `parser::parse_str` runs; `parser::parse(tokens, None)` over a bare
+  `&[Token]` reports token indices only.
 - `printer::to_aql` — canonical AQL rendering of the AST, the parser's
   inverse, for programmatic query construction (corpus-verified fixed point:
   `parse(to_aql(ast)) == ast`).
