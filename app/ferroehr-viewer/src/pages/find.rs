@@ -205,22 +205,11 @@ fn failed_line(failed: &[Kind]) -> String {
     tr_with(OverviewMsg::FindUnfinishedLine, &[("kinds", kinds.into())])
 }
 
-/// Whether `error` means the thing looked for is not there (`404`), which a
-/// search reads as no hit; any other error is the CDR not answering.
-fn absent(error: &crate::error::ViewerError) -> bool {
-    crate::pages::common::is_status(error, http::StatusCode::NOT_FOUND)
-}
-
-/// Whether `text` is shaped as an RFC 9562 UUID.
-fn uuid_shaped(text: &str) -> bool {
-    crate::bff::ehrs::is_uuid(text)
-}
-
 /// The hits of the words `typed`, from every place the CDR answers.
 pub async fn find(typed: &str) -> Found {
     let typed = typed.trim().to_owned();
     let id = crate::uid::container_uid_of(&typed);
-    let id_shaped = uuid_shaped(&id);
+    let id_shaped = crate::bff::ehrs::is_uuid(&id);
     let mut hits = Vec::new();
     let mut failed = Vec::new();
     if id_shaped {
@@ -235,9 +224,9 @@ pub async fn find(typed: &str) -> Found {
                     OverviewMsg::FindEhrLine,
                     &[("created", summary.time_created.clone().into())],
                 ),
-                href: crate::bff::ehrs::ehr_detail_href(&summary.ehr_id),
+                href: crate::pages::ehr::ehr_href(&summary.ehr_id),
             }),
-            Err(error) if absent(&error) => {}
+            Err(error) if crate::pages::common::is_status(&error, http::StatusCode::NOT_FOUND) => {}
             Err(_) => failed.push(Kind::Ehr),
         }
         match composition_hits(&id).await {
@@ -296,7 +285,7 @@ pub async fn find(typed: &str) -> Found {
         }
     }
     Found {
-        ehr_href: crate::bff::ehrs::ehr_detail_href(&typed),
+        ehr_href: crate::pages::ehr::ehr_href(&typed),
         typed,
         hits,
         id_shaped,
@@ -448,11 +437,12 @@ pub async fn page() -> Drawn {
 
 #[cfg(test)]
 mod tests {
-    use super::uuid_shaped;
 
     #[test]
     fn an_id_is_read_as_a_uuid_by_its_shape() {
-        assert!(uuid_shaped("0199c2a4-7e1b-4c3e-9a51-4f2d8b6e1a01"));
-        assert!(!uuid_shaped("vital signs"));
+        assert!(crate::bff::ehrs::is_uuid(
+            "0199c2a4-7e1b-4c3e-9a51-4f2d8b6e1a01"
+        ));
+        assert!(!crate::bff::ehrs::is_uuid("vital signs"));
     }
 }
