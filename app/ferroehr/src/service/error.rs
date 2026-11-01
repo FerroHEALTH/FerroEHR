@@ -710,13 +710,13 @@ impl ServiceError {
             ServiceError::Internal(r) => ServiceError::Internal(r.with_shared_source(source)),
             ServiceError::Restricted(r) => ServiceError::Restricted(r.with_shared_source(source)),
             ServiceError::Forbidden(r) => ServiceError::Forbidden(r.with_shared_source(source)),
-            ServiceError::Unprocessable { kind, violation } => ServiceError::Unprocessable {
+            ServiceError::Unprocessable {
                 kind,
-                violation: match source {
-                    Some(source) => violation.with_source(source),
-                    None => violation,
-                },
-            },
+                mut violation,
+            } => {
+                violation.source = source.or(violation.source);
+                ServiceError::Unprocessable { kind, violation }
+            }
             other => other,
         }
     }
