@@ -17,10 +17,9 @@
 //! `Resources.md` the media types above cite.
 
 use crate::locale::{Msg, tr_with};
-use serde::{Deserialize, Serialize};
 
 /// One selectable representation of an openEHR resource.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReprFormat {
     /// Canonical JSON (`application/json`).
     CanonicalJson,

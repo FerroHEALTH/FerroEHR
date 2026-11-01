@@ -32,7 +32,6 @@
 
 pub mod edit;
 
-use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::uid::uid_value_of;
@@ -49,7 +48,7 @@ use crate::locale::tr_served;
 /// a server that sent no `ETag` — a FOLDER is `VERSIONABLE` and always carries
 /// one (ITS-REST `specifications/schemas/ehr/Folder.yaml`; RM common
 /// `master05-directory_package`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryState {
     /// The canonical FOLDER JSON body.
     pub body: String,
@@ -60,7 +59,7 @@ pub struct DirectoryState {
 
 /// One row of the directory version history: a past (or the current) FOLDER
 /// version summarized for the history panel.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryVersion {
     /// The version's `OBJECT_VERSION_ID` (`uid.value`).
     pub version_uid: String,
@@ -83,7 +82,7 @@ pub struct DirectoryVersion {
 ///
 /// The default is the empty history (no rows, nothing older), which is what an
 /// unopened panel and an EHR without a directory both read as.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DirectoryHistory {
     /// The fetched versions, newest first.
     pub versions: Vec<DirectoryVersion>,
@@ -95,7 +94,7 @@ pub struct DirectoryHistory {
 /// The outcome of a `version_at_time` directory read: present, deleted at that
 /// time (`204`), or no directory at that time (`404`) — the three distinct
 /// states the time-travel panel renders.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DirectoryAtTime {
     /// A directory FOLDER existed at the requested time.
     Present(DirectoryState),
@@ -107,7 +106,7 @@ pub enum DirectoryAtTime {
 
 /// The outcome of a `?path=` subtree query: the matched sub-FOLDER body, or a
 /// miss (`404` — no folder at that path).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DirectorySubtree {
     /// The sub-FOLDER matched at the requested path (canonical JSON body).
     Found(String),
@@ -594,11 +593,8 @@ mod tests {
     fn served_directory(etag: Option<&str>) -> crate::cdr::CdrResponse {
         crate::cdr::CdrResponse {
             status: http::StatusCode::OK,
-            content_type: Some("application/json".to_owned()),
             etag: etag.map(str::to_owned),
             location: None,
-            last_modified: None,
-            preference_applied: None,
             body: r#"{"_type":"FOLDER","uid":{"value":"7d44::sys::1"}}"#.to_owned(),
         }
     }

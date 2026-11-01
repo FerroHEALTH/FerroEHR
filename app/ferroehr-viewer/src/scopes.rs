@@ -117,23 +117,6 @@ pub fn grant(raw: &str) -> Grant {
     }
 }
 
-/// Render a whole space-delimited scope claim (what a token carries, and what
-/// the previewer field accepts).
-#[must_use]
-pub fn grants(scope_claim: &str) -> Vec<Grant> {
-    scope_claim.split_whitespace().map(grant).collect()
-}
-
-/// Render the session's scope list. Each entry is itself split on whitespace, so
-/// a single claim string stored whole reads the same as a pre-split list.
-#[must_use]
-pub fn grants_of(scopes: &[String]) -> Vec<Grant> {
-    scopes
-        .iter()
-        .flat_map(|scope| grants(scope.as_str()))
-        .collect()
-}
-
 /// Where the authority for this session's requests comes from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PolicySource {
@@ -322,9 +305,7 @@ fn resource_expectation(raw: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::scopes::{
-        Grant, GrantDetail, ResourceGrant, grant, grants, grants_of, policy_source,
-    };
+    use crate::scopes::{Grant, GrantDetail, ResourceGrant, grant, policy_source};
 
     fn resource(raw: &str) -> ResourceGrant {
         match grant(raw).detail {
@@ -421,29 +402,6 @@ mod tests {
         );
         // Every diagnosis quotes the form itself or the offending element.
         assert!(expectation("patient/composition-*.").contains("permission"));
-    }
-
-    #[test]
-    fn a_claim_string_splits_on_whitespace() {
-        let rendered = grants("openid  launch/patient\npatient/composition-*.rs");
-        assert_eq!(rendered.len(), 3);
-        assert_eq!(rendered[0].raw, "openid");
-        assert_eq!(rendered[2].raw, "patient/composition-*.rs");
-        assert!(grants("   ").is_empty(), "blank input renders nothing");
-    }
-
-    #[test]
-    fn the_session_scope_list_renders_in_order() {
-        let session = [
-            "openid".to_owned(),
-            "patient/aql-*.rs".to_owned(),
-            "user/template-MyTemplate.crud".to_owned(),
-        ];
-        let rendered = grants_of(&session);
-        assert_eq!(rendered.len(), 3);
-        assert!(matches!(rendered[0].detail, GrantDetail::Identity { .. }));
-        assert!(matches!(rendered[1].detail, GrantDetail::Resource(_)));
-        assert!(matches!(rendered[2].detail, GrantDetail::Resource(_)));
     }
 
     #[test]

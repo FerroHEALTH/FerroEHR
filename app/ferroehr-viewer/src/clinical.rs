@@ -28,11 +28,10 @@
 
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// One node of the rendered document.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RenderedNode {
     /// A structural RM node rendered as a titled section.
     Section(RenderedSection),
@@ -40,24 +39,11 @@ pub enum RenderedNode {
     Row(RenderedRow),
 }
 
-impl RenderedNode {
-    /// The node's RM path key — unique within a document, derived from the
-    /// walked attribute names and list indices, and therefore a stable `<For>`
-    /// key.
-    #[must_use]
-    pub fn key(&self) -> &str {
-        match self {
-            Self::Section(section) => &section.key,
-            Self::Row(row) => &row.key,
-        }
-    }
-}
-
 /// A structural RM node: its heading, its RM type, its archetype node id and
 /// its children.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenderedSection {
-    /// The RM path of this node (the `<For>` key).
+    /// The RM path of this node, unique within the document.
     pub key: String,
     /// The heading: `name.value` where the node has one (`LOCATABLE._name_`),
     /// otherwise the humanized attribute or RM type name.
@@ -72,9 +58,9 @@ pub struct RenderedSection {
 
 /// A leaf: one label, one rendered value, and the terminology code behind it
 /// where the value was coded.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenderedRow {
-    /// The RM path of this leaf (the `<For>` key).
+    /// The RM path of this leaf, unique within the document.
     pub key: String,
     /// The leaf's label: `name.value` for an `ELEMENT`, otherwise the humanized
     /// RM attribute name.
@@ -756,7 +742,7 @@ mod tests {
         assert_eq!(
             unique.len(),
             keys.len(),
-            "`<For>` keys must be unique: {keys:#?}"
+            "node keys must be unique: {keys:#?}"
         );
         assert!(
             keys.iter()

@@ -710,8 +710,6 @@ crate::locale::messages! {
         EditorXml = "editor-xml",
         /// `composition`
         TagCollectionComposition = "tag-collection-composition",
-        /// `{ $count ->`
-        TagCount = "tag-count",
         /// `Tags stay on the { $object } across its versions; setting one commits no version.`
         TagIntro = "tag-intro",
         /// `The { $object } carries no tag.`

@@ -1,16 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The viewer's server half over the CDR, area by area: the server functions
-//! the pages call as they are drawn, and the pure readings of what the CDR
+//! The viewer's reads and writes of the CDR, area by area: the functions the
+//! pages call as they are drawn, and the pure readings of what the CDR
 //! answers.
 //!
-//! Every server function guards with
+//! Every function that reaches the CDR guards with
 //! [`require_session`](crate::session::require_session) first (it is a
 //! public endpoint), and the CDR credential never leaves the server. The wire
 //! is ITS-REST (`docs/specs/openehr/ITS-REST/`); the pages are our own design.
-//! The areas the converted pages read compile for both halves, the server
-//! functions as their browser stubs; the others stay on the server.
 
 pub mod audit;
 pub mod composition;

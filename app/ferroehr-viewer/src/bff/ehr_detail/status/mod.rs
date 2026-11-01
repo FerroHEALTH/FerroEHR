@@ -35,7 +35,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
@@ -57,7 +56,7 @@ pub mod edit;
 /// of the served version — `EHR_STATUS` is `VERSIONABLE` (RM
 /// `docs/specs/openehr/RM/docs/ehr/master04-ehr_package.adoc` §`EHR_STATUS`) —
 /// and that value is the `If-Match` an update must carry.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct EhrStatusState {
     /// The canonical `EHR_STATUS` JSON body exactly as the CDR served it — the
     /// base every edit is applied to, so nothing outside the edited fields can

@@ -4,11 +4,11 @@
 //! The `/templates` screen — the Template Manager list + template upload.
 //!
 //! One screen, two template FAMILIES, switched by `?family=` (the switch is
-//! deep-linkable URL state, not a private signal): ADL 1.4 operational
+//! deep-linkable URL state): ADL 1.4 operational
 //! templates (`definition/template/adl1.4`, OPT/XML upload) and ADL2 ones
 //! (`definition/template/adl2`, `text/plain` ADL2 source upload). Each family
 //! has its own list, its own upload affordance, and its own detail route; the
-//! client-side text filter and the URL page window serve both. No openEHR spec
+//! text filter and the URL page window serve both. No openEHR spec
 //! governs the viewer — our own design / product extension; the wire it
 //! reads/writes is the ITS-REST Definition API.
 
@@ -18,32 +18,16 @@
               (#1694)"
 )]
 
-use crate::adl2::TemplateFamily;
 use crate::bff::dashboard::Count;
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr_served, tr_served_with};
-
-/// Which template a delete addresses — the id, and the family that decides
-/// WHICH wire route removes it.
-///
-/// The family travels with the id rather than being read off the URL at
-/// confirm time: the row that opened the dialog is the one that knows its own
-/// family, so the confirmation copy and the dispatched route can never
-/// disagree with the row the reader clicked.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DeleteTarget {
-    /// The archetype-model family the template belongs to.
-    pub family: TemplateFamily,
-    /// The `template_id` (ADL 1.4) or artefact HRID (ADL2) to remove.
-    pub template_id: String,
-}
 
 /// One row of the template list, distilled from the ITS-REST Definition list
 /// shape (`template_id` / `concept` / `created_timestamp`).
 ///
 /// Shared across both compilation targets, so it carries only fixed-size,
 /// client-safe fields (no `usize` in serialized types).
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TemplateRow {
     /// The operational-template id (the detail route segment).
     pub template_id: String,
@@ -361,8 +345,8 @@ fn stored_id(response: &crate::cdr::CdrResponse) -> Option<String> {
 /// artefact is the `404` — which is also the answer for
 /// a malformed HRID, since the store key is opaque. A template-kind artefact
 /// that committed versions still reference is refused `409` with the
-/// referencing count in the diagnostic, and that text surfaces verbatim
-/// through [`delete_failure_copy`](crate::admin::delete_failure_copy).
+/// referencing count in the diagnostic, and the page shows that text
+/// verbatim.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
@@ -481,11 +465,8 @@ mod tests {
     ) -> crate::cdr::CdrResponse {
         crate::cdr::CdrResponse {
             status,
-            content_type: None,
             etag: etag.map(str::to_owned),
             location: location.map(str::to_owned),
-            last_modified: None,
-            preference_applied: None,
             body: body.to_owned(),
         }
     }

@@ -157,7 +157,6 @@ mod tests {
                     crate::request::path_and_query(),
                     crate::request::query("q"),
                     crate::request::query("empty"),
-                    crate::request::query_pairs().len(),
                 )
             },
         )
@@ -167,8 +166,7 @@ mod tests {
                 "/ehrs".to_owned(),
                 "/ehrs?q=a+b&empty=&q=c".to_owned(),
                 Some("a b".to_owned()),
-                None,
-                3
+                None
             ),
             read
         );

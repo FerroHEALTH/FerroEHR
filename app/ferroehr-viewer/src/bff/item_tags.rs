@@ -26,17 +26,12 @@
 //!   lost. Every panel says so.
 //! - **A tag's identity is the `(key, target_path)` PAIR** — "they are uniquely
 //!   identified by their `key` and `target_path` pair attributes" (same file) —
-//!   which is what the merge and the `<For>` key key on. A DELETE addresses a
+//!   which is what the merge keys on. A DELETE addresses a
 //!   `key` alone, so it removes every tag sharing that key.
 //! - **`target` and `owner_id` are server-assigned and never sent**: the update
 //!   body is the released `UpdateItemTag` shape (`key` required, optional
 //!   `value` and `target_path`, and nothing else —
 //!   `schemas/common/UpdateItemTag.yaml` is `additionalProperties: false`).
-//!
-//! DOM hooks: the set form's field ids (`tag-key`, `tag-value`,
-//! `tag-target-path`, `tag-save`) are fixed, so a screen mounts at most ONE tag
-//! panel; the panel's own section id comes from its caller
-//! ([`TagPanelCopy::form_id`]).
 
 #![expect(
     clippy::disallowed_types,
@@ -46,7 +41,6 @@
 
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::ViewerError;
@@ -60,7 +54,7 @@ use crate::locale::tr_with;
 /// `key`, the optional `value`, the optional `target_path`, the `target` (a
 /// `UID_BASED_ID` — a `HIER_OBJECT_ID` for a container target, an
 /// `OBJECT_VERSION_ID` for one version) and the `owner_id` reference.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ItemTagRow {
     /// `ITEM_TAG.key`.
     pub key: String,
@@ -76,30 +70,11 @@ pub struct ItemTagRow {
 
 impl ItemTagRow {
     /// The tag's identity — the `(key, target_path)` pair the released update
-    /// operation names — as the `<For>` key (stable, unique, data-derived).
+    /// operation names (stable, unique, data-derived).
     #[must_use]
     pub fn identity(&self) -> String {
         format!("{}\u{1f}{}", self.key, self.target_path)
     }
-
-    /// The identity qualified by the target, unique across a whole aggregate
-    /// tag list (where one key may sit on many targets).
-    #[must_use]
-    pub fn global_identity(&self) -> String {
-        format!("{}\u{1f}{}", self.target, self.identity())
-    }
-}
-
-/// The three attributes a tag write carries — the released `UpdateItemTag`
-/// members, and nothing else.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct TagEdit {
-    /// The tag key to set (required — `ITEM_TAG` invariant `Inv_key_valid`).
-    pub key: String,
-    /// The tag value; blank stores a tag with no value.
-    pub value: String,
-    /// The tag's `target_path`; blank tags the whole object.
-    pub target_path: String,
 }
 
 /// One target's tags, as an aggregate tag list groups them.
@@ -109,23 +84,6 @@ pub struct TagGroup {
     pub target: String,
     /// That target's tags, ordered by identity.
     pub tags: Vec<ItemTagRow>,
-}
-
-/// The copy one tag panel renders itself with — what the collection IS, so no
-/// screen has to re-explain the openEHR tag model in its own words.
-#[derive(Debug, Clone, Copy)]
-pub struct TagPanelCopy {
-    /// The heading over the tag table ("Tags").
-    pub title: Msg,
-    /// One paragraph naming the addressed collection and its whole-collection
-    /// replace semantics.
-    pub note: Msg,
-    /// The empty state's headline.
-    pub empty_message: Msg,
-    /// The empty state's hint.
-    pub empty_hint: Msg,
-    /// The set-a-tag section's DOM id — the panel's stable E2E hook.
-    pub form_id: &'static str,
 }
 
 /// The three released tag filters as a query string, each sent only when
@@ -294,19 +252,9 @@ mod tests {
             ..ItemTagRow::default()
         };
         // The released update operation identifies a tag by the PAIR, so two
-        // same-key tags on different paths must be distinct `<For>` keys.
+        // same-key tags on different paths must be distinct identities.
         assert_ne!(bare.identity(), pathed.identity());
         assert_eq!(bare.identity(), bare.clone().identity());
-    }
-
-    #[test]
-    fn the_same_key_on_two_targets_is_two_rows_in_an_aggregate_list() {
-        let here = row("flag", "8849182c");
-        let there = row("flag", "b1e6a0c4::sys::2");
-        // Within one collection the identities collide by design; across an
-        // aggregate list the target disambiguates them.
-        assert_eq!(here.identity(), there.identity());
-        assert_ne!(here.global_identity(), there.global_identity());
     }
 
     #[test]

@@ -21,8 +21,6 @@
 //! governs the viewer. Only the name format these rules read is spec-bound,
 //! cited above.
 
-use serde::{Deserialize, Serialize};
-
 use crate::locale::Msg;
 use crate::queries_api::StoredQueryRow;
 
@@ -107,45 +105,6 @@ pub fn qualify(namespace: &str, name: &str) -> String {
     }
 }
 
-/// Split a `name@version` stored-query reference into its qualified name and
-/// version, or `None` when it lacks the `@version` suffix.
-///
-/// Splits on the LAST `@` so a qualified name is never mistaken for the
-/// version.
-///
-/// `name@version` is the viewer's own reference form for one stored-query
-/// VERSION (the raw editor's `?load=` hand-off carries it) — the openEHR REST
-/// API keeps the two as separate path segments, so this pairing is our
-/// design/extension, not a spec form.
-///
-/// NOTE: the version is OPAQUE text here — never parsed, compared, or
-/// normalized, because prefix resolution is the server's job (ITS-REST
-/// `specifications/docs/query/Qualified_query_name.md` §Qualified query name).
-#[must_use]
-pub fn split_query_ref(reference: &str) -> Option<(String, String)> {
-    reference
-        .rsplit_once('@')
-        .filter(|(name, version)| !name.is_empty() && !version.is_empty())
-        .map(|(name, version)| (name.to_owned(), version.to_owned()))
-}
-
-/// The `?load=` hand-off link into `route` for one stored-query VERSION.
-///
-/// `name@version` ([`split_query_ref`]'s input) is percent-encoded as ONE
-/// query-string value: a qualified name may carry `::`, `/`, `&`, `=` or `#`,
-/// any of which would otherwise truncate the value or forge a second parameter.
-/// The router percent-DEcodes query parameters before a screen reads them.
-///
-/// NOTE: no openEHR spec governs the viewer's internal links — our own
-/// design/extension.
-#[must_use]
-pub fn load_href(route: &str, name: &str, version: &str) -> String {
-    format!(
-        "{route}?load={}",
-        urlencoding::encode(&format!("{name}@{version}"))
-    )
-}
-
 /// How the CDR should resolve the version of a stored query being READ.
 ///
 /// ITS-REST defines three forms, and this is all three: "The `version`
@@ -156,7 +115,7 @@ pub fn load_href(route: &str, name: &str, version: &str) -> String {
 /// is used, then the latest query version matching supplied prefix will be
 /// used." (ITS-REST `specifications/docs/query/Qualified_query_name.md`
 /// §Qualified query name).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VersionResolution {
     /// No `version` at all — the CDR uses the latest version of the query.
     Latest,
@@ -201,22 +160,6 @@ impl VersionResolution {
             Self::Latest => Msg::LatestVersionNoVersionSent,
             Self::Prefix => Msg::VersionPrefixLatestMatch,
             Self::Exact => Msg::ExactVersion,
-        }
-    }
-
-    /// Which form fits `version` as written: no version at all is
-    /// [`Self::Latest`], a `{major}`/`{major}.{minor}` pattern is
-    /// [`Self::Prefix`], anything else is read as [`Self::Exact`] (and then
-    /// validated by [`resolve_version`]).
-    #[must_use]
-    pub fn of(version: &str) -> Self {
-        let version = version.trim();
-        if version.is_empty() {
-            Self::Latest
-        } else if is_semver_prefix(version) {
-            Self::Prefix
-        } else {
-            Self::Exact
         }
     }
 }
@@ -386,8 +329,8 @@ mod tests {
     use crate::queries_api::StoredQueryRow;
     use crate::query_namespace::{
         UNQUALIFIED_LABEL, VersionResolution, VersionResolutionError, bare_name_of,
-        group_by_namespace, group_label, is_full_semver, is_semver_prefix, load_href, namespace_of,
-        next_minor, qualify, resolve_version, split_qualified, split_query_ref,
+        group_by_namespace, group_label, is_full_semver, is_semver_prefix, namespace_of,
+        next_minor, qualify, resolve_version, split_qualified,
     };
 
     /// A listing row with only the fields the grouping reads.
@@ -518,22 +461,6 @@ mod tests {
         assert_eq!(namespace, "a");
         assert_eq!(bare, "b::c");
         assert_eq!(qualify(&namespace, &bare), "b::c");
-    }
-
-    #[test]
-    fn split_query_ref_parses_name_at_version() {
-        assert_eq!(
-            split_query_ref("org.example::vitals@1.2.3"),
-            Some(("org.example::vitals".to_owned(), "1.2.3".to_owned()))
-        );
-        assert_eq!(split_query_ref("no_at_sign"), None);
-        assert_eq!(split_query_ref("trailing@"), None);
-        assert_eq!(split_query_ref("@leading"), None);
-        // Splits on the LAST '@' so a name is never mistaken for the version.
-        assert_eq!(
-            split_query_ref("weird@name@2.0.0"),
-            Some(("weird@name".to_owned(), "2.0.0".to_owned()))
-        );
     }
 
     #[test]
@@ -681,17 +608,6 @@ mod tests {
     }
 
     #[test]
-    fn the_form_of_a_version_text_is_read_from_its_shape() {
-        assert_eq!(VersionResolution::of(""), VersionResolution::Latest);
-        assert_eq!(VersionResolution::of("   "), VersionResolution::Latest);
-        assert_eq!(VersionResolution::of("1"), VersionResolution::Prefix);
-        assert_eq!(VersionResolution::of("1.2"), VersionResolution::Prefix);
-        assert_eq!(VersionResolution::of("1.2.3"), VersionResolution::Exact);
-        // Anything else is read as the exact form and validated there.
-        assert_eq!(VersionResolution::of("latest"), VersionResolution::Exact);
-    }
-
-    #[test]
     fn resolution_form_values_round_trip() {
         for mode in VersionResolution::ALL {
             assert_eq!(VersionResolution::from_str_or_exact(mode.as_str()), mode);
@@ -702,46 +618,6 @@ mod tests {
             VersionResolution::from_str_or_exact("nonsense"),
             VersionResolution::Exact
         );
-    }
-
-    #[test]
-    fn load_href_escapes_the_qualified_ref_as_one_value() {
-        assert_eq!(
-            load_href("/queries/aql", "my_query", "1.0.0"),
-            "/queries/aql?load=my_query%401.0.0"
-        );
-        // A qualified name carries `::` and `/`; a `&`/`=` must not become an
-        // extra parameter.
-        assert_eq!(
-            load_href("/queries/builder", "org.example::c/name/value", "1.2.3"),
-            "/queries/builder?load=org.example%3A%3Ac%2Fname%2Fvalue%401.2.3"
-        );
-        assert_eq!(
-            load_href("/queries/stored", "a&b=c", "1"),
-            "/queries/stored?load=a%26b%3Dc%401"
-        );
-    }
-
-    #[test]
-    fn load_href_round_trips_back_through_split_query_ref() {
-        // The router decodes `?load=` before a screen reads it, so decoding the
-        // emitted value must hand `split_query_ref` the original pair.
-        for (name, version) in [
-            ("my_query", "1.0.0"),
-            ("org.example::c/name/value", "1.2.3"),
-            ("a&b=c", "1"),
-            ("blodtryk_målinger", "2.0.0"),
-        ] {
-            let href = load_href("/queries/stored", name, version);
-            let value = href
-                .strip_prefix("/queries/stored?load=")
-                .expect("the helper always emits <route>?load=<value>");
-            let decoded = urlencoding::decode(value).expect("valid UTF-8 percent-encoding");
-            assert_eq!(
-                split_query_ref(&decoded),
-                Some((name.to_owned(), version.to_owned()))
-            );
-        }
     }
 
     #[test]

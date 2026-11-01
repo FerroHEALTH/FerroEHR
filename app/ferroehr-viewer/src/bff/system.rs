@@ -31,7 +31,6 @@
 use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
 use crate::locale::tr;
-use crate::locale::tr_with;
 use crate::served_vocabulary::OPENAPI_FAMILIES;
 
 /// Where the CDR serves its SMART service-discovery document, relative to the
@@ -158,166 +157,6 @@ pub async fn fetch_admin_config() -> Result<String, ViewerError> {
         .unwrap_or(body))
 }
 
-/// The fixed count-AQL behind the repository-usage card: one row per template,
-/// the template id supplied as the `$template` binding.
-///
-/// The id is never concatenated into the text. It is CDR-supplied but
-/// operator-authored data, and AQL escapes inside a literal with a backslash
-/// (`docs/specs/openehr/QUERY/docs/AQL/master03-syntax.adoc` §LIKE — "escaped
-/// by using the backslash `\` character"), so no quote-doubling makes
-/// interpolation safe; the binding travels in `query_parameters`
-/// (`docs/specs/openehr/ITS-REST/specifications/docs/query/Request.md`
-/// §Query parameters) and is matched as data.
-const TEMPLATE_USAGE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = $template";
-
-/// Build the `POST query/aql` request body counting the compositions committed
-/// under `template_id`.
-///
-/// The AQL text is [`TEMPLATE_USAGE_AQL`] verbatim for every template; only the
-/// `query_parameters` object differs.
-fn template_usage_body(template_id: &str) -> String {
-    crate::bff::ehrs::aql_request_body(
-        TEMPLATE_USAGE_AQL,
-        &serde_json::json!({ "template": template_id }),
-        0,
-        crate::bff::PAGE_SIZE,
-    )
-}
-
-/// How many templates the repository-usage card counts.
-const USAGE_TEMPLATES: usize = 25;
-
-/// Count the compositions committed under one template, via `POST query/aql`.
-async fn template_count(
-    state: &crate::state::AppState,
-    session: &crate::session::ViewerSession,
-    template_id: String,
-) -> Result<(String, i64), ViewerError> {
-    let url = state.cdr.rest_v1("query/aql");
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            template_usage_body(&template_id),
-        )
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    let count = serde_json::from_str::<serde_json::Value>(&response.body)
-        .ok()
-        .and_then(|v| {
-            v.get("rows")?
-                .as_array()?
-                .first()?
-                .as_array()?
-                .first()?
-                .as_i64()
-        })
-        .unwrap_or(0);
-    Ok((template_id, count))
-}
-
-/// Per-template composition counts ("repo usage") — one count AQL per template,
-/// plain AQL (no CDR stats endpoint exists).
-///
-/// Bounded to the first `USAGE_TEMPLATES` templates, sorted by count
-/// descending; the second member is the repository's total template count, so
-/// the card can say when it is showing a truncated list.
-///
-/// The counts fan out with the shared bounded concurrency
-/// ([`FANOUT_CONCURRENCY`](crate::cdr::FANOUT_CONCURRENCY)) rather than a serial
-/// await chain. `buffered` yields in input order, so the sort below still breaks
-/// ties by the template listing's order, and `try_collect` keeps the serial
-/// loop's short circuit.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR errors
-/// normalized by the underlying calls.
-pub async fn template_usage() -> Result<(Vec<(String, i64)>, u32), ViewerError> {
-    use futures::stream::{StreamExt, TryStreamExt};
-
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let templates = crate::bff::templates::list_templates().await?;
-    let total = u32::try_from(templates.len()).unwrap_or(u32::MAX);
-    // Borrowed once outside the stream: each fan-out future captures the two
-    // references by copy, which keeps the read's future sized.
-    let state = &state;
-    let session = &session;
-    let mut usage: Vec<(String, i64)> = futures::stream::iter(
-        templates
-            .into_iter()
-            .take(USAGE_TEMPLATES)
-            .map(|row| template_count(state, session, row.template_id)),
-    )
-    .buffered(crate::cdr::FANOUT_CONCURRENCY)
-    .try_collect()
-    .await?;
-    usage.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
-    Ok((usage, total))
-}
-
-/// What to say when the SMART discovery probe could not be read.
-///
-/// Component-free and unit-tested (the viewer's failure-copy convention —
-/// `crate::feedback::write_failure_copy`): every branch names what was asked
-/// for and what to do next, and none of them echoes a bare status code back
-/// at the reader.
-#[must_use]
-pub fn smart_probe_failure_copy(error: &ViewerError) -> String {
-    let endpoint = format!("/{SMART_DISCOVERY_PATH}");
-    match error {
-        ViewerError::CdrUnreachable(detail) => tr_with(
-            ConsoleMsg::SmartDiscoveryCouldNotReadCdr,
-            &[("detail", detail.clone().into())],
-        ),
-        ViewerError::CdrUnauthorized(_) | ViewerError::Unauthenticated => tr_with(
-            ConsoleMsg::SmartDiscoveryCouldNotReadCdr2,
-            &[("endpoint", endpoint.clone().into())],
-        ),
-        ViewerError::Forbidden(_) => tr_with(
-            ConsoleMsg::SmartDiscoveryCouldNotReadSession,
-            &[("endpoint", endpoint.clone().into())],
-        ),
-        _ => {
-            // A CDR body that only restates its own status ("HTTP 302") adds
-            // nothing, so it is dropped rather than printed beside the code it
-            // repeats.
-            let detail = match error {
-                ViewerError::Cdr { status, message } => {
-                    let restatement =
-                        tr_with(ConsoleMsg::Http, &[("status", (status).to_string().into())]);
-                    if message.trim().is_empty() || message.trim() == restatement {
-                        tr_with(
-                            ConsoleMsg::TheCdrAnsweredThere,
-                            &[("status", (status).to_string().into())],
-                        )
-                    } else {
-                        tr_with(
-                            ConsoleMsg::TheCdrAnsweredThere2,
-                            &[
-                                ("status", (status).to_string().into()),
-                                ("message", message.clone().into()),
-                            ],
-                        )
-                    }
-                }
-                other => other.to_string(),
-            };
-            tr_with(
-                ConsoleMsg::SmartDiscoveryCouldNotReadFrom,
-                &[
-                    ("endpoint", endpoint.clone().into()),
-                    ("detail", detail.clone().into()),
-                ],
-            )
-        }
-    }
-}
-
 /// One operation of an `OpenAPI` document: its method, its path and its
 /// summary.
 pub(crate) type Endpoint = (String, String, String);
@@ -377,10 +216,7 @@ pub(crate) fn group_openapi_paths(doc: &serde_json::Value) -> Vec<(String, Vec<E
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        SMART_DISCOVERY_PATH, group_openapi_paths, openapi_families, smart_probe_failure_copy,
-    };
-    use crate::error::ViewerError;
+    use super::{SMART_DISCOVERY_PATH, group_openapi_paths, openapi_families};
     use crate::served_vocabulary::OPENAPI_FAMILIES;
 
     /// The probe asks for the path the CDR actually serves: relative to the
@@ -393,88 +229,6 @@ mod tests {
     #[test]
     fn discovery_is_probed_under_the_platform_base_path() {
         assert_eq!(SMART_DISCOVERY_PATH, ".well-known/smart-configuration");
-    }
-
-    /// No failure branch echoes a bare status back at the reader; each names
-    /// what was probed (or why that is moot) and what to do next.
-    #[test]
-    fn a_failed_probe_reads_as_actionable_copy_never_a_status_echo() {
-        let cases = [
-            ViewerError::CdrUnreachable("connection refused".to_owned()),
-            ViewerError::CdrUnauthorized("expired".to_owned()),
-            ViewerError::Forbidden("missing role".to_owned()),
-            ViewerError::Unauthenticated,
-            ViewerError::Cdr {
-                status: 302,
-                message: "HTTP 302".to_owned(),
-            },
-        ];
-        for error in cases {
-            let copy = smart_probe_failure_copy(&error);
-            assert!(
-                copy.starts_with("SMART discovery could not be read"),
-                "{copy}"
-            );
-            assert!(!copy.contains("CDR answered 302: HTTP 302"), "{copy}");
-            // Either the endpoint is named, or the branch explains why naming
-            // it would not help (the CDR was never reached).
-            assert!(
-                copy.contains(SMART_DISCOVERY_PATH) || copy.contains("unreachable"),
-                "{copy}"
-            );
-        }
-    }
-
-    /// An unexpected answer states that "enabled" is UNKNOWN — the one thing
-    /// the card must not do is imply SMART is off when it could not tell.
-    #[test]
-    fn an_unexpected_answer_does_not_claim_smart_is_disabled() {
-        let copy = smart_probe_failure_copy(&ViewerError::Cdr {
-            status: 302,
-            message: "HTTP 302".to_owned(),
-        });
-        assert!(copy.contains("unknown"), "{copy}");
-        assert!(!copy.contains("not enabled"), "{copy}");
-    }
-
-    #[test]
-    fn a_template_id_travels_as_a_binding_and_never_as_query_text() {
-        use super::{TEMPLATE_USAGE_AQL, template_usage_body};
-
-        let read = |body: &str| -> serde_json::Value {
-            serde_json::from_str(body).expect("the request body is JSON")
-        };
-        let benign = read(&template_usage_body("vital_signs.v2"));
-        // A quote and a backslash are AQL syntax, so an id carrying either one
-        // must not change a single byte of the statement.
-        for hostile in [
-            "o'brien.v1",
-            r"back\slash.v1",
-            "x' OR 1=1 --",
-            r"x\' OR 1=1 --",
-        ] {
-            let sent = read(&template_usage_body(hostile));
-            assert_eq!(
-                sent.get("q"),
-                benign.get("q"),
-                "the AQL text must be identical for {hostile:?}"
-            );
-            assert_eq!(sent["q"], serde_json::json!(TEMPLATE_USAGE_AQL));
-            assert_eq!(sent["query_parameters"]["template"], hostile);
-        }
-        // The statement names the parameter, and quotes no value at all.
-        assert!(
-            TEMPLATE_USAGE_AQL.contains("= $template"),
-            "{TEMPLATE_USAGE_AQL}"
-        );
-        assert!(!TEMPLATE_USAGE_AQL.contains('\''), "{TEMPLATE_USAGE_AQL}");
-    }
-
-    #[test]
-    fn the_repository_usage_statement_is_valid_aql() {
-        // The fixed text is parsed by the real grammar, so a typo in the
-        // constant fails here rather than as a CDR 400 on the card.
-        openehr_query::parser::parse_str(super::TEMPLATE_USAGE_AQL).expect("the count AQL parses");
     }
 
     #[test]

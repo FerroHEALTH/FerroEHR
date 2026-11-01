@@ -11,8 +11,6 @@
 //! handler holds for the page's whole draw. No openEHR spec governs the
 //! viewer's pages: our own design.
 
-use serde::{Deserialize, Serialize};
-
 /// How the signed-in reader's session reaches the CDR.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
@@ -23,7 +21,7 @@ pub enum Method {
 }
 
 /// Who is signed in, without the credential.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Signed {
     /// The display identity.
     pub identity: String,
@@ -119,33 +117,6 @@ pub fn query(key: &str) -> Option<String> {
     let whole = path_and_query();
     let (_, query) = whole.split_once('?')?;
     query_in(query, key)
-}
-
-/// Every query parameter of `query`, in the order sent.
-#[must_use]
-pub fn pairs_in(query: &str) -> Vec<(String, String)> {
-    query
-        .split('&')
-        .filter(|pair| !pair.is_empty())
-        .filter_map(|pair| {
-            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-            let name = urlencoding::decode(name).ok()?.into_owned();
-            let value = urlencoding::decode(&value.replace('+', " "))
-                .ok()?
-                .into_owned();
-            Some((name, value))
-        })
-        .collect()
-}
-
-/// Every query parameter of the request, in the order sent.
-#[must_use]
-pub fn query_pairs() -> Vec<(String, String)> {
-    let whole = path_and_query();
-    whole
-        .split_once('?')
-        .map(|(_, query)| pairs_in(query))
-        .unwrap_or_default()
 }
 
 /// The request's `Cookie` header, empty for none.
@@ -265,7 +236,7 @@ pub fn return_path(back: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::{kept_of, pairs_in, query_in, return_path};
+    use super::{kept_of, query_in, return_path};
 
     #[test]
     fn a_page_reads_only_the_display_cookies() {
@@ -283,7 +254,6 @@ mod tests {
         let query = "q=a+b&empty=&q=c";
         assert_eq!(Some("a b".to_owned()), query_in(query, "q"));
         assert_eq!(None, query_in(query, "empty"));
-        assert_eq!(3, pairs_in(query).len());
     }
 
     #[test]

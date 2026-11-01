@@ -167,7 +167,7 @@ override, because the viewer's variables share its prefix:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `server.listen` | `127.0.0.1:3000` (`0.0.0.0:3000` in the image) | The socket address the viewer listens on. `LEPTOS_SITE_ADDR` no longer sets it: a value other than `server.listen` refuses the start. |
+| `server.listen` | `127.0.0.1:3000` (`0.0.0.0:3000` in the image) | The socket address the viewer listens on. |
 | `server.tls` | unset | The listener's certificate and key, as the CDR's [`[server.tls]`](../installation/config-server.md) table; unset, the viewer speaks plain HTTP behind a terminating proxy. |
 | `server.request_timeout_ms` / `body_limit_bytes` | `60000` / `16777216` | How long one request may take, and the largest body it may post (a template or composition posts whole). |
 | `server.drain_delay_ms` / `shutdown_timeout_ms` | `0` / `10000` | On `SIGTERM` the viewer withdraws readiness, waits the drain delay, then gives the requests in flight the shutdown bound. |

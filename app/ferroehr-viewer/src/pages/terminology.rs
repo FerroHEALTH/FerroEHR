@@ -11,7 +11,7 @@
 //! `terminology` ([`crate::terminology`]); a CDR with
 //! the terminology API off answers `404`, and the page says so once. Every
 //! form is a `GET`, so an answer keeps its address, and each tab reads its
-//! answers on the server into one model that both halves draw. No openEHR spec governs
+//! answers on the server into one model the page draws. No openEHR spec governs
 //! the viewer's pages: our own design.
 
 use ferrohealth_ui::html::Html;

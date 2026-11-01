@@ -37,7 +37,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::bff::demographics::PartyKind;
@@ -63,7 +62,7 @@ const REF_NAMESPACE: &str = "demographic";
 /// (`org.openehr.base.base_types.object_ref.adoc`), and its `type` names the
 /// referenced party class — which is what lets the viewer link the end to that
 /// kind's route.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PartyRefView {
     /// `OBJECT_REF.type` — the referenced party class (`PERSON`, `ROLE`, …).
     pub rm_type: String,
@@ -74,7 +73,7 @@ pub struct PartyRefView {
 }
 
 /// The viewer's view of one `PARTY_RELATIONSHIP` version.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RelationshipState {
     /// The canonical relationship JSON exactly as the CDR served it — the base
     /// every edit is applied to.
@@ -102,7 +101,7 @@ pub struct RelationshipState {
 }
 
 /// One entry of a party's inline `PARTY.relationships` list.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InlineRelationship {
     /// `LOCATABLE.name.value` — the relationship type.
     pub name: String,
@@ -196,9 +195,6 @@ pub async fn create_relationship(
 ) -> Result<String, ViewerError> {
     let session = crate::session::require_session()?;
     let state = crate::scope::state()?;
-    // Flat string parameters rather than the draft struct: a server function is
-    // a URL-encoded public endpoint, and a flat argument list has no nested
-    // encoding to get wrong.
     let body = relationship_body(&RelationshipDraft {
         archetype_node_id,
         name,
@@ -367,7 +363,7 @@ fn relationship_body(draft: &RelationshipDraft) -> Result<String, String> {
 /// A named struct rather than a positional argument list: the form dispatches
 /// the same value the inline check judged, so a field can never reach the CDR
 /// in another field's place.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RelationshipDraft {
     /// The relationship's `archetype_node_id`.
     pub archetype_node_id: String,

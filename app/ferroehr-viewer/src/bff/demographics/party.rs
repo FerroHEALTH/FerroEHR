@@ -37,7 +37,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::bff::demographics::PartyKind;
@@ -52,7 +51,7 @@ use crate::uid::container_uid_of;
 /// The canonical document verbatim, the version that document IS, and the two
 /// attributes the edit form works on — flattened BFF-side so the browser never
 /// re-models the RM, with fixed-size ints only.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PartyState {
     /// The canonical party JSON exactly as the CDR served it — the base every
     /// edit is applied to, so nothing outside the edited attributes is lost.

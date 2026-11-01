@@ -41,10 +41,8 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
-
 use crate::error::ViewerError;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, tr_with};
 use crate::locale::{tr_served, tr_served_with};
 
 /// One subscription as the CDR serves it
@@ -55,7 +53,7 @@ use crate::locale::{tr_served, tr_served_with};
 /// is rendered, never computed with (no parsing the viewer would have to keep
 /// in step with the CDR's own formatting). A predicate the CDR serves as `null` — its wildcard —
 /// arrives here as the empty string.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SubscriptionRow {
     /// The subscription's UUID, as the CDR spelled it.
     pub id: String,
@@ -79,7 +77,7 @@ pub struct SubscriptionRow {
 /// One named struct rather than four adjacent `String` parameters at each
 /// dispatch site: the predicates are all the same type, so a transposition
 /// would otherwise be silent.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SubscriptionPredicates {
     /// The versioned-object kind to match (empty = any).
     pub kind: String,
@@ -92,7 +90,7 @@ pub struct SubscriptionPredicates {
 }
 
 /// Whether the CDR serves its event-subscription admin API.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SubscriptionAvailability {
     /// The group answered: it is mounted, so the screen is offered. Whether
     /// THIS session may use it is a per-request answer.
@@ -150,87 +148,6 @@ pub fn name_is_valid(name: &str) -> bool {
         && name
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))
-}
-
-/// How one predicate reads on screen: its value, or `any` for the wildcard.
-///
-/// Pure and unit-tested, so the table cell and the summary sentence spell an
-/// absent predicate identically.
-#[must_use]
-pub fn predicate_label(value: &str) -> String {
-    if value.trim().is_empty() {
-        "any".to_owned()
-    } else {
-        value.trim().to_owned()
-    }
-}
-
-/// The one sentence a row renders under its name: which committed-version
-/// events this subscription selects.
-///
-/// A subscription with no predicate at all selects everything, and saying so in
-/// words is more honest than four cells reading "any".
-#[must_use]
-pub fn match_summary(row: &SubscriptionRow) -> String {
-    let mut parts = Vec::new();
-    for (label, value) in [
-        ("kind", row.kind.as_str()),
-        (&tr(Msg::ChangeType2), row.change_type.as_str()),
-        ("template", row.template_id.as_str()),
-    ] {
-        if !value.trim().is_empty() {
-            parts.push(format!("{label} {}", value.trim()));
-        }
-    }
-    if parts.is_empty() {
-        return tr(Msg::MatchesEveryCommittedVersion);
-    }
-    tr_with(
-        Msg::Matches,
-        &[("parts", (parts.join(", ")).clone().into())],
-    )
-}
-
-/// Actionable copy for a refused subscription operation — a write, a delete, or
-/// a read the RBAC gate turned down.
-///
-/// Names the object, carries the CDR's own diagnostic verbatim, and names the
-/// next action. The `409` here is a duplicate NAME (the CDR's unique key), not
-/// the admin deletes' "still referenced by committed data".
-#[must_use]
-pub fn subscription_failure_copy(object: &str, error: &ViewerError) -> String {
-    match error {
-        ViewerError::Cdr { message, .. }
-            if error.status_code() == Some(http::StatusCode::CONFLICT) =>
-        {
-            tr_with(
-                Msg::CdrAlreadyHoldsSubscriptionNameSo,
-                &[
-                    ("object", (object).to_string().into()),
-                    ("message", message.clone().into()),
-                ],
-            )
-        }
-        ViewerError::Cdr { message, .. }
-            if error.status_code() == Some(http::StatusCode::NOT_FOUND) =>
-        {
-            tr_with(
-                Msg::NotCdrAnyMoreAnotherOperator,
-                &[
-                    ("object", (object).to_string().into()),
-                    ("message", message.clone().into()),
-                ],
-            )
-        }
-        ViewerError::Forbidden(message) => tr_with(
-            Msg::SessionMayNotAdministerSignAdmin,
-            &[
-                ("object", (object).to_string().into()),
-                ("message", message.clone().into()),
-            ],
-        ),
-        other => crate::feedback::write_failure_copy(object, other),
-    }
 }
 
 /// Probe the CDR for its event-subscription admin API
@@ -484,8 +401,8 @@ fn subscription_row(item: &serde_json::Value) -> SubscriptionRow {
 #[cfg(test)]
 mod tests {
     use super::{
-        SubscriptionAvailability, SubscriptionRow, availability_of_status, match_summary,
-        name_is_valid, predicate_label, renders_event_subscriptions, subscription_failure_copy,
+        SubscriptionAvailability, SubscriptionRow, availability_of_status, name_is_valid,
+        renders_event_subscriptions,
     };
     use crate::error::ViewerError;
 
@@ -554,85 +471,6 @@ mod tests {
         assert!(!name_is_valid("has space"));
         assert!(!name_is_valid("slash/es"));
         assert!(!name_is_valid("ünicode"));
-    }
-
-    #[test]
-    fn an_absent_predicate_reads_as_any() {
-        assert_eq!(predicate_label("COMPOSITION"), "COMPOSITION");
-        assert_eq!(predicate_label("  249  "), "249");
-        assert_eq!(predicate_label(""), "any");
-        assert_eq!(predicate_label("   "), "any");
-    }
-
-    #[test]
-    fn the_summary_names_every_filled_predicate_and_says_so_when_none_is() {
-        assert_eq!(
-            match_summary(&row()),
-            "Matches kind COMPOSITION, change type 249, template \
-             minimal_evaluation.en.v1."
-        );
-        let wildcard = SubscriptionRow {
-            kind: String::new(),
-            change_type: String::new(),
-            template_id: String::new(),
-            ..row()
-        };
-        assert_eq!(match_summary(&wildcard), "Matches every committed version.");
-    }
-
-    #[test]
-    fn a_refusal_names_the_subscription_the_diagnostic_and_the_next_action() {
-        let conflict = subscription_failure_copy(
-            "subscription `vitals`",
-            &ViewerError::Cdr {
-                status: 409,
-                message: "an event subscription with that name exists".to_owned(),
-            },
-        );
-        assert!(conflict.contains("subscription `vitals`"), "{conflict}");
-        assert!(
-            conflict.contains("an event subscription with that name exists"),
-            "{conflict}"
-        );
-        assert!(conflict.contains("Choose another name"), "{conflict}");
-
-        let gone = subscription_failure_copy(
-            "subscription `vitals`",
-            &ViewerError::Cdr {
-                status: 404,
-                message: "not found: event subscription 01a0".to_owned(),
-            },
-        );
-        assert!(gone.contains("Reload this screen"), "{gone}");
-
-        let refused = subscription_failure_copy(
-            "subscription `vitals`",
-            &ViewerError::Forbidden("operation requires the 'ADMIN' role".to_owned()),
-        );
-        assert!(
-            refused.contains("ADMIN-role") && refused.contains("requires the 'ADMIN' role"),
-            "{refused}"
-        );
-
-        // Everything else keeps the shared write copy rather than inventing a
-        // second vocabulary.
-        let rejected = subscription_failure_copy(
-            "subscription `vitals`",
-            &ViewerError::Cdr {
-                status: 400,
-                message: "event subscription 'name' must match [A-Za-z0-9_.-]".to_owned(),
-            },
-        );
-        assert_eq!(
-            rejected,
-            crate::feedback::write_failure_copy(
-                "subscription `vitals`",
-                &ViewerError::Cdr {
-                    status: 400,
-                    message: "event subscription 'name' must match [A-Za-z0-9_.-]".to_owned(),
-                }
-            )
-        );
     }
 
     /// The wire shapes this module parses, pinned against the answers the CDR

@@ -1,0 +1,1 @@
+- The viewer no longer reads `LEPTOS_SITE_ADDR`: a value naming another address than `server.listen` no longer refuses the start. `server.listen` (`FERROEHR_VIEWER__SERVER__LISTEN`) sets the listen address.

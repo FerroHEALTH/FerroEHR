@@ -19,7 +19,7 @@
 //! []`), so the fetch carries no CDR credential — but the read still guards
 //! the viewer session first, as every read of the viewer does.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
@@ -31,7 +31,7 @@ use crate::locale::tr_served_with;
 /// list at all, so a conformant peer may omit any of them and the reader fills
 /// the gap from [`Default`] rather than failing the whole manifest — which
 /// would hide every affordance the `endpoints` list gates.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(default)]
 pub struct ConformanceManifest {
     /// The product name the CDR advertises.

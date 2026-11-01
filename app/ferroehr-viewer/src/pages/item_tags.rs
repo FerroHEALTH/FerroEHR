@@ -24,7 +24,7 @@ use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::markup::{h, opt, t};
-use crate::pages::common::{count, refused, section};
+use crate::pages::common::{refused, section};
 
 /// The prefix of a Remove's intent; the key follows it.
 const REMOVE: &str = "remove-tag:";
@@ -224,10 +224,4 @@ pub fn tag_panel(panel: TagPanel) -> Html {
         held,
         section(Some(tr(RecordsMsg::TagSetTitle)), None, None, set),
     ])
-}
-
-/// The count words of a Tags tab.
-#[must_use]
-pub fn tag_count_words(total: usize) -> String {
-    tr_with(RecordsMsg::TagCount, &[("count", count(total))])
 }

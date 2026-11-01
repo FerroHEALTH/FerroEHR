@@ -291,7 +291,7 @@ fn time_axis(
         })
         .collect();
     // `total_cmp` is a total order and the sort is stable (equal instants keep
-    // result-set order), so the axis is deterministic on both targets.
+    // result-set order), so the axis is deterministic.
     points.sort_by(|left, right| left.x.total_cmp(&right.x));
     if points.len() < MIN_POINTS || !any_series_plottable(series.len(), &points) {
         return None;

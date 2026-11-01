@@ -40,7 +40,6 @@
 )]
 
 use ferrohealth_health::document::Readiness;
-use serde::{Deserialize, Serialize};
 
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr};
@@ -74,7 +73,7 @@ const HEADLINE_METRICS: [HeadlineMetric; 3] = [
 ];
 
 /// Whether the CDR serves its management surface at the configured base URL.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ManagementAvailability {
     /// The surface answered: it is mounted, so the operations panel is offered.
     /// Whether THIS session may read each endpoint is a per-request answer.
@@ -123,7 +122,7 @@ pub fn renders_management_ops(probe: &Result<ManagementAvailability, ViewerError
 // ── Health: the dependency-health indicators ────────────────────────────────
 
 /// The CDR's readiness document and where it was read.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReadinessView {
     /// The family readiness document, its indicators sorted by name.
     pub readiness: Readiness,
@@ -231,7 +230,7 @@ pub async fn probe_management_api() -> Result<ManagementAvailability, ViewerErro
 // ── Management: build + spec provenance ─────────────────────────────────────
 
 /// The `GET /management/info` body as rendered rows.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct BuildInfoView {
     /// Top-level non-object members (`version`, `git_sha`, `rustc`, …) as
     /// `(key, text)`, key-sorted.
@@ -242,31 +241,13 @@ pub struct BuildInfoView {
 }
 
 /// One nested object of `/management/info`, rendered one level deep.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InfoSection {
     /// The member name in the body, unique among the sections.
     pub key: String,
     /// The object's members as `(key, text)`, key-sorted; a member that is
     /// itself an object or an array is shown as its compact JSON.
     pub rows: Vec<(String, String)>,
-}
-
-impl InfoSection {
-    /// Returns the heading the panel shows for this section.
-    ///
-    /// `spec` reads as the specification pins it holds; any other member name
-    /// is shown with its first letter capitalised and underscores as spaces.
-    #[must_use]
-    pub fn title(&self) -> String {
-        if self.key == "spec" {
-            return tr(Msg::OpenehrSpecificationPins);
-        }
-        let spaced = self.key.replace('_', " ");
-        let mut chars = spaced.chars();
-        chars.next().map_or_else(String::new, |first| {
-            first.to_uppercase().chain(chars).collect()
-        })
-    }
 }
 
 /// Distils a `/management/info` body into a [`BuildInfoView`].
@@ -343,7 +324,7 @@ pub async fn fetch_build_info() -> Result<Option<BuildInfoView>, ViewerError> {
 // ── Management: metrics ─────────────────────────────────────────────────────
 
 /// One headline metric tile.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricTile {
     /// The metric name (the browser's selection value).
     pub name: String,
@@ -354,7 +335,7 @@ pub struct MetricTile {
 }
 
 /// One sample of a metric: its labels, flattened for display, and its value.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MetricSample {
     /// The sample's labels as `k=v, k2=v2` (empty for an unlabelled sample).
     pub labels: String,
@@ -363,7 +344,7 @@ pub struct MetricSample {
 }
 
 /// The `GET /management/metrics/{name}` body as rendered rows.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MetricDetailView {
     /// The metric name.
     pub name: String,
@@ -552,7 +533,7 @@ pub async fn fetch_headline_metrics() -> Result<Option<Vec<MetricTile>>, ViewerE
 
 /// The `GET /management/loggers` body: the effective filter and the boot filter
 /// a reset restores.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LoggerView {
     /// The filter directives in effect right now.
     pub filter: String,
@@ -849,10 +830,6 @@ mod tests {
                 ],
             }]
         );
-        assert_eq!(
-            sections.first().map(InfoSection::title).as_deref(),
-            Some("openEHR specification pins")
-        );
     }
 
     /// Every nested object of the body becomes its own key-sorted section,
@@ -902,7 +879,6 @@ mod tests {
                 ),
             ]
         );
-        assert_eq!(section("manufacturer").title(), "Manufacturer");
         assert_eq!(
             section("support").rows,
             vec![
@@ -918,11 +894,6 @@ mod tests {
                 ("enabled".to_owned(), "true".to_owned()),
             ]
         );
-        let spaced = InfoSection {
-            key: "spec_profile".to_owned(),
-            rows: Vec::new(),
-        };
-        assert_eq!(spaced.title(), "Spec profile");
     }
 
     #[test]

@@ -10,7 +10,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::activity::ActivityPoint;
@@ -30,7 +29,7 @@ const ACTIVITY_FETCH: u32 = 200;
 /// Fixed-size-safe strings; the shape is the CDR's contribution-list contract
 /// (`{uid, time_committed, committer, inserted_by_person, change_type,
 /// change_type_rubric}`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContributionRow {
     /// The CONTRIBUTION uid.
     pub uid: String,
@@ -47,7 +46,7 @@ pub struct ContributionRow {
 
 /// One page of an EHR's contributions: the rows plus the total count (for
 /// prev/next).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContributionPage {
     /// The contribution rows on this page.
     pub rows: Vec<ContributionRow>,

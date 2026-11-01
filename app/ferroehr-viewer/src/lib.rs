@@ -28,7 +28,6 @@ pub mod components;
 pub mod deployment;
 pub mod error;
 pub mod example_options;
-pub mod feedback;
 pub mod format;
 pub mod locale;
 pub mod management;
