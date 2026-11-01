@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 
-use super::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
+use super::refusal::{Clash, Curated, Invalid, Malformed, Missing, Refusal};
 
 /// The status a failed service call reports, as one flat enum.
 ///
@@ -271,6 +271,17 @@ impl StatusError {
             status,
             source: refusal.shared_source(),
             message: refusal.message,
+        }
+    }
+}
+
+impl StatusError {
+    /// The `exception` status error a curated fault becomes, its cause kept.
+    pub(crate) fn from_curated(fault: &Curated) -> Self {
+        Self {
+            status: ServiceStatus::Exception,
+            source: fault.shared_source(),
+            message: fault.message.to_owned(),
         }
     }
 }

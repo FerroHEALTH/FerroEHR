@@ -17,7 +17,7 @@ use openehr_base::validate::InvariantViolation;
 use openehr_its::json::{JsonParseError, SchemaRoot};
 use openehr_its::rest::runtime::ApiError;
 
-use super::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
+use super::refusal::{Clash, Curated, Invalid, Malformed, Missing, Refusal};
 use super::status::{ServiceStatus, StatusError};
 
 /// One violated spec rule, carried as data rather than as a pre-formatted
@@ -290,7 +290,7 @@ pub enum ServiceError {
     /// A `500` whose message is client-visible text a deployment acts on (no
     /// EHR index provider, a failed identity source); [`ServiceError::fault`].
     #[error(transparent)]
-    Fault(Refusal),
+    Fault(Curated),
     /// The access record for a completed read or write could not be taken
     /// and the deployment fails closed (`[audit] fail_mode = "closed"`), so
     /// the result is withheld — the wire's `503`, `Retry-After` set, the same
@@ -705,7 +705,6 @@ impl ServiceError {
                 ServiceError::VersionConflict(r.with_shared_source(source))
             }
             ServiceError::Internal(r) => ServiceError::Internal(r.with_shared_source(source)),
-            ServiceError::Fault(r) => ServiceError::Fault(r.with_shared_source(source)),
             ServiceError::Restricted(r) => ServiceError::Restricted(r.with_shared_source(source)),
             ServiceError::Forbidden(r) => ServiceError::Forbidden(r.with_shared_source(source)),
             ServiceError::Unprocessable {
@@ -782,7 +781,7 @@ impl From<ServiceError> for StatusError {
             // The curated row: the detail and the whole cause chain go to the
             // trace record, the client gets `exception` + `INTERNAL_MESSAGE`.
             ServiceError::Internal(err) => internal_fault_caused("complete the request", &err),
-            ServiceError::Fault(err) => StatusError::from_refusal(S::Exception, err),
+            ServiceError::Fault(err) => StatusError::from_curated(&err),
             // Fail-closed and the two refusals the law asks for keep their
             // status, so the status route reports what the wire reports.
             ServiceError::Unrecorded(err) => StatusError::from_refusal(S::ServiceOverloaded, err),
@@ -849,7 +848,7 @@ impl From<ServiceError> for ApiError {
             ServiceError::Internal(err) => {
                 ApiError::Internal(internal_fault_caused("complete the request", &err).message)
             }
-            ServiceError::Fault(err) => ApiError::Internal(err.message),
+            ServiceError::Fault(err) => ApiError::Internal(err.message.to_owned()),
             // Fail-closed: the result is withheld because its access record
             // was not taken. Our own contract (no openEHR spec governs the
             // audit trail's availability); RFC 9110 §15.6.4 is the HTTP

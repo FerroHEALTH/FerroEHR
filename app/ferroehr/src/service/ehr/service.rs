@@ -566,11 +566,9 @@ impl FerroEhrService {
             .commit_new_ehr(an_ehr_id, status, committal)
             .await
             .map_err(ServiceError::flattened)?;
-        created.meta.ok_or_else(|| {
-            ServiceError::fault(format!(
-                "EHR {an_ehr_id} was created without resource metadata"
-            ))
-        })
+        created
+            .meta
+            .ok_or_else(|| ServiceError::fault("an EHR was created without resource metadata"))
     }
 }
 

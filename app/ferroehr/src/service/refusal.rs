@@ -83,6 +83,42 @@ impl<K: std::fmt::Debug> std::error::Error for Refusal<K> {
     }
 }
 
+/// The payload of a [`Fault`](super::error::ServiceError::Fault).
+///
+/// The message of this `500` reaches the response body, so it is curated
+/// text fixed at the raise site and never a cause's `Display`, SQL, a path or
+/// a payload value. The cause rides [`std::error::Error::source`] only.
+#[derive(Debug, Clone)]
+pub struct Curated {
+    /// The client-visible message.
+    pub message: &'static str,
+    /// The failure this fault was raised for.
+    source: Option<Arc<dyn std::error::Error + Send + Sync>>,
+}
+
+impl Curated {
+    /// The cause, for a conversion that keeps it.
+    pub(crate) fn shared_source(&self) -> Option<Arc<dyn std::error::Error + Send + Sync>> {
+        self.source.clone()
+    }
+}
+
+impl std::fmt::Display for Curated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.message)
+    }
+}
+
+// NOTE: hand-written for the reason given on `Refusal`'s impl.
+impl std::error::Error for Curated {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match &self.source {
+            Some(source) => Some(&**source),
+            None => None,
+        }
+    }
+}
+
 /// What a `404` did not find.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Missing {
@@ -152,11 +188,27 @@ pub enum Invalid {
 }
 
 impl super::error::ServiceError {
-    /// A `500` whose `message` reaches the body
+    /// A `500` whose curated `message` reaches the body
     /// ([`Fault`](super::error::ServiceError::Fault)).
     #[must_use]
-    pub fn fault(message: impl Into<String>) -> Self {
-        Self::Fault(Refusal::new((), message))
+    pub fn fault(message: &'static str) -> Self {
+        Self::Fault(Curated {
+            message,
+            source: None,
+        })
+    }
+
+    /// A [`Fault`](super::error::ServiceError::Fault) that carries the failure
+    /// which caused it as its source, never in its message.
+    #[must_use]
+    pub fn fault_caused(
+        message: &'static str,
+        source: impl std::error::Error + Send + Sync + 'static,
+    ) -> Self {
+        Self::Fault(Curated {
+            message,
+            source: Some(Arc::new(source)),
+        })
     }
 
     /// The client-visible text of this error: a refusal's message, the
@@ -173,8 +225,8 @@ impl super::error::ServiceError {
             | E::Internal(r)
             | E::Unrecorded(r)
             | E::Restricted(r)
-            | E::Forbidden(r)
-            | E::Fault(r) => r.message.clone(),
+            | E::Forbidden(r) => r.message.clone(),
+            E::Fault(f) => f.message.to_owned(),
             E::Unprocessable { violation, .. } => violation.to_string(),
             E::ValidationFailed(v) => v
                 .iter()

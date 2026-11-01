@@ -22,7 +22,6 @@ pub mod provider;
 pub mod types;
 
 use crate::service::error::ServiceError;
-use crate::service::refusal::Refusal;
 
 /// The precise EHR-index failure kind.
 ///
@@ -35,19 +34,28 @@ pub enum IndexError {
     Service(#[from] ServiceError),
     /// No provider translates a subject: the service was built without one
     /// ([`provider::EhrIndexProvider::Unconfigured`]).
-    #[error(
-        "no EHR index provider is installed: configure an IHE patient identity source \
-         ([ehr_index] pixm_url and assigning_authority) or opt in to provider = \"local\""
-    )]
+    #[error("{UNCONFIGURED}")]
     Unconfigured,
     /// The identity source failed; nothing falls back to another answer.
-    #[error("the IHE patient identity source failed")]
+    #[error("{SOURCE_FAILED}")]
     IdentitySource(#[source] ihe::IdentitySourceError),
     /// The identity source answered a clinical-domain identifier the
     /// `[privacy]` subject rule refuses, so it is no pseudonym.
-    #[error("the IHE patient identity source answered a clinical identifier that is no pseudonym")]
+    #[error("{NOT_PSEUDONYMOUS}")]
     NotPseudonymous,
 }
+
+/// What a service without an EHR index provider answers.
+const UNCONFIGURED: &str = "no EHR index provider is installed: configure an IHE patient \
+    identity source ([ehr_index] pixm_url and assigning_authority) or opt in to provider = \
+    \"local\"";
+
+/// What a failed identity source answers.
+const SOURCE_FAILED: &str = "the IHE patient identity source failed";
+
+/// What a clinical identifier that is no pseudonym answers.
+const NOT_PSEUDONYMOUS: &str =
+    "the IHE patient identity source answered a clinical identifier that is no pseudonym";
 
 impl From<IndexError> for ServiceError {
     /// A service fault passes through; every other EHR-index failure is a
@@ -55,12 +63,9 @@ impl From<IndexError> for ServiceError {
     fn from(e: IndexError) -> Self {
         match e {
             IndexError::Service(e) => e,
-            refused @ (IndexError::Unconfigured | IndexError::NotPseudonymous) => {
-                ServiceError::fault(refused.to_string())
-            }
-            IndexError::IdentitySource(source) => ServiceError::Fault(
-                Refusal::new((), "the IHE patient identity source failed").with_source(source),
-            ),
+            IndexError::Unconfigured => ServiceError::fault(UNCONFIGURED),
+            IndexError::NotPseudonymous => ServiceError::fault(NOT_PSEUDONYMOUS),
+            IndexError::IdentitySource(source) => ServiceError::fault_caused(SOURCE_FAILED, source),
         }
     }
 }
@@ -68,7 +73,7 @@ impl From<IndexError> for ServiceError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::refusal::Missing;
+    use crate::service::refusal::{Missing, Refusal};
 
     /// A generic service miss passes through with its kind.
     #[test]
