@@ -556,3 +556,108 @@ async fn a_simplified_commit_stores_the_names_and_archetype_details_of_the_canon
         }
     }
 }
+
+/// The single row an ad hoc AQL query scoped to `ehr` returns.
+async fn one_row(svc: &FerroEhrService, ehr: EhrId, aql: &str) -> Value {
+    let request = ferroehr::service::query::request::AqlQueryRequest {
+        ehr_ids: vec![ehr.0.to_string()],
+        ..Default::default()
+    };
+    let result = svc
+        .execute_ad_hoc_query(aql.to_owned(), request)
+        .await
+        .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
+        .result_set;
+    let rows = result
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .unwrap_or_else(|| panic!("query {aql:?}: no rows array"));
+    assert_eq!(rows.len(), 1, "query {aql:?} matches the one composition");
+    rows.first().cloned().expect("the one row")
+}
+
+/// A FLAT body committed against an ADL 2 template stores its archetype roots
+/// under the complete identifier the template inlined (BASE
+/// `artefact_identification` `master07-referencing.adoc` §Reconstitutability),
+/// and AQL finds it by an interface reference (`.v1`) and by the physical one
+/// (`.v1.0.0`), both at the COMPOSITION root and at the OBSERVATION inlined
+/// below it (§Referencing; §Supporting Archetype-based Querying: X itself and
+/// any previous minor or patch variant of X).
+#[tokio::test]
+async fn aql_finds_a_flat_adl2_commit_by_interface_and_full_archetype_ids() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (body, wt) = count_range(&svc).await;
+    let ehr = new_ehr(&svc).await;
+    let canonical = openehr_sdt::flat::convert::submitted_composition_from_flat(
+        &count_flat(&body, &wt, 17),
+        &wt,
+        "2026-01-01T10:00:00Z",
+    )
+    .expect("the FLAT body converts");
+    let committed = svc
+        .create_composition(ehr, creation(&canonical))
+        .await
+        .expect("the FLAT commit");
+    let stored = svc
+        .get_composition_latest(ehr, committed.vo_id)
+        .await
+        .expect("the stored composition");
+    let (root, inlined) = (
+        "openEHR-EHR-COMPOSITION.cnf_adl2_dv_count_range",
+        "openEHR-EHR-OBSERVATION.cnf_minimal",
+    );
+    assert_eq!(
+        text(&stored, "/archetype_node_id"),
+        format!("{root}.v1.0.0")
+    );
+    assert_eq!(
+        text(&stored, "/content/0/archetype_node_id"),
+        format!("{inlined}.v1.0.0")
+    );
+    let magnitude = "o/data[id2]/events[id3]/data[id4]/items[id5]/value/magnitude";
+    for version in ["v1", "v1.0.0"] {
+        let row = one_row(
+            &svc,
+            ehr,
+            &format!(
+                "SELECT c/archetype_node_id FROM EHR e \
+                 CONTAINS COMPOSITION c[{root}.{version}]"
+            ),
+        )
+        .await;
+        assert_eq!(
+            row,
+            json!([format!("{root}.v1.0.0")]),
+            "the root by .{version}"
+        );
+        let row = one_row(
+            &svc,
+            ehr,
+            &format!(
+                "SELECT o/archetype_node_id, {magnitude} FROM EHR e \
+                 CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{inlined}.{version}]"
+            ),
+        )
+        .await;
+        assert_eq!(
+            row,
+            json!([format!("{inlined}.v1.0.0"), 17]),
+            "the inlined OBSERVATION by .{version}"
+        );
+        let row = one_row(
+            &svc,
+            ehr,
+            &format!(
+                "SELECT {magnitude} FROM EHR e CONTAINS COMPOSITION c[{root}.{version}] \
+                 CONTAINS OBSERVATION o[{inlined}.{version}]"
+            ),
+        )
+        .await;
+        assert_eq!(
+            row,
+            json!([17]),
+            "the root and the inlined one by .{version}"
+        );
+    }
+}
