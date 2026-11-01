@@ -126,7 +126,7 @@
 
 services:
   ferroehr-postgres:
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc5}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc6}
     # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic shared
     # memory under load (parallel workers error `could not resize shared
     # memory segment … No space left on device`), so measured runs keep this
@@ -252,7 +252,7 @@ services:
   # single credential.
   ferroehr-backup-clinical:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc5}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc6}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -290,7 +290,7 @@ services:
 
   ferroehr-backup-party:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc5}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc6}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -322,7 +322,7 @@ services:
 
   ferroehr-backup-linkage:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc5}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0-rc6}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -482,7 +482,7 @@ services:
       start_period: 10s
 
   ferroehr:
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:5.6.0-rc5}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:5.6.0-rc6}
     # The issuer's namespace (the header says why); the issuer publishes 8080
     # and answers to `ferroehr` on the compose network.
     network_mode: service:identity-issuer
@@ -610,7 +610,7 @@ services:
   # FERROEHR_VIEWER__AUTH__OIDC__* variables at your identity provider.
   ferroehr-viewer:
     profiles: [viewer]
-    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:5.6.0-rc5}
+    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:5.6.0-rc6}
     depends_on:
       ferroehr:
         condition: service_healthy

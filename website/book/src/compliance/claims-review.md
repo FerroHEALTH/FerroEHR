@@ -930,3 +930,60 @@ re-vendored and the `openehr-*` crates step to 0.0.122 (#4377); chart
 
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
+
+## The review of 2026-11-01, for 5.6.0-rc6
+
+Read on the tree after commit `df911334d`, for the FerroEHR release candidate
+5.6.0-rc6. The facts added since 5.6.0-rc5 and checked in every text in scope:
+the CONTRIBUTION commit reads the body through the released `NewContribution`
+schema and refuses the shapes it does not define with `400` (#3595, #4543);
+the EHDS Art. 3(3) delay of the person's own access, off by default under
+`[access_delay]` (#4351); the EHDS Art. 5 mark of what a person inserts and the
+`403` on their change of a professional's version (#4350); the ADL 2
+validation fixes (#4505, #4513, #4522, #4529, #4536, #4540, #4567); the FLAT
+and STRUCTURED reads under an ADL 2 template (#4551, #4559); the node header
+columns and the smaller storage per version (#4525); the audit search tokens
+taken from the record's columns (#4524); the `400` for a malformed versioned
+read (#4541); the viewer's template releases and its unavailable count
+(#4506, #4533); the conformance pipeline on Veredictum 0.3.2 with the released
+and development profiles and their README badges (#4503); and the
+`openehr-*` crates versioned at publish (#4555); chart 21.0.0-rc6 with
+`appVersion` 5.6.0-rc6.
+
+### Read and kept on 2026-11-01, for 5.6.0-rc6
+
+- **The README and the conformance page**: the badges are drawn from the runs
+  on `main` under each profile, and [conformance](../conformance.md) states
+  that the released profile alone backs a released claim and that the
+  development profile is never counted toward it.
+- **The security, authentication and audit pages**: [security](../security.md)
+  and the [authentication configuration](../installation/config-auth.md)
+  describe the Art. 3(3) delay as a Member State option, off by default, that
+  withholds data from the person and never from a professional, and
+  [the audit trail](../audit.md) names the feeds that carry records about a
+  held composition as controller feeds.
+- **The resources page**: [resources](../using-the-api/resources.md) states the
+  CONTRIBUTION body as the released `NewContribution` schema reads it.
+- **The operations page**: the storage sizing section names 5.6.0-rc5 as the
+  measured release and states the node header columns' effect on it.
+- **The hazard log and the technical documentation**: the logging component
+  changed since 5.6.0-rc5 (`ehds-logging` and `ihe-atna` 0.3.3, the held
+  composition's records, audit migration 0020), so the hazard log gains
+  review 14, H6 names the hold and its tests, and the technical documentation
+  gains its 5.6.0-rc6 row.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc6 and image 5.6.0-rc6 in the book of main.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-01, for 5.6.0-rc6
+
+- The conformance run on `main` still has known red rows under the released
+  profile, tracked on #4455; two of them are Veredictum's
+  (Vernum-Projecten/Veredictum#964 and Vernum-Projecten/Veredictum#965). The
+  badges show the run as it stands, and no text claims a green record.
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths and the old error body until 5.6.0 ships.
