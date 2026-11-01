@@ -46,25 +46,11 @@
 //! is resolved at commit by `service::terminology::binding`.
 
 mod opt;
-mod structure;
+pub(crate) mod structure;
 
 use openehr_its::opt14::types::OperationalTemplate;
 
 use crate::service::error::ServiceError;
-
-/// Reject an OPT the tolerant `openehr_its::opt14` codec would silently
-/// accept: a foreign top-level element (CNF `invalid_templates/alien_tags`)
-/// or a duplicated single-valued top-level element (CNF
-/// `invalid_templates/multiple_elements`).
-///
-/// # Errors
-///
-/// [`ServiceError::Unprocessable`] (→ ITS-REST `422`) naming the offending
-/// element, or describing the XML parse failure when the document is
-/// malformed.
-pub(crate) fn validate_opt_structure(xml: &str) -> Result<(), ServiceError> {
-    structure::validate_opt_structure(xml)
-}
 
 /// Validate an uploaded OPT 1.4 artefact against the AOM2/08
 /// standalone-artefact validity rules

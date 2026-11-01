@@ -99,7 +99,7 @@ pub async fn refresh(conn: &mut PgConnection, schemas: &[&str]) -> Result<Refres
 /// [`refresh`] returns.
 pub async fn refresh_store(pool: &PgPool, store: Domain) -> Result<Refreshed, DbError> {
     let mut conn = acquire(pool).await?;
-    refresh(&mut conn, &[store.schema()]).await
+    refresh(&mut conn, &[store.as_str()]).await
 }
 
 /// [`refresh`] of each store on its own pool, so each runs under the role that
@@ -122,7 +122,7 @@ pub async fn refresh_pools(pools: &DomainPools) -> Result<Refreshed, DbError> {
 /// [`refresh`] returns.
 pub async fn refresh_pool(pool: &PgPool) -> Result<Refreshed, DbError> {
     let mut conn = acquire(pool).await?;
-    refresh(&mut conn, &STORES.map(Domain::schema)).await
+    refresh(&mut conn, &STORES.map(Domain::as_str)).await
 }
 
 /// Log one refresh's outcome: what was analyzed at debug, a refused table or

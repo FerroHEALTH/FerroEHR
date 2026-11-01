@@ -158,7 +158,7 @@ pub fn verify(
         .verify(primary, signed_text.as_bytes())
         .map_err(VerifyError::BadSignature)?;
 
-    let licence = Licence::from_json(&signed_text).map_err(VerifyError::Payload)?;
+    let licence = serde_json::from_str::<Licence>(&signed_text).map_err(VerifyError::Payload)?;
     match licence.window(today) {
         Window::NotYetValid => Err(VerifyError::NotYetValid {
             not_before: licence.not_before,

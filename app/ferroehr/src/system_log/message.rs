@@ -225,25 +225,18 @@ fn build_objects(
         // add the URI object when the id is known; non-patient classes always
         // carry it, filled with `value_if_missing` when unknown, so no required
         // element is absent (DICOM PS3.15 §A.5).
-        if let Some(id) = event.object_id.clone() {
-            objects.push(uri_object(id));
-        } else if !object_class.is_patient_centric() {
-            objects.push(uri_object(missing.to_owned()));
+        let uri = event
+            .object_id
+            .clone()
+            .or_else(|| (!object_class.is_patient_centric()).then(|| missing.to_owned()));
+        if let Some(id) = uri {
+            // NOTE: DICOM PS3.15 Annex A.5, Tables A.5.1.2.2-1 and A.5.1.2.4-1: a System
+            // Object (type 2) whose role "may be omitted", with the URI ID type 12.
+            objects.push(object(id, OBJECT_TYPE_SYSTEM, None, codes::OBJ_ID_URI));
         }
     }
 
     objects
-}
-
-/// The object a record names by its URI: a System Object (type `2`), its
-/// role left out, and the ID type `12` URI.
-///
-/// DICOM PS3.15 Annex A.5, Tables A.5.1.2.2-1 and A.5.1.2.4-1: the
-/// `ParticipantObjectTypeCodeRole` "may be omitted", and URI is a System
-/// Object's ID type. ITI-20 carries the message as written (IHE ITI TF-2
-/// §3.20.4.1.2).
-fn uri_object(id: String) -> ParticipantObject {
-    object(id, OBJECT_TYPE_SYSTEM, None, codes::OBJ_ID_URI)
 }
 
 fn object(

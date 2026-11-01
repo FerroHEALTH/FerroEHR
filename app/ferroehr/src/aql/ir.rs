@@ -708,12 +708,6 @@ pub struct Params {
 }
 
 impl Params {
-    /// An empty parameter set.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Bind `name` (without the leading `$`) to `value`.
     #[must_use]
     pub fn with(mut self, name: impl Into<String>, value: ParamValue) -> Self {

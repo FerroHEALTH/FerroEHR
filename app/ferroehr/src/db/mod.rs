@@ -711,7 +711,7 @@ fn bootstrap_statements(sets: &[Domain]) -> Vec<String> {
     statements.extend(
         bootstrap_schemas(sets)
             .into_iter()
-            .map(|domain| format!("CREATE SCHEMA IF NOT EXISTS {}", domain.schema())),
+            .map(|domain| format!("CREATE SCHEMA IF NOT EXISTS {}", domain.as_str())),
     );
     statements.push(BOOTSTRAP_EXTENSION.to_owned());
     statements
@@ -1340,7 +1340,7 @@ pub async fn verify_domain_isolation(
 /// `has_*_privilege` functions, which answer about any role from any session.
 async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Result<(), DbError> {
     let bookkeeping_schemas: Vec<String> = std::iter::once("ext")
-        .chain(Domain::ALL.into_iter().map(Domain::schema))
+        .chain(Domain::ALL.into_iter().map(Domain::as_str))
         .map(str::to_owned)
         .collect();
     for domain in Domain::ALL {
@@ -1638,11 +1638,11 @@ async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result
     let named_only: Vec<&'static str> = bootstrap_schemas(domains)
         .into_iter()
         .filter(|domain| !domains.contains(domain))
-        .map(Domain::schema)
+        .map(Domain::as_str)
         .collect();
     let preexisting = present_schemas(&mut *conn, &named_only).await?;
     for statement in bootstrap_statements(domains) {
-        // Each statement is built from the `Domain::schema` literals, never
+        // Each statement is built from the `Domain::as_str` literals, never
         // input; DDL takes no bind placeholder.
         sqlx::query(sqlx::AssertSqlSafe(statement))
             .execute(&mut *conn)
@@ -1669,14 +1669,14 @@ async fn apply_migrations(conn: &mut PgConnection, domains: &[Domain]) -> Result
     let stores: Vec<&str> = parent_statistics::STORES
         .into_iter()
         .filter(|store| domains.contains(store))
-        .map(Domain::schema)
+        .map(Domain::as_str)
         .collect();
     parent_statistics::refresh(&mut *conn, &stores).await?;
     for schema in named_only {
         if preexisting.contains(&schema) {
             continue;
         }
-        // The name is a `Domain::schema` literal, never input.
+        // The name is a `Domain::as_str` literal, never input.
         sqlx::query(sqlx::AssertSqlSafe(format!("DROP SCHEMA {schema}")))
             .execute(&mut *conn)
             .await?;
@@ -1807,7 +1807,7 @@ async fn erasable_schemas(
     let others: Vec<&'static str> = Domain::ALL
         .into_iter()
         .filter(|domain| !domains.contains(domain))
-        .map(Domain::schema)
+        .map(Domain::as_str)
         .collect();
     let names: Vec<String> = others.iter().map(|s| (*s).to_owned()).collect();
     let empty: Vec<String> = sqlx::query_scalar(

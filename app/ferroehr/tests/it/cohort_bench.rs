@@ -376,7 +376,7 @@ async fn explain_clinical(pool: &sqlx::PgPool, ehr_ids: &[EhrId]) -> Value {
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
     let ast = openehr_query::parser::parse_str(BENCH_AQL).expect("the AQL parses");
-    let params = Params::new();
+    let params = Params::default();
     let ir = ferroehr::aql::plan(
         &ast,
         &params,

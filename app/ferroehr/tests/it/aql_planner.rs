@@ -42,7 +42,7 @@ fn plan_ok(q: &str) -> QueryIr {
     let ast = parse_str(q).unwrap_or_else(|e| panic!("parse failed for {q:?}: {e}"));
     plan(
         &ast,
-        &Params::new(),
+        &Params::default(),
         ferroehr::config::profile::SpecProfile::default(),
     )
     .unwrap_or_else(|e| panic!("plan failed for {q:?}: {e}"))
@@ -64,7 +64,7 @@ fn build_sql(q: &str) -> String {
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
+    ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
         .sql
 }
@@ -89,7 +89,7 @@ fn plan_err(q: &str) -> AqlError {
     let ast = parse_str(q).unwrap_or_else(|e| panic!("parse failed for {q:?}: {e}"));
     plan(
         &ast,
-        &Params::new(),
+        &Params::default(),
         ferroehr::config::profile::SpecProfile::default(),
     )
     .expect_err(&format!("expected planning to fail for {q:?}"))
@@ -518,7 +518,7 @@ fn parameters_are_collected_and_validated() {
     let q = "SELECT c/uid/value FROM EHR e[ehr_id/value=$ehr] CONTAINS COMPOSITION c \
              WHERE c/name/value = $cname";
     // both bound → ok, params sorted+unique.
-    let params = Params::new()
+    let params = Params::default()
         .with("ehr", ParamValue::Str("1234".into()))
         .with("cname", ParamValue::Str("BP".into()));
     let ir = plan_with(q, &params).unwrap();
@@ -528,7 +528,7 @@ fn parameters_are_collected_and_validated() {
 #[test]
 fn missing_parameter_is_rejected() {
     let q = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c WHERE c/name/value = $cname";
-    let err = plan_with(q, &Params::new()).unwrap_err();
+    let err = plan_with(q, &Params::default()).unwrap_err();
     assert!(matches!(
         err,
         AqlError::Analysis(AnalysisError::UnboundParameter(p)) if p == "cname"
@@ -539,7 +539,7 @@ fn missing_parameter_is_rejected() {
 fn ehr_id_predicate_lowers_to_field() {
     let ir = plan_with(
         "SELECT e/ehr_id/value FROM EHR e[ehr_id/value=$id] CONTAINS COMPOSITION c",
-        &Params::new().with("id", ParamValue::Str("x".into())),
+        &Params::default().with("id", ParamValue::Str("x".into())),
     )
     .unwrap();
     let Source::Ehr(ehr) = &ir.sources[0] else {
@@ -982,7 +982,7 @@ fn a_fragment_path_ending_on_a_list_names_its_elements() {
             offset: None,
             archetype_lineage: Arc::new(ArchetypeLineage::default()),
         };
-        let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::new(), &ctx)
+        let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::default(), &ctx)
             .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"));
         // Whether the array-cell projection runs over a bound jsonpath equal to `jsonpath`.
         move |jsonpath: &str| {
@@ -1524,7 +1524,7 @@ fn build_sql_limited(q: &str) -> String {
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
+    ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
         .sql
 }
@@ -1648,7 +1648,7 @@ fn ehr_scoped_execution_keeps_the_flat_shape() {
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    let sql = ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
+    let sql = ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed: {e}"))
         .sql;
     assert!(!sql.contains("JOIN LATERAL"), "flat when EHR-scoped");
@@ -1924,11 +1924,11 @@ fn stable_profile_gate_matches_the_released_model() {
     ] {
         let ast = parse_str(q).expect("parses");
         assert!(
-            plan(&ast, &Params::new(), SpecProfile::Stable).is_ok(),
+            plan(&ast, &Params::default(), SpecProfile::Stable).is_ok(),
             "stable must not refuse RM 1.1.0 surface: {q}"
         );
         assert!(
-            plan(&ast, &Params::new(), SpecProfile::Development).is_ok(),
+            plan(&ast, &Params::default(), SpecProfile::Development).is_ok(),
             "development baseline: {q}"
         );
     }
@@ -1949,7 +1949,7 @@ fn build_err(q: &str) -> AqlError {
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
+    ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .err()
         .unwrap_or_else(|| panic!("expected the SQL build to refuse {q:?}"))
 }
@@ -2224,7 +2224,7 @@ fn prepare(
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    ferroehr::aql::sql::build(&ir, &Params::new(), &ctx)
+    ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
 }
 
@@ -2487,7 +2487,7 @@ fn the_scope_collection_reports_ehr_sources() {
         "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR COMPOSITION c2)",
     ] {
         let ir = plan_ok(q);
-        let scope = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scope_ctx())
+        let scope = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scope_ctx())
             .unwrap_or_else(|e| panic!("scope build failed for {q:?}: {e}"))
             .unwrap_or_else(|| panic!("{q}: an EHR source is something to collect"));
         assert_eq!(
@@ -2502,7 +2502,7 @@ fn the_scope_collection_reports_ehr_sources() {
         );
     }
     let ir = plan_ok("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
-    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scope_ctx())
+    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scope_ctx())
         .unwrap_or_else(|e| panic!("scope build failed: {e}"))
         .unwrap_or_else(|| panic!("a rooted query collects"));
     assert_eq!(
@@ -2675,7 +2675,7 @@ fn exists_is_path_level() {
 #[test]
 fn the_scope_collection_reports_the_ehr_status_template() {
     let ir = plan_ok("SELECT e/ehr_status/subject FROM EHR e");
-    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::new(), &scope_ctx())
+    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scope_ctx())
         .unwrap_or_else(|e| panic!("scope build failed: {e}"))
         .unwrap_or_else(|| panic!("an EHR source is something to collect"));
     assert_eq!(scope.ehr_columns, vec!["scope_ehr_0".to_owned()]);
@@ -2699,7 +2699,7 @@ fn a_configured_patient_namespace_matches_the_pair_exactly() {
         "SELECT e/ehr_id/value FROM EHR e",
         "SELECT c/uid/value FROM COMPOSITION c",
     ] {
-        let sql = ferroehr::aql::sql::build(&plan_ok(q), &Params::new(), &ctx)
+        let sql = ferroehr::aql::sql::build(&plan_ok(q), &Params::default(), &ctx)
             .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
             .sql;
         assert!(
@@ -2845,7 +2845,7 @@ const PERSON_LOOKUP: &str =
 /// ELEMENT rows, under the leaf step's at-code, by their search text (#4437).
 #[test]
 fn a_value_equality_with_a_parameter_is_anchored_on_the_element_rows() {
-    let params = Params::new().with("v", ParamValue::Str("MRN-1".to_owned()));
+    let params = Params::default().with("v", ParamValue::Str("MRN-1".to_owned()));
     let sql = build_sql_with(
         &format!(
             "SELECT p/uid/value, id/items[at0001]/value/issuer {PERSON_LOOKUP} \

@@ -296,7 +296,7 @@ mod tests {
         let c = constraints(
             "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.report.v1] \
              NOT CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.imaging_exam_result.v0]",
-            &Params::new(),
+            &Params::default(),
         );
         assert_eq!(
             c.archetype_ids,
@@ -315,7 +315,7 @@ mod tests {
             "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c \
              WHERE c/archetype_details/template_id/value = 'Lab Report' \
              AND NOT c/archetype_details/template_id/value = 'Imaging Report'",
-            &Params::new(),
+            &Params::default(),
         );
         assert_eq!(c.template_ids, BTreeSet::from(["Lab Report".to_owned()]));
         assert!(
@@ -329,7 +329,7 @@ mod tests {
         let c = constraints(
             "SELECT o/data FROM EHR e CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.report.v1] \
              CONTAINS OBSERVATION o",
-            &Params::new(),
+            &Params::default(),
         );
         assert!(c.reaches_content);
         assert!(!c.every_root_bound, "the observation is bound to no id");
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn parameters_and_path_predicates_are_bound() {
-        let params = Params::new().with(
+        let params = Params::default().with(
             "arch",
             ParamValue::Str("openEHR-EHR-COMPOSITION.encounter.v1".to_owned()),
         );
@@ -357,14 +357,17 @@ mod tests {
 
     #[test]
     fn an_ehr_only_query_reaches_no_content() {
-        let c = constraints("SELECT e/ehr_id/value FROM EHR e", &Params::new());
+        let c = constraints("SELECT e/ehr_id/value FROM EHR e", &Params::default());
         assert!(!c.reaches_content);
         assert_eq!(c.resource_kinds, BTreeSet::from([ResourceKind::Ehr]));
     }
 
     #[test]
     fn an_ehr_access_query_reaches_no_content() {
-        let c = constraints("SELECT a FROM EHR e CONTAINS EHR_ACCESS a", &Params::new());
+        let c = constraints(
+            "SELECT a FROM EHR e CONTAINS EHR_ACCESS a",
+            &Params::default(),
+        );
         assert!(!c.reaches_content);
         assert_eq!(
             c.resource_kinds,

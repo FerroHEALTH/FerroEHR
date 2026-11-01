@@ -29,6 +29,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use uuid::Uuid;
 
+use ferroehr::service::status::StatusError;
 use openehr_its::rest::runtime::ApiError;
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
@@ -202,30 +203,50 @@ async fn run(
 
     match op {
         "event_subscription_list" => {
-            let items = state.backend().event_subscription_list().await?;
+            let items = state
+                .backend()
+                .event_subscription_list()
+                .await
+                .map_err(StatusError::from)?;
             Ok(negotiate::respond(h, StatusCode::OK, &items))
         }
         "event_subscription_create" => {
             let body: ferroehr::extensions::events::subscription::SubscriptionDefinition =
                 negotiate::typed_json(h, &parts.body)?;
-            let created = state.backend().event_subscription_create(body).await?;
+            let created = state
+                .backend()
+                .event_subscription_create(&body)
+                .await
+                .map_err(StatusError::from)?;
             Ok(negotiate::respond(h, StatusCode::CREATED, &created))
         }
         "event_subscription_get" => {
             let id = subscription_id(&parts)?;
-            let item = state.backend().event_subscription_get(id).await?;
+            let item = state
+                .backend()
+                .event_subscription_get(id)
+                .await
+                .map_err(StatusError::from)?;
             Ok(negotiate::respond(h, StatusCode::OK, &item))
         }
         "event_subscription_update" => {
             let id = subscription_id(&parts)?;
             let body: ferroehr::extensions::events::subscription::SubscriptionUpdate =
                 negotiate::typed_json(h, &parts.body)?;
-            let updated = state.backend().event_subscription_update(id, body).await?;
+            let updated = state
+                .backend()
+                .event_subscription_update(id, &body)
+                .await
+                .map_err(StatusError::from)?;
             Ok(negotiate::respond(h, StatusCode::OK, &updated))
         }
         "event_subscription_delete" => {
             let id = subscription_id(&parts)?;
-            state.backend().event_subscription_delete(id).await?;
+            state
+                .backend()
+                .event_subscription_delete(id)
+                .await
+                .map_err(StatusError::from)?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(

@@ -892,7 +892,7 @@ async fn commit_probe(svc: &FerroEhrService, pool: &PgPool, corpus: &Corpus) -> 
 async fn explain_population(pool: &PgPool, corpus: &Corpus) -> Value {
     let aql = population_aql(corpus);
     let ast = openehr_query::parser::parse_str(&aql).expect("the population AQL parses");
-    let params = Params::new();
+    let params = Params::default();
     let ir = ferroehr::aql::plan(&ast, &params, SpecProfile::default())
         .expect("the population AQL plans");
     let ctx = SqlCtx {
@@ -1265,7 +1265,7 @@ fn sibling_leaves_aql(leaves: usize, ordered: bool) -> String {
 /// (#3733, #4431).
 fn from_shape(aql: &str) -> &'static str {
     let ast = openehr_query::parser::parse_str(aql).expect("the path AQL parses");
-    let params = Params::new();
+    let params = Params::default();
     let ir =
         ferroehr::aql::plan(&ast, &params, SpecProfile::default()).expect("the path AQL plans");
     let ctx = SqlCtx {

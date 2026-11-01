@@ -37,7 +37,7 @@ const RESULT_SET_META_TYPE: &str = "RESULTSET";
 /// (values arrive as JSON scalars; complex values degrade to their JSON
 /// text — the documented widening on [`AqlQueryRequest::parameters`]).
 pub(super) fn build_params(request: &AqlQueryRequest) -> Params {
-    let mut params = Params::new();
+    let mut params = Params::default();
     for (name, value) in &request.parameters {
         params.insert(name.clone(), param_value(value));
     }

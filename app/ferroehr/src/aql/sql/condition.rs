@@ -55,7 +55,7 @@ use crate::aql::ir::{
 use crate::db::iden::{Node, VersionRow};
 
 use super::expr::{binoper, call, col, hot};
-use super::from::{attribute_child, left_binding_rows};
+use super::from::{BoundTable, attribute_child, binding_rows};
 use super::predicate::raw_numeric_wanted;
 use super::value::ItemWalk;
 use super::{Builder, StepBinding, ValueMode};
@@ -371,7 +371,7 @@ impl Builder<'_> {
                     }
                 }
                 bindings.from_function(
-                    left_binding_rows(&alias, &inner, on),
+                    binding_rows(BoundTable::Node, &alias, &inner, on),
                     Alias::new(alias.as_str()),
                 );
                 self.step_bindings.push(StepBinding {

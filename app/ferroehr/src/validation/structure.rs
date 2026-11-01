@@ -52,7 +52,7 @@ const OPT_TOP_LEVEL_MULTIPLE: &[&str] = &["component_ontologies", "annotations"]
 ///
 /// [`ServiceError::Unprocessable`] naming the foreign or duplicated element,
 /// or describing the XML parse failure when the document is malformed.
-pub(super) fn validate_opt_structure(xml: &str) -> Result<(), ServiceError> {
+pub(crate) fn validate_opt_structure(xml: &str) -> Result<(), ServiceError> {
     let mut reader = Reader::from_str(xml);
     let mut depth: i32 = 0;
     let mut seen: HashMap<String, u32> = HashMap::new();

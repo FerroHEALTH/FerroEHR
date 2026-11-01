@@ -72,12 +72,6 @@ pub struct ChainCheck {
 }
 
 impl ChainCheck {
-    /// Creates a check whose state is [`ChainCheckState::Pending`].
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Returns the outcome of the most recent run.
     #[must_use]
     pub fn state(&self) -> ChainCheckState {
@@ -85,12 +79,6 @@ impl ChainCheck {
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
-    }
-
-    /// Verifies the whole chain once, reports the outcome, and returns it
-    /// ([`Self::run_scope`] with [`VerifyScope::Full`]).
-    pub async fn run(&self, store: &AuditStore) -> ChainCheckState {
-        self.run_scope(store, VerifyScope::Full).await
     }
 
     /// Verifies the chain over `scope` once, reports the outcome, and returns
