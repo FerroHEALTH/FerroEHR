@@ -32,6 +32,16 @@
 //! call per `_`-segment. [`build_rm_attr`] can build the value-internal families
 //! too, so a walker may route them either way, but never the same `_`-segment to
 //! both.
+//!
+//! [`data_values::emit_leaf`] writes a leaf's datum attrs only (the `|suffix`
+//! keys of master05, plus the bare `""` value where the type has one).
+//! `list_open` is the `DV_CODED_TEXT` open-value-set marker from the
+//! web-template input (`None` = not coded or unknown): a `DV_TEXT` value in an
+//! open slot is emitted via `|other` (master04 §"Open Value-Sets and the
+//! `|other` Suffix"). [`structures::emit_rm_attrs`] writes the `_`-prefixed
+//! families present on an RM value (master04 §"RM Attributes prefix" and the
+//! per-class `_`-rows of master05); field presence and `_type` decide which
+//! family applies, so one entry point serves every node kind.
 
 #![expect(
     clippy::disallowed_types,

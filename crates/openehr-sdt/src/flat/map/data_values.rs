@@ -80,14 +80,7 @@ fn emit_quantified_extras(dv: &Value, out: &mut SimNode, with_accuracy: bool) {
     }
 }
 
-/// RM leaf value (canonical JSON) → datum parts on `out` (attrs only; the
-/// `|suffix` keys of master05, plus the bare `""` value where the type has one).
-///
-/// `list_open` is the `DV_CODED_TEXT` open-value-set marker from the web-template
-/// input (`None` = not coded / unknown): a `DV_TEXT` value in an *open*
-/// `DV_CODED_TEXT` slot is emitted via `|other` (master04 §"Open Value-Sets and
-/// the `|other` Suffix"). The `_`-prefixed sub-attribute families are emitted by
-/// [`super::structures::emit_rm_attrs`], not here.
+/// RM leaf value → datum attrs on `out` (the [`super`] module docs, `emit_leaf`).
 #[expect(
     clippy::match_same_arms,
     reason = "the arms are kept explicit per RM type so each mapping stays readable next to its type name"

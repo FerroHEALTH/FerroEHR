@@ -14,7 +14,7 @@ use crate::versioning::signature::signer::SignError;
 use std::sync::Arc;
 
 use openehr_base::validate::InvariantViolation;
-use openehr_its::json::JsonParseError;
+use openehr_its::json::{JsonParseError, SchemaRoot};
 use openehr_its::rest::runtime::ApiError;
 
 use super::status::{ServiceStatus, StatusError};
@@ -715,8 +715,7 @@ pub fn its_json_admits(data: &serde_json::Value) -> bool {
         .and_then(serde_json::Value::as_str)
         .is_some()
         && openehr_its::json::reject_undeclared_keys(data).is_ok()
-        && openehr_its::json::validate_canonical(data, openehr_its::json::SchemaRoot::EveryClass)
-            .is_ok()
+        && openehr_its::json::validate_canonical(data, SchemaRoot::EveryClass).is_ok()
 }
 
 impl From<ServiceError> for StatusError {

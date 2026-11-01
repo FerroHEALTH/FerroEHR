@@ -321,7 +321,7 @@ fn every_ckm_archetype_writes_an_opt_that_validates_and_reads_back() {
     {
         let mut definition = template(id, archetype_use(id));
         definition.language = archetype(&library, id).original_language.clone();
-        let built = match openehr_its::opt14_writer::assemble::build(&definition, &library) {
+        let built = match openehr_its::opt14_writer::build(&definition, &library) {
             Ok(built) => built,
             Err(e) => {
                 let _ = writeln!(findings, "{id}: {e}");
@@ -1080,7 +1080,7 @@ fn ckm_templates_rebuild_to_their_upstream_node_tree() {
                 continue;
             }
         };
-        let built = match openehr_its::opt14_writer::assemble::build(&definition, &library) {
+        let built = match openehr_its::opt14_writer::build(&definition, &library) {
             Ok(built) => built,
             Err(e) => {
                 let _ = writeln!(
@@ -1181,8 +1181,8 @@ fn items_children(template: &OperationalTemplate) -> &[CObject] {
 #[test]
 fn a_filler_follows_its_slot_as_an_archetype_root() {
     let library = library();
-    let built = openehr_its::opt14_writer::assemble::build(&birth_summary_with_fills(), &library)
-        .expect("builds");
+    let built =
+        openehr_its::opt14_writer::build(&birth_summary_with_fills(), &library).expect("builds");
     assert_eq!(
         built
             .definition
@@ -1231,7 +1231,7 @@ fn excluding_a_filled_slot_closes_it() {
     definition.root.narrowings.push(Narrowing::Exclude {
         path: PLACE_OF_BIRTH_SLOT.to_owned(),
     });
-    let built = openehr_its::opt14_writer::assemble::build(&definition, &library).expect("builds");
+    let built = openehr_its::opt14_writer::build(&definition, &library).expect("builds");
     let children = items_children(&built);
     assert!(
         !children.iter().any(|c| head(c).2 == "at0005"),
@@ -1250,7 +1250,7 @@ fn a_lone_include_admits_any_filler_of_the_slot_type() {
     let library = library();
     let mut definition = birth_summary_with_fills();
     definition.root.fills[0].filler = archetype_use(DEVICE);
-    assert!(openehr_its::opt14_writer::assemble::build(&definition, &library).is_ok());
+    assert!(openehr_its::opt14_writer::build(&definition, &library).is_ok());
 }
 
 #[test]
@@ -1289,13 +1289,11 @@ fn a_binding_slot_refuses_a_filler_it_does_not_name() {
     );
     library.insert(birth_summary);
 
-    assert!(
-        openehr_its::opt14_writer::assemble::build(&birth_summary_with_fills(), &library).is_ok()
-    );
+    assert!(openehr_its::opt14_writer::build(&birth_summary_with_fills(), &library).is_ok());
     let mut definition = birth_summary_with_fills();
     definition.root.fills[0].filler = archetype_use(DEVICE);
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::SlotRefusesFiller { filler, .. }) if filler == DEVICE
     ));
 }
@@ -1326,7 +1324,7 @@ fn a_filler_of_another_type_is_refused() {
     let mut definition = birth_summary_with_fills();
     definition.root.fills[0].filler = archetype_use("openEHR-EHR-EVALUATION.clinical_synopsis.v1");
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::FillerTypeMismatch { slot_type, filler_type, .. })
             if slot_type == "CLUSTER" && filler_type == "EVALUATION"
     ));
@@ -1338,17 +1336,17 @@ fn a_fill_that_names_no_slot_is_refused() {
     let mut definition = birth_summary_with_fills();
     definition.root.fills[0].path = "/data[at0001]".to_owned();
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::NotASlot { .. })
     ));
     definition.root.fills[0].path = "/data[at0001]/items[at9999]".to_owned();
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::PathNotFound { found: 0, .. })
     ));
     definition.root.fills[0].path = "data[at0001]".to_owned();
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::MalformedPath { .. })
     ));
 }
@@ -1361,8 +1359,8 @@ fn narrowings_apply_and_widenings_are_refused() {
         path: PLACE_OF_BIRTH_SLOT.to_owned(),
         occurrences: closed(0, 1),
     });
-    let built = openehr_its::opt14_writer::assemble::build(&definition, &library)
-        .expect("a narrowing builds");
+    let built =
+        openehr_its::opt14_writer::build(&definition, &library).expect("a narrowing builds");
     let slot = items_children(&built)
         .iter()
         .find(|c| head(c).2 == "at0005")
@@ -1374,7 +1372,7 @@ fn narrowings_apply_and_widenings_are_refused() {
         occurrences: closed(0, 1),
     }];
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::Widening {
             what: "occurrences",
             ..
@@ -1384,7 +1382,7 @@ fn narrowings_apply_and_widenings_are_refused() {
         path: "/data[at0001]".to_owned(),
     }];
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::Widening { .. })
     ));
 }
@@ -1398,7 +1396,7 @@ fn an_existence_of_zero_removes_the_attribute() {
         path: "/protocol".to_owned(),
         existence: closed(0, 0),
     });
-    let built = openehr_its::opt14_writer::assemble::build(&definition, &library).expect("builds");
+    let built = openehr_its::opt14_writer::build(&definition, &library).expect("builds");
     assert!(
         !built
             .definition
@@ -1412,7 +1410,7 @@ fn an_existence_of_zero_removes_the_attribute() {
         existence: closed(0, 1),
     }];
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::Widening {
             what: "existence",
             ..
@@ -1428,13 +1426,13 @@ fn a_missing_archetype_or_language_is_refused() {
         archetype_use("openEHR-EHR-EVALUATION.no_such.v1"),
     );
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::ArchetypeNotFound { archetype_id }) if archetype_id.ends_with("no_such.v1")
     ));
     let mut definition = birth_summary_with_fills();
     definition.language.code_string = "xx".to_owned();
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::MissingLanguage { language, .. }) if language == "xx"
     ));
 }
@@ -1470,7 +1468,7 @@ fn a_recursive_internal_reference_is_refused() {
     library.insert(synopsis);
     let definition = template("Synopsis", archetype_use(id));
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::RecursiveInternalRef { .. })
     ));
 }
@@ -1506,8 +1504,7 @@ fn imaging_report() -> TemplateDefinition {
 #[test]
 fn an_archetype_takes_an_open_attribute_as_the_reference_model_declares_it() {
     let library = library();
-    let built =
-        openehr_its::opt14_writer::assemble::build(&imaging_report(), &library).expect("builds");
+    let built = openehr_its::opt14_writer::build(&imaging_report(), &library).expect("builds");
     let content = built
         .definition
         .attributes
@@ -1557,18 +1554,18 @@ fn an_open_attribute_takes_only_an_archetype_of_its_type() {
     let mut definition = imaging_report();
     definition.root.fills[0].filler = archetype_use(ADDRESS);
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::FillerTypeMismatch { slot_type, .. }) if slot_type == "CONTENT_ITEM"
     ));
     definition.root.fills[0].path = "/no_such_attribute".to_owned();
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::AttributeNotInModel { .. })
     ));
     let mut definition = imaging_report();
     definition.root.fills[0].path = "/context".to_owned();
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::AttributeConstrained { .. })
     ));
 }
@@ -1594,7 +1591,7 @@ fn a_template_constrains_an_open_attribute() {
         path: "/data[at0001]/items[at0002]".to_owned(),
         attribute: name.clone(),
     });
-    let built = openehr_its::opt14_writer::assemble::build(&definition, &library).expect("builds");
+    let built = openehr_its::opt14_writer::build(&definition, &library).expect("builds");
     assert!(
         built
             .definition
@@ -1607,7 +1604,7 @@ fn a_template_constrains_an_open_attribute() {
         attribute: name.clone(),
     });
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::AttributeConstrained { .. })
     ));
     let mut bogus = name;
@@ -1619,7 +1616,7 @@ fn a_template_constrains_an_open_attribute() {
         attribute: bogus,
     }];
     assert!(matches!(
-        openehr_its::opt14_writer::assemble::build(&definition, &library),
+        openehr_its::opt14_writer::build(&definition, &library),
         Err(WriteError::AttributeNotInModel { .. })
     ));
 }
@@ -1677,7 +1674,7 @@ fn name_constraint(text: &str) -> CAttribute {
 /// Builds `definition`, checks its OPT against `Template.xsd`, reads it back
 /// to the same model and writes the same bytes twice.
 fn written(definition: &TemplateDefinition, library: &ArchetypeLibrary) -> OperationalTemplate {
-    let built = openehr_its::opt14_writer::assemble::build(definition, library).expect("builds");
+    let built = openehr_its::opt14_writer::build(definition, library).expect("builds");
     let xml = openehr_its::opt14_writer::write(definition, library).expect("writes");
     assert_eq!(
         openehr_its::opt14_writer::write(definition, library).expect("writes"),
@@ -1811,7 +1808,7 @@ fn a_clone_the_archetype_does_not_admit_is_refused() {
         let mut root = archetype_use(ADDRESS);
         root.narrowings
             .extend(clones.into_iter().map(Narrowing::Clone));
-        openehr_its::opt14_writer::assemble::build(&template("Address", root), library)
+        openehr_its::opt14_writer::build(&template("Address", root), library)
     };
     // `/items[at0004]` occurs at most once.
     assert!(matches!(
@@ -1906,7 +1903,7 @@ fn a_redefinition_that_does_not_narrow_is_refused() {
             path: path.to_owned(),
             objects: vec![object],
         });
-        openehr_its::opt14_writer::assemble::build(&template("Address", root), &library)
+        openehr_its::opt14_writer::build(&template("Address", root), &library)
     };
     let value = format!("{STREET}/value");
     assert!(matches!(
@@ -1969,7 +1966,7 @@ fn a_clone_of_a_node_that_cannot_repeat_is_refused() {
     let build = |id: &str, clone: NodeClone| {
         let mut root = archetype_use(id);
         root.narrowings.push(Narrowing::Clone(clone));
-        openehr_its::opt14_writer::assemble::build(&template("Clone", root), &library)
+        openehr_its::opt14_writer::build(&template("Clone", root), &library)
     };
     assert!(
         matches!(
@@ -2028,7 +2025,7 @@ fn a_redefinition_overlays_the_attributes_it_names() {
             path: "/items".to_owned(),
             objects: vec![object],
         });
-        openehr_its::opt14_writer::assemble::build(&template("Address", root), &library)
+        openehr_its::opt14_writer::build(&template("Address", root), &library)
     };
     let built = redefine(element_with(single("value", closed(0, 0)))).expect("builds");
     let street = root_items(&built)
@@ -2130,7 +2127,7 @@ fn a_redefined_leaf_narrows_the_archetype_leaf() {
         format!("{built:?}").contains("upper: Some(300.0)"),
         "the narrower magnitude is written"
     );
-    let refusal = openehr_its::opt14_writer::assemble::build(
+    let refusal = openehr_its::opt14_writer::build(
         &redefined(millimetres_of_mercury("0.0", "1500.0")),
         &library,
     );

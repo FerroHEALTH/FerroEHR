@@ -9,71 +9,16 @@ use openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase;
 
 use super::path::{self, Step, Unresolved};
 use super::redefine::{self, Site};
-use super::{
-    ArchetypeLibrary, ArchetypeUse, Narrowing, NodeClone, SlotFill, TemplateDefinition, WriteError,
-};
+use super::{ArchetypeLibrary, ArchetypeUse, Narrowing, NodeClone, SlotFill, WriteError};
 use super::{interval, slot};
 use crate::opt14::types::{
     Archetype, CArchetypeRoot, CAttribute, CComplexObject, CMultipleAttribute, CObject,
-    CSingleAttribute, Cardinality, FlatArchetypeOntology, Intervalofinteger, OperationalTemplate,
+    CSingleAttribute, Cardinality, FlatArchetypeOntology, Intervalofinteger,
 };
-
-/// Builds the operational template of `definition` over `library`.
-///
-/// The root archetype becomes the OPT `definition`, a `C_ARCHETYPE_ROOT`
-/// carrying the template id; every filler becomes a `C_ARCHETYPE_ROOT` placed
-/// directly after its slot, or in the open attribute it names. Each root carries its archetype's term
-/// definitions in the template language and its term bindings, and
-/// `component_ontologies` carries every constituent's whole ontology, once
-/// per archetype id, in first-use order.
-///
-/// # Errors
-///
-/// Returns a [`WriteError`] when an archetype is missing from the library or
-/// lacks the template language, a path does not resolve, a slot refuses its
-/// filler, a constraint widens the archetype's or constrains an attribute
-/// that is taken or absent from the reference model, a redefinition names a
-/// type that does not conform or no single node, a clone is not admitted or
-/// not told apart by its name, or an internal reference is recursive.
-pub fn build(
-    definition: &TemplateDefinition,
-    library: &ArchetypeLibrary,
-) -> Result<OperationalTemplate, WriteError> {
-    let mut flattener = Flattener {
-        library,
-        language: &definition.language,
-        components: Vec::new(),
-    };
-    let mut root = flattener.archetype_root(&definition.root, None)?;
-    // NOTE: Template.xsd declares C_ARCHETYPE_ROOT.template_id with no semantics; no openEHR
-    // spec governs it, and the writer names the template on the definition root (our design).
-    root.template_id = Some(definition.template_id.clone());
-    let component_ontologies = flattener
-        .components
-        .iter()
-        .filter_map(|id| library.get(id))
-        .map(flat_ontology)
-        .collect();
-    Ok(OperationalTemplate {
-        language: definition.language.clone(),
-        is_controlled: None,
-        description: definition.description.clone(),
-        revision_history: None,
-        uid: definition.uid.clone(),
-        template_id: definition.template_id.clone(),
-        concept: definition.concept.clone(),
-        definition: root,
-        ontology: None,
-        component_ontologies,
-        annotations: Vec::new(),
-        constraints: None,
-        view: None,
-    })
-}
 
 /// A constituent's whole ontology, every language, as `component_ontologies`
 /// carries it.
-fn flat_ontology(archetype: &Archetype) -> FlatArchetypeOntology {
+pub(super) fn flat_ontology(archetype: &Archetype) -> FlatArchetypeOntology {
     // NOTE: OPT2 master03-opt_raw.adoc §Terminology gathers each constituent's flat
     // terminology; Template.xsd's only home for all its languages is component_ontologies.
     FlatArchetypeOntology {
@@ -86,11 +31,11 @@ fn flat_ontology(archetype: &Archetype) -> FlatArchetypeOntology {
 }
 
 /// The state of one build: the inputs and the constituents seen so far.
-struct Flattener<'a> {
-    library: &'a ArchetypeLibrary,
-    language: &'a CodePhrase,
+pub(super) struct Flattener<'a> {
+    pub(super) library: &'a ArchetypeLibrary,
+    pub(super) language: &'a CodePhrase,
     /// Archetype ids in first-use order, each once.
-    components: Vec<String>,
+    pub(super) components: Vec<String>,
 }
 
 fn lookup<'a>(
@@ -107,7 +52,7 @@ fn lookup<'a>(
 impl Flattener<'_> {
     /// Flattens one archetype use into its `C_ARCHETYPE_ROOT`: internal
     /// references inline, then [`Self::apply`].
-    fn archetype_root(
+    pub(super) fn archetype_root(
         &mut self,
         archetype_use: &ArchetypeUse,
         occurrences: Option<Intervalofinteger>,
