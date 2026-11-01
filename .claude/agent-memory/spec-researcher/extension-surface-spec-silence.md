@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 Routing answer for "does any openEHR spec govern a server serving endpoints
 beyond the released ITS-REST operations?" — **NO released clause exists**.
 Confirmed first-hand 2026-07-27 across the vendored tree.
@@ -33,10 +36,10 @@ Confirmed first-hand 2026-07-27 across the vendored tree.
 health probes, an operational status document, an ops-introspection/metrics
 surface, an OAS/Swagger-serving endpoint, multi-tenancy, event subscriptions,
 FHIR connectors. None of RM/BASE/AM/QUERY/TERM/SM/ITS-REST/ITS-XML/CNF names
-any of them. Terminology is the exception: the *operation semantics* are SM
-`master12-terminology_service.adoc` (`I_TERMINOLOGY_SERVICE`, 9 calls), but no
-released ITS-REST wire contract exists for it — cite SM for semantics, flag the
-wire shape as own-design.
+any of them as an authority. Terminology is the closest case: SM
+`master12-terminology_service.adoc` (`I_TERMINOLOGY_SERVICE`, 9 calls) describes
+operation semantics, but SM is reference text only and no released ITS-REST
+wire contract exists, so both the semantics and the wire shape are own design.
 
 ## System API
 

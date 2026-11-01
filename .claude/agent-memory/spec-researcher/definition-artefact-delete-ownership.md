@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # Who owns archetype / template / OPT deletion — file map
 
 Companion to [[admin-api-location]], [[adl14-aom14-validity-location]],
@@ -20,9 +23,10 @@ Companion to [[admin-api-location]], [[adl14-aom14-validity-location]],
 archetype-delete / artefact-delete / admin-template-delete route is OWN EXTENSION.
 Lifecycle: Definition API `x-status: STABLE`, Admin API `x-status: DEVELOPMENT`.
 
-## SM assigns ALL of them to the Definitions component (the decisive citation)
+## SM assigns ALL of them to the Definitions component (reference text only)
 `SM/docs/openehr_platform/master04-definition_package.adoc` §Archetypes and
-Templates — the one sentence that settles ownership: the ADL14/ADL2 interfaces
+Templates — the sentence it states on ownership, which grounds nothing (the
+route ownership is our own design): the ADL14/ADL2 interfaces
 "enable upload, updating and **removal** of archetypes and templates". Also
 states the ADL2 kind-collapse ("archetypes and 'templates' are all instances of
 archetypes, formally speaking") and that ADL1.4 templates are "distinct

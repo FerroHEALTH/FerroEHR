@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 `docs/specs/openehr/ITS-REST/specifications/docs/overview/Amendment_record.md`
 is the authoritative date line for every `applies: { its_rest: … }` floor. It is
 HTML-in-markdown; strip tags to read it.

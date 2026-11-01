@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # ITS-REST ADL2 template operations — wire-contract spec locations
 
 Base path `/definition/template/adl2` (server `https://{baseUrl}/v1`, `definition.openapi.yaml` L18). Path->op wiring: `docs/specs/openehr/ITS-REST/specifications/definition.openapi.yaml` L36-49.

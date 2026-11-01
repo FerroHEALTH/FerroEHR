@@ -5,6 +5,9 @@ metadata:
   type: feedback
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 Verified 2026-08-02 against RM 1.2.0
 `docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
 lines 3–18 (§6.1 = TWO paragraphs + two figures; §6.2 Basic Semantics starts
@@ -46,7 +49,8 @@ mismatch, `versioning/import.rs:258`).
   PARTY includes all the compositional parts, such as … Party relationships of
   which it is the source"; §Party Relationships: "stored as part of the data of
   the PARTY designated as the source"; `PARTY.relationships` is an inline
-  `List<PARTY_RELATIONSHIP>`. SM `i_party_relationship.adoc` contradicts it —
+  `List<PARTY_RELATIONSHIP>`. SM `i_party_relationship.adoc` (reference text
+  only) reads differently —
   `a_versioned_party_rel_id: UUID`, "Causes server-side creation of a new
   ORIGINAL_VERSION and CONTRIBUTION", `versioned_object_does_not_exist`. We do
   BOTH (own `kind='PARTY_RELATIONSHIP'` container + inline validation in

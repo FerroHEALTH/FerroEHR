@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # `is_modifiable` content-write guard — where the requirements live
 
 **The ENTIRE normative rule is two RM prose sentences + one class-table

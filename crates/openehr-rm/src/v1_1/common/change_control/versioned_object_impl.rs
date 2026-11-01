@@ -28,8 +28,8 @@
 //!
 //! They are therefore repository operations by nature: a conforming platform
 //! realizes the twelve query functions and the committal operations in its
-//! own persistence/versioning layers, over the stored version set (see the SM
-//! `I_EHR_CONTRIBUTION` / change-control semantics,
+//! own persistence/versioning layers, over the stored version set (the RM
+//! change-control semantics,
 //! `docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`).
 //!
 //! NOTE: `commit_original_merged_version` has NO wire realization,

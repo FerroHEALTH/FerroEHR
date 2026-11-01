@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # AQL result-set equivalence — location map
 
 **AQL 1.1 semantics** (QUERY component, `docs/specs/openehr/QUERY/docs/AQL/`):

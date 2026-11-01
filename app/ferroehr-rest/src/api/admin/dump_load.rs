@@ -89,8 +89,7 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
                                 `compression_format` \
                                 (`zip` \\| `7z`; absent = uncompressed) and \
                                 `segment_split_size` (kb, default 1024). \
-                                `encoding` names an `ENCODING_FORMAT` member \
-                                and the vendored enumeration is EMPTY, so any \
+                                The extension defines no `encoding`, so any \
                                 value is refused.",
                  example = json!({
                      "file_sys_loc": "/tmp/openehr-export",
@@ -107,8 +106,8 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
         (status = 400, description = "`file_sys_loc` is absent or blank, a \
                                       format value names no member of its \
                                       vendored enumeration, `encoding` is \
-                                      present (`ENCODING_FORMAT` is an empty \
-                                      enumeration), or `segment_split_size` is \
+                                      present (the extension defines no \
+                                      encoding), or `segment_split_size` is \
                                       not a positive integer.",
          body = serde_json::Value),
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
@@ -275,8 +274,8 @@ fn file_sys_loc(body: &Value) -> Result<String, RestError> {
         .filter(|s| !s.is_empty())
         .ok_or_else(|| {
             RestError::from(ApiError::BadRequest(
-                "request body must carry a non-empty `file_sys_loc` string (the SM \
-                 file-system location parameter)"
+                "request body must carry a non-empty `file_sys_loc` string, a location \
+                 on the server's file system (FerroEHR's own dump/load extension)"
                     .to_owned(),
             ))
         })?;
@@ -290,8 +289,8 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
     // No encoding is defined, so no value a client can send names one.
     if body.get("encoding").is_some() {
         return Err(RestError::from(ApiError::BadRequest(
-            "`encoding` names an ENCODING_FORMAT member, and the vendored SM enumeration \
-             (encoding_format.adoc) declares none — no value is representable"
+            "`encoding` is not accepted: FerroEHR's own dump/load extension defines no \
+             encoding, so no value names one"
                 .to_owned(),
         )));
     }

@@ -5,6 +5,9 @@ metadata:
   type: reference
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 # ADL 1.4 / AOM 1.4 validity + ADL14 REST/SM location
 
 ## AOM 1.4 invariants (the catalogue is CLASS-TABLE-based, not V-coded)

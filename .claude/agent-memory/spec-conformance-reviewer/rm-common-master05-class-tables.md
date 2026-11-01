@@ -5,6 +5,9 @@ metadata:
   type: feedback
 ---
 
+Reference text only where it cites the Service Model: SM is not an authority
+(owner ruling 2026-10-27); an SM line here grounds no verdict and no feature.
+
 Verified 2026-08-02 against RM 1.2.0
 `RM/docs/UML/classes/org.openehr.rm.common.{folder,versioned_folder,versioned_object}.adoc`
 (the two §5.2 includes at `master05-directory_package.adoc:32,34`).
