@@ -136,7 +136,7 @@ async fn assert_held(svc: &FerroEhrService, vo: &str) {
 async fn the_syslog_feed_carries_a_record_about_a_held_composition() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let mut listener = SyslogTlsListener::bind().await.expect("listener");
+    let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
     let (svc, sender, handle) = service(&pool, Some(&listener), None).await;
     let (ehr, vo) = held(&svc).await;
     let mut read = AuditEvent::new(

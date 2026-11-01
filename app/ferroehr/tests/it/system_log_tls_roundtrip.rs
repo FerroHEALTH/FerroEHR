@@ -19,7 +19,7 @@ use testkit::syslog_tls::{Ending, SyslogTlsListener};
 
 #[tokio::test]
 async fn tls_octet_counted_frame_round_trips() {
-    let mut listener = SyslogTlsListener::bind().await.expect("listener");
+    let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
     let config = SyslogConfig {
         enabled: true,
         host: "localhost".to_owned(),
@@ -59,7 +59,7 @@ async fn tls_octet_counted_frame_round_trips() {
 /// loses nothing.
 #[tokio::test]
 async fn a_record_whose_send_fails_is_delivered_later() {
-    let mut listener = SyslogTlsListener::bind_refusing(1).await.expect("listener");
+    let mut listener = SyslogTlsListener::bind(1).await.expect("listener");
     let config = SyslogConfig {
         enabled: true,
         host: "localhost".to_owned(),
@@ -105,7 +105,7 @@ async fn a_record_whose_send_fails_is_delivered_later() {
 /// discard the records sent last (#3959).
 #[tokio::test]
 async fn the_drain_closes_its_connection_with_close_notify_when_it_exits() {
-    let mut listener = SyslogTlsListener::bind().await.expect("listener");
+    let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
     let config = AuditConfig {
         enabled: true,
         store: StoreConfig {

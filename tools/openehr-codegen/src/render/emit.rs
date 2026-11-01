@@ -34,7 +34,9 @@ use crate::plan::composition::{
     CrateComposition, GenerationSpec, GenerationUnit, generation_variant,
 };
 use crate::plan::construction;
-use crate::plan::overrides::{back_reference, class_binding, type_override, untyped_field};
+use crate::plan::overrides::{
+    ContradictionKind, back_reference, class_binding, contradicted, type_override, untyped_field,
+};
 use crate::plan::{Emission, decide};
 use crate::render::naming;
 use std::collections::{BTreeMap, BTreeSet};
@@ -1014,7 +1016,7 @@ fn render_constants(class: &BmmClass, ty: &str) -> String {
         if i > 0 {
             b.push('\n');
         }
-        doc_block(&mut b, c.documentation.as_deref(), "    ");
+        doc_block_summarized(&mut b, c.documentation.as_deref(), "    ", "");
         b.push_str(&format!("    /// BMM constant `{}`.\n", c.name));
         let (rust_ty, lit) = const_literal(c, &siblings);
         b.push_str(&format!(
@@ -1261,7 +1263,7 @@ fn single_field_type(
 ///   §Invariants).
 ///
 /// The `1..*` source is the BMM minus
-/// [`crate::plan::overrides::cardinality_contradicted`] (an attribute whose
+/// [`crate::plan::overrides::contradicted`] (an attribute whose
 /// declared lower bound the release's own syntax chapter contradicts). The write direction is
 /// unaffected either way: the canonical-JSON writer omits an empty list
 /// whether it is `None` or `Some(vec![])` (ITS-REST overview `Resources.md`
@@ -1292,7 +1294,7 @@ fn container_field_type(
     }
     let item_ty = model.render_type(shape.item, generics, subst, local, external);
     let lower_bound_one = shape.cardinality.as_ref().is_some_and(|c| c.lower >= 1)
-        && !crate::plan::overrides::cardinality_contradicted(&class.name, &p.name);
+        && !contradicted(&class.name, &p.name, ContradictionKind::LowerBound);
     let nonempty_when_present = crate::analyze::nonempty_optional_lists_cached(model)
         .iter()
         .any(|(decl, attr)| {
@@ -1910,12 +1912,8 @@ fn doc_summary_then(b: &mut String, summary: &str, doc: Option<&str>, indent: &s
     b.push_str(&format!("{indent}/// {summary}\n"));
     if doc.is_some_and(|d| !d.trim().is_empty()) {
         b.push_str(&format!("{indent}///\n"));
-        doc_block(b, doc, indent);
+        doc_block_summarized(b, doc, indent, "");
     }
-}
-
-fn doc_block(b: &mut String, doc: Option<&str>, indent: &str) {
-    doc_block_summarized(b, doc, indent, "");
 }
 
 fn doc_block_summarized(b: &mut String, doc: Option<&str>, indent: &str, summary_hint: &str) {
@@ -2253,7 +2251,7 @@ fn to_snake(spec: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{doc_block, sanitize_doc_prose};
+    use super::{doc_block_summarized, sanitize_doc_prose};
 
     #[test]
     fn bare_url_becomes_an_autolink() {
@@ -2304,9 +2302,10 @@ mod tests {
     #[test]
     fn fenced_and_indented_blocks_are_left_alone() {
         let mut out = String::new();
-        doc_block(
+        doc_block_summarized(
             &mut out,
             Some("Values:\n\n```\n\"YYYY-MM-DD\" -- [full]\n```"),
+            "",
             "",
         );
         assert_eq!(

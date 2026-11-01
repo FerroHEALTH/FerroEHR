@@ -58,7 +58,7 @@ const JSON_GEN_DIR: &str = "openehr-its/src/json_codec/generated";
 
 /// Exit code for an unrecognized subcommand (distinct from a pipeline failure,
 /// which exits 1, so a wrapper script can tell a typo from a codegen error).
-const EXIT_USAGE: u8 = 2;
+pub(crate) const EXIT_USAGE: u8 = 2;
 
 /// One file an emit target produces, before it reaches the filesystem.
 ///
@@ -108,36 +108,7 @@ fn write_emitted(files: &[EmittedFile]) -> std::io::Result<Vec<PathBuf>> {
     Ok(written)
 }
 
-pub(crate) fn run() -> std::process::ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    let cmd = args.first().map_or("check", String::as_str);
-    let result = match cmd {
-        "check" => cmd_check(),
-        "emit" => cmd_emit(args.get(1).map(PathBuf::from)),
-        "check-xsd" => cmd_check_xsd(),
-        "emit-xml" => cmd_emit_xml(),
-        "emit-json" => cmd_emit_json(),
-        "emit-rest" => cmd_emit_rest(),
-        "emit-opt" => cmd_emit_opt(),
-        "emit-aom2" => cmd_emit_aom2(),
-        "emit-rm-model" => cmd_emit_rm_model(),
-        "emit-validate" => cmd_emit_validate(),
-        "model-query" => cmd_model_query(args.get(1..).unwrap_or_default()),
-        other => {
-            eprintln!(
-                "unknown command {other:?}; use `check`, `emit [OUTDIR]`, `check-xsd`, `emit-xml`, `emit-json`, `emit-rest`, `emit-opt`, `emit-aom2`, `emit-rm-model`, `emit-validate`, or `model-query`"
-            );
-            return std::process::ExitCode::from(EXIT_USAGE);
-        }
-    };
-    if let Err(e) = result {
-        eprintln!("error: {e}");
-        return std::process::ExitCode::FAILURE;
-    }
-    std::process::ExitCode::SUCCESS
-}
-
-fn cmd_check() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_check() -> Result<(), Box<dyn std::error::Error>> {
     // Every generation of every composition entry: load + parse each vendored
     // file, resolve its paired dependency generations, and prove the model
     // constructible — the full input-validation pass, not a summary of three
@@ -186,7 +157,7 @@ fn cmd_check() -> Result<(), Box<dyn std::error::Error>> {
 /// row per class × **carried** attribute (inherited ones included), adding the
 /// declaring class in the `declared_on` column — the inheritance dimension a
 /// declared-only view cannot express.
-fn cmd_model_query(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_model_query(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let (query, format) = parse_model_query_args(args)?;
     print!("{}", model_query::render(&query, format)?);
     Ok(())
@@ -245,7 +216,7 @@ fn parse_model_query_args(
 
 /// Emit the ITS-REST contract (DTOs, param structs, server trait, route table)
 /// for each API group into `openehr-its/src/rest/generated/`.
-fn cmd_emit_rest() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit_rest() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_rest_files()?;
     let written = write_emitted(&files)?;
     rustfmt(&written)?;
@@ -354,7 +325,7 @@ pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
 /// Emit canonical-XML `ToXml`/`FromXml` impls for the RM/BASE spec types into
 /// `openehr-its/src/xml/generated/`. Generates both wire lineages: v1
 /// (`.../v1`, parity target) and v2 (`.../v2`, latest).
-fn cmd_emit_xml() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit_xml() -> Result<(), Box<dyn std::error::Error>> {
     let emission = render_xml_files()?;
     let written = write_emitted(&emission.files)?;
     rustfmt(&written)?;
@@ -451,7 +422,7 @@ pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Erro
 /// `openehr-its/src/json_codec/generated/`, where it can name every crate.
 /// Covers the same crate composition `emit` consumes, including AM 2.4's
 /// cross-schema re-emission closure.
-fn cmd_emit_json() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit_json() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_json_files()?;
     let mut written = write_emitted(&files)?;
     for f in &files {
@@ -672,7 +643,7 @@ fn render_xsd_model(
 /// `ToXml`/`FromXml` for `OPERATIONAL_TEMPLATE`, generated from the AM/OPT
 /// constraint XSD closure (`Template.xsd` + includes). RM instance types
 /// resolve to the already-generated `openehr-base`/`openehr-rm` impls.
-fn cmd_emit_opt() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit_opt() -> Result<(), Box<dyn std::error::Error>> {
     write_xsd_emission("emit-opt", &render_opt_files()?)
 }
 
@@ -708,7 +679,7 @@ pub(crate) fn render_opt_files() -> Result<XsdEmission, Box<dyn std::error::Erro
 /// [`xsd::AOM2_MODEL_FILES`] for the full adjudication, including why the model
 /// form's entry points are typed to `AUTHORED_ARCHETYPE` and not to the
 /// `abstract` `ARCHETYPE` the schema's global element names.
-fn cmd_emit_aom2() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit_aom2() -> Result<(), Box<dyn std::error::Error>> {
     write_xsd_emission("emit-aom2", &render_aom2_files()?)
 }
 
@@ -769,7 +740,7 @@ fn write_xsd_emission(
 /// BASE + RM BMM `emit` consumes. Writes the `model/` subtree in place (does not
 /// touch the generated spec files) and declares `pub mod model;` in `lib.rs` if
 /// absent, so it is correct run standalone; `emit` produces the identical output.
-fn cmd_emit_rm_model() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit_rm_model() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_rm_model_files()?;
     let mut written = write_emitted(&files)?;
     let src = crates_root().join(RM_CRATE).join("src");
@@ -849,7 +820,7 @@ fn rm_crate_files(files: Vec<GenFile>) -> Vec<EmittedFile> {
 /// (`pub(crate) mod generated;`) is a permanent hand edit in the hand-written
 /// `validate.rs`, so this target never touches a hand-written file. `emit`
 /// produces the identical output (via `inject_validate`).
-fn cmd_emit_validate() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit_validate() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_validate_files()?;
     let written = write_emitted(&files)?;
     rustfmt(&written)?;
@@ -931,7 +902,7 @@ fn inject_rm_model(files: &mut Vec<GenFile>, mut model_files: Vec<GenFile>, modu
 
 /// Diagnostic: parse the vendored v1 RM-instance XSDs and print a summary +
 /// a couple of flattened views, to validate the XSD reader.
-fn cmd_check_xsd() -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_check_xsd() -> Result<(), Box<dyn std::error::Error>> {
     let files = xsd::v1_files(Path::new(XSD_V1_DIR));
     let model = xsd::XsdModel::parse_files(&files)?;
     println!(
@@ -1061,7 +1032,7 @@ fn templates_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("templates")
 }
 
-fn cmd_emit(_outdir: Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn cmd_emit(_outdir: Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
     let files = render_emit_files()?;
     for comp in composition::COMPOSITIONS {
         let crate_files: Vec<&EmittedFile> = files

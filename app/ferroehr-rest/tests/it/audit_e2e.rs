@@ -142,7 +142,7 @@ fn auth_off_config() -> AppConfig {
 /// Bind a TLS syslog listener and an [`AuditSender`] (fail-open, login suppressed by
 /// default) shipping DICOM records to it.
 async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender) {
-    let socket = SyslogTlsListener::bind().await.expect("syslog listener");
+    let socket = SyslogTlsListener::bind(0).await.expect("syslog listener");
     let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,

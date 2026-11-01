@@ -120,7 +120,7 @@ async fn app(rbac_enabled: bool, audit: Option<AuditSender>) -> (testkit::TestDb
 /// (fail-open, login events suppressed). The returned listener receives the RFC
 /// 5425 frames; each carries the DICOM `AuditMessage` XML in its `MSG` field.
 async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
-    let socket = SyslogTlsListener::bind().await.expect("syslog listener");
+    let socket = SyslogTlsListener::bind(0).await.expect("syslog listener");
     let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,
