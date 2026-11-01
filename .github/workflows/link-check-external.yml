@@ -57,7 +57,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0 # zizmor: ignore[cache-poisoning]
-      - uses: ./.github/actions/docs-toolchain
+      - uses: ./.github/actions/docs-toolchain # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
 
       - name: Render the generated includes the book expects
         run: |
@@ -121,7 +121,7 @@ jobs:
 
       - name: Open or update the report issue
         if: steps.lychee.outputs.finding == '1'
-        uses: ./.github/actions/file-watcher-issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           title: "docs: external links are failing the scheduled reachability check"
           body-file: body.md

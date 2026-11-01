@@ -42,13 +42,10 @@ use ferrohealth_ui::view::template::list::{
 };
 use ferrohealth_ui::view::tree::{Tree, TreeKind, TreeNode, TreeWords, tree_view};
 
-use crate::adl2::{TemplateFamily, split_hrid};
-use crate::bff::template_detail::TemplateDetail;
-use crate::bff::template_detail::{fetch_example, fetch_template_detail};
-use crate::bff::templates::TemplateRow;
+use crate::adl2::TemplateFamily;
+use crate::bff::template_detail::{TemplateDetail, fetch_example, fetch_template_detail};
 use crate::bff::templates::{
-    delete_adl2_artefact, list_adl2_templates, list_templates, upload_adl2_template,
-    upload_template,
+    TemplateRow, delete_adl2_artefact, list_adl2_templates, list_templates, upload_template,
 };
 use crate::builder::catalog::CatalogNode;
 use crate::components::source_upload;
@@ -381,6 +378,8 @@ pub enum Uploaded {
     Fresh,
     /// The CDR refused the upload.
     Refused(ViewerError),
+    /// The CDR refused the ADL 2 source `422` for the violations it found.
+    Invalid(Vec<crate::bff::template_adl2::Violation>),
     /// The upload succeeded and the browser was sent on.
     Left,
 }
@@ -399,23 +398,22 @@ pub async fn load_upload(
     };
     let source = posted.get("source-text").unwrap_or_default();
     let uploaded = match family {
-        TemplateFamily::Adl14 => upload_template(source).await.map(|id| template_href(&id)),
-        TemplateFamily::Adl2 => upload_adl2_template(source).await.map(|id| {
-            let (stem, release) = split_hrid(&id);
-            adl2_href(stem, release)
-        }),
+        TemplateFamily::Adl14 => upload_template(source)
+            .await
+            .map(|id| template_href(&id))
+            .map_err(Uploaded::Refused),
+        TemplateFamily::Adl2 => adl2::upload(source).await,
     };
     Ok(match uploaded {
         Ok(href) => {
             redirect_with(&href, &Done::ok(tr(DefinitionsMsg::TemplateUploaded)));
             Uploaded::Left
         }
-        Err(error) => Uploaded::Refused(error),
+        Err(refused) => refused,
     })
 }
 
 /// Upload a template, of the family the address names.
-/// Upload a template.
 pub async fn upload_page() -> Drawn {
     let posted = crate::posted::posted();
     let family = posted.as_ref().map_or_else(asked_family, |posted| {
@@ -430,21 +428,24 @@ pub async fn upload_page() -> Drawn {
         .as_ref()
         .and_then(|posted| posted.get("source-text"))
         .unwrap_or_default();
-    let mut top = None;
-    let mut line = (Glyph::UPLOAD, tr(DefinitionsMsg::TemplateNotYet));
-    match uploaded {
-        Ok(Uploaded::Fresh) => {}
+    let top = match uploaded {
+        Ok(Uploaded::Fresh) => None,
         Ok(Uploaded::Left) => return Drawn::default(),
+        Ok(Uploaded::Invalid(found)) => Some(adl2::violations_refused(&found)),
         Ok(Uploaded::Refused(error)) | Err(error) => {
-            line = (Glyph::CIRCLE_X, tr(DefinitionsMsg::TemplateNotUploaded));
             let found = findings_of(&error, &source, "source-text")
                 .map(|(heading, file)| diagnostics(&current(), &heading, &file));
-            top = Some(
+            Some(
                 refused(tr(DefinitionsMsg::TemplateUploadRefused), &error, None)
                     .then(opt(found.map(card_panel))),
-            );
+            )
         }
-    }
+    };
+    let line = if top.is_some() {
+        (Glyph::CIRCLE_X, tr(DefinitionsMsg::TemplateNotUploaded))
+    } else {
+        (Glyph::UPLOAD, tr(DefinitionsMsg::TemplateNotYet))
+    };
     dock_editor(EditorDock {
         form: UPLOAD_FORM.to_owned(),
         line: line.1,
@@ -960,7 +961,6 @@ pub async fn load_template(
     })
 }
 
-/// One ADL 1.4 template.
 /// One ADL 1.4 template.
 #[expect(
     clippy::too_many_lines,

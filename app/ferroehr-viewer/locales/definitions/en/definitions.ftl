@@ -122,6 +122,10 @@ template-not-yet = Not uploaded yet.
 template-not-uploaded = Not uploaded.
 template-upload = Upload this template
 template-upload-refused = The CDR refused the template, so nothing was uploaded.
+template-upload-invalid = { $count ->
+    [one] The CDR refused the template, so nothing was uploaded: it breaks 1 rule.
+   *[other] The CDR refused the template, so nothing was uploaded: it breaks { $count } rules.
+}
 
 term-subtitle = What the CDR can answer about the code sets it serves.
 term-operations = Terminology operations

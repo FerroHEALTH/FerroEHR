@@ -78,6 +78,9 @@ pub struct Report {
     pub features: Vec<&'static str>,
     /// The `openehr-*` crates this binary links, with their versions.
     pub openehr_crates: Vec<CrateVersion>,
+    /// Whether those versions are the ones published to crates.io or the
+    /// source tree's.
+    pub openehr_crates_origin: CrateOrigin,
     /// The licence summary `GET /management/status` serves; `None` when the embedded
     /// licence anchors could not be read.
     pub licence: Option<LicenceStatus>,
@@ -124,6 +127,35 @@ pub struct Target {
     pub os: &'static str,
     /// Whether debug assertions are compiled in, which only a debug build does.
     pub debug_assertions: bool,
+}
+
+/// Where the recorded `openehr-*` crate versions come from.
+///
+/// The `openehr-*` manifests in the source tree hold a floor below the line
+/// published on crates.io; the release lane writes the version it publishes
+/// into its checkout before it builds. No openEHR spec governs this: our own
+/// design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CrateOrigin {
+    /// A release build: the versions are the ones the release published to
+    /// crates.io.
+    Published,
+    /// Any other build, a pre-release included: the versions are the source
+    /// tree's manifests, which may name an older published version than the
+    /// content this binary links.
+    SourceTree,
+}
+
+impl CrateOrigin {
+    /// The origin the build script recorded for this binary.
+    #[must_use]
+    pub fn of_this_build() -> Self {
+        match env!("FERROEHR_OPENEHR_CRATES_ORIGIN") {
+            "published" => Self::Published,
+            _ => Self::SourceTree,
+        }
+    }
 }
 
 /// One linked crate and its version.
@@ -204,6 +236,7 @@ impl Report {
             },
             features: enabled_features(),
             openehr_crates,
+            openehr_crates_origin: CrateOrigin::of_this_build(),
             licence,
             deployment,
             schema,
@@ -536,5 +569,30 @@ mod tests {
             !names.contains(&"openehr-codegen"),
             "the code generator is not linked: {names:?}"
         );
+    }
+
+    /// A build no release lane stamped reports its `openehr-*` versions as the
+    /// source tree's, at the version the manifests hold.
+    #[test]
+    fn an_unstamped_build_names_its_crate_versions_the_source_trees() {
+        assert_eq!(CrateOrigin::of_this_build(), CrateOrigin::SourceTree);
+        assert_eq!(
+            serde_json::to_value(CrateOrigin::of_this_build()).ok(),
+            Some(serde_json::json!("source_tree"))
+        );
+        assert_eq!(
+            serde_json::to_value(CrateOrigin::Published).ok(),
+            Some(serde_json::json!("published"))
+        );
+        let manifest = include_str!("../../../crates/openehr-rm/Cargo.toml");
+        let floor = manifest
+            .lines()
+            .find_map(|line| line.strip_prefix("version = \""))
+            .and_then(|rest| rest.strip_suffix('"'));
+        let rm = openehr_crates()
+            .into_iter()
+            .find(|linked| linked.name == "openehr-rm")
+            .map(|linked| linked.version);
+        assert_eq!(rm, floor);
     }
 }

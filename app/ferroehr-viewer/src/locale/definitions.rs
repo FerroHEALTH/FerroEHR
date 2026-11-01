@@ -178,6 +178,8 @@ crate::locale::messages! {
         TemplateUid = "template-uid",
         /// `Upload this template`
         TemplateUpload = "template-upload",
+        /// `{ $count ->`
+        TemplateUploadInvalid = "template-upload-invalid",
         /// `The CDR refused the template, so nothing was uploaded.`
         TemplateUploadRefused = "template-upload-refused",
         /// `Choose a file or paste the source; the CDR validates it on upload.`

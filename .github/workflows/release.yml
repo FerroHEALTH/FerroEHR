@@ -165,7 +165,7 @@ jobs:
       # The tag comes from the step above (a dispatch names it, a push carries
       # it), never from the ref alone. THE prerelease rule, one definition.
       - id: kind
-        uses: ./.github/actions/release-kind
+        uses: ./.github/actions/release-kind # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           tag: ${{ steps.tag.outputs.tag }}
 
@@ -186,7 +186,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # The chart-version check of the list below reads the registry with helm.
-      - uses: ./.github/actions/helm-pinned
+      - uses: ./.github/actions/helm-pinned # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
 
       # Every release fact, as ONE list: the milestone, the workspace version,
       # the changelog's structure and Security rules for this section, the
@@ -380,12 +380,16 @@ jobs:
       contents: write # attach the per-arch tarballs to the release
       id-token: write # Sigstore, for the provenance + SBOM attestations
       attestations: write # store them against this repository
-    uses: ./.github/workflows/release-build.yml
+    uses: ./.github/workflows/release-build.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       tag: ${{ needs.plan.outputs.tag }}
       sha: ${{ github.sha }}
       target: ${{ matrix.target }}
       runner: ${{ matrix.runner }}
+      # Only a release publishes the crates (see the crates leg), so only a
+      # release stamps their version; the pre-release rule spelled inline, as
+      # .github/actions/release-kind says a `with:` on a job call must.
+      crate-version: ${{ needs.plan.outputs.is-release == 'true' && needs.plan.outputs.crate-version || '' }}
 
   # ── One CycloneDX SBOM per published crate ──────────────────────────────────
   # CRA Annex I Part II(1) (docs/law/eu/cra/text.html): the nine `openehr-*`
@@ -715,6 +719,15 @@ jobs:
         with:
           tool: cargo-auditable@0.7.5
 
+      # The openehr-* version the crates leg publishes, stamped as
+      # release-build.yml stamps it, so the image's report names it too. A
+      # pre-release publishes no crates and keeps the source tree's.
+      - name: Stamp the published openehr-* version
+        if: needs.plan.outputs.is-release == 'true'
+        env:
+          CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
+        run: bash scripts/release/publish-crates.sh stamp "$CRATE_VERSION"
+
       - name: Build (release, native)
         # The binary is produced by the ferroehr-server package (bin name
         # `ferroehr`) since the crate consolidation; `-p ferroehr` is the
@@ -728,6 +741,7 @@ jobs:
         env:
           REVISION: ${{ github.sha }}
           FERROEHR_RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+          FERROEHR_OPENEHR_CRATE_VERSION: ${{ needs.plan.outputs.is-release == 'true' && needs.plan.outputs.crate-version || '' }}
         run: cargo auditable build --release --locked -p ferroehr-server
 
       - name: Strip
@@ -767,7 +781,7 @@ jobs:
     # `defer-tags` pushes BY DIGEST: the tags are applied by scan-and-tag once
     # the vulnerability gate passes, so a HIGH finding can never already be
     # `latest` by the time the lane turns red (#2747).
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr
       defer-tags: true
@@ -868,7 +882,7 @@ jobs:
       id-token: write # Sigstore, for the signed attestations
       attestations: write # store them against this repository
     # The reusable SLSA Build L3 lane; see the app image above.
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr-viewer
       defer-tags: true
@@ -902,7 +916,7 @@ jobs:
     # The reusable SLSA Build L3 lane. QEMU: the one RUN layer (the Debian
     # security upgrade, #2408, and the GnuPG purge, #3673) executes on the
     # non-native platform.
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr-postgres
       defer-tags: true
@@ -935,7 +949,7 @@ jobs:
     permissions:
       contents: read
       packages: write # pull the pushed digests, then tag them
-    uses: ./.github/workflows/scan-and-tag.yml
+    uses: ./.github/workflows/scan-and-tag.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       app-image: ghcr.io/ferrohealth/ferroehr
       app-digest: ${{ needs.app-image.outputs.digest }}
@@ -1170,20 +1184,23 @@ jobs:
   # ── openEHR conformance against this release's own images (#4539) ──────────
   # The reusable conformance.yml on the digests app-image and postgres-image
   # pushed, which this pipeline compiled cold from no cache: the run pulls them
-  # and compiles nothing. It reports and gates nothing yet (#4455): announce
-  # names its outcome without failing on it, nothing else needs it, and the
-  # milestone does not wait for it. The badge push is the Action's on main
-  # only, so a tag run pushes none.
+  # and compiles nothing. While `advisory` is set it ends green and hands its
+  # verdict to announce as an output, which names it in the run summary
+  # (#4455, #4605); nothing else needs it, and the milestone does not wait for
+  # it. The badge push is the Action's on main only, so a tag run pushes none.
   conformance:
     name: conformance
     needs: [plan, app-image, postgres-image]
     permissions:
       contents: write # the reusable job's badge push, which never happens off main
       packages: read # pull the digests this run pushed
-    uses: ./.github/workflows/conformance.yml
+    uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       server-image: ghcr.io/ferrohealth/ferroehr@${{ needs.app-image.outputs.digest }}
       postgres-image: ghcr.io/ferrohealth/ferroehr-postgres@${{ needs.postgres-image.outputs.digest }}
+      # THE SWITCH (#4455): delete this line to make conformance gate the
+      # release, once the released run on main is green.
+      advisory: true
 
   # ── The Helm chart ──────────────────────────────────────────────────────────
   # `needs: scan-and-tag` is the whole fix for the defect class this pipeline
@@ -1205,7 +1222,7 @@ jobs:
     concurrency:
       group: publish-chart
       cancel-in-progress: false
-    uses: ./.github/workflows/build-chart.yml
+    uses: ./.github/workflows/build-chart.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       publish: true
       release-tag: ${{ needs.plan.outputs.tag }}
@@ -1247,13 +1264,13 @@ jobs:
       # recreate is the fresh boot that migrates the empty database, and the
       # verify below reads the release it just deployed.
       - name: Wipe the sandbox schemas (the deploy migrates a fresh database)
-        uses: ./.github/actions/hosted-deploy
+        uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           verb: wipe
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
       - name: Deploy the hosted sandbox
-        uses: ./.github/actions/hosted-deploy
+        uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           expected-version: ${{ needs.plan.outputs.version }}
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
@@ -1276,7 +1293,7 @@ jobs:
     permissions:
       contents: read
     secrets: inherit # zizmor: ignore[secrets-inherit]
-    uses: ./.github/workflows/sandbox-reseed.yml
+    uses: ./.github/workflows/sandbox-reseed.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       seed-only: true
 
@@ -1308,7 +1325,7 @@ jobs:
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
       # This job renders the book and pushes it; it lints and link-checks
       # nothing, so neither link-check tool is installed.
-      - uses: ./.github/actions/docs-toolchain
+      - uses: ./.github/actions/docs-toolchain # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           lint: "false"
           link-check: "false"
@@ -1562,6 +1579,7 @@ jobs:
           R_CRATES: ${{ needs.crates.result }}
           R_MILESTONE: ${{ needs.milestone.result }}
           R_CONFORMANCE: ${{ needs.conformance.result }}
+          CONFORMANCE_VERDICT: ${{ needs.conformance.outputs.verdict }}
         run: |
           set -uo pipefail
           fail=0
@@ -1581,10 +1599,6 @@ jobs:
             fi
             if [ "$skip_ok" = "prerelease" ] && [ "$result" = "skipped" ] && [ "$IS_RELEASE" != "true" ]; then
               rows="${rows}| ${leg} | skipped — pre-release |"$'\n'
-              return
-            fi
-            if [ "$skip_ok" = "advisory" ]; then
-              rows="${rows}| ${leg} | ${result} (reported, not gating) |"$'\n'
               return
             fi
             rows="${rows}| ${leg} | **${result}** |"$'\n'
@@ -1611,8 +1625,10 @@ jobs:
           check "docs freeze" "$R_DOCS_FREEZE" prerelease
           check "crates.io" "$R_CRATES" prerelease
           check "milestone closed" "$R_MILESTONE"
-          # Reported, not gating, until conformance on main is green (#4455).
-          check "conformance (released profile)" "$R_CONFORMANCE" advisory
+          # The job gates like every leg; while its call passes `advisory` it
+          # ends green whatever its verdict, which the row and the section
+          # below name (#4455).
+          check "conformance (released profile, verdict: ${CONFORMANCE_VERDICT:-none})" "$R_CONFORMANCE"
 
           chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | sed -n 1p)"
           crates_version="${CRATE_VERSION:-unknown}"
@@ -1644,6 +1660,16 @@ jobs:
             printf '| crates.io | %s |\n' \
               "$([ "$R_CRATES" = "success" ] && echo "${crates_count:-unknown} \`openehr-*\` crates at \`${crates_version}\`" || echo "$R_CRATES")"
             printf '\n'
+            printf '### Conformance\n\n'
+            # Named the way the 5.6.0-rc6 notes named it while main had red rows.
+            case "$CONFORMANCE_VERDICT" in
+              passed)
+                printf "The released-profile Veredictum run of this release's images passed.\n\n" ;;
+              failed)
+                printf "The released-profile Veredictum run of this release's images failed: the run on main still has known red rows, tracked on #4455, so %s does not claim a green Veredictum record. The %s job summary names each red row, or the step that could not run.\n\n" "$TAG" '`conformance`' ;;
+              *)
+                printf "The conformance run gave no verdict (job result: %s), so %s does not claim a green Veredictum record.\n\n" "$R_CONFORMANCE" "$TAG" ;;
+            esac
             if [ "$fail" != 0 ]; then
               printf '### Recovery\n\n'
               printf 'Re-run this pipeline for `%s`. Every leg is idempotent, so a re-run\n' "$TAG"

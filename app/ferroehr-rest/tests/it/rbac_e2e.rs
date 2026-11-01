@@ -402,6 +402,114 @@ async fn oauth2_committer_identifier_names_the_token_issuer() {
     );
 }
 
+/// Sends one request as `authorization` and returns its status, its `ETag`
+/// with the quotes and weak prefix removed, and its JSON body (`Null` when
+/// empty).
+async fn exchange(
+    app: &Router,
+    method: &str,
+    path: &str,
+    authorization: &str,
+    if_match: Option<&str>,
+    body: Option<&Value>,
+) -> (StatusCode, Option<String>, Value) {
+    let mut builder = Request::builder()
+        .method(method)
+        .uri(format!("{BASE}{path}"))
+        .header("authorization", authorization)
+        .header("accept", "application/json");
+    if let Some(tag) = if_match {
+        builder = builder.header("if-match", format!("\"{tag}\""));
+    }
+    let request = match body {
+        Some(json) => builder
+            .header("content-type", "application/json")
+            .body(Body::from(json.to_string())),
+        None => builder.body(Body::empty()),
+    }
+    .expect("request");
+    let resp = app.clone().oneshot(request).await.expect("oneshot");
+    let status = resp.status();
+    let etag = resp
+        .headers()
+        .get("ETag")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.trim_matches(['W', '/', '"']).to_owned());
+    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .expect("body");
+    let json = if bytes.is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_slice(&bytes).expect("json")
+    };
+    (status, etag, json)
+}
+
+/// With no committal headers, the committer a write records names the caller's
+/// login in the authority that issued it, whether the service builds the
+/// default (EHR creation) or the REST adapter does (an `EHR_STATUS` update):
+/// the token issuer for a Bearer caller, `ferroehr` for a Basic one. The
+/// authority is `DV_IDENTIFIER.issuer` (RM `data_types`
+/// `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc` §Attributes);
+/// the concrete string is spec-silent, our own design.
+#[tokio::test]
+async fn default_committer_names_the_callers_issuer_on_both_paths() {
+    let (_pg, app) = app(true, None).await;
+    let callers = [
+        (basic("user"), "user", "basic", "ferroehr"),
+        (bearer_with_roles(&["USER"]), "svc", "oauth2", ISSUER),
+    ];
+    for (authorization, subject, id_type, issuer) in callers {
+        let (created, ehr_id, _) = exchange(&app, "POST", "/ehr", &authorization, None, None).await;
+        assert_eq!(created, StatusCode::CREATED, "{id_type}: EHR created");
+        let ehr_id = ehr_id.expect("ETag names the EHR");
+
+        let status_path = format!("/ehr/{ehr_id}/ehr_status");
+        let (read, version, ehr_status) =
+            exchange(&app, "GET", &status_path, &authorization, None, None).await;
+        assert_eq!(read, StatusCode::OK, "{id_type}: EHR_STATUS read");
+        let version = version.expect("ETag names the EHR_STATUS version");
+        let (updated, _, _) = exchange(
+            &app,
+            "PUT",
+            &status_path,
+            &authorization,
+            Some(&version),
+            Some(&ehr_status),
+        )
+        .await;
+        assert_eq!(
+            updated,
+            StatusCode::NO_CONTENT,
+            "{id_type}: EHR_STATUS updated"
+        );
+
+        let history_path = format!("/ehr/{ehr_id}/versioned_ehr_status/revision_history");
+        let (listed, _, history) =
+            exchange(&app, "GET", &history_path, &authorization, None, None).await;
+        assert_eq!(listed, StatusCode::OK, "{id_type}: revision history");
+        let audits: Vec<&Value> = history["items"]
+            .as_array()
+            .expect("items")
+            .iter()
+            .flat_map(|item| item["audits"].as_array().expect("audits"))
+            .collect();
+        assert_eq!(
+            audits.len(),
+            2,
+            "{id_type}: the creation and the update: {history}"
+        );
+        for audit in audits {
+            let identifier = &audit["committer"]["identifiers"][0];
+            assert_eq!(audit["committer"]["name"], subject, "{id_type}: {history}");
+            assert_eq!(identifier["id"], subject, "{id_type}: {history}");
+            assert_eq!(identifier["type"], id_type, "{id_type}: {history}");
+            assert_eq!(identifier["issuer"], issuer, "{id_type}: {history}");
+        }
+    }
+}
+
 #[tokio::test]
 async fn rbac_deny_is_audited() {
     // A 403 from the RBAC gate carries the Principal, so the ATNA audit layer

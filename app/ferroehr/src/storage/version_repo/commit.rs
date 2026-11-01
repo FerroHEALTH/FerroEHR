@@ -236,6 +236,8 @@ pub struct FoldedVersion<'a> {
     pub creating_system_id: &'a str,
     /// `ORIGINAL_VERSION.preceding_version_uid`; `None` for a first version.
     pub preceding_version_uid: Option<&'a str>,
+    /// `ORIGINAL_VERSION.other_input_version_uids`; empty when not a merge.
+    pub other_input_version_uids: &'a [String],
     /// The OPT `template_id` a COMPOSITION was committed against (else `None`).
     pub template_id: Option<&'a str>,
     /// `VERSION.signature` (0..1), opaque radix-64.
@@ -392,10 +394,11 @@ pub async fn commit_new_version(
                    (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
                     lifecycle_state, creating_system_id, preceding_version_uid, \
                     contribution_id, commit_audit_id, template_id, signature, \
-                    signature_client_supplied, stable_compatible, body, origins, committed_at) \
+                    signature_client_supplied, stable_compatible, body, origins, committed_at, \
+                    other_input_version_uids) \
                  SELECT $8, $9, $7, $10, $11, $12, $13, \
                         $14, $15, $16, c.id, a.id, $17, $18, $19, $20, $21, $23, \
-                        $22::timestamptz \
+                        $22::timestamptz, $24 \
                  FROM a, c \
                  RETURNING 1 \
              ), h AS ( {} \
@@ -413,7 +416,7 @@ pub async fn commit_new_version(
                 committed_at: "$22",
             }
             .sql(),
-            crate::storage::node_repo::node_insert_cte("$8", "$10", "$7", 24)
+            crate::storage::node_repo::node_insert_cte("$8", "$10", "$7", 25)
         )
     });
     let row = sqlx::query(sqlx::AssertSqlSafe(SQL.as_str()))
@@ -439,7 +442,8 @@ pub async fn commit_new_version(
         .bind(v.stable_compatible)
         .bind(v.body)
         .bind(v.time_committed.to_string())
-        .bind(serde_json::json!(v.origins));
+        .bind(serde_json::json!(v.origins))
+        .bind(super::optional_json_array(v.other_input_version_uids));
     let node_refs: Vec<&crate::storage::row::NodeRow> = v.rows.iter().collect();
     let row = crate::storage::node_repo::bind_node_arrays(row, &node_refs)
         .fetch_one(&mut *tx)
@@ -488,10 +492,11 @@ pub async fn commit_version_into(
                    (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
                     lifecycle_state, creating_system_id, preceding_version_uid, \
                     contribution_id, commit_audit_id, template_id, signature, \
-                    signature_client_supplied, stable_compatible, body, origins, committed_at) \
+                    signature_client_supplied, stable_compatible, body, origins, committed_at, \
+                    other_input_version_uids) \
                  SELECT $6, $7, $8, $9, $10, $11, $12, \
                         $13, $14, $15, $16, a.id, $17, $18, $19, $20, $21, $23, \
-                        $22::timestamptz \
+                        $22::timestamptz, $24 \
                  FROM a \
                  RETURNING 1 \
              ), h AS ( {} \
@@ -508,7 +513,7 @@ pub async fn commit_version_into(
                 committed_at: "$22",
             }
             .sql(),
-            crate::storage::node_repo::node_insert_cte("$6", "$9", "$8", 24)
+            crate::storage::node_repo::node_insert_cte("$6", "$9", "$8", 25)
         )
     });
     let row = sqlx::query(sqlx::AssertSqlSafe(SQL.as_str()))
@@ -534,7 +539,8 @@ pub async fn commit_version_into(
         .bind(v.stable_compatible)
         .bind(v.body)
         .bind(v.time_committed.to_string())
-        .bind(serde_json::json!(v.origins));
+        .bind(serde_json::json!(v.origins))
+        .bind(super::optional_json_array(v.other_input_version_uids));
     let node_refs: Vec<&crate::storage::row::NodeRow> = v.rows.iter().collect();
     let row = crate::storage::node_repo::bind_node_arrays(row, &node_refs)
         .fetch_one(&mut *tx)

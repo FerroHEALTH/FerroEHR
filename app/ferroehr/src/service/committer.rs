@@ -115,3 +115,112 @@ where
 {
     REQUEST_COMMITTER.scope(identity, fut).await
 }
+
+/// The committer a write records when the request supplied none: the
+/// authenticated caller, or the system identity when there is none.
+///
+/// A person writing in their own EHR is their [`person_committer`]. Any other
+/// caller is a `PARTY_IDENTIFIED` named by its subject, with one
+/// `DV_IDENTIFIER` whose `issuer` is the token issuer for a Bearer caller and
+/// this deployment's `ferroehr` for a Basic one ([`CommitterIdentity::issuer`]).
+/// `DV_IDENTIFIER.issuer` is the "authority which issues the kind of id used
+/// in the id field of this object" (RM `data_types`
+/// `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc` §Attributes), and
+/// `AUDIT_DETAILS.committer` is `1..1` (RM common master04 §Audit Details).
+/// Every default committer the server writes, in the service and in a protocol
+/// adapter, comes from here.
+// NOTE: no openEHR spec governs which string names the issuing authority; our own design.
+#[must_use]
+pub fn default_committer(identity: Option<CommitterIdentity>) -> PartyProxy {
+    let party = match identity {
+        Some(identity) if identity.person => return person_committer(identity),
+        Some(identity) => openehr_rm::prelude::PartyIdentifiedData {
+            external_ref: None,
+            name: Some(identity.subject.clone()),
+            identifiers: Some(openehr_base::containers::NonEmptyVec::of(
+                openehr_rm::prelude::DvIdentifier {
+                    issuer: Some(
+                        identity
+                            .issuer
+                            .unwrap_or_else(|| crate::service::ehr::meta::LOCAL_ISSUER.to_owned()),
+                    ),
+                    assigner: None,
+                    id: identity.subject,
+                    r#type: Some(identity.id_type.to_owned()),
+                },
+            )),
+        },
+        None => openehr_rm::prelude::PartyIdentifiedData {
+            external_ref: None,
+            name: Some(crate::service::SYSTEM_COMMITTER_NAME.to_owned()),
+            identifiers: None,
+        },
+    };
+    PartyProxy::PartyIdentified(openehr_rm::prelude::PartyIdentified::PartyIdentified(party))
+}
+
+/// The default committer of the current request ([`default_committer`] over
+/// [`current_committer`]).
+#[must_use]
+pub fn request_committer() -> PartyProxy {
+    default_committer(current_committer())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CommitterIdentity, default_committer};
+    use openehr_rm::prelude::{PartyIdentified, PartyProxy};
+
+    fn caller(id_type: &'static str, issuer: Option<&str>) -> CommitterIdentity {
+        CommitterIdentity {
+            subject: "alice".to_owned(),
+            id_type,
+            issuer: issuer.map(str::to_owned),
+            client: None,
+            person: false,
+        }
+    }
+
+    /// The `(issuer, id, type)` of the one identifier a default committer carries.
+    fn identifier(committer: &PartyProxy) -> (Option<&str>, &str, Option<&str>) {
+        let PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)) = committer else {
+            panic!("a default committer is a PARTY_IDENTIFIED: {committer:?}");
+        };
+        let ids = party.identifiers.as_ref().expect("one identifier");
+        assert_eq!(ids.len(), 1);
+        let id = ids.iter().next().expect("one identifier");
+        (id.issuer.as_deref(), id.id.as_str(), id.r#type.as_deref())
+    }
+
+    #[test]
+    fn a_basic_caller_is_issued_by_this_deployment() {
+        let committer = default_committer(Some(caller("basic", None)));
+        assert_eq!(
+            identifier(&committer),
+            (Some("ferroehr"), "alice", Some("basic"))
+        );
+    }
+
+    #[test]
+    fn a_bearer_caller_is_issued_by_its_token_issuer() {
+        let committer = default_committer(Some(caller("oauth2", Some("https://idp.example"))));
+        assert_eq!(
+            identifier(&committer),
+            (Some("https://idp.example"), "alice", Some("oauth2"))
+        );
+    }
+
+    #[test]
+    fn no_caller_is_the_system_identity() {
+        let PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)) =
+            default_committer(None)
+        else {
+            panic!("the system committer is a PARTY_IDENTIFIED");
+        };
+        assert_eq!(
+            party.name.as_deref(),
+            Some(crate::service::SYSTEM_COMMITTER_NAME)
+        );
+        assert!(party.identifiers.is_none());
+    }
+}

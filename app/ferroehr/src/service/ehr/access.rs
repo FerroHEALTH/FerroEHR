@@ -101,17 +101,7 @@ impl FerroEhrService {
             Some(ehr_id),
             None,
             &audit,
-            vec![(
-                audit.clone(),
-                Change::Create {
-                    kind: Kind::EhrAccess,
-                    canonical: initial_ehr_access(),
-                    template_id: None,
-                    signature: None,
-                    lifecycle_state: None,
-                    attestations: Vec::new(),
-                },
-            )],
+            vec![(audit.clone(), initial_ehr_access_change())],
             Vec::new(),
             &self.signing_ctx(),
         )
@@ -214,6 +204,20 @@ impl FerroEhrService {
 /// unconditional `Is_archetype_root` invariant as `EHR_STATUS`
 /// (RM ehr `ehr_access.adoc`), so `Archetyped_valid` (RM common
 /// `locatable.adoc`) requires the `ARCHETYPED` block on the root.
+pub(in crate::service) fn initial_ehr_access_change() -> Change {
+    Change::Create {
+        kind: Kind::EhrAccess,
+        canonical: initial_ehr_access(),
+        template_id: None,
+        signature: None,
+        lifecycle_state: None,
+        attestations: Vec::new(),
+        other_input_version_uids: Vec::new(),
+    }
+}
+
+/// The server-created first `EHR_ACCESS` body of an EHR (see
+/// [`initial_ehr_access_change`]).
 pub(in crate::service) fn initial_ehr_access() -> Value {
     const ARCHETYPE: &str = "openEHR-EHR-EHR_ACCESS.generic.v1";
     let access = EhrAccess {

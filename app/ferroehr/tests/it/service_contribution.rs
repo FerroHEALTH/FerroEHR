@@ -2184,15 +2184,16 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
     .expect("the member that states its lifecycle_state commits");
 }
 
-/// `other_input_version_uids` is not a member of the released commit wire:
-/// ITS-REST `UpdateVersion.yaml` declares no such property and
-/// `NewContribution.versions` items are `UpdateVersion`, so the merge commit
-/// has no released shape — the same absence the import commit has. Merge
-/// provenance is produce-only — `OriginalVersion.yaml`
-/// declares it on reads. A member carrying it is refused; the twin without it
-/// commits and serves no merge provenance.
+/// `other_input_version_uids` is not declared by ITS-REST `UpdateVersion.yaml`,
+/// an open object, but it is the merge provenance of the `ORIGINAL_VERSION` the
+/// member becomes (RM common `org.openehr.rm.common.original_version.adoc`), and
+/// RM common master06 §Version Merging commits a merge as a local
+/// `ORIGINAL_VERSION` with it, so the commit records it and the read serves it
+/// (#4577). The uids are recorded as given: here they name versions of another
+/// system this repository does not hold, which no RM invariant forbids. The
+/// twin without the key serves none (`Is_merged_validity`).
 #[tokio::test]
-async fn merge_provenance_is_refused_on_the_commit_wire() {
+async fn merge_provenance_on_a_member_is_recorded_and_served() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let ehr_id = create_ehr(&svc).await;
@@ -2204,13 +2205,13 @@ async fn merge_provenance_is_refused_on_the_commit_wire() {
         .expect("create")
         .version_uid();
 
-    let member = |extra: Option<Value>| {
+    let member = |preceding: &str, extra: Option<Value>| {
         let mut version = json!({
             "commit_audit": {
                 "change_type": change_type("251", "modification"),
                 "committer": committer("author")
             },
-            "preceding_version_uid": { "value": v1 },
+            "preceding_version_uid": { "value": preceding },
             "lifecycle_state": lifecycle("532"),
             "data": composition("v2")
         });
@@ -2223,59 +2224,73 @@ async fn merge_provenance_is_refused_on_the_commit_wire() {
         })
     };
 
-    let err = svc
+    let inputs = [
+        "0198f1f1-0000-7000-8000-000000000001::sysB.example.org::2.1.2",
+        "0198f1f1-0000-7000-8000-000000000002::sysC.example.org::1",
+    ];
+    let merged = svc
         .create_ehr_contribution(
             ehr_uuid,
-            member(Some(json!([
-                { "value": "0198f1f1-0000-7000-8000-000000000001::sysA.example.org::3" }
-            ]))),
+            member(
+                &v1,
+                Some(json!([
+                    { "_type": "OBJECT_VERSION_ID", "value": inputs[0] },
+                    { "value": inputs[1] }
+                ])),
+            ),
         )
         .await
-        .expect_err("an undeclared merge-provenance member is refused");
+        .expect("a member naming its merge inputs commits");
+    let v2 = first_version_uid(&merged.body);
+    let ov = read_version(&svc, &ehr_id, vo_of(&v2), &v2).await;
+    let served: Vec<&str> = ov["other_input_version_uids"]
+        .as_array()
+        .unwrap_or_else(|| panic!("the merge provenance is served, got {ov:?}"))
+        .iter()
+        .map(|u| u["value"].as_str().expect("an OBJECT_VERSION_ID value"))
+        .collect();
+    assert_eq!(served, inputs, "served in the order committed");
+
+    // A malformed input is the 422 at its member path, and nothing commits.
+    let err = svc
+        .create_ehr_contribution(ehr_uuid, member(&v2, Some(json!([{ "value": "sysB::2" }]))))
+        .await
+        .expect_err("a malformed merge input is refused");
+    assert_eq!(err.status, ServiceStatus::ContentInvalid, "{err:?}");
     assert!(
-        matches!(
-            err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
-                ..
-            }
-        ) && err.message.contains("other_input_version_uids"),
-        "expected the 400 naming other_input_version_uids, got {err:?}"
+        err.message.contains("other_input_version_uids"),
+        "the refusal names the member, got {err:?}"
     );
 
-    // The accepting twin commits, and the served ORIGINAL_VERSION carries no
-    // merge provenance (`Is_merged_validity` — a locally committed version is
-    // never a merge).
+    // The twin without the key commits on top and serves none.
     let committed = svc
-        .create_ehr_contribution(ehr_uuid, member(None))
+        .create_ehr_contribution(ehr_uuid, member(&v2, None))
         .await
-        .expect("the same member without the undeclared property commits");
-    let v2 = first_version_uid(&committed.body);
-    let ov = read_version(&svc, &ehr_id, vo_of(&v2), &v2).await;
+        .expect("the same member without merge inputs commits");
+    let v3 = first_version_uid(&committed.body);
+    let ov = read_version(&svc, &ehr_id, vo_of(&v3), &v3).await;
     assert!(
         ov.get("other_input_version_uids").is_none(),
-        "a locally committed version carries no merge provenance, got {ov:?}"
+        "a version that merges nothing carries no merge provenance, got {ov:?}"
     );
 }
 
-/// None of the three identity-bearing keys of an `IMPORTED_VERSION` shape is a
-/// member of the released commit wire: ITS-REST `UpdateVersion.yaml` declares
-/// exactly six properties (`preceding_version_uid`, `signature`,
-/// `lifecycle_state`, `attestations`, `data`, `commit_audit`) and
-/// `NewContribution.versions` items are `UpdateVersion` with no `oneOf` and no
-/// discriminator, so the import commit has no released shape at all. RM common
-/// master06 §Copying puts it behind
-/// `VERSIONED_OBJECT.commit_imported_version` ("Details of version id etc come
-/// from the `ORIGINAL_VERSION`"), realized here by the EHR-Extract import route.
-///
-/// A member carrying `item`, `uid`, or a `_type` naming any other class is
-/// refused naming the key — accepting it would commit a DECLARED FOREIGN
-/// version as a locally created `ORIGINAL_VERSION` under a freshly minted local
-/// uid, discarding the identity and provenance the client declared. The
-/// accepting twins: the same member without them, and the same member
-/// self-tagged `_type: ORIGINAL_VERSION` (a legal self-tag — ITS-REST
+/// A member may not state its own version identity: the server assigns the
+/// identity of a locally created version (RM common
+/// `master06-change_control_package.adoc` §Version Identification: its
+/// `creating_system_id` is "the identifier of the local system"), and a
+/// foreign identity is an `IMPORTED_VERSION`, which RM master06 §Copying
+/// commits through `VERSIONED_OBJECT.commit_imported_version` and the
+/// release gives no CONTRIBUTION shape (#4577). A member-borne `uid`, under
+/// either legal self-tag, and a `_type` naming `IMPORTED_VERSION` (ITS-REST
 /// `Resources.md`: the value "MUST be the uppercase class name from the RM
-/// specification").
+/// specification") are refused naming the key.
+///
+/// `UPDATE_VERSION` is otherwise open (`UpdateVersion.yaml` declares no
+/// `additionalProperties`), so a member carrying `item` commits as a local
+/// `ORIGINAL_VERSION` that wraps nothing; the accepting twins are that member,
+/// the same member without the key, and the member self-tagged
+/// `_type: ORIGINAL_VERSION`.
 #[tokio::test]
 async fn foreign_version_identity_is_refused_on_the_commit_wire() {
     let db = testkit::db().await.expect("testkit database");
@@ -2293,42 +2308,36 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
     // created by another system, in the `::`-separated OBJECT_VERSION_ID form
     // (BASE `object_version_id.adoc`).
     let foreign_uid = "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::3";
-    let member = |extra: Option<(&str, Value)>| {
+    let member = |preceding: &str, extra: &[(&str, Value)]| {
         let mut version = json!({
             "commit_audit": {
                 "change_type": change_type("251", "modification"),
                 "committer": committer("author")
             },
-            "preceding_version_uid": { "value": v1 },
+            "preceding_version_uid": { "value": preceding },
             "lifecycle_state": lifecycle("532"),
             "data": composition("v2")
         });
-        if let Some((key, value)) = extra {
-            version[key] = value;
+        for (key, value) in extra {
+            version[*key] = value.clone();
         }
         json!({
             "versions": [version],
             "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
         })
     };
+    let uid = json!({ "_type": "OBJECT_VERSION_ID", "value": foreign_uid });
 
-    for (key, value) in [
-        (
-            "item",
-            json!({
-                "_type": "ORIGINAL_VERSION",
-                "uid": { "_type": "OBJECT_VERSION_ID", "value": foreign_uid },
-                "data": composition("foreign")
-            }),
-        ),
+    for (key, extra) in [
+        ("uid", vec![("uid", uid.clone())]),
         (
             "uid",
-            json!({ "_type": "OBJECT_VERSION_ID", "value": foreign_uid }),
+            vec![("uid", uid.clone()), ("_type", json!("ORIGINAL_VERSION"))],
         ),
-        ("_type", json!("IMPORTED_VERSION")),
+        ("_type", vec![("_type", json!("IMPORTED_VERSION"))]),
     ] {
         let err = svc
-            .create_ehr_contribution(ehr_uuid, member(Some((key, value))))
+            .create_ehr_contribution(ehr_uuid, member(&v1, &extra))
             .await
             .expect_err("a member declaring a foreign version identity is refused");
         assert!(
@@ -2338,16 +2347,22 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
                     status: ServiceStatus::PreconditionViolation,
                     ..
                 }
-            ) && err.message.contains(key),
-            "expected the 400 naming {key}, got {err:?}"
+            ) && err.message.contains(&format!("versions[0]/{key}")),
+            "expected the 400 naming versions[0]/{key}, got {err:?}"
         );
     }
 
-    // Twin 1: the same member with none of the three keys commits.
+    // Twin 1: `item` is an undeclared member of the open object, accepted and
+    // ignored; the committed version is local and wraps nothing.
+    let item = json!({
+        "_type": "ORIGINAL_VERSION",
+        "uid": { "_type": "OBJECT_VERSION_ID", "value": foreign_uid },
+        "data": composition("foreign")
+    });
     let committed = svc
-        .create_ehr_contribution(ehr_uuid, member(None))
+        .create_ehr_contribution(ehr_uuid, member(&v1, &[("item", item)]))
         .await
-        .expect("the same member without the undeclared keys commits");
+        .expect("an undeclared item member of the open UPDATE_VERSION commits");
     let v2 = first_version_uid(&committed.body);
     let ov = read_version(&svc, &ehr_id, vo_of(&v2), &v2).await;
     assert_eq!(
@@ -2367,36 +2382,33 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
         "the committed version must not carry the foreign creating system, got {ov:?}"
     );
 
-    // Twin 2: the LEGAL self-tag — `_type: ORIGINAL_VERSION` names the class
+    // Twin 2: the same member with none of the keys commits.
+    let committed = svc
+        .create_ehr_contribution(ehr_uuid, member(&v2, &[]))
+        .await
+        .expect("the same member without the undeclared keys commits");
+    let v3 = first_version_uid(&committed.body);
+
+    // Twin 3: the LEGAL self-tag, `_type: ORIGINAL_VERSION`, names the class
     // this wire commits, so it is accepted.
     svc.create_ehr_contribution(
         ehr_uuid,
-        json!({
-            "versions": [{
-                "_type": "ORIGINAL_VERSION",
-                "commit_audit": {
-                    "change_type": change_type("251", "modification"),
-                    "committer": committer("author")
-                },
-                "preceding_version_uid": { "value": v2 },
-                "lifecycle_state": lifecycle("532"),
-                "data": composition("v3")
-            }],
-            "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("author") }
-        }),
+        member(&v3, &[("_type", json!("ORIGINAL_VERSION"))]),
     )
     .await
     .expect("a member self-tagged as the class this wire commits is accepted");
 }
 
-/// THE CLOSED MEMBER READ (#1753): an undeclared key on a CONTRIBUTION
-/// version member is refused with the member index in the path — the released
-/// commit wire declares exactly six member properties (ITS-REST
-/// `UpdateVersion.yaml`) plus the adjudicated `_type` self-tag, and the strict
-/// reader discipline (post-#1702) admits nothing else silently. The valid
-/// twin is every accepted member in this suite.
+/// THE OPEN MEMBER READ (#4577): ITS-REST `UpdateVersion.yaml` declares six
+/// member properties and no `additionalProperties`, so an undeclared key with
+/// no RM meaning on a CONTRIBUTION version member is accepted and ignored, as
+/// on `NewContribution` and `UpdateAudit` (#4543); the committed version
+/// references the CONTRIBUTION this commit creates. The RM attributes the
+/// server assigns stay the 400 naming their member path: `uid` (RM common
+/// master06 §Version Identification) and `contribution` (§Version and its
+/// Subtypes).
 #[tokio::test]
-async fn an_undeclared_contribution_member_key_is_refused_with_its_path() {
+async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_refused() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let ehr_id = create_ehr(&svc).await;
@@ -2413,13 +2425,13 @@ async fn an_undeclared_contribution_member_key_is_refused_with_its_path() {
     member
         .as_object_mut()
         .expect("member object")
-        .insert("contribution".to_owned(), json!({"id": "x"}));
+        .insert("extension".to_owned(), json!({"id": "x"}));
 
-    let err = svc
+    let committed = svc
         .create_ehr_contribution(
             ehr_uuid,
             json!({
-                "versions": [member],
+                "versions": [member.clone()],
                 "audit": {
                     "change_type": change_type("249", "creation"),
                     "committer": committer("author")
@@ -2427,11 +2439,49 @@ async fn an_undeclared_contribution_member_key_is_refused_with_its_path() {
             }),
         )
         .await
-        .expect_err("an undeclared member key must be refused");
-    assert!(
-        err.message.contains("versions[0]/contribution"),
-        "the refusal names the key at its member path, got {err:?}"
+        .expect("an undeclared member key of the open UPDATE_VERSION commits");
+    let contribution_uid = committed.body["uid"]["value"]
+        .as_str()
+        .expect("the CONTRIBUTION uid")
+        .to_owned();
+    let version_uid = first_version_uid(&committed.body);
+    let ov = read_version(&svc, &ehr_id, vo_of(&version_uid), &version_uid).await;
+    assert_eq!(
+        ov["contribution"]["id"]["value"], contribution_uid,
+        "the served version references the committing CONTRIBUTION, got {ov:?}"
     );
+
+    for (key, value) in [
+        (
+            "uid",
+            json!({ "_type": "OBJECT_VERSION_ID", "value": format!("{}::local::1", uuid::Uuid::now_v7()) }),
+        ),
+        (
+            "contribution",
+            json!({ "id": { "_type": "HIER_OBJECT_ID", "value": contribution_uid },
+                "namespace": "local", "type": "CONTRIBUTION" }),
+        ),
+    ] {
+        let mut assigned = member.clone();
+        assigned[key] = value;
+        let err = svc
+            .create_ehr_contribution(
+                ehr_uuid,
+                json!({
+                    "versions": [assigned],
+                    "audit": {
+                        "change_type": change_type("249", "creation"),
+                        "committer": committer("author")
+                    }
+                }),
+            )
+            .await
+            .expect_err("a server-assigned member must be refused");
+        assert!(
+            err.message.contains(&format!("versions[0]/{key}")),
+            "the refusal names the key at its member path, got {err:?}"
+        );
+    }
 }
 
 /// The CONTRIBUTION's own `audit.change_type` is REQUIRED and never derived.
