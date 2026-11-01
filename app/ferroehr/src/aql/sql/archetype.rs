@@ -11,7 +11,9 @@ use sea_query::extension::postgres::PgFunc;
 use sea_query::{Expr, ExprTrait as _};
 
 use super::expr::{call, cast, col};
-use crate::aql::lineage::{ArchetypeKey, ArchetypeLineage, ReferenceForm, decompose_hrid};
+use crate::aql::lineage::{
+    AdmittedReleases, ArchetypeKey, ArchetypeLineage, ReferenceForm, decompose_hrid,
+};
 use crate::db::iden::Node;
 
 /// The minor version of a node's stored `archetype` id: the middle number of a
@@ -51,8 +53,9 @@ const STORED_PATCH: &str = r"\.v[0-9]+\.[0-9]+\.([0-9]+)(-[^:]*)?$";
 /// `lineage`, the stored specialisation graph ([`ArchetypeLineage`]), since
 /// "for specialised archetypes, the specialisation lineage can only be obtained
 /// from the operational form of the archetype, found in the template used to
-/// create the data" (BASE Artefact Identification, Referencing). Every stored descendant
-/// joins on its own namespace, entity, major and concept, every release of it.
+/// create the data" (BASE Artefact Identification, Referencing). Every stored
+/// descendant joins on its own namespace, entity, major and concept, in the
+/// releases [`ArchetypeLineage::descendants`] admits.
 ///
 /// For at- and id-codes, arbitrary strings and params resolving to non-HRIDs the
 /// predicate is the case-folded equality on `archetype`.
@@ -85,19 +88,48 @@ pub(super) fn archetype_predicate(node: &str, value: &str, lineage: &ArchetypeLi
 
     // The stored descendants, grouped by the interface boundary each member is
     // scoped to. `BTreeMap`/`BTreeSet` keep the emitted SQL byte-deterministic.
+    // A descendant admitted only in some releases is its own disjunct.
     let mut groups: BTreeMap<ArchetypeKey, BTreeSet<String>> = BTreeMap::new();
-    for descendant in lineage.descendants(key, queried.form) {
-        let concept = descendant.concept.clone();
-        let boundary = ArchetypeKey {
-            concept: String::new(),
-            ..descendant
-        };
-        groups.entry(boundary).or_default().insert(concept);
+    for (descendant, admitted) in lineage.descendants(key, queried.form) {
+        match admitted {
+            AdmittedReleases::Every => {
+                let concept = descendant.concept.clone();
+                let boundary = ArchetypeKey {
+                    concept: String::new(),
+                    ..descendant
+                };
+                groups.entry(boundary).or_default().insert(concept);
+            }
+            AdmittedReleases::Only(releases) => {
+                let concept =
+                    col(node, Node::ArchConcept).eq(Expr::val(descendant.concept.clone()));
+                cond = cond.or(interface(node, &descendant)
+                    .and(concept)
+                    .and(release_in(node, &releases)));
+            }
+        }
     }
     for (boundary, concepts) in groups {
         cond = cond.or(interface(node, &boundary).and(concept_match(node, &concepts)));
     }
     cond
+}
+
+/// The stored release is one of `releases`, each a `(minor, patch)` within
+/// the major the interface boundary fixes.
+fn release_in(node: &str, releases: &BTreeSet<(i64, i64)>) -> Expr {
+    let mut any: Option<Expr> = None;
+    for (minor, patch) in releases {
+        let one = stored_part(node, STORED_MINOR)
+            .eq(Expr::val(*minor))
+            .and(stored_part(node, STORED_PATCH).eq(Expr::val(*patch)));
+        any = Some(match any {
+            None => one,
+            Some(previous) => previous.or(one),
+        });
+    }
+    // `descendants` never yields an empty `Only` set; an empty one admits nothing.
+    any.unwrap_or_else(|| Expr::val(false))
 }
 
 /// The interface boundary of `key`: its namespace, its entity and its major.
@@ -368,6 +400,35 @@ mod tests {
             "the 1.4-form prefix rule is unchanged: {legacy}"
         );
         assert!(legacy.contains("'hdl_result','ldl_result'"), "{legacy}");
+    }
+
+    /// A child admitted in only some of its stored releases is matched on
+    /// those releases alone, as its own disjunct.
+    #[test]
+    fn a_partly_admitted_child_is_bounded_to_its_releases() {
+        let lineage = ArchetypeLineage::from_parent_edges([
+            (
+                "openEHR-EHR-OBSERVATION.child.v1.0.0",
+                "openEHR-EHR-OBSERVATION.parent.v1.1",
+            ),
+            (
+                "openEHR-EHR-OBSERVATION.child.v1.1.0",
+                "openEHR-EHR-OBSERVATION.parent.v1.3",
+            ),
+        ]);
+        let sql = archetype_predicate_sql("openEHR-EHR-OBSERVATION.parent.v1.2", &lineage);
+        assert!(
+            sql.contains(&format!(
+                r#""n"."arch_concept" = 'child' AND ({MINOR} = 1 AND {PATCH} = 0)"#
+            )),
+            "only child v1.1.0 is built on parent v1.2 or later: {sql}"
+        );
+        assert!(!sql.contains("ANY(ARRAY"), "{sql}");
+        let every = archetype_predicate_sql("openEHR-EHR-OBSERVATION.parent.v1", &lineage);
+        assert!(
+            every.contains(r#""n"."arch_concept" = 'child')"#),
+            "every child release under an interface query: {every}"
+        );
     }
 
     /// A descendant that declares a parent in another major line is matched on

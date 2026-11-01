@@ -814,7 +814,8 @@ async fn archetype_predicate_version_bounds_the_release() {
 /// parent at or before the parent release the child declares, and not by a
 /// later one.
 ///
-/// Spec: AM `Identification` master07 §Supporting Archetype-based Querying:
+/// Spec: BASE Artefact Identification, Referencing §Supporting Archetype-based
+/// Querying:
 /// "any of the specialisation parents of X" and "any previous minor or patch
 /// variant of any of the specialisation parents of X".
 #[tokio::test]
@@ -876,6 +877,68 @@ async fn archetype_predicate_specialised_child_by_parent_version() {
         0,
         "the parent in another namespace is another archetype"
     );
+}
+
+/// Two releases of one specialised child that declare different parent
+/// releases: a query at a parent release finds the data of only the child
+/// release built on that parent release or a later one.
+///
+/// Spec: BASE Artefact Identification, Referencing §Supporting Archetype-based
+/// Querying:
+/// "any previous minor or patch variant of any of the specialisation parents
+/// of X", where X is the archetype the data was created with.
+#[tokio::test]
+async fn archetype_predicate_child_releases_follow_their_own_parent_release() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    for (hrid, parent) in [
+        ("openEHR-EHR-OBSERVATION.rel_parent.v1.1.0", None),
+        ("openEHR-EHR-OBSERVATION.rel_parent.v1.3.0", None),
+        (
+            "openEHR-EHR-OBSERVATION.rel_child.v1.0.0",
+            Some("openEHR-EHR-OBSERVATION.rel_parent.v1.1.0"),
+        ),
+        (
+            "openEHR-EHR-OBSERVATION.rel_child.v1.1.0",
+            Some("openEHR-EHR-OBSERVATION.rel_parent.v1.3.0"),
+        ),
+    ] {
+        svc.upload_artefact(adl2_source("archetype", hrid, parent))
+            .await
+            .unwrap_or_else(|e| panic!("upload {hrid}: {e:?}"));
+    }
+    let ehr_id = create_ehr(&svc).await;
+    for version in ["v1.0.0", "v1.1.0"] {
+        create_comp_arch(
+            &svc,
+            &ehr_id,
+            version,
+            1.0,
+            &format!("openEHR-EHR-OBSERVATION.rel_child.{version}"),
+        )
+        .await;
+    }
+    for (version, expected) in [
+        ("v1", 2),
+        ("v1.1", 2),
+        ("v1.1.0", 2),
+        ("v1.2", 1),
+        ("v1.3.0", 1),
+        ("v1.3.1", 0),
+        ("v1.4", 0),
+    ] {
+        assert_eq!(
+            count_obs(
+                &svc,
+                &ehr_id,
+                &format!("openEHR-EHR-OBSERVATION.rel_parent.{version}")
+            )
+            .await,
+            expected,
+            "the parent queried by .{version}"
+        );
+    }
 }
 
 #[tokio::test]

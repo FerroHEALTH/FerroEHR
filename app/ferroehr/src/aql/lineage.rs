@@ -192,8 +192,28 @@ pub fn decompose_hrid(hrid: &str) -> Option<QueriedArchetype> {
     })
 }
 
+/// A stored artefact's `(minor, patch)` release; `None` for a stored id
+/// whose version is not the three-part physical form.
+type Release = Option<(i64, i64)>;
+
+/// The releases of one stored child identity, each with the forms of the
+/// parent references the artefacts of that release declare.
+type ChildReleases = BTreeMap<Release, BTreeSet<ReferenceForm>>;
+
+/// The releases of a stored descendant a query admits, within the
+/// descendant's own major.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AdmittedReleases {
+    /// Every release: no stored release of the descendant is refused, so data
+    /// of any release of it (a legacy major-only id included) is selected.
+    Every,
+    /// Only these `(minor, patch)` releases.
+    Only(BTreeSet<(i64, i64)>),
+}
+
 /// The stored specialisation graph: for every archetype identity, the stored
-/// artefacts that declare it (transitively) as their specialisation parent.
+/// artefacts that declare it (transitively) as their specialisation parent,
+/// release by release.
 ///
 /// Built from the `specialize` parent references of the stored ADL2/OPT2
 /// family, the only lineage source BASE Artefact Identification (Referencing
@@ -202,9 +222,11 @@ pub fn decompose_hrid(hrid: &str) -> Option<QueriedArchetype> {
 /// resolves every identifier to itself.
 #[derive(Debug, Clone, Default)]
 pub struct ArchetypeLineage {
-    /// parent identity → the identities that directly specialise it, each with
-    /// the forms of the parent references its stored artefacts declare.
-    children: BTreeMap<ArchetypeKey, BTreeMap<ArchetypeKey, BTreeSet<ReferenceForm>>>,
+    /// parent identity → the identities that directly specialise it → their
+    /// stored releases with the parent references each declares.
+    children: BTreeMap<ArchetypeKey, BTreeMap<ArchetypeKey, ChildReleases>>,
+    /// Every stored release of each child identity, across all its parents.
+    releases: BTreeMap<ArchetypeKey, BTreeSet<Release>>,
 }
 
 impl ArchetypeLineage {
@@ -224,8 +246,7 @@ impl ArchetypeLineage {
         C: AsRef<str>,
         P: AsRef<str>,
     {
-        let mut children: BTreeMap<ArchetypeKey, BTreeMap<ArchetypeKey, BTreeSet<ReferenceForm>>> =
-            BTreeMap::new();
+        let mut index = Self::default();
         for (child, parent) in edges {
             let (Some(child), Some(parent)) = (
                 decompose_hrid(child.as_ref()),
@@ -239,16 +260,29 @@ impl ArchetypeLineage {
             }
             // A self-edge would make every query its own descendant query for
             // no gain; drop it at build time so the walk stays minimal.
-            if child.key != parent_key {
-                children
-                    .entry(parent_key)
-                    .or_default()
-                    .entry(child.key)
-                    .or_default()
-                    .insert(parent.form);
+            if child.key == parent_key {
+                continue;
             }
+            let release = match child.form {
+                ReferenceForm::Physical { minor, patch } => Some((minor, patch)),
+                _ => None,
+            };
+            index
+                .releases
+                .entry(child.key.clone())
+                .or_default()
+                .insert(release);
+            index
+                .children
+                .entry(parent_key)
+                .or_default()
+                .entry(child.key)
+                .or_default()
+                .entry(release)
+                .or_default()
+                .insert(parent.form);
         }
-        Self { children }
+        index
     }
 
     /// Whether the index carries no specialisation edge at all (no stored
@@ -259,53 +293,122 @@ impl ArchetypeLineage {
     }
 
     /// Every stored identity that descends from `root`, transitively,
-    /// excluding `root` itself, for a query naming `root` in `form`.
+    /// excluding `root` itself, for a query naming `root` in `form`, with the
+    /// releases of each the query admits.
     ///
-    /// A direct child joins when one of its declared parent references names a
-    /// release `form` admits ([`ReferenceForm::admits_reference`]): data of the
-    /// child may be queried with "any previous minor or patch variant of any of
-    /// the specialisation parents" (BASE Artefact Identification, Referencing §Supporting
-    /// Archetype-based Querying). Below it every descendant joins, since the
-    /// query names none of their own parents.
+    /// Data of a child release may be queried with "any previous minor or
+    /// patch variant of any of the specialisation parents" of it (BASE
+    /// Artefact Identification, Referencing §Supporting Archetype-based
+    /// Querying), so a child release joins when the parent reference it
+    /// declares names a release the query admits. For a direct child of `root`
+    /// that is [`ReferenceForm::admits_reference`]; below it, the declared
+    /// reference resolves to the latest stored parent release it matches,
+    /// which must be an admitted one.
     ///
-    /// The walk is breadth-first over the parent → children map with a visited
-    /// set, so a cyclic `specialize` chain (which AOM2 forbids but a hostile
-    /// upload could still attempt across two artefacts) terminates instead of
-    /// looping.
+    /// The walk is breadth-first and re-visits an identity only when its
+    /// admitted set grows, so a cyclic `specialize` chain (which AOM2 forbids
+    /// but a hostile upload could still attempt across two artefacts)
+    /// terminates instead of looping.
     #[must_use]
-    pub fn descendants(&self, root: &ArchetypeKey, form: ReferenceForm) -> BTreeSet<ArchetypeKey> {
-        let mut found = BTreeSet::new();
-        let mut queue = VecDeque::new();
-        if let Some(direct) = self.children.get(root) {
-            for (child, declared) in direct {
-                let admitted = declared.iter().any(|d| form.admits_reference(*d));
-                if admitted && child != root && found.insert(child.clone()) {
-                    queue.push_back(child.clone());
-                }
-            }
-        }
-        while let Some(next) = queue.pop_front() {
-            let Some(direct) = self.children.get(&next) else {
+    pub fn descendants(
+        &self,
+        root: &ArchetypeKey,
+        form: ReferenceForm,
+    ) -> BTreeMap<ArchetypeKey, AdmittedReleases> {
+        let mut admitted: BTreeMap<ArchetypeKey, BTreeSet<Release>> = BTreeMap::new();
+        let mut queue = VecDeque::from([root.clone()]);
+        while let Some(parent) = queue.pop_front() {
+            let Some(direct) = self.children.get(&parent) else {
                 continue;
             };
-            for child in direct.keys() {
-                if child != root && found.insert(child.clone()) {
+            for (child, releases) in direct {
+                if child == root {
+                    continue;
+                }
+                let accepted: Vec<Release> = releases
+                    .iter()
+                    .filter(|(_, declared)| {
+                        declared.iter().any(|d| {
+                            if &parent == root {
+                                form.admits_reference(*d)
+                            } else {
+                                self.resolves_into(&parent, *d, admitted.get(&parent))
+                            }
+                        })
+                    })
+                    .map(|(release, _)| *release)
+                    .collect();
+                if accepted.is_empty() {
+                    continue;
+                }
+                let entry = admitted.entry(child.clone()).or_default();
+                let before = entry.len();
+                entry.extend(accepted);
+                if entry.len() > before {
                     queue.push_back(child.clone());
                 }
             }
         }
-        found
+        admitted
+            .into_iter()
+            .map(|(key, set)| {
+                let every = set.contains(&None) || self.releases.get(&key) == Some(&set);
+                let releases = if every {
+                    AdmittedReleases::Every
+                } else {
+                    AdmittedReleases::Only(set.into_iter().flatten().collect())
+                };
+                (key, releases)
+            })
+            .collect()
+    }
+
+    /// Whether the parent reference `declared` resolves to an admitted stored
+    /// release of `parent`: an `ihrid_ref` to the latest release, an
+    /// `sihrid_ref` to the latest release of its minor, a `phrid_ref` to
+    /// itself (BASE `artefact_identification` master07 §Referencing).
+    fn resolves_into(
+        &self,
+        parent: &ArchetypeKey,
+        declared: ReferenceForm,
+        admitted: Option<&BTreeSet<Release>>,
+    ) -> bool {
+        let (Some(stored), Some(admitted)) = (self.releases.get(parent), admitted) else {
+            return false;
+        };
+        let mut stored = stored.iter().flatten().copied();
+        let resolved = match declared {
+            ReferenceForm::Interface => stored.max(),
+            ReferenceForm::SpecificInterface { minor } => stored.filter(|r| r.0 == minor).max(),
+            ReferenceForm::Physical { minor, patch } => stored.find(|r| *r == (minor, patch)),
+        };
+        resolved.is_some_and(|r| admitted.contains(&Some(r)))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ArchetypeKey, ArchetypeLineage, ReferenceForm, decompose_hrid};
+    use std::collections::BTreeSet;
+
+    use super::{AdmittedReleases, ArchetypeKey, ArchetypeLineage, ReferenceForm, decompose_hrid};
 
     const ANY: ReferenceForm = ReferenceForm::Interface;
 
     fn key(concept: &str, major: i32) -> ArchetypeKey {
         ArchetypeKey::new(None, "openEHR-EHR-OBSERVATION", concept, major)
+    }
+
+    /// The descendants of `root`, each of which the query admits whole.
+    fn every(
+        lineage: &ArchetypeLineage,
+        root: &ArchetypeKey,
+        form: ReferenceForm,
+    ) -> BTreeSet<ArchetypeKey> {
+        let found = lineage.descendants(root, form);
+        for (key, releases) in &found {
+            assert_eq!(releases, &AdmittedReleases::Every, "{key:?}");
+        }
+        found.into_keys().collect()
     }
 
     fn ns_key(namespace: &str, concept: &str, major: i32) -> ArchetypeKey {
@@ -412,18 +515,18 @@ mod tests {
         ]);
         assert!(!lineage.is_empty());
         assert_eq!(
-            lineage.descendants(&key("lipid_panel", 1), ANY),
+            every(&lineage, &key("lipid_panel", 1), ANY),
             [key("hdl_result", 1), key("hdl_direct", 1)]
                 .into_iter()
                 .collect()
         );
         assert_eq!(
-            lineage.descendants(&key("hdl_result", 1), ANY),
+            every(&lineage, &key("hdl_result", 1), ANY),
             [key("hdl_direct", 1)].into_iter().collect()
         );
-        assert!(lineage.descendants(&key("hdl_direct", 1), ANY).is_empty());
+        assert!(every(&lineage, &key("hdl_direct", 1), ANY).is_empty());
         // An identity nothing descends from resolves to itself alone.
-        assert!(lineage.descendants(&key("lipid_panel", 2), ANY).is_empty());
+        assert!(every(&lineage, &key("lipid_panel", 2), ANY).is_empty());
     }
 
     /// A specialised archetype is reached from its parent only by a query at
@@ -436,33 +539,30 @@ mod tests {
             "openEHR-EHR-OBSERVATION.lipid_panel.v1.2.0",
         )]);
         let parent = ns_key("org.a", "lipid_panel", 1);
-        let child: std::collections::BTreeSet<_> =
-            [ns_key("org.a", "hdl_result", 1)].into_iter().collect();
+        let child: BTreeSet<_> = [ns_key("org.a", "hdl_result", 1)].into_iter().collect();
         for form in [
             ReferenceForm::Interface,
             ReferenceForm::SpecificInterface { minor: 1 },
             ReferenceForm::SpecificInterface { minor: 2 },
             ReferenceForm::Physical { minor: 2, patch: 0 },
         ] {
-            assert_eq!(lineage.descendants(&parent, form), child, "{form:?}");
+            assert_eq!(every(&lineage, &parent, form), child, "{form:?}");
         }
         for form in [
             ReferenceForm::SpecificInterface { minor: 3 },
             ReferenceForm::Physical { minor: 2, patch: 1 },
         ] {
             assert!(
-                lineage.descendants(&parent, form).is_empty(),
+                every(&lineage, &parent, form).is_empty(),
                 "a later parent release than the child declares: {form:?}"
             );
         }
         assert!(
-            lineage.descendants(&key("lipid_panel", 1), ANY).is_empty(),
+            every(&lineage, &key("lipid_panel", 1), ANY).is_empty(),
             "the parent without a namespace is another archetype"
         );
         assert!(
-            lineage
-                .descendants(&ns_key("org.b", "lipid_panel", 1), ANY)
-                .is_empty(),
+            every(&lineage, &ns_key("org.b", "lipid_panel", 1), ANY).is_empty(),
             "the parent in another namespace is another archetype"
         );
     }
@@ -476,7 +576,7 @@ mod tests {
             "openEHR-EHR-OBSERVATION.diagnosis.v1",
         )]);
         assert_eq!(
-            lineage.descendants(&key("diagnosis", 1), ANY),
+            every(&lineage, &key("diagnosis", 1), ANY),
             [key("genetic_diagnosis", 2)].into_iter().collect()
         );
     }
@@ -500,10 +600,10 @@ mod tests {
             ),
         ]);
         assert_eq!(
-            lineage.descendants(&key("a", 1), ANY),
+            every(&lineage, &key("a", 1), ANY),
             [key("b", 1)].into_iter().collect()
         );
-        assert!(lineage.descendants(&key("c", 1), ANY).is_empty());
+        assert!(every(&lineage, &key("c", 1), ANY).is_empty());
     }
 
     /// Unreadable rows are skipped, never fatal; an empty index resolves every
@@ -512,6 +612,99 @@ mod tests {
     fn unreadable_edges_are_skipped() {
         let lineage = ArchetypeLineage::from_parent_edges([("not an hrid", "at0001")]);
         assert!(lineage.is_empty());
-        assert!(lineage.descendants(&key("lipid_panel", 1), ANY).is_empty());
+        assert!(every(&lineage, &key("lipid_panel", 1), ANY).is_empty());
+    }
+
+    /// Two releases of one child declaring different parent releases: a
+    /// query admits only the child release whose declared parent release is
+    /// at or after its own, and every release once both are (AM
+    /// `Identification` master07 §Supporting Archetype-based Querying).
+    #[test]
+    fn a_query_admits_only_the_child_releases_built_on_a_later_parent() {
+        let lineage = ArchetypeLineage::from_parent_edges([
+            (
+                "openEHR-EHR-OBSERVATION.child.v1.0.0",
+                "openEHR-EHR-OBSERVATION.parent.v1.1",
+            ),
+            (
+                "openEHR-EHR-OBSERVATION.child.v1.1.0",
+                "openEHR-EHR-OBSERVATION.parent.v1.3",
+            ),
+        ]);
+        let parent = key("parent", 1);
+        let only = |releases: &[(i64, i64)]| {
+            [(
+                key("child", 1),
+                AdmittedReleases::Only(releases.iter().copied().collect()),
+            )]
+            .into_iter()
+            .collect()
+        };
+        assert_eq!(
+            lineage.descendants(&parent, ReferenceForm::SpecificInterface { minor: 2 }),
+            only(&[(1, 0)])
+        );
+        assert_eq!(
+            lineage.descendants(&parent, ReferenceForm::Physical { minor: 3, patch: 0 }),
+            only(&[(1, 0)])
+        );
+        for form in [
+            ReferenceForm::Interface,
+            ReferenceForm::SpecificInterface { minor: 1 },
+        ] {
+            assert_eq!(
+                every(&lineage, &parent, form),
+                [key("child", 1)].into_iter().collect(),
+                "{form:?}"
+            );
+        }
+        assert!(
+            lineage
+                .descendants(&parent, ReferenceForm::SpecificInterface { minor: 4 })
+                .is_empty()
+        );
+    }
+
+    /// Below the queried parent, a grandchild release joins when the child
+    /// reference it declares resolves to an admitted child release: an
+    /// interface reference to the latest stored one, a full reference to
+    /// itself.
+    #[test]
+    fn a_grandchild_follows_the_child_release_it_resolves_to() {
+        let lineage = ArchetypeLineage::from_parent_edges([
+            (
+                "openEHR-EHR-OBSERVATION.child.v1.0.0",
+                "openEHR-EHR-OBSERVATION.parent.v1.1",
+            ),
+            (
+                "openEHR-EHR-OBSERVATION.child.v1.1.0",
+                "openEHR-EHR-OBSERVATION.parent.v1.3",
+            ),
+            (
+                "openEHR-EHR-OBSERVATION.grand.v1.0.0",
+                "openEHR-EHR-OBSERVATION.child.v1.0.0",
+            ),
+            (
+                "openEHR-EHR-OBSERVATION.grand.v1.1.0",
+                "openEHR-EHR-OBSERVATION.child.v1",
+            ),
+        ]);
+        let found = lineage.descendants(
+            &key("parent", 1),
+            ReferenceForm::SpecificInterface { minor: 2 },
+        );
+        assert_eq!(
+            found.get(&key("grand", 1)),
+            Some(&AdmittedReleases::Only([(1, 0)].into_iter().collect())),
+            "grand v1.1.0 resolves `child.v1` to child v1.1.0, built on parent v1.3: {found:?}"
+        );
+        let found = lineage.descendants(
+            &key("parent", 1),
+            ReferenceForm::SpecificInterface { minor: 4 },
+        );
+        assert!(
+            found.is_empty(),
+            "no child release is built on parent v1.4: {found:?}"
+        );
     }
 }
