@@ -33,21 +33,24 @@ FLAT + STRUCTURED data instances and the Web Template model. This is the ITS-RES
 
 - **The wire oracle is the ITS-REST Simplified Formats specification**
   (`docs/specs/openehr/ITS-REST/docs/simplified_formats/`, STABLE):
-  `master04` (field identifiers, node-id algorithm, level removal, `|raw`,
-  `|other`, FLAT⇄STRUCTURED algorithms), `master05` (per-RM-type mapping
-  tables), `master06` (the `ctx/` vocabulary). SM SIM-B / SDF are
-  DEVELOPMENT-state model documents: never implement their terse string
-  encodings. SDT (`simplified_data_template/`, the crate's namesake) carries
+  `master04-basic_concepts.adoc` (Basic Concepts: field identifiers, node-id
+  algorithm, level removal, `|raw`, `|other`, FLAT⇄STRUCTURED algorithms),
+  `master05-rm_mapping.adoc` (RM Mappings: the per-RM-type mapping tables),
+  `master06-context_information.adoc` (Context Information: the `ctx/`
+  vocabulary), each in that directory. SM SIM-B / SDF are DEVELOPMENT-state
+  model documents: never implement their terse string encodings. SDT
+  (`docs/specs/openehr/ITS-REST/docs/simplified_data_template/`, the crate's
+  namesake, with no chapter past `master01-preface.adoc`) carries
   upstream `spec_status: RETIRED` and is never implemented. No vendor
   implementation is an oracle.
 - **Architecture: one internal tree** (`flat::sim::SimNode`). FLAT
   (`flat::sim::flat`) and STRUCTURED (`flat::sim::structured`) are pure codecs
   over it; the template-driven RM conversion is written once (`flat::flatten`
   RM→sim, `flat::build` sim→RM, entry points in `flat::convert`). Datum codecs
-  from the `master05` tables live in `flat::map`; the `ctx/` vocabulary in
-  `flat::ctx`; the Web Template model/builder in `flat::webtemplate` (node ids
-  per `master04 §Node ID Generation Rules`; the document shape serves
-  `application/openehr.wt+json`).
+  from the `master05-rm_mapping.adoc` tables live in `flat::map`; the `ctx/`
+  vocabulary in `flat::ctx`; the Web Template model/builder in
+  `flat::webtemplate` (node ids per `master04-basic_concepts.adoc` §Node ID
+  Generation Rules; the document shape serves `application/openehr.wt+json`).
 - Path/key encoding (`a/b:0/c|unit`) is load-bearing wire surface: no ad-hoc
   changes; every accepted/emitted form needs a spec citation and a round-trip
   test. Spec-example JSON blocks are the primary test vectors; the OPT corpus
@@ -71,11 +74,12 @@ cargo clippy -p openehr-sdt --target wasm32-unknown-unknown --no-default-feature
   never weaken or skip one. Two complementary ones: `spec_vectors.rs` replays
   every `simplified_formats` example block for **syntax** + FLAT⇄STRUCTURED
   stability, and `master05_tables.rs` is the **semantic** battery (one test
-  per `master05` section, one assertion per mapping-table row: Flat Path +
-  Flat type against a minimal RM value through `composition_to_flat`), with
-  every row the implementation relocates or does not emit recorded explicitly
-  rather than skipped. Plus the `insta` goldens and the OPT-corpus
-  round-trips. A new/changed `master05` row lands with its battery row.
+  per `master05-rm_mapping.adoc` section, one assertion per mapping-table row:
+  Flat Path + Flat type against a minimal RM value through
+  `composition_to_flat`), with every row the implementation relocates or does
+  not emit recorded explicitly rather than skipped. Plus the `insta` goldens
+  and the OPT-corpus round-trips. A new/changed `master05-rm_mapping.adoc` row
+  lands with its battery row.
 - **Fixture paths.** This crate's own fixtures are `tests/fixtures/better` and
   `tests/fixtures/named_event`. The shared canonical-JSON corpus
   (`tests/vendor/openehr_sdk`) and the `sdk`/`twins`/`repeated_member`
