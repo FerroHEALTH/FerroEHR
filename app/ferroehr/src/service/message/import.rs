@@ -78,7 +78,7 @@ use crate::versioning::import::{
 };
 use crate::versioning::lifecycle;
 use crate::versioning::lifecycle::lifecycle_state_code;
-use crate::versioning::object_version_id::parse_object_version_id;
+use crate::versioning::object_version_id::{parse_merge_inputs, parse_object_version_id};
 use openehr_base::prelude::ObjectRef;
 use openehr_rm::v1_2::common::generic::audit_details::AuditDetails;
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
@@ -440,19 +440,24 @@ fn parse_import_containers(
     let mut by_container: BTreeMap<VoId, ImportContainer> = BTreeMap::new();
     let mut parties: BTreeMap<VoId, ImportContainer> = BTreeMap::new();
 
-    for chapter in value
+    for (chapter_index, chapter) in value
         .get("chapters")
         .and_then(Value::as_array)
         .unwrap_or(&empty)
+        .iter()
+        .enumerate()
     {
-        for item in chapter
+        for (item_index, item) in chapter
             .get("items")
             .and_then(Value::as_array)
             .unwrap_or(&empty)
+            .iter()
+            .enumerate()
         {
             let Some(xver) = content_item_payload(item)? else {
                 continue;
             };
+            let position = format!("chapters[{chapter_index}]/items[{item_index}]/item");
             let xtype = xver
                 .get("_type")
                 .and_then(Value::as_str)
@@ -461,7 +466,7 @@ fn parse_import_containers(
             // (master09-semantics.adoc §Creation Semantics demographics
             // chapter); each version's PARTY subtype fixes the container kind.
             if xtype == "X_VERSIONED_PARTY" {
-                collect_party_versions(xver, &mut parties)?;
+                collect_party_versions(xver, &position, &mut parties)?;
                 continue;
             }
             let kind = kind_from_x_versioned(xtype).ok_or_else(|| {
@@ -470,7 +475,7 @@ fn parse_import_containers(
                      EHR_STATUS / EHR_ACCESS / FOLDER / demographics-chapter PARTYs)"
                 ))
             })?;
-            collect_content_versions(xver, kind, &mut by_container)?;
+            collect_content_versions(xver, kind, &position, &mut by_container)?;
         }
     }
     Ok((
@@ -522,33 +527,52 @@ fn content_item_payload(item: &Value) -> Result<Option<&Value>, StatusError> {
     }
 }
 
+/// The received `ORIGINAL_VERSION`s of one `X_VERSIONED_*` wrapper, each with
+/// its position in the extract (`<position>/versions[i]`).
+fn wrapper_versions<'a>(
+    xver: &'a Value,
+    position: &'a str,
+) -> impl Iterator<Item = (String, &'a Value)> + 'a {
+    xver.get("versions")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+        .map(move |(i, ov)| (format!("{position}/versions[{i}]"), ov))
+}
+
+/// Names the extract position a received version's refusal belongs to, so an
+/// importer can find the defective `ORIGINAL_VERSION` in a large extract.
+fn at_position(position: &str, mut err: StatusError) -> StatusError {
+    err.message = format!("{position}: {}", err.message);
+    err
+}
+
 /// Collects the versions of one `X_VERSIONED_PARTY` wrapper into the
 /// demographic containers, keyed by cloned `vo_id`.
 ///
 /// # Errors
 /// [`StatusError::precondition`] when a version's data is not a PARTY subtype, and
-/// the [`parse_imported_version`] rejections.
+/// the [`parse_imported_version`] rejections, each naming the version's
+/// extract position.
 fn collect_party_versions(
     xver: &Value,
+    position: &str,
     parties: &mut BTreeMap<VoId, ImportContainer>,
 ) -> Result<(), StatusError> {
-    let empty: Vec<Value> = Vec::new();
-    for ov in xver
-        .get("versions")
-        .and_then(Value::as_array)
-        .unwrap_or(&empty)
-    {
+    for (position, ov) in wrapper_versions(xver, position) {
         let party_type = ov
             .pointer("/data/_type")
             .and_then(Value::as_str)
             .unwrap_or_default();
         let Some(kind) = Kind::from_type(party_type).filter(|k| k.is_demographic()) else {
             return Err(StatusError::precondition(format!(
-                "X_VERSIONED_PARTY version data must be a PARTY subtype, \
+                "{position}: X_VERSIONED_PARTY version data must be a PARTY subtype, \
                  got {party_type:?}"
             )));
         };
-        let (vo_id, version) = parse_imported_version(ov)?;
+        let (vo_id, version) = parse_imported_version(ov).map_err(|e| at_position(&position, e))?;
         push_version(parties, vo_id, kind, version);
     }
     Ok(())
@@ -563,19 +587,16 @@ fn collect_party_versions(
 ///
 /// # Errors
 /// [`StatusError::precondition`] when one `vo_id` arrives under two kinds, and the
-/// [`parse_imported_version`] rejections.
+/// [`parse_imported_version`] rejections, each naming the version's extract
+/// position.
 fn collect_content_versions(
     xver: &Value,
     kind: Kind,
+    position: &str,
     by_container: &mut BTreeMap<VoId, ImportContainer>,
 ) -> Result<(), StatusError> {
-    let empty: Vec<Value> = Vec::new();
-    for ov in xver
-        .get("versions")
-        .and_then(Value::as_array)
-        .unwrap_or(&empty)
-    {
-        let (vo_id, version) = parse_imported_version(ov)?;
+    for (position, ov) in wrapper_versions(xver, position) {
+        let (vo_id, version) = parse_imported_version(ov).map_err(|e| at_position(&position, e))?;
         if let Some(existing) = by_container.get(&vo_id)
             && existing.kind != kind
         {
@@ -701,19 +722,13 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), StatusErr
         .pointer("/preceding_version_uid/value")
         .and_then(Value::as_str)
         .map(str::to_owned);
-    let other_input_version_uids: Vec<String> = ov
+    // An entry that is no OBJECT_VERSION_ID refuses the import, the rule the
+    // CONTRIBUTION path applies (RM common `original_version`:
+    // `Other_input_version_uids_valid`; master06 §Version Merging).
+    let other_input_version_uids = ov
         .get("other_input_version_uids")
-        .and_then(Value::as_array)
-        .map(|a| {
-            a.iter()
-                .filter_map(|u| {
-                    u.as_str()
-                        .or_else(|| u.pointer("/value").and_then(Value::as_str))
-                        .map(str::to_owned)
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+        .map_or(Ok(Vec::new()), parse_merge_inputs)
+        .map_err(StatusError::from)?;
 
     // VERSION.contribution (1..1) — the SOURCE system's CONTRIBUTION reference,
     // kept verbatim: master06 §Committal and Audits puts "the knowledge of the
@@ -739,7 +754,12 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), StatusErr
         .pointer("/lifecycle_state/defining_code/code_string")
         .and_then(Value::as_str)
         .or_else(|| ov.pointer("/lifecycle_state/value").and_then(Value::as_str))
-        .unwrap_or(lifecycle::state::COMPLETE);
+        .ok_or_else(|| {
+            StatusError::precondition(
+                "imported ORIGINAL_VERSION has no lifecycle_state \
+                 (ORIGINAL_VERSION.lifecycle_state 1..1, RM common original_version.adoc)",
+            )
+        })?;
     let lifecycle_state = lifecycle_state_code(lifecycle_token).ok_or_else(|| {
         StatusError::precondition(format!(
             "imported lifecycle_state {lifecycle_token:?} is not a version_lifecycle_state code"
@@ -793,131 +813,4 @@ fn parse_imported_version(ov: &Value) -> Result<(VoId, ImportVersion), StatusErr
 }
 
 #[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::*;
-
-    /// A minimal spec-shaped `ORIGINAL_VERSION` wire value for the import parser
-    /// — carrying both mandatory `VERSION` attributes (`contribution` 1..1,
-    /// `commit_audit` 1..1; RM common `version.adoc` §Attributes).
-    fn original_version(type_field: Option<&str>) -> Value {
-        let mut ov = json!({
-            "uid": { "_type": "OBJECT_VERSION_ID",
-                     "value": "018f4a5e-9df1-7d1e-8b6f-2b8c00000001::sysA.example.org::1" },
-            "contribution": { "_type": "OBJECT_REF", "namespace": "local",
-                              "type": "CONTRIBUTION",
-                              "id": { "_type": "HIER_OBJECT_ID",
-                                      "value": "3d2c1b0a-0000-4000-8000-000000000abc" } },
-            "commit_audit": {
-                "_type": "AUDIT_DETAILS",
-                "system_id": "sysA.example.org",
-                "time_committed": { "_type": "DV_DATE_TIME", "value": "2026-07-11T10:00:00Z" },
-                "change_type": { "_type": "DV_CODED_TEXT", "value": "creation",
-                                 "defining_code": { "_type": "CODE_PHRASE", "code_string": "249",
-                                                    "terminology_id": { "_type": "TERMINOLOGY_ID",
-                                                                        "value": "openehr" } } },
-                "committer": { "_type": "PARTY_IDENTIFIED", "name": "Dr A" }
-            },
-            "lifecycle_state": { "_type": "DV_CODED_TEXT", "value": "complete",
-                                 "defining_code": { "_type": "CODE_PHRASE", "code_string": "532",
-                                                    "terminology_id": { "_type": "TERMINOLOGY_ID",
-                                                                        "value": "openehr" } } },
-            "data": { "_type": "EHR_STATUS" }
-        });
-        if let Some(t) = type_field {
-            ov.as_object_mut().unwrap().insert("_type".into(), json!(t));
-        }
-        ov
-    }
-
-    /// `X_VERSIONED_OBJECT.versions` members must be `ORIGINAL_VERSION` (RM
-    /// `ehr_extract` master05); a foreign `_type` — e.g. an already-wrapped
-    /// `IMPORTED_VERSION` — is rejected, while an explicit or absent
-    /// `ORIGINAL_VERSION` tag parses. Regression for
-    /// rm-common-change-control-R20.
-    #[test]
-    fn imported_versions_member_type_is_enforced() {
-        parse_imported_version(&original_version(None)).expect("absent _type defaults");
-        parse_imported_version(&original_version(Some("ORIGINAL_VERSION")))
-            .expect("explicit ORIGINAL_VERSION");
-        for foreign in ["IMPORTED_VERSION", "VERSION", "ORIGINAL_VERSION2"] {
-            let err = parse_imported_version(&original_version(Some(foreign)))
-                .expect_err("foreign _type in versions[] must be rejected");
-            assert!(
-                err.message.contains("ORIGINAL_VERSION") && err.message.contains(foreign),
-                "error should name the expected and offending types, got: {}",
-                err.message
-            );
-        }
-    }
-
-    /// The received original's OWN `contribution` and `commit_audit` are the
-    /// FOREIGN act, kept for the wrapped `ORIGINAL_VERSION` — RM common
-    /// master06 §Committal and Audits: "the knowledge of the original
-    /// Contribution and committal are retained inside the wrapped
-    /// `ORIGINAL_VERSION` instance". Regression for #1679, whose defect was
-    /// that the received `contribution` was dropped entirely and the foreign
-    /// `commit_audit` was written as the version row's own.
-    #[test]
-    fn wrapped_original_keeps_its_foreign_contribution_and_audit() {
-        let (_, version) =
-            parse_imported_version(&original_version(None)).expect("the fixture parses");
-        assert_eq!(
-            version
-                .contribution
-                .pointer("/id/value")
-                .and_then(Value::as_str),
-            Some("3d2c1b0a-0000-4000-8000-000000000abc"),
-            "the received contribution reference must be preserved verbatim"
-        );
-        assert_eq!(
-            version
-                .commit_audit
-                .pointer("/time_committed/value")
-                .and_then(Value::as_str),
-            Some("2026-07-11T10:00:00Z"),
-            "the source commit instant must ride the wrapped original, not the row"
-        );
-        assert_eq!(
-            version
-                .commit_audit
-                .get("system_id")
-                .and_then(Value::as_str),
-            Some("sysA.example.org"),
-        );
-    }
-
-    /// `VERSION.contribution` is 1..1 (RM common `version.adoc` §Attributes);
-    /// an `ORIGINAL_VERSION` arriving without one cannot be wrapped without
-    /// losing the original Contribution master06 §Committal and Audits says
-    /// must be retained, so it is refused.
-    #[test]
-    fn a_received_original_without_a_contribution_is_refused() {
-        let mut ov = original_version(None);
-        ov.as_object_mut().expect("object").remove("contribution");
-        let err = parse_imported_version(&ov).expect_err("contribution is mandatory");
-        assert!(
-            err.message.contains("contribution"),
-            "error should name the missing attribute, got: {}",
-            err.message
-        );
-    }
-
-    /// `AUDIT_DETAILS.Change_type_valid`: the commit audit's `change_type` is
-    /// coded from the openEHR `audit change type` group
-    /// (`UML/classes/org.openehr.rm.common.audit_details.adoc` §Invariants), so
-    /// a foreign code is refused rather than stored verbatim.
-    #[test]
-    fn a_received_commit_audit_with_an_unknown_change_type_is_refused() {
-        let mut ov = original_version(None);
-        *ov.pointer_mut("/commit_audit/change_type/defining_code/code_string")
-            .expect("code_string") = json!("999999");
-        let err = parse_imported_version(&ov).expect_err("change_type must be an openEHR code");
-        assert!(
-            err.message.contains("audit_change_type"),
-            "error should name the violated invariant, got: {}",
-            err.message
-        );
-    }
-}
+mod tests;
