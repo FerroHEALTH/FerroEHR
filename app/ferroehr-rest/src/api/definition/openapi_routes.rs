@@ -17,8 +17,7 @@
 //! ## Prose-vs-OAS reconciliations (documented real wire, per handler)
 //!
 //! - **ADL 2 upload** (`definition_template_adl2_upload.yaml`): the OAS declares
-//!   `201/400/409`; the REST adapter emits the `409` on a duplicate HRID (the
-//!   native `upload_artefact` replaces — this seam does not), and the `400`
+//!   `201/400/409`; the REST adapter emits the `409` on a duplicate HRID and the `400`
 //!   for an ADL2/AOM2 artefact that is invalid on the store path. A request
 //!   DECLARING a media type other than the operation's single `text/plain` body type is refused
 //!   `415` before parsing — the same cross-cutting rule that grounds the ADL 1.4

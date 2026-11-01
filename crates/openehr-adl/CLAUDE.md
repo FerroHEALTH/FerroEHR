@@ -77,6 +77,7 @@ else; each helper has exactly ONE home.
 | `adl14/metadata` | the description / standardised meta-data / HRID-version transform |
 | `adl14/differ` | the differential-form reducer |
 | `adl14/log` | the `ConversionLog` (code remaps, value sets, notes) |
+| `adl14/opt` | the OPT 1.4 → ADL 2 front end over the `openehr_its::opt14` model: `convert_opt_to_adl2` decomposes a flattened 1.4 OPT into one source archetype per embedded `C_ARCHETYPE_ROOT` (`decompose`; embedded children become slots, the fills recorded as `FillEdge`s), maps its constraints (`primitive`, `slot`, `tuple`, `value`) and runs each through `adl14/convert`, returning each root's ADL 2 text, `ConversionLog` and `conversion_details` |
 
 ## Crate rules
 
@@ -212,8 +213,9 @@ else; each helper has exactly ONE home.
   its accepting twin.
 - Dependencies point downward only: `openehr-am`, `openehr-base`, `openehr-rm`
   (the generated RM model oracle), `openehr-lang` (ODIN/BEL), `openehr-term`
-  (the languages code set for the resource-meta rows). No app-crate
-  knowledge, no SQL, no REST.
+  (the languages code set for the resource-meta rows), `openehr-its` with
+  `default-features = false` and only `opt14` (the OPT 1.4 model `adl14/opt`
+  reads). No app-crate knowledge, no SQL, no REST.
 - Spec pin: ADL/AOM 2.4.0 via `SPEC_VERSION`; the package version is the
   crate's own SemVer line (`.claude/rules/crates-publishing.md`).
 - Gates: `cargo clippy -p openehr-adl --all-targets` +

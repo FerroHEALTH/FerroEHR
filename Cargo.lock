@@ -5011,6 +5011,7 @@ dependencies = [
  "indexmap 2.14.2",
  "openehr-am",
  "openehr-base",
+ "openehr-its",
  "openehr-lang",
  "openehr-rm",
  "openehr-term",

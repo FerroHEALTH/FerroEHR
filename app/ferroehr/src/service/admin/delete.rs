@@ -70,8 +70,8 @@ impl FerroEhrService {
     /// §Composite Identifiers and Case), evicting its `WebTemplate` cache entry.
     ///
     /// NOTE: no openEHR spec governs this operation, the ITS-REST Admin API
-    /// defining only EHR deletes — our own design/extension, mirroring the
-    /// UUID-keyed delete ([`Self::delete_opt`]) but addressed by the wire id.
+    /// defining only EHR deletes — our own design/extension, addressed by the
+    /// wire id.
     ///
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — no template with that id.
@@ -89,9 +89,8 @@ impl FerroEhrService {
     /// exact on the version.
     ///
     /// NOTE: no openEHR spec governs this operation, the ITS-REST Admin API
-    /// defining only EHR deletes — our own design/extension; the native
-    /// `delete_query` deletes every version by name while this surface targets
-    /// a single `(name, version)` row.
+    /// defining only EHR deletes — our own design/extension; it targets a
+    /// single `(name, version)` row.
     ///
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — no stored query at that
@@ -160,8 +159,8 @@ impl FerroEhrService {
         .execute(&mut *tx)
         .await?;
         tx.commit().await?;
-        // Evict the derived-runtime cache for the deleted id (case-canonical key,
-        // matching the native delete path). No openEHR spec governs the cache.
+        // Evict the derived-runtime cache for the deleted id (case-canonical
+        // key). No openEHR spec governs the cache.
         self.web_templates
             .invalidate(&crate::templates::identity::canonical_key(&stored))
             .await;

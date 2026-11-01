@@ -35,10 +35,9 @@
 //!    at-code node ids, terminology constraints preserved verbatim in the
 //!    `C_TERMINOLOGY_CODE.constraint` string, inline dADL domain blocks lowered
 //!    to their `DV_*` types with an attribute tuple. The converter core takes
-//!    the assembled `Archetype`, not raw text, so a stored 1.4 operational
-//!    template converts through it too once an application-side front end has
-//!    decomposed the flattened OPT into one source `Archetype` per embedded
-//!    root.
+//!    the assembled `Archetype`, not raw text, so a 1.4 operational template
+//!    converts through it too: [`opt`] decomposes the flattened OPT into one
+//!    source `Archetype` per embedded root.
 //! 2. **Converter core** ([`convert`]) — node-id renumbering (the `+1`
 //!    first-segment shift, separate id-/at-code spaces, `0.`-prefixed
 //!    new-at-level codes kept, missing ids synthesised in document order),
@@ -62,4 +61,5 @@ pub mod log;
 pub mod lower;
 mod metadata;
 mod multiplicity;
+pub mod opt;
 mod walk;

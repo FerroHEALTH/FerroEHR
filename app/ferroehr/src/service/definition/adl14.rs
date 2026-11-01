@@ -27,6 +27,7 @@ use std::str::FromStr;
 
 use openehr_adl::adl14::convert::{ConvertConfig, parse_and_convert};
 use openehr_adl::adl14::log::ConversionLog;
+use openehr_adl::adl14::opt::convert_opt_to_adl2;
 use openehr_adl::error::SyntaxError;
 use openehr_adl::validate::catalogue::Severity;
 use openehr_adl::validate::rm::ProductionRmModel;
@@ -34,7 +35,6 @@ use openehr_adl::validate::{ValidationIssue, validate_adl14_source};
 use openehr_base::prelude::ArchetypeId;
 use openehr_base::validate::InvariantViolation;
 use sqlx::Connection as _;
-use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
@@ -42,7 +42,7 @@ use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
 use crate::service::status::{ServiceStatus, StatusError};
 
-use super::{compile_pattern, page_bounds, paginate};
+use super::page_bounds;
 
 // ── the native ADL 1.4 definition calls ─────────────────────────────────────
 
@@ -56,29 +56,6 @@ impl FerroEhrService {
     /// A database failure (`exception` → `500`).
     pub async fn has_archetype(&self, an_id: String) -> Result<bool, StatusError> {
         Ok(self.archetype_exists(&an_id).await?)
-    }
-
-    /// `valid_archetype` — the ADL 1.4 phase-1 validity of a 1.4 source
-    /// (`openehr-adl` engine, standalone: parse in the 1.4 dialect + the ADL 1.4
-    /// / AOM 1.4 phase-1 subset). Stateless — validity is judged as 1.4, never
-    /// post-conversion.
-    ///
-    /// # Errors
-    ///
-    /// Never — the `Result` shape matches the other calls; validity is reported
-    /// in the `Ok` boolean.
-    #[expect(
-        clippy::unused_self,
-        clippy::unnecessary_wraps,
-        reason = "every service call shares one method-on-the-service, `Result`-returning \
-                  shape the protocol adapter invokes uniformly, so neither is dropped because \
-                  this implementation happens to be stateless and infallible"
-    )]
-    pub fn valid_archetype(&self, adl: &str) -> Result<bool, StatusError> {
-        Ok(matches!(
-            validate_adl14_source(adl, &ProductionRmModel),
-            Ok(issues) if issues.iter().all(|i| i.severity != Severity::Error)
-        ))
     }
 
     /// `upload_archetype` — validate a 1.4 archetype
@@ -148,43 +125,39 @@ impl FerroEhrService {
         })
     }
 
-    /// Convert a stored ADL 1.4 **operational template** (by `UUID`) to ADL2
-    /// source text via the `openehr_adl::adl14` converter, returning one ADL2
-    /// source per embedded archetype root (the top COMPOSITION root first, then
-    /// each component in document order).
+    /// Convert a stored ADL 1.4 **operational template** (by its `template_id`)
+    /// to ADL2 source text via the `openehr_adl::adl14` converter, returning one
+    /// ADL2 source per embedded archetype root (the top COMPOSITION root first,
+    /// then each component in document order).
     ///
     /// A 1.4 OPT is specialisation-flattened: its `definition` is one
     /// `C_ARCHETYPE_ROOT` tree with the component archetypes embedded as nested
-    /// `C_ARCHETYPE_ROOT` nodes, each with its own at-code space. The
-    /// `super::opt14_convert` front end decomposes it into one scoped 1.4-shaped
-    /// `v2_4` source per embedded root and converts each; the recovered
-    /// composition structure stays on the front end's result.
+    /// `C_ARCHETYPE_ROOT` nodes, each with its own at-code space.
+    /// [`openehr_adl::adl14::opt::convert_opt_to_adl2`] decomposes it into one
+    /// scoped 1.4-shaped `v2_4` source per embedded root and converts each.
+    /// The `template_id` is matched case-insensitively (BASE master05
+    /// §Composite Identifiers and Case).
     ///
     /// NOTE: no openEHR spec governs 1.4 to 2 conversion — our own
     /// design/extension, a service capability with no REST endpoint.
     ///
     /// # Errors
     ///
-    /// - `an_opt_id` is not a parseable `UUID` → `precondition_violation`
-    ///   (`400`).
-    /// - No OPT with that id → `template_does_not_exist` (`404`).
+    /// - No OPT with that `template_id` → `template_does_not_exist` (`404`).
     /// - The stored OPT no longer parses or does not convert → `content_invalid`
     ///   (`422`).
     /// - A database failure (`exception` → `500`).
     pub async fn adl14_convert_opt_to_adl2(
         &self,
-        an_opt_id: String,
+        template_id: String,
     ) -> Result<Vec<String>, StatusError> {
-        // `opt_get` names `template_does_not_exist` at construction and
-        // `ServiceError` round-trips the granular status losslessly — no
-        // boundary re-raise needed.
-        let xml = self.opt_get(&an_opt_id).await?;
+        let xml = self.opt_get_by_template_id(&template_id).await?;
         let opt = openehr_its::opt14::from_xml(&xml).map_err(|e| {
             ServiceError::content_invalid(
                 Violation::new(format!("stored OPT no longer parses: {e:?}")).with_source(e),
             )
         })?;
-        let conversion = super::opt14_convert::convert_opt_to_adl2(&opt).map_err(|e| {
+        let conversion = convert_opt_to_adl2(&opt).map_err(|e| {
             ServiceError::content_invalid(
                 Violation::new(format!("OPT 1.4 → 2 conversion failed: {e}")).with_source(e),
             )
@@ -213,21 +186,6 @@ impl FerroEhrService {
         Ok(self.archetype_list(page).await?)
     }
 
-    /// `list_matching_archetypes` — archetype ids matching `id_pattern` (a
-    /// regex), cursored by `page`.
-    ///
-    /// # Errors
-    ///
-    /// - An uncompilable `id_pattern` → `invalid_id_pattern` (`400`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn list_matching_archetypes(
-        &self,
-        id_pattern: String,
-        page: Page,
-    ) -> Result<Vec<String>, StatusError> {
-        Ok(self.archetype_list_matching(&id_pattern, page).await?)
-    }
-
     /// `delete_archetype` —
     /// delete an archetype by id (case-insensitive).
     ///
@@ -237,44 +195,6 @@ impl FerroEhrService {
     /// - A database failure (`exception` → `500`).
     pub async fn delete_archetype(&self, an_id: String) -> Result<(), StatusError> {
         Ok(self.archetype_delete(&an_id).await?)
-    }
-
-    /// `archetypes_count` — total stored ADL 1.4 archetypes.
-    ///
-    /// # Errors
-    ///
-    /// A database failure (`exception` → `500`).
-    pub async fn archetypes_count_adl14(&self) -> Result<i64, StatusError> {
-        Ok(self.archetype_count().await?)
-    }
-
-    /// `has_opt` — true if an OPT with `an_opt_id` (a `UUID`) is stored.
-    ///
-    /// # Errors
-    ///
-    /// - `an_opt_id` is not a parseable `UUID` → `precondition_violation`
-    ///   (`400`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn has_opt(&self, an_opt_id: String) -> Result<bool, StatusError> {
-        Ok(self.opt_exists(&an_opt_id).await?)
-    }
-
-    /// `valid_opt` — the OPT parses (`opt14::from_xml`) and passes the
-    /// templates seam's structural check. Stateless.
-    ///
-    /// # Errors
-    ///
-    /// Never — the `Result` shape matches the other calls; validity is reported
-    /// in the `Ok` boolean.
-    #[expect(
-        clippy::unused_self,
-        clippy::unnecessary_wraps,
-        reason = "every service call shares one method-on-the-service, `Result`-returning \
-                  shape the protocol adapter invokes uniformly, so neither is dropped because \
-                  this implementation happens to be stateless and infallible"
-    )]
-    pub fn valid_opt(&self, opt_xml: &str) -> Result<bool, StatusError> {
-        Ok(valid_opt_xml(opt_xml))
     }
 
     /// `upload_opt` — store an OPT 1.4 canonical-XML template. Ingestion runs
@@ -298,77 +218,6 @@ impl FerroEhrService {
             .await
             .map_err(|e| invalid_artefact_status(e, ServiceStatus::InvalidTemplate))?;
         Ok(())
-    }
-
-    /// `get_opt` — the OPT 1.4 canonical XML of the OPT with `an_opt_id` (a
-    /// `UUID`; interchange form).
-    ///
-    /// # Errors
-    ///
-    /// - `an_opt_id` is not a parseable `UUID` → `precondition_violation`
-    ///   (`400`).
-    /// - No OPT with that id → `template_does_not_exist` (`404`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn get_opt(&self, an_opt_id: String) -> Result<String, StatusError> {
-        Ok(self.opt_get(&an_opt_id).await?)
-    }
-
-    /// `list_opts` — the ids (`UUID`s) of all stored OPTs, oldest first,
-    /// cursored by `page`.
-    ///
-    /// # Errors
-    ///
-    /// A database failure (`exception` → `500`).
-    pub async fn list_opts_adl14(&self, page: Page) -> Result<Vec<String>, StatusError> {
-        Ok(self.opt_list(page).await?)
-    }
-
-    /// `list_matching_opts` — OPTs whose `template_id` matches `id_pattern`
-    /// (a regex), cursored by `page`.
-    ///
-    /// It returns the OPTs' `template_id` strings, the identifier a pattern is
-    /// useful against.
-    ///
-    /// # Errors
-    ///
-    /// - An uncompilable `id_pattern` → `invalid_id_pattern` (`400`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn list_matching_opts(
-        &self,
-        id_pattern: String,
-        page: Page,
-    ) -> Result<Vec<String>, StatusError> {
-        Ok(self.opt_list_matching(&id_pattern, page).await?)
-    }
-
-    /// `delete_opt` — delete an OPT by
-    /// `an_opt_id` (a `UUID`), evicting its derived-runtime (`WebTemplate`)
-    /// cache entry.
-    ///
-    /// NOTE: no specification governs deleting a template that committed data
-    /// references, so the in-use refusal is our own integrity
-    /// design, matching the admin wire delete
-    /// ([`Self::admin_template_delete`]).
-    ///
-    /// # Errors
-    ///
-    /// - `an_opt_id` is not a parseable `UUID` → `precondition_violation`
-    ///   (`400`).
-    /// - No OPT with that id → `template_does_not_exist` (`404`).
-    /// - A committed version still references the template →
-    ///   `ServiceError::Conflict` (`409`), naming the reference count.
-    /// - A database failure (`exception` → `500`).
-    pub async fn delete_opt(&self, an_opt_id: String) -> Result<(), StatusError> {
-        Ok(self.opt_delete(&an_opt_id).await?)
-    }
-
-    /// `opts_count` — total stored OPTs.
-    ///
-    /// # Errors
-    ///
-    /// A database failure (`exception` → `500`).
-    pub async fn opts_count_adl14(&self) -> Result<i64, StatusError> {
-        Ok(self.opt_count().await?)
     }
 }
 
@@ -441,21 +290,6 @@ impl FerroEhrService {
         .await?)
     }
 
-    /// Archetype ids matching `id_pattern` (regex; uncompilable →
-    /// `invalid_id_pattern`, `400`), then paged.
-    async fn archetype_list_matching(
-        &self,
-        id_pattern: &str,
-        page: Page,
-    ) -> Result<Vec<String>, ServiceError> {
-        let re = compile_pattern(id_pattern)?;
-        let all: Vec<String> =
-            sqlx::query_scalar("SELECT archetype_id FROM archetype_store ORDER BY archetype_id")
-                .fetch_all(&mut *acquire(&self.pool).await?)
-                .await?;
-        Ok(paginate(all.into_iter().filter(|id| re.is_match(id)), page))
-    }
-
     /// Delete an archetype by id (case-insensitive); absent →
     /// `artefact_does_not_exist` (`404`).
     async fn archetype_delete(&self, an_id: &str) -> Result<(), ServiceError> {
@@ -474,47 +308,8 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Total stored ADL 1.4 archetypes.
-    async fn archetype_count(&self) -> Result<i64, ServiceError> {
-        Ok(
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM archetype_store")
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?,
-        )
-    }
-
-    /// True if an OPT with `an_opt_id` (a `UUID`) is stored; unparseable UUID
-    /// → `400`.
-    async fn opt_exists(&self, an_opt_id: &str) -> Result<bool, ServiceError> {
-        let id = parse_opt_uuid(an_opt_id)?;
-        Ok(sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM template_store WHERE id = $1)",
-        )
-        .bind(id)
-        .fetch_one(&mut *acquire(&self.pool).await?)
-        .await?)
-    }
-
-    /// The OPT 1.4 canonical XML of the OPT with `an_opt_id` (a `UUID`);
-    /// absent → `template_does_not_exist` (`404`); unparseable UUID
-    /// → `400`.
-    async fn opt_get(&self, an_opt_id: &str) -> Result<String, ServiceError> {
-        let id = parse_opt_uuid(an_opt_id)?;
-        sqlx::query_scalar::<_, String>("SELECT content FROM template_store WHERE id = $1")
-            .bind(id)
-            .fetch_optional(&mut *acquire(&self.pool).await?)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::TemplateDoesNotExist,
-                    format!("OPT {an_opt_id}"),
-                )
-            })
-    }
-
-    /// The OPT 1.4 canonical XML addressed by its `template_id` string (the
-    /// ITS-REST wire address, unlike the UUID-keyed [`opt_get`](Self::opt_get)).
-    /// Absent → `template_does_not_exist` (`404`).
+    /// The OPT 1.4 canonical XML addressed by its `template_id` string, the
+    /// ITS-REST wire address. Absent → `template_does_not_exist` (`404`).
     pub(super) async fn opt_get_by_template_id(
         &self,
         template_id: &str,
@@ -533,111 +328,6 @@ impl FerroEhrService {
                 format!("OPT template_id {template_id}"),
             )
         })
-    }
-
-    /// The ids (`UUID`s) of all stored OPTs, oldest first, paged in SQL.
-    async fn opt_list(&self, page: Page) -> Result<Vec<String>, ServiceError> {
-        let (offset, limit) = page_bounds(page);
-        let ids: Vec<Uuid> = sqlx::query_scalar(
-            "SELECT id FROM template_store ORDER BY created_at, id OFFSET $1 LIMIT $2",
-        )
-        .bind(offset)
-        .bind(limit)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        Ok(ids.into_iter().map(|u| u.to_string()).collect())
-    }
-
-    /// OPTs whose `template_id` matches `id_pattern` (regex; uncompilable →
-    /// `invalid_id_pattern`, `400`), then paged. Returns `template_id`
-    /// strings.
-    async fn opt_list_matching(
-        &self,
-        id_pattern: &str,
-        page: Page,
-    ) -> Result<Vec<String>, ServiceError> {
-        let re = compile_pattern(id_pattern)?;
-        let all: Vec<String> =
-            sqlx::query_scalar("SELECT template_id FROM template_store ORDER BY template_id")
-                .fetch_all(&mut *acquire(&self.pool).await?)
-                .await?;
-        Ok(paginate(
-            all.into_iter().filter(|tid| re.is_match(tid)),
-            page,
-        ))
-    }
-
-    /// Delete an OPT by `an_opt_id` (a `UUID`), evicting the deleted
-    /// template's `WebTemplate` cache entry; absent →
-    /// `template_does_not_exist` (`404`); still referenced by committed
-    /// versions → `Conflict` (`409`, with the reference count); unparseable
-    /// UUID → `400`.
-    async fn opt_delete(&self, an_opt_id: &str) -> Result<(), ServiceError> {
-        let id = parse_opt_uuid(an_opt_id)?;
-        // Resolve, count references and delete in ONE transaction so the 409 is
-        // consistent with the delete; the `version.template_id` →
-        // `template_ref` foreign key stays the integrity guard under a
-        // concurrent commit.
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        let template_id: Option<String> =
-            sqlx::query_scalar("SELECT template_id FROM template_store WHERE id = $1")
-                .bind(id)
-                .fetch_optional(&mut *tx)
-                .await?;
-        let Some(template_id) = template_id else {
-            return Err(ServiceError::new(
-                ServiceStatus::TemplateDoesNotExist,
-                format!("OPT {an_opt_id}"),
-            ));
-        };
-        // Counted over BOTH storage tiers: the cold archival mirror carries no
-        // `template_ref` foreign key, so an archived composition's reference is
-        // invisible to the constraint and deleting under it would make that
-        // object unrestorable (no openEHR spec governs the in-use refusal).
-        let refs: i64 = sqlx::query_scalar("SELECT count(*) FROM version WHERE template_id = $1")
-            .bind(&template_id)
-            .fetch_one(&mut *tx)
-            .await?;
-        if refs > 0 {
-            return Err(ServiceError::conflict(format!(
-                "template '{template_id}' is still referenced by {refs} committed version(s); \
-                 delete those compositions before deleting the template"
-            )));
-        }
-        sqlx::query("DELETE FROM template_store WHERE id = $1")
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
-        // Deregister the wire address unless a template-kind ADL2 artefact
-        // also claims it (`template_ref` is the union of both dialects'
-        // addresses; the FK blocks the deregistration if a concurrent commit
-        // referenced it after the count above).
-        sqlx::query(
-            "DELETE FROM template_ref WHERE template_id = $1 AND NOT EXISTS \
-             (SELECT 1 FROM adl2_artefact WHERE lower(hrid) = lower($1) \
-              AND kind IN ('template', 'operational_template'))",
-        )
-        .bind(&template_id)
-        .execute(&mut *tx)
-        .await?;
-        tx.commit().await?;
-        // Uploads are create-only, so delete is the single cache-invalidation
-        // point. The key is the identity-canonical form, so a case variant is
-        // evicted too (BASE master05 §Composite Identifiers and Case).
-        self.web_templates
-            .invalidate(&crate::templates::identity::canonical_key(&template_id))
-            .await;
-        Ok(())
-    }
-
-    /// Total stored OPTs.
-    async fn opt_count(&self) -> Result<i64, ServiceError> {
-        Ok(
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM template_store")
-                .fetch_one(&mut *acquire(&self.pool).await?)
-                .await?,
-        )
     }
 }
 
@@ -714,27 +404,6 @@ fn issue_to_validation_error(i: &ValidationIssue) -> InvariantViolation {
             None => i.message.clone(),
         },
     )
-}
-
-/// `valid_opt` core — the OPT parses (`opt14::from_xml`), passes the
-/// templates seam's structural check, and passes the same artefact-validity
-/// catalogue `upload_opt` enforces, so the two answers never diverge.
-fn valid_opt_xml(opt_xml: &str) -> bool {
-    crate::validation::validate_opt_structure(opt_xml).is_ok()
-        && openehr_its::opt14::from_xml(opt_xml)
-            .is_ok_and(|opt| crate::validation::validate_opt_artefact(&opt).is_ok())
-}
-
-/// Parse an OPT id UUID string; an unparseable value is a `400`.
-#[expect(
-    clippy::map_err_ignore,
-    reason = "the mapped error already names the resource and echoes the \
-              rejected token; the discarded `uuid::Error` adds only its own \
-              wording, which is not part of the wire contract"
-)]
-fn parse_opt_uuid(an_opt_id: &str) -> Result<Uuid, ServiceError> {
-    Uuid::parse_str(an_opt_id)
-        .map_err(|_| ServiceError::precondition(format!("OPT id is not a UUID: {an_opt_id}")))
 }
 
 /// Extract the `ARCHETYPE_ID` from ADL 1.4 source: the source must begin with

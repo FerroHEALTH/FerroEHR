@@ -8,11 +8,10 @@
 //! Governing spec text: `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
 //! Governing spec: `docs/specs/openehr/ITS-REST/specifications/docs/definition/`.
 //!
-//! The wire addresses OPTs by their `template_id` string; the native `get_opt` is
-//! UUID-keyed, so retrieval runs through the `DefinitionAdapter` extension
-//! (`template_adl14_get`), while list/upload/example likewise route through the
-//! wire-shaped adapter (rich summary objects + a generated example COMPOSITION
-//! the native OPT calls do not carry).
+//! The wire addresses OPTs by their `template_id` string, so retrieval runs
+//! through the wire-shaped service method `template_adl14_get`, and
+//! list/upload/example route through the wire-shaped methods too (rich summary
+//! objects and a generated example COMPOSITION).
 
 #![expect(
     clippy::disallowed_types,

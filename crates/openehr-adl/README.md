@@ -14,7 +14,8 @@ generation, and ADL 1.4 → ADL 2 conversion — over the generated
   archetypes.
 - **Flattener**: specialisation flattening and template expansion.
 - **OPT 2**: operational template generation from a flattened archetype set.
-- **ADL 1.4 → 2 conversion** for legacy archetype libraries.
+- **ADL 1.4 → 2 conversion** for legacy archetype libraries and ADL 1.4
+  operational templates.
 
 The grammar authority is the vendored openEHR ADL 2.4 specification text and
 its normative grammars; the parser is a hand-written native-Rust

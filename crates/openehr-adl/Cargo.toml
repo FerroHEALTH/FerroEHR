@@ -21,6 +21,7 @@ openehr-am = { path = "../openehr-am", version = "0.0.128" }       # v2_4 Archet
 openehr-rm = { path = "../openehr-rm", version = "0.0.128" }       # openehr_rm::model — the generated RM attribute/type oracle (ProductionRmModel)
 openehr-lang = { path = "../openehr-lang", version = "0.0.128" }   # openehr_lang::odin — the ODIN section parser
 openehr-term = { path = "../openehr-term", version = "0.0.128" }   # the languages code set for the RM resource-meta rows
+openehr-its = { path = "../openehr-its", version = "0.0.128", default-features = false, features = ["opt14"] }   # the OPT 1.4 model `adl14::opt` converts from, and the canonical-JSON default values it carries
 uuid.workspace = true        # meta uid/build_uid (AUTHORED_ARCHETYPE.uid: Uuid)
 indexmap.workspace = true    # OdinValue::Object body (insertion-ordered map)
 
