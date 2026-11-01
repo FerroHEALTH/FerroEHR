@@ -99,6 +99,20 @@ if [ -x "$repo_root/scripts/checks/file-size.sh" ]; then
   }
 fi
 
+# Forwarder guard (.claude/rules/rust-style.md §No function only forwards to
+# another): the edited file carries no forwarder the baseline lacks. It builds
+# tools/forwarders in the one ./target on first use, a few seconds.
+case "$file_path" in
+*/app/*/src/*.rs | */crates/*/src/*.rs | */tools/*/src/*.rs)
+  if [ -x "$repo_root/scripts/checks/forwarders.sh" ]; then
+    findings="$("$repo_root/scripts/checks/forwarders.sh" --files "$file_path" 2>&1)" || {
+      printf '%s\n' "$findings" >&2
+      exit 2
+    }
+  fi
+  ;;
+esac
+
 # E2E wait guard (.claude/rules/console-ui.md §5): a browser journey holds the
 # bounded `common::Element`, never a raw `WebElement`/`SelectElement`, and waits
 # on a condition rather than a timer. Whole-scope only (the guard reads every

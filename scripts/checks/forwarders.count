@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The forwarders scripts/checks/forwarders.sh counts in app/*/src/,
+# crates/*/src/ and tools/*/src/. It may fall and never rise; --update
+# writes a lower one, and a higher one is a hand edit that says why.
+158
