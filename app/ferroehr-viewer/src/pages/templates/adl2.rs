@@ -4,16 +4,23 @@
 //! What one ADL 2 template's page reads from the CDR, tab by tab.
 
 use crate::adl2::{TemplateFamily, family_versions, split_hrid};
+use ferrohealth_ui::html::Html;
+use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
+
 use crate::bff::template_adl2::{
-    Compiled, adl2_catalog_from_json, fetch_adl2_compiled, fetch_adl2_example, fetch_adl2_source,
+    Compiled, Violation, adl2_catalog_from_json, fetch_adl2_compiled, fetch_adl2_example,
+    fetch_adl2_source,
 };
-use crate::bff::templates::list_adl2_templates;
+use crate::bff::templates::{Adl2Upload, list_adl2_templates, upload_adl2_template};
 use crate::builder::catalog::CatalogNode;
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
+use crate::locale::current;
+use crate::locale::definitions::DefinitionsMsg;
+use crate::pages::common::count;
 use crate::pages::template_releases::{CompareAsk, Releases, load_releases};
 
-use super::{ExampleAsk, TemplateTab, delete_posted};
+use super::{ExampleAsk, TemplateTab, Uploaded, adl2_href, delete_posted};
 
 /// What the tab of an ADL 2 template read.
 #[derive(Debug, Clone)]
@@ -171,4 +178,82 @@ pub(super) async fn load_adl2_template(
         missing,
         download,
     })
+}
+
+/// Uploads the ADL 2 `source`: the page of the stored template, else what
+/// Upload draws of the refusal.
+pub(super) async fn upload(source: String) -> Result<String, Uploaded> {
+    match upload_adl2_template(source).await {
+        Ok(Adl2Upload::Stored(Some(id))) => {
+            let (stem, release) = split_hrid(&id);
+            Ok(adl2_href(stem, release))
+        }
+        Ok(Adl2Upload::Stored(None)) => Ok(format!(
+            "/templates?family={}",
+            TemplateFamily::Adl2.as_query()
+        )),
+        Ok(Adl2Upload::Invalid(found)) => Err(Uploaded::Invalid(found)),
+        Err(error) => Err(Uploaded::Refused(error)),
+    }
+}
+
+/// The refusal of an ADL 2 source for the violations `found`: one issue for
+/// each, its rule code and the CDR's words for it.
+#[must_use]
+pub(super) fn violations_refused(found: &[Violation]) -> Html {
+    refusal(
+        &current(),
+        &Refusal {
+            status: Some(http::StatusCode::UNPROCESSABLE_ENTITY.as_u16()),
+            summary: crate::locale::tr_with(
+                DefinitionsMsg::TemplateUploadInvalid,
+                &[("count", count(found.len()))],
+            ),
+            issues: found
+                .iter()
+                .map(|violation| {
+                    Issue::new(Severity::Error, violation.rule.clone())
+                        .text(violation.detail.clone())
+                })
+                .collect(),
+            request: None,
+            evidence: None,
+        },
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::violations_refused;
+    use crate::bff::template_adl2::Violation;
+
+    #[test]
+    fn a_refused_upload_draws_each_violation_with_its_rule_and_detail() {
+        let found = [
+            Violation {
+                rule: "VARXR".to_owned(),
+                detail: "external reference \"openEHR-EHR-OBSERVATION.cnf_constituent.v1\" \
+                         does not resolve to an archetype in the repository (at id2)"
+                    .to_owned(),
+            },
+            Violation {
+                rule: "VACSD".to_owned(),
+                detail: "the specialisation depth does not match (at id1)".to_owned(),
+            },
+        ];
+        let html = violations_refused(&found).as_str().to_owned();
+        for violation in &found {
+            assert!(html.contains(&violation.rule), "{html}");
+        }
+        assert!(
+            html.contains("openEHR-EHR-OBSERVATION.cnf_constituent.v1"),
+            "{html}"
+        );
+        assert!(
+            html.contains("the specialisation depth does not match (at id1)"),
+            "{html}"
+        );
+        assert!(html.contains("it breaks 2 rules"), "{html}");
+        assert!(!html.contains("\"errors\""), "no raw JSON is drawn: {html}");
+    }
 }
