@@ -358,17 +358,23 @@ These things about the payload are worth calling out:
   new version. A code outside the openEHR *version lifecycle state* group is a
   **422**.
 - **A version entry may carry members the schema does not declare.** The
-  released `UPDATE_VERSION` schema leaves the object open, so an extra member,
-  such as `contribution`, `item` or `other_input_version_uids`, is accepted
-  and ignored. The version commits as a local `ORIGINAL_VERSION`: it wraps
-  nothing and serves no merge provenance. Merge provenance is read-only (it
-  appears on `ORIGINAL_VERSION` reads and is preserved when a version arrives
-  through an EHR-Extract import or an archive load), and an imported version
-  comes only through the import route.
-- **A version entry never states its own `uid`.** The server assigns the
-  identity of every version it commits, so a `uid` on a version entry is a
-  **400** naming `versions[i]/uid`. The optional `_type` self-tag is
-  `UPDATE_VERSION` or `ORIGINAL_VERSION`; any other class is a **400**.
+  released `UPDATE_VERSION` schema leaves the object open, so an extra member
+  that means nothing on a locally created `ORIGINAL_VERSION`, such as `item`
+  (an imported version's attribute) or an extension of your own, is accepted
+  and ignored. An imported version comes only through the import route.
+- **A version entry records its merge inputs.** When the version merges other
+  versions, list them in `other_input_version_uids` as `OBJECT_VERSION_ID`
+  objects (`{"value": "…::…::…"}`, `_type` optional). The committed
+  `ORIGINAL_VERSION` stores them as given and serves them on every read and in
+  the signed form. They may name versions this server does not hold. An empty
+  list, an entry that is not an `OBJECT_VERSION_ID`, or the list on an
+  attestation entry is a **422**.
+- **A version entry never states what the server assigns.** The server assigns
+  the identity of every version it commits and links it to the contribution
+  being created, so a `uid` or a `contribution` on a version entry is a
+  **400** naming `versions[i]/uid` or `versions[i]/contribution`. The optional
+  `_type` self-tag is `UPDATE_VERSION` or `ORIGINAL_VERSION`; any other class
+  is a **400**.
 
 A version's `attestations` list carries `UPDATE_ATTESTATION` objects, each with
 its own `change_type`, `committer`, `reason` (required) and `is_pending`

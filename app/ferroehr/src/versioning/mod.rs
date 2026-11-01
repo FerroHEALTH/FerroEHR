@@ -80,6 +80,7 @@ pub mod origins;
 pub(crate) mod person;
 pub(crate) mod profile;
 pub(crate) mod read;
+pub(crate) mod restriction;
 pub mod signature;
 pub(crate) mod wire;
 

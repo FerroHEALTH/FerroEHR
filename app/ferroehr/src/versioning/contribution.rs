@@ -280,6 +280,9 @@ struct PlannedVersion {
     /// content member, attached to the existing version on a
     /// `666|attestation|` member.
     attestations: Vec<AttestationInput>,
+    /// `ORIGINAL_VERSION.other_input_version_uids`, the merge provenance the
+    /// member states (empty when it merges nothing).
+    other_input_version_uids: Vec<String>,
 }
 
 /// The `_type` self-tags a CONTRIBUTION version member may carry: the class the
@@ -292,69 +295,83 @@ struct PlannedVersion {
 /// `ORIGINAL_VERSION` names the class the member becomes, per the `_type` rule
 /// of `specifications/docs/overview/Resources.md` §Resource representation; the
 /// server still assigns the version identity, so
-/// [`reject_foreign_version_identity`] refuses a member-borne `uid` under either
+/// [`read_undeclared_members`] refuses a member-borne `uid` under either
 /// tag.
 const COMMITTABLE_MEMBER_TYPES: [&str; 2] = ["UPDATE_VERSION", "ORIGINAL_VERSION"];
 
-/// Refuses a CONTRIBUTION version member that states its own version identity
-/// or self-tags as a class this wire does not commit.
+/// Refuses a CONTRIBUTION version member that states an attribute the server
+/// assigns or self-tags as a class this wire does not commit, and reads its
+/// merge provenance.
 ///
 /// `UPDATE_VERSION` is an open object: ITS-REST `schemas/ehr/UpdateVersion.yaml`
 /// (and its demographic copy) declares six properties and no
 /// `additionalProperties`, where the release closes an object it means to close
-/// with `additionalProperties: false` (`ItemTag.yaml`). Every other undeclared
-/// member is accepted and ignored, as on `NewContribution` and `UpdateAudit`.
+/// with `additionalProperties: false` (`ItemTag.yaml`). An undeclared member
+/// with no meaning on a locally created `ORIGINAL_VERSION` (RM common
+/// `org.openehr.rm.common.original_version.adoc`) is accepted and ignored, as on
+/// `NewContribution` and `UpdateAudit`; `item` is one, being `IMPORTED_VERSION`'s.
 ///
-/// `uid` is the one member refused by name: the identity of a locally created
-/// version is the server's to assign. RM common
-/// `master06-change_control_package.adoc` §Version Identification sets its
-/// `creating_system_id` to "the identifier of the local system" and numbers its
-/// `version_tree_id` from 1, and ITS-REST `Resources.md` §Resource
-/// identification says "Once assigned, a resource identifier remains
-/// unchanged". A stated `uid` is either the value the server computes or a
-/// foreign identity, which RM master06 §Copying commits as an
-/// `IMPORTED_VERSION`; ignoring it would commit under an identity other than
-/// the one the client stated.
+/// Two RM attributes are the server's to assign and refused by name. `uid`: RM
+/// common `master06-change_control_package.adoc` §Version Identification sets a
+/// local version's `creating_system_id` to "the identifier of the local system"
+/// and numbers its `version_tree_id` from 1. `contribution`: master06 §Version
+/// and its Subtypes says a committed version "records the Contribution in the
+/// `_contribution_` attribute", the one this commit creates. Ignoring either
+/// would commit under a value other than the one the client stated.
 ///
-/// `undeclared` is the generated envelope's `additional_properties`: every key
-/// of the member outside the six the schema declares.
+/// `other_input_version_uids` is recorded ([`object_version_id::parse_merge_inputs`]).
 ///
 /// NOTE: `_type` must name "the uppercase class name from the RM specification"
 /// (ITS-REST `specifications/docs/overview/Resources.md` §Resource
 /// representation), so only a class this wire commits passes.
 ///
 /// # Errors
-/// [`ServiceError::BadRequest`] naming the offending key.
-fn reject_foreign_version_identity(
+/// [`ServiceError::BadRequest`] naming the offending key;
+/// [`ServiceError::Unprocessable`] for malformed merge provenance.
+fn read_undeclared_members(
     undeclared: &std::collections::BTreeMap<String, Value>,
     index: usize,
-) -> Result<(), ServiceError> {
-    if undeclared.contains_key("uid") {
-        return Err(ServiceError::precondition(format!(
-            "versions[{index}]/uid is not carried on a CONTRIBUTION version member: \
-             the identity of a locally committed version is assigned by this \
-             repository (RM common master06 §Version Identification: its \
-             creating_system_id is the local system and its version_tree_id is \
-             numbered here; ITS-REST Resources.md §Resource identification), and the \
-             committed ORIGINAL_VERSION is served with it. This holds whichever of \
-             UPDATE_VERSION / ORIGINAL_VERSION the member self-tags as. A version whose \
-             identity comes from elsewhere is an IMPORTED_VERSION (RM common master06 \
-             §Copying), which the EHR-Extract import route commits"
-        )));
+) -> Result<Vec<String>, ServiceError> {
+    for (key, assigned) in [
+        (
+            "uid",
+            "its identity (RM common master06 §Version Identification)",
+        ),
+        (
+            "contribution",
+            "the CONTRIBUTION this commit creates (RM common master06 §Version and its Subtypes)",
+        ),
+    ] {
+        if undeclared.contains_key(key) {
+            return Err(ServiceError::precondition(format!(
+                "versions[{index}]/{key} is not carried on a CONTRIBUTION version member: \
+                 this repository assigns a committed version {assigned} and serves the \
+                 ORIGINAL_VERSION with it, whichever of UPDATE_VERSION / ORIGINAL_VERSION \
+                 the member self-tags as. A version whose identity comes from elsewhere \
+                 is an IMPORTED_VERSION (RM common master06 §Copying), which the \
+                 EHR-Extract import route commits"
+            )));
+        }
     }
     match undeclared.get("_type") {
-        None => Ok(()),
-        Some(Value::String(name)) if COMMITTABLE_MEMBER_TYPES.contains(&name.as_str()) => Ok(()),
-        Some(other) => Err(ServiceError::precondition(format!(
-            "versions[{index}]/_type {other} does not name a class the CONTRIBUTION \
-             commit wire commits: a member self-tags as UPDATE_VERSION or \
-             ORIGINAL_VERSION or not at all (ITS-REST Resources.md: the value \"MUST \
-             be the uppercase class name from the RM specification\"; \
-             UpdateVersion.yaml is the only member schema NewContribution declares). \
-             An IMPORTED_VERSION member has no released shape; the EHR-Extract import \
-             route carries foreign versions instead (RM common master06 §Copying)"
-        ))),
+        None => {}
+        Some(Value::String(name)) if COMMITTABLE_MEMBER_TYPES.contains(&name.as_str()) => {}
+        Some(other) => {
+            return Err(ServiceError::precondition(format!(
+                "versions[{index}]/_type {other} does not name a class the CONTRIBUTION \
+                 commit wire commits: a member self-tags as UPDATE_VERSION or \
+                 ORIGINAL_VERSION or not at all (ITS-REST Resources.md: the value \"MUST \
+                 be the uppercase class name from the RM specification\"; \
+                 UpdateVersion.yaml is the only member schema NewContribution declares). \
+                 An IMPORTED_VERSION member has no released shape; the EHR-Extract import \
+                 route carries foreign versions instead (RM common master06 §Copying)"
+            )));
+        }
     }
+    undeclared
+        .get("other_input_version_uids")
+        .map_or(Ok(Vec::new()), object_version_id::parse_merge_inputs)
+        .map_err(|e| e.for_version_member(index))
 }
 
 /// The pool the pseudonymisation domain this CONTRIBUTION belongs to is served
@@ -723,14 +740,14 @@ fn parse_contribution_audit(
 /// unparsable preceding target, an attestation failing its RM invariants, or
 /// (on a `666|attestation|` member) a `lifecycle_state` outside the openEHR
 /// `version_lifecycle_state` group; [`ServiceError::precondition`] for an
-/// member-borne `uid` or foreign `_type` ([`reject_foreign_version_identity`]) or a
+/// member-borne `uid`, `contribution` or foreign `_type` ([`read_undeclared_members`]) or a
 /// `commit_audit` that is an `UPDATE_ATTESTATION` ([`plain_audit`]).
 fn plan_version(
     version: UpdateVersion<Value>,
     index: usize,
     contrib_system_id: &str,
 ) -> Result<PlannedVersion, ServiceError> {
-    reject_foreign_version_identity(&version.additional_properties, index)?;
+    let other_input_version_uids = read_undeclared_members(&version.additional_properties, index)?;
     let UpdateVersion {
         preceding_version_uid,
         signature,
@@ -759,6 +776,13 @@ fn plan_version(
     };
     let audit = AuditInput::from_commit_audit(member_audit, code, contrib_system_id);
     let lifecycle_state = lifecycle_state.defining_code.code_string;
+    if action == Action::Attest && !other_input_version_uids.is_empty() {
+        return Err(ServiceError::content_invalid(
+            Violation::new("names merge inputs, but a 666|attestation| member commits no version")
+                .with_path("other_input_version_uids"),
+        )
+        .for_version_member(index));
+    }
     if action == Action::Attest {
         // NOTE: no openEHR spec governs the meaning of lifecycle_state on a member
         // that creates no version, so a 666 member's state is checked against its
@@ -793,6 +817,7 @@ fn plan_version(
         // server signs (master06 §Digital Signature).
         signature,
         attestations,
+        other_input_version_uids,
     })
 }
 
@@ -991,6 +1016,7 @@ async fn create_change(
         signature: v.signature.clone(),
         lifecycle_state: Some(v.lifecycle_state.clone()),
         attestations: v.attestations.clone(),
+        other_input_version_uids: v.other_input_version_uids.clone(),
     })
 }
 
@@ -1027,6 +1053,7 @@ async fn modify_change(
         signature: v.signature.clone(),
         lifecycle_state: Some(v.lifecycle_state.clone()),
         attestations: v.attestations.clone(),
+        other_input_version_uids: v.other_input_version_uids.clone(),
     })
 }
 
@@ -1062,6 +1089,7 @@ fn delete_change(
         kind,
         expected: Some(expected),
         signature: v.signature.clone(),
+        other_input_version_uids: v.other_input_version_uids.clone(),
     })
 }
 

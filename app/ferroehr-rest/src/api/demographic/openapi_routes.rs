@@ -6350,9 +6350,9 @@ pub(crate) async fn versioned_party_version_get_by_id(
                                       (`UpdateVersion.yaml` lists it under `required`); a non-creation \
                                       change type on a member with no `preceding_version_uid` (the released \
                                       first-version-of-a-MODIFICATION trigger); \
-                                      a member stating its own `uid` (the \
-                                      server assigns a version's identity, RM \
-                                      common master06 §Version Identification) \
+                                      a member stating a `uid` or `contribution` \
+                                      (the server assigns both, RM common \
+                                      master06 §Version and its Subtypes) \
                                       or a `_type` other than `UPDATE_VERSION` \
                                       or `ORIGINAL_VERSION`; or a member names a \
                                       `preceding_version_uid` whose \

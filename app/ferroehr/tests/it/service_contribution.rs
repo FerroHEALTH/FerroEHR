@@ -2184,14 +2184,16 @@ async fn contribution_member_without_lifecycle_state_is_refused() {
     .expect("the member that states its lifecycle_state commits");
 }
 
-/// `other_input_version_uids` is not a member the released commit wire
-/// declares (ITS-REST `UpdateVersion.yaml`), and `UPDATE_VERSION` declares no
-/// `additionalProperties`, so the member is open and the key is accepted and
-/// ignored (#4577). The commit is a local version: the served
-/// `ORIGINAL_VERSION` carries no merge provenance (`Is_merged_validity`), with
-/// the key or without it.
+/// `other_input_version_uids` is not declared by ITS-REST `UpdateVersion.yaml`,
+/// an open object, but it is the merge provenance of the `ORIGINAL_VERSION` the
+/// member becomes (RM common `org.openehr.rm.common.original_version.adoc`), and
+/// RM common master06 §Version Merging commits a merge as a local
+/// `ORIGINAL_VERSION` with it, so the commit records it and the read serves it
+/// (#4577). The uids are recorded as given: here they name versions of another
+/// system this repository does not hold, which no RM invariant forbids. The
+/// twin without the key serves none (`Is_merged_validity`).
 #[tokio::test]
-async fn merge_provenance_on_a_member_is_ignored_on_the_commit_wire() {
+async fn merge_provenance_on_a_member_is_recorded_and_served() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let ehr_id = create_ehr(&svc).await;
@@ -2222,35 +2224,54 @@ async fn merge_provenance_on_a_member_is_ignored_on_the_commit_wire() {
         })
     };
 
+    let inputs = [
+        "0198f1f1-0000-7000-8000-000000000001::sysB.example.org::2.1.2",
+        "0198f1f1-0000-7000-8000-000000000002::sysC.example.org::1",
+    ];
     let merged = svc
         .create_ehr_contribution(
             ehr_uuid,
             member(
                 &v1,
                 Some(json!([
-                    { "value": "0198f1f1-0000-7000-8000-000000000001::sysA.example.org::3" }
+                    { "_type": "OBJECT_VERSION_ID", "value": inputs[0] },
+                    { "value": inputs[1] }
                 ])),
             ),
         )
         .await
-        .expect("an undeclared member of the open UPDATE_VERSION commits");
+        .expect("a member naming its merge inputs commits");
     let v2 = first_version_uid(&merged.body);
     let ov = read_version(&svc, &ehr_id, vo_of(&v2), &v2).await;
+    let served: Vec<&str> = ov["other_input_version_uids"]
+        .as_array()
+        .unwrap_or_else(|| panic!("the merge provenance is served, got {ov:?}"))
+        .iter()
+        .map(|u| u["value"].as_str().expect("an OBJECT_VERSION_ID value"))
+        .collect();
+    assert_eq!(served, inputs, "served in the order committed");
+
+    // A malformed input is the 422 at its member path, and nothing commits.
+    let err = svc
+        .create_ehr_contribution(ehr_uuid, member(&v2, Some(json!([{ "value": "sysB::2" }]))))
+        .await
+        .expect_err("a malformed merge input is refused");
+    assert_eq!(err.status, ServiceStatus::ContentInvalid, "{err:?}");
     assert!(
-        ov.get("other_input_version_uids").is_none(),
-        "the ignored member is not served as merge provenance, got {ov:?}"
+        err.message.contains("other_input_version_uids"),
+        "the refusal names the member, got {err:?}"
     );
 
-    // The twin without the key commits on top and serves none either.
+    // The twin without the key commits on top and serves none.
     let committed = svc
         .create_ehr_contribution(ehr_uuid, member(&v2, None))
         .await
-        .expect("the same member without the undeclared property commits");
+        .expect("the same member without merge inputs commits");
     let v3 = first_version_uid(&committed.body);
     let ov = read_version(&svc, &ehr_id, vo_of(&v3), &v3).await;
     assert!(
         ov.get("other_input_version_uids").is_none(),
-        "a locally committed version carries no merge provenance, got {ov:?}"
+        "a version that merges nothing carries no merge provenance, got {ov:?}"
     );
 }
 
@@ -2379,15 +2400,15 @@ async fn foreign_version_identity_is_refused_on_the_commit_wire() {
 }
 
 /// THE OPEN MEMBER READ (#4577): ITS-REST `UpdateVersion.yaml` declares six
-/// member properties and no `additionalProperties`, so an undeclared key on a
-/// CONTRIBUTION version member is accepted and ignored, as on
-/// `NewContribution` and `UpdateAudit` (#4543). The RM `VERSION.contribution`
-/// a client copies over is never served: the committed version references
-/// the CONTRIBUTION this commit creates. A `uid` stays the 400 naming its
-/// member path, because the server assigns the version identity (RM common
-/// master06 §Version Identification).
+/// member properties and no `additionalProperties`, so an undeclared key with
+/// no RM meaning on a CONTRIBUTION version member is accepted and ignored, as
+/// on `NewContribution` and `UpdateAudit` (#4543); the committed version
+/// references the CONTRIBUTION this commit creates. The RM attributes the
+/// server assigns stay the 400 naming their member path: `uid` (RM common
+/// master06 §Version Identification) and `contribution` (§Version and its
+/// Subtypes).
 #[tokio::test]
-async fn an_undeclared_contribution_member_key_is_accepted_and_uid_refused_with_its_path() {
+async fn an_undeclared_contribution_member_key_is_accepted_and_assigned_ones_refused() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let ehr_id = create_ehr(&svc).await;
@@ -2404,7 +2425,7 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_uid_refused_with_
     member
         .as_object_mut()
         .expect("member object")
-        .insert("contribution".to_owned(), json!({"id": "x"}));
+        .insert("extension".to_owned(), json!({"id": "x"}));
 
     let committed = svc
         .create_ehr_contribution(
@@ -2430,31 +2451,37 @@ async fn an_undeclared_contribution_member_key_is_accepted_and_uid_refused_with_
         "the served version references the committing CONTRIBUTION, got {ov:?}"
     );
 
-    let mut with_uid = member;
-    with_uid
-        .as_object_mut()
-        .expect("member object")
-        .insert(
-            "uid".to_owned(),
+    for (key, value) in [
+        (
+            "uid",
             json!({ "_type": "OBJECT_VERSION_ID", "value": format!("{}::local::1", uuid::Uuid::now_v7()) }),
+        ),
+        (
+            "contribution",
+            json!({ "id": { "_type": "HIER_OBJECT_ID", "value": contribution_uid },
+                "namespace": "local", "type": "CONTRIBUTION" }),
+        ),
+    ] {
+        let mut assigned = member.clone();
+        assigned[key] = value;
+        let err = svc
+            .create_ehr_contribution(
+                ehr_uuid,
+                json!({
+                    "versions": [assigned],
+                    "audit": {
+                        "change_type": change_type("249", "creation"),
+                        "committer": committer("author")
+                    }
+                }),
+            )
+            .await
+            .expect_err("a server-assigned member must be refused");
+        assert!(
+            err.message.contains(&format!("versions[0]/{key}")),
+            "the refusal names the key at its member path, got {err:?}"
         );
-    let err = svc
-        .create_ehr_contribution(
-            ehr_uuid,
-            json!({
-                "versions": [with_uid],
-                "audit": {
-                    "change_type": change_type("249", "creation"),
-                    "committer": committer("author")
-                }
-            }),
-        )
-        .await
-        .expect_err("a member-borne uid must be refused");
-    assert!(
-        err.message.contains("versions[0]/uid"),
-        "the refusal names the key at its member path, got {err:?}"
-    );
+    }
 }
 
 /// The CONTRIBUTION's own `audit.change_type` is REQUIRED and never derived.

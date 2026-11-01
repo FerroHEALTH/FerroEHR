@@ -1155,12 +1155,12 @@ async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
 }
 
 /// #4577 on the demographic CONTRIBUTION path: `schemas/demographic/UpdateVersion.yaml`
-/// leaves `additionalProperties` open as its EHR copy does, so undeclared
-/// member keys commit, and a member-borne `uid` stays the 400 naming its member
-/// path, because the server assigns the version identity (RM common master06
-/// §Version Identification).
+/// leaves `additionalProperties` open as its EHR copy does, so an extension
+/// member commits, merge provenance is recorded (RM common master06 §Version
+/// Merging) and served, and the members the server assigns, `uid` and
+/// `contribution`, stay the 400 naming their member path.
 #[tokio::test]
-async fn demographic_contribution_member_is_open_but_uid_is_refused() {
+async fn demographic_contribution_member_is_open_but_assigned_members_are_refused() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let member = |extra: &[(&str, Value)]| {
@@ -1182,19 +1182,45 @@ async fn demographic_contribution_member_is_open_but_uid_is_refused() {
                 "committer": { "_type": "PARTY_IDENTIFIED", "name": "tester" } }
         })
     };
-    svc.demographic_contribution_create(member(&[
-        ("contribution", json!({ "id": { "value": "x" } })),
-        ("other_input_version_uids", json!([])),
-        ("extension", json!({ "note": "an undeclared member" })),
-    ]))
-    .await
-    .expect("undeclared members of the open UPDATE_VERSION commit");
-    let uid = json!({ "_type": "OBJECT_VERSION_ID",
-        "value": "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::1" });
-    let err = svc
-        .demographic_contribution_create(member(&[("uid", uid)]))
+    let input = "0198f1f1-0000-7000-8000-000000000042::sysA.example.org::1";
+    let committed = svc
+        .demographic_contribution_create(member(&[
+            ("other_input_version_uids", json!([{ "value": input }])),
+            ("extension", json!({ "note": "an undeclared member" })),
+        ]))
         .await
-        .expect_err("a member-borne uid is refused");
-    assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
-    assert!(err.message.contains("versions[0]/uid"), "{err:?}");
+        .expect("an open UPDATE_VERSION with merge provenance commits");
+    let version_uid = committed.body["versions"][0]["id"]["value"]
+        .as_str()
+        .expect("the committed version uid");
+    let vo = version_uid.split("::").next().expect("the object id");
+    let served = svc
+        .versioned_party_version_get_by_id(vo.to_owned(), version_uid.to_owned())
+        .await
+        .expect("the committed version reads back");
+    assert_eq!(
+        served.body["other_input_version_uids"][0]["value"], input,
+        "the merge provenance is served, got {}",
+        served.body
+    );
+    for (key, value) in [
+        (
+            "uid",
+            json!({ "_type": "OBJECT_VERSION_ID", "value": input }),
+        ),
+        (
+            "contribution",
+            json!({ "id": { "value": "x" }, "namespace": "local", "type": "CONTRIBUTION" }),
+        ),
+    ] {
+        let err = svc
+            .demographic_contribution_create(member(&[(key, value)]))
+            .await
+            .expect_err("a server-assigned member is refused");
+        assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
+        assert!(
+            err.message.contains(&format!("versions[0]/{key}")),
+            "{err:?}"
+        );
+    }
 }

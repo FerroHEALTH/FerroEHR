@@ -446,6 +446,69 @@ pub(crate) fn expected_from_if_match(if_match: &str) -> Result<Option<TreeId>, V
     }
 }
 
+/// Reads a CONTRIBUTION member's `other_input_version_uids`, the merge
+/// provenance its `ORIGINAL_VERSION` records (RM common
+/// `org.openehr.rm.common.original_version.adoc`: "Identifiers of other versions
+/// whose content was merged into this version").
+///
+/// Each entry is an `OBJECT_VERSION_ID`, as the object `{"value": …}` with an
+/// optional `_type`, and its value passes the strict BASE three-part parse. The
+/// `object_id` may be any `UID`, never narrowed to this CDR's UUID keys.
+///
+/// NOTE: RM common master06 §Version Merging and §Disjoint Merging name the
+/// input versions and no invariant requires this repository to hold them, so
+/// each uid is recorded as given.
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] at path `other_input_version_uids` for a
+/// value that is not a list of `OBJECT_VERSION_ID`s, and for an empty list
+/// (`ORIGINAL_VERSION.Other_input_version_uids_valid`).
+pub(crate) fn parse_merge_inputs(value: &serde_json::Value) -> Result<Vec<String>, ServiceError> {
+    let invalid = |message: String, invariant: Option<&'static str>| {
+        let violation =
+            crate::service::error::Violation::new(message).with_path("other_input_version_uids");
+        ServiceError::content_invalid(match invariant {
+            Some(invariant) => violation.with_invariant(invariant),
+            None => violation,
+        })
+    };
+    let Some(entries) = value.as_array() else {
+        return Err(invalid(
+            "is not a list of OBJECT_VERSION_ID (RM common ORIGINAL_VERSION)".to_owned(),
+            None,
+        ));
+    };
+    if entries.is_empty() {
+        return Err(invalid(
+            "is empty; leave it out when the version merges nothing".to_owned(),
+            Some("ORIGINAL_VERSION.Other_input_version_uids_valid"),
+        ));
+    }
+    entries
+        .iter()
+        .enumerate()
+        .map(|(i, entry)| {
+            let tagged = entry
+                .get("_type")
+                .is_none_or(|tag| tag.as_str() == Some("OBJECT_VERSION_ID"));
+            match entry.get("value").and_then(serde_json::Value::as_str) {
+                // The refusal echoes the rejected token, as `VersionIdError` does.
+                Some(raw) if tagged => match ObjectVersionId::from_str(raw) {
+                    Ok(_) => Ok(raw.to_owned()),
+                    Err(_) => Err(invalid(
+                        format!("[{i}] {raw:?} is not an OBJECT_VERSION_ID"),
+                        None,
+                    )),
+                },
+                _ => Err(invalid(
+                    format!("[{i}] is not an OBJECT_VERSION_ID object {{\"value\": …}}"),
+                    None,
+                )),
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
