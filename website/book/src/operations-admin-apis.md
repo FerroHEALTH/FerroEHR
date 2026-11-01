@@ -233,6 +233,9 @@ anything.
 | `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
 | `POST {ext}/admin/access-delay/release` | `{"ehr_id": "…", "vo_id": "…"}` | **204**: every hold of the composition still in force is released, and the person reads it |
 | `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release` | none | **204**: the treating professional's release from the clinical surface, with the checks of a write to that EHR; **403** to a request that may be the person's |
+| `POST {ext}/admin/access-opt-out` | `{"ehr_id": "…", "note": "…"?}` | **204**: the person's EHDS Art. 10 opt-out from the access services is recorded for the whole EHR; **400** while `authz.rbac.access_service_roles` is empty |
+| `GET {ext}/admin/access-opt-out` | `?ehr_id=…` | **200**: the opt-out register, newest first, reversals included |
+| `POST {ext}/admin/access-opt-out/reverse` | `{"ehr_id": "…"}` | **204**: every opt-out of the EHR that stands is reversed, and the access services read it again |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
 is **404**, and a body without `Content-Type: application/json` is **415**, in

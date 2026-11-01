@@ -81,7 +81,7 @@ use openehr_its::rest::routes::{Lookup, Param, ParamLocation, PathParam, RouteMa
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::extensions::access::{delay, ehr_access, pep, restriction};
+use crate::extensions::access::{delay, ehr_access, opt_out, pep, restriction};
 #[cfg(feature = "events")]
 use crate::extensions::event_subscription;
 #[cfg(feature = "fhir")]
@@ -318,6 +318,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::integrity::integrity_routes())
         .merge(admin::marks::marks_routes())
         .merge(admin::access_delay::access_delay_routes())
+        .merge(admin::opt_out::opt_out_routes())
         .merge(admin::identifiers::identifier_routes())
         .merge(message::extract::extract_routes())
         .merge(terminology::routes())
@@ -392,6 +393,9 @@ pub(crate) async fn guarded_dispatch(
     // NOTE: EHDS Art. 3(3) (`docs/law/eu/ehds/text.html`), data a professional has not
     // released reads as absent to a patient-context request on a deployment that delays.
     let delayed = delay::applies(&state, op);
+    // NOTE: EHDS Art. 10 (`docs/law/eu/ehds/text.html`), an opted-out EHR reads as absent to
+    // an access-service caller unless it declares a vital interest under Art. 10(2).
+    let opted_out = opt_out::applies(&state, op);
     let guarded = Box::pin(async move {
         match ehr_access::enforce(&state, op, &parts).await {
             Ok(()) => {
@@ -409,6 +413,11 @@ pub(crate) async fn guarded_dispatch(
                         Err(fault) => return *fault,
                     }
                 }
+                match opt_out::refuse_opted_out(&state, op, &parts, opted_out).await {
+                    Ok(Some(absent)) => return absent,
+                    Ok(None) => {}
+                    Err(fault) => return *fault,
+                }
                 match pep::pre_check(&state, op, &parts).await {
                     Ok(()) => {
                         let resp = dispatch(state.clone(), op, parts).await;
@@ -422,7 +431,13 @@ pub(crate) async fn guarded_dispatch(
     });
     let mut resp = ferroehr::system_log::access_context::with_access_restriction(
         enforced,
-        ferroehr::system_log::access_context::with_access_delay(delayed, guarded),
+        ferroehr::system_log::access_context::with_access_delay(
+            delayed,
+            ferroehr::system_log::access_context::with_access_opt_out(
+                opted_out == opt_out::OptOut::Enforced,
+                guarded,
+            ),
+        ),
     )
     .await;
     resp.extensions_mut()

@@ -347,6 +347,67 @@ entry inside a composition) is not built: an object is the unit the version
 reads, the queries and the exports already decide on, and splitting a
 composition would change what the stored, signed version holds.
 
+### Opt-out from the access services (EHDS Art. 10)
+
+Regulation (EU) 2025/327 Art. 10(1) lets a Member State's law give a person
+"the right to opt out from the access to their personal electronic health data
+registered in an EHR system through the electronic health data access services
+referred to in Articles 4 and 12", and has the Member State "ensure that the
+exercise of that right is reversible". Art. 10(2) lets the Member State admit
+"a healthcare provider or health professional" where processing "is necessary
+in order to protect the vital interests of the data subject or of another
+natural person", even after an opt-out. No openEHR specification governs this;
+it is our own design.
+
+FerroEHR ships the software part: a mark on the whole EHR that the callers you
+declare as the access services read as absent. Whether the right exists, how
+the person exercises it, and the rules and safeguards of Art. 10(2) are your
+Member State's law and yours to apply. Where the Member State enforces the
+opt-out in its own services, leave the mark unused.
+
+- **Declaring the access services.** `authz.rbac.access_service_roles` lists
+  the roles your Art. 4 access service (the person's) and your Art. 12 health
+  professional access service carry in their tokens or Basic users. It is
+  empty by default, so the opt-out holds for nobody, and recording one is
+  refused with **400**.
+- **Recording and reversing it.** The controller records the opt-out on the
+  person's instruction with
+  `POST /ferroehr/rest/extensions/v1/admin/access-opt-out` and reverses it with
+  `POST /ferroehr/rest/extensions/v1/admin/access-opt-out/reverse`
+  ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
+  A reversal keeps the row in the register with its reversal time, and stays
+  open whatever the configuration, so an opt-out can always be reversed.
+- **What an access service sees.** A request from a caller holding one of the
+  declared roles reads the EHR as absent: a route that names the EHR or an
+  object in it answers **404** as for an unknown EHR, a population query leaves
+  its data out, a query scoped to it answers as for an unknown EHR, an export
+  and the lookup by subject find no such EHR, and a write to it is refused as a
+  write to an unknown EHR.
+- **What it does not change.** Every other caller reads the record as before:
+  your own care, through callers that hold none of the declared roles, and the
+  controller's admin routes. Nothing is deleted. It is not the Art. 8
+  restriction above, which reaches every professional route and leaves the
+  person's own access open.
+- **The vital-interest override.** An access-service caller that declares one
+  of `[audit] emergency_purpose_codes` reads the EHR, unless it acts for the
+  person (a SMART `patient/` grant or the patient claim), because Art. 10(2)
+  names a healthcare provider or health professional. Its access record
+  carries the [emergency mark](audit.md#emergency-access-ehds-art-115), and a
+  route that names the opted-out EHR adds an access record
+  `access-opt-out-override:ehr-wide` against it.
+- **The record.** Recording, reversing and reading the register are each an
+  access record on the EHR (`access-opt-out:ehr-wide`) naming the
+  administrator.
+
+```toml
+[authz.rbac]
+access_service_roles = ["EHDS-ACCESS-SERVICE"]
+
+[audit]
+purpose_codes = ["TREAT", "ETREAT"]
+emergency_purpose_codes = ["ETREAT"]
+```
+
 ### Information a person inserts (EHDS Art. 5)
 
 Regulation (EU) 2025/327 Art. 5 lets a person, or their representative, insert

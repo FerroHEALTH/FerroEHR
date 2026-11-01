@@ -739,11 +739,11 @@ pub(crate) async fn ensure_not_restricted_tx(
     crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await
 }
 
-/// Refuse, as though the target did not exist, a write a health professional
-/// makes to data under an EHDS Art. 8 access restriction, whose fact is "not
-/// visible to healthcare providers" (`docs/law/eu/ehds/text.html` Art. 8),
-/// while the request enforces it. No openEHR spec governs restriction of
-/// access — our own design/extension.
+/// Refuse, as though the target did not exist, a write to data under an EHDS
+/// Art. 8 access restriction, whose fact is "not visible to healthcare
+/// providers", or to an EHR whose person opted out under Art. 10, while the
+/// request enforces either (`docs/law/eu/ehds/text.html`). No openEHR spec
+/// governs either: our own design/extension.
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] (`ehr_id_does_not_exist` or
@@ -754,23 +754,17 @@ async fn ensure_not_access_restricted_tx(
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
 ) -> Result<(), ServiceError> {
-    if !crate::system_log::access_context::access_restriction_enforced() {
-        return Ok(());
+    let restricted = crate::system_log::access_context::access_restriction_enforced();
+    let opted_out = crate::system_log::access_context::access_opt_out_enforced();
+    if let Some(ehr_id) = ehr_id.filter(|_| restricted || opted_out)
+        && crate::storage::opt_out::ehr_hidden(&mut *tx, ehr_id, restricted, opted_out).await?
+    {
+        return Err(ServiceError::new(
+            ServiceStatus::EhrIdDoesNotExist,
+            format!("EHR {ehr_id}"),
+        ));
     }
-    if let Some(ehr_id) = ehr_id {
-        let restricted: Option<bool> =
-            sqlx::query_scalar("SELECT access_restricted_at IS NOT NULL FROM ehr WHERE id = $1")
-                .bind(ehr_id)
-                .fetch_optional(&mut *tx)
-                .await?;
-        if restricted == Some(true) {
-            return Err(ServiceError::new(
-                ServiceStatus::EhrIdDoesNotExist,
-                format!("EHR {ehr_id}"),
-            ));
-        }
-    }
-    if let Some(vo_id) = vo_id
+    if let Some(vo_id) = vo_id.filter(|_| restricted)
         && crate::storage::marks::is_access_restricted(&mut *tx, vo_id).await?
     {
         return Err(ServiceError::new(

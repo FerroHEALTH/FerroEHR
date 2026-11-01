@@ -15,7 +15,8 @@
 //! [`integrity`], which sweeps the storage's two content copies
 //! for disagreement, and no openEHR spec governs storage mechanics. Beside
 //! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
-//! delay of the person's own access, and [`identifiers`] serves the audited
+//! delay of the person's own access, [`opt_out`] the EHDS Art. 10 opt-out from
+//! access through the access services, and [`identifiers`] serves the audited
 //! read of a party's protected national identifiers. Each carries its own
 //! spec-silence flag and register citation.
 
@@ -28,4 +29,5 @@ pub mod identifiers;
 pub mod integrity;
 pub mod marks;
 pub(crate) mod openapi_routes;
+pub mod opt_out;
 pub mod report;

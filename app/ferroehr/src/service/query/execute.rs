@@ -333,18 +333,18 @@ impl FerroEhrService {
             })?;
             ids.push(EhrId(uuid));
         }
-        // Verify existence in one round-trip; report the first absent id. A
-        // set, not a list probe: a cohort scope names a hundred thousand EHRs
-        // (#3159), and a probe per id made that check quadratic.
+        // Verify existence in one round-trip and report the first absent id, as
+        // a set: a cohort names 100 000 EHRs and a probe per id is quadratic (#3159).
         let present: std::collections::HashSet<Uuid> =
-            // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), an EHR under a whole-EHR
-            // access restriction reads as absent while the request enforces it.
+            // NOTE: EHDS Art. 8 and Art. 10 (`docs/law/eu/ehds/text.html`), an EHR under a
+            // whole-EHR access restriction or an opt-out reads as absent while enforced.
             sqlx::query_scalar::<_, EhrId>(
                 "SELECT id FROM ehr WHERE id = ANY($1) \
-                 AND (NOT $2 OR access_restricted_at IS NULL)",
+                 AND (NOT $2 OR access_restricted_at IS NULL) AND (NOT $3 OR opted_out_at IS NULL)",
             )
             .bind(&ids)
             .bind(crate::system_log::access_context::access_restriction_enforced())
+            .bind(crate::system_log::access_context::access_opt_out_enforced())
                 .fetch_all(
                     &mut *acquire(&self.pool)
                         .await
