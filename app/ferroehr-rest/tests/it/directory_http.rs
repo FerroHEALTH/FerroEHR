@@ -123,14 +123,11 @@ fn composition_ref(id: &str) -> Value {
     })
 }
 
-/// A canonical FOLDER with a name, nested `folders`, and no items.
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "a fixture builder: taking the Vec by value keeps the nested literals \
-              at the call sites readable"
-)]
+/// A canonical FOLDER with a name, nested `folders`, and no items. An empty
+/// `subfolders` leaves `folders` absent: ITS-JSON `Common/FOLDER.json` gives
+/// the array `minItems: 1`.
 fn folder_json(name: &str, subfolders: Vec<Value>) -> Value {
-    json!({
+    let mut folder = json!({
         "_type": "FOLDER",
         "name": dv_text(name),
         "archetype_node_id": FOLDER_ARCHETYPE,
@@ -138,19 +135,20 @@ fn folder_json(name: &str, subfolders: Vec<Value>) -> Value {
             "_type": "ARCHETYPED",
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": FOLDER_ARCHETYPE },
             "rm_version": "1.1.0"
-        },
-        "folders": subfolders
-    })
+        }
+    });
+    if !subfolders.is_empty() {
+        folder
+            .as_object_mut()
+            .expect("a FOLDER object")
+            .insert("folders".to_owned(), Value::Array(subfolders));
+    }
+    folder
 }
 
 /// A canonical FOLDER carrying `items` (COMPOSITION `OBJECT_REF`s).
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "a fixture builder: taking the Vec by value keeps the nested literals \
-              at the call sites readable"
-)]
 fn folder_with_items(name: &str, subfolders: Vec<Value>, item_ids: &[&str]) -> Value {
-    json!({
+    let mut folder = json!({
         "_type": "FOLDER",
         "name": dv_text(name),
         "archetype_node_id": FOLDER_ARCHETYPE,
@@ -159,9 +157,15 @@ fn folder_with_items(name: &str, subfolders: Vec<Value>, item_ids: &[&str]) -> V
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": FOLDER_ARCHETYPE },
             "rm_version": "1.1.0"
         },
-        "folders": subfolders,
         "items": item_ids.iter().copied().map(composition_ref).collect::<Vec<_>>()
-    })
+    });
+    if !subfolders.is_empty() {
+        folder
+            .as_object_mut()
+            .expect("a FOLDER object")
+            .insert("folders".to_owned(), Value::Array(subfolders));
+    }
+    folder
 }
 
 // ── setup helpers ────────────────────────────────────────────────────────────
@@ -1448,4 +1452,47 @@ async fn a_root_without_archetype_details_is_422() {
     let uid = etag_uid(&h);
     let (status, _h, body) = update_directory(&app, &ehr, &root, Some(&quoted(&uid)), None).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "update: {body}");
+}
+
+/// A FOLDER carrying `folders: []`, at the root or nested, is a body the
+/// ITS-JSON schema refuses (`components/RM/Release-1.1.0/Common/FOLDER.json`:
+/// `folders` has `minItems: 1`; ITS-REST `overview/Resources.md` §JSON Format:
+/// a canonical JSON payload SHOULD be valid against those schemas), so the
+/// create and the update are `400` and commit nothing.
+#[tokio::test]
+async fn an_empty_folders_array_is_400_and_commits_nothing() {
+    let (_pg, app) = common::test_router().await;
+    let ehr = create_ehr(&app).await;
+    let mut root_empty = folder_json("root", vec![]);
+    root_empty["folders"] = json!([]);
+    let mut leaf_empty = folder_json("leaf", vec![]);
+    leaf_empty["folders"] = json!([]);
+    let nested_empty = folder_json("root", vec![leaf_empty]);
+
+    for (label, body) in [("root", &root_empty), ("nested", &nested_empty)] {
+        let (status, _h, text) = create_directory(&app, &ehr, body, None).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{label} create: {text}");
+        assert!(
+            text.contains("folders"),
+            "{label}: names the member: {text}"
+        );
+    }
+    let (status, _h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "no directory committed: {body}"
+    );
+
+    let (status, h, body) = create_directory(&app, &ehr, &folder_json("root", vec![]), None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let uid = etag_uid(&h);
+    for (label, body) in [("root", &root_empty), ("nested", &nested_empty)] {
+        let (status, _h, text) =
+            update_directory(&app, &ehr, body, Some(&quoted(&uid)), None).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{label} update: {text}");
+    }
+    let (status, h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(etag_uid(&h), uid, "the update committed no new version");
 }

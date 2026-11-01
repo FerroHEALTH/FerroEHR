@@ -15,6 +15,7 @@
 
 pub(crate) mod composition;
 pub(crate) mod construction;
+pub(crate) mod its_json_bounds;
 pub(crate) mod ordered_hashes;
 pub(crate) mod overrides;
 pub(crate) mod rest_tagged;
@@ -214,6 +215,9 @@ pub(crate) struct JsonField {
     /// erroring. An enumeration constant is a `@SPEC::Variant` marker resolved
     /// by the emitter. `None` = no default.
     pub default: Option<String>,
+    /// An [`JsonFieldKind::OptionalContainer`] whose present-but-empty array
+    /// the reader refuses ([`its_json_bounds::ITS_JSON_MIN_ITEMS`]).
+    pub refuses_empty: bool,
 }
 
 /// How a field is written on serialize — matching the derive's classification by
@@ -345,6 +349,7 @@ impl Model {
                     rust_name: naming::field_ident(&p.name),
                     kind,
                     default: field_default(&rp.owner, p, |name| self.get(name)),
+                    refuses_empty: its_json_bounds::refuses_empty(&rp.owner, &p.name),
                 }
             })
             .collect()

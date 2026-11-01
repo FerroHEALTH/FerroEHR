@@ -460,6 +460,28 @@ impl<'de> serde::Deserialize<'de> for OpenSubtype {
     }
 }
 
+// ── the refusal of an empty array the ITS-JSON schema bounds ─────────────────
+
+/// Refuse a present-but-empty optional list that ITS-JSON bounds `minItems: 1`.
+///
+/// The BMM admits the empty list there (the codegen table
+/// `plan::its_json_bounds`); an absent or populated list passes through.
+///
+/// # Errors
+/// An `invalid_length` error naming `attribute` when the list is empty.
+pub fn refuse_empty_list<T, E: serde::de::Error>(
+    list: Option<Vec<T>>,
+    attribute: &str,
+) -> Result<Option<Vec<T>>, E> {
+    match list {
+        Some(items) if items.is_empty() => Err(E::invalid_length(
+            0,
+            &format!("`{attribute}` to hold at least one element (ITS-JSON minItems 1)").as_str(),
+        )),
+        list => Ok(list),
+    }
+}
+
 // ── the refusal a polymorphic slot raises ────────────────────────────────────
 
 /// The refusal for a polymorphic slot whose `_type` names no permitted class.

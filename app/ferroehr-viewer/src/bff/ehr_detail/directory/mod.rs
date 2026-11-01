@@ -129,13 +129,19 @@ pub(crate) const FOLDER_NODE_ID: &str = "at0001";
 /// `specifications/schemas/ehr/Folder.yaml`; no `uid` — the CDR assigns the
 /// `OBJECT_VERSION_ID` on create.
 pub(crate) fn folder_json(archetype_node_id: &str, name: &str, folders: &[Value]) -> Value {
-    json!({
+    let mut folder = json!({
         "_type": "FOLDER",
         "archetype_node_id": archetype_node_id,
         "name": { "_type": "DV_TEXT", "value": name },
-        "folders": folders,
         "items": [],
-    })
+    });
+    // NOTE: ITS-JSON `Common/FOLDER.json` gives `folders` `minItems: 1`, so a leaf omits it.
+    if !folders.is_empty()
+        && let Some(map) = folder.as_object_mut()
+    {
+        map.insert("folders".to_owned(), Value::Array(folders.to_vec()));
+    }
+    folder
 }
 
 /// An empty directory root FOLDER (the "empty root" create choice), carrying
@@ -631,7 +637,7 @@ mod tests {
         let root = empty_root_folder();
         assert_eq!(root["_type"], "FOLDER");
         assert_eq!(root["archetype_node_id"], DIRECTORY_ARCHETYPE);
-        assert_eq!(root["folders"], serde_json::json!([]));
+        assert!(root.get("folders").is_none(), "a leaf omits `folders`");
         assert_eq!(
             root["archetype_details"]["archetype_id"]["value"],
             DIRECTORY_ARCHETYPE

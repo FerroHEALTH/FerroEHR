@@ -212,14 +212,18 @@ pub(crate) fn rename_folder(root: &mut Value, path: &[usize], name: &str) {
 
 /// Remove the folder at `path` from its parent. A no-op for the root
 /// (`path` empty) — the root FOLDER is never deleted from within the tree.
+/// The parent's emptied `folders` goes too: ITS-JSON `Common/FOLDER.json`
+/// gives the array `minItems: 1`.
 pub(crate) fn delete_folder(root: &mut Value, path: &[usize]) {
     if let Some((&idx, parent_path)) = path.split_last()
-        && let Some(list) = folder_at_mut(root, parent_path)
-            .and_then(|p| p.get_mut("folders"))
-            .and_then(Value::as_array_mut)
+        && let Some(parent) = folder_at_mut(root, parent_path).and_then(Value::as_object_mut)
+        && let Some(list) = parent.get_mut("folders").and_then(Value::as_array_mut)
         && idx < list.len()
     {
         list.remove(idx);
+        if list.is_empty() {
+            parent.remove("folders");
+        }
     }
 }
 
@@ -453,6 +457,9 @@ mod tests {
         // Deleting the root is a no-op.
         delete_folder(&mut tree, &[]);
         assert_eq!(name_at(&tree, &[]), "root");
+        // Deleting the last child leaves no empty `folders` array behind.
+        delete_folder(&mut tree, &[0]);
+        assert!(tree.get("folders").is_none(), "{tree}");
     }
 
     #[test]

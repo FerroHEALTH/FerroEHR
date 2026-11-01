@@ -383,6 +383,18 @@ fn existence_contradictions_name_a_still_mandatory_hash() {
     );
 }
 
+/// Every ITS-JSON `minItems` refusal still names an optional container the
+/// ITS-JSON schema bounds, so an upstream schema change fails here.
+#[test]
+fn its_json_min_items_name_a_bounded_optional_container() {
+    let stale = testsupport::decision_checks::stale_its_json_min_items().unwrap();
+    assert!(
+        stale.is_empty(),
+        "stale ITS-JSON minItems entries:\n{}",
+        stale.join("\n")
+    );
+}
+
 /// Every ordered-hash entry still names a `Hash` its owner declares, so a
 /// retyped attribute fails here instead of leaving a dead entry.
 #[test]

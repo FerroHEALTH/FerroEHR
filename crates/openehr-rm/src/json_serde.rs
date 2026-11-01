@@ -15218,7 +15218,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::directory::folder::
                     archetype_details: __s4.flatten(),
                     feeder_audit: __s5.flatten(),
                     items: __s6,
-                    folders: __s7,
+                    folders: ::openehr_base::serde_support::refuse_empty_list(__s7, "folders")?,
                     details: __s8.flatten(),
                 })
             }
@@ -45030,7 +45030,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::directory::folder::
                     archetype_details: __s4.flatten(),
                     feeder_audit: __s5.flatten(),
                     items: __s6,
-                    folders: __s7,
+                    folders: ::openehr_base::serde_support::refuse_empty_list(__s7, "folders")?,
                     details: __s8.flatten(),
                 })
             }

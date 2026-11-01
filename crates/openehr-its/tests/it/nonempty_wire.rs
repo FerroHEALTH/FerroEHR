@@ -458,3 +458,35 @@ fn a_present_but_empty_optional_nonempty_list_refuses_at_parse() {
     )
     .expect("absent mappings is legal (0..1)");
 }
+
+/// `FOLDER.folders` is `0..1` with no invariant in the RM, but ITS-JSON
+/// `components/RM/Release-1.1.0/Common/FOLDER.json` gives the array
+/// `minItems: 1`: a present-but-empty `folders` refuses at parse, at the root
+/// and nested, the schema refuses the same body, and an absent one reads.
+#[test]
+fn a_present_but_empty_folder_list_refuses_at_parse() {
+    use openehr_rm::prelude::Folder;
+    let leaf = json!({
+        "_type": "FOLDER",
+        "archetype_node_id": "at0001",
+        "name": { "_type": "DV_TEXT", "value": "leaf" }
+    });
+    from_canonical_json::<Folder>(&leaf.to_string()).expect("absent folders is legal (0..1)");
+
+    let mut root_empty = leaf.clone();
+    root_empty["folders"] = json!([]);
+    let mut nested_empty = leaf.clone();
+    nested_empty["folders"] = json!([root_empty.clone()]);
+    for (label, body) in [("root", &root_empty), ("nested", &nested_empty)] {
+        let refused = from_canonical_json::<Folder>(&body.to_string())
+            .expect_err("an empty folders array is refused");
+        assert!(
+            refused.to_string().contains("folders"),
+            "{label}: {refused}"
+        );
+        assert!(
+            openehr_its::json::validate_canonical_class(body).is_err(),
+            "{label}: the ITS-JSON schema refuses the same body"
+        );
+    }
+}
