@@ -150,11 +150,7 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     // Tags are judged before the commit, so a defective tag refuses while
     // nothing is durable; the write itself stays post-commit.
     let pending_tags = item_tags::pending(h)?;
-    let committed = state
-        .backend()
-        .create_composition(ehr_id, uv)
-        .await
-        .map_err(|e| RestError::from(ApiError::from(e)))?;
+    let committed = state.backend().create_composition(ehr_id, uv).await?;
     let uid = committed.version_uid();
     let stored_tags = item_tags::persist(
         &state,
@@ -357,7 +353,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 meta.as_ref(),
             ))
         }
-        Err(e) => Err(RestError::from(ApiError::from(e))),
+        Err(e) => Err(RestError::from(e)),
     }
 }
 
@@ -456,7 +452,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 meta.as_ref(),
             ))
         }
-        Err(e) => Err(RestError::from(ApiError::from(e))),
+        Err(e) => Err(RestError::from(e)),
     }
 }
 

@@ -423,6 +423,16 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
         .expect("request");
     let (status, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "a delete is refused: {body}");
+    // The write raises the restriction as a `ServiceError`, and it answers
+    // with the restriction's own problem type, as the reads above do.
+    let kind = serde_json::from_str::<serde_json::Value>(&body).expect("problem json")["type"]
+        .as_str()
+        .expect("a problem type")
+        .to_owned();
+    assert!(
+        kind.ends_with("processing-restricted"),
+        "a restricted write names the restriction, not an authorization outcome: {kind}"
+    );
 
     // The rest of the record is untouched: this is the grain the whole issue
     // turns on.

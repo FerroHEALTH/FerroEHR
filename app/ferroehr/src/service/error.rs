@@ -681,8 +681,9 @@ impl ServiceError {
 }
 
 impl ServiceError {
-    /// The validation violations joined into one [`Invalid::Content`] detail,
-    /// the flat `422` a caller answers where the per-path list is not served.
+    /// The validation violations joined into one [`Invalid::Content`] detail.
+    /// It exists only to keep today's wire on the paths whose violations
+    /// reached it as one flat `422`, and goes with the `ApiError` table.
     #[must_use]
     pub fn flattened(self) -> Self {
         match self {
