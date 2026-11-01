@@ -334,7 +334,7 @@ jobs:
           profile: released
           out-dir: conformance-results/released
           badge-branch: veredictum-badges
-          image: ghcr.io/vernum-projecten/veredictum@sha256:df50feb4df9de262be64502ff999d0bbe784ba623ffbfa32313b52769a594efd
+          image: ghcr.io/vernum-projecten/veredictum@sha256:50e0138ca23014f71c2b8b0fcdb587893026cc59aeb46488b7d5c2c9022606eb
       # Fresh volumes again, so the development run starts on the ground the
       # released run had.
       - id: recompose
@@ -370,7 +370,7 @@ jobs:
           profile: development
           out-dir: conformance-results/development
           badge-branch: veredictum-badges-development
-          image: ghcr.io/vernum-projecten/veredictum@sha256:df50feb4df9de262be64502ff999d0bbe784ba623ffbfa32313b52769a594efd
+          image: ghcr.io/vernum-projecten/veredictum@sha256:50e0138ca23014f71c2b8b0fcdb587893026cc59aeb46488b7d5c2c9022606eb
       # The views each run's outputs name, one directory per profile, so the
       # two are never mixed. recording.har is never among them.
       - name: Collect the views the Action wrote
