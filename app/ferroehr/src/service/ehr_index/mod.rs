@@ -22,6 +22,7 @@ pub mod provider;
 pub mod types;
 
 use crate::service::error::ServiceError;
+use crate::service::refusal::Refusal;
 
 /// The precise EHR-index failure kind.
 ///
@@ -50,16 +51,16 @@ pub enum IndexError {
 
 impl From<IndexError> for ServiceError {
     /// A service fault passes through; every other EHR-index failure is a
-    /// server fault (`500`).
+    /// `500` whose text names what the deployment has to fix.
     fn from(e: IndexError) -> Self {
         match e {
             IndexError::Service(e) => e,
             refused @ (IndexError::Unconfigured | IndexError::NotPseudonymous) => {
-                ServiceError::exception(refused.to_string())
+                ServiceError::fault(refused.to_string())
             }
-            IndexError::IdentitySource(source) => {
-                ServiceError::internal("the IHE patient identity source failed", source)
-            }
+            IndexError::IdentitySource(source) => ServiceError::Fault(
+                Refusal::new((), "the IHE patient identity source failed").with_source(source),
+            ),
         }
     }
 }
@@ -67,7 +68,7 @@ impl From<IndexError> for ServiceError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::refusal::{Missing, Refusal};
+    use crate::service::refusal::Missing;
 
     /// A generic service miss passes through with its kind.
     #[test]

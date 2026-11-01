@@ -567,7 +567,7 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::flattened)?;
         created.meta.ok_or_else(|| {
-            ServiceError::exception(format!(
+            ServiceError::fault(format!(
                 "EHR {an_ehr_id} was created without resource metadata"
             ))
         })

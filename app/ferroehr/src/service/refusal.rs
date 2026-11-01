@@ -152,6 +152,13 @@ pub enum Invalid {
 }
 
 impl super::error::ServiceError {
+    /// A `500` whose `message` reaches the body
+    /// ([`Fault`](super::error::ServiceError::Fault)).
+    #[must_use]
+    pub fn fault(message: impl Into<String>) -> Self {
+        Self::Fault(Refusal::new((), message))
+    }
+
     /// The client-visible text of this error: a refusal's message, the
     /// rendered violation of a `422`, the joined validation violations, and the
     /// `Display` text of every other variant.
@@ -166,7 +173,8 @@ impl super::error::ServiceError {
             | E::Internal(r)
             | E::Unrecorded(r)
             | E::Restricted(r)
-            | E::Forbidden(r) => r.message.clone(),
+            | E::Forbidden(r)
+            | E::Fault(r) => r.message.clone(),
             E::Unprocessable { violation, .. } => violation.to_string(),
             E::ValidationFailed(v) => v
                 .iter()

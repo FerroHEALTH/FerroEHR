@@ -702,7 +702,7 @@ async fn unreachable_store_refuses_expansion_instead_of_answering_silently() {
     // The wire body stays the curated opaque 500 text; the actionable detail is
     // on the trace record, never on the wire.
     assert!(
-        format!("{err:?}").contains("Exception"),
-        "expected a server-fault status, got {err:?}"
+        matches!(err, ferroehr::service::error::ServiceError::Internal(_)),
+        "expected a server fault, got {err:?}"
     );
 }

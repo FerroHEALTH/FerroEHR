@@ -75,7 +75,7 @@ fn committed_meta(
     resp: crate::service::response::ServiceResponse,
 ) -> Result<ResourceMeta, ServiceError> {
     resp.meta
-        .ok_or_else(|| ServiceError::exception("write produced no version metadata"))
+        .ok_or_else(|| ServiceError::fault("write produced no version metadata"))
 }
 
 /// Verify a version-addressed READ returned the VERSION the caller named:

@@ -29,7 +29,6 @@ use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::refusal::Missing;
-#[cfg(feature = "multimedia")]
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;

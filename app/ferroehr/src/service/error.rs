@@ -255,10 +255,8 @@ pub enum ServiceError {
     #[error(transparent)]
     JsonWrite(#[from] serde_json::Error),
     /// A version-signing or read-time integrity failure (RM common master06
-    /// §Digital Signature) — either signing at commit failed, or
-    /// `verify_on_read = strict` found a stored signature that does not match
-    /// the served version. The carried text is a LOG detail: both bridges
-    /// below trace it and answer with `INTERNAL_MESSAGE`.
+    /// §Digital Signature); the carried text is a LOG detail, and both bridges
+    /// below answer with `INTERNAL_MESSAGE`.
     #[error("signing: {0}")]
     Signing(String),
     /// The signer failed, with its cause intact as the source (RFC 0201:
@@ -283,15 +281,16 @@ pub enum ServiceError {
     /// statuses — `exception`, `file_not_writable`, `not_implemented`,
     /// `service_overloaded`).
     ///
-    /// The carried message is a LOG detail, not a wire message,
-    /// and this is the ONE row whose status does not survive the round trip:
-    /// both bridges below trace the detail (and the whole cause chain) and
-    /// answer with `exception` + `INTERNAL_MESSAGE`, because a `500` is by
-    /// definition something the client cannot act on and must disclose no
-    /// internal error value. Construct with [`ServiceError::exception`], or
-    /// with [`ServiceError::internal`] to carry the failure that caused it.
+    /// The carried message is a LOG detail: both bridges below trace it and
+    /// answer with `exception` + `INTERNAL_MESSAGE`, as a `500` must disclose
+    /// no internal error value. Construct with [`ServiceError::exception`], or
+    /// [`ServiceError::internal`] to carry the failure that caused it.
     #[error(transparent)]
     Internal(Refusal),
+    /// A `500` whose message is client-visible text a deployment acts on (no
+    /// EHR index provider, a failed identity source); [`ServiceError::fault`].
+    #[error(transparent)]
+    Fault(Refusal),
     /// The access record for a completed read or write could not be taken
     /// and the deployment fails closed (`[audit] fail_mode = "closed"`), so
     /// the result is withheld — the wire's `503`, `Retry-After` set, the same
@@ -497,13 +496,11 @@ impl ServiceError {
 
     /// A restriction refusal (`403`) naming the restricted object.
     ///
-    /// The message is client-visible and says WHICH object is restricted and
-    /// that the refusal is a restriction rather than an authorization outcome:
-    /// GDPR Art. 18(2) leaves storage as the only processing a restricted
-    /// object admits (`docs/law/eu/gdpr/text.html`), so the same caller with
-    /// the same rights is refused, and a caller that could not tell the two
-    /// apart would retry against the access layer forever. No openEHR spec
-    /// governs restriction of processing — our own design/extension.
+    /// The message says which object is restricted and that this is no
+    /// authorization outcome: GDPR Art. 18(2) leaves storage as the only
+    /// processing it admits (`docs/law/eu/gdpr/text.html`), so a caller that
+    /// could not tell the two apart would retry against the access layer. No
+    /// openEHR spec governs restriction of processing: our own design.
     #[must_use]
     pub fn restricted(subject: &str) -> Self {
         ServiceError::Restricted(Refusal::new(
@@ -708,6 +705,7 @@ impl ServiceError {
                 ServiceError::VersionConflict(r.with_shared_source(source))
             }
             ServiceError::Internal(r) => ServiceError::Internal(r.with_shared_source(source)),
+            ServiceError::Fault(r) => ServiceError::Fault(r.with_shared_source(source)),
             ServiceError::Restricted(r) => ServiceError::Restricted(r.with_shared_source(source)),
             ServiceError::Forbidden(r) => ServiceError::Forbidden(r.with_shared_source(source)),
             ServiceError::Unprocessable {
@@ -784,6 +782,7 @@ impl From<ServiceError> for StatusError {
             // The curated row: the detail and the whole cause chain go to the
             // trace record, the client gets `exception` + `INTERNAL_MESSAGE`.
             ServiceError::Internal(err) => internal_fault_caused("complete the request", &err),
+            ServiceError::Fault(err) => StatusError::from_refusal(S::Exception, err),
             // Fail-closed and the two refusals the law asks for keep their
             // status, so the status route reports what the wire reports.
             ServiceError::Unrecorded(err) => StatusError::from_refusal(S::ServiceOverloaded, err),
@@ -850,6 +849,7 @@ impl From<ServiceError> for ApiError {
             ServiceError::Internal(err) => {
                 ApiError::Internal(internal_fault_caused("complete the request", &err).message)
             }
+            ServiceError::Fault(err) => ApiError::Internal(err.message),
             // Fail-closed: the result is withheld because its access record
             // was not taken. Our own contract (no openEHR spec governs the
             // audit trail's availability); RFC 9110 §15.6.4 is the HTTP
