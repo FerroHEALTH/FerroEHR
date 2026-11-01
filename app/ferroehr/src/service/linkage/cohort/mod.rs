@@ -96,8 +96,8 @@ use crate::service::FerroEhrService;
 use crate::service::ehr_index::IndexError;
 use crate::service::ehr_index::provider::EhrIndexProvider;
 use crate::service::ehr_index::types::SubjectRef;
+use crate::service::error::{ServiceError, Violation};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
-use crate::service::status::{ServiceStatus, StatusError};
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -206,7 +206,7 @@ pub enum CohortError {
     ScopeNotAllowed,
     /// The inner AQL execution failed.
     #[error("the cohort query failed")]
-    Query(#[source] StatusError),
+    Query(#[source] ServiceError),
     /// A demographic read failed.
     #[error("the cohort store is unavailable")]
     Database(#[source] sqlx::Error),
@@ -220,34 +220,27 @@ pub enum CohortError {
     /// The execution ran but its access record could not be taken, and the
     /// deployment fails closed, so the result is withheld.
     #[error("the access record could not be taken and the deployment fails closed")]
-    Unrecorded(#[source] StatusError),
+    Unrecorded(#[source] ServiceError),
 }
 
-impl From<CohortError> for StatusError {
+impl From<CohortError> for ServiceError {
     fn from(error: CohortError) -> Self {
         match error {
             CohortError::Query(inner) | CohortError::Unrecorded(inner) => inner,
-            CohortError::Subject(inner) => {
-                StatusError::from(crate::service::error::ServiceError::from(inner))
-            }
+            CohortError::Subject(inner) => ServiceError::from(inner),
             CohortError::NotConfigured
             | CohortError::UnknownPredicate(_)
             | CohortError::InvalidValue { .. }
             | CohortError::NoPredicates
             | CohortError::IdentityNotHeld
-            | CohortError::ScopeNotAllowed => {
-                let message = error.to_string();
-                Self::new(ServiceStatus::PreconditionViolation, message).with_source(error)
-            }
+            | CohortError::ScopeNotAllowed => ServiceError::bad_request(error.to_string(), error),
             CohortError::CohortTooLarge { .. } => {
-                let message = error.to_string();
-                Self::new(ServiceStatus::ContentInvalid, message).with_source(error)
+                ServiceError::content_invalid(Violation::new(error.to_string()).with_source(error))
             }
             CohortError::Database(_) | CohortError::Storage(_) => {
-                crate::service::error::internal_fault_caused("execute a cohort query", &error)
-                    .with_source(error)
+                ServiceError::internal("execute a cohort query", error)
             }
-            CohortError::Acquire(e) => StatusError::from(e),
+            CohortError::Acquire(e) => ServiceError::Acquire(e),
         }
     }
 }
@@ -527,8 +520,7 @@ impl FerroEhrService {
         event.purpose = purpose;
         event.permit = crate::system_log::access_context::current_permit();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
-            .map_err(|e| CohortError::Unrecorded(StatusError::from(e)))
+        self.record_access(event).map_err(CohortError::Unrecorded)
     }
 }
 
@@ -618,50 +610,54 @@ mod tests {
 
     #[test]
     fn the_refusals_map_onto_their_call_statuses() {
-        for (error, expected) in [
-            (
-                CohortError::NotConfigured,
-                ServiceStatus::PreconditionViolation,
-            ),
-            (
-                CohortError::NoPredicates,
-                ServiceStatus::PreconditionViolation,
-            ),
-            (
-                CohortError::ScopeNotAllowed,
-                ServiceStatus::PreconditionViolation,
-            ),
-            (
-                CohortError::IdentityNotHeld,
-                ServiceStatus::PreconditionViolation,
-            ),
+        use crate::service::refusal::{Invalid, Malformed, Refusal};
+        type Expect<'a> = &'a dyn Fn(&ServiceError) -> bool;
+        let precondition = |e: &ServiceError| matches!(e, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition);
+        let too_large = |e: &ServiceError| {
+            matches!(
+                e,
+                ServiceError::Unprocessable {
+                    kind: Invalid::Content,
+                    ..
+                }
+            )
+        };
+        let unrecorded = |e: &ServiceError| matches!(e, ServiceError::Unrecorded(_));
+        let cases: [(CohortError, Expect<'_>); 8] = [
+            (CohortError::NotConfigured, &precondition),
+            (CohortError::NoPredicates, &precondition),
+            (CohortError::ScopeNotAllowed, &precondition),
+            (CohortError::IdentityNotHeld, &precondition),
             (
                 CohortError::UnknownPredicate("nope".to_owned()),
-                ServiceStatus::PreconditionViolation,
+                &precondition,
             ),
             (
                 CohortError::InvalidValue {
                     name: "age_band".to_owned(),
                     reason: "bad".to_owned(),
                 },
-                ServiceStatus::PreconditionViolation,
+                &precondition,
             ),
             (
                 CohortError::CohortTooLarge {
                     size: 200_000,
                     max: 100_000,
                 },
-                ServiceStatus::ContentInvalid,
+                &too_large,
             ),
             (
-                CohortError::Unrecorded(StatusError::new(
-                    ServiceStatus::ServiceOverloaded,
+                CohortError::Unrecorded(ServiceError::Unrecorded(Refusal::new(
+                    (),
                     "audit trail unavailable (fail-closed)",
-                )),
-                ServiceStatus::ServiceOverloaded,
+                ))),
+                &unrecorded,
             ),
-        ] {
-            assert_eq!(StatusError::from(error).status, expected);
+        ];
+        for (error, expected) in cases {
+            let label = format!("{error:?}");
+            let mapped = ServiceError::from(error);
+            assert!(expected(&mapped), "{label} mapped to {mapped:?}");
         }
     }
 }

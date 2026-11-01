@@ -22,8 +22,9 @@
 use openehr_query::parser::MAX_EXPRESSION_DEPTH;
 
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::ServiceStatus;
+use ferroehr::service::refusal::Malformed;
 
 /// The stack the server gives each runtime thread.
 const SERVER_THREAD_STACK_BYTES: usize = 16 * 1024 * 1024;
@@ -94,7 +95,7 @@ fn chains_at_the_depth_bound_run_through_every_pass_and_postgresql() {
             or_chain(MAX_EXPRESSION_DEPTH, &ehr_id),
         ] {
             let answer = svc
-                .execute_ad_hoc_query(aql, scope(&ehr_id))
+                .execute_aql(&aql, None, &scope(&ehr_id))
                 .await
                 .expect("a query at the bound runs");
             let rows = answer.result_set["rows"]
@@ -124,14 +125,16 @@ fn chains_beyond_the_depth_bound_are_refused_as_invalid_queries() {
             or_chain(30_000, &ehr_id),
         ] {
             let refused = svc
-                .execute_ad_hoc_query(aql, scope(&ehr_id))
+                .execute_aql(&aql, None, &scope(&ehr_id))
                 .await
                 .expect_err("a chain beyond the bound is refused");
-            assert_eq!(refused.status, ServiceStatus::PreconditionViolation);
             assert!(
-                refused.message.contains("deepest this parser accepts"),
+                matches!(&refused, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition)
+            );
+            assert!(
+                refused.message().contains("deepest this parser accepts"),
                 "the refusal says why, got {:?}",
-                refused.message
+                refused.message()
             );
         }
     });

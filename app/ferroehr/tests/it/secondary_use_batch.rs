@@ -101,9 +101,10 @@ async fn batch(
     fetch: Option<i64>,
 ) -> Vec<Value> {
     let result = svc
-        .execute_ad_hoc_query(
-            BATCH.to_owned(),
-            AqlQueryRequest {
+        .execute_aql(
+            BATCH,
+            None,
+            &AqlQueryRequest {
                 parameters: BTreeMap::from([("since".to_owned(), json!(since))]),
                 offset,
                 fetch,
@@ -119,12 +120,12 @@ async fn batch(
 /// The `time_committed` of a version, read back through AQL.
 async fn committed_at(svc: &FerroEhrService, version_uid: &str) -> String {
     let result = svc
-        .execute_ad_hoc_query(
+        .execute_aql(
             "SELECT v/commit_audit/time_committed/value \
              FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
-             WHERE v/uid/value = $uid"
-                .to_owned(),
-            AqlQueryRequest {
+             WHERE v/uid/value = $uid",
+            None,
+            &AqlQueryRequest {
                 parameters: BTreeMap::from([("uid".to_owned(), json!(version_uid))]),
                 ..AqlQueryRequest::default()
             },
@@ -239,7 +240,8 @@ async fn a_versioned_object_variable_answers_its_uid_and_owner() {
         .expect("update the composition")
         .version_uid();
 
-    let run = |q: &str| svc.execute_ad_hoc_query(q.to_owned(), AqlQueryRequest::default());
+    let request = AqlQueryRequest::default();
+    let run = |q: &'static str| svc.execute_aql(q, None, &request);
     let rows = run("SELECT vo/uid/value, vo/owner_id/id/value, v/uid/value \
          FROM EHR e CONTAINS VERSIONED_OBJECT vo CONTAINS VERSION v[ALL_VERSIONS] \
          CONTAINS COMPOSITION c ORDER BY v/uid/value")
@@ -261,9 +263,9 @@ async fn a_versioned_object_variable_answers_its_uid_and_owner() {
     .expect_err("a path the versioned object does not answer is refused");
     assert!(
         refused
-            .message
+            .message()
             .contains("VERSIONED_OBJECT path `time_created/value`"),
         "{}",
-        refused.message
+        refused.message()
     );
 }

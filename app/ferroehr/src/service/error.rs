@@ -245,13 +245,10 @@ pub enum ServiceError {
     /// act on. Constructed explicitly at a read site; never by `?`.
     #[error(transparent)]
     JsonRead(serde_json::Error),
-    /// The server failed to serialize its OWN data — a server-side fault
-    /// (`500`). This is the `From<serde_json::Error>` default (a bare `?` on a
-    /// `serde_json` failure lands here), because the safe classification of an
-    /// unattributed codec failure is "our fault, say nothing": a serde
-    /// diagnostic names Rust type and field names, which is server-internal
-    /// detail no client can act on. The full diagnostic goes to `tracing`
-    /// instead, and the wire body carries `INTERNAL_MESSAGE`.
+    /// The server failed to serialize its OWN data, a `500` and the
+    /// `From<serde_json::Error>` default: a serde diagnostic names Rust types
+    /// no client can act on, so it goes to `tracing` and the body carries
+    /// `INTERNAL_MESSAGE`.
     #[error(transparent)]
     JsonWrite(#[from] serde_json::Error),
     /// A version-signing or read-time integrity failure (RM common master06
@@ -277,9 +274,7 @@ pub enum ServiceError {
     SigningCanonical(
         #[source] openehr_rm::v1_2::common::change_control::version_impl::CanonicalFormError,
     ),
-    /// A server-side fault with no more specific variant (the `500`-class
-    /// statuses — `exception`, `file_not_writable`, `not_implemented`,
-    /// `service_overloaded`).
+    /// A server-side fault with no more specific variant.
     ///
     /// The carried message is a LOG detail: both bridges below trace it and
     /// answer with `exception` + `INTERNAL_MESSAGE`, as a `500` must disclose
@@ -312,6 +307,9 @@ pub enum ServiceError {
     /// design/extension.
     #[error(transparent)]
     Forbidden(Refusal),
+    /// The query outran its execution budget, the wire's `408` (`responses/408_Query.yaml`).
+    #[error(transparent)]
+    Timeout(Refusal),
 }
 
 /// The client-visible message of a server-side fault (`500`). Deliberately
@@ -789,6 +787,7 @@ impl From<ServiceError> for StatusError {
                 StatusError::from_refusal(S::ProcessingRestricted, err)
             }
             ServiceError::Forbidden(err) => StatusError::from_refusal(S::AuthFailure, err),
+            ServiceError::Timeout(err) => StatusError::from_timeout(&err),
         }
     }
 }
@@ -859,6 +858,7 @@ impl From<ServiceError> for ApiError {
             ServiceError::Restricted(err) | ServiceError::Forbidden(err) => {
                 ApiError::Forbidden(err.message)
             }
+            ServiceError::Timeout(e) => ApiError::Internal(StatusError::from_timeout(&e).message),
         }
     }
 }

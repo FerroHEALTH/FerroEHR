@@ -92,7 +92,7 @@ async fn served(pool: &PgPool, svc: &FerroEhrService) -> Served {
     let mut aql = Vec::new();
     for query in QUERIES {
         let result = svc
-            .execute_ad_hoc_query(query.to_owned(), AqlQueryRequest::default())
+            .execute_aql(query, None, &AqlQueryRequest::default())
             .await
             .map_err(|e| format!("{query}: {e:?}"))
             .expect("the AQL statement runs")

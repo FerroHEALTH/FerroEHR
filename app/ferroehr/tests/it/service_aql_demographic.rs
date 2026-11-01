@@ -31,8 +31,9 @@ use serde_json::{Value, json};
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::Malformed;
 
 const IDENTIFIER_CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2";
 
@@ -163,7 +164,7 @@ fn params(pairs: &[(&str, &str)]) -> AqlQueryRequest {
 }
 
 async fn run(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> Vec<Value> {
-    svc.execute_ad_hoc_query(aql.to_owned(), request)
+    svc.execute_aql(aql, None, &request)
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
         .result_set["rows"]
@@ -172,8 +173,8 @@ async fn run(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> Vec<
         .clone()
 }
 
-async fn refuse(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> StatusError {
-    svc.execute_ad_hoc_query(aql.to_owned(), request)
+async fn refuse(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> ServiceError {
+    svc.execute_aql(aql, None, &request)
         .await
         .expect_err("the query must be refused")
 }
@@ -400,11 +401,14 @@ async fn unserved_demographic_constructs_are_refused() {
         ),
     ] {
         let err = refuse(&svc, aql, AqlQueryRequest::default()).await;
-        assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{aql}");
         assert!(
-            err.message.contains(names),
+            matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
+            "{aql}"
+        );
+        assert!(
+            err.message().contains(names),
             "the refusal of {aql} names {names}: {}",
-            err.message
+            err.message()
         );
     }
 
@@ -423,8 +427,8 @@ async fn unserved_demographic_constructs_are_refused() {
         },
     )
     .await;
-    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
-    assert!(err.message.contains("ehr_id"), "{}", err.message);
+    assert!(matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
+    assert!(err.message().contains("ehr_id"), "{}", err.message());
 
     // A clinical query does not read the party domain.
     let rows = run(
@@ -542,8 +546,11 @@ async fn a_party_joins_to_the_content_of_its_ehr() {
         ),
     ] {
         let err = refuse(&svc, aql, AqlQueryRequest::default()).await;
-        assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{aql}");
-        assert!(err.message.contains(names), "{aql}: {}", err.message);
+        assert!(
+            matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
+            "{aql}"
+        );
+        assert!(err.message().contains(names), "{aql}: {}", err.message());
     }
 }
 

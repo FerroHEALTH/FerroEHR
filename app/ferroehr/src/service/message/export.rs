@@ -388,12 +388,12 @@ impl FerroEhrService {
                 ..crate::service::query::request::AqlQueryRequest::default()
             };
             let outcome = self
-                .execute_ad_hoc_query(criterion.value.clone(), request)
+                .execute_aql(&criterion.value, None, &request)
                 .await
                 .map_err(|e| {
                     StatusError::precondition(format!(
                         "EXTRACT_SPEC.criteria[{idx}] did not evaluate as AQL: {}",
-                        e.message
+                        StatusError::from(e).message
                     ))
                 })?;
             let empty = Vec::new();

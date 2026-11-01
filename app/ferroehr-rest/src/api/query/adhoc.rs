@@ -59,7 +59,7 @@ pub(super) async fn execute(
                 parameters,
                 ..Default::default()
             });
-            Ok(state.backend().execute_ad_hoc_query(p.q, request).await?)
+            Ok(state.backend().execute_aql(&p.q, None, &request).await?)
         }
         // POST /query/aql — `AdhocQueryExecute` body (`q` + paging/params);
         // `ehr_id` still from the query string / header.
@@ -83,10 +83,7 @@ pub(super) async fn execute(
                 parameters,
                 ..Default::default()
             });
-            Ok(state
-                .backend()
-                .execute_ad_hoc_query(body.q, request)
-                .await?)
+            Ok(state.backend().execute_aql(&body.q, None, &request).await?)
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ad-hoc query operation: {other}"

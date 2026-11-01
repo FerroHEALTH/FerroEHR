@@ -825,9 +825,10 @@ async fn ehr_read_with_its_counts() {
         .expect("ehr_contribution_list_page");
     assert_eq!(listed["total"], json!(3));
     let compositions = svc
-        .execute_ad_hoc_query(
-            "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c".to_owned(),
-            ferroehr::service::query::request::AqlQueryRequest {
+        .execute_aql(
+            "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c",
+            None,
+            &ferroehr::service::query::request::AqlQueryRequest {
                 ehr_ids: vec![ehr_id.clone()],
                 ..ferroehr::service::query::request::AqlQueryRequest::default()
             },

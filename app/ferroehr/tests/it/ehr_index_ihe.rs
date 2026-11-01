@@ -36,9 +36,9 @@ use ferroehr::service::ehr_index::config::EhrIndexConfig;
 use ferroehr::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::linkage::cohort::CohortQueryRequest;
 use ferroehr::service::linkage::cohort::config::CohortConfig;
-use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::tls_client::TlsClientSection;
 
@@ -114,7 +114,7 @@ pub(crate) fn red_subject() -> SubjectRef {
 /// The EHR ids a cohort naming `subject` resolves to, as its AQL projects
 /// them, through the cohort query the `POST /query/cohort` route makes; a
 /// refused resolution is the refusal.
-async fn resolved(svc: &FerroEhrService, subject: SubjectRef) -> Result<Vec<String>, StatusError> {
+async fn resolved(svc: &FerroEhrService, subject: SubjectRef) -> Result<Vec<String>, ServiceError> {
     let outcome = svc
         .execute_cohort_query(CohortQueryRequest {
             aql: "SELECT e/ehr_id/value FROM EHR e".to_owned(),
@@ -122,7 +122,7 @@ async fn resolved(svc: &FerroEhrService, subject: SubjectRef) -> Result<Vec<Stri
             ..CohortQueryRequest::default()
         })
         .await
-        .map_err(StatusError::from)?;
+        .map_err(ServiceError::from)?;
     Ok(outcome
         .query
         .result_set
@@ -238,8 +238,8 @@ async fn a_clinical_identifier_that_is_no_pseudonym_is_refused() {
     let refused = resolved(&svc, red_subject())
         .await
         .expect_err("IHEBLUE-994 is no pseudonym");
-    assert_eq!(refused.status, ServiceStatus::Exception);
-    assert!(refused.message.contains("no pseudonym"), "{refused}");
+    assert!(matches!(&refused, ServiceError::Fault(_)), "{refused:?}");
+    assert!(refused.message().contains("no pseudonym"), "{refused}");
 }
 
 /// An identity source that fails is an error, never an answer from the
@@ -262,7 +262,7 @@ async fn a_failing_source_never_falls_back_to_the_ehr_status_subject() {
     let refused = resolved(&svc, red_subject())
         .await
         .expect_err("the source failed");
-    assert_eq!(refused.status, ServiceStatus::Exception);
+    assert!(matches!(&refused, ServiceError::Fault(_)), "{refused:?}");
 }
 
 /// A service with no provider refuses every subject-scoped call, naming both
@@ -276,10 +276,10 @@ async fn a_service_without_a_provider_refuses_naming_both_choices() {
         .await
         .expect_err("no provider installed");
     assert!(
-        refused.message.contains("provider = \"local\""),
+        refused.message().contains("provider = \"local\""),
         "{refused}"
     );
-    assert!(refused.message.contains("pixm_url"), "{refused}");
+    assert!(refused.message().contains("pixm_url"), "{refused}");
 }
 
 /// The boot check reads the PIX Manager's `CapabilityStatement`; a refusal and

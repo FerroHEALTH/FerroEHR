@@ -45,9 +45,10 @@ use openehr_rm::prelude::PartyProxy;
 use uuid::Uuid;
 
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::config::QueryConfig;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::{Malformed, Missing};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
@@ -178,7 +179,7 @@ async fn count_obs(svc: &FerroEhrService, ehr_id: &str, archetype: &str) -> i64 
 }
 
 async fn run_aql(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> Value {
-    svc.execute_ad_hoc_query(aql.to_owned(), request)
+    svc.execute_aql(aql, None, &request)
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
         .result_set
@@ -370,17 +371,11 @@ async fn aql_acceptance_set() {
     let mut req = ehr_scope(&ehr_id);
     req.fetch = Some(2);
     let err = svc
-        .execute_ad_hoc_query(aql, req)
+        .execute_aql(&aql, None, &req)
         .await
         .expect_err("fetch + AQL TOP must be rejected");
     assert!(
-        matches!(
-            err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
-                ..
-            }
-        ),
+        matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
         "fetch+TOP is precondition_violation, got {err:?}"
     );
 
@@ -1360,39 +1355,29 @@ async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
 
     // A well-formed, absent id in the set → ehr_id_does_not_exist.
     let err = svc
-        .execute_ad_hoc_query(
-            "SELECT COUNT(*) FROM EHR e".to_owned(),
-            ehr_scope_multi(&[&real, &ghost]),
+        .execute_aql(
+            "SELECT COUNT(*) FROM EHR e",
+            None,
+            &ehr_scope_multi(&[&real, &ghost]),
         )
         .await
         .expect_err("an absent ehr_id must be rejected");
     assert!(
-        matches!(
-            err,
-            StatusError {
-                status: ServiceStatus::EhrIdDoesNotExist,
-                ..
-            }
-        ),
+        matches!(&err, ServiceError::NotFound(r) if r.kind == Missing::Ehr),
         "absent ehr_id is ehr_id_does_not_exist, got {err:?}"
     );
 
     // A malformed id → precondition_violation.
     let err = svc
-        .execute_ad_hoc_query(
-            "SELECT COUNT(*) FROM EHR e".to_owned(),
-            ehr_scope_multi(&["not-a-uuid"]),
+        .execute_aql(
+            "SELECT COUNT(*) FROM EHR e",
+            None,
+            &ehr_scope_multi(&["not-a-uuid"]),
         )
         .await
         .expect_err("a malformed ehr_id must be rejected");
     assert!(
-        matches!(
-            err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
-                ..
-            }
-        ),
+        matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
         "malformed ehr_id is precondition_violation, got {err:?}"
     );
 }
@@ -2126,12 +2111,13 @@ async fn distinct_order_by_limit_and_now_comparison() {
     // DISTINCT ordered by an UNSELECTED expression is a typed reject (no
     // spec semantics; the DBMS forbids it) — never a 500.
     let err = svc
-        .execute_ad_hoc_query(
-            format!(
+        .execute_aql(
+            &format!(
                 "SELECT DISTINCT c/name/value FROM EHR e CONTAINS COMPOSITION c \
                  CONTAINS OBSERVATION o[{OBS_ARCHETYPE}] ORDER BY o/{MAG_PATH}"
             ),
-            ehr_scope(&ehr_id),
+            None,
+            &ehr_scope(&ehr_id),
         )
         .await
         .expect_err("DISTINCT + unselected sort key must be a typed reject");
@@ -2682,23 +2668,22 @@ async fn an_uncoercible_temporal_binding_is_the_callers_400() {
     let mut req = ehr_scope(&ehr_id);
     req.parameters = BTreeMap::from([("from".to_owned(), json!("not-a-date"))]);
     let err = svc
-        .execute_ad_hoc_query(aql, req)
+        .execute_aql(&aql, None, &req)
         .await
         .expect_err("an uncoercible binding is refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
         "the caller's defect classifies 400, got {err:?}"
     );
     assert!(
-        err.message.contains("cannot be coerced"),
+        err.message().contains("cannot be coerced"),
         "the message names the defect class without internals: {}",
-        err.message
+        err.message()
     );
     assert!(
-        !err.message.contains("not-a-date") && !err.message.contains("timestamp"),
+        !err.message().contains("not-a-date") && !err.message().contains("timestamp"),
         "no driver internals echo to the wire: {}",
-        err.message
+        err.message()
     );
 }
 
@@ -3099,17 +3084,15 @@ async fn an_explicit_page_above_the_result_ceiling_is_refused() {
         let svc = &svc;
         async move {
             let err = svc
-                .execute_ad_hoc_query(aql, request)
+                .execute_aql(&aql, None, &request)
                 .await
                 .expect_err("a page above the ceiling is refused");
             assert!(
                 matches!(
                     &err,
-                    StatusError {
-                        status: ServiceStatus::PreconditionViolation,
-                        message,
-                        ..
-                    } if message.contains("exceeds the largest page") && message.contains("2 rows")
+                    ServiceError::BadRequest(r) if r.kind == Malformed::Precondition
+                        && r.message.contains("exceeds the largest page")
+                        && r.message.contains("2 rows")
                 ),
                 "got {err:?}"
             );

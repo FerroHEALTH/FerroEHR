@@ -140,11 +140,12 @@ async fn an_aql_page_records_the_union_of_the_origins_it_served() {
     commit(&svc, ehr_id, &imported).await;
 
     let outcome = svc
-        .execute_ad_hoc_query(
-            format!(
+        .execute_aql(
+            &format!(
                 "SELECT c/uid/value FROM EHR e[ehr_id/value='{ehr_id}'] CONTAINS COMPOSITION c"
             ),
-            AqlQueryRequest::default(),
+            None,
+            &AqlQueryRequest::default(),
         )
         .await
         .expect("the query runs");
@@ -155,12 +156,9 @@ async fn an_aql_page_records_the_union_of_the_origins_it_served() {
 
     // A leaf projection over one root still knows which versions it served.
     let one = svc
-        .execute_ad_hoc_query(
-            format!(
+        .execute_aql(&format!(
                 "SELECT c/name/value FROM EHR e[ehr_id/value='{ehr_id}'] CONTAINS COMPOSITION c[name/value='imported']"
-            ),
-            AqlQueryRequest::default(),
-        )
+            ), None, &AqlQueryRequest::default())
         .await
         .expect("the query runs");
     assert_eq!(one.served_origins, ["lab.example"]);
@@ -191,11 +189,12 @@ async fn an_unstamped_row_is_assessed_from_the_body_at_read() {
         "the point read walks the body it serves"
     );
     let outcome = svc
-        .execute_ad_hoc_query(
-            format!(
+        .execute_aql(
+            &format!(
                 "SELECT c/uid/value FROM EHR e[ehr_id/value='{ehr_id}'] CONTAINS COMPOSITION c"
             ),
-            AqlQueryRequest::default(),
+            None,
+            &AqlQueryRequest::default(),
         )
         .await
         .expect("the query runs");

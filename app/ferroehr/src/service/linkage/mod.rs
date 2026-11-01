@@ -29,24 +29,10 @@ pub mod cohort;
 
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::status::StatusError;
+use crate::service::error::ServiceError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
-
-/// A linkage-domain crossing whose access record could not be taken.
-#[derive(Debug, thiserror::Error)]
-pub enum LinkageError {
-    /// The crossing ran but its access record could not be taken, and the
-    /// deployment fails closed, so the result is withheld.
-    ///
-    /// A crossing of the pseudonymisation boundary that nobody can reconstruct
-    /// afterwards is what the access log exists to prevent; under
-    /// `[audit] fail_mode = "closed"` an unrecorded crossing is refused rather
-    /// than served.
-    #[error("the access record could not be taken and the deployment fails closed")]
-    Unrecorded(#[source] StatusError),
-}
 
 impl FerroEhrService {
     /// Record one linkage-domain access.
@@ -65,8 +51,9 @@ impl FerroEhrService {
     /// trail depend on which door was used.
     ///
     /// # Errors
-    /// [`LinkageError::Unrecorded`] when the sender rejected the record under
-    /// `fail_mode = "closed"`; the caller withholds its result.
+    /// [`ServiceError::Unrecorded`] when the sender rejected the record under
+    /// `fail_mode = "closed"`: a crossing of the pseudonymisation boundary nobody
+    /// can reconstruct afterwards is refused, and the caller withholds its result.
     pub(crate) fn emit_linkage_access(
         &self,
         action: EventActionCode,
@@ -74,7 +61,7 @@ impl FerroEhrService {
         ehr_id: Option<EhrId>,
         result_count: u64,
         succeeded: bool,
-    ) -> Result<(), LinkageError> {
+    ) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -91,7 +78,6 @@ impl FerroEhrService {
         stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
         self.record_access(event)
-            .map_err(|e| LinkageError::Unrecorded(StatusError::from(e)))
     }
 }
 
