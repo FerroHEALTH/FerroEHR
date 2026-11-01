@@ -53,7 +53,7 @@ applies to every crate — generated and hand-written alike.
   `scripts/conformance.sh`) — the data-driven interpreter over the committed
   machine-readable catalogue, with pure-function verdicts. Issue-close runs
   must show **zero drift** vs the committed baseline
-  (`docs/conformance/ferroehr/results.json` + `verdicts.json`); the
+  (`docs/conformance/ferroehr/results.json` and `summary.md`); the
   baseline only ratchets upward.
 - **The vendored CNF text is the STALLED structural GUIDE the instrument's
   COVERAGE derives from — NOT the correctness oracle** (owner ruling

@@ -50,9 +50,9 @@ FORBIDDEN:
 - **Coverage only ratchets up.** A spec-defined behaviour the catalogue does
   not yet exercise is a GAP to close (a new spec-cited case), never an
   acceptable omission — see `.claude/rules/testing.md` §CNF coverage.
-- Profile verdicts (CORE/STANDARD/OPTIONS/SEC-BASIC) are **machine-computed**
-  by the verdict pipeline from (statement, results, catalogue, capability
-  matrix); never hand-assert them anywhere.
+- The record has no tier verdict. Its counts per part (BASE and OPTIONS) are
+  read from `results.json` by `scripts/render/conformance-stats.sh`; never
+  hand-type a count or a tier claim anywhere.
 
 ## Steps
 
@@ -74,10 +74,9 @@ FORBIDDEN:
    results.json. The full canonical CLI table lives in
    Veredictum's own `CLAUDE.md`.
 3. **Compare against the committed baseline**
-   (`docs/conformance/ferroehr/results.json` + `verdicts.json`): the only
-   permitted delta is newly-green cases — **zero drift**. Report:
-   passed / failed / errored / not-applicable counts, the machine verdicts,
-   and any drift case-by-case.
+   (`docs/conformance/ferroehr/results.json`): the only permitted delta is
+   newly-green rows, **zero drift**. Report: passed / failed / warning /
+   errored / skipped counts per part, and any drift row by row.
 4. **On any non-green result, ATTRIBUTE before you touch anything**
    (`.claude/rules/cnf-triage.md`; **delegate a red run to the `cnf-triage`
    agent**). Per red row, in order — no shortcuts:
@@ -103,6 +102,6 @@ FORBIDDEN:
         `artifacts/registers/ambiguities.yaml` entry with a typed disposition.
    Never adjust an expectation to match observed behaviour; never change app
    code without a reproduced exchange; never assume the app is the correct one.
-5. **At phase close:** the ratcheted `results.json`, `verdicts.json`,
-   rendered report/statement/certificate and badges under
-   `docs/conformance/<sut>/` are committed with the phase.
+5. **At phase close:** the ratcheted released-profile `results.json` and
+   `summary.md` under `docs/conformance/<sut>/` are committed with the phase.
+   The badges are pushed by the Conformance workflow, never committed.

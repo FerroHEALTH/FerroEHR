@@ -17,7 +17,7 @@
        themselves with presentation attributes (fill, stroke), which are not
        CSS and are outside style-src
        (https://www.w3.org/TR/CSP3/#directive-style-src). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>FerroEHR — a pure-Rust openEHR Clinical Data Repository</title>
   <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1, PostgreSQL 18-native storage, shipped as a single self-contained binary. Conformance measured and machine-verified.">
@@ -177,27 +177,41 @@
         <div class="section-head">
           <span class="eyebrow">Conformance</span>
           <h2>Conformance you can verify.</h2>
-          <p>The complete openEHR conformance catalogue runs against a live server, in JSON and XML, and the runner computes the profile verdicts. The committed record names the FerroEHR version it measured.</p>
+          <p>Veredictum, a separate openEHR conformance instrument, runs its whole catalogue against a live FerroEHR on every push to <code>main</code>. One run against the released specification is committed as the record, and every number below is read from it.</p>
         </div>
-        <!-- Conformance numbers/verdicts are DERIVED AT BUILD TIME from
-             docs/conformance/ferroehr/ by scripts/render/conformance-stats.sh
-             (fill-html). Never hand-type a number here — CI's stale-numbers
+        <!-- The numbers are DERIVED AT BUILD TIME from
+             docs/conformance/ferroehr/results.json by scripts/render/conformance-stats.sh
+             (fill-html). Never hand-type a number here: CI's stale-numbers
              gate (scripts/checks/conformance-numbers.sh) fails the build. -->
         <div class="proof-nums">
-          <div class="proof-num"><span class="n" data-cnf="executed">—</span><span class="l">cases executed</span></div>
+          <div class="proof-num"><span class="n" data-cnf="ran">—</span><span class="l">rows run</span></div>
           <div class="proof-num"><span class="n" data-cnf="passed">—</span><span class="l">passed</span></div>
-          <div class="proof-num"><span class="n zero" data-cnf="failed">—</span><span class="l">failed</span></div>
+          <div class="proof-num"><span class="n zero" data-cnf="failed">—</span><span class="l">failed or errored</span></div>
+          <div class="proof-num"><span class="n zero" data-cnf="skipped">—</span><span class="l">skipped</span></div>
         </div>
-        <!-- The heat grid is GENERATED output (scripts/render/conformance-assets.sh,
-             regenerate-and-diff guarded) — its labels are rendered, never hand-typed. -->
-        <a class="proof-grid" href="./docs/latest/conformance.html">
-          <img src="./docs/latest/conformance-assets/conformance-heat-grid.svg" alt="Capability conformance heat grid: every claimed capability grouped by profile tier, marked passed, failed, not evidenced, excused or no-cases" loading="lazy">
-        </a>
+        <p class="proof-record">The committed record: <span data-cnf="record">—</span>.</p>
+        <!-- The badges are drawn by Veredictum from each run on main and pushed
+             by the Conformance workflow to the veredictum-badges branches;
+             img-src in the policy above admits that repository path. -->
+        <div class="proof-badges">
+          <div class="proof-badge-row">
+            <span class="proof-badge-label">Released specification</span>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg" alt="openEHR BASE · released" height="20"></a>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg" alt="openEHR options · released" height="20"></a>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg" alt="specification · released" height="20"></a>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg" alt="veredictum · released" height="20"></a>
+          </div>
+          <div class="proof-badge-row">
+            <span class="proof-badge-label">Development specification, never counted toward the record</span>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg" alt="openEHR BASE · development" height="20"></a>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/options.svg" alt="openEHR options · development" height="20"></a>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg" alt="specification · development" height="20"></a>
+            <a href="https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain" rel="noopener"><img src="https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg" alt="veredictum · development" height="20"></a>
+          </div>
+        </div>
         <div class="proof-pills">
-          <a class="pill" href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md" rel="noopener"><span class="dot"></span><span data-cnf="verdict-core">—</span></a>
-          <a class="pill" href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md" rel="noopener"><span class="dot"></span><span data-cnf="verdict-standard">—</span></a>
-          <a class="pill" href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md" rel="noopener"><span class="dot"></span><span data-cnf="verdict-options">—</span></a>
-          <a class="pill" href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md" rel="noopener"><span class="dot"></span><span data-cnf="verdict-sec">—</span></a>
+          <a class="pill" href="./docs/latest/conformance.html"><span class="dot"></span>How conformance is measured</a>
+          <a class="pill" href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/summary.md" rel="noopener"><span class="dot"></span>The run, row by row</a>
         </div>
       </div>
     </section>
@@ -356,7 +370,7 @@
               <li><a href="https://github.com/FerroHEALTH/FerroEHR" rel="noopener">GitHub</a></li>
               <li><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md" rel="noopener">Security policy</a></li>
               <li><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/CHANGELOG.md" rel="noopener">Changelog</a></li>
-              <li><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/CONFORMANCE_CERTIFICATE.md" rel="noopener">Conformance certificate</a></li>
+              <li><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/summary.md" rel="noopener">Conformance record</a></li>
               <li><a href="https://ferrohealth.eu/docs/" rel="noopener">FerroHEALTH family</a></li>
             </ul>
           </div>

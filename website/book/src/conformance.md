@@ -36,13 +36,18 @@ to any server's observed behaviour. The catalogue spans the schedule's chapters:
 | SMART | SMART App Launch discovery and resource-scope enforcement |
 | PERF | The measured performance classes ([Performance](performance.md)) |
 
-The run is what turns cases into a claim. **Verdicts are computed, never
-asserted**: a pure function rolls per-case outcomes up through the
-capability→tier matrix from the CNF Profiles book into Core / Standard / Options /
-SEC-BASIC profile verdicts, honouring the party statement's declared capabilities
-and option selections. A case whose wire does not exist on the technology profile,
-or whose ground a shared server cannot establish, is recorded as _not applicable
-with a machine-readable citation_ rather than silently omitted.
+A run judges every row of every case and counts it in one of two parts.
+**BASE** holds what every server that claims a capability must do. **OPTIONS**
+holds the cases of an option the specification leaves to the implementation,
+where the party statement selects one arm, and the cases that rest on TRIAL
+text. A row of an arm FerroEHR did not select is skipped with the citation that
+makes it not apply, so a skipped row is never a silent pass.
+
+Each row ends in one of five outcomes. A **failed** row counts against the
+server. A **warning** row is a SHOULD the server did not follow and never
+counts against it. An **errored** row could not be judged: it counts against
+the server unless its record names the instrument as the cause. A **skipped**
+row was not run.
 
 > [!NOTE]
 > The runner publishes a JSON Schema for every artefact family it writes, so a
@@ -57,33 +62,46 @@ with a machine-readable citation_ rather than silently omitted.
 
 ## The current result
 
-The whole conformance story in one picture: every capability of the claims
-matrix, grouped by profile tier, colored AND glyph-marked by the evidence its
-cases produced (both charts are generated from the committed runner artefacts and
-regenerate-and-diff guarded in CI; no number on them is hand-typed):
+Every run on `main` draws its own badges and pushes them to a branch of the
+repository, so these show the latest run, the same badges the README carries.
+The released profile reads every citation against the frozen openEHR release
+and is the record:
 
-![Capability conformance heat grid](conformance-assets/conformance-heat-grid.svg)
+[![openEHR BASE · released][base-rel]][runs]
+[![openEHR options · released][options-rel]][runs]
+[![specification · released][profile-rel]][runs]
+[![veredictum · released][instrument-rel]][runs]
 
-The same run broken down two levels deep: a header per schedule chapter with its
-total, then one bar per **band**, the surface a case actually exercises (EHR
-resource, EHR_STATUS, COMPOSITION, …), with the exact outcome counts printed
-beside every row. Every band the taxonomy declares is drawn, so one with no case
-for this run shows as an explicit `no cases` row rather than disappearing, and a
-hatched segment marks cited-N/A so it reads as neither a pass nor a failure:
+The development profile reads the same catalogue against the pinned `master`
+of each openEHR repository, the text FerroEHR builds on. It is shown beside the
+record and never counted toward it:
 
-![Schedule outcomes by chapter and band](conformance-assets/conformance-chapter-bars.svg)
+[![openEHR BASE · development][base-dev]][runs]
+[![openEHR options · development][options-dev]][runs]
+[![specification · development][profile-dev]][runs]
+[![veredictum · development][instrument-dev]][runs]
 
-The published run against FerroEHR reports:
+The committed record, `docs/conformance/ferroehr/results.json`, holds one
+released-profile run. Its counts:
 
 <!-- Generated at build time from docs/conformance/ferroehr/results.json by
-     scripts/render/conformance-stats.sh — never hand-type numbers here (CI:
+     scripts/render/conformance-stats.sh. Never hand-type numbers here (CI:
      scripts/checks/conformance-numbers.sh). -->
 {{#include ../generated/conformance-stats.md}}
 
-Cases that did not execute are not-applicable with a machine-readable citation (an
-unrealized wire on this technology profile, an undeclared option branch, or a
-ground a shared server cannot establish), never silent omissions. Options
-aggregates optional capabilities under the Profiles book's "any passes" rule.
+[`summary.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/summary.md)
+beside it breaks the same run down by chapter, band and section, and lists
+every skipped row with its reason.
+
+[runs]: https://github.com/FerroHEALTH/FerroEHR/actions/workflows/containers.yml?query=branch%3Amain
+[base-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/base.svg
+[options-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/options.svg
+[profile-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/profile.svg
+[instrument-rel]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges/instrument.svg
+[base-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/base.svg
+[options-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/options.svg
+[profile-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/profile.svg
+[instrument-dev]: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/veredictum-badges-development/instrument.svg
 
 ## The party set
 
@@ -186,59 +204,24 @@ server. Both instruments refuse to write a record if the server answered any
 
 ## Reading the artefacts
 
-A run writes machine records and three human-readable documents to
-`docs/conformance/<sut-name>/`. Each has a distinct job.
+A run writes `results.json` and three views `veredictum export` renders from
+it: `junit.xml`, `ctrf.json` and `summary.md`. Each view is a pure function of
+`results.json`, so the same results give the same bytes.
 
-### The machine records
+- **`results.json`** is the record: the instrument and its version, the
+  specification profile, the server's own `OPTIONS` answer, an outline of every
+  case with its chapter, band and part, and one row per workflow row with its
+  outcome, its inputs and, for a skipped row, the reason and the citation.
+- **`summary.md`** is the view for a person: the counts per part, then chapter
+  by chapter, with each red row opened up to the step, what was checked,
+  expected against received, and the cited sentence.
+- **`junit.xml`** and **`ctrf.json`** are the views a CI system shows. The
+  Conformance workflow keeps them as run artifacts and does not commit them.
 
-`results.json` is the party results record: one outcome per case with its
-rows-driven coverage, failing step and reason where applicable, and the excusing
-citation for every not-applicable entry, alongside the system-under-test identity,
-the runner's verification-pack status, the technology profile, and the ixit
-digest. `verdicts.json` is the computed verdict report, and
-`run-exceptions.json` registers anything the interpreter itself could not cover.
-Every other artefact (the three documents, the badges, the charts) is generated
-from these; nothing downstream is hand-edited.
-
-### The conformance report
-
-`CONFORMANCE_REPORT.md` is the honest, scoped record of _this run_: the system
-under test, the outcome counts, the per-capability evidence rollup, the
-machine-computed profile verdicts, and every not-applicable entry with its
-excusing citation. Read this when you want to know exactly what happened and why
-any case did not run.
-
-### The conformance statement
-
-`CONFORMANCE_STATEMENT.md` is the concise, generated claim: the supported
-specification versions, the declared external data formats (JSON and XML), and the
-profile results. Every line is a pure function of the machine verdicts, so the
-statement can never claim more than the run proves.
-
-### The conformance certificate
-
-`CONFORMANCE_CERTIFICATE.md` follows the structure of the openEHR conformance
-certificate template: the system under test, the scope of test, and a
-per-capability profile report showing which capabilities are required in each
-profile, what each was verified against, and whether each passed. The
-**Realization** column separates capabilities verified over released ITS-REST
-operations from any verified over routes a product serves of its own design — the
-latter never gate an openEHR profile tier. Where the certificate carries a
-measured run, its **Workload Coverage** table additionally shows which claimed
-capabilities the hospital-simulation load actually exercised; a capability the
-simulation does not reach must carry an adjudicated exclusion, printed with its
-reason, and the runner's validation gate refuses an artefact tree that leaves such
-a row undecided. It always identifies itself as a framework assessment with the
-claim computed from the attached run; it is never an official openEHR
-certification. This is the document to hand to a procurement or evaluation
-reviewer who wants the capability-by-capability picture.
-
-> [!TIP]
-> The conformance badges in the project README are generated from the same run
-> and carry the measured amounts (per-profile capability counts, the overall
-> driven-case count, the earned performance class). A badge can never show a pass
-> unless the machine verdict does, so a green badge is a claim you can
-> immediately reproduce with `scripts/conformance.sh`.
+`results.json` and `summary.md` of one released-profile run are committed under
+`docs/conformance/ferroehr/`. The website and this page read their numbers from
+that record at build time, and the build fails when `summary.md` and
+`results.json` disagree.
 
 ## What conformance does not cover
 
@@ -252,11 +235,7 @@ The other honest boundary is the gap between openEHR's *service* model and its
 *released* REST wire. Several service operations were never surfaced as
 endpoints (listing an EHR's contributions, counting stored templates or queries,
 deleting a template or a stored query) so a case that addresses one has no wire
-to drive on this technology profile. Those cases are excused through the
-schedule's typed ambiguity register, with the citation printed in the report, and
-reported as an explicit scope exclusion on the certificate; never a silent pass
-and never an unavoidable failure. FerroEHR does serve routes of its own design
-for several of them (see
+to drive on this technology profile. FerroEHR does serve routes of its own
+design for several of them (see
 [Admin & messaging APIs](operations-admin-apis.md) and the archetype routes in
-[Templates & validation](templates-validation.md)); those are marked
-`extension` on the certificate and never gate an openEHR profile tier.
+[Templates & validation](templates-validation.md)).

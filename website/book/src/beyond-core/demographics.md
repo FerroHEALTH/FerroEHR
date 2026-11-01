@@ -13,11 +13,9 @@ API. See [Security](../security.md).
 > [!NOTE]
 > The party wire API is defined by the openEHR REST specification's
 > **Demographic API**, which carries DEVELOPMENT lifecycle status inside the
-> released specification, and the conformance schedule places demographics in
-> the **Options** profile tier rather than Core or Standard. Party
-> *relationships* are the one part with no specification at all: those routes are
-> a FerroEHR extension realizing the service model's relationship interface, and
-> they are excluded from conformance-profile claims.
+> released specification. Party *relationships* are the one part with no
+> specification at all: those routes are a FerroEHR extension realizing the
+> service model's relationship interface, and no conformance claim covers them.
 
 <!-- toc -->
 
