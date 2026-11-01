@@ -21,7 +21,8 @@ use crate::fixtures::uv;
 use crate::fixtures::{uid, vo_of};
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{Missing, Refusal};
 
 /// The bare versioned-object UUID of a versioned-object body.
 fn vo_uuid(v: &Value) -> String {
@@ -237,13 +238,7 @@ async fn relationship_lifecycle_end_to_end() {
         )
         .await;
     assert!(
-        matches!(
-            stale,
-            Err(StatusError {
-                status: ServiceStatus::VersionMismatch,
-                ..
-            })
-        ),
+        matches!(stale, Err(ServiceError::VersionConflict(_))),
         "stale update, got {stale:?}"
     );
 
@@ -297,10 +292,10 @@ async fn relationship_error_cases() {
     assert!(
         matches!(
             unknown,
-            Err(StatusError {
-                status: ServiceStatus::VersionedObjectDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::VersionedObject,
                 ..
-            })
+            }))
         ),
         "unknown relationship is 404, got {unknown:?}"
     );
@@ -337,10 +332,10 @@ async fn relationship_error_cases() {
         .await;
     assert!(matches!(
         vp_unknown,
-        Err(StatusError {
-            status: ServiceStatus::VersionedObjectDoesNotExist,
+        Err(ServiceError::NotFound(Refusal {
+            kind: Missing::VersionedObject,
             ..
-        })
+        }))
     ));
     assert!(svc.party_relationship_get(vo, None).await.is_ok());
 }

@@ -25,11 +25,11 @@ use openehr_rm::prelude::{Agent, Group, Organisation, Party, Person, Role};
 use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
-use crate::overview::error::{RestError, status_api_error};
+use crate::overview::error::RestError;
 use crate::state::AppState;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::response::ServiceResponse;
-use ferroehr::service::status::ServiceStatus;
 
 /// The per-kind CRUD operations (`create`/`get`/`update`/`delete`).
 pub(super) async fn run(
@@ -134,7 +134,7 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(super::error_with_meta(status_api_error(e), meta.as_ref()))
+                    Ok(super::error_with_meta(ApiError::from(e), meta.as_ref()))
                 }
                 Err(e) => Err(RestError::from(e)),
             }
@@ -230,7 +230,7 @@ async fn run_delete(
             Ok(out)
         }
         // 409_PERSON_with_uid_based_id: the supplied uid is not the latest.
-        Err(e) if e.status == ServiceStatus::VersionMismatch => {
+        Err(e @ ServiceError::VersionConflict(_)) => {
             let meta = state
                 .backend()
                 .demographic_latest_meta(kind, preceding)
@@ -238,7 +238,7 @@ async fn run_delete(
                 .ok()
                 .flatten();
             Ok(super::error_with_meta(
-                ApiError::Conflict(e.message),
+                ApiError::Conflict(e.message()),
                 meta.as_ref(),
             ))
         }

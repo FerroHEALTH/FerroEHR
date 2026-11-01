@@ -28,13 +28,17 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::{item_tag_refusal, normalized_target_path, tag_target_tail};
 use crate::service::error::ServiceError;
-use crate::service::status::ServiceStatus;
+use crate::service::refusal::Missing;
 use crate::storage::tag_repo;
 use crate::versioning::object_version_id::{VersionIdError, hier_object_id};
 
 impl FerroEhrService {
-    /// All demographic tags (ehr-less), optionally filtered by key/value/path.
-    pub(super) async fn demographic_tags(
+    /// All demographic `ITEM_TAG`s (ehr-less), optionally filtered by
+    /// key/value/target path.
+    ///
+    /// # Errors
+    /// [`ServiceError`] on a storage/database fault reading the tag store.
+    pub async fn demographic_tags_get(
         &self,
         key: Option<&str>,
         value: Option<&str>,
@@ -89,8 +93,8 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         let stored = crate::versioning::read::object_kind(&self.demographic_pool, vo_id).await?;
         if stored != Some(crate::service::demographic::support::kind_of(kind)) {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("tag target {} {vo_id}", kind.rm_type()),
             ));
         }
@@ -106,8 +110,8 @@ impl FerroEhrService {
             )
             .await?
             {
-                return Err(ServiceError::new(
-                    ServiceStatus::ObjectVersionDoesNotExist,
+                return Err(ServiceError::not_found(
+                    Missing::ObjectVersion,
                     format!("tag target version {}", version.value()),
                 ));
             }
@@ -218,8 +222,8 @@ impl FerroEhrService {
         )
         .await?
         {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("item tag {key:?}"),
             ));
         }

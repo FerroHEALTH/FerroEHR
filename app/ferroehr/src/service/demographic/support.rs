@@ -31,8 +31,8 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
 use crate::service::error::ServiceError;
+use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::ServiceStatus;
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::Committed;
@@ -284,10 +284,7 @@ impl FerroEhrService {
         let time_created = version_repo::meta::time_created(&self.demographic_pool, vo_id)
             .await?
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::VersionedObjectDoesNotExist,
-                    format!("{label} {vo_id}"),
-                )
+                ServiceError::not_found(Missing::VersionedObject, format!("{label} {vo_id}"))
             })?;
         let uid = HierObjectId::from(vo_id.0);
         let owner_id = ObjectRef::ObjectRef(ObjectRefData {
@@ -337,8 +334,8 @@ impl FerroEhrService {
         // §Attributes): a versioned object with no versions has no revision
         // history resource to return.
         let items = openehr_base::containers::NonEmptyVec::new(items).map_err(|empty| {
-            ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("versioned object {vo_id}: {empty}"),
             )
         })?;
@@ -371,8 +368,8 @@ impl FerroEhrService {
         )
         .await?
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::ObjectVersionDoesNotExist,
+            ServiceError::not_found(
+                Missing::ObjectVersion,
                 format!("{label} {vo_id} v{version}"),
             )
         })?;
@@ -398,8 +395,8 @@ impl FerroEhrService {
         let read = load_ehrless(&self.demographic_pool, self.spec_profile, vo_id, None, at)
             .await?
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::ObjectVersionDoesNotExist,
+                ServiceError::not_found(
+                    Missing::ObjectVersion,
                     format!("{label} {vo_id} version at time"),
                 )
             })?;

@@ -38,6 +38,8 @@ use uuid::Uuid;
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{Clash, Invalid, Refusal};
 use ferroehr::service::status::ServiceStatus;
 
 /// Write the audit and contribution rows every version row needs, leaving the
@@ -934,9 +936,14 @@ async fn a_failed_commit_leaves_no_sealed_identifier(service: &FerroEhrService, 
         .demographic_contribution_create(persons_with_bsn(&["Lovelace", "Byron"], SYNTHETIC_BSN))
         .await
         .expect_err("two parties cannot hold one national identifier");
-    assert_eq!(
-        refused.status,
-        ServiceStatus::Conflict,
+    assert!(
+        matches!(
+            &refused,
+            ServiceError::Conflict(Refusal {
+                kind: Clash::State,
+                ..
+            })
+        ),
         "a value another party holds is the 409 conflict, never a 500: {refused:?}"
     );
     assert_eq!(
@@ -1151,7 +1158,16 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
         )
         .await
         .expect_err("another party may not take a live value");
-    assert_eq!(refused.status, ServiceStatus::Conflict, "{refused:?}");
+    assert!(
+        matches!(
+            &refused,
+            ServiceError::Conflict(Refusal {
+                kind: Clash::State,
+                ..
+            })
+        ),
+        "{refused:?}"
+    );
     service
         .party_create(
             PartyKind::Person,
@@ -1261,7 +1277,16 @@ async fn a_reference_to_another_partys_identifier_is_refused() {
         )
         .await
         .expect_err("another party's row cannot be carried");
-    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
+    assert!(
+        matches!(
+            &refused,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "{refused:?}"
+    );
     assert_eq!(
         sealed_and_versions(&party_pool).await,
         (1, 1),
@@ -1287,7 +1312,16 @@ async fn two_values_in_one_scheme_are_refused() {
         )
         .await
         .expect_err("one party, two values in one scheme");
-    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
+    assert!(
+        matches!(
+            &refused,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "{refused:?}"
+    );
     assert_eq!(sealed_and_versions(&party_pool).await, (0, 0));
 }
 
@@ -1336,9 +1370,8 @@ async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
         )
         .await
         .expect_err("an unregistered scheme cannot be sealed");
-    assert_eq!(
-        refused.status,
-        ServiceStatus::Exception,
+    assert!(
+        matches!(&refused, ServiceError::Internal(_)),
         "the client cannot fix the deployment's configuration: {refused:?}"
     );
     assert_eq!(

@@ -28,7 +28,7 @@ use serde_json::Value;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::identifier::store::StoreError;
-use crate::service::status::StatusError;
+use crate::service::error::ServiceError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -51,35 +51,37 @@ impl FerroEhrService {
     /// **No openEHR spec governs this — our own design/extension.**
     ///
     /// # Errors
-    /// [`StatusError::precondition`] when the deployment configures no identifier
+    /// [`ServiceError::precondition`] when the deployment configures no identifier
     /// protection or `version_uid` is no `OBJECT_VERSION_ID`, the
-    /// `object_version_does_not_exist` [`StatusError`] when no party holds that
+    /// `object_version_does_not_exist` [`ServiceError`] when no party holds that
     /// version, `exception` when a sealed value cannot be read or does not
     /// authenticate, and `service_overloaded` when the access record is
     /// refused under `fail_mode = "closed"`, which withholds the values.
     pub async fn read_party_identifiers(
         &self,
         version_uid: &str,
-    ) -> Result<(Value, Vec<String>), StatusError> {
+    ) -> Result<(Value, Vec<String>), ServiceError> {
         let Some(engine) = self.identifier_protection() else {
-            return Err(StatusError::precondition(
+            return Err(ServiceError::precondition(
                 "this deployment configures no national-identifier protection, so a party \
                  carries no protected identifier to expand",
             ));
         };
         let (party, _) = parse_version_uid(version_uid).map_err(|error| {
-            StatusError::precondition(format!("`{version_uid}` is not an OBJECT_VERSION_ID"))
-                .with_source(error)
+            ServiceError::bad_request(
+                format!("`{version_uid}` is not an OBJECT_VERSION_ID"),
+                error,
+            )
         })?;
         let mut version = self.get_party_at_version(version_uid.to_owned()).await?;
         let schemes = engine.expand(&mut version).await.map_err(|error| {
             if let StoreError::Acquire(acquire) = error {
-                return StatusError::from(acquire);
+                return ServiceError::Acquire(acquire);
             }
-            StatusError::exception(format!(
-                "expanding the protected identifiers of party version `{version_uid}` failed"
-            ))
-            .with_source(error)
+            ServiceError::fault_caused(
+                "expanding the protected identifiers of a party version failed",
+                error,
+            )
         })?;
         self.emit_identifier_expansion(party, &schemes)?;
         Ok((version, schemes))
@@ -89,13 +91,13 @@ impl FerroEhrService {
     /// scheme expanded, or one naming no scheme when the version held none.
     ///
     /// # Errors
-    /// The `service_overloaded` [`StatusError`] when the sender rejected a record
+    /// The `service_overloaded` [`ServiceError`] when the sender rejected a record
     /// under `fail_mode = "closed"`; the values are then withheld.
     fn emit_identifier_expansion(
         &self,
         party: VoId,
         schemes: &[String],
-    ) -> Result<(), StatusError> {
+    ) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }

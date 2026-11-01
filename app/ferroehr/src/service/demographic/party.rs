@@ -25,6 +25,7 @@ use crate::service::demographic::support;
 use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::party_invariants;
 use crate::service::error::ServiceError;
+use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::ServiceStatus;
 use crate::service::version_update::Committal;
@@ -245,8 +246,8 @@ impl FerroEhrService {
     ) -> Result<ServiceResponse, ServiceError> {
         let kind = current.kind;
         if current.deleted {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("{} {} is deleted", kind.rm_type(), current.vo_id),
             ));
         }

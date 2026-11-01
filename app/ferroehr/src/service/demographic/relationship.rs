@@ -34,6 +34,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::support;
 use crate::service::demographic::validate::relationship_check;
 use crate::service::error::ServiceError;
+use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::ServiceStatus;
 use crate::service::version_update::Committal;
@@ -251,8 +252,8 @@ impl FerroEhrService {
         committal: Option<&Committal>,
     ) -> Result<ServiceResponse, ServiceError> {
         if current.deleted {
-            return Err(ServiceError::new(
-                ServiceStatus::VersionedObjectDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::VersionedObject,
                 format!("PARTY_RELATIONSHIP {} is deleted", current.vo_id),
             ));
         }

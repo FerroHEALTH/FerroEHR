@@ -23,7 +23,8 @@ use sqlx::PgPool;
 use crate::typed_body::typed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{Invalid, Malformed, Missing, Refusal};
 use openehr_its::rest::generated::common::UpdateVersion;
 
 /// The `uid.value` (`OBJECT_VERSION_ID`) of a versioned-object body.
@@ -178,10 +179,7 @@ async fn person_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId) -> bo
         Err(e) => {
             let shown = format!("{e:?}");
             assert!(
-                matches!(
-                    ferroehr::service::error::ServiceError::from(e),
-                    ferroehr::service::error::ServiceError::NotFound(_)
-                ),
+                matches!(e, ServiceError::NotFound(_)),
                 "the party read fails only as not found: {shown}"
             );
             false
@@ -233,20 +231,17 @@ async fn party_typed_calls_round_trip() {
         .await
         .expect_err("an unknown version does not read");
     assert!(
-        matches!(
-            ferroehr::service::error::ServiceError::from(unread),
-            ferroehr::service::error::ServiceError::NotFound(_)
-        ),
+        matches!(unread, ServiceError::NotFound(_)),
         "an unknown version is not found"
     );
     let miss = svc.get_party_at_version(bogus).await;
     assert!(
         matches!(
             miss,
-            Err(StatusError {
-                status: ServiceStatus::ObjectVersionDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::ObjectVersion,
                 ..
-            })
+            }))
         ),
         "unknown version → object_version_does_not_exist, got {miss:?}"
     );
@@ -385,13 +380,7 @@ async fn person_lifecycle_end_to_end() {
         )
         .await;
     assert!(
-        matches!(
-            stale,
-            Err(StatusError {
-                status: ServiceStatus::VersionMismatch,
-                ..
-            })
-        ),
+        matches!(stale, Err(ServiceError::VersionConflict(_))),
         "stale update, got {stale:?}"
     );
 
@@ -400,10 +389,10 @@ async fn person_lifecycle_end_to_end() {
     assert!(
         matches!(
             wrong,
-            Err(StatusError {
-                status: ServiceStatus::VersionedObjectDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::VersionedObject,
                 ..
-            })
+            }))
         ),
         "person under role route is 404, got {wrong:?}"
     );
@@ -536,10 +525,10 @@ async fn person_delete_by_versioned_uid_is_refused() {
     assert!(
         matches!(
             refused,
-            Err(StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            Err(ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            })
+            }))
         ),
         "a container id is not a version_uid, got {refused:?}"
     );
@@ -595,8 +584,8 @@ async fn update_without_uid_refuses_a_foreign_relationship_source() {
     assert!(
         matches!(
             refused,
-            Err(StatusError {
-                status: ServiceStatus::ContentInvalid,
+            Err(ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             })
         ),
@@ -662,13 +651,18 @@ async fn demographic_contribution_member_without_committer_is_refused() {
         }))
         .await
         .expect_err("a demographic member without a committer is refused");
-    assert_eq!(
-        err.status,
-        ServiceStatus::PreconditionViolation,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        ),
         "got {err:?}"
     );
     assert!(
-        err.message.contains("(at $.versions[0].commit_audit)"),
+        err.message().contains("(at $.versions[0].commit_audit)"),
         "got {err:?}"
     );
 }
@@ -853,13 +847,7 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
         )
         .await;
     assert!(
-        matches!(
-            stale,
-            Err(StatusError {
-                status: ServiceStatus::VersionMismatch,
-                ..
-            })
-        ),
+        matches!(stale, Err(ServiceError::VersionConflict(_))),
         "a stale full OBJECT_VERSION_ID must still fail the precondition, got {stale:?}"
     );
 }
@@ -929,10 +917,10 @@ async fn inline_relationships_are_stored_and_served_verbatim() {
     assert!(
         matches!(
             not_a_relationship,
-            Err(StatusError {
-                status: ServiceStatus::VersionedObjectDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::VersionedObject,
                 ..
-            })
+            }))
         ),
         "an inline by-value relationship must not create a relationship \
          container, got {not_a_relationship:?}"
@@ -1026,8 +1014,8 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
     assert!(
         matches!(
             refused,
-            Err(StatusError {
-                status: ServiceStatus::ContentInvalid,
+            Err(ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             })
         ),
@@ -1141,9 +1129,14 @@ async fn demographic_contribution_refuses_the_lenient_spellings() {
             .demographic_contribution_create(refused.clone())
             .await
             .expect_err("a lenient spelling is refused");
-        assert_eq!(
-            err.status,
-            ServiceStatus::PreconditionViolation,
+        assert!(
+            matches!(
+                &err,
+                ServiceError::BadRequest(Refusal {
+                    kind: Malformed::Precondition,
+                    ..
+                })
+            ),
             "{refused}: got {err:?}"
         );
     }
@@ -1182,16 +1175,31 @@ async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
             "audit": contribution_audit
         })
     };
-    for (shape, status) in [
-        (
-            with("system_id", json!(7)),
-            ServiceStatus::PreconditionViolation,
-        ),
+    let precondition: fn(&ServiceError) -> bool = |e| {
+        matches!(
+            e,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
+                ..
+            })
+        )
+    };
+    let content_invalid: fn(&ServiceError) -> bool = |e| {
+        matches!(
+            e,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        )
+    };
+    for (shape, refusal) in [
+        (with("system_id", json!(7)), precondition),
         (
             with("description", json!({ "value": "no tag" })),
-            ServiceStatus::PreconditionViolation,
+            precondition,
         ),
-        (with("system_id", json!("")), ServiceStatus::ContentInvalid),
+        (with("system_id", json!("")), content_invalid),
     ] {
         for refused in [
             body(shape.clone(), audit.clone()),
@@ -1201,7 +1209,7 @@ async fn demographic_contribution_audit_refusals_agree_with_the_ehr_path() {
                 .demographic_contribution_create(refused.clone())
                 .await
                 .expect_err("the shape is refused");
-            assert_eq!(err.status, status, "{refused}: got {err:?}");
+            assert!(refusal(&err), "{refused}: got {err:?}");
         }
     }
     let mut undeclared = body(with("is_pending", json!(false)), audit.clone());
@@ -1274,9 +1282,18 @@ async fn demographic_contribution_member_is_open_but_assigned_members_are_refuse
             .demographic_contribution_create(member(&[(key, value)]))
             .await
             .expect_err("a server-assigned member is refused");
-        assert_eq!(err.status, ServiceStatus::PreconditionViolation, "{err:?}");
         assert!(
-            err.message.contains(&format!("versions[0]/{key}")),
+            matches!(
+                &err,
+                ServiceError::BadRequest(Refusal {
+                    kind: Malformed::Precondition,
+                    ..
+                })
+            ),
+            "{err:?}"
+        );
+        assert!(
+            err.message().contains(&format!("versions[0]/{key}")),
             "{err:?}"
         );
     }
