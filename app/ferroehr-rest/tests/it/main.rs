@@ -81,6 +81,7 @@ mod overload_http;
 mod patient_data_assurance;
 mod protocol_tail;
 mod query_ehr_id_header;
+mod query_refusals_http;
 mod rbac_e2e;
 mod served_openapi;
 mod server_tls;
