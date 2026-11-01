@@ -474,3 +474,85 @@ async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost
         "the DV_COUNT case and the 17 interval cases were read back"
     );
 }
+
+/// Every `LOCATABLE` of `composition`, keyed by the chain of
+/// `archetype_node_id`s down to it, with its `name` and `archetype_details`.
+fn locatables(composition: &Value) -> BTreeMap<String, Value> {
+    fn collect(value: &Value, at: &str, out: &mut BTreeMap<String, Value>) {
+        match value {
+            Value::Object(o) => {
+                let mut at = at.to_owned();
+                if let Some(id) = o.get("archetype_node_id").and_then(Value::as_str) {
+                    at = format!("{at}/{id}");
+                    out.insert(
+                        at.clone(),
+                        json!([o.get("name"), o.get("archetype_details")]),
+                    );
+                }
+                o.values().for_each(|v| collect(v, &at, out));
+            }
+            Value::Array(items) => {
+                for (i, v) in items.iter().enumerate() {
+                    collect(v, &format!("{at}:{i}"), out);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut out = BTreeMap::new();
+    collect(composition, "", &mut out);
+    out
+}
+
+/// A FLAT or STRUCTURED body committed against an ADL 2 template is stored with
+/// the instance names, the archetype references and the `rm_version` the
+/// catalogue's canonical body carries: each node's term text or, for a node the
+/// template gives none, its RM type's name (RM `LOCATABLE.name`); the complete
+/// identifier the template inlined at every archetype root (BASE
+/// `artefact_identification` `master07-referencing.adoc` §Reconstitutability);
+/// and the template's `rm_release` (RM `ARCHETYPED.rm_version`).
+#[tokio::test]
+async fn a_simplified_commit_stores_the_names_and_archetype_details_of_the_canonical_body() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let all = cases();
+    let admitted: Vec<&Case> = all
+        .iter()
+        .filter(|c| c.status == StatusCode::CREATED)
+        .collect();
+    assert!(!admitted.is_empty(), "the catalogue's 201 cases");
+    upload(&svc, &admitted).await;
+    let ehr = new_ehr(&svc).await;
+    let now = "2026-01-01T10:00:00Z";
+    for case in admitted {
+        let want = locatables(&case.body);
+        let wt = svc
+            .web_template(text(&case.body, "/archetype_details/template_id/value"))
+            .await
+            .expect("the ADL 2 Web Template resolves");
+        let flat =
+            openehr_sdt::flat::convert::composition_to_flat(&case.body, &wt).expect("FLAT read");
+        let from_flat =
+            openehr_sdt::flat::convert::submitted_composition_from_flat(&flat, &wt, now)
+                .expect("the FLAT body converts");
+        let structured =
+            openehr_sdt::flat::convert::flat_to_structured(&flat).expect("FLAT to STRUCTURED");
+        let from_structured = openehr_sdt::flat::convert::submitted_composition_from_structured(
+            &structured,
+            &wt,
+            now,
+        )
+        .expect("the STRUCTURED body converts");
+        for (format, canonical) in [("FLAT", from_flat), ("STRUCTURED", from_structured)] {
+            let committed = svc
+                .create_composition(ehr, creation(&canonical))
+                .await
+                .unwrap_or_else(|e| panic!("{} {format}: commit: {e:?}", case.workflow));
+            let stored = svc
+                .get_composition_latest(ehr, committed.vo_id)
+                .await
+                .unwrap_or_else(|e| panic!("{} {format}: read: {e:?}", case.workflow));
+            assert_eq!(locatables(&stored), want, "{} {format}", case.workflow);
+        }
+    }
+}

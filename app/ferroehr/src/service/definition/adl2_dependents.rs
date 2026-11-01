@@ -12,7 +12,9 @@
 //! §Validity Rules: `C_ARCHETYPE_ROOT`) requires each archetype reference to
 //! "refer to an artefact that can be found in the current repository", and
 //! OPT2 (`AM/docs/OPT2/master03-opt_raw.adoc` §Archetype References) resolves
-//! every one of them.
+//! every one of them, to the stored release BASE Artefact Identification
+//! (`BASE/docs/artefact_identification/master07-referencing.adoc`
+//! §Referencing) names.
 
 use openehr_adl::opt::create_opt;
 use sqlx::PgConnection;

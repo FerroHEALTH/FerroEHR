@@ -344,6 +344,21 @@ These things about the payload are worth calling out:
   even when it differs from the shared audit's. A version that omits
   `system_id` gets the shared audit's, and every audit in the contribution
   carries the same `time_committed`.
+- **A committer that names a login must name you.** On every write, a
+  contribution or a direct write of a composition, EHR status, directory,
+  EHR or demographic object, the server compares the committer with the
+  login that authenticated the request where it can. A committer whose
+  `identifiers` hold a `DV_IDENTIFIER` with the `issuer` of your token (or
+  `ferroehr`, for a login this server holds), or whose `external_ref` is a
+  `GENERIC_ID` in that `scheme`, must carry your own login, or the write is
+  refused with a **403**. A `PARTY_SELF` committer states that the record's
+  person committed, so it is a **403** unless the request comes from the
+  person, whose writes the server records as `PARTY_SELF` itself. A committer
+  the server cannot compare with a login, such as a name only or an
+  identifier from a professional register, is stored as you send it. The
+  access record of the write names the login that made it. With
+  authentication off, nothing is compared. The committer's own rules (the
+  **422** above) apply on the direct writes as well.
 - **A `description` is a `DV_TEXT` or `DV_CODED_TEXT` object that names its
   `_type`.** A plain string, or an object without `_type`, is a **400**. A
   coded description keeps its `defining_code`. The same holds for an

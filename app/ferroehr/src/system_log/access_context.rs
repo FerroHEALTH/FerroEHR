@@ -28,6 +28,7 @@ task_local! {
     static REQUEST_ROLES: Vec<String>;
     static ACCESS_RESTRICTION_ENFORCED: bool;
     static ACCESS_DELAY_ENFORCED: bool;
+    static ACCESS_OPT_OUT_ENFORCED: bool;
 }
 
 /// The roles the authenticated caller holds for the current request (#3239).
@@ -161,6 +162,31 @@ where
     F: Future,
 {
     ACCESS_DELAY_ENFORCED.scope(enforced, fut).await
+}
+
+/// Whether the EHDS Art. 10 opt-out holds for the current request: an EHR
+/// whose person opted out of access through the access services then reads as
+/// absent.
+///
+/// The protocol adapter publishes `true` for a caller the deployment declares
+/// an access-service caller (`[authz.rbac] access_service_roles`), unless it
+/// declares a vital interest under Art. 10(2), and `false` for every other
+/// caller, the controller's own surfaces among them. Outside a request scope
+/// it is `false` (`docs/law/eu/ehds/text.html` Art. 10). No openEHR spec
+/// governs an opt-out: our own design/extension.
+#[must_use]
+pub fn access_opt_out_enforced() -> bool {
+    ACCESS_OPT_OUT_ENFORCED
+        .try_with(|enforced| *enforced)
+        .unwrap_or(false)
+}
+
+/// Run `fut` with the EHDS Art. 10 opt-out enforced or not.
+pub async fn with_access_opt_out<F>(enforced: bool, fut: F) -> F::Output
+where
+    F: Future,
+{
+    ACCESS_OPT_OUT_ENFORCED.scope(enforced, fut).await
 }
 
 #[cfg(test)]

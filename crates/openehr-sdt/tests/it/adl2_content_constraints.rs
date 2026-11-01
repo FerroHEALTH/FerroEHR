@@ -557,7 +557,7 @@ fn the_simplified_read_keeps_the_content_below_a_full_archetype_reference() {
             Value::from("openEHR-EHR-OBSERVATION.cnf_minimal.v1.0.0")
         );
     });
-    let stored = elements(&under_interface_ids(&body, &wt));
+    let stored = elements(&body);
     assert_eq!(stored.len(), 1, "the one DV_COUNT ELEMENT");
     let flat = composition_to_flat(&body, &wt).expect("FLAT read");
     let structured = composition_to_structured(&body, &wt).expect("STRUCTURED read");
@@ -571,6 +571,75 @@ fn the_simplified_read_keeps_the_content_below_a_full_archetype_reference() {
         stored,
         "an ELEMENT is lost in STRUCTURED"
     );
+}
+
+/// Every `LOCATABLE` of `composition`, keyed by the chain of
+/// `archetype_node_id`s down to it, with its `name` and `archetype_details`.
+fn identities(composition: &Value) -> BTreeMap<String, (Value, Value)> {
+    fn collect(value: &Value, at: &str, out: &mut BTreeMap<String, (Value, Value)>) {
+        match value {
+            Value::Object(o) => {
+                let at = match o.get("archetype_node_id").and_then(Value::as_str) {
+                    Some(id) => {
+                        let at = format!("{at}/{id}");
+                        let field = |k: &str| o.get(k).cloned().unwrap_or(Value::Null);
+                        out.insert(at.clone(), (field("name"), field("archetype_details")));
+                        at
+                    }
+                    None => at.to_owned(),
+                };
+                o.values().for_each(|v| collect(v, &at, out));
+            }
+            Value::Array(items) => items
+                .iter()
+                .enumerate()
+                .for_each(|(i, v)| collect(v, &format!("{at}:{i}"), out)),
+            _ => {}
+        }
+    }
+    let mut out = BTreeMap::new();
+    collect(composition, "", &mut out);
+    out
+}
+
+/// A composition built from FLAT or STRUCTURED against an ADL 2 template
+/// carries what the catalogue's canonical body carries for every `LOCATABLE`:
+/// - the instance name is the node's term text, and a node the template gives
+///   no term (ADL2 `master04.3-cadl_complex_types.adoc` §"Node Identifiers")
+///   is named for its RM type, never by its bare id-code (RM `LOCATABLE.name`;
+///   ITS-REST `simplified_formats/master04-basic_concepts.adoc` §"Web Template
+///   Metadata");
+/// - an archetype root records the complete identifier the template inlined, in
+///   its `archetype_node_id` and its `archetype_details.archetype_id` (RM
+///   `LOCATABLE.archetype_node_id`; BASE `artefact_identification`
+///   `master07-referencing.adoc` §Reconstitutability);
+/// - `archetype_details.rm_version` is the template's `rm_release` (AOM2
+///   `master03-archetype_package.adoc`; RM `ARCHETYPED.rm_version`).
+#[test]
+fn a_simplified_build_carries_the_names_and_archetype_details_of_the_canonical_body() {
+    let templates = templates();
+    let now = "2026-01-01T10:00:00Z";
+    let admitted: Vec<Case> = cases()
+        .into_iter()
+        .filter(|c| c.status == StatusCode::CREATED)
+        .collect();
+    assert!(!admitted.is_empty(), "the catalogue's 201 cases");
+    for case in &admitted {
+        let wt = templates.get(&case.template).expect("the case's template");
+        let stored = identities(&case.body);
+        let flat = composition_to_flat(&case.body, wt).expect("FLAT read");
+        let from_flat = composition_from_flat(&flat, wt, now).expect("FLAT build");
+        assert_eq!(identities(&from_flat), stored, "{}: FLAT", case.workflow);
+        let structured = composition_to_structured(&case.body, wt).expect("STRUCTURED read");
+        let from_structured =
+            composition_from_structured(&structured, wt, now).expect("STRUCTURED build");
+        assert_eq!(
+            identities(&from_structured),
+            stored,
+            "{}: STRUCTURED",
+            case.workflow
+        );
+    }
 }
 
 /// The admitted catalogue cases whose ELEMENT holds a `DV_INTERVAL`: 8 whose
@@ -602,7 +671,7 @@ fn every_interval_case_reads_back_with_its_value() {
     let now = "2026-01-01T10:00:00Z";
     for case in interval_cases() {
         let wt = templates.get(&case.template).expect("the case's template");
-        let stored = elements(&under_interface_ids(&case.body, wt));
+        let stored = elements(&case.body);
         assert_eq!(
             stored.len(),
             1,

@@ -371,6 +371,13 @@ readonly_role = "READONLY"   # carriers are refused on every write operation
 # caller also declares one of [audit] emergency_purpose_codes (Art. 11(5)).
 # Unset, nobody may override a restriction.
 #? emergency_access_role = "EMERGENCY"
+# The roles of the EHDS Art. 10 access-service callers: the Art. 4 access
+# service of persons and the Art. 12 health professional access service. A
+# caller holding one reads an EHR whose person opted out (POST
+# /admin/access-opt-out) as absent, unless it declares one of [audit]
+# emergency_purpose_codes for a vital interest (Art. 10(2)). Empty, the
+# default, holds nobody to an opt-out, and recording one is refused.
+access_service_roles = []
 # The role that may read a party's protected national identifiers through
 # GET /admin/party/identifiers, beside admin_role. Every read is an access
 # record naming the reader, the party and the scheme. Unset, nobody may.

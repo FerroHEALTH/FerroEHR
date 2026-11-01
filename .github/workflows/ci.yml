@@ -1158,7 +1158,7 @@ jobs:
         with:
           persist-credentials: false
           # A merge group reads its pull requests from the commits between
-          # its base and head.
+          # main and its head.
           fetch-depth: 0
       - name: No book page says planned about a closed issue, or shipped about an open one
         env:
@@ -1168,8 +1168,10 @@ jobs:
           # body through the API, so a re-run by pr-guards.yml sees the
           # description as it is then (#3948). A merge group has no body of
           # its own: the issues every pull request in the group closes count
-          # as closed, read from the squash commits' `(#N)` between its base
-          # and head, so a "shipped, #N" row the group lands passes there too.
+          # as closed, read from the squash commits' `(#N)` between main and
+          # its head. A queued entry's base_sha is the head of the entry ahead
+          # of it, so main (where the group forked) is the base, which also
+          # counts the pull requests queued ahead.
           PR: ${{ github.event.pull_request.number }}
           GROUP_BASE: ${{ github.event.merge_group.base_sha }}
           GROUP_HEAD: ${{ github.event.merge_group.head_sha }}
@@ -1178,7 +1180,8 @@ jobs:
           if [ -n "${PR}" ]; then
             bash scripts/checks/tracker-status.sh --closing "${PR}"
           elif [ -n "${GROUP_BASE}" ] && [ -n "${GROUP_HEAD}" ]; then
-            prs="$(git log --format=%s "${GROUP_BASE}..${GROUP_HEAD}" | grep -oE '[(]#[0-9]+[)]$' | grep -oE '[0-9]+' | sort -u || true)"
+            base="$(git merge-base origin/main "${GROUP_HEAD}" 2>/dev/null || printf '%s' "${GROUP_BASE}")"
+            prs="$(git log --format=%s "${base}..${GROUP_HEAD}" | grep -oE '[(]#[0-9]+[)]$' | grep -oE '[0-9]+' | sort -u || true)"
             PR_BODY=""
             for n in $prs; do
               PR_BODY+="$(gh pr view "$n" --json body --jq .body)"$'\n'
