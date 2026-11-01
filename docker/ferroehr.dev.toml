@@ -108,7 +108,7 @@ scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds
 roles = ["ADMIN", "USER"]
 
 # Dev-only READ-ONLY account for the conformance suite's authorization-
-# separation cases (SEC-BASIC): authenticated, but every write operation is
+# separation cases: authenticated, but every write operation is
 # refused by the RBAC read-only gate. Do NOT use in production.
 [[auth.basic.users]]
 user = "ferroehr-readonly"

@@ -142,11 +142,8 @@ jobs:
           bash scripts/render/perf-assets.sh
           bash scripts/render/cohort-bench.sh
           bash scripts/render/storage-bench.sh
-          bash scripts/render/conformance-assets.sh
       - name: Perf-assets drift gate (regenerated SVGs match the committed assets)
         run: git diff --exit-code website/book/src/perf-assets
-      - name: Conformance-assets drift gate (regenerated SVGs match the committed assets)
-        run: git diff --exit-code website/book/src/conformance-assets
       - name: Markdown lint gate
         run: mdbook-lint lint website/book/src
       - name: Assemble _site (landing + /docs/dev/)

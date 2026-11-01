@@ -259,7 +259,7 @@ Properties worth knowing before you build on these:
   templates only: it declares no archetype resource, no count, and no delete.
   These routes realize the openEHR *service model*'s archetype operations, which
   the released wire never surfaced, so they are excluded from openEHR wire
-  conformance and never gate a conformance profile tier.
+  conformance.
 - **The archetype id is the client's, never assigned.** An ADL 1.4 upload reads
   it out of the source's own `archetype` header, and a re-upload of the same id
   **replaces** it (there is no conflict branch: the service operation is

@@ -162,13 +162,6 @@ trough) applying the same ITU-T E.500 busy-hour convention the peak factor cites
 the class floor is then the busy-hour rate, and the off-peak troughs are the
 design, not a shortfall.
 
-Finally, the conformance certificate prints the **workload coverage**: the set of
-claimed capabilities the simulation actually exercised, joined against the claims
-matrix. A claimed capability the hospital never touches must carry an adjudicated
-exclusion printed with its reason: a design-time operation like archetype
-provisioning is not a sustainable per-patient arrival, and saying so beats
-pretending the load reached it.
-
 ## How a measured run works
 
 A performance run is deliberately **open-loop**: the runner plays a seeded arrival
@@ -279,7 +272,7 @@ veredictum aql-probe --root <catalogue-root> --ixit <ixit.json> \
                      --out <aql-probe.json>
 ```
 
-The published assets on this page are rendered from the committed `results.json`
+The published assets on this page are rendered from the committed `measured.json`
 by the runner's `perf-assets` subcommand (wrapped by
 `scripts/render/perf-assets.sh`); the docs CI job re-renders and diffs them, so a
 hand-edited or stale asset fails the build.

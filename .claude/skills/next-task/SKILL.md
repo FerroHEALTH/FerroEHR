@@ -63,8 +63,8 @@ so they are not in context until read.
      `/spec-lookup`. Doing the work starts by reading those.
    - **What "done" looks like** for this task specifically — the issue's
      `## Acceptance criteria` checklist, plus what proves it: the CNF pipeline's
-     zero-drift gate (`docs/conformance/ferroehr/results.json` +
-     `verdicts.json`), the `openehr-its` fidelity gates, or corpus tests.
+     zero-drift gate (`docs/conformance/ferroehr/results.json`), the
+     `openehr-its` fidelity gates, or corpus tests.
 3. **When work on the picked issue actually starts** (the plan is accepted
    and the session proceeds), first set any of type, priority and effort the
    issue arrived without (a scheduled lane files without them;

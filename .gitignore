@@ -57,6 +57,10 @@ docs/conformance/*/perf-corpus-*.json
 # The HAR recording of a conformance run holds the server's response bodies
 # verbatim; it stays where the run is kept and is never committed.
 docs/conformance/*/recording.har
+# The JUnit and CTRF views of a run are CI views, kept as run artifacts; the
+# record commits results.json and summary.md only.
+docs/conformance/*/junit.xml
+docs/conformance/*/ctrf.json
 # A development-profile run is published beside the record, never committed
 # into it (scripts/conformance.sh, CONF_PROFILE=development).
 docs/conformance/ferroehr-development/
