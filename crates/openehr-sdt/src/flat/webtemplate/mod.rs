@@ -21,6 +21,7 @@ mod implicit;
 mod inputs;
 mod interval_v2_4;
 pub mod model;
+mod root;
 mod shape;
 
 pub(crate) use inputs::PROPORTION_KINDS;

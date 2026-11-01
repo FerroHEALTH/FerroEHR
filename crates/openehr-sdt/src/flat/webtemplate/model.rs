@@ -24,7 +24,7 @@
 //! on the root) — no openEHR spec governs them, so they are our own
 //! design/extension, schema-legal because those schemas set no
 //! `additionalProperties: false`. The one place the schema is STRICTER is its
-//! `Tree.required` list, which `serialize_root` satisfies.
+//! `Tree.required` list, which `super::root::serialize_root` satisfies.
 
 #![expect(
     clippy::disallowed_types,
@@ -36,7 +36,7 @@
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 
 /// A single Web Template metadata document (`ITS-REST simplified_formats
 /// master04 §"Web Template Metadata"`).
@@ -62,7 +62,7 @@ pub struct WebTemplate {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub languages: Vec<String>,
     /// The root node of the template tree.
-    #[serde(serialize_with = "serialize_root")]
+    #[serde(serialize_with = "super::root::serialize_root")]
     pub tree: WebTemplateNode,
     /// Additive template metadata — no openEHR spec governs this member; our own design/extension (wire member `otherDetails`).
     #[serde(rename = "otherDetails", skip_serializing_if = "IndexMap::is_empty")]
@@ -77,41 +77,6 @@ pub struct WebTemplate {
     /// STRUCTURED read; `#[serde(skip)]`.
     #[serde(skip)]
     pub archetype_refs: Option<BTreeMap<String, String>>,
-}
-
-/// Serialize the **root** node so it satisfies the normative ITS-REST
-/// `Tree` schema (`schemas/web_template/Tree.yaml`), whose `required` set —
-/// `id, name, localizedName, rmType, nodeId, min, max, localizedNames,
-/// localizedDescriptions, aqlPath, children` — is stricter than the `Child`
-/// schema a nested [`WebTemplateNode`] serializes against.
-///
-/// A well-formed OPT root already carries every required member, so this
-/// reproduces the normal node serialization byte-for-byte; it only *fills in*
-/// members a sparse root would otherwise omit (empty rubric maps, an unbounded
-/// `min`, an empty `nodeId`, no children), so a strict JSON-Schema validator
-/// accepts the `WebTemplate`. Children keep the looser `Child`-schema shape
-/// (`schemas/web_template/Child.yaml`). Missing scalars default to spec-valid
-/// placeholders
-/// (`name`/`localizedName` ← the node `id`, `nodeId` ← `""`, `min` ← `0`).
-fn serialize_root<S: Serializer>(node: &WebTemplateNode, s: S) -> Result<S::Ok, S::Error> {
-    // Serialize via the derived (Child-shaped) impl, then ensure the
-    // Tree-required members are present. Appended keys are schema-legal (JSON
-    // object member order is not significant); nothing already emitted is
-    // touched, so the well-formed case is unchanged.
-    use serde_json::json;
-    let mut value = serde_json::to_value(node).map_err(serde::ser::Error::custom)?;
-    if let serde_json::Value::Object(map) = &mut value {
-        map.entry("name").or_insert_with(|| json!(node.id));
-        map.entry("localizedName")
-            .or_insert_with(|| json!(node.name.clone().unwrap_or_else(|| node.id.clone())));
-        map.entry("nodeId").or_insert_with(|| json!(""));
-        map.entry("min").or_insert_with(|| json!(0));
-        map.entry("localizedNames").or_insert_with(|| json!({}));
-        map.entry("localizedDescriptions")
-            .or_insert_with(|| json!({}));
-        map.entry("children").or_insert_with(|| json!([]));
-    }
-    value.serialize(s)
 }
 
 /// The `defining_code` a coded-name node must carry.
@@ -365,6 +330,20 @@ pub struct WebTemplateNode {
     /// `DV_TEXT` name. Build-time only (`#[serde(skip)]`); see [`CodedName`].
     #[serde(skip)]
     pub name_coded: Option<CodedName>,
+    /// For an archetype root of an OPT2, the complete identifier the template
+    /// inlined it by, which data records in its `archetype_node_id` and
+    /// `archetype_details.archetype_id` (BASE `artefact_identification`
+    /// `master07-referencing.adoc` §Reconstitutability), where [`Self::node_id`]
+    /// carries the interface form. `None` for an OPT 1.4. Build-time only
+    /// (`#[serde(skip)]`).
+    #[serde(skip)]
+    pub archetype_ref: Option<String>,
+    /// On the root of an OPT2's tree, the template's `rm_release` (AOM2
+    /// `master03-archetype_package.adoc`), the release a composition built to
+    /// it records as `ARCHETYPED.rm_version`. `None` for an OPT 1.4.
+    /// Build-time only (`#[serde(skip)]`).
+    #[serde(skip)]
+    pub rm_release: Option<String>,
 
     /// Pre-parsed archetype-conformance walk plan: the constraint
     /// paths and sibling groups this node's validation walk needs, parsed ONCE at
@@ -419,6 +398,8 @@ impl WebTemplateNode {
             alt_json_id: None,
             name_code: None,
             name_coded: None,
+            archetype_ref: None,
+            rm_release: None,
             walk: None,
         }
     }
