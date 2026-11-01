@@ -18,8 +18,8 @@ pub struct SubjectRef {
 }
 
 impl SubjectRef {
-    /// A subject reference of the default `PERSON` type: the common MPI
-    /// case, a patient (our own default).
+    /// A subject reference of the `PERSON` type, the common MPI case, a
+    /// patient (our own default).
     #[must_use]
     pub fn person(id: impl Into<String>, namespace: impl Into<String>) -> Self {
         Self {
