@@ -119,7 +119,7 @@ impl ArchetypeLibrary {
 
 impl FromIterator<Archetype> for ArchetypeLibrary {
     fn from_iter<I: IntoIterator<Item = Archetype>>(iter: I) -> Self {
-        let mut library = Self::new();
+        let mut library = Self::default();
         for archetype in iter {
             library.insert(archetype);
         }
