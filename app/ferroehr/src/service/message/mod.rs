@@ -13,6 +13,7 @@
 //! - `export` — `export_ehrs` / `export_ehr_extracts`:
 //!   the extract-building algorithm over the stored versions (RM EHR-Extract IM
 //!   `master05`/`master09`).
+//! - `extract_type` — the `EXTRACT_SPEC.extract_type` check `export` applies.
 //! - `import` — `import_ehr` / `import_ehr_extract`:
 //!   parse a received `EXTRACT` and dispatch clone against append; the
 //!   `IMPORTED_VERSION` replay is [`crate::versioning`] (RM common master06
@@ -31,11 +32,12 @@
 //! vending no message endpoints.
 
 mod export;
+mod extract_type;
 mod import;
 
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::status::StatusError;
+use crate::service::error::ServiceError;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 
@@ -62,14 +64,14 @@ impl FerroEhrService {
     /// categories (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
     ///
     /// # Errors
-    /// The `service_overloaded` [`StatusError`] when the sender rejected the record
-    /// under `fail_mode = "closed"`.
+    /// [`ServiceError::Unrecorded`] when the sender rejected the record under
+    /// `fail_mode = "closed"`.
     pub(super) fn emit_extract_audit(
         &self,
         ehr_id: EhrId,
         action: EventActionCode,
         content: Option<AccessedContent>,
-    ) -> Result<(), StatusError> {
+    ) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -80,6 +82,6 @@ impl FerroEhrService {
         event.purpose = crate::system_log::access_context::current_purpose();
         event.permit = crate::system_log::access_context::current_permit();
         event.category = content.and_then(|content| self.audit_classify(&content, action));
-        self.record_access(event).map_err(StatusError::from)
+        self.record_access(event)
     }
 }

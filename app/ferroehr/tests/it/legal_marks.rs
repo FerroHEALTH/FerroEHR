@@ -269,7 +269,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .extract_ehrs(ehr_id)
         .await
         .expect_err("an Extract of a restricted EHR is refused");
-    assert_eq!(extract.status, ServiceStatus::ProcessingRestricted);
+    assert!(matches!(&extract, ServiceError::Restricted(_)));
     assert_eq!(
         drainable_rows(&pool, ehr_id).await,
         0,
@@ -394,11 +394,11 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         .extract_ehrs(ehr_id)
         .await
         .expect_err("an Extract of an objected EHR is refused");
-    assert_eq!(extract.status, ServiceStatus::ProcessingRestricted);
+    assert!(matches!(&extract, ServiceError::Restricted(_)));
     assert!(
-        extract.message.contains("Art. 21(6)"),
+        extract.message().contains("Art. 21(6)"),
         "the refusal names the objection rather than a restriction: {}",
-        extract.message
+        extract.message()
     );
     assert_eq!(
         drainable_rows(&pool, ehr_id).await,

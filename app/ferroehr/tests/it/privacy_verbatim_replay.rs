@@ -21,6 +21,8 @@
               intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::Invalid;
 use std::sync::Arc;
 
 use serde_json::json;
@@ -31,7 +33,6 @@ use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
-use ferroehr::service::status::ServiceStatus;
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 
 use crate::admin_fixture::archive_dir;
@@ -123,13 +124,22 @@ async fn an_extract_carrying_an_identifier_is_refused_on_import() {
         .import_ehr(None, extract)
         .await
         .expect_err("the identifier in the FOLDER name refuses the import");
-    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused}");
     assert!(
-        refused.message.contains("FOLDER") && refused.message.contains("name"),
+        matches!(
+            &refused,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "{refused}"
+    );
+    assert!(
+        refused.message().contains("FOLDER") && refused.message().contains("name"),
         "the refusal names the RM path: {refused}"
     );
     assert!(
-        !refused.message.contains(SYNTHETIC_BSN),
+        !refused.message().contains(SYNTHETIC_BSN),
         "the refusal never carries the identifier itself: {refused}"
     );
     assert_eq!(

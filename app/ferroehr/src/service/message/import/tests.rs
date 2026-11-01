@@ -3,6 +3,8 @@
 
 //! Unit tests of the parent module.
 
+use crate::service::error::ServiceError;
+use crate::service::refusal::Invalid;
 use serde_json::json;
 
 use super::*;
@@ -54,9 +56,9 @@ fn imported_versions_member_type_is_enforced() {
         let err = parse_imported_version(&original_version(Some(foreign)))
             .expect_err("foreign _type in versions[] must be rejected");
         assert!(
-            err.message.contains("ORIGINAL_VERSION") && err.message.contains(foreign),
+            err.message().contains("ORIGINAL_VERSION") && err.message().contains(foreign),
             "error should name the expected and offending types, got: {}",
-            err.message
+            err.message()
         );
     }
 }
@@ -106,9 +108,9 @@ fn a_received_original_without_a_contribution_is_refused() {
     ov.as_object_mut().expect("object").remove("contribution");
     let err = parse_imported_version(&ov).expect_err("contribution is mandatory");
     assert!(
-        err.message.contains("contribution"),
+        err.message().contains("contribution"),
         "error should name the missing attribute, got: {}",
-        err.message
+        err.message()
     );
 }
 
@@ -123,9 +125,9 @@ fn a_received_commit_audit_with_an_unknown_change_type_is_refused() {
         .expect("code_string") = json!("999999");
     let err = parse_imported_version(&ov).expect_err("change_type must be an openEHR code");
     assert!(
-        err.message.contains("audit_change_type"),
+        err.message().contains("audit_change_type"),
         "error should name the violated invariant, got: {}",
-        err.message
+        err.message()
     );
 }
 
@@ -152,12 +154,18 @@ fn a_malformed_merge_input_is_refused_and_a_valid_one_kept() {
         ]),
     );
     let err = parse_imported_version(&ov).expect_err("a malformed merge input is refused");
-    assert_eq!(err.status, ServiceStatus::ContentInvalid);
+    assert!(matches!(
+        &err,
+        ServiceError::Unprocessable {
+            kind: Invalid::Content,
+            ..
+        }
+    ));
     assert!(
-        err.message.contains("other_input_version_uids [1]")
-            && err.message.contains("not-a-version-id"),
+        err.message().contains("other_input_version_uids [1]")
+            && err.message().contains("not-a-version-id"),
         "the refusal names the defective entry, got: {}",
-        err.message
+        err.message()
     );
 }
 
@@ -172,8 +180,8 @@ fn a_received_original_without_a_lifecycle_state_is_refused() {
         .remove("lifecycle_state");
     let err = parse_imported_version(&ov).expect_err("lifecycle_state is mandatory");
     assert!(
-        err.message.contains("lifecycle_state"),
+        err.message().contains("lifecycle_state"),
         "error should name the missing attribute, got: {}",
-        err.message
+        err.message()
     );
 }

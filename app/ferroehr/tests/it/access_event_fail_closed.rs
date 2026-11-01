@@ -29,7 +29,6 @@ use uuid::Uuid;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::ServiceStatus;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
@@ -117,5 +116,5 @@ async fn an_extract_export_is_withheld_when_its_record_is_rejected() {
 
     let refused = closed.extract_ehrs(ehr).await;
     let error = refused.expect_err("the export ran, and its record was rejected");
-    assert_eq!(error.status, ServiceStatus::ServiceOverloaded, "{error}");
+    assert!(matches!(&error, ServiceError::Unrecorded(_)), "{error}");
 }

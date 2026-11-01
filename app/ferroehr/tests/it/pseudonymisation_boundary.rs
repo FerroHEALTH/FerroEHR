@@ -40,7 +40,6 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Clash, Invalid, Refusal};
-use ferroehr::service::status::ServiceStatus;
 
 /// Write the audit and contribution rows every version row needs, leaving the
 /// boundary constraints exactly as the migrated clone carries them.
@@ -1506,7 +1505,16 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
         .import_ehr(None, extract)
         .await
         .expect_err("a plaintext protected value cannot be stored verbatim");
-    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
+    assert!(
+        matches!(
+            &refused,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "{refused:?}"
+    );
     assert_eq!(
         sealed_and_versions(&target_party).await,
         (0, 0),
@@ -1585,7 +1593,16 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
         .import_ehr(None, extract)
         .await
         .expect_err("a reference to a row this deployment does not hold is refused");
-    assert_eq!(refused.status, ServiceStatus::ContentInvalid, "{refused:?}");
+    assert!(
+        matches!(
+            &refused,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "{refused:?}"
+    );
     assert!(
         format!("{refused:?}").contains("does not travel in an EHR extract"),
         "the refusal names the remedy: {refused:?}"
