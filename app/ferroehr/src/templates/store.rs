@@ -79,6 +79,9 @@ impl FerroEhrService {
     ///   (`crate::validation::validate_opt_artefact`,
     ///   `AM/docs/AOM2/master08-validation.adoc`) propagate their own
     ///   typed rejections.
+    /// - [`ServiceError::Unprocessable`] — the OPT does not build into a
+    ///   Web Template, checked before the insert so such a template is never
+    ///   stored; the REST upload answers it `400`.
     /// - [`ServiceError::Conflict`] (→ `409`) — a template with the same
     ///   `template_id` (case-insensitively) already exists.
     /// - [`ServiceError::Database`] — the insert itself failed.
@@ -94,7 +97,7 @@ impl FerroEhrService {
         // (`crate::validation::opt`; spec `AM/docs/AOM2/master08-validation.adoc`).
         crate::validation::validate_opt_artefact(&opt)?;
 
-        let template_id = opt.template_id.value;
+        let template_id = opt.template_id.value.clone();
         // NOTE: no specification names this status token: our own design for a
         // semantically invalid operational template.
         if template_id.trim().is_empty() {
@@ -113,6 +116,17 @@ impl FerroEhrService {
                     .with_path("concept"),
             });
         }
+        // NOTE: `operations/definition_template_adl1.4_upload.yaml` answers only
+        // 201, 400 and 409, so a template the server cannot serve as a Web
+        // Template is refused before it is stored, never after.
+        let web_template = openehr_sdt::flat::webtemplate::builder::build_web_template(&opt)
+            .map_err(|e| ServiceError::Unprocessable {
+                status: crate::service::status::ServiceStatus::InvalidTemplate,
+                violation: Violation::new(format!(
+                    "the operational template could not be built into a Web Template: {}",
+                    crate::service::error::ErrorChain::new(&e)
+                )),
+            })?;
         let concept = Some(opt.concept);
         let root_archetype = {
             let a = opt.definition.archetype_id.value;
@@ -156,6 +170,16 @@ impl FerroEhrService {
         // never overwrites and `web_template_for` caches only successful builds,
         // so a freshly stored template_id can have no pre-existing entry. The
         // cache is invalidated where a template's lifetime ends, in the delete.
+        // The Web Template built above is cached, so the upload's representation
+        // reads no row back.
+        let key = super::identity::canonical_key(&template_id);
+        if let Err(error) = self
+            .web_templates
+            .get_or_build(&key, || Ok(web_template))
+            .await
+        {
+            tracing::warn!(template_id, %error, "the uploaded Web Template was not cached");
+        }
         Self::template_json(&row)
     }
 

@@ -405,6 +405,16 @@ async fn opt_upload_with_an_empty_typed_default_value_names_the_place() {
 /// `POST …/definition/template/adl1.4` with `Prefer: return=representation`
 /// and an `Accept`.
 async fn upload_accepting(app: &Router, accept: &str) -> (StatusCode, header::HeaderMap, String) {
+    upload_source_accepting(app, accept, opt_xml()).await
+}
+
+/// `POST …/definition/template/adl1.4` of `source` with
+/// `Prefer: return=representation` and an `Accept`.
+async fn upload_source_accepting(
+    app: &Router,
+    accept: &str,
+    source: String,
+) -> (StatusCode, header::HeaderMap, String) {
     let resp = app
         .clone()
         .oneshot(
@@ -414,7 +424,7 @@ async fn upload_accepting(app: &Router, accept: &str) -> (StatusCode, header::He
                 .header(header::CONTENT_TYPE, XML_MIME)
                 .header(header::ACCEPT, accept)
                 .header("Prefer", "return=representation")
-                .body(Body::from(opt_xml()))
+                .body(Body::from(source))
                 .unwrap(),
         )
         .await
@@ -452,5 +462,38 @@ async fn upload_representation_follows_accept() {
     assert_eq!(
         wt.get("templateId").and_then(Value::as_str),
         Some(TEMPLATE_ID)
+    );
+}
+
+/// `operations/definition_template_adl1.4_upload.yaml` declares 201, 400 and
+/// 409 only, so an upload answers no error once it has stored the template:
+/// the Web Template a representation serves is built before the store, a
+/// template refused there leaves nothing stored, and a stored one answers
+/// `201` with its `Location` and the Web Template a later read serves.
+#[tokio::test]
+async fn an_upload_is_refused_before_the_store_or_answered_201_after_it() {
+    let (_pg, app) = empty_app().await;
+    let refused = opt_xml().replacen("<concept>Vitals</concept>", "<concept></concept>", 1);
+    let (status, _h, body) = upload_source_accepting(&app, WT_MIME, refused).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let (status, _ct, _body) = get(&app, Some(XML_MIME)).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "the refused upload stored nothing"
+    );
+
+    let (status, h, uploaded) = upload_accepting(&app, WT_MIME).await;
+    assert_eq!(status, StatusCode::CREATED, "{uploaded}");
+    assert_eq!(
+        h.get(header::LOCATION).and_then(|v| v.to_str().ok()),
+        Some(format!("{BASE}/definition/template/adl1.4/Demo%20Vitals").as_str())
+    );
+    let (status, _ct, read) = get(&app, Some(WT_MIME)).await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    assert_eq!(
+        serde_json::from_str::<Value>(&uploaded).expect("the upload's Web Template"),
+        serde_json::from_str::<Value>(&read).expect("the read's Web Template"),
+        "the upload serves the Web Template built before the store"
     );
 }

@@ -125,11 +125,24 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
         state.config().rest.base_path,
         urlencoding::encode(&template_id)
     );
+    // The template is stored from here on, so the answer is `201` whatever
+    // happens: the upload declares no refusal after the store, and the stored
+    // Web Template was built before it.
     let body = match representation {
         Some(WireFormat::CanonicalXml) => Some(negotiate::xml_body(StatusCode::CREATED, xml)),
-        Some(fmt) => {
-            Some(web_template_response(state, &template_id, fmt, StatusCode::CREATED).await?)
-        }
+        Some(fmt) => Some(
+            match web_template_response(state, &template_id, fmt, StatusCode::CREATED).await {
+                Ok(resp) => resp,
+                Err(error) => {
+                    tracing::error!(
+                        template_id,
+                        status = %error.status(),
+                        "the stored template's Web Template was not served; answering its OPT"
+                    );
+                    negotiate::xml_body(StatusCode::CREATED, xml)
+                }
+            },
+        ),
         None => None,
     };
     Ok(upload_response(h, &location, &template_id, body))
