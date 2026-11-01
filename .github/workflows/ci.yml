@@ -559,6 +559,8 @@ jobs:
         run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
       - run: bash scripts/watch/spec-update.sh --self-test
       - run: bash scripts/watch/spec-release.sh --self-test
+      - name: The CI budget watcher's lane patterns match every form of their job names
+        run: bash scripts/watch/ci-budget.sh --self-test
       - name: The release withdrawal refuses unregistered versions and moves only the floating tags
         run: bash scripts/release/withdraw.sh --self-test
       - name: The release-notes check refuses notes without the CRA user information, the support period or the pinned EHDS system documents
@@ -866,10 +868,12 @@ jobs:
       - name: Packaged third-party bytes carry a pinned attribution
         run: bash scripts/checks/packaged-attribution.sh
       # `cargo package --list` needs the pinned toolchain; the two packaging
-      # guards are the only cargo consumers in this job.
+      # guards are the only cargo consumers in this job. No rust-cache: its
+      # entries are keyed by job and only main may save one, and this job never
+      # runs on main, so there is no entry to restore (#4601).
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
-          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache: false
       # A packaged src file embedding a path its own package does not carry
       # compiles in this repository and breaks inside the published .crate.
       - name: Packaged sources embed only packaged files
