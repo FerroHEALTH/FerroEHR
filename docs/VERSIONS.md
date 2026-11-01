@@ -251,8 +251,10 @@ possibly data migration".
   a correct RM 1.2.0 document can be invalid against the v1 schemas and valid
   against the v2 ones. That is a bundle-content fact, not a second generation:
   no second model, crate module, or impl set exists. The sweep is pinned by
-  `crates/openehr-its/tests/it/xml_xsd_validity.rs` and adjudicated in
-  the conformance instrument's `artifacts/registers/ambiguities.yaml` AMB-185.
+  `crates/openehr-its/tests/it/xml_xsd_validity.rs`. The conformance
+  instrument leaves the lineage open as its `xml-namespace` option
+  (`catalogue/capabilities.yaml`), and the party statement selects the
+  `xml-namespace-v2` arm.
   The CDR serves v2 by default (owner ruling 2026-08-03, issue #1666: the
   default a schema-validating client receives must actually validate this
   server's RM 1.2.0 output, and only the v2 bundle can — correctness over the
