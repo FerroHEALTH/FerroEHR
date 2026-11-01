@@ -140,7 +140,10 @@ record of a delete carries the agent types the BALP `Delete` profile fixes
 (the client as DCM `110150` Application, the server as `custodian`). The
 FHIR `AuditEvent` names the object a read, create, update or delete touched
 by its openEHR object id, as `entity.what.identifier` in the system
-`urn:openehr:object-id`, and ITI-81 finds it by `entity.identifier`.
+`urn:openehr:object-id`, and ITI-81 finds it by `entity.identifier`. The
+syslog form of an EHR-level record names the same object beside the patient,
+as a URI participant object, so the record of an EHDS Art. 3(3) hold names
+the held composition (`access-delay:<vo>`).
 
 **Shown by:**
 
@@ -168,7 +171,9 @@ by its openEHR object id, as `entity.what.identifier` in the system
 - `app/ferroehr/src/system_log/fhir.rs`:
   `dicom_and_fhir_agree_on_the_data_flow_direction`,
   `delete_carries_the_agent_types_balp_delete_fixes`,
-  `a_classified_read_names_its_object_by_identifier`.
+  `a_classified_read_names_its_object_by_identifier`;
+- `app/ferroehr/src/system_log/message.rs`:
+  `an_access_delay_record_names_the_patient_and_the_held_composition`.
 
 **Remains:** both blocks are off by default, and until the deployment
 configures `[authz.professional]` a client application's credential is
@@ -424,7 +429,10 @@ words and names the purposes that marked it.
 The person's own subject-scoped ITI-81 retrieval serves that document. The
 mark lifts no restriction: an object restricted under GDPR Art. 18 is refused
 with an emergency purpose exactly as without one, and the refused attempt is
-logged with the mark.
+logged with the mark. The same mark is carried by an access-service caller
+that reads an EHR whose person opted out of the access services (EHDS
+Art. 10) under the vital-interest override of Art. 10(2), and a route that
+names that EHR adds an `access-opt-out-override` record against it.
 
 **Shown by:** `app/ferroehr-rest/tests/it/audit_emergency_access.rs`:
 `an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log`,
@@ -432,7 +440,9 @@ logged with the mark.
 `app/ferroehr/tests/it/audit_ehds_mapping.rs`:
 `art_11_5_the_emergency_mark_reaches_the_fhir_rendering_only`;
 `app/ferroehr/tests/it/audit_store.rs`:
-`both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten`.
+`both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten`;
+`app/ferroehr-rest/tests/it/access_opt_out_http.rs`:
+`the_vital_interest_override_reads_the_ehr_and_is_recorded`.
 
 **Remains:** the Art. 8 restriction hides restricted data from every
 professional route, query and export, and only a caller holding
@@ -468,3 +478,4 @@ EHDS-side risk assessment of the component.
 | 12 | 2026-10-29 | Reviewed for release candidate 5.6.0-rc2 (changes since the 5.6.0-rc1 review: a body without `FEEDER_AUDIT` committed directly by a client the `[origins]` register names records that client's origin, so H4 names it and its test, and the retention register keys a period on the origin of the data (#4299); H3's remainder said the binary ships no category map, which #4298 changed; the FHIR rendering of an access record `ehds-logging` does not classify carries the BALP `entity:data` slice its profile requires (#4353); the component's intended performance is stated and measured (#4293), and its ATNA transactions are exercised against independent implementations (#4296)); every named test exists; no hazard added |
 | 13 | 2026-10-29 | Reviewed for release candidate 5.6.0-rc3 (changes since the 5.6.0-rc2 review: FerroEHR takes `ehds-logging` and `ihe-atna` 0.3.2, and the FHIR `AuditEvent` names the object it touched by its openEHR object id as `entity.what.identifier` where it wrote a `what.reference` no FHIR server resolves, so H2 states it and names its test (#4366); the audit store writes a drained batch, its search tokens and its token sets in one transaction on one connection, and the GIN index on `search_tokens` collects new entries in a 512 kB fast-update list (GIN `fastupdate`) that audit migration 0019 sets, which changes no control H5 or H7 states (#4375, #4424); the ITI-81 route answers an authentication refusal as an `OperationOutcome`, the fail-closed `503` is RFC 9457 problem details, and `fail_closed_503_carries_openehr_error_body_and_retry_after` asserts the problem body (#4342)); every named test exists; no hazard added |
 | 14 | 2026-11-01 | Reviewed for release candidate 5.6.0-rc6 (changes since the 5.6.0-rc3 review; the logging component did not change in 5.6.0-rc4 or 5.6.0-rc5: FerroEHR takes `ehds-logging` and `ihe-atna` 0.3.3, and with the EHDS Art. 3(3) delay turned on the subject-scoped ITI-81 read leaves out the records about a held composition until it is released or expires, while the syslog and FHIR feeds and the event stream carry them as controller feeds, so H6 states the hold and its remainder and names its tests (#4351, #4521); placing, releasing and expiry of a hold are access records (#4351); ITI-81 `entity.identifier` finds a request id or a created version uid from the record's own columns through a hash index (audit migration 0020), and retention deletes the search tokens no remaining record names while the database still refuses to delete one a kept record names, which changes no control H7 states (#4524); the Service Model vocabulary leaves the component's identifiers with no test renamed (#4213)); every named test exists; no hazard added |
+| 15 | 2026-11-01 | Reviewed for release candidate 5.6.0-rc7 (changes since the 5.6.0-rc6 review: the syslog form of an EHR-level record names its object beside the patient as a URI participant object, so the record of an Art. 3(3) hold names the held composition as its FHIR `AuditEvent` does, and H2 states it and names its test (#4569); the EHDS Art. 10 opt-out lands, the access context carries whether a request enforces it, an access-service caller's read under the Art. 10(2) override carries the emergency mark and a route that names the EHR adds an `access-opt-out-override` record, and recording, reversing and reading the register are access records, so H9 states the override's mark and names its test (#4516)); every named test exists; no hazard added |
