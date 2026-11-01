@@ -224,8 +224,10 @@ impl AuditInput {
     ///
     /// # Errors
     /// [`ServiceError::Unprocessable`] for a `change_type` outside the
-    /// `audit_change_type` group (`AUDIT_DETAILS.Change_type_valid`) or a
-    /// stated empty `system_id` ([`validate_system_id`]);
+    /// `audit_change_type` group (`AUDIT_DETAILS.Change_type_valid`), a
+    /// stated empty `system_id` ([`validate_system_id`]) or a committer that
+    /// breaks its own invariants; [`ServiceError::Restricted`] for a committer
+    /// that is not the caller ([`check_committer`]);
     /// [`ServiceError::BadRequest`] for a group code that contradicts the
     /// operation (mirroring the CONTRIBUTION path's change-control mismatch,
     /// `versioning/contribution.rs`) or an `UPDATE_ATTESTATION` audit.
@@ -247,6 +249,8 @@ impl AuditInput {
             .clone()
             .unwrap_or_else(|| fallback_system_id.to_owned());
         validate_system_id(&system_id)?;
+        let committer = crate::service::committer::attributed(base.committer.clone());
+        check_committer(&committer)?;
         Ok(Self {
             system_id,
             change_type,
@@ -262,7 +266,7 @@ impl AuditInput {
                     .cloned()
                     .unwrap_or_else(|| dv_text(default_description)),
             ),
-            committer: crate::service::committer::attributed(base.committer.clone()),
+            committer,
             attestation: None,
         })
     }
@@ -540,7 +544,9 @@ pub(crate) fn validate_system_id(system_id: &str) -> Result<(), ServiceError> {
 /// `change_type` is validated separately ([`change_type_code`]).
 ///
 /// # Errors
-/// [`ServiceError::Unprocessable`] when either enforced invariant fails:
+/// [`ServiceError::Restricted`] (`403`) for a committer that is not the caller
+/// ([`check_committer`]); [`ServiceError::Unprocessable`] when either enforced
+/// invariant fails:
 ///
 /// - `AUDIT_DETAILS.System_id_valid`: `not system_id.is_empty` (RM
 ///   `UML/classes/org.openehr.rm.common.audit_details.adoc` §Invariants).
@@ -555,7 +561,20 @@ pub(crate) fn validate_system_id(system_id: &str) -> Result<(), ServiceError> {
 ///   audit committer is stored verbatim, so it is checked here.
 pub(crate) fn validate_commit_audit(audit: &AuditInput) -> Result<(), ServiceError> {
     validate_system_id(&audit.system_id)?;
-    validate_committer(&audit.committer)
+    check_committer(&audit.committer)
+}
+
+/// The one committer check every write path runs: the committer's own RM
+/// invariants ([`validate_committer`]), then whether it is the authenticated
+/// caller ([`crate::service::committer::refuse_impersonation`]).
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] for a committer that breaks its invariants;
+/// [`ServiceError::Restricted`] (`403`) for one the server can show is not
+/// the caller.
+pub(crate) fn check_committer(committer: &PartyProxy) -> Result<(), ServiceError> {
+    validate_committer(committer)?;
+    crate::service::committer::refuse_impersonation(committer)
 }
 
 /// Run the committer `PARTY_PROXY`'s OWN RM class invariants + terminology
