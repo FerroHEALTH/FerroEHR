@@ -83,7 +83,7 @@ pub(super) async fn run(
                 &base,
                 Some("ehr_status"),
                 &resp,
-                "ehr_status",
+                openehr_its::xml::LOCATABLE_ROOT,
             ))
         }
         "ehr_status_get_at_time" => {
@@ -105,7 +105,7 @@ pub(super) async fn run(
                 &base,
                 Some("ehr_status"),
                 &resp,
-                "ehr_status",
+                openehr_its::xml::LOCATABLE_ROOT,
             ))
         }
         "ehr_status_update" => {
@@ -153,7 +153,7 @@ pub(super) async fn run(
                         ok,
                         Some("ehr_status"),
                         &resp,
-                        "ehr_status",
+                        openehr_its::xml::LOCATABLE_ROOT,
                     );
                     stored_tags.echo(&mut resp);
                     Ok(resp)

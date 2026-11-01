@@ -84,7 +84,8 @@ async fn get_at_time(state: AppState, parts: RequestParts) -> Result<Response, R
     }
     let mut resp = resp;
     resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-    let mut out = negotiate::respond_rm::<Folder>(h, ok, &resp.body, "folder");
+    let mut out =
+        negotiate::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
     if let Some(meta) = &resp.meta {
         negotiate::set_versioning_headers(&mut out, meta);
     }
@@ -145,7 +146,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 ok,
                 Some("directory"),
                 &resp,
-                "folder",
+                openehr_its::xml::LOCATABLE_ROOT,
             );
             stored_tags.echo(&mut resp);
             Ok(resp)
@@ -212,7 +213,7 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
         created,
         Some("directory"),
         &resp,
-        "folder",
+        openehr_its::xml::LOCATABLE_ROOT,
     );
     stored_tags.echo(&mut resp);
     Ok(resp)
@@ -293,7 +294,8 @@ async fn get_by_version_id(state: AppState, parts: RequestParts) -> Result<Respo
     }
     let mut resp = resp;
     resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-    let mut out = negotiate::respond_rm::<Folder>(h, ok, &resp.body, "folder");
+    let mut out =
+        negotiate::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
     if let Some(meta) = &resp.meta {
         negotiate::set_versioning_headers(&mut out, meta);
     }

@@ -36,6 +36,7 @@ use openehr_its::rest::generated::demographic::{
     VersionedPartyVersionGetAtTimeParams, VersionedPartyVersionGetByIdParams,
 };
 use openehr_its::rest::runtime::ApiError;
+use openehr_its::xml::LOCATABLE_ROOT;
 use openehr_rm::prelude::PartyRelationship;
 
 use crate::api::{RequestParts, guarded_dispatch};
@@ -1230,9 +1231,7 @@ fn write_relationship(
         minimal_status,
         repr_status,
         resp.meta.as_ref().map(|m| m.uid.as_str()),
-        |status| {
-            negotiate::respond_rm::<PartyRelationship>(h, status, &resp.body, "party_relationship")
-        },
+        |status| negotiate::respond_rm::<PartyRelationship>(h, status, &resp.body, LOCATABLE_ROOT),
     );
     super::set_write_headers(&mut out, base, segment, resp.meta.as_ref());
     out
@@ -1243,12 +1242,8 @@ fn write_relationship(
 /// NOT be used to indicate an alternate representation of an existing resource
 /// (e.g. via `GET` method)".
 fn read_relationship(h: &http::HeaderMap, resp: &ServiceResponse) -> Response {
-    let mut out = negotiate::respond_rm::<PartyRelationship>(
-        h,
-        StatusCode::OK,
-        &resp.body,
-        "party_relationship",
-    );
+    let mut out =
+        negotiate::respond_rm::<PartyRelationship>(h, StatusCode::OK, &resp.body, LOCATABLE_ROOT);
     super::set_versioning_headers(&mut out, resp.meta.as_ref());
     out
 }

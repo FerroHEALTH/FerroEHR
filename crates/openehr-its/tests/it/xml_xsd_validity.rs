@@ -53,7 +53,9 @@
 
 use openehr_its::json::from_canonical_value;
 use openehr_its::xml::runtime::Namespace;
-use openehr_its::xml::to_canonical_xml_ns;
+use openehr_its::xml::{
+    LOCATABLE_ROOT, declared_abstract_root_type, to_canonical_xml_declared, to_canonical_xml_ns,
+};
 use openehr_rm::prelude::{Composition, Folder};
 use openehr_rm::v1_2::model;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
@@ -767,7 +769,8 @@ fn base_composition() -> Value {
     .expect("corpus composition JSON")
 }
 
-/// A directory-root FOLDER — the shape the `/ehr/{id}/directory` routes serve.
+/// A directory-root FOLDER — the shape the `/ehr/{id}/directory` routes serve,
+/// under the published `items` element (`ALL/Structure.xsd`).
 fn base_folder() -> Value {
     json!({
         "_type": "FOLDER",
@@ -978,7 +981,7 @@ fn folder_vectors() -> Vec<Vector> {
     vec![
         Vector {
             label: "directory.baseline",
-            root: "folder",
+            root: LOCATABLE_ROOT,
             rm_type: "FOLDER",
             value: base_folder(),
             v1: Expect::Valid,
@@ -986,7 +989,7 @@ fn folder_vectors() -> Vec<Vector> {
         },
         Vector {
             label: "directory.details",
-            root: "folder",
+            root: LOCATABLE_ROOT,
             rm_type: "FOLDER",
             value: details,
             v1: Expect::Invalid {
@@ -1009,16 +1012,24 @@ fn validate(bundle: &Bundle, vector: &Vector) -> Outcome {
         }
         "FOLDER" => {
             let typed: Folder = from_canonical_value(&vector.value).expect("typed FOLDER");
-            to_canonical_xml_ns(&typed, vector.root, bundle.serialize_as)
+            match declared_abstract_root_type(vector.root) {
+                Some(declared) => {
+                    to_canonical_xml_declared(&typed, vector.root, declared, bundle.serialize_as)
+                }
+                None => to_canonical_xml_ns(&typed, vector.root, bundle.serialize_as),
+            }
         }
         other => panic!("vector {}: unhandled RM type {other}", vector.label),
     }
     .expect("serialize canonical XML");
 
+    // A published abstract root binds its declared type, so the bundle's own
+    // `items` element (v1) or the same declaration (v2) judges the document.
+    let root_type = declared_abstract_root_type(vector.root).unwrap_or(vector.rm_type);
     let driver = write_driver(
         bundle,
         &format!("{}_{}", bundle.label, vector.root),
-        &[(vector.root, vector.rm_type)],
+        &[(vector.root, root_type)],
     );
     let document = scratch().join(format!("{}.{}.xml", bundle.label, vector.label));
     std::fs::write(&document, &xml).expect("write document");
