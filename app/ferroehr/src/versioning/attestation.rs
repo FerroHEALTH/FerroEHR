@@ -43,7 +43,7 @@ use crate::service::error::{ServiceError, Violation};
 use crate::service::status::ServiceStatus;
 use crate::versioning::Kind;
 use crate::versioning::audit::{
-    change_type, change_type_rubric, dv_date_time, openehr_coded_text, validate_committer,
+    change_type, change_type_rubric, check_committer, dv_date_time, openehr_coded_text,
 };
 use crate::versioning::change::Committed;
 use crate::versioning::object_version_id::TreeId;
@@ -411,7 +411,7 @@ impl AttestationInput {
                     .with_invariant("AUDIT_DETAILS.System_id_valid"),
             ));
         }
-        validate_committer(&update.committer)?;
+        check_committer(&update.committer)?;
         Ok(Self {
             parts: AttestationParts {
                 attested_view: update.attested_view.clone(),

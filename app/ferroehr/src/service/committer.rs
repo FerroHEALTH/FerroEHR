@@ -13,8 +13,10 @@
 //! — our own design.
 
 use openehr_base::prelude::{GenericId, ObjectId, PartyRef};
-use openehr_rm::prelude::{PartyProxy, PartySelf};
+use openehr_rm::prelude::{PartyIdentified, PartyProxy, PartySelf};
 use tokio::task_local;
+
+use crate::service::error::ServiceError;
 
 /// The authenticated identity a protocol adapter attributes commits to.
 #[derive(Debug, Clone)]
@@ -108,6 +110,78 @@ pub fn attributed(supplied: PartyProxy) -> PartyProxy {
     }
 }
 
+/// Refuses a stated committer that the server can show is not the request's
+/// authenticated caller.
+///
+/// `AUDIT_DETAILS.committer` is the "identity [...] of user who committed the
+/// item" (RM `UML/classes/org.openehr.rm.common.audit_details.adoc`), in the
+/// form of "a system login identifier", with `PARTY_SELF` "when the committer
+/// is the record subject" (RM common master04 §Audit Information). A login is
+/// verifiable when it is issued by the caller's own issuer or by this
+/// deployment: a `PARTY_IDENTIFIED.identifiers` entry whose `issuer`, or an
+/// `external_ref` `GENERIC_ID` whose `scheme`, names one of them must carry
+/// the caller's subject. A `PARTY_SELF` committer from a caller not acting as
+/// the person states that the record subject committed, the EHDS Art. 5 marker
+/// (`docs/law/eu/ehds/text.html`). A name, or an identifier of another
+/// authority, cannot be compared with a login and is kept as the caller's
+/// account (ITS-REST `schemas/common/UpdateAudit.yaml`). With no authenticated
+/// caller there is nothing to compare with. No openEHR spec governs who checks
+/// the committer: our own design.
+///
+/// # Errors
+/// [`ServiceError::Restricted`] (`403`, `auth_failure`) for a committer naming
+/// another login, or a `PARTY_SELF` committer from a caller who is not the
+/// person.
+pub fn refuse_impersonation(committer: &PartyProxy) -> Result<(), ServiceError> {
+    let Some(identity) = current_committer() else {
+        return Ok(());
+    };
+    if !identity.person && matches!(committer, PartyProxy::PartySelf(_)) {
+        return Err(ServiceError::not_permitted(
+            "the committer is PARTY_SELF, which states that the record subject committed, \
+             and the authenticated caller does not act as the person (RM common master04 \
+             §Audit Information; EHDS Art. 5)",
+        ));
+    }
+    let local = crate::service::ehr::meta::LOCAL_ISSUER;
+    let issuer = identity.issuer.as_deref().unwrap_or(local);
+    let verifiable = |authority: &str| authority == issuer || authority == local;
+    if logins(committer)
+        .any(|(authority, login)| verifiable(authority) && login != identity.subject)
+    {
+        return Err(ServiceError::not_permitted(
+            "the committer names a login other than the authenticated caller's, issued by \
+             the caller's issuer or this server (AUDIT_DETAILS.committer, RM common master04 \
+             §Audit Information)",
+        ));
+    }
+    Ok(())
+}
+
+/// Every `(authority, login)` pair a committer states: each
+/// `PARTY_IDENTIFIED.identifiers` entry as `(issuer, id)`, and an
+/// `external_ref` `GENERIC_ID` as `(scheme, value)`.
+fn logins(committer: &PartyProxy) -> impl Iterator<Item = (&str, &str)> {
+    let (external_ref, identifiers) = match committer {
+        PartyProxy::PartySelf(party) => (party.external_ref.as_ref(), None),
+        PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)) => {
+            (party.external_ref.as_ref(), party.identifiers.as_ref())
+        }
+        PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(party)) => {
+            (party.external_ref.as_ref(), party.identifiers.as_ref())
+        }
+    };
+    let referenced = external_ref.and_then(|reference| match &reference.id {
+        ObjectId::GenericId(id) => Some((id.scheme.as_str(), id.value.as_str())),
+        _ => None,
+    });
+    let identified = identifiers
+        .into_iter()
+        .flat_map(|ids| ids.iter())
+        .filter_map(|id| Some((id.issuer.as_deref()?, id.id.as_str())));
+    referenced.into_iter().chain(identified)
+}
+
 /// Run `fut` with `identity` published as the request's committer.
 pub async fn with_committer<F>(identity: Option<CommitterIdentity>, fut: F) -> F::Output
 where
@@ -156,7 +230,7 @@ pub fn default_committer(identity: Option<CommitterIdentity>) -> PartyProxy {
             identifiers: None,
         },
     };
-    PartyProxy::PartyIdentified(openehr_rm::prelude::PartyIdentified::PartyIdentified(party))
+    PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party))
 }
 
 /// The default committer of the current request ([`default_committer`] over
