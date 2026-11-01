@@ -592,7 +592,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     lower: 0,
                     upper: None,
                 }),
-                nonempty: false,
+                nonempty: true,
                 ref_target: None,
             },
             RmAttribute {
@@ -1180,7 +1180,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     lower: 0,
                     upper: None,
                 }),
-                nonempty: false,
+                nonempty: true,
                 ref_target: None,
             },
             RmAttribute {
@@ -9814,7 +9814,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     lower: 0,
                     upper: None,
                 }),
-                nonempty: false,
+                nonempty: true,
                 ref_target: None,
             },
             RmAttribute {
@@ -10449,7 +10449,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     lower: 0,
                     upper: None,
                 }),
-                nonempty: false,
+                nonempty: true,
                 ref_target: None,
             },
             RmAttribute {
@@ -10687,7 +10687,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     lower: 0,
                     upper: None,
                 }),
-                nonempty: false,
+                nonempty: true,
                 ref_target: None,
             },
         ],
@@ -14642,7 +14642,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     lower: 0,
                     upper: None,
                 }),
-                nonempty: false,
+                nonempty: true,
                 ref_target: None,
             },
             RmAttribute {
@@ -15854,7 +15854,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                     lower: 0,
                     upper: None,
                 }),
-                nonempty: false,
+                nonempty: true,
                 ref_target: None,
             },
             RmAttribute {
