@@ -37,6 +37,7 @@ use openehr_sdt::flat::convert::{
     composition_from_flat, composition_from_structured, composition_to_flat,
     composition_to_structured,
 };
+use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::validation::validate_archetype_conformance;
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
@@ -482,26 +483,28 @@ fn the_simplified_read_keeps_the_content_below_a_full_archetype_reference() {
     );
 }
 
-/// The admitted catalogue cases whose ELEMENT holds a `DV_INTERVAL` the
-/// template constrains the parts of.
+/// The admitted catalogue cases whose ELEMENT holds a `DV_INTERVAL`: 8 whose
+/// template constrains the interval's parts and 9 (`validate_open`) whose
+/// template leaves them open.
 fn interval_cases() -> Vec<Case> {
     let rows: Vec<Case> = cases()
         .into_iter()
         .filter(|c| c.status == StatusCode::CREATED && c.workflow.starts_with("adl2-dv_interval_"))
-        .filter(|c| !c.workflow.contains("-validate_open-"))
         .collect();
-    assert_eq!(
-        rows.len(),
-        8,
-        "the catalogue's 8 admitted constrained interval cases"
-    );
+    assert_eq!(rows.len(), 17, "the catalogue's 17 admitted interval cases");
+    let open = rows
+        .iter()
+        .filter(|c| c.workflow.contains("-validate_open-"))
+        .count();
+    assert_eq!(open, 9, "the catalogue's 9 admitted open interval cases");
     rows
 }
 
-/// Every admitted `DV_INTERVAL` case [`interval_cases`] names reads back in FLAT and STRUCTURED with
-/// its value: the composition built back from either form holds the ELEMENT
-/// unchanged. The FLAT format reaches the interval's parts as `/lower` and
-/// `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
+/// Every admitted `DV_INTERVAL` case [`interval_cases`] names reads back in
+/// FLAT and STRUCTURED with its value, whether or not its template constrains
+/// the interval's parts: the composition built back from either form holds the
+/// ELEMENT unchanged. The FLAT format reaches the interval's parts as `/lower`
+/// and `/upper` (ITS-REST `simplified_formats/master05-rm_mapping.adoc`
 /// §DV_INTERVAL).
 #[test]
 fn every_interval_case_reads_back_with_its_value() {
@@ -542,9 +545,8 @@ fn every_interval_case_reads_back_with_its_value() {
     }
 }
 
-/// The `DV_INTERVAL` node of `wt` and its parts, each as its id, RM type and
-/// path below the ELEMENT that holds the interval as its `value`.
-fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
+/// The first `DV_INTERVAL` node of `wt`.
+fn interval_node(wt: &WebTemplate) -> &WebTemplateNode {
     fn find(node: &WebTemplateNode) -> Option<&WebTemplateNode> {
         node.children.iter().find_map(|child| {
             if child.rm_type.starts_with("DV_INTERVAL") {
@@ -554,7 +556,13 @@ fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
             }
         })
     }
-    let interval = find(&wt.tree).expect("an interval node");
+    find(&wt.tree).expect("an interval node")
+}
+
+/// The `DV_INTERVAL` node of `wt` and its parts, each as its id, RM type and
+/// path below the ELEMENT that holds the interval as its `value`.
+fn interval_paths(wt: &WebTemplate) -> Vec<(String, String, String)> {
+    let interval = interval_node(wt);
     let element = interval
         .aql_path
         .strip_suffix("/value")
@@ -605,4 +613,54 @@ fn the_interval_aql_paths_match_the_adl14_web_template() {
             "{workflow}"
         );
     }
+}
+
+/// An ADL 1.4 template that leaves a `DV_INTERVAL<DV_COUNT>`'s parts open gives
+/// the interval node its `lower` and `upper`, each an open `DV_COUNT` (RM
+/// `data_types` §DV_INTERVAL), and a composition holding such an interval reads
+/// back in FLAT and STRUCTURED with its value (ITS-REST
+/// `simplified_formats/master05-rm_mapping.adoc` §DV_INTERVAL).
+#[test]
+fn an_open_adl14_interval_reads_back_with_its_value() {
+    let path = corpus().join("../../templates/interval_count_open.opt");
+    let xml = std::fs::read_to_string(&path).expect("the ADL 1.4 template");
+    let opt = openehr_its::opt14::from_xml(&xml).expect("the ADL 1.4 OPT parses");
+    let wt = build_web_template(&opt).expect("the ADL 1.4 Web Template");
+    assert_eq!(
+        interval_paths(&wt),
+        [
+            ("value", "DV_INTERVAL<DV_COUNT>", "/value"),
+            ("lower", "DV_COUNT", "/value/lower"),
+            ("upper", "DV_COUNT", "/value/upper"),
+        ]
+        .map(|(id, rm, p)| (id.to_owned(), rm.to_owned(), p.to_owned()))
+    );
+    let built = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    let stored = elements(&built);
+    let [(_, value)] = stored.values().collect::<Vec<_>>()[..] else {
+        panic!("one interval ELEMENT in {stored:?}");
+    };
+    for part in ["lower", "upper"] {
+        assert_eq!(
+            value.pointer(&format!("/{part}/_type")),
+            Some(&Value::from("DV_COUNT")),
+            "the interval's {part} in {value}"
+        );
+    }
+    let now = "2026-01-01T10:00:00Z";
+    let read = composition_to_flat(&built, &wt).expect("FLAT read");
+    let structured = composition_to_structured(&built, &wt).expect("STRUCTURED read");
+    let from_flat = composition_from_flat(&read, &wt, now).expect("FLAT build back");
+    let from_structured =
+        composition_from_structured(&structured, &wt, now).expect("STRUCTURED build back");
+    assert_eq!(
+        elements(&from_flat),
+        stored,
+        "the FLAT read loses the interval"
+    );
+    assert_eq!(
+        elements(&from_structured),
+        stored,
+        "the STRUCTURED read loses the interval"
+    );
 }

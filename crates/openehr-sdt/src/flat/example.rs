@@ -53,6 +53,7 @@ use serde_json::{Map, Value, json};
 use crate::flat::build::{RM_VERSION, stamp_archetype_details, structural_from};
 use crate::flat::convert::composition_from_flat;
 use crate::flat::error::FlatError;
+use crate::flat::uid::deterministic_uuid;
 use crate::flat::webtemplate::model::{
     WebTemplate, WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
     WebTemplateStructuralStub,
@@ -443,7 +444,8 @@ fn walk_child(
     // A mandatory child must materialise even when all of *its* children are
     // optional (else the mandatory node would go missing).
     let child_force = !is_optional(child);
-    let mut emitted = walk(child, &child_prefix, child_opt, cx.level, child_force, out);
+    let source = interval_part_source(node, child);
+    let mut emitted = walk(source, &child_prefix, child_opt, cx.level, child_force, out);
     if emitted && let Some(slot) = ci.and_then(|i| card_counts.get_mut(i)) {
         *slot += 1;
     }
@@ -460,6 +462,22 @@ fn walk_child(
         }
     }
     emitted
+}
+
+/// The node whose example fills `child`: a `DV_INTERVAL` part the template
+/// leaves open takes its constrained sibling's example, so the limits agree
+/// (RM `data_types` §DV_INTERVAL `Limits_consistent`).
+fn interval_part_source<'a>(
+    node: &'a WebTemplateNode,
+    child: &'a WebTemplateNode,
+) -> &'a WebTemplateNode {
+    let open = child.implicit && node.rm_type.starts_with("DV_INTERVAL<");
+    let sibling = || {
+        node.children
+            .iter()
+            .find(|s| !s.implicit && s.rm_type == child.rm_type)
+    };
+    open.then(sibling).flatten().unwrap_or(child)
 }
 
 /// Cardinality satisfaction: for every container attribute constrained to
@@ -1599,49 +1617,6 @@ fn pick_count(range: Option<&WebTemplateRange>) -> i64 {
         }
     }
     v
-}
-
-// ── deterministic UUID (for the output-form uid) ────────────────────────────────
-
-/// A deterministic, RFC-4122-shaped UUID derived from `seed` (FNV-1a; no
-/// randomness). Not a cryptographic v5, but syntactically a valid UUID and stable
-/// for a given seed — sufficient for a pedagogical example's `OBJECT_VERSION_ID`.
-fn deterministic_uuid(seed: &str) -> String {
-    let h1 = fnv1a64(seed.as_bytes(), 0xcbf2_9ce4_8422_2325);
-    let h2 = fnv1a64(seed.as_bytes(), 0x8422_2325_cbf2_9ce4);
-    let mut b = [0u8; 16];
-    b[..8].copy_from_slice(&h1.to_be_bytes());
-    b[8..].copy_from_slice(&h2.to_be_bytes());
-    b[6] = (b[6] & 0x0f) | 0x50; // version 5 nibble
-    b[8] = (b[8] & 0x3f) | 0x80; // RFC-4122 variant
-    format!(
-        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-        b[0],
-        b[1],
-        b[2],
-        b[3],
-        b[4],
-        b[5],
-        b[6],
-        b[7],
-        b[8],
-        b[9],
-        b[10],
-        b[11],
-        b[12],
-        b[13],
-        b[14],
-        b[15],
-    )
-}
-
-fn fnv1a64(data: &[u8], basis: u64) -> u64 {
-    let mut hash = basis;
-    for &byte in data {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    hash
 }
 
 #[cfg(test)]
