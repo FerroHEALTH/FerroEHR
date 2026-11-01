@@ -348,8 +348,8 @@ impl FerroEhrService {
     ///
     /// The artefact's declared `specialize` parent travels with it into
     /// `parent_hrid`: it is the archetype-lineage edge AQL resolves a parent
-    /// query through (AM `Identification` master07 §Supporting Archetype-based
-    /// Querying — for a specialised archetype the lineage "can only be obtained
+    /// query through (BASE Artefact Identification, Referencing §Supporting
+    /// Archetype-based Querying — for a specialised archetype the lineage "can only be obtained
     /// from the operational form of the archetype"), and the engine has already
     /// extracted it into the [`ArtefactSummary`] during validation.
     async fn adl2_persist(

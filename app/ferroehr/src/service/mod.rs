@@ -195,8 +195,8 @@ pub struct FerroEhrService {
     pub(crate) plan_cache: PlanCache,
     /// Memo of the stored archetype specialisation graph
     /// (`adl2_artefact.parent_hrid` edges) the AQL archetype predicate widens a
-    /// parent query through (AM `Identification` master07 §Supporting
-    /// Archetype-based Querying). Invalidated on every local ADL2 artefact
+    /// parent query through (BASE Artefact Identification
+    /// §Supporting Archetype-based Querying). Invalidated on every local ADL2 artefact
     /// write; the memo itself is spec-silent — our own performance design.
     pub(crate) archetype_lineage: ArchetypeLineageCache,
     /// Per-query DB execution budget (`[query].timeout_ms`); `None` disables it

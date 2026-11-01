@@ -4,15 +4,16 @@
 //! The archetype **specialisation-lineage** index the AQL planner folds into an
 //! `archetype_node_id` predicate.
 //!
-//! AM `Identification` master07 §Supporting Archetype-based Querying fixes the
-//! matching set as X, its previous minor or patch variants, its specialisation
-//! parents and their previous variants, and adds that "for specialised
-//! archetypes, the specialisation lineage can only be obtained from the
-//! operational form of the archetype, found in the template used to create the
-//! data". AM `Identification` master03 §Legacy ADL 1.4 Semantics removes the
-//! lineage meaning of the `-` separator for AOM2-era identifiers ("the level of
-//! specialisation can no longer be determined from the identifier"), so their
-//! lineage is only what the stored artefacts declare.
+//! BASE Artefact Identification (Referencing §Supporting Archetype-based
+//! Querying) fixes the matching set as X, its previous minor or patch variants,
+//! its specialisation parents and their previous variants, and adds that "for
+//! specialised archetypes, the specialisation lineage can only be obtained from
+//! the operational form of the archetype, found in the template used to create
+//! the data". BASE Artefact Identification (Source Artefact Identification
+//! §Legacy ADL 1.4 Semantics) removes the lineage meaning of the `-` separator
+//! for AOM2-era identifiers ("the level of specialisation can no longer be
+//! determined from the identifier"), so their lineage is only what the stored
+//! artefacts declare.
 //!
 //! This module is the read-only side of that: a resolved child-to-parent graph
 //! over the stored ADL2 and OPT2 family, inverted into parent-to-children, which
@@ -29,9 +30,10 @@ use openehr_adl::hrid::parse_hrid;
 /// concept, and the major version.
 ///
 /// Minor/patch versions and the AOM2 namespace are deliberately *not* part of
-/// the key: AM `Identification` master07 §Supporting Archetype-based Querying
-/// admits "any previous minor or patch variant" into the same matching set,
-/// while §Referencing keeps the major version a hard boundary. Both parts
+/// the key: BASE Artefact Identification (Referencing §Supporting
+/// Archetype-based Querying) admits "any previous minor or patch variant" into
+/// the same matching set, while its §Referencing keeps the major version a hard
+/// boundary. Both parts
 /// compare case-folded (BASE `base_types` master05 §"Composite Identifiers and
 /// Case"), matching the promoted `node.arch_entity` / `node.arch_concept`
 /// columns, which are lowercased at write.
@@ -125,8 +127,8 @@ fn version_is_major_only(hrid: &str) -> bool {
 /// artefacts that declare it (transitively) as their specialisation parent.
 ///
 /// Built from the `specialize` parent references of the stored ADL2/OPT2
-/// family — the only lineage source AM `Identification` master07 §Supporting
-/// Archetype-based Querying recognises for specialised archetypes. An empty
+/// family — the only lineage source BASE Artefact Identification (Referencing
+/// §Supporting Archetype-based Querying) recognises for specialised archetypes. An empty
 /// index (nothing stored, or nothing specialised) resolves every identifier to
 /// itself, which is exactly the pre-lineage behaviour.
 #[derive(Debug, Clone, Default)]
@@ -230,8 +232,8 @@ mod tests {
 
     /// The lineage walk is transitive: a query naming the root reaches a
     /// grandchild, and each intermediate identity reaches only what is below
-    /// it (AM master07 §Supporting Archetype-based Querying — "any of the
-    /// specialisation parents of X").
+    /// it (BASE Artefact Identification, Referencing §Supporting
+    /// Archetype-based Querying: "any of the specialisation parents of X").
     #[test]
     fn descendants_are_transitive() {
         let lineage = ArchetypeLineage::from_parent_edges([

@@ -4,7 +4,8 @@
 //! The archetype specialisation-lineage index over the ADL2/OPT2 artefact
 //! store — the read the AQL planner takes before lowering a query.
 //!
-//! AM `Identification` master07 §Supporting Archetype-based Querying: "for
+//! BASE Artefact Identification, Referencing §Supporting Archetype-based
+//! Querying: "for
 //! specialised archetypes, the specialisation lineage can only be obtained from
 //! the operational form of the archetype, found in the template used to create
 //! the data". The `specialize` parent of every uploaded artefact is extracted

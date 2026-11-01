@@ -393,10 +393,11 @@ pub(super) fn aql_like_to_sql(pattern: &str) -> String {
 /// predicate implements query subsumption: "the data created with any
 /// specialised archetype will always be matched by queries based on the parent
 /// archetype" (BASE `architecture_overview` master10 §Design-time
-/// Relationships), with AM master07 §Supporting Archetype-based Querying making
-/// the matching set for a query naming X be X, its older minor and patch
-/// variants, its specialisation parents and their older variants, bounded to one
-/// major version. That set comes from two sources.
+/// Relationships), with BASE Artefact Identification (Referencing §Supporting
+/// Archetype-based Querying) making the matching set for a query naming X be
+/// X, its older minor and patch variants, its specialisation parents and their
+/// older variants, bounded to one major version. That set comes from two
+/// sources.
 ///
 /// The first is the ADL 1.4 naming convention, and applies to an ADL 1.4-form id
 /// only (a major-only `.vN` version): a specialisation child extends the
@@ -410,21 +411,22 @@ pub(super) fn aql_like_to_sql(pattern: &str) -> String {
 /// ([`ArchetypeLineage`] resolved from the `specialize` clauses of the ADL2 and
 /// OPT2 family before the SQL is built), since "for specialised archetypes, the
 /// specialisation lineage can only be obtained from the operational form of the
-/// archetype, found in the template used to create the data" (AM
-/// `Identification` master07). Every stored descendant joins the matching set on
-/// its own `(arch_entity, arch_major, arch_concept)` triple, a declared parent
-/// reference being free to name another major. A queried identifier with no
-/// stored family resolves to itself.
+/// archetype, found in the template used to create the data" (BASE Artefact
+/// Identification, Referencing §Supporting Archetype-based Querying). Every
+/// stored descendant joins the matching set on its own
+/// `(arch_entity, arch_major, arch_concept)` triple, a declared parent reference
+/// being free to name another major. A queried identifier with no stored family
+/// resolves to itself.
 ///
 /// For at- and id-codes, arbitrary strings and params resolving to non-HRIDs the
 /// predicate is the case-folded equality on `archetype`, served by the
 /// `idx_node_archetype_lower` functional index.
 //
 // The `-`-prefix rule is exact for an ADL 1.4-form id (major-only `.vN`,
-// lineage encoded directly in the concept) and is applied ONLY to that form: AM
-// `Identification` master03 §Legacy ADL 1.4 Semantics strips the separator of
-// all meaning for AOM2-era identifiers ("the '-' character is still be allowed,
-// but no longer has any semantic significance").
+// lineage encoded directly in the concept) and is applied ONLY to that form:
+// BASE Artefact Identification (Source Artefact Identification §Legacy ADL 1.4
+// Semantics) strips the separator of all meaning for AOM2-era identifiers ("the
+// '-' character is still allowed, but no longer has any semantic significance").
 // NOTE: QUERY master03 §Archetype predicate equates the predicate to
 // `archetype_node_id` string equality; we implement BASE/AM subsumption instead,
 // since a parent archetype must retrieve its children (master10).
@@ -549,8 +551,9 @@ mod tests {
     /// The `archetype_node_id` predicate: a full archetype HRID lowers to the
     /// subsumption condition (parent + specialisation children, same entity +
     /// major); an at-code keeps the case-folded equality. BASE
-    /// `architecture_overview` master10 §Design-time Relationships; AM master07
-    /// §Querying.
+    /// `architecture_overview` master10 §Design-time Relationships; BASE
+    /// Artefact Identification, Referencing §Supporting Archetype-based
+    /// Querying.
     #[test]
     fn archetype_predicate_subsumption_sql() {
         // Parent archetype: matches its own concept OR any `laboratory-` child,
@@ -608,9 +611,9 @@ mod tests {
     }
 
     /// An AOM2-era physical identifier (`.vMAJOR.MINOR.PATCH`) gets NO
-    /// `-`-prefix subsumption: AM `Identification` master03 §Legacy ADL 1.4
-    /// Semantics removes the separator's meaning, so lineage may come only
-    /// from the stored family.
+    /// `-`-prefix subsumption: BASE Artefact Identification (Source Artefact
+    /// Identification §Legacy ADL 1.4 Semantics) removes the separator's
+    /// meaning, so lineage may come only from the stored family.
     #[test]
     fn aom2_era_identifier_drops_the_concept_prefix_heuristic() {
         let sql = predicate_sql("openEHR-EHR-OBSERVATION.laboratory.v1.4.2");
@@ -657,8 +660,8 @@ mod tests {
 
     /// A stored specialisation family widens the matching set to `= ANY(…)`
     /// over the queried concept plus its stored descendants, still scoped to
-    /// the entity + major each member carries (AM master07 §Supporting
-    /// Archetype-based Querying).
+    /// the entity + major each member carries (BASE Artefact Identification,
+    /// Referencing §Supporting Archetype-based Querying).
     #[test]
     fn stored_lineage_widens_the_matching_set() {
         let lineage = ArchetypeLineage::from_parent_edges([
