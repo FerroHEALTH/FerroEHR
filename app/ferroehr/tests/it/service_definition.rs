@@ -1289,11 +1289,6 @@ async fn adl2_template_upload_accepts_node_ids_reused_by_an_included_archetype()
 /// resolves and is validated — the ADL2 twin of the OPT 1.4 commit path. Before
 /// #269 this 422'd "operational template not known" (the resolver read only the
 /// OPT 1.4 `template_store`).
-///
-/// Validation runs through the same choke point every commit uses
-/// (`content_valid` → `validate_for_commit` → `web_template_for` →
-/// `validate_archetype_conformance`), so this also exercises the `v2_4`
-/// archetype-conformance capture end-to-end.
 #[tokio::test]
 async fn adl2_template_resolves_on_the_commit_path_and_validates() {
     use serde_json::Value;
@@ -1321,9 +1316,9 @@ async fn adl2_template_resolves_on_the_commit_path_and_validates() {
         "resolved through the v2_4 (OPT2) front end, which carries semVer"
     );
 
-    // A composition declaring that template validates end-to-end through the same
-    // per-commit choke point.
-    let mut comp = openehr_sdt::flat::example::example_composition(
+    // A composition declaring that template validates end-to-end through the
+    // commit path.
+    let comp = openehr_sdt::flat::example::example_composition(
         &wt,
         openehr_sdt::flat::example::DetailLevel::Complete,
     )
@@ -1334,27 +1329,13 @@ async fn adl2_template_resolves_on_the_commit_path_and_validates() {
         Some(HRID),
         "the example declares the ADL2 template id"
     );
-    assert!(
-        svc.definitions_valid(&comp)
-            .await
-            .expect("definitions_valid"),
-        "the declared ADL2 template is now known to the definitions service"
-    );
-    assert!(
-        svc.content_valid(&comp).await.expect("content_valid"),
-        "a self-consistent instance validates clean against the ADL2 template"
-    );
-
-    // A structurally RM-broken instance is rejected — proving the validation
-    // passes actually run against the ADL2-resolved template
-    // (COMPOSITION.composer [1], RM common `composition.adoc`).
-    comp.as_object_mut()
-        .expect("composition object")
-        .remove("composer");
-    assert!(
-        !svc.content_valid(&comp).await.expect("content_valid"),
-        "an RM-invalid instance is rejected on the ADL2-resolved commit path"
-    );
+    let ehr = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .expect("create an EHR")
+        .0;
+    svc.create_composition(ehr, crate::fixtures::uv(&comp, "249", None))
+        .await
+        .expect("a self-consistent instance validates clean against the ADL2 template");
 }
 
 /// The full service seam for a template-with-filler: upload the archetype +
@@ -1413,88 +1394,5 @@ async fn adl2_template_with_filler_projects_the_filled_web_template() {
     assert!(
         find(&wt.tree, "count_item").is_some(),
         "the filler's constrained leaf must appear in the projected WebTemplate"
-    );
-}
-
-// ── definitions_valid over archetype ids (#2987) ─────────────────────────────
-
-/// `definitions_valid` resolves every declared definition identifier —
-/// archetype and template identifiers — against the stored repositories: archetype ids
-/// against BOTH the ADL 1.4 store and the ADL 2 store, template ids through
-/// the commit-path template lookup, collected from `archetype_details` at any
-/// depth.
-#[tokio::test]
-async fn definitions_valid_resolves_archetype_ids_against_the_stored_repositories() {
-    const ADL2_HRID: &str = "openEHR-EHR-SECTION.validity_known.v1.0.0";
-
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    svc.upload_archetype(fixture(ARCHETYPE_REL))
-        .await
-        .expect("upload the ADL 1.4 archetype");
-    svc.template_adl2_upload(adl2_source("archetype", ADL2_HRID, None))
-        .await
-        .expect("upload the ADL 2 archetype");
-
-    // A root declaring the stored ADL 1.4 archetype and a nested node
-    // declaring the stored ADL 2 archetype: every id resolves → true.
-    let content = |root_id: &str, nested_id: &str| {
-        serde_json::json!({
-            "_type": "COMPOSITION",
-            "archetype_details": { "archetype_id": { "value": root_id } },
-            "content": [{
-                "_type": "SECTION",
-                "archetype_details": { "archetype_id": { "value": nested_id } },
-            }],
-        })
-    };
-    assert!(
-        svc.definitions_valid(&content(ARCHETYPE_ID, ADL2_HRID))
-            .await
-            .expect("definitions_valid"),
-        "ids known to the ADL 1.4 and ADL 2 repositories both resolve"
-    );
-
-    // An unknown ROOT archetype id refuses, even with the nested id known.
-    assert!(
-        !svc.definitions_valid(&content(
-            "openEHR-EHR-COMPOSITION.never_stored.v1",
-            ADL2_HRID
-        ))
-        .await
-        .expect("definitions_valid"),
-        "an archetype id neither repository holds is unknown"
-    );
-
-    // An unknown NESTED archetype id refuses too: collection recurses past the
-    // root (`master03-archetyped_package.adoc` — every archetype root node
-    // carries its own ARCHETYPED).
-    assert!(
-        !svc.definitions_valid(&content(
-            ARCHETYPE_ID,
-            "openEHR-EHR-SECTION.never_stored.v1"
-        ))
-        .await
-        .expect("definitions_valid"),
-        "an unknown archetype id below the root is still checked"
-    );
-
-    // An unknown template id refuses (the pre-#2987 check, retained).
-    let mut with_template = content(ARCHETYPE_ID, ADL2_HRID);
-    with_template["archetype_details"]["template_id"] =
-        serde_json::json!({ "value": "never stored template" });
-    assert!(
-        !svc.definitions_valid(&with_template)
-            .await
-            .expect("definitions_valid"),
-        "an unknown template id is unknown"
-    );
-
-    // Content declaring no definition identifiers uses none → true.
-    assert!(
-        svc.definitions_valid(&serde_json::json!({ "_type": "COMPOSITION" }))
-            .await
-            .expect("definitions_valid"),
-        "no declared identifiers means nothing is unknown"
     );
 }

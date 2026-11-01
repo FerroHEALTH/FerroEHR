@@ -31,7 +31,6 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::status::{ServiceStatus, StatusError};
 
-use ferroehr::service::list::Page;
 use ferroehr::service::version_update::lifecycle_state_coded;
 use serde_json::{Value, json};
 
@@ -705,32 +704,15 @@ fn ehr_status(queryable: bool) -> Value {
     })
 }
 
-/// `list_contributions` / `contribution_count` and the EHR read with its
-/// counts, against a real PG 18.
+/// The EHR read with its counts, against a real PG 18.
 #[tokio::test]
-async fn contribution_listing_count_and_ehr_summary() {
+async fn ehr_read_with_its_counts() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
 
     // Unknown EHR → NotFound (`ehr_id_does_not_exist`, carried granularly
-    // through the ServiceError round-trip) for every native call.
+    // through the ServiceError round-trip).
     let ghost = "00000000-0000-7000-8000-0000000000ff";
-    assert!(matches!(
-        svc.list_contributions(ghost.parse().expect("uuid"), None, Page::all())
-            .await,
-        Err(StatusError {
-            status: ServiceStatus::EhrIdDoesNotExist,
-            ..
-        })
-    ));
-    assert!(matches!(
-        svc.contribution_count(ghost.parse().expect("uuid"), None)
-            .await,
-        Err(StatusError {
-            status: ServiceStatus::EhrIdDoesNotExist,
-            ..
-        })
-    ));
     assert!(matches!(
         svc.ehr_read(ghost.parse().expect("uuid")).await,
         Err(StatusError {
@@ -762,72 +744,6 @@ async fn contribution_listing_count_and_ehr_summary() {
     svc.create_composition(ehr_uuid, uv(&composition("obs"), "249", None))
         .await
         .expect("composition_create"); // contribution #3
-
-    // contribution_count matches the seeded three.
-    let count = svc
-        .contribution_count(ehr_uuid, None)
-        .await
-        .expect("contribution_count");
-    assert_eq!(count, 3, "EHR creation + status update + composition");
-
-    // contribution_list returns all three, oldest-first, distinct.
-    let all = svc
-        .list_contributions(ehr_uuid, None, Page::all())
-        .await
-        .expect("contribution_list");
-    assert_eq!(all.len(), 3, "three contribution ids");
-    let distinct: std::collections::BTreeSet<_> = all.iter().collect();
-    assert_eq!(distinct.len(), 3, "ids are distinct");
-
-    // Paging: offset 1, fetch 1 → exactly the second id of the full list.
-    let page = svc
-        .list_contributions(
-            ehr_uuid,
-            None,
-            Page {
-                item_offset: Some(1),
-                items_to_fetch: Some(1),
-            },
-        )
-        .await
-        .expect("paged contribution_list");
-    assert_eq!(
-        page,
-        vec![all[1].clone()],
-        "offset 1 / fetch 1 slices the list"
-    );
-
-    // time_range: an upper bound before every commit excludes all.
-    let empty = svc
-        .list_contributions(
-            ehr_uuid,
-            Some((None, Some("2000-01-01T00:00:00Z".to_owned()))),
-            Page::all(),
-        )
-        .await
-        .expect("bounded contribution_list");
-    assert!(
-        empty.is_empty(),
-        "upper bound in the past → no contributions"
-    );
-    assert_eq!(
-        svc.contribution_count(
-            ehr_uuid,
-            Some((None, Some("2000-01-01T00:00:00Z".to_owned())))
-        )
-        .await
-        .expect("bounded count"),
-        0
-    );
-    // A malformed bound → 400 BadRequest.
-    assert!(matches!(
-        svc.contribution_count(ehr_uuid, Some((Some("not-a-time".to_owned()), None)))
-            .await,
-        Err(StatusError {
-            status: ServiceStatus::PreconditionViolation,
-            ..
-        })
-    ));
 
     // The EHR as the wire reads it: mandatory fields + the counts.
     let ehr = svc.ehr_read(ehr_uuid).await.expect("ehr_read").body;
@@ -1403,12 +1319,12 @@ async fn contribution_resolve_refs() {
         .expect("composition_create")
         .version_uid();
 
-    let all = svc
-        .list_contributions(ehr_uuid, None, Page::all())
+    let newest = svc
+        .ehr_contribution_list_page(ehr_uuid, 0, 1)
         .await
         .expect("list");
-    let cid = all
-        .last()
+    let cid = newest["rows"][0]["uid"]
+        .as_str()
         .expect("a contribution")
         .parse::<uuid::Uuid>()
         .expect("contribution uuid");

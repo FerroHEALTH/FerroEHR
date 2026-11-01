@@ -22,9 +22,8 @@
 //! ([`version_update`]), the list cursor ([`list`]), the
 //! platform-service enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), the
-//! authenticated-committer context ([`committer`]), the crate-internal
-//! ITS-REST datetime-request-parameter decoder (`datetime`), and the
-//! validity checker ([`validity`]).
+//! authenticated-committer context ([`committer`]), and the crate-internal
+//! ITS-REST datetime-request-parameter decoder (`datetime`).
 //!
 //! NOTE: no openEHR spec governs the internal layering: our own design; each
 //! one-expression `Ok(self.inner(...).await?)` method is where a `ServiceError`
@@ -53,7 +52,6 @@ pub mod list;
 pub mod platform_service;
 pub mod response;
 pub mod status;
-pub mod validity;
 pub mod version_update;
 
 use crate::service::definition::lineage::{ArchetypeLineageCache, archetype_lineage_cache};

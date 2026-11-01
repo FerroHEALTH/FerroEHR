@@ -87,12 +87,6 @@ impl IdentifierProtection {
         }))
     }
 
-    /// The schemes this engine protects.
-    #[must_use]
-    pub fn schemes(&self) -> &[String] {
-        &self.schemes
-    }
-
     /// The first configured scheme the database registry does not hold.
     ///
     /// The boot check behind the rule that an unregistered scheme is a boot

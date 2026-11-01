@@ -22,7 +22,6 @@
 //!   `VERSIONED_COMPOSITION` cross-version invariants.
 //! - `meta` — the shared version-metadata helpers.
 //! - `tags`         — `ITEM_TAG` (ITS-REST experimental extension).
-//! - `uri`          — `ehr:`-URI resolution (spec-silent extension).
 //!
 //! The versioned-object mechanics are delegated to [`crate::versioning`]
 //! (change control, RM common master06) and [`crate::storage`] (row I/O — no
@@ -57,7 +56,6 @@ pub(in crate::service) mod meta;
 pub(in crate::service) mod service;
 mod status;
 pub(in crate::service) mod tags;
-mod uri;
 pub(crate) mod validation;
 
 pub mod access_types;
@@ -71,7 +69,6 @@ use serde_json::Value;
 use crate::service::ehr_index::types::SubjectRef;
 use crate::service::response::ResourceMeta;
 use crate::service::status::StatusError;
-use crate::versioning::contribution::TimeRange;
 
 /// The committed version's full [`ResourceMeta`] (version uid + commit
 /// time), for write paths whose wire response carries `ETag` **and**
@@ -133,20 +130,6 @@ fn ensure_if_match(
         )),
         None => Ok(()),
     }
-}
-
-/// Parse the optional ISO 8601 date-time bounds of a contribution
-/// `time_range` into the internal [`crate::versioning::contribution::TimeRange`]; a malformed
-/// bound is a `400`-equivalent precondition failure. Bound decoding is the
-/// shared ITS-REST datetime-parameter decoder
-/// (`crate::service::datetime`) — an offset is optional on the wire.
-fn parse_time_range(raw: handle::TimeRange) -> Result<TimeRange, StatusError> {
-    let parse = |b: Option<String>| -> Result<Option<jiff::Timestamp>, StatusError> {
-        b.as_deref()
-            .map(crate::service::datetime::parse_time_range_bound)
-            .transpose()
-    };
-    raw.map(|(lo, hi)| Ok((parse(lo)?, parse(hi)?))).transpose()
 }
 
 /// Everything a direct-commit write path carries from the caller's

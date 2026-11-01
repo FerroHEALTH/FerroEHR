@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The explicit CONTRIBUTION-level surface: has/get/commit/list/count, plus the ITS-REST
-//! raw-wire commit seam (`create_ehr_contribution`).
+//! The explicit CONTRIBUTION-level surface: get, commit and the paged list,
+//! plus the ITS-REST raw-wire commit seam (`create_ehr_contribution`).
 //!
 //! Spec: RM common `master06-change_control_package.adoc` §Contributions /
 //! §Committal and Audits. The change-set engine itself (classify, atomic
 //! multi-version commit, retrieval assembly) is versioning law and lives in
 //! [`crate::versioning`] (`commit_version_set` / `get_contribution` /
-//! `list_contributions` / `count_contributions`); this file keeps only the
+//! `count_contributions`); this file keeps only the
 //! CONTRIBUTION surface and the wire glue. The EHR-existence guard
 //! is enforced inside `commit_version_set` via the
 //! [`crate::versioning::CommitEnv`] `ensure_ehr_exists` hook.
@@ -20,7 +20,6 @@
 )]
 
 use crate::ids::EhrId;
-use crate::service::list::Page;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::status::StatusError;
 use openehr_its::rest::generated::ehr::NewContribution;
@@ -31,10 +30,7 @@ use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::versioning::contribution::{
     commit_version_set, count_contributions, decode_new_contribution, get_contribution,
-    list_contributions,
 };
-
-use super::parse_time_range;
 
 impl FerroEhrService {
     /// `POST /ehr/{ehr_id}/contribution` — commit a raw wire CONTRIBUTION body
@@ -146,26 +142,6 @@ impl FerroEhrService {
         Ok(self.ehr_contribution(an_ehr_id, a_contrib_id, true).await?)
     }
 
-    /// The EHR's CONTRIBUTION
-    /// uids, optionally bounded by `time_range`, paged.
-    ///
-    /// # Errors
-    /// [`StatusError`] for a malformed `time_range` bound (400-equivalent), a
-    /// missing EHR (the EHR-existence check, enforced inside the versioning read), or a
-    /// read failure.
-    pub async fn list_contributions(
-        &self,
-        an_ehr_id: EhrId,
-        time_range: crate::service::ehr::handle::TimeRange,
-        page: Page,
-    ) -> Result<Vec<String>, StatusError> {
-        let time_range = parse_time_range(time_range)?;
-        // The EHR-existence check (`ehr_id_does_not_exist`) is enforced inside
-        // the versioning read.
-        let ids = list_contributions(&self.pool, an_ehr_id, time_range, page).await?;
-        Ok(ids.iter().map(Uuid::to_string).collect())
-    }
-
     /// The EHR contribution-list extension (`GET /ehr/{ehr_id}/contribution`,
     /// no uid): the EHR's CONTRIBUTIONs newest-first, paged, as
     /// `{ "rows": [ { uid, time_committed, committer, inserted_by_person,
@@ -212,21 +188,6 @@ impl FerroEhrService {
             })
             .collect();
         Ok(json!({ "rows": rows, "total": total }))
-    }
-
-    /// The number of
-    /// CONTRIBUTIONs in the EHR, optionally bounded by `time_range`.
-    ///
-    /// # Errors
-    /// [`StatusError`] for a malformed `time_range` bound (400-equivalent) or a
-    /// read failure.
-    pub async fn contribution_count(
-        &self,
-        an_ehr_id: EhrId,
-        time_range: crate::service::ehr::handle::TimeRange,
-    ) -> Result<i64, StatusError> {
-        let time_range = parse_time_range(time_range)?;
-        Ok(count_contributions(&self.pool, an_ehr_id, time_range).await?)
     }
 
     /// The `POST /ehr/{ehr_id}/contribution` commit with the wire `Prefer`
