@@ -143,7 +143,6 @@ system_id = "ferroehr.local"
 #? solution_version = "<build version>"
 #? vendor = "Cadasto B.V."
 #? restapi_specs_version = "<tested contract identity>"
-#? conformance_profile = "<last ECC verdict>"
 
 # ── [db] — PostgreSQL ────────────────────────────────────────────────────────
 [db]

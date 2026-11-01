@@ -174,8 +174,8 @@ pub struct AdminConfig {
 }
 
 /// `[rest.identity]` — the `OPTIONS` System-Options manifest identity: the
-/// **display** identity this deployment advertises (product, vendor, the
-/// contract edition and conformance profile it claims).
+/// **display** identity this deployment advertises (product, vendor and the
+/// contract edition it implements).
 ///
 /// Deliberately NOT the data-authoring identity: what a commit stamps into
 /// `EHR.system_id`, `AUDIT_DETAILS.system_id`, and
@@ -197,8 +197,6 @@ pub struct SystemOptionsConfig {
     pub vendor: String,
     /// `Options.restapi_specs_version` — the ITS-REST version targeted.
     pub restapi_specs_version: String,
-    /// `Options.conformance_profile` — CORE / STANDARD (CNF master03 profiles).
-    pub conformance_profile: String,
 }
 
 impl Default for SystemOptionsConfig {
@@ -210,7 +208,6 @@ impl Default for SystemOptionsConfig {
             solution_version: env!("CARGO_PKG_VERSION").to_owned(),
             vendor: crate::manufacturer::MANUFACTURER.name.to_owned(),
             restapi_specs_version: crate::telemetry::provenance::ITS_REST.to_owned(),
-            conformance_profile: crate::telemetry::provenance::CONFORMANCE_PROFILE.to_owned(),
         }
     }
 }
