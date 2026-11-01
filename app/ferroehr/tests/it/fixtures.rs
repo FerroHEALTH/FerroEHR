@@ -349,7 +349,9 @@ pub(crate) async fn create_relationship(
 
 /// An `EHR_STATUS` whose subject is a `PARTY_SELF` with an `external_ref`
 /// naming `id` in `namespace` as an object of class `class` (RM ehr master04
-/// §EHR Status; BASE `OBJECT_REF`), written as `POST /ehr` receives it.
+/// §EHR Status; BASE `OBJECT_REF`), written as `POST /ehr` receives it. The id
+/// is a `GENERIC_ID` under the namespace as its scheme, so a business
+/// identifier is as admissible as a UUID (BASE `GENERIC_ID`).
 pub(crate) fn status_naming(
     id: &str,
     namespace: &str,
@@ -371,7 +373,7 @@ pub(crate) fn status_naming(
                 "_type": "PARTY_REF",
                 "namespace": namespace,
                 "type": class,
-                "id": { "_type": "HIER_OBJECT_ID", "value": id }
+                "id": { "_type": "GENERIC_ID", "value": id, "scheme": namespace }
             }
         },
         "is_queryable": true,

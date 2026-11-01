@@ -18,17 +18,14 @@ pub struct SubjectRef {
 }
 
 impl SubjectRef {
-    /// The `OBJECT_REF.type` a subject reference carries when none was
-    /// recorded: the common MPI case, a patient (our own default).
-    pub const DEFAULT_TYPE: &str = "PERSON";
-
-    /// A subject reference of the default `PERSON` type.
+    /// A subject reference of the `PERSON` type, the common MPI case, a
+    /// patient (our own default).
     #[must_use]
     pub fn person(id: impl Into<String>, namespace: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             namespace: namespace.into(),
-            r#type: Self::DEFAULT_TYPE.to_owned(),
+            r#type: "PERSON".to_owned(),
         }
     }
 }
