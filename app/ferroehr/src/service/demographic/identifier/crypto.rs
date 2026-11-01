@@ -65,8 +65,8 @@ const LOOKUP_KEY_LABEL: &str = "ferroehr:national-identifier:lookup:v2";
 
 /// The pseudonymisation domain a subkey belongs to.
 ///
-/// The three domains are the ones the storage layer separates: the clinical
-/// record, the identities of its subjects, and the map between them. Binding
+/// The two domains are the ones the storage layer separates: the clinical
+/// record and the identities of its subjects. Binding
 /// the domain into the derivation makes a subkey usable in exactly one of them,
 /// so a key that escapes with one domain's backup opens nothing in another.
 ///
