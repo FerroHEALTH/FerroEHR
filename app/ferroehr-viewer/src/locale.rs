@@ -45,17 +45,11 @@ pub trait Catalogued: Copy {
 /// Every language the viewer's catalogs ship, English first.
 #[must_use]
 pub fn shipped() -> Vec<Locale> {
-    let mut tags: Vec<String> = catalog().locales().map(ToString::to_string).collect();
+    let mut tags: Vec<String> = Msg::catalog().locales().map(ToString::to_string).collect();
     tags.sort_by_key(|tag| (tag != "en", tag.clone()));
     tags.iter()
         .filter_map(|tag| Locale::parse(tag).ok())
         .collect()
-}
-
-/// The shell's catalogs, every language the viewer ships.
-#[must_use]
-pub fn catalog() -> &'static (dyn Loader + Send + Sync) {
-    Msg::catalog()
 }
 
 /// Declares one catalog's messages, the type `$name`, each variant naming
@@ -618,7 +612,7 @@ pub fn negotiated(state: &crate::state::AppState, headers: &http::HeaderMap) -> 
         .and_then(|language| language.tag().map(str::to_owned))
         .filter(|tag| shipped().iter().any(|locale| locale.tag() == *tag))
         .and_then(|tag| Locale::parse(&tag).ok());
-    chosen.unwrap_or_else(|| Locale::negotiate_with(header, catalog(), configured))
+    chosen.unwrap_or_else(|| Locale::negotiate_with(header, Msg::catalog(), configured))
 }
 
 #[cfg(test)]
@@ -637,7 +631,7 @@ mod tests {
     use super::records::RecordsMsg;
     use super::server::ServerMsg;
     use super::signin::SignInMsg;
-    use super::{Catalogued, Msg, catalog, tr_in};
+    use super::{Catalogued, Msg, tr_in};
 
     fluent_templates::static_loader! {
         static THROWAWAY = {
@@ -745,12 +739,15 @@ mod tests {
     #[test]
     fn a_throwaway_catalog_changes_the_words_with_no_code_change() {
         let english = Locale::english();
-        assert_eq!("No such screen", tr_in(catalog(), &english, Msg::Title404));
+        assert_eq!(
+            "No such screen",
+            tr_in(Msg::catalog(), &english, Msg::Title404)
+        );
         let throwaway = Locale::parse("qaa").expect("a private-use language");
         assert_eq!("Qot qound", tr_in(&*THROWAWAY, &throwaway, Msg::Title404));
         assert_eq!(
             "Page not found",
-            tr_in(catalog(), &throwaway, Msg::Heading404),
+            tr_in(Msg::catalog(), &throwaway, Msg::Heading404),
             "the shipped catalogs fall back to English"
         );
     }

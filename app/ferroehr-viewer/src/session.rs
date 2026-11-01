@@ -353,7 +353,7 @@ pub fn outside_request() -> ViewerError {
 /// # Errors
 /// [`ViewerError::Internal`] outside a request or on a sealing failure.
 pub fn commit(session: &CookieSession) -> Result<(), ViewerError> {
-    let state = app_state()?;
+    let state = crate::scope::state()?;
     let header = set_cookie(
         &state.session_keys,
         session,
@@ -380,11 +380,6 @@ pub fn require_session() -> Result<ViewerSession, ViewerError> {
         crate::session_client::note_if_over(error);
     }
     session
-}
-
-/// The `AppState` of the request being drawn.
-fn app_state() -> Result<crate::state::AppState, ViewerError> {
-    crate::scope::state()
 }
 
 #[cfg(test)]

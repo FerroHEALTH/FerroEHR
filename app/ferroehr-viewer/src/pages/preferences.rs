@@ -142,7 +142,7 @@ pub fn page() -> Drawn {
                 languages: crate::locale::shipped(),
                 browser: Locale::negotiate_with(
                     &accepted,
-                    crate::locale::catalog(),
+                    <crate::locale::Msg as crate::locale::Catalogued>::catalog(),
                     Locale::english(),
                 ),
                 week_from_language: Weekday::Monday,

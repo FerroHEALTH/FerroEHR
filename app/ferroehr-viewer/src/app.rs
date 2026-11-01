@@ -24,17 +24,11 @@ use crate::markup::{h, t};
 /// The path the FerroEHR mark is served at as the tab icon.
 pub const ICON_PATH: &str = "/favicon.svg";
 
-/// The product name as a reader sees it.
-#[must_use]
-pub fn product() -> String {
-    tr(Msg::ProductName)
-}
-
 /// The document title of a page whose bare title is `section`: the section,
 /// then the product name, once.
 #[must_use]
 pub fn viewer_title(mut section: String) -> String {
-    let product = product();
+    let product = tr(Msg::ProductName);
     if section.is_empty() || section == product {
         return product;
     }

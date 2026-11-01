@@ -32,16 +32,6 @@ use ferrohealth_smart::openehr::smart_scopes::{
 /// diagnostics (the one sentence a mistyped scope needs).
 pub const RESOURCE_SCOPE_FORM: &str = "<compartment>/<resource>.<permission>";
 
-/// The standing capability-vs-authorization caveat the drawer states (master08
-/// §Scopes.
-///
-/// The Platform validates every requested scope against the client
-/// registration, the access-control policies and the user's own permissions).
-#[must_use]
-pub fn capability_note_text() -> String {
-    tr(ConsoleMsg::ScopesNarrowAccessTheyNeverGrant)
-}
-
 /// One scope string and what the grammar made of it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Grant {

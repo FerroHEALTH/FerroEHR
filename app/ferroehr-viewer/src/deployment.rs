@@ -84,14 +84,6 @@ pub struct SandboxNotice {
 }
 
 impl SandboxNotice {
-    /// The rule this deployment is under, stated as the rule rather than as a
-    /// category: it has not made the production separations, and it must not
-    /// hold real patient data.
-    #[must_use]
-    pub fn rule() -> String {
-        tr(ServerMsg::SandboxDeploymentDeploymentHasNotMade)
-    }
-
     /// The gap list as one sentence, or an empty string when the server
     /// reported none.
     #[must_use]
@@ -134,7 +126,7 @@ pub fn gap_text(code: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{SandboxNotice, StatusDocument, gap_text};
+    use super::{ServerMsg, StatusDocument, gap_text};
     use crate::served_vocabulary::DEPLOYMENT_GAPS;
 
     fn status(profile: &str, gaps: &[&str]) -> StatusDocument {
@@ -168,7 +160,10 @@ mod tests {
             "Open: the clinical, demographic and linkage domains share one database \
              credential; access is not recorded to a durable audit trail."
         );
-        assert!(SandboxNotice::rule().contains("must not hold real patient data"));
+        assert!(
+            crate::locale::tr(ServerMsg::SandboxDeploymentDeploymentHasNotMade)
+                .contains("must not hold real patient data")
+        );
 
         let production = status("production", &[]);
         assert_eq!(production.profile(), Some("production"));
