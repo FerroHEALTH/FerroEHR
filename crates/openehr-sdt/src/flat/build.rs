@@ -1660,9 +1660,10 @@ fn new_struct(
         }
     }
     match rm_type {
+        // No `events` until an event lands: ITS-JSON `HISTORY.json` gives the
+        // array `minItems: 1`.
         "HISTORY" => {
             o.insert("origin".into(), dv_date_time(DEFAULT_TIME));
-            o.insert("events".into(), json!([]));
         }
         "POINT_EVENT" | "EVENT" | "INTERVAL_EVENT" => {
             o.insert("time".into(), dv_date_time(DEFAULT_TIME));
@@ -1905,7 +1906,6 @@ fn structural_container(rm_type: &str, node_id: &str, name: &str) -> Value {
     match rm_type {
         "HISTORY" => {
             o.insert("origin".into(), dv_date_time(DEFAULT_TIME));
-            o.insert("events".into(), json!([]));
         }
         _ => {
             o.insert("items".into(), json!([]));
@@ -2308,7 +2308,6 @@ fn fill_structural_mandatory(obj: &mut Map<String, Value>, rm_type: &str) {
         "HISTORY" => {
             obj.entry("origin".to_owned())
                 .or_insert_with(|| dv_date_time(DEFAULT_TIME));
-            obj.entry("events".to_owned()).or_insert_with(|| json!([]));
         }
         "POINT_EVENT" | "EVENT" => {
             obj.entry("time".to_owned())
@@ -2375,6 +2374,20 @@ fn fill_structural_mandatory(obj: &mut Map<String, Value>, rm_type: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// ITS-JSON `Data_structures/HISTORY.json` gives `events` `minItems: 1`,
+    /// so neither a synthesised nor a completed HISTORY carries `events: []`.
+    #[test]
+    fn a_history_without_an_event_carries_no_events_member() {
+        let built = structural_container("HISTORY", "at0001", "History");
+        assert!(built.get("events").is_none(), "{built}");
+        let mut obj = Map::new();
+        fill_structural_mandatory(&mut obj, "HISTORY");
+        assert!(
+            obj.contains_key("origin") && !obj.contains_key("events"),
+            "{obj:?}"
+        );
+    }
 
     /// master05 §OBSERVATION `/history_origin`: an origin the input does not
     /// set is "the time of the earliest event", compared as instants, not as

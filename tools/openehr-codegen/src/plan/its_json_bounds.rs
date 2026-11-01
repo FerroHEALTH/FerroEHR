@@ -22,6 +22,9 @@ pub(crate) struct ItsJsonMinItems {
     pub owner: &'static str,
     /// The container attribute.
     pub field: &'static str,
+    /// The ITS-JSON definitions that state the bound (the owner itself, or its
+    /// concrete descendants where ITS-JSON defines no abstract class).
+    pub its_json_classes: &'static [&'static str],
     /// The ITS-JSON schema statement the refusal realizes.
     pub citation: &'static str,
 }
@@ -32,12 +35,33 @@ pub(crate) struct ItsJsonMinItems {
 /// An attribute whose BMM already carries a present-implies-non-empty
 /// invariant needs no entry: it emits `Option<NonEmptyVec<T>>`
 /// (`analyze::nonempty_optional_lists`).
-pub(crate) const ITS_JSON_MIN_ITEMS: &[ItsJsonMinItems] = &[ItsJsonMinItems {
-    owner: "FOLDER",
-    field: "folders",
-    citation: "docs/specs/openehr/ITS-JSON/components/RM/Release-1.1.0/Common/FOLDER.json \
-               (and Release-1.0.3, Release-1.0.4): `folders` is an array with `minItems: 1`",
-}];
+pub(crate) const ITS_JSON_MIN_ITEMS: &[ItsJsonMinItems] = &[
+    ItsJsonMinItems {
+        owner: "FOLDER",
+        field: "folders",
+        its_json_classes: &["FOLDER"],
+        citation: "docs/specs/openehr/ITS-JSON/components/RM/Release-1.1.0/Common/FOLDER.json \
+                   (and Release-1.0.3, Release-1.0.4): `folders` is an array with `minItems: 1`",
+    },
+    ItsJsonMinItems {
+        owner: "HISTORY",
+        field: "events",
+        its_json_classes: &["HISTORY"],
+        citation: "docs/specs/openehr/ITS-JSON/components/RM/Release-1.1.0/Data_structures/\
+                   HISTORY.json (and Release-1.0.3, Release-1.0.4): `events` is an array with \
+                   `minItems: 1`; the RM invariant `Events_valid` \
+                   (org.openehr.rm.data_structures.history.adoc) admits an empty list beside a \
+                   `summary`, which the schema does not",
+    },
+    ItsJsonMinItems {
+        owner: "ACTOR",
+        field: "languages",
+        its_json_classes: &["AGENT", "GROUP", "ORGANISATION", "PERSON"],
+        citation: "docs/specs/openehr/ITS-JSON/components/RM/Release-1.1.0/Demographic/\
+                   {AGENT,GROUP,ORGANISATION,PERSON}.json (and Release-1.0.3, Release-1.0.4): \
+                   `languages` is an array with `minItems: 1`",
+    },
+];
 
 /// Whether the canonical-JSON reader refuses an empty `(owner, field)` array.
 #[must_use]

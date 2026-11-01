@@ -1262,3 +1262,33 @@ async fn demographic_contribution_get_carries_etag_and_last_modified() {
     );
     assert!(location(&h).is_none(), "no Location on a GET");
 }
+
+/// An ACTOR carrying `languages: []` is a body the ITS-JSON schema refuses
+/// (`ITS-JSON/components/RM/Release-1.1.0/Demographic/{AGENT,GROUP,
+/// ORGANISATION,PERSON}.json`: `languages` has `minItems: 1`; ITS-REST
+/// `overview/Resources.md` §JSON Format), so the create is `400` for every
+/// ACTOR kind, while a populated list commits.
+#[tokio::test]
+async fn an_actor_with_an_empty_languages_array_is_400() {
+    let (_pg, app) = app().await;
+    for rm_type in ["AGENT", "GROUP", "ORGANISATION", "PERSON"] {
+        let seg = rm_type.to_lowercase();
+        let mut body = actor_body(rm_type);
+        body["languages"] = json!([]);
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("{BASE}/demographic/{seg}"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap();
+        let (status, _h, text) = send(&app, req).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{rm_type}: {text}");
+        assert!(
+            text.contains("languages"),
+            "{rm_type}: names the member: {text}"
+        );
+
+        body["languages"] = json!([{ "_type": "DV_TEXT", "value": "en" }]);
+        create(&app, &seg, &body).await;
+    }
+}
