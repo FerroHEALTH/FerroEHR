@@ -109,10 +109,19 @@ the databases and writes nothing to them.
 | `target` | the CPU architecture and operating system the binary was built for, and whether it is a debug build |
 | `features` | the optional integrations compiled in (`events`, `fhir`, `multimedia`) |
 | `openehr_crates` | each `openehr-*` crate the binary links, with its version |
+| `openehr_crates_origin` | `published` in a release build, whose `openehr_crates` versions are the ones that release published to crates.io; `source_tree` in any other build, a pre-release included, whose versions are the source tree's manifests |
 | `licence` | the licence summary `GET /management/status` serves (state, use, licensee, last valid day, what the configured token contributed); never the token |
 | `deployment` | the deployment profile, the open gaps and the accepted ones, measured over the databases, or from the configuration alone when they do not answer |
 | `schema` | for each database, the highest migration version applied and the highest this build embeds, per schema |
 | `configuration` | the effective configuration as `config check` prints it |
+
+The crate versions on `main` are a floor below the line on crates.io: the
+release that publishes the crates picks the version and writes it into its
+checkout before it builds the server, so only a release build can name the
+published version. A pre-release publishes no crates, and a build from source
+names the version its manifests hold, which may be an older published version
+than the code it links. Read `openehr_crates_origin` before you look a version
+up on crates.io.
 
 Nothing in it identifies a person: it reads no clinical, demographic or audit
 table. Every secret in the configuration shows `***`, every URL shows `***` in

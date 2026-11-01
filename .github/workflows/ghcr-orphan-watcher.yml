@@ -111,7 +111,7 @@ jobs:
       # lists and the newest one would be the hardest to find.
       - name: File or update the tracking issue
         if: steps.probe.outputs.orphans != '0'
-        uses: ./.github/actions/file-watcher-issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           title: "chore(images): unreachable GHCR manifests are accumulating"
           body-file: body.md

@@ -96,7 +96,7 @@ jobs:
     # L3 construction (#2140): this caller has no steps at all. `release-tag`
     # is passed only to recover an existing tag's chart leg, and the tag's tree
     # is then what is packaged.
-    uses: ./.github/workflows/build-chart.yml
+    uses: ./.github/workflows/build-chart.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       publish: ${{ inputs.publish }}
       release-tag: ${{ inputs.release-tag }}

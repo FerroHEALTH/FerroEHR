@@ -346,9 +346,9 @@ fn element_values(composition: &Value) -> Vec<Value> {
 /// recorded by their complete identifier, is committed and read back in FLAT
 /// and STRUCTURED (ITS-REST `simplified_formats/master04-basic_concepts.adoc`
 /// §Format variants) exactly as the same content under the interface ids the
-/// Web Template names them by. The `DV_COUNT` one and every `DV_INTERVAL` one
-/// whose template constrains the interval's parts, built back from either
-/// form, hold their ELEMENT unchanged (ITS-REST
+/// Web Template names them by. The `DV_COUNT` one and every `DV_INTERVAL` one,
+/// whether or not its template constrains the interval's parts, built back
+/// from either form, hold their ELEMENT unchanged (ITS-REST
 /// `simplified_formats/master05-rm_mapping.adoc` §`DV_INTERVAL`).
 #[tokio::test]
 async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost() {
@@ -400,8 +400,7 @@ async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost
             case.workflow
         );
         if case.workflow == "adl2-dv_count-validate_range-accepted"
-            || (case.workflow.starts_with("adl2-dv_interval_")
-                && !case.workflow.contains("-validate_open-"))
+            || case.workflow.starts_with("adl2-dv_interval_")
         {
             let now = "2026-01-01T10:00:00Z";
             let want = element_values(&stored);
@@ -427,7 +426,7 @@ async fn an_adl2_composition_reads_back_in_flat_and_structured_with_nothing_lost
         }
     }
     assert_eq!(
-        read_back, 9,
-        "the DV_COUNT case and the 8 constrained interval cases were read back"
+        read_back, 18,
+        "the DV_COUNT case and the 17 interval cases were read back"
     );
 }

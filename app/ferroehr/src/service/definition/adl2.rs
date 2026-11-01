@@ -19,7 +19,6 @@
               ADL/OPT wire envelopes"
 )]
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use openehr_adl::artefact::ArchetypeRepository;
@@ -28,7 +27,6 @@ use openehr_adl::hrid::{raw_id_concept, raw_id_lookup_key, raw_id_version};
 use openehr_adl::meta::{ArtefactSummary, summarize};
 use openehr_adl::opt::{OptError, create_opt, unresolved_constituents};
 use openehr_adl::parse::Dialect;
-use openehr_adl::validate::bindings::{TerminologyResolver, external_term_bindings};
 use openehr_adl::validate::catalogue::Severity;
 use openehr_adl::validate::rm::{ProductionRmModel, production_model_governs};
 use openehr_adl::validate::{validate_source, validate_source_integrity};
@@ -40,18 +38,17 @@ use openehr_sdt::flat::example::{DetailLevel, ExampleType, apply_output_uid};
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 
 use crate::db::acquire::acquire;
-use crate::service::definition::binding_uri::code_system_and_code;
-use crate::service::terminology::fhir::TermExistence;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use serde_json::Value;
 use sqlx::Connection as _;
-use sqlx::Row;
+use sqlx::{PgConnection, Row};
 
 use crate::service::FerroEhrService;
 use crate::service::error::{ErrorChain, ServiceError, Violation};
 use crate::service::list::Page;
 use crate::service::status::{ServiceStatus, StatusError};
 
+use super::adl2_dependents::adl2_write_lock;
 use super::adl2_engine::{missing_constituents, not_compiled, on_engine_stack};
 use super::adl2_resolution::{parse_stored, repository_for};
 use super::version_selector::{check_version_selector, cmp_version, version_prefix_matches};
@@ -65,36 +62,6 @@ use super::{compile_pattern, page_bounds, paginate};
 /// entry keyed by the plain identity-canonical form. No openEHR spec governs the
 /// cache — our own design/extension.
 const ADL2_CACHE_NS: &str = "adl2\u{1f}";
-
-/// A memoised [`TerminologyResolver`] for ADL2 VETDF validation.
-///
-/// `openehr-adl` is a network-free spec engine whose VETDF check consults a
-/// synchronous [`TerminologyResolver`] seam, while a terminology lookup is
-/// asynchronous. The service therefore pre-resolves every external term binding
-/// of the uploaded archetype against its terminology service
-/// ([`FerroEhrService::term_existence`], on the system and code the binding
-/// URI names) and hands the validator this memoised map.
-///
-/// `code_exists` returns `Some(true)`/`Some(false)` for a binding the service
-/// could answer, and `None` for one it could not (no external provider
-/// configured, a code system the server does not serve, or a transport
-/// fault) — matching the
-/// VETDF "subject to tool accessibility; … no verification was possible"
-/// carve-out (AM ADL2 `master03-archetype_package.adoc` §Validity Rules).
-#[derive(Debug, Default)]
-struct AdlTerminologyResolver {
-    /// `(terminology_id, external target)` → the target's existence, for every
-    /// binding the terminology service could answer.
-    resolved: HashMap<(String, String), bool>,
-}
-
-impl TerminologyResolver for AdlTerminologyResolver {
-    fn code_exists(&self, terminology_id: &str, code: &str) -> Option<bool> {
-        self.resolved
-            .get(&(terminology_id.to_owned(), code.to_owned()))
-            .copied()
-    }
-}
 
 // ── the native ADL2 definition calls ────────────────────────────────────────
 
@@ -147,8 +114,7 @@ impl FerroEhrService {
     ///   validation phase → `invalid_artefact` (`422`, via [`ServiceError`]).
     /// - A database failure (`exception` → `500`).
     pub async fn upload_artefact(&self, adl2: String) -> Result<(), StatusError> {
-        let summary = self.adl2_validate(&adl2).await?;
-        self.adl2_persist(&summary, &adl2, true).await?;
+        self.adl2_store(&adl2, true).await?;
         Ok(())
     }
 
@@ -291,17 +257,25 @@ impl FerroEhrService {
     /// only for an ADL2 upload or an OPT projection, so a memoized copy would
     /// cost invalidation on every ADL2 write for no clinical-path gain. No
     /// openEHR spec governs this — our own design/extension.
-    async fn adl2_repository(&self, root: &Archetype) -> Result<ArchetypeRepository, ServiceError> {
+    async fn adl2_repository(
+        &self,
+        conn: &mut PgConnection,
+        root: &Archetype,
+    ) -> Result<ArchetypeRepository, ServiceError> {
         let rows: Vec<(String, String)> =
             sqlx::query_as("SELECT hrid, adl FROM adl2_artefact ORDER BY hrid")
-                .fetch_all(&mut *acquire(&self.pool).await?)
+                .fetch_all(conn)
                 .await?;
         let root = root.clone();
         on_engine_stack(move || repository_for(&root, &parse_stored(&rows))).await
     }
 
-    /// Validate one uploaded ADL2 source with the `openehr-adl` engine and return
-    /// its identity [`ArtefactSummary`].
+    /// Validate one uploaded ADL2 source with the `openehr-adl` engine and store
+    /// it ([`Self::adl2_persist`]), returning its `ARCHETYPE_HRID`.
+    ///
+    /// The repository read, the validation and the write share one transaction
+    /// under [`adl2_write_lock`], which the delete takes too, so of an upload
+    /// and a delete that race, the second gets the refusal it gets alone.
     ///
     /// Invalidity splits on the syntax/semantics line: an unparseable source
     /// (S-codes) is syntactically invalid content, the released `400` branch
@@ -314,12 +288,11 @@ impl FerroEhrService {
     /// (`AOM2/master04.3` §Reference Model Type Matching). External term
     /// bindings are verified through the terminology-service resolver (VETDF,
     /// `master03` §Validity Rules; see [`Self::adl2_terminology_resolver`]).
-    async fn adl2_validate(&self, source: &str) -> Result<ArtefactSummary, ServiceError> {
+    async fn adl2_store(&self, source: &str, replace: bool) -> Result<String, ServiceError> {
         let owned = source.to_owned();
         let archetype = on_engine_stack(move || parse_artefact(&owned, Dialect::Adl2))
             .await?
             .map_err(|errs| syntax_bad_request(&errs))?;
-        let repo = self.adl2_repository(&archetype).await?;
         let governed = production_model_governs(&archetype);
         // VETDF: external term bindings are verified against the terminology
         // service, pre-resolved here into the synchronous validator seam
@@ -329,6 +302,10 @@ impl FerroEhrService {
         } else {
             None
         };
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
+        adl2_write_lock(&mut tx).await?;
+        let repo = self.adl2_repository(&mut tx, &archetype).await?;
         let owned = source.to_owned();
         let issues = on_engine_stack(move || match resolver {
             Some(resolver) => validate_source(&owned, Some(&repo), &ProductionRmModel, &resolver),
@@ -355,60 +332,18 @@ impl FerroEhrService {
         if !errors.is_empty() {
             return Err(ServiceError::ValidationFailed(errors));
         }
-        Ok(summarize(&archetype))
+        let summary = summarize(&archetype);
+        Self::adl2_persist(&mut tx, &summary, source, replace).await?;
+        tx.commit().await?;
+        self.invalidate_archetype_lineage().await;
+        Ok(summary.archetype_id)
     }
 
-    /// Pre-resolve every external term binding of `archetype` against the
-    /// terminology service, building the [`AdlTerminologyResolver`] the VETDF
-    /// check consults (see its docs — the seam is synchronous, a lookup is not).
-    ///
-    /// A binding target is a URI in the IHTSDO model (`…/id/<code>`), so it is
-    /// taken apart into the FHIR `(system, code)` the server is asked about
-    /// ([`code_system_and_code`]); a target of another shape is asked as
-    /// written under the binding's own terminology id. Only a definite answer
-    /// lands in the resolver: exists, or absent from a code system the server
-    /// serves. A binding the service cannot verify — no configured external
-    /// provider, a code system the server does not serve, a transport fault —
-    /// is left unresolved and logged, so VETDF is not raised for it
-    /// (`master03` §Validity Rules: "codes for inaccessible terminologies
-    /// should be flagged with a warning indicating that no verification was
-    /// possible"). Only genuinely external terminologies are consulted; the
-    /// archetype-internal `local`/`openehr` ids are excluded by
-    /// [`external_term_bindings`] (their keys are covered by VTTBK/VTCBK).
-    async fn adl2_terminology_resolver(&self, archetype: &Archetype) -> AdlTerminologyResolver {
-        let mut resolved = HashMap::new();
-        for binding in external_term_bindings(archetype) {
-            let (system, code) = code_system_and_code(&binding.target)
-                .unwrap_or_else(|| (binding.terminology_id.clone(), binding.target.clone()));
-            match self.term_existence(&system, &code).await {
-                Ok(TermExistence::Exists) => {
-                    resolved.insert((binding.terminology_id, binding.target), true);
-                }
-                Ok(TermExistence::Absent) => {
-                    resolved.insert((binding.terminology_id, binding.target), false);
-                }
-                Ok(TermExistence::Unverifiable(reason)) => tracing::warn!(
-                    terminology = %binding.terminology_id,
-                    target = %binding.target,
-                    system = %system,
-                    reason,
-                    "VETDF: no verification was possible for this term binding; accepted unverified"
-                ),
-                Err(e) => tracing::warn!(
-                    terminology = %binding.terminology_id,
-                    target = %binding.target,
-                    system = %system,
-                    error = %e,
-                    "VETDF: the terminology server could not be asked; accepted unverified"
-                ),
-            }
-        }
-        AdlTerminologyResolver { resolved }
-    }
-
-    /// Store a validated ADL2 artefact. With `replace`, any case-variant of the
-    /// same HRID is removed first (the native `upload_artefact` replaces); the
-    /// insert is then verbatim (BASE master05 §Composite Identifiers and Case).
+    /// Store a validated ADL2 artefact in `tx`. With `replace`, any case-variant
+    /// of the same HRID is removed first (the native `upload_artefact`
+    /// replaces); without it, a stored one is a `409` (the REST contract
+    /// declares `409_template_already_exists.yaml`). The insert is verbatim
+    /// (BASE master05 §Composite Identifiers and Case).
     ///
     /// The artefact's declared `specialize` parent travels with it into
     /// `parent_hrid`: it is the archetype-lineage edge AQL resolves a parent
@@ -417,19 +352,21 @@ impl FerroEhrService {
     /// from the operational form of the archetype"), and the engine has already
     /// extracted it into the [`ArtefactSummary`] during validation.
     async fn adl2_persist(
-        &self,
+        tx: &mut PgConnection,
         summary: &ArtefactSummary,
         source: &str,
         replace: bool,
     ) -> Result<(), ServiceError> {
         let kind = store_kind(summary.kind);
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        if replace {
-            sqlx::query("DELETE FROM adl2_artefact WHERE lower(hrid) = lower($1)")
-                .bind(&summary.archetype_id)
-                .execute(&mut *tx)
-                .await?;
+        let removed = sqlx::query("DELETE FROM adl2_artefact WHERE lower(hrid) = lower($1)")
+            .bind(&summary.archetype_id)
+            .execute(&mut *tx)
+            .await?;
+        if removed.rows_affected() > 0 && !replace {
+            return Err(ServiceError::conflict(format!(
+                "an ADL2 template with id '{}' already exists",
+                summary.archetype_id
+            )));
         }
         sqlx::query(
             "INSERT INTO adl2_artefact (hrid, kind, adl, parent_hrid) VALUES ($1, $2, $3, $4)",
@@ -463,8 +400,6 @@ impl FerroEhrService {
             .execute(&mut *tx)
             .await?;
         }
-        tx.commit().await?;
-        self.invalidate_archetype_lineage().await;
         Ok(())
     }
 
@@ -481,15 +416,7 @@ impl FerroEhrService {
     ///   (`409`).
     /// - A database failure (`500`).
     pub(super) async fn adl2_wire_upload(&self, source: &str) -> Result<String, ServiceError> {
-        let summary = self.adl2_validate(source).await?;
-        if self.adl2_exists(&summary.archetype_id).await? {
-            return Err(ServiceError::conflict(format!(
-                "an ADL2 template with id '{}' already exists",
-                summary.archetype_id
-            )));
-        }
-        self.adl2_persist(&summary, source, false).await?;
-        Ok(summary.archetype_id)
+        self.adl2_store(source, false).await
     }
 
     /// Resolve a wire `template_id` (`+` optional `version`) to the exact stored
@@ -755,7 +682,9 @@ impl FerroEhrService {
         {
             return Ok(opt.as_ref().clone());
         }
-        let repo = self.adl2_repository(&archetype).await?;
+        let repo = self
+            .adl2_repository(&mut *acquire(&self.pool).await?, &archetype)
+            .await?;
         on_engine_stack(move || {
             create_opt(&archetype, &repo).map_err(|e| match e {
                 OptError::UnresolvedReference(_) => {
@@ -840,6 +769,7 @@ impl FerroEhrService {
         // remains the race-free backstop under a concurrent commit.
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
+        adl2_write_lock(&mut tx).await?;
         let stored: Option<(String, String)> =
             sqlx::query_as("SELECT hrid, kind FROM adl2_artefact WHERE lower(hrid) = lower($1)")
                 .bind(an_id)
@@ -980,7 +910,7 @@ fn join_syntax_errors(errs: &[openehr_adl::error::SyntaxError]) -> String {
 /// (`docs/specs/openehr/ITS-REST/specifications/responses/400.yaml`: "the
 /// request could not be parsed or is invalid (e.g. … syntactically invalid …
 /// content)"). AOM2 validation-phase failures (V-codes) on a *parsed* source
-/// are the semantic `422` branch instead (see [`FerroEhrService::adl2_validate`]).
+/// are the semantic `422` branch instead (see [`FerroEhrService::adl2_store`]).
 fn syntax_bad_request(errs: &[openehr_adl::error::SyntaxError]) -> ServiceError {
     ServiceError::precondition(format!(
         "syntactically invalid ADL2 content: {}",

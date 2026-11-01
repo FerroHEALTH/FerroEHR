@@ -229,6 +229,9 @@ pub struct WebTemplateNode {
     /// "Class not allowed"). `#[serde(skip)]` — validation-only.
     #[serde(skip)]
     pub slots: Vec<WebTemplateSlot>,
+    /// Built for an RM attribute the template leaves implicit. Example-only.
+    #[serde(skip)]
+    pub implicit: bool,
 
     /// `C_INTEGER.list`/`C_REAL.list` constraints on a leaf's numeric datum
     /// (`magnitude`, `value`, …), keyed by RM attribute name — the `inputs`
@@ -401,6 +404,7 @@ impl WebTemplateNode {
             existence: Vec::new(),
             card_all: Vec::new(),
             slots: Vec::new(),
+            implicit: false,
             numeric_lists: Vec::new(),
             numeric_ranges: Vec::new(),
             duration_range: None,

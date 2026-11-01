@@ -108,7 +108,7 @@ jobs:
 
       - name: File or update the tracking issue
         if: steps.check.outputs.stale == '1'
-        uses: ./.github/actions/file-watcher-issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           title: "chore(images): the pinned postgres base is stale — newer upstream bytes exist"
           body-file: body.md
@@ -191,7 +191,7 @@ jobs:
 
       - name: File or update the tracking issue
         if: steps.check.outputs.stale == '1'
-        uses: ./.github/actions/file-watcher-issue
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           title: "chore(images): the pinned Keycloak is stale — a newer upstream release exists"
           body-file: body.md
