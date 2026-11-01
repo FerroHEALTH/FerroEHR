@@ -293,6 +293,50 @@ VernumBOEK's rule of the same name).
   `main`; your pull request leaves the list alone. A file over the budget is
   split by concern.
 
+## No function only forwards to another
+
+No specification governs this: our own design (#4663, owner ruling
+2026-11-01).
+
+- **A function exists because it decides something.** It validates,
+  branches, converts, owns a transaction, or names a concept its callers
+  need. A function whose body is a single call, with its arguments passed
+  through or merely borrowed and at most `.await`, `?`, `Ok(..)`,
+  `Some(..)`, `.into()` or an error-only `.map_err` around it, is a
+  forwarder. It adds a name and a hop and decides nothing, so its callers
+  call the target directly, and internal and crate APIs may break to get
+  there. A forwarder that fixes an argument
+  (`self.adl2_list_by_kind("archetype", page)`) is still one: its callers
+  pass the argument.
+- **Three kinds are not forwarders.**
+  - The methods of a trait implementation (`Display`, `From`, `Deref` and
+    the rest), which the trait requires. A binary's `main`, which the
+    language requires, and a function an openEHR specification defines,
+    whose doc comment cites its `.adoc` page, stand with them.
+  - A `pub` function in a crate's root API that re-exposes a private
+    module's function under the crate's own name, kept only where the
+    baseline records why.
+  - A constructor (`new`, `with_*`, or an associated function that returns
+    `Self`) that fixes an argument.
+- **The ratchet measures it.** `tools/forwarders` parses every `.rs` file
+  under `app/*/src/`, `crates/*/src/` and `tools/*/src/` with `syn`, leaving
+  out a file that opens with `// @generated`, anything under `#[cfg(test)]`,
+  and `tests/`. It reports a free function or inherent method whose body is
+  one call, to a function or to a method of `self`, whose arguments are
+  parameters, literals and constants, or references, borrows and clones of
+  those. A call that reads a field of `self`, or calls a method of a field
+  or a parameter, reaches what the caller cannot, so an accessor is never
+  reported; nor are the `#[cfg]` arms of one function.
+  `scripts/checks/forwarders.sh` runs it in the `forwarders` CI job and per
+  edit through `.claude/hooks/rust_fmt_clippy.sh`, and holds the total to
+  `scripts/checks/forwarders.count`. `scripts/checks/forwarders-baseline.txt`
+  keys each counted forwarder by its path, owner and target call, with no
+  line number, and a key may carry a tab and the reason the forwarder stays.
+  A rise fails and names each new forwarder, its target and its place. A
+  fall passes with a note, and the `Ratchet tighten` workflow lowers the
+  count on `main`, as it does for the duplication ratchet. `--update` never
+  raises the count and keeps each reason while its key stands.
+
 ## No Python, anywhere (owner hard rule, 2026-08-10)
 
 The tooling languages are **bash and Rust**. Python is banned across the
