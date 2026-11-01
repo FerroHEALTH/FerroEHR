@@ -84,12 +84,6 @@ impl Filters {
     }
 }
 
-/// The page of the composition `uid` of the EHR `ehr_id`.
-#[must_use]
-pub fn composition_href(ehr_id: &str, uid: &str) -> String {
-    crate::pages::composition::composition_href(ehr_id, uid)
-}
-
 /// The filter toolbar: the composer as the find field, the template and the
 /// start-time range beside it.
 fn toolbar(ehr_id: &str, filters: &Filters) -> Html {
@@ -256,7 +250,10 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
         .into_iter()
         .map(|row| {
             let version = row.uid.rsplit("::").next().unwrap_or_default().to_owned();
-            let href = composition_href(ehr_id, &crate::uid::container_uid_of(&row.uid));
+            let href = crate::pages::composition::composition_href(
+                ehr_id,
+                &crate::uid::container_uid_of(&row.uid),
+            );
             let sub = h(format!(
                 r#"<span class="fui-row-sub">{}</span>"#,
                 t(&row.template)

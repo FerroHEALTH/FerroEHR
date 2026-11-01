@@ -361,12 +361,6 @@ pub async fn find_ehr_by_subject(
     parse_ehr_id(&response.body).map(Some)
 }
 
-/// The detail-route href for one EHR id ([`crate::pages::ehr::ehr_href`]).
-#[must_use]
-pub(crate) fn ehr_detail_href(ehr_id: &str) -> String {
-    crate::pages::ehr::ehr_href(ehr_id)
-}
-
 /// Render one raw AQL cell value as display text: strings verbatim, JSON null
 /// as empty, anything else as compact JSON.
 pub(crate) fn cell_text(value: &Value) -> String {
