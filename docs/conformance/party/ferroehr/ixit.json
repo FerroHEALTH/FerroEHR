@@ -18,6 +18,11 @@
     "storage_class": "nvme",
     "topology": "single-node compose (8-CPU/8GB container VM) on Apple M2: one FerroEHR deployment from docker/sut-ferroehr.yml with docker/sut-smart.yml and docker/sut-terminology.yml over it, FerroTERM 0.1.6 serving the shaped seed beside it (compose --profile terminology, fail-open), Basic login"
   },
+  "containers": {
+    "sut": "ferroehr-cnf-ferroehr-1",
+    "db": "ferroehr-cnf-ferroehr-postgres-1",
+    "database": "ferroehr"
+  },
   "scoped_tokens": {
     "mint": {
       "issuer": "https://as.cnf.test",

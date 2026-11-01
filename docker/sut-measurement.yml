@@ -1,10 +1,9 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# The MEASUREMENT posture overlay — composed on top of docker/sut-ferroehr.yml
-# only for the measured-performance (`veredictum perf`) and step-load
-# (`veredictum stress`) lanes, which scripts/conformance.sh selects when
-# CONF_PERF_CLASS or CONF_STRESS is set.
+# The MEASUREMENT posture overlay, composed on top of docker/sut-ferroehr.yml
+# only for the measured lane (`veredictum perf` and `perf-compare`), which
+# scripts/conformance.sh selects with its `perf` and `perf-aa` stages.
 #
 # Why an overlay rather than an environment default: a measurement's posture is
 # part of the record, so it must be a file that can be read after the fact, not
@@ -18,16 +17,13 @@ services:
     environment:
       # Rate limiting OFF for the duration of a measurement.
       #
-      # The instruments deliberately offer load past the server's knee — the
-      # step ladder reaches 1024 requests/second, all of it from one principal
-      # and one address — so with the limiter on, the ceiling being measured
-      # would be `server.caller_rate`, not the server. The functional catalogue
-      # keeps the limiter on (the base file's default), so the production
-      # posture is still what conformance exercises.
-      #
-      # This is belt AND braces: both instruments refuse to write a record if
-      # the SUT answered any 429, so a measurement can never be silently
-      # limiter-shaped even if this overlay is left out.
+      # The scout ramp offers load past the server's knee on purpose, all of
+      # it from one principal and one address, so with the limiter on, the
+      # ceiling being measured would be `server.caller_rate`, not the server.
+      # The functional catalogue keeps the limiter on (the base file's
+      # default), so the production posture is still what conformance
+      # exercises. Belt and braces: `perf` writes no record when the SUT
+      # answered any 429.
       #
       # The family section switches the limiter off when the
       # `[server.caller_rate]` table is absent, so the overlay removes both of
@@ -37,3 +33,8 @@ services:
       # boot. A huge rate instead truncated the limiter's interval (#4281).
       FERROEHR__SERVER__CALLER_RATE__REQUESTS_PER_SECOND: !reset null
       FERROEHR__SERVER__CALLER_RATE__BURST: !reset null
+      # Response compression OFF. Every posture profile `perf --posture` takes
+      # declares compression off, and its compression canary offers
+      # `Accept-Encoding: gzip, br` on the template list: a compressed answer
+      # contradicts the declared posture, and the run is refused.
+      FERROEHR__SERVER__COMPRESSION: "false"

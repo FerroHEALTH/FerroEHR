@@ -623,14 +623,14 @@ design. The build record is the closed issues + PR descriptions.
   results → pure-function verdicts → report/statement/certificate + badges,
   all under `docs/conformance/<sut>/` (the baseline lives ONLY in those
   committed artifacts).
-- **Measured performance** (the same instrument): `veredictum perf` earns the
-  volumetric deployment classes (POC/S/L/R) by open-loop,
-  coordinated-omission-free sustained runs (normative hour, extendable
-  2–12 h — never shorter) whose re-checkable HDR-V2 records land in
-  `results.json` `measurements`, environment-bound; `veredictum stress` is
-  the separate step-load exploration instrument (maximum sustainable
-  throughput, `stress.json`, never a conformance record). Published SVGs +
-  summaries regenerate FROM the committed artifacts
+- **Measured performance** (the same instrument): `scripts/conformance.sh perf`
+  runs `veredictum perf` over a pinned workload (open-loop Poisson arrivals, a
+  scout ramp and a ladder of plateaus, at most ten minutes after seeding) and
+  writes `docs/conformance/ferroehr/perf-result.json`: the knee bracket, the
+  peak, per-operation percentiles from recorded histograms, server-side
+  readings, environment-bound and earning no class. `perf-judge` re-derives
+  it; `perf-compare` runs A/A and A/B on one host. Published SVGs and the
+  summary regenerate FROM the committed record
   (`scripts/render/perf-assets.sh`, CI diff-guarded).
 - **Drift check** (`scripts/checks/codegen-drift.sh` + CI): the generated layer
   is always in sync with the vendored specs.

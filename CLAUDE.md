@@ -82,8 +82,8 @@ cargo fmt --all
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --document-private-items
 cargo deny check   # subsumes cargo-audit
 bash scripts/conformance.sh   # the Veredictum catalogue against one FerroEHR, in the pinned release image → docs/conformance/ferroehr/ (baseline numbers live ONLY there)
-# perf / stress / aql-probe (the measured lanes, moving to the perf tree in #4452): source scripts/lib/veredictum.sh; "$(veredictum_bin)" perf|stress|aql-probe --root "$(veredictum_perf)" --ixit docs/conformance/party/ferroehr/ixit.json …
-# published perf SVGs regenerate from committed artifacts: bash scripts/render/perf-assets.sh
+bash scripts/conformance.sh perf      # the measured lane: veredictum perf over the pinned workload → docs/conformance/ferroehr/perf-result.json, perf-judge, the charts; `perf-aa` adds the A/A noise floor. A published record is measured on the idle reference host only
+# published perf SVGs regenerate from the committed record: bash scripts/render/perf-assets.sh
 # CPU profiling: the /flamegraph skill
 # viewer gates: /ui-gates · browser journeys: bash scripts/ui-e2e.sh
 bash scripts/deploy-probe.sh  # deployment conformance at the far end, each integration off/working/broken; its report names what it did NOT exercise (silence is never coverage);
