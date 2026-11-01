@@ -28,7 +28,7 @@ use crate::locale::{Msg, tr_with};
 /// Template identity + language metadata for the detail header card,
 /// combined from the typed OPT (uid, concept, original language) and its
 /// Web Template (version, default + available languages).
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone)]
 pub struct TemplateMeta {
     /// The operational-template id.
     pub template_id: String,
@@ -50,7 +50,7 @@ pub struct TemplateMeta {
 /// The three panes of the screen are three views of the same document — the raw
 /// source, its identity metadata, and its Web Template path catalog — so they
 /// travel together and the screen reads the CDR once.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone)]
 pub struct TemplateDetail {
     /// The raw OPT 1.4 canonical XML the CDR served, verbatim.
     pub source: String,

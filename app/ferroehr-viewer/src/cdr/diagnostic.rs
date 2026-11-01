@@ -120,11 +120,8 @@ mod tests {
     fn response(status: http::StatusCode, body: &str) -> CdrResponse {
         CdrResponse {
             status,
-            content_type: Some("application/json".to_owned()),
             etag: None,
             location: None,
-            last_modified: None,
-            preference_applied: None,
             body: body.to_owned(),
         }
     }
@@ -134,11 +131,8 @@ mod tests {
         // #2581: the shared reader speaks the FHIR refusal vocabulary too.
         let response = CdrResponse {
             status: http::StatusCode::BAD_REQUEST,
-            content_type: Some("application/fhir+json".to_owned()),
             etag: None,
             location: None,
-            last_modified: None,
-            preference_applied: None,
             body: r#"{"resourceType":"OperationOutcome","issue":[
                 {"severity":"error","code":"invalid","diagnostics":"missing field `template_id`"},
                 {"severity":"error","code":"structure"}]}"#

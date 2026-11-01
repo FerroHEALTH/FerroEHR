@@ -7,10 +7,8 @@
 //! NOTE: the variants carry their cause as text because a page's model holds the
 //! refusal it draws and is compared and cloned with it, which no `reqwest` error allows.
 
-use serde::{Deserialize, Serialize};
-
 /// Every failure a read of the CDR can hand a page.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ViewerError {
     /// No viewer session — the UI redirects to `/login`.
     #[error("not authenticated")]

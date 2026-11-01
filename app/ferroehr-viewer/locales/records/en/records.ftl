@@ -422,9 +422,6 @@ tag-set = Tag set
 tag-set-line = { $key } is on { $object }.
 tag-removed = Tag removed
 tag-removed-line = { $key } is gone from { $object }.
-tag-count = { $count ->
-    [one] 1 tag
-   *[other] { $count } tags
 }
 composition-not-committed = Not committed
 

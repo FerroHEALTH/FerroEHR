@@ -23,8 +23,8 @@
 //!
 //! **Capability is not authorization.** The manifest says the admin group is
 //! MOUNTED; whether THIS session may use it is answered per request by the CDR's
-//! RBAC (`401`/`403`), and a refusal on click surfaces through
-//! [`delete_failure_copy`].
+//! RBAC (`401`/`403`), and a refusal surfaces on the page through
+//! [`refused`](crate::pages::common::refused).
 //!
 //! NOTE: no openEHR spec governs the viewer, and none governs the template or
 //! stored-query deletes it drives either — our own design. The EHR delete is the
@@ -35,12 +35,9 @@
 //! [`require_session`](crate::session::require_session) first and keeps the
 //! CDR credential server-side.
 
-use serde::{Deserialize, Serialize};
-
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
 use crate::locale::tr_served;
-use crate::locale::tr_with;
 use crate::system_api::ConformanceManifest;
 
 /// The API group name the conformance manifest advertises for the Admin API
@@ -49,7 +46,7 @@ use crate::system_api::ConformanceManifest;
 const ADMIN_ENDPOINT: &str = "/admin";
 
 /// Whether the CDR advertises its Admin API as mounted.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdminAvailability {
     /// The conformance manifest lists `/admin`: the group is mounted, so the
     /// destructive affordances render (authorization is still per request).
@@ -101,79 +98,13 @@ pub async fn probe_admin_api() -> Result<AdminAvailability, ViewerError> {
     Ok(availability_of(&manifest))
 }
 
-/// Actionable copy for a refused admin delete.
-///
-/// It names the exact object, the reason, and the next action, and carries the
-/// CDR's own diagnostic verbatim (the CDR's `409` names the
-/// referencing-version count).
-#[must_use]
-pub fn delete_failure_copy(object: &str, error: &ViewerError) -> String {
-    match error {
-        ViewerError::Cdr { message, .. } => match error.status_code() {
-            Some(http::StatusCode::CONFLICT) => tr_with(
-                ServerMsg::StillReferencedCommittedDataSoCdr,
-                &[
-                    ("object", (object).to_string().into()),
-                    ("message", message.clone().into()),
-                ],
-            ),
-            Some(http::StatusCode::NOT_FOUND) => tr_with(
-                ServerMsg::NotCdrAnyMoreWasAlready,
-                &[("object", (object).to_string().into())],
-            ),
-            Some(http::StatusCode::BAD_REQUEST | http::StatusCode::UNPROCESSABLE_ENTITY) => {
-                tr_with(
-                    ServerMsg::CdrRejectedDelete,
-                    &[
-                        ("object", (object).to_string().into()),
-                        ("message", message.clone().into()),
-                    ],
-                )
-            }
-            _ => tr_with(
-                ServerMsg::DeletingFailed,
-                &[
-                    ("object", (object).to_string().into()),
-                    ("error", (error).to_string().into()),
-                ],
-            ),
-        },
-        ViewerError::Forbidden(message) => tr_with(
-            ServerMsg::SessionMayNotDeleteSignAdmin,
-            &[
-                ("object", (object).to_string().into()),
-                ("message", message.clone().into()),
-            ],
-        ),
-        ViewerError::CdrUnauthorized(message) => tr_with(
-            ServerMsg::CdrNoLongerAcceptsSessionSo,
-            &[
-                ("object", (object).to_string().into()),
-                ("message", message.clone().into()),
-            ],
-        ),
-        ViewerError::Unauthenticated => tr_with(
-            ServerMsg::ViewerSessionExpiredBeforeWasDeleted,
-            &[("object", (object).to_string().into())],
-        ),
-        other => tr_with(
-            ServerMsg::DeletingFailed2,
-            &[
-                ("object", (object).to_string().into()),
-                ("other", (other).to_string().into()),
-            ],
-        ),
-    }
-}
-
 /// Physically delete an operational template
 /// (`DELETE admin/template/{template_id}`).
 ///
 /// The id is a CDR-supplied string, so the path segment is percent-encoded with
 /// the `urlencoding` crate — a template id containing a `/`, `#`, `?` or `%`
 /// would otherwise address a different resource. A template still referenced by
-/// a committed version is refused `409`; the diagnostic surfaces through
-/// [`delete_failure_copy`].
+/// a committed version is refused `409`, the CDR's diagnostic naming why.
 ///
 /// # Errors
 /// [`ViewerError::Unauthenticated`] without a viewer session;
@@ -266,7 +197,7 @@ pub async fn admin_delete_ehr(
 
 #[cfg(test)]
 mod tests {
-    use super::{AdminAvailability, availability_of, delete_failure_copy, renders_admin_ops};
+    use super::{AdminAvailability, availability_of, renders_admin_ops};
     use crate::error::ViewerError;
     use crate::system_api::ConformanceManifest;
 
@@ -315,60 +246,5 @@ mod tests {
         ))));
         assert!(AdminAvailability::Available.usable());
         assert!(!AdminAvailability::Disabled.usable());
-    }
-
-    #[test]
-    fn in_use_refusal_names_the_object_the_reason_and_the_next_action() {
-        let copy = delete_failure_copy(
-            "template `vital_signs.v2`",
-            &ViewerError::Cdr {
-                status: 409,
-                message: "3 versions reference this template".to_owned(),
-            },
-        );
-        assert!(copy.contains("template `vital_signs.v2`"), "{copy}");
-        assert!(
-            copy.contains("3 versions reference this template"),
-            "{copy}"
-        );
-        assert!(copy.contains("then retry"), "{copy}");
-    }
-
-    #[test]
-    fn other_failures_name_the_object_and_their_own_next_action() {
-        let gone = delete_failure_copy(
-            "EHR 7d44",
-            &ViewerError::Cdr {
-                status: 404,
-                message: "HTTP 404".to_owned(),
-            },
-        );
-        assert!(
-            gone.contains("EHR 7d44") && gone.contains("Reload this screen"),
-            "{gone}"
-        );
-
-        let refused = delete_failure_copy(
-            "query `org.example::recent`",
-            &ViewerError::Forbidden("insufficient role".to_owned()),
-        );
-        assert!(
-            refused.contains("query `org.example::recent`")
-                && refused.contains("ADMIN-role")
-                && refused.contains("insufficient role"),
-            "{refused}"
-        );
-
-        let expired = delete_failure_copy("EHR 7d44", &ViewerError::Unauthenticated);
-        assert!(expired.contains("sign in again"), "{expired}");
-
-        let other = delete_failure_copy(
-            "template `x`",
-            &ViewerError::Internal("serialization".to_owned()),
-        );
-        assert!(
-            other.contains("template `x`") && other.contains("serialization"),
-            "{other}"
-        );
     }
 }

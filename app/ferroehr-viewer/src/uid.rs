@@ -3,9 +3,8 @@
 
 //! openEHR identifier handling shared by the viewer's screens.
 //!
-//! Component-free and unit-tested, and compiled on BOTH targets: the same
-//! reduction runs server-side before a CDR path is built and client-side
-//! when a link is rendered.
+//! The same reduction runs before a CDR path is built and when a link is
+//! drawn.
 
 /// The version CONTAINER id inside a `uid_based_id`: an `OBJECT_VERSION_ID`
 /// (`{uuid}::{system}::{tree}`) reduced to its `object_id`, a bare
@@ -35,10 +34,9 @@ pub fn container_uid_of(uid: &str) -> String {
 /// `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.versioned_object.adoc`)
 /// — so one reader serves every body the viewer has to identify.
 ///
-/// Compiled on BOTH targets: a BFF write reads the uid out of the answer it
-/// just received, and the Commit tab's amend seed reads it out of the document
-/// the browser already holds — rather than a second endpoint read for the same
-/// claim.
+/// A BFF write reads the uid out of the answer it just received, and the
+/// Commit tab's amend seed reads it out of the document it already holds,
+/// rather than a second endpoint read for the same claim.
 #[must_use]
 pub fn uid_value_of(body: &str) -> String {
     #[expect(

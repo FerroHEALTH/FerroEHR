@@ -23,7 +23,7 @@ use crate::locale::queries::QueriesMsg;
 use crate::locale::tr;
 
 /// Everything that can be wrong with a builder state.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum BuilderError {
     /// A criterion group has no children.
     #[error("a criterion group is empty: add a condition or remove the group")]

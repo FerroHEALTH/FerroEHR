@@ -49,36 +49,3 @@ fn not_found_body() -> Html {
 pub fn not_found_page() -> Drawn {
     Drawn::page(tr(Msg::Title404), not_found_body())
 }
-
-/// The 403 page a page draws when the CDR refuses this reader what it shows:
-/// `title` names the page, `needs` says what the CDR asks for.
-#[must_use]
-pub fn forbidden(title: String, needs: String) -> Html {
-    crate::request::set_status(http::StatusCode::FORBIDDEN);
-    let who = crate::request::signed().map_or_else(String::new, |session| session.identity);
-    error_page(
-        &current(),
-        ErrorPage {
-            status: Status::Forbidden,
-            title,
-            body: t(tr_with(
-                Msg::ForbiddenBody,
-                &[("who", who.into()), ("needs", needs.into())],
-            )),
-            hint: None,
-            ways: vec![
-                Way {
-                    label: tr(Msg::NavDashboard),
-                    href: "/".to_owned(),
-                    glyph: Some(Glyph::ARROW_LEFT),
-                },
-                Way {
-                    label: tr(Msg::YourAccess),
-                    href: "/access".to_owned(),
-                    glyph: Some(Glyph::KEY_ROUND),
-                },
-            ],
-            detail: None,
-        },
-    )
-}

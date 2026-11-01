@@ -29,7 +29,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::bff::wire::VersionEntry;
@@ -298,7 +297,7 @@ pub async fn delete_composition(
 /// version (`org.openehr.rm.common.version.adoc`); and
 /// `ORIGINAL_VERSION._lifecycle_state_`
 /// (`org.openehr.rm.common.original_version.adoc`).
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct VersionedCompositionDetails {
     /// `VERSIONED_OBJECT.uid.value` — the versioned-object id.
     pub object_uid: String,

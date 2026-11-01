@@ -13,8 +13,6 @@
 //! carry fixed-size-safe fields only — no `usize` crosses a server-function
 //! boundary on a 32-bit target.
 
-use serde::{Deserialize, Serialize};
-
 /// One entry in a versioned object's revision history, flattened for the
 /// version selector, the history table and the audit card.
 ///
@@ -23,7 +21,7 @@ use serde::{Deserialize, Serialize};
 /// beside the VERSION's `uid`; a revision history is
 /// `List<REVISION_HISTORY_ITEM>`, each item a version id plus its audits
 /// (`org.openehr.rm.common.revision_history_item.adoc`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VersionEntry {
     /// The `OBJECT_VERSION_ID` value (`uuid::system::version`).
     pub version_id: String,
@@ -66,7 +64,7 @@ pub fn committer_label(attribute: impl Fn(&str) -> Option<String>) -> String {
 /// (`org.openehr.rm.common.version.adoc`); and
 /// `ORIGINAL_VERSION._lifecycle_state_`
 /// (`org.openehr.rm.common.original_version.adoc`).
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct VersionedObjectFacts {
     /// `VERSIONED_OBJECT.uid.value` — the versioned-object id.
     pub object_uid: String,

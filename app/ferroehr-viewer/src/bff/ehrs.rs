@@ -24,7 +24,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::ViewerError;
@@ -42,7 +41,7 @@ const LIST_EHRS_AQL: &str =
 /// can build prev/next links).
 ///
 /// Shared across the EHR browse surfaces.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResultPage {
     /// The result-set column names (falling back to the column path).
     pub columns: Vec<String>,
@@ -208,7 +207,7 @@ pub(crate) fn parse_ehr_id(body: &str) -> Result<String, ViewerError> {
 /// strongly RECOMMENDED that an UUID always be used for this"
 /// (`docs/specs/openehr/ITS-REST/specifications/operations/ehr_create_with_id.yaml`
 /// §description), so the viewer requires a UUID and says so — a typed id is
-/// checked before the round-trip and again in the server function.
+/// checked before it is sent.
 ///
 /// Byte-wise (never `&value[..n]`, which can panic on a non-char boundary — the
 /// `string_slice` reliability lint).
@@ -271,8 +270,8 @@ pub async fn create_ehr(
             )));
         }
     };
-    // A server function is a public endpoint: the client-side check is a
-    // courtesy, this one is the guard.
+    // Every route is a public endpoint: the form's check is a courtesy, this
+    // one is the guard.
     if !ehr_id.is_empty() && !is_uuid(ehr_id) {
         return Err(ViewerError::Invalid(format!(
             "{ehr_id:?} is not a UUID: the openEHR EHR API strongly recommends a UUID for a \

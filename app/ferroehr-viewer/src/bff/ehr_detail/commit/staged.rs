@@ -31,14 +31,13 @@
 
 use crate::locale::records::RecordsMsg;
 use crate::locale::{tr, tr_with};
-use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 /// The `version_lifecycle_state` code every viewer-authored member carries.
 const LIFECYCLE_COMPLETE: &str = "532";
 
 /// Which openEHR change one staged row commits.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StagedKind {
     /// A brand-new COMPOSITION — a member with no `preceding_version_uid`.
     CompositionCreate,
@@ -116,7 +115,7 @@ impl StagedKind {
 }
 
 /// A code of the openEHR `audit_change_type` group, as a member's change type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChangeType {
     /// `249|creation|`.
     Creation,
@@ -146,27 +145,16 @@ impl ChangeType {
             Self::Modification => "modification",
         }
     }
-
-    /// Returns the change type a rubric names, defaulting to
-    /// [`ChangeType::Modification`] for anything unrecognized.
-    #[must_use]
-    pub fn from_rubric(rubric: &str) -> Self {
-        match rubric {
-            "creation" => Self::Creation,
-            "amendment" => Self::Amendment,
-            _ => Self::Modification,
-        }
-    }
 }
 
 /// One pending change in the staging area.
 ///
-/// Viewer-session state only: the list lives in the tab's component state, so
+/// Viewer-session state only: the list rides the page's own form, so
 /// navigating away discards it (the viewer stores nothing of its own).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StagedChange {
     /// The row's stable identity — the staging sequence number, carried IN the
-    /// row so `<For>` keys on a datum rather than a position.
+    /// row so a post names a datum rather than a position.
     pub seq: u32,
     /// Which change this row commits.
     pub kind: StagedKind,
@@ -623,17 +611,6 @@ mod tests {
         assert_eq!(
             StagedKind::from_value("nonsense"),
             StagedKind::CompositionCreate
-        );
-        for change_type in [
-            ChangeType::Creation,
-            ChangeType::Amendment,
-            ChangeType::Modification,
-        ] {
-            assert_eq!(ChangeType::from_rubric(change_type.rubric()), change_type);
-        }
-        assert_eq!(
-            ChangeType::from_rubric("nonsense"),
-            ChangeType::Modification
         );
     }
 

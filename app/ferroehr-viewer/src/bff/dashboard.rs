@@ -20,8 +20,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
-
 use crate::activity::ActivityPoint;
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr};
@@ -153,7 +151,7 @@ pub async fn dashboard_counts() -> Result<(Count, Count, u32), ViewerError> {
 
 /// One dashboard namespace tile: the derived group's heading, the summed match
 /// count of its member stored queries, and how many members that sum covers.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NamespaceTile {
     /// The namespace, or the label for the bucket of names that carry none
     /// ([`group_label`](crate::query_namespace::group_label)).

@@ -27,8 +27,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
-
 use crate::error::ViewerError;
 use crate::locale::definitions::DefinitionsMsg;
 use crate::locale::{tr_served, tr_with};
@@ -40,7 +38,7 @@ use crate::locale::{tr_served, tr_with};
 /// absent optional reads as empty rather than failing the
 /// card, and `name` is carried only because a CDR may publish one — it is
 /// rendered when present and never invented.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TerminologyDescriptor {
     /// The terminology id the descriptor was read for.
     pub terminology_id: String,
@@ -62,7 +60,7 @@ pub struct TerminologyDescriptor {
 /// A `_terms_` entry is either a bare `Term_code` or a fully defined
 /// `Defined_term`; the bare form leaves
 /// [`Self::text`] and [`Self::language`] empty.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TermRow {
     /// `Term_code.code`.
     pub code: String,
@@ -74,25 +72,10 @@ pub struct TermRow {
     pub preferred: bool,
 }
 
-impl TermRow {
-    /// Renders the term as `code — text`, or the bare code when the extract
-    /// carried no text.
-    ///
-    /// The one rubric spelling in the viewer: the terminology browser's table
-    /// and the query builder's validated code chips both read it, so a term
-    /// looks the same wherever it appears.
-    #[must_use]
-    pub fn rubric(&self) -> String {
-        if self.text.is_empty() {
-            self.code.clone()
-        } else {
-            format!("{} · {}", self.code, self.text)
-        }
-    }
-}
+impl TermRow {}
 
 /// One `Term_relationship` of an extract.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TermRelationshipRow {
     /// `origin_code` — the left-hand concept.
     pub origin_code: String,
@@ -103,7 +86,7 @@ pub struct TermRelationshipRow {
 }
 
 /// A `Terminology_extract` flattened for rendering.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TerminologyExtractView {
     /// `terminology_id` — the namespace the terms belong to.
     pub terminology_id: String,
@@ -439,9 +422,7 @@ pub async fn validate_value_set_code(
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        TermRow, TerminologyDescriptor, descriptor_view, extract_view, terminology_ids, verdict,
-    };
+    use super::{TerminologyDescriptor, descriptor_view, extract_view, terminology_ids, verdict};
 
     #[test]
     fn terminology_ids_read_the_wire_order_and_survive_a_missing_field() {
@@ -509,11 +490,10 @@ mod tests {
         assert_eq!(view.version, "3.1.0");
         let codes: Vec<&str> = view.terms.iter().map(|t| t.code.as_str()).collect();
         assert_eq!(codes, vec!["111", "249", "532"]);
-        assert_eq!(view.terms[1].rubric(), "249 · creation");
+        assert_eq!(view.terms[1].text, "creation");
         assert!(!view.terms[1].preferred);
         assert!(view.terms[2].preferred);
-        // The bare code carries no text, so its rubric IS the code.
-        assert_eq!(view.terms[0].rubric(), "111");
+        assert_eq!(view.terms[0].text, "");
         assert_eq!(view.terms[0].language, "");
         assert_eq!(
             view.relationships,
@@ -527,7 +507,7 @@ mod tests {
         let view = extract_view(&body);
         assert_eq!(view.terms.len(), 1);
         assert_eq!(view.terms[0].code, "249");
-        assert_eq!(view.terms[0].rubric(), "249 · creation");
+        assert_eq!(view.terms[0].text, "creation");
     }
 
     #[test]
@@ -566,21 +546,5 @@ mod tests {
         // A body missing the key is NOT a true verdict.
         assert!(!verdict(&serde_json::json!({}), "valid"));
         assert!(!verdict(&serde_json::json!({ "valid": "yes" }), "valid"));
-    }
-
-    #[test]
-    fn the_rubric_is_the_one_code_plus_text_spelling() {
-        let defined = TermRow {
-            code: "249".to_owned(),
-            text: "creation".to_owned(),
-            language: "en".to_owned(),
-            preferred: false,
-        };
-        assert_eq!(defined.rubric(), "249 · creation");
-        let bare = TermRow {
-            text: String::new(),
-            ..defined
-        };
-        assert_eq!(bare.rubric(), "249");
     }
 }

@@ -119,37 +119,11 @@ messages! {
     Msg in "./locales/shell" {
         /// The title of the page for a path the viewer does not serve.
         Title404 = "not-found-title",
-        /// That page's heading.
-        Heading404 = "not-found-heading",
         /// That page's sentence.
         Body404 = "not-found-body",
-        /// `Example`
-        Example = "example",
         /// `The person or their representative`, a committer that is the
         /// record's person (EHDS Art. 5).
         CommitterPerson = "committer-person",
-        /// `Path catalog`
-        PathCatalog = "path-catalog",
-        /// `AOM2 JSON`
-        Aom2Json = "aom2-json",
-        /// `Source`
-        Source = "source",
-        /// `Choose an ADL2 file`
-        ChooseAnAdl2File = "choose-an-adl2-file",
-        /// `Choose an OPT/XML file`
-        ChooseOptXmlFile = "choose-opt-xml-file",
-        /// `operational_template (adl_version=2.0.6; rm_release=1.0.2; generated) …`
-        OperationalTemplateAdlVersion20 = "operational-template-adl-version-2-0",
-        /// `<template xmlns="http://schemas.openehr.org/v1"> …`
-        TemplateXmlnsHttpSchemasOpenehrOrg = "template-xmlns-http-schemas-openehr-org",
-        /// `Upload an ADL2 operational template`
-        UploadAdl2OperationalTemplate = "upload-adl2-operational-template",
-        /// `Upload an operational template`
-        UploadAnOperationalTemplate = "upload-an-operational-template",
-        /// `Upload ADL2`
-        UploadAdl2 = "upload-adl2",
-        /// `Upload OPT`
-        UploadOpt = "upload-opt",
         /// `ADL 2`
         Adl2 = "adl-2",
         /// `ADL 1.4`
@@ -168,16 +142,12 @@ messages! {
         LogFilterNeedsLeastOneDirective = "log-filter-needs-least-one-directive",
         /// `no metric name given`
         NoMetricNameGiven = "no-metric-name-given",
-        /// `openEHR specification pins`
-        OpenehrSpecificationPins = "openehr-specification-pins",
         /// `DB connections in use`
         DbConnectionsInUse = "db-connections-in-use",
         /// `AQL queries`
         AqlQueries = "aql-queries",
         /// `Compositions committed`
         CompositionsCommitted = "compositions-committed",
-        /// `change type`
-        ChangeType2 = "change-type-2",
         /// no current version is known — reload the page and retry
         NoCurrentVersionKnownReloadPage = "no-current-version-known-reload-page",
         /// `the composition body is empty`
@@ -188,16 +158,6 @@ messages! {
         PartyIdRequired = "party-id-required",
         /// `a version uid is required to read a past version`
         VersionUidRequiredReadPastVersion = "version-uid-required-read-past-version",
-        /// `Roles`
-        Roles = "roles",
-        /// `People`
-        People = "people",
-        /// `Organisations`
-        Organisations = "organisations",
-        /// `Groups`
-        Groups = "groups",
-        /// `Agents`
-        Agents = "agents",
         /// `a tag key is required`
         TagKeyRequired = "tag-key-required",
         /// `a tag key is required (ITEM_TAG invariant Inv_key_valid: the key is not empty)`
@@ -236,8 +196,6 @@ messages! {
         NoSubscriptionIdUpdate = "no-subscription-id-update",
         /// a subscription name is required and may hold only letters, digits, `_`, `.` and `-`
         SubscriptionNameRequiredMayHoldOnly = "subscription-name-required-may-hold-only",
-        /// `Matches every committed version.`
-        MatchesEveryCommittedVersion = "matches-every-committed-version",
         /// `ITEM_TAG list JSON: '$e'`
         ItemTagListJson = "item-tag-list-json",
         /// `$with_secondsZ`
@@ -290,26 +248,14 @@ messages! {
         TemplateListJson = "template-list-json",
         /// ADL2 template list JSON: `$e`
         Adl2TemplateListJson = "adl2-template-list-json",
-        /// Matches `$parts`.
-        Matches = "matches",
         /// event subscription list JSON: `$e`
         EventSubscriptionListJson = "event-subscription-list-json",
         /// event subscription record JSON: `$e`
         EventSubscriptionRecordJson = "event-subscription-record-json",
-        /// `The CDR ingests an ADL 1.4 operational template as OPT/XML. Choose a file or paste the...`
-        CdrIngestsAdl14Operational = "cdr-ingests-adl-1-4-operational",
-        /// `The CDR ingests the ADL2 artefact SOURCE as text/plain. Choose a file or paste the...`
-        CdrIngestsAdl2ArtefactSourceText = "cdr-ingests-adl2-artefact-source-text",
         /// `the latest version's full OBJECT_VERSION_ID is required to delete a composition:...`
         LatestVersionSFullObjectVersion = "latest-version-s-full-object-version",
         /// `the current EHR_STATUS version uid is required to update it: reload this tab and retry`
         CurrentEhrStatusVersionUidRequired = "current-ehr-status-version-uid-required",
-        /// The CDR already holds a subscription with that name, so `$object` was not saved...
-        CdrAlreadyHoldsSubscriptionNameSo = "cdr-already-holds-subscription-name-so",
-        /// `$object is not on the CDR any more ($message): another operator may have deleted it....`
-        NotCdrAnyMoreAnotherOperator = "not-cdr-any-more-another-operator",
-        /// This session may not administer `$object` (`$message`). Sign in with an ADMIN-role...
-        SessionMayNotAdministerSignAdmin = "session-may-not-administer-sign-admin",
         /// A value the server did not state.
         NoValue = "no-value",
         /// `Unavailable`
@@ -334,8 +280,6 @@ messages! {
         Discard = "discard",
         /// `Decision`
         DockLabel = "dock-label",
-        /// `You are signed in as { $who }, and the CDR shows this only to { $needs }.`
-        ForbiddenBody = "forbidden-body",
         /// `Viewer error`
         InternalCode = "internal-code",
         /// `Not sent`
@@ -550,13 +494,6 @@ pub fn tr_with<M: Catalogued>(msg: M, args: &[(&'static str, Arg)]) -> String {
     current().lookup_with(M::catalog(), msg.id(), args)
 }
 
-/// The viewer's message `msg` in `locale`, with the placeables `args`
-/// filled in: for a handler or a task, where no page tree is in reach.
-#[must_use]
-pub fn tr_in_with<M: Catalogued>(locale: &Locale, msg: M, args: &[(&'static str, Arg)]) -> String {
-    locale.lookup_with(M::catalog(), msg.id(), args)
-}
-
 /// The viewer's message `msg` as a [`Message`] a component looks up as it
 /// draws, such as a listing's noun or an editor's title.
 #[must_use]
@@ -746,8 +683,8 @@ mod tests {
         let throwaway = Locale::parse("qaa").expect("a private-use language");
         assert_eq!("Qot qound", tr_in(&*THROWAWAY, &throwaway, Msg::Title404));
         assert_eq!(
-            "Page not found",
-            tr_in(Msg::catalog(), &throwaway, Msg::Heading404),
+            "ADL 1.4",
+            tr_in(Msg::catalog(), &throwaway, Msg::Adl14),
             "the shipped catalogs fall back to English"
         );
     }

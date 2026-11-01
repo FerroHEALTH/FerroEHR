@@ -15,7 +15,7 @@
 //! design/extension.
 
 use crate::locale::server::ServerMsg;
-use crate::locale::{tr, tr_with};
+use crate::locale::tr;
 use serde::Deserialize;
 
 /// The CDR status document, typed over the fields the shell reads.
@@ -83,21 +83,6 @@ pub struct SandboxNotice {
     pub gaps: Vec<String>,
 }
 
-impl SandboxNotice {
-    /// The gap list as one sentence, or an empty string when the server
-    /// reported none.
-    #[must_use]
-    pub fn gaps_sentence(&self) -> String {
-        if self.gaps.is_empty() {
-            return String::new();
-        }
-        tr_with(
-            ServerMsg::Open2,
-            &[("gaps", (self.gaps.join("; ")).clone().into())],
-        )
-    }
-}
-
 /// One gap code in plain words; an unknown code is shown as itself rather
 /// than dropped, so a newer server's gap is still named.
 #[must_use]
@@ -126,7 +111,7 @@ pub fn gap_text(code: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ServerMsg, StatusDocument, gap_text};
+    use super::{StatusDocument, gap_text};
     use crate::served_vocabulary::DEPLOYMENT_GAPS;
 
     fn status(profile: &str, gaps: &[&str]) -> StatusDocument {
@@ -154,15 +139,6 @@ mod tests {
                 "the clinical and demographic domains share one database credential",
                 "access is not recorded to a durable audit trail",
             ]
-        );
-        assert_eq!(
-            notice.gaps_sentence(),
-            "Open: the clinical and demographic domains share one database \
-             credential; access is not recorded to a durable audit trail."
-        );
-        assert!(
-            crate::locale::tr(ServerMsg::SandboxDeploymentDeploymentHasNotMade)
-                .contains("must not hold real patient data")
         );
 
         let production = status("production", &[]);
@@ -208,12 +184,6 @@ mod tests {
             .sandbox_notice()
             .expect("sandbox");
         assert_eq!(notice.gaps, ["future_gap"]);
-        assert_eq!(
-            status("sandbox", &[])
-                .sandbox_notice()
-                .map(|n| n.gaps_sentence()),
-            Some(String::new())
-        );
         assert_eq!(StatusDocument::parse("not json"), None);
     }
 }

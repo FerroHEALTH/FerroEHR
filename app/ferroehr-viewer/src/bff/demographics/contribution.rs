@@ -25,7 +25,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::ViewerError;
@@ -34,7 +33,7 @@ use crate::locale::tr_served;
 use crate::locale::tr_with;
 
 /// One version a CONTRIBUTION changed, as its `OBJECT_REF` carries it.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ContributionVersion {
     /// `OBJECT_REF.type` — the RM class of the changed object.
     pub rm_type: String,
@@ -43,7 +42,7 @@ pub struct ContributionVersion {
 }
 
 /// The viewer's view of one demographic CONTRIBUTION.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ContributionState {
     /// The canonical CONTRIBUTION JSON, pretty-printed for the pane.
     pub body: String,

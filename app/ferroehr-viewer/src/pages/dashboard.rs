@@ -7,7 +7,7 @@
 //!
 //! The counts come from fixed AQL and the template and stored-query lists
 //! ([`crate::bff::dashboard`]), read on the server into one [`Dashboard`]
-//! model that both halves draw; a namespace whose stored query did not run
+//! model the page draws; a namespace whose stored query did not run
 //! shows no total rather than a short one, and a count the CDR answered in
 //! another shape draws as unavailable with its reason, never as 0. A CDR that
 //! does not answer turns the page into its refusal. No openEHR spec governs the viewer: our own
