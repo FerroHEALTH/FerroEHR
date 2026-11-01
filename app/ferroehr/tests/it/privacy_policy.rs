@@ -38,7 +38,7 @@ use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::Invalid;
 
 use crate::fixtures::{composition, uv};
 
@@ -97,16 +97,21 @@ fn typed_status(value: &Value) -> openehr_rm::prelude::EhrStatus {
     openehr_its::json::from_canonical_value(value).expect("the fixture EHR_STATUS decodes")
 }
 
-fn assert_refused(error: &StatusError, expected_path: &str) {
-    assert_eq!(
-        error.status,
-        ServiceStatus::ContentInvalid,
-        "a privacy refusal is the 422-class content_invalid status, got {error:?}"
+fn assert_refused(error: &ServiceError, expected_path: &str) {
+    assert!(
+        matches!(
+            error,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "a privacy refusal is the 422-class content_invalid refusal, got {error:?}"
     );
     assert!(
-        error.message.contains(expected_path),
+        error.message().contains(expected_path),
         "the refusal names the offending RM path; got: {}",
-        error.message
+        error.message()
     );
 }
 
@@ -187,9 +192,9 @@ async fn a_non_uuid_subject_id_is_refused_and_the_value_never_reaches_the_wire()
     .expect_err("a national identifier as the subject must be refused");
     assert_refused(&error, "EHR_STATUS/subject/external_ref/id/value");
     assert!(
-        !error.message.contains(SYNTHETIC_BSN),
+        !error.message().contains(SYNTHETIC_BSN),
         "the refusal must name the shape, never the value: {}",
-        error.message
+        error.message()
     );
 }
 

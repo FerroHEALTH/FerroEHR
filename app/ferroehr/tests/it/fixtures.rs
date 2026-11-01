@@ -275,9 +275,16 @@ pub(crate) async fn ehr_exists(
     match svc.ehr_read(ehr).await {
         Ok(_) => true,
         Err(e) => {
-            assert_eq!(
-                e.status,
-                ferroehr::service::status::ServiceStatus::EhrIdDoesNotExist,
+            assert!(
+                matches!(
+                    e,
+                    ferroehr::service::error::ServiceError::NotFound(
+                        ferroehr::service::refusal::Refusal {
+                            kind: ferroehr::service::refusal::Missing::Ehr,
+                            ..
+                        }
+                    )
+                ),
                 "the EHR read fails only as an unknown EHR: {e}"
             );
             false
@@ -430,9 +437,16 @@ pub(crate) async fn subject_ehr_ids(
                 .to_owned(),
         ],
         Err(e) => {
-            assert_eq!(
-                e.status,
-                ferroehr::service::status::ServiceStatus::EhrIdDoesNotExist,
+            assert!(
+                matches!(
+                    e,
+                    ferroehr::service::error::ServiceError::NotFound(
+                        ferroehr::service::refusal::Refusal {
+                            kind: ferroehr::service::refusal::Missing::Ehr,
+                            ..
+                        }
+                    )
+                ),
                 "the subject read fails only as an unknown subject: {e}"
             );
             Vec::new()

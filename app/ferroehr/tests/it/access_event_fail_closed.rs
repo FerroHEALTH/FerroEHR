@@ -28,6 +28,7 @@ use sqlx::postgres::PgPoolOptions;
 use uuid::Uuid;
 
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::status::ServiceStatus;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use ferroehr::system_log::event::{
@@ -98,7 +99,7 @@ async fn a_subject_lookup_is_withheld_when_its_record_is_rejected() {
         .ehr_read_for_subject(&Uuid::now_v7().to_string(), "urn:example:pseudonym")
         .await;
     let error = refused.expect_err("a miss is still a lookup, and its record was rejected");
-    assert_eq!(error.status, ServiceStatus::ServiceOverloaded, "{error}");
+    assert!(matches!(&error, ServiceError::Unrecorded(_)), "{error}");
 }
 
 /// An EHR-Extract export is withheld when its non-repudiation record is

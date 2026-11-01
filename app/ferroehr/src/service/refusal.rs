@@ -150,3 +150,30 @@ pub enum Invalid {
     /// A COMPOSITION fails archetype or template conformance.
     CompositionArchetype,
 }
+
+impl super::error::ServiceError {
+    /// The client-visible text of this error: a refusal's message, the
+    /// rendered violation of a `422`, the joined validation violations, and the
+    /// `Display` text of every other variant.
+    #[must_use]
+    pub fn message(&self) -> String {
+        use super::error::ServiceError as E;
+        match self {
+            E::NotFound(r) => r.message.clone(),
+            E::BadRequest(r) => r.message.clone(),
+            E::Conflict(r) => r.message.clone(),
+            E::VersionConflict(r)
+            | E::Internal(r)
+            | E::Unrecorded(r)
+            | E::Restricted(r)
+            | E::Forbidden(r) => r.message.clone(),
+            E::Unprocessable { violation, .. } => violation.to_string(),
+            E::ValidationFailed(v) => v
+                .iter()
+                .map(|e| format!("{}: {}", e.path, e.message))
+                .collect::<Vec<_>>()
+                .join("; "),
+            other => other.to_string(),
+        }
+    }
+}

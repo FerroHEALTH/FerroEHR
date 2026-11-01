@@ -1140,7 +1140,7 @@ fn bench_read(
                     rt.block_on(async {
                         let start = Instant::now();
                         for _ in 0..iters {
-                            svc.composition_latest_response(kept.ehr, kept.vo)
+                            svc.read_composition_raw(kept.ehr, kept.vo, None)
                                 .await
                                 .map(|r| {
                                     r.body.into_value().expect("the stored COMPOSITION decodes")

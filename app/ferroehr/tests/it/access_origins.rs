@@ -69,7 +69,7 @@ async fn commit(svc: &FerroEhrService, ehr_id: EhrId, body: &Value) -> (VoId, St
 
 /// The origins the latest read of `vo` serves, from the response metadata.
 async fn served_origins(svc: &FerroEhrService, ehr_id: EhrId, vo: VoId) -> Vec<String> {
-    svc.composition_latest_response(ehr_id, vo)
+    svc.read_composition_raw(ehr_id, vo, None)
         .await
         .expect("the latest read")
         .meta

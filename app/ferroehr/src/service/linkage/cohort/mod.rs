@@ -227,7 +227,9 @@ impl From<CohortError> for StatusError {
     fn from(error: CohortError) -> Self {
         match error {
             CohortError::Query(inner) | CohortError::Unrecorded(inner) => inner,
-            CohortError::Subject(inner) => StatusError::from(inner),
+            CohortError::Subject(inner) => {
+                StatusError::from(crate::service::error::ServiceError::from(inner))
+            }
             CohortError::NotConfigured
             | CohortError::UnknownPredicate(_)
             | CohortError::InvalidValue { .. }

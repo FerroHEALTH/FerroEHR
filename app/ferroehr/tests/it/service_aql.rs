@@ -429,9 +429,10 @@ async fn aql_acceptance_set() {
     assert_eq!(rows(&r).len(), 1, "one composition in the single-comp EHR");
     let queried = &rows(&r)[0][0];
     let fetched = svc
-        .composition_latest_response(
+        .read_composition_raw(
             single.parse().expect("ehr uuid"),
             vo_id.parse().expect("vo uuid"),
+            None,
         )
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
@@ -473,9 +474,10 @@ async fn whole_object_projection_batches_over_a_multi_row_page() {
         let ovid = create_comp(&svc, &ehr_id, &name, f64::from(i) + 10.0).await;
         let vo_id = ovid.split("::").next().unwrap();
         let body = svc
-            .composition_latest_response(
+            .read_composition_raw(
                 ehr_id.parse().expect("ehr uuid"),
                 vo_id.parse().expect("vo uuid"),
+                None,
             )
             .await
             .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))

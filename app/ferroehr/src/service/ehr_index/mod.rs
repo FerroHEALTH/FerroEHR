@@ -22,13 +22,11 @@ pub mod provider;
 pub mod types;
 
 use crate::service::error::ServiceError;
-use crate::service::status::StatusError;
 
 /// The precise EHR-index failure kind.
 ///
-/// [`From<IndexError> for StatusError`] maps each variant onto its
-/// `ServiceStatus`; a generic [`ServiceError`] (a DB/codec fault) rides
-/// through unchanged.
+/// [`From<IndexError> for ServiceError`] maps each variant; a generic
+/// [`ServiceError`] (a DB/codec fault) rides through unchanged.
 #[derive(Debug, thiserror::Error)]
 pub enum IndexError {
     /// A generic service/DB fault (mapped by the shared table).
@@ -50,17 +48,17 @@ pub enum IndexError {
     NotPseudonymous,
 }
 
-impl From<IndexError> for StatusError {
-    /// Map the EHR-index errors onto their statuses; a service fault keeps the
-    /// status the shared [`From<ServiceError> for StatusError`] table gives it.
+impl From<IndexError> for ServiceError {
+    /// A service fault passes through; every other EHR-index failure is a
+    /// server fault (`500`).
     fn from(e: IndexError) -> Self {
         match e {
-            IndexError::Service(e) => e.into(),
+            IndexError::Service(e) => e,
             refused @ (IndexError::Unconfigured | IndexError::NotPseudonymous) => {
-                StatusError::exception(refused.to_string())
+                ServiceError::exception(refused.to_string())
             }
             IndexError::IdentitySource(source) => {
-                StatusError::exception("the IHE patient identity source failed").with_source(source)
+                ServiceError::internal("the IHE patient identity source failed", source)
             }
         }
     }
@@ -69,17 +67,21 @@ impl From<IndexError> for StatusError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::status::ServiceStatus;
+    use crate::service::refusal::{Missing, Refusal};
 
-    /// A generic service miss routes through the shared table, carrying the
-    /// status it was constructed with.
+    /// A generic service miss passes through with its kind.
     #[test]
-    fn a_service_fault_keeps_its_status() {
-        let svc: StatusError = IndexError::Service(ServiceError::new(
-            ServiceStatus::VersionedObjectDoesNotExist,
+    fn a_service_fault_keeps_its_kind() {
+        let svc = ServiceError::from(IndexError::Service(ServiceError::not_found(
+            Missing::VersionedObject,
             "x",
-        ))
-        .into();
-        assert_eq!(svc.status, ServiceStatus::VersionedObjectDoesNotExist);
+        )));
+        assert!(matches!(
+            svc,
+            ServiceError::NotFound(Refusal {
+                kind: Missing::VersionedObject,
+                ..
+            })
+        ));
     }
 }

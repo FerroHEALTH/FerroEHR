@@ -18,8 +18,8 @@
 
 use crate::db::acquire::acquire;
 use crate::ids::EhrId;
+use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::{ServiceStatus, StatusError};
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -112,18 +112,18 @@ impl FerroEhrService {
             Ok(None) => {
                 // NOTE: ITS-REST EHR API `PUT /ehr/{ehr_id}` answers `409` for a
                 // taken id (`409_EHR_with_id`); the status token is our own.
-                return Err(ServiceError::new(
-                    ServiceStatus::EhrCreateFailDuplicateId,
+                return Err(ServiceError::Conflict(Refusal::new(
+                    Clash::DuplicateEhrId,
                     format!("EHR {ehr_id} already exists"),
-                ));
+                )));
             }
             Err(crate::storage::error::StorageError::SubjectInUse(id, ns)) => {
                 // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
                 // id and namespace pair; the status token is our own.
-                return Err(ServiceError::new(
-                    ServiceStatus::EhrForSubjectAlreadyExists,
+                return Err(ServiceError::Conflict(Refusal::new(
+                    Clash::EhrForSubject,
                     format!("an EHR already exists for subject {id}@{ns}"),
-                ));
+                )));
             }
             Err(e) => return Err(e.into()),
         };
@@ -166,7 +166,7 @@ impl FerroEhrService {
         self.prewarm_ehr_access_open(ehr_id).await;
 
         // The RM `EHR` wire body is built from the commit results rather than
-        // re-read through `ehr_summary`: the version identities are in
+        // re-read through `ehr_read`: the version identities are in
         // `Committed`, `time_created` came back from the INSERT, and a fresh EHR
         // indexes no folder hierarchy. It is stashed so a
         // `Prefer: return=representation` response needs no re-read.
@@ -184,7 +184,7 @@ impl FerroEhrService {
     /// [`Committed`](crate::versioning::change::Committed) rows (RM ehr master04
     /// §EHR Creation), the status ref carries its `OBJECT_VERSION_ID` (master06
     /// §Distributed Versioning), and a fresh EHR has no `directory` or `folders`
-    /// (RM ehr master04 §Folders, 0..1). Both this and [`Self::ehr_summary`] go
+    /// (RM ehr master04 §Folders, 0..1). Both this and [`Self::ehr_read`] go
     /// through [`ehr_object`], so they cannot drift apart.
     ///
     /// # Errors
@@ -213,25 +213,12 @@ impl FerroEhrService {
         )
     }
 
-    /// Find an EHR by the subject its current `EHR_STATUS` names (external ref
-    /// `id.value` + `namespace`), recording the resolution as an access.
-    ///
-    /// Served from the promoted `ehr.subject_*` columns (unique per subject —
-    /// `ehr_subject_uq`), on the CLINICAL pool: the value matched is the
-    /// opaque subject pseudonym [`crate::privacy::PrivacyPolicy::check_subject`]
-    /// admits, so this resolves a pseudonym and consults no linkage map. The
-    /// access event is emitted all the same, and in the `linkage` domain,
-    /// because "who resolved a subject to an EHR" is the question that domain
-    /// exists to answer and it is worth an answer wherever it is asked.
-    ///
-    /// NOTE: the DB constraint narrows the list to at most one, per the
-    /// one-EHR-per-subject rule (RM ehr master04 §EHR Status; CNF
-    /// `create_ehr-two_ehrs_same_patient` expects `409` on a second EHR).
+    /// [`Self::ehr_read`] for the EHR located by subject.
     ///
     /// # Errors
-    /// [`ServiceError::NotFound`] when no EHR names the subject;
-    /// [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn ehr_by_subject(
+    /// [`ServiceError`] when no EHR names the subject (404-equivalent) or a read
+    /// fails.
+    pub async fn ehr_read_for_subject(
         &self,
         subject_id: &str,
         namespace: &str,
@@ -240,12 +227,12 @@ impl FerroEhrService {
         // NOTE: no openEHR spec governs this message, our own design: the subject
         // id is an external patient identifier, so the refusal names only its namespace.
         let ehr_id = found.ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::EhrIdDoesNotExist,
+            ServiceError::not_found(
+                Missing::Ehr,
                 format!("no EHR names the requested subject in namespace {namespace}"),
             )
         })?;
-        self.ehr_summary(ehr_id).await
+        self.ehr_read(ehr_id).await
     }
 
     /// The id of the EHR whose `EHR_STATUS.subject.external_ref` names
@@ -253,7 +240,7 @@ impl FerroEhrService {
     /// on the access log.
     ///
     /// An EHR under a whole-EHR access restriction is not found while the
-    /// request enforces it, exactly as [`Self::ehr_by_subject`] describes.
+    /// request enforces it, exactly as [`Self::ehr_read_for_subject`] describes.
     ///
     /// # Errors
     /// [`ServiceError::Database`] on a storage failure, and the access-record
@@ -313,33 +300,23 @@ impl FerroEhrService {
         self.record_access(event)
     }
 
-    /// Build the canonical RM `EHR` object for an existing EHR, with its
-    /// `ehr_id` metadata (the `ETag`/`Location` for `POST /ehr`). ITS-REST
-    /// extension: the wire `GET /ehr/{id}` returns the RM `EHR`, not the
-    /// summary.
+    /// The canonical RM `EHR` wire object with its [`ResourceMeta`]: the
+    /// `ehr_id` and the instant of the latest change to the served object.
     ///
     /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR or its current `EHR_STATUS` does
-    /// not exist; [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn ehr_summary(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<ServiceResponse, ServiceError> {
+    /// [`ServiceError`] when the EHR or its current `EHR_STATUS` does not exist, or
+    /// a read fails.
+    pub async fn ehr_read(&self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
         // ONE statement for the whole representation — header, EHR_STATUS
         // identity, EHR_ACCESS ref and folder hierarchies. EHR.system_id is
         // IMMUTABLE after creation (arch master06 §System Identity): the stored
         // per-EHR value, never the live config.
         let read = crate::storage::ehr_repo::ehr_summary_read(&self.pool, ehr_id)
             .await?
-            .ok_or_else(|| {
-                ServiceError::new(ServiceStatus::EhrIdDoesNotExist, format!("EHR {ehr_id}"))
-            })?;
+            .ok_or_else(|| ServiceError::not_found(Missing::Ehr, format!("EHR {ehr_id}")))?;
         let time_created = read.time_created;
         let status = read.status.ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::EhrIdDoesNotExist,
-                format!("EHR_STATUS for EHR {ehr_id}"),
-            )
+            ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
         })?;
         let folders: Vec<String> = read.folders.iter().map(ToString::to_string).collect();
         let body = ehr_object(
@@ -383,7 +360,7 @@ fn container_ref(rm_type: &str, vo_id: &str) -> Result<ObjectRef, VersionIdError
 /// Assemble the canonical RM `EHR` wire body from the identities that make it
 /// up — the single builder behind both the create path
 /// ([`FerroEhrService::ehr_object_from_committed`]) and the read path
-/// ([`FerroEhrService::ehr_summary`]), so the two cannot drift apart.
+/// ([`FerroEhrService::ehr_read`]), so the two cannot drift apart.
 ///
 /// Built as the generated [`Ehr`] and serialized through the native canonical
 /// codec, so `_type` comes first and the attribute order is the BMM's own. The
@@ -505,42 +482,19 @@ impl FerroEhrService {
     /// shape, not the summary).
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR or its current `EHR_STATUS` does not exist, or
+    /// [`ServiceError`] when the EHR or its current `EHR_STATUS` does not exist, or
     /// a read fails.
-    pub async fn ehr_object(&self, an_ehr_id: EhrId) -> Result<Value, StatusError> {
-        Ok(self.ehr_summary(an_ehr_id).await?.body)
-    }
-
-    /// The canonical RM `EHR` wire object with its [`ResourceMeta`]: the
-    /// `ehr_id` and the instant of the latest change to the served object.
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR or its current `EHR_STATUS` does not exist, or
-    /// a read fails.
-    pub async fn ehr_read(&self, an_ehr_id: EhrId) -> Result<ServiceResponse, StatusError> {
-        Ok(self.ehr_summary(an_ehr_id).await?)
-    }
-
-    /// [`Self::ehr_read`] for the EHR located by subject.
-    ///
-    /// # Errors
-    /// [`StatusError`] when no EHR names the subject (404-equivalent) or a read
-    /// fails.
-    pub async fn ehr_read_for_subject(
-        &self,
-        subject_id: &str,
-        subject_namespace: &str,
-    ) -> Result<ServiceResponse, StatusError> {
-        Ok(self.ehr_by_subject(subject_id, subject_namespace).await?)
+    pub async fn ehr_object(&self, an_ehr_id: EhrId) -> Result<Value, ServiceError> {
+        Ok(self.ehr_read(an_ehr_id).await?.body)
     }
 
     /// The RM `EHR` wire object for a just-created EHR — the
     /// `Prefer: return=representation` body of `POST /ehr` / `PUT /ehr/{id}`.
     ///
     /// # Errors
-    /// [`StatusError`] when the fallback full read finds no such EHR, or a read
+    /// [`ServiceError`] when the fallback full read finds no such EHR, or a read
     /// fails.
-    pub async fn ehr_created_object(&self, an_ehr_id: EhrId) -> Result<Value, StatusError> {
+    pub async fn ehr_created_object(&self, an_ehr_id: EhrId) -> Result<Value, ServiceError> {
         // Serve the create-time representation from the stash the commit path
         // populated (built from `Committed`, no re-read); a popped entry cannot
         // be reused. Fall back to a full read when the entry has been evicted
@@ -569,7 +523,7 @@ impl FerroEhrService {
     /// `openehr-audit-details` metadata (see `Self::commit_new_ehr`).
     ///
     /// # Errors
-    /// [`StatusError`] when the status is structurally invalid (422-equivalent),
+    /// [`ServiceError`] when the status is structurally invalid (422-equivalent),
     /// a committal `change_type`/`lifecycle_state` is illegal for a creation
     /// (400/422-equivalent), the subject already owns an EHR
     /// (409-equivalent), or storage fails.
@@ -577,7 +531,7 @@ impl FerroEhrService {
         &self,
         an_ehr_status: Option<EhrStatus>,
         committal: Option<&crate::service::version_update::Committal>,
-    ) -> Result<(EhrId, ResourceMeta), StatusError> {
+    ) -> Result<(EhrId, ResourceMeta), ServiceError> {
         let ehr_id = EhrId::minted(self.stamp());
         let meta = self
             .create_ehr_with_id_meta(ehr_id, an_ehr_status, committal)
@@ -593,7 +547,7 @@ impl FerroEhrService {
     /// `openehr-audit-details` metadata (see `Self::commit_new_ehr`).
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR already exists (409-equivalent), the status is
+    /// [`ServiceError`] when the EHR already exists (409-equivalent), the status is
     /// invalid, a committal `change_type`/`lifecycle_state` is illegal for a
     /// creation (400/422-equivalent), the subject already owns an EHR, or
     /// storage fails.
@@ -602,15 +556,18 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         an_ehr_status: Option<EhrStatus>,
         committal: Option<&crate::service::version_update::Committal>,
-    ) -> Result<ResourceMeta, StatusError> {
+    ) -> Result<ResourceMeta, ServiceError> {
         // NOTE: ITS-REST EHR API `POST /ehr` accepts an optional EHR_STATUS
         // body, so a subject-bearing status is accepted here.
         let status = an_ehr_status.map_or_else(initial_ehr_status, |s| {
             openehr_its::json::to_canonical_value(&s)
         });
-        let created = self.commit_new_ehr(an_ehr_id, status, committal).await?;
+        let created = self
+            .commit_new_ehr(an_ehr_id, status, committal)
+            .await
+            .map_err(ServiceError::flattened)?;
         created.meta.ok_or_else(|| {
-            StatusError::exception(format!(
+            ServiceError::exception(format!(
                 "EHR {an_ehr_id} was created without resource metadata"
             ))
         })

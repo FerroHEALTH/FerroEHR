@@ -20,8 +20,8 @@
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
+use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::{ServiceStatus, StatusError};
 use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::EhrStatus;
 use serde_json::Value;
@@ -76,10 +76,7 @@ impl FerroEhrService {
             }
         }
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::EhrIdDoesNotExist,
-                format!("EHR_STATUS for EHR {ehr_id}"),
-            )
+            ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
         })?;
         let vo_id = read.vo_id;
         Ok(self.version_response(ehr_id, vo_id, read)?)
@@ -101,8 +98,8 @@ impl FerroEhrService {
             .await?
             .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::EhrStatus)
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::ObjectVersionDoesNotExist,
+                ServiceError::not_found(
+                    Missing::ObjectVersion,
                     format!("EHR_STATUS {vo_id} v{version}"),
                 )
             })?;
@@ -168,12 +165,16 @@ impl FerroEhrService {
         Ok(committed)
     }
 
-    /// The `VERSIONED_OBJECT` for an EHR's `EHR_STATUS`.
+    /// The `VERSIONED_EHR_STATUS` container object with the container
+    /// metadata the wire's `ETag`/`Last-Modified` need: the container uid
+    /// identity plus the newest held version's commit instant (ITS-REST
+    /// overview `Requests_and_responses.md` §"`ETag` and Last-Modified" — both
+    /// headers SHOULD accompany a `VERSIONED_OBJECT` response).
     ///
     /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR has no current `EHR_STATUS`;
-    /// [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn versioned_status(
+    /// [`ServiceError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
+    /// a read fails.
+    pub async fn versioned_ehr_status_response(
         &self,
         ehr_id: EhrId,
     ) -> Result<ServiceResponse, ServiceError> {
@@ -181,17 +182,14 @@ impl FerroEhrService {
             .current_vo(ehr_id, Kind::EhrStatus)
             .await?
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::EhrIdDoesNotExist,
-                    format!("EHR_STATUS for EHR {ehr_id}"),
-                )
+                ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
             })?;
         let (body, last_modified) =
             versioned_object(&self.pool, vo_id, ehr_id, "VERSIONED_EHR_STATUS")
                 .await?
                 .ok_or_else(|| {
-                    ServiceError::new(
-                        ServiceStatus::VersionedObjectDoesNotExist,
+                    ServiceError::not_found(
+                        Missing::VersionedObject,
                         format!("versioned object {vo_id}"),
                     )
                 })?;
@@ -214,10 +212,7 @@ impl FerroEhrService {
             .current_vo(ehr_id, Kind::EhrStatus)
             .await?
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::EhrIdDoesNotExist,
-                    format!("EHR_STATUS for EHR {ehr_id}"),
-                )
+                ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
             })?;
         let (body, last_modified) = revision_history(&self.pool, ehr_id, vo_id).await?;
         Ok(ServiceResponse::new(
@@ -244,8 +239,8 @@ impl FerroEhrService {
             .await?
             .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::EhrStatus)
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::ObjectVersionDoesNotExist,
+                ServiceError::not_found(
+                    Missing::ObjectVersion,
                     format!("EHR_STATUS {vo_id} v{version}"),
                 )
             })?;
@@ -268,18 +263,15 @@ impl FerroEhrService {
             .current_vo(ehr_id, Kind::EhrStatus)
             .await?
             .ok_or_else(|| {
-                ServiceError::new(
-                    ServiceStatus::EhrIdDoesNotExist,
-                    format!("EHR_STATUS for EHR {ehr_id}"),
-                )
+                ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
             })?;
         let read = match at {
             Some(at) => version_at(&self.pool, self.spec_profile, vo_id, at).await?,
             None => read_current(&self.pool, self.spec_profile, vo_id).await?,
         }
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::ObjectVersionDoesNotExist,
+            ServiceError::not_found(
+                Missing::ObjectVersion,
                 format!("EHR_STATUS version at time for EHR {ehr_id}"),
             )
         })?;
@@ -292,36 +284,6 @@ impl FerroEhrService {
         );
         let ov = version_envelope(&read, self.signer())?;
         Ok(ServiceResponse::new(ov, meta))
-    }
-
-    /// The current `EHR_STATUS` version metadata (for a `412`
-    /// `ETag`/`Location`).
-    ///
-    /// # Errors
-    /// [`ServiceError::Database`] if the metadata read fails.
-    pub(in crate::service) async fn ehr_status_meta(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<Option<ResourceMeta>, ServiceError> {
-        self.latest_version_meta(ehr_id, Kind::EhrStatus).await
-    }
-
-    /// The current `EHR_STATUS` versioned-object id **and** its version
-    /// metadata, resolved and read in ONE metadata-only statement (no node
-    /// reassembly). The `PUT …/ehr_status` pre-read: it supplies both the
-    /// full-`OBJECT_VERSION_ID` the `If-Match` compare needs (ITS-REST overview
-    /// §Concurrency control) and the `vo_id` threaded into the update, so the
-    /// write path resolves the versioned object exactly once. `None` when the
-    /// EHR has no current `EHR_STATUS`.
-    ///
-    /// # Errors
-    /// [`ServiceError::Database`] if the metadata read fails.
-    pub(in crate::service) async fn ehr_status_meta_with_vo(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<Option<(VoId, ResourceMeta)>, ServiceError> {
-        self.latest_version_meta_with_vo(ehr_id, Kind::EhrStatus)
-            .await
     }
 
     /// Whether the EHR is modifiable (RM ehr `EHR_STATUS.is_modifiable`, 1..1
@@ -420,14 +382,14 @@ impl FerroEhrService {
             {
                 // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
                 // id and namespace pair; the status token is our own.
-                return ServiceError::new(
-                    ServiceStatus::EhrForSubjectAlreadyExists,
+                return ServiceError::Conflict(Refusal::new(
+                    Clash::EhrForSubject,
                     format!(
                         "an EHR already exists for subject {}@{}",
                         subject_id.unwrap_or("?"),
                         namespace.unwrap_or("?"),
                     ),
-                );
+                ));
             }
             ServiceError::Database(e)
         })?;
@@ -470,13 +432,13 @@ impl FerroEhrService {
         {
             // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
             // id and namespace pair; the status token is our own.
-            return Err(ServiceError::new(
-                ServiceStatus::EhrForSubjectAlreadyExists,
+            return Err(ServiceError::Conflict(Refusal::new(
+                Clash::EhrForSubject,
                 format!(
                     "EHR {ehr_id} names subject {subject_id}@{namespace}, which EHR {owner} \
                      already holds (one EHR per subject)"
                 ),
-            ));
+            )));
         }
         self.sync_ehr_subject(tx, ehr_id, &status).await
     }
@@ -523,9 +485,9 @@ impl FerroEhrService {
     /// its `uid`).
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
+    /// [`ServiceError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
     /// a read fails.
-    pub async fn get_ehr_status(&self, an_ehr_id: EhrId) -> Result<Value, StatusError> {
+    pub async fn get_ehr_status(&self, an_ehr_id: EhrId) -> Result<Value, ServiceError> {
         Ok(self.status_at(an_ehr_id, None).await?.body)
     }
 
@@ -534,13 +496,13 @@ impl FerroEhrService {
     /// (`GET …/versioned_ehr_status/version`).
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed `a_time` (400-equivalent), a missing version
+    /// [`ServiceError`] for a malformed `a_time` (400-equivalent), a missing version
     /// at that instant (404-equivalent), or a read failure.
     pub async fn ehr_status_version_at_time(
         &self,
         an_ehr_id: EhrId,
         a_time: Option<String>,
-    ) -> Result<Value, StatusError> {
+    ) -> Result<Value, ServiceError> {
         let at = a_time.as_deref().map(parse_at_time).transpose()?;
         Ok(self.status_version_at_time(an_ehr_id, at).await?.body)
     }
@@ -549,16 +511,16 @@ impl FerroEhrService {
     /// (`GET …/versioned_ehr_status/version/{version_uid}`).
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed version id, an unknown version
+    /// [`ServiceError`] for a malformed version id, an unknown version
     /// (404-equivalent), or a read failure.
     pub async fn ehr_status_version_envelope(
         &self,
         an_ehr_id: EhrId,
         a_version_uid: VoId,
         a_version: &str,
-    ) -> Result<Value, StatusError> {
+    ) -> Result<Value, ServiceError> {
         let tree = parse_tree_id(a_version)?;
-        Ok(self.status_version(an_ehr_id, a_version_uid, tree).await?)
+        self.status_version(an_ehr_id, a_version_uid, tree).await
     }
 }
 
@@ -575,15 +537,15 @@ impl FerroEhrService {
     /// `ETag`/`Last-Modified` need.
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed `a_time` (400-equivalent), a missing status
+    /// [`ServiceError`] for a malformed `a_time` (400-equivalent), a missing status
     /// at that instant (404-equivalent), or a read failure.
     pub async fn ehr_status_at_time_response(
         &self,
         an_ehr_id: EhrId,
         a_time: Option<String>,
-    ) -> Result<ServiceResponse, StatusError> {
+    ) -> Result<ServiceResponse, ServiceError> {
         let at = a_time.as_deref().map(parse_at_time).transpose()?;
-        Ok(self.status_at(an_ehr_id, at).await?)
+        self.status_at(an_ehr_id, at).await
     }
 
     /// The `EHR_STATUS` at a specific version, with the version metadata the
@@ -592,34 +554,16 @@ impl FerroEhrService {
     /// `EHR_STATUS`, not an `ORIGINAL_VERSION`.
     ///
     /// # Errors
-    /// [`StatusError`] for a malformed version id, an unknown version
+    /// [`ServiceError`] for a malformed version id, an unknown version
     /// (404-equivalent), or a read failure.
     pub async fn ehr_status_at_version_response(
         &self,
         an_ehr_id: EhrId,
         a_version_uid: VoId,
         a_version: &str,
-    ) -> Result<ServiceResponse, StatusError> {
+    ) -> Result<ServiceResponse, ServiceError> {
         let tree = parse_tree_id(a_version)?;
-        Ok(self
-            .status_by_version(an_ehr_id, a_version_uid, tree)
-            .await?)
-    }
-
-    /// The `VERSIONED_EHR_STATUS` container object with the container
-    /// metadata the wire's `ETag`/`Last-Modified` need: the container uid
-    /// identity plus the newest held version's commit instant (ITS-REST
-    /// overview `Requests_and_responses.md` §"`ETag` and Last-Modified" — both
-    /// headers SHOULD accompany a `VERSIONED_OBJECT` response).
-    ///
-    /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
-    /// a read fails.
-    pub async fn versioned_ehr_status_response(
-        &self,
-        an_ehr_id: EhrId,
-    ) -> Result<ServiceResponse, StatusError> {
-        Ok(self.versioned_status(an_ehr_id).await?)
+        self.status_by_version(an_ehr_id, a_version_uid, tree).await
     }
 
     /// The `REVISION_HISTORY` of the EHR's `EHR_STATUS` (RM common
@@ -629,13 +573,13 @@ impl FerroEhrService {
     /// [`Self::versioned_ehr_status_response`]).
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
+    /// [`ServiceError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
     /// a read fails.
     pub async fn ehr_status_revision_history_response(
         &self,
         an_ehr_id: EhrId,
-    ) -> Result<ServiceResponse, StatusError> {
-        Ok(self.status_revision_history(an_ehr_id).await?)
+    ) -> Result<ServiceResponse, ServiceError> {
+        self.status_revision_history(an_ehr_id).await
     }
 
     /// Replace the whole `EHR_STATUS` in one commit (`PUT …/ehr_status`),
@@ -643,7 +587,7 @@ impl FerroEhrService {
     /// instant).
     ///
     /// # Errors
-    /// [`StatusError`] when the EHR has no current `EHR_STATUS` (404-equivalent),
+    /// [`ServiceError`] when the EHR has no current `EHR_STATUS` (404-equivalent),
     /// the `preceding_version_uid` mismatches the current latest
     /// (412-equivalent), the body fails structural validation
     /// (422-equivalent), or the commit fails.
@@ -651,18 +595,20 @@ impl FerroEhrService {
         &self,
         an_ehr_id: EhrId,
         a_status: UpdateVersion<EhrStatus>,
-    ) -> Result<ResourceMeta, StatusError> {
+    ) -> Result<ResourceMeta, ServiceError> {
         // The `If-Match` meta pre-read also yields the `vo_id`, threaded into
         // the write so the versioned object is resolved once (no second
         // `current_vo`). No current EHR_STATUS ⇒ NotFound (404).
         // NOTE: the ITS-REST wire replaces the whole EHR_STATUS in one PUT; a
         // mismatch → 412.
-        let Some((vo_id, latest)) = self.ehr_status_meta_with_vo(an_ehr_id).await? else {
-            return Err(ServiceError::new(
-                ServiceStatus::EhrIdDoesNotExist,
+        let Some((vo_id, latest)) = self
+            .latest_version_meta_with_vo(an_ehr_id, Kind::EhrStatus)
+            .await?
+        else {
+            return Err(ServiceError::not_found(
+                Missing::Ehr,
                 format!("EHR_STATUS for EHR {an_ehr_id}"),
-            )
-            .into());
+            ));
         };
         ensure_if_match(a_status.preceding_version_uid.as_ref(), Some(&latest))?;
         let if_match = a_status
@@ -672,7 +618,8 @@ impl FerroEhrService {
             .unwrap_or_default();
         let committed = self
             .commit_status(an_ehr_id, vo_id, a_status, &if_match)
-            .await?;
+            .await
+            .map_err(ServiceError::flattened)?;
         Ok(self.version_meta(
             an_ehr_id,
             committed.vo_id,

@@ -53,6 +53,8 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{Clash, Invalid, Refusal};
 use ferroehr::service::status::ServiceStatus;
 
 use crate::fixtures::{composition, uv};
@@ -393,10 +395,10 @@ async fn import_ehr_promotes_the_subject_for_lookup_and_uniqueness() {
     assert!(
         matches!(
             dup,
-            Err(ferroehr::service::status::StatusError {
-                status: ServiceStatus::EhrForSubjectAlreadyExists,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::EhrForSubject,
                 ..
-            })
+            }))
         ),
         "an EHR for a subject an imported clone already holds must 409, got {dup:?}"
     );
@@ -1256,20 +1258,26 @@ async fn attesting_an_imported_version_is_refused() {
         .expect_err("attesting an IMPORTED_VERSION must be refused");
     // The status seam carries status + message (the documented lossy seam,
     // #1729); the status class and both violation facts must survive.
-    assert_eq!(
-        err.status,
-        ServiceStatus::ContentInvalid,
+    assert!(
+        matches!(
+            &err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
         "the refusal is the semantic 422 class, got {err:?}"
     );
     assert!(
-        err.message.contains("preceding_version_uid"),
+        err.message().contains("preceding_version_uid"),
         "the refusal names the target-bearing member, got: {}",
-        err.message
+        err.message()
     );
     assert!(
-        err.message.contains("VERSIONED_OBJECT.commit_attestation"),
+        err.message()
+            .contains("VERSIONED_OBJECT.commit_attestation"),
         "the refusal names the precondition, got: {}",
-        err.message
+        err.message()
     );
 }
 

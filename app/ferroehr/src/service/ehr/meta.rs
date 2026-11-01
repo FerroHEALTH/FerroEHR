@@ -187,25 +187,16 @@ impl FerroEhrService {
         ))
     }
 
-    /// The current version metadata of an EHR-owned object of `kind` (the
-    /// latest `version_uid` a `409`/`412` must echo in `ETag`/`Location`), or
-    /// `None`.
-    ///
-    /// Resolved and read in one metadata-only `version`⋈`audit` statement
-    /// (`current_version_meta_by_kind`): the `409` and `412` paths need only the
-    /// full `OBJECT_VERSION_ID` and commit instant, so this avoids the node
-    /// reassembly and attestation read a full version read pays. The emitted
-    /// `ETag` is still `object_id::creating_system_id::version_tree_id`, the
-    /// token the `If-Match` compare uses (ITS-REST overview §Concurrency
-    /// control).
+    /// The current `EHR_STATUS` version metadata of an EHR, or `None` when the
+    /// EHR has no current `EHR_STATUS`.
     ///
     /// # Errors
-    /// [`ServiceError::Database`] if the metadata read fails.
-    pub(in crate::service) async fn latest_version_meta(
+    /// [`ServiceError`] if the metadata read fails.
+    pub async fn ehr_status_latest_meta(
         &self,
         ehr_id: EhrId,
-        kind: Kind,
     ) -> Result<Option<ResourceMeta>, ServiceError> {
+        let kind = Kind::EhrStatus;
         Ok(self
             .latest_version_meta_with_vo(ehr_id, kind)
             .await?
@@ -214,7 +205,7 @@ impl FerroEhrService {
 
     /// The current version's `vo_id` **and** its [`ResourceMeta`] for an
     /// EHR-owned object of `kind`, resolved and read in the same ONE
-    /// metadata-only `version`⋈`audit` statement [`Self::latest_version_meta`]
+    /// metadata-only `version`⋈`audit` statement [`Self::ehr_status_latest_meta`]
     /// uses. Threading the `vo_id` back to the caller lets a following write
     /// skip re-resolving `(ehr_id, kind) → vo_id`, so the `If-Match` pre-read
     /// and the write share one `current_vo` resolution. The
@@ -268,46 +259,7 @@ impl FerroEhrService {
 // The protocol adapter's `412`/`ETag` pre-reads. No openEHR spec governs this
 // adapter seam — our own extension over the RM version identities.
 
-impl FerroEhrService {
-    /// The current COMPOSITION version metadata (the latest `version_uid` a
-    /// `409`/`412` must echo), or `None` if unknown or outside this EHR.
-    ///
-    /// # Errors
-    /// [`StatusError`](crate::service::status::StatusError) if the metadata read fails.
-    pub async fn composition_latest_meta(
-        &self,
-        an_ehr_id: EhrId,
-        a_versioned_object_uid: VoId,
-    ) -> Result<Option<ResourceMeta>, crate::service::status::StatusError> {
-        Ok(self
-            .composition_current_meta(an_ehr_id, a_versioned_object_uid)
-            .await?)
-    }
-
-    /// The current `EHR_STATUS` version metadata of an EHR, or `None` when the
-    /// EHR has no current `EHR_STATUS`.
-    ///
-    /// # Errors
-    /// [`StatusError`](crate::service::status::StatusError) if the metadata read fails.
-    pub async fn ehr_status_latest_meta(
-        &self,
-        an_ehr_id: EhrId,
-    ) -> Result<Option<ResourceMeta>, crate::service::status::StatusError> {
-        Ok(self.ehr_status_meta(an_ehr_id).await?)
-    }
-
-    /// The current directory FOLDER version metadata of an EHR, or `None` when
-    /// the EHR indexes no directory hierarchy.
-    ///
-    /// # Errors
-    /// [`StatusError`](crate::service::status::StatusError) if the metadata read fails.
-    pub async fn directory_latest_meta(
-        &self,
-        an_ehr_id: EhrId,
-    ) -> Result<Option<ResourceMeta>, crate::service::status::StatusError> {
-        Ok(self.directory_meta(an_ehr_id).await?)
-    }
-}
+impl FerroEhrService {}
 
 /// The [`ResourceMeta`] of a version-CONTAINER read (a `VERSIONED_OBJECT` body
 /// or its `REVISION_HISTORY`): the `ETag` identity is the container uid

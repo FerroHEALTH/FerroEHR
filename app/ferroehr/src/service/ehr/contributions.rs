@@ -21,7 +21,6 @@
 
 use crate::ids::EhrId;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::status::StatusError;
 use openehr_its::rest::generated::ehr::NewContribution;
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -43,15 +42,18 @@ impl FerroEhrService {
     /// where all RM `change_control` semantics stay.
     ///
     /// # Errors
-    /// [`StatusError`] if the body is not a `NewContribution` (400), or the
+    /// [`ServiceError`] if the body is not a `NewContribution` (400), or the
     /// CONTRIBUTION fails classification, content validation, the optimistic
     /// lock, or its storage commit.
     pub async fn create_ehr_contribution(
         &self,
         ehr_id: EhrId,
         body: Value,
-    ) -> Result<ServiceResponse, StatusError> {
-        let committed = self.commit_wire_contribution(ehr_id, &body).await?;
+    ) -> Result<ServiceResponse, ServiceError> {
+        let committed = self
+            .commit_wire_contribution(ehr_id, &body)
+            .await
+            .map_err(ServiceError::flattened)?;
         let body = self.ehr_contribution(ehr_id, committed.id, false).await?;
         let meta = ResourceMeta::new(ehr_id.to_string(), committed.id.to_string())
             .with_last_modified(committed.time_committed)
@@ -81,16 +83,16 @@ impl FerroEhrService {
         commit_version_set(self, Some(ehr_id), uid.as_ref(), versions, &audit, false).await
     }
 
-    /// Retrieve a CONTRIBUTION by id (scoped to the EHR), its `versions` as
-    /// `OBJECT_REF`s, or — with `resolve_refs` — as the resolved VERSION
-    /// objects (`ORIGINAL_VERSION`, or `IMPORTED_VERSION` for a version this
-    /// repository received from another system) (ITS-REST `Prefer: resolve_refs`,
-    /// `Requests_and_responses` §Representation details negotiation).
+    /// The stored `CONTRIBUTION`
+    /// (its `versions` as `OBJECT_REF`s).
+    ///
+    /// With `resolve_refs` the version references are resolved into the
+    /// versions they name.
     ///
     /// # Errors
-    /// [`ServiceError::NotFound`] when the CONTRIBUTION does not exist in this
-    /// EHR; [`ServiceError::Database`] on a storage failure.
-    pub(in crate::service) async fn ehr_contribution(
+    /// [`ServiceError`] when the CONTRIBUTION does not exist in this EHR
+    /// (404-equivalent) or a read fails.
+    pub async fn ehr_contribution(
         &self,
         ehr_id: EhrId,
         contribution_id: Uuid,
@@ -111,37 +113,6 @@ impl FerroEhrService {
 // ── The CONTRIBUTION call surface ─────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// The stored `CONTRIBUTION`
-    /// (its `versions` as `OBJECT_REF`s).
-    ///
-    /// # Errors
-    /// [`StatusError`] when the CONTRIBUTION does not exist in this EHR
-    /// (404-equivalent) or a read fails.
-    pub async fn get_contribution(
-        &self,
-        an_ehr_id: EhrId,
-        a_contrib_id: Uuid,
-    ) -> Result<Value, StatusError> {
-        Ok(self
-            .ehr_contribution(an_ehr_id, a_contrib_id, false)
-            .await?)
-    }
-
-    /// The stored `CONTRIBUTION` with its `versions` resolved to the full
-    /// VERSION objects — `ORIGINAL_VERSION`, or `IMPORTED_VERSION` for a
-    /// version received from another system (ITS-REST `Prefer: resolve_refs`).
-    ///
-    /// # Errors
-    /// [`StatusError`] when the CONTRIBUTION does not exist in this EHR
-    /// (404-equivalent) or a read fails.
-    pub async fn get_contribution_resolved(
-        &self,
-        an_ehr_id: EhrId,
-        a_contrib_id: Uuid,
-    ) -> Result<Value, StatusError> {
-        Ok(self.ehr_contribution(an_ehr_id, a_contrib_id, true).await?)
-    }
-
     /// The EHR contribution-list extension (`GET /ehr/{ehr_id}/contribution`,
     /// no uid): the EHR's CONTRIBUTIONs newest-first, paged, as
     /// `{ "rows": [ { uid, time_committed, committer, inserted_by_person,
@@ -160,13 +131,13 @@ impl FerroEhrService {
     /// already clamped by the protocol adapter.
     ///
     /// # Errors
-    /// [`StatusError`] — the EHR-existence check fails (unknown EHR → 404), or a read fails.
+    /// [`ServiceError`] — the EHR-existence check fails (unknown EHR → 404), or a read fails.
     pub async fn ehr_contribution_list_page(
         &self,
         an_ehr_id: EhrId,
         offset: i64,
         fetch: i64,
-    ) -> Result<Value, StatusError> {
+    ) -> Result<Value, ServiceError> {
         // Existence (the EHR-existence check → 404) + the unwindowed total in one call.
         let total = count_contributions(&self.pool, an_ehr_id, None).await?;
         let rows = crate::storage::version_repo::contribution::list_contribution_summaries(
@@ -195,7 +166,7 @@ impl FerroEhrService {
     /// `return=minimal` commits and returns just the metadata.
     ///
     /// # Errors
-    /// [`StatusError`] if the CONTRIBUTION fails classification, content
+    /// [`ServiceError`] if the CONTRIBUTION fails classification, content
     /// validation, the optimistic lock, or its storage commit.
     ///
     /// Both branches carry `Last-Modified` beside the `ETag` and `Location` uid,
@@ -208,7 +179,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         a_contribution: Value,
         representation: bool,
-    ) -> Result<ServiceResponse, StatusError> {
+    ) -> Result<ServiceResponse, ServiceError> {
         if representation {
             // `return=representation`: assemble the stored CONTRIBUTION body
             // (audit + version OBJECT_REFs) for the response.
@@ -222,7 +193,8 @@ impl FerroEhrService {
             // commit itself yields the new CONTRIBUTION id).
             let committed = self
                 .commit_wire_contribution(an_ehr_id, &a_contribution)
-                .await?;
+                .await
+                .map_err(ServiceError::flattened)?;
             let meta = ResourceMeta::new(an_ehr_id.to_string(), committed.id.to_string())
                 .with_last_modified(committed.time_committed)
                 .with_content(self.written_content(&committed.versions).await);

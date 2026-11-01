@@ -26,8 +26,7 @@ use std::sync::Arc;
 
 use crate::ids::EhrId;
 use crate::service::ehr::access_types::{EhrAccessIndex, EhrAccessSettings};
-use crate::service::error::{ServiceError, internal_fault_caused};
-use crate::service::status::StatusError;
+use crate::service::error::ServiceError;
 use moka::future::Cache;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
 use serde_json::Value;
@@ -116,7 +115,7 @@ impl FerroEhrService {
     async fn load_ehr_access_settings(
         &self,
         ehr_id: EhrId,
-    ) -> Result<Option<EhrAccessSettings>, StatusError> {
+    ) -> Result<Option<EhrAccessSettings>, ServiceError> {
         let Some((vo_id, _)) = self.current_vo(ehr_id, Kind::EhrAccess).await? else {
             return Ok(None);
         };
@@ -136,13 +135,13 @@ impl FerroEhrService {
     /// server does not understand).
     ///
     /// # Errors
-    /// [`StatusError`] when the cache-miss load (the `current_vo` + `read_current`
+    /// [`ServiceError`] when the cache-miss load (the `current_vo` + `read_current`
     /// storage reads) fails; the error is shared across concurrent callers of
     /// the single-flight load.
     pub async fn current_ehr_access_settings(
         &self,
         ehr_id: EhrId,
-    ) -> Result<Arc<Option<EhrAccessSettings>>, StatusError> {
+    ) -> Result<Arc<Option<EhrAccessSettings>>, ServiceError> {
         // Clone the (cheap, Arc-backed) service into an owned, `'static` load
         // future so `moka`'s single-flight `try_get_with` can drive it.
         let svc = self.clone();
@@ -152,7 +151,7 @@ impl FerroEhrService {
                 async move { svc.load_ehr_access_settings(ehr_id).await },
             )
             .await
-            .map_err(|e| (*e).clone())
+            .map_err(owned)
     }
 
     /// Every EHR whose current `EHR_ACCESS` carries settings this server
@@ -166,17 +165,17 @@ impl FerroEhrService {
     /// replica, or one racing a load, cannot leave a stale grant in force. No openEHR spec governs this index — our own design.
     ///
     /// # Errors
-    /// [`StatusError`] when the storage read fails or a stored body is not JSON.
-    pub async fn ehr_access_settings_index(&self) -> Result<EhrAccessIndex, StatusError> {
+    /// [`ServiceError`] when the storage read fails or a stored body is not JSON.
+    pub async fn ehr_access_settings_index(&self) -> Result<EhrAccessIndex, ServiceError> {
         let svc = self.clone();
         self.ehr_access
             .index_or_load(async move { svc.load_ehr_access_index().await })
             .await
-            .map_err(|e| (*e).clone())
+            .map_err(owned)
     }
 
     /// The cache-miss path of [`Self::ehr_access_settings_index`].
-    async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrAccessSettings)>, StatusError> {
+    async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrAccessSettings)>, ServiceError> {
         let bodies =
             crate::storage::version_repo::meta::ehr_access_bodies_with_settings(&self.pool)
                 .await
@@ -184,7 +183,7 @@ impl FerroEhrService {
         let mut index = Vec::with_capacity(bodies.len());
         for (ehr_id, body) in bodies {
             let value: Value = serde_json::from_str(&body)
-                .map_err(|e| internal_fault_caused("read a stored EHR_ACCESS body", &e))?;
+                .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
             if let Some(settings) = EhrAccessSettings::from_ehr_access(&value) {
                 index.push((ehr_id, settings));
             }
@@ -283,14 +282,14 @@ impl EhrAccessCache {
     ///
     /// # Errors
     /// Propagates the `init` error (shared across concurrent callers as an
-    /// `Arc<StatusError>`).
+    /// `Arc<ServiceError>`).
     pub(in crate::service) async fn get_or_load<Fut>(
         &self,
         ehr_id: EhrId,
         init: Fut,
-    ) -> Result<Arc<Option<EhrAccessSettings>>, Arc<StatusError>>
+    ) -> Result<Arc<Option<EhrAccessSettings>>, Arc<ServiceError>>
     where
-        Fut: Future<Output = Result<Option<EhrAccessSettings>, StatusError>>,
+        Fut: Future<Output = Result<Option<EhrAccessSettings>, ServiceError>>,
     {
         self.inner
             .try_get_with(ehr_id, async move { init.await.map(Arc::new) })
@@ -328,18 +327,31 @@ impl EhrAccessCache {
     ///
     /// # Errors
     /// Propagates the `init` error (shared across concurrent callers as an
-    /// `Arc<StatusError>`).
+    /// `Arc<ServiceError>`).
     pub(in crate::service) async fn index_or_load<Fut>(
         &self,
         init: Fut,
-    ) -> Result<EhrAccessIndex, Arc<StatusError>>
+    ) -> Result<EhrAccessIndex, Arc<ServiceError>>
     where
-        Fut: Future<Output = Result<Vec<(EhrId, EhrAccessSettings)>, StatusError>>,
+        Fut: Future<Output = Result<Vec<(EhrId, EhrAccessSettings)>, ServiceError>>,
     {
         self.index
             .try_get_with((), async move { init.await.map(Arc::new) })
             .await
     }
+}
+
+/// The error of a failed single-flight load, owned: the caller that ran the
+/// load gets it as it was, and a concurrent waiter, which shares it, gets a
+/// server fault carrying it as the cause. No openEHR spec governs the cache:
+/// our own design.
+fn owned(error: Arc<ServiceError>) -> ServiceError {
+    Arc::try_unwrap(error).unwrap_or_else(|shared| {
+        ServiceError::internal(
+            "a concurrent load of the EHR access settings failed",
+            shared,
+        )
+    })
 }
 
 impl Default for EhrAccessCache {

@@ -23,7 +23,7 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::error::ServiceError;
 use ferroehr::versioning::signature::config::{Mode, SigningConfig, VerifyOnRead};
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr::versioning::signature::verify::Verdict;
@@ -248,7 +248,11 @@ async fn contribution_versions_are_signed() {
     // NOTE: `commit_contribution` returns the contribution_uid;
     // the created version's OBJECT_VERSION_ID is read back from the CONTRIBUTION.
     let contribution = svc
-        .get_contribution(ehr_uuid, contribution_uid.parse().expect("contrib uuid"))
+        .ehr_contribution(
+            ehr_uuid,
+            contribution_uid.parse().expect("contrib uuid"),
+            false,
+        )
         .await
         .expect("get_contribution");
     let ovid = contribution["versions"][0]["id"]["value"]
@@ -289,7 +293,11 @@ async fn client_supplied_signature_is_stored_verbatim() {
     )
     .await;
     let contribution = svc
-        .get_contribution(ehr_uuid, contribution_uid.parse().expect("contrib uuid"))
+        .ehr_contribution(
+            ehr_uuid,
+            contribution_uid.parse().expect("contrib uuid"),
+            false,
+        )
         .await
         .expect("get_contribution");
     let ovid = contribution["versions"][0]["id"]["value"]
@@ -353,13 +361,7 @@ async fn strict_verify_on_read_rejects_a_tampered_row() {
     // as `StatusError { status: Exception }` (the adapter maps it to the same wire 5xx
     // the old `ApiError::Internal` produced).
     assert!(
-        matches!(
-            tampered,
-            Err(StatusError {
-                status: ServiceStatus::Exception,
-                ..
-            })
-        ),
+        matches!(tampered, Err(ServiceError::Signing(_))),
         "strict verify_on_read must 5xx a tampered signature, got {tampered:?}"
     );
 }
@@ -397,13 +399,7 @@ async fn default_verify_on_read_is_strict_and_rejects_a_tampered_row() {
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await;
     assert!(
-        matches!(
-            tampered,
-            Err(StatusError {
-                status: ServiceStatus::Exception,
-                ..
-            })
-        ),
+        matches!(tampered, Err(ServiceError::Signing(_))),
         "the strict default must 5xx a tampered signature, got {tampered:?}"
     );
 }
@@ -614,7 +610,7 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     let (_, v2) = version_components(&ovid_v2);
     assert_eq!(v2, "2", "second trunk version");
     let latest = svc
-        .composition_latest_response(ehr_uuid, vo_uuid)
+        .read_composition_raw(ehr_uuid, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("latest");
@@ -629,7 +625,7 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
         .await
         .expect("delete_composition");
     let deleted = svc
-        .composition_latest_response(ehr_uuid, vo_uuid)
+        .read_composition_raw(ehr_uuid, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("deleted get");
@@ -648,7 +644,11 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     )
     .await;
     let contribution = svc
-        .get_contribution(ehr_uuid, contribution_uid.parse().expect("contrib uuid"))
+        .ehr_contribution(
+            ehr_uuid,
+            contribution_uid.parse().expect("contrib uuid"),
+            false,
+        )
         .await
         .expect("get_contribution");
     let c_ovid = contribution["versions"][0]["id"]["value"]
@@ -701,7 +701,7 @@ async fn creating_system_id_and_signature_survive_a_system_id_change() {
     // Reading the composition back: the injected uid still carries "sys-origin"
     // (the stored creating_system_id), not the new config value.
     let read = svc_b
-        .composition_latest_response(ehr_uuid, vo_uuid)
+        .read_composition_raw(ehr_uuid, vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get");
@@ -780,13 +780,7 @@ async fn at_committal_attestation_is_signed_and_a_tamper_is_caught() {
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await;
     assert!(
-        matches!(
-            tampered,
-            Err(StatusError {
-                status: ServiceStatus::Exception,
-                ..
-            })
-        ),
+        matches!(tampered, Err(ServiceError::Signing(_))),
         "an altered at-committal attestation must fail strict verify_on_read, got {tampered:?}"
     );
 }

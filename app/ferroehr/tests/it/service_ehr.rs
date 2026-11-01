@@ -28,7 +28,7 @@ use openehr_rm::prelude::{ItemTag, PartyProxy};
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::versioning::change::Committed;
 
 use crate::fixtures::{change_type, composition, folder, uid, uv};
@@ -114,13 +114,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     .await
     .map(|m| m.uid);
     assert!(
-        matches!(
-            stale,
-            Err(StatusError {
-                status: ServiceStatus::VersionMismatch,
-                ..
-            })
-        ),
+        matches!(stale, Err(ServiceError::VersionConflict(_))),
         "stale update must 412, got {stale:?}"
     );
 
@@ -161,7 +155,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let comp_vo_uuid = comp_vo_id.parse::<ferroehr::ids::VoId>().expect("vo uuid");
 
     let got = svc
-        .composition_latest_response(ehr_uuid, comp_vo_uuid)
+        .read_composition_raw(ehr_uuid, comp_vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("composition_get");
@@ -180,7 +174,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
 
     // current is v2; the pinned OBJECT_VERSION_ID still returns v1
     let current = svc
-        .composition_latest_response(ehr_uuid, comp_vo_uuid)
+        .read_composition_raw(ehr_uuid, comp_vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("get current");
@@ -236,7 +230,11 @@ async fn ehr_composition_lifecycle_end_to_end() {
 
     // ── CONTRIBUTION retrieval (audit + version refs) ────────────────────────
     let contribution = svc
-        .get_contribution(ehr_uuid, contribution_uid.parse().expect("contrib uuid"))
+        .ehr_contribution(
+            ehr_uuid,
+            contribution_uid.parse().expect("contrib uuid"),
+            false,
+        )
         .await
         .expect("contribution_get");
     assert_eq!(contribution["_type"], "CONTRIBUTION");
@@ -274,7 +272,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
         "a stale volunteered If-Match must 412, got {volunteered_stale:?}"
     );
     let still_live = svc
-        .composition_latest_response(ehr_uuid, comp_vo_uuid)
+        .read_composition_raw(ehr_uuid, comp_vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the refused delete performed nothing");
@@ -330,7 +328,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     );
     // A deleted read is NOT an error/500 — it yields Null (→ 204).
     let after_delete = svc
-        .composition_latest_response(ehr_uuid, comp_vo_uuid)
+        .read_composition_raw(ehr_uuid, comp_vo_uuid, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("deleted composition read must not error");
@@ -455,13 +453,13 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     // write path still surfaces the raw `StatusError`).
     let comp_blocked =
         |r: &Result<Committed, ServiceError>| matches!(r, Err(ServiceError::Conflict(_)));
-    let dir_blocked = |r: &Result<ferroehr::service::response::ResourceMeta, StatusError>| {
+    let dir_blocked = |r: &Result<ferroehr::service::response::ResourceMeta, ServiceError>| {
         matches!(
             r,
-            Err(StatusError {
-                status: ServiceStatus::Conflict,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::State,
                 ..
-            })
+            }))
         )
     };
 
@@ -522,10 +520,10 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     assert!(
         matches!(
             content_contrib,
-            Err(StatusError {
-                status: ServiceStatus::Conflict,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::State,
                 ..
-            })
+            }))
         ),
         "content contribution must 409 when inactive: {content_contrib:?}"
     );
@@ -630,7 +628,11 @@ async fn ehr_creation_merges_the_committal_metadata() {
         .expect("contribution ref")
         .to_owned();
     let contribution = svc
-        .get_contribution(ehr_id, contribution_uid.parse().expect("contrib uuid"))
+        .ehr_contribution(
+            ehr_id,
+            contribution_uid.parse().expect("contrib uuid"),
+            false,
+        )
         .await
         .expect("contribution_get");
     assert_eq!(
@@ -707,7 +709,16 @@ async fn ehr_creation_refuses_a_stated_empty_system_id() {
     let err = Box::pin(svc.create_ehr_meta(None, Some(&committal)))
         .await
         .expect_err("an empty system_id is refused");
-    assert_eq!(err.status, ServiceStatus::ContentInvalid, "{err:?}");
+    assert!(
+        matches!(
+            &err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
+        "{err:?}"
+    );
 }
 
 #[tokio::test]
@@ -960,8 +971,8 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     assert!(
         matches!(
             bad_creation,
-            Err(StatusError {
-                status: ServiceStatus::ContentInvalid,
+            Err(ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             })
         ),
@@ -988,8 +999,8 @@ async fn contribution_preserves_the_client_change_type_and_rejects_invalid_combo
     assert!(
         matches!(
             bad_code,
-            Err(StatusError {
-                status: ServiceStatus::ContentInvalid,
+            Err(ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             })
         ),
@@ -1054,8 +1065,8 @@ async fn contribution_rejects_an_invalid_composition() {
     assert!(
         matches!(
             res,
-            Err(StatusError {
-                status: ServiceStatus::ContentInvalid,
+            Err(ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             })
         ),
@@ -1530,7 +1541,7 @@ async fn item_tag_version_and_container_targets_are_distinct() {
         )
         .await
         .expect_err("a nonexistent version cannot be tagged");
-    assert!(err.message.contains("version"), "got: {}", err.message);
+    assert!(err.message().contains("version"), "got: {}", err.message());
 
     // The route family must match the stored kind: the composition target on
     // an EHR_STATUS route 404s.
@@ -1544,9 +1555,9 @@ async fn item_tag_version_and_container_targets_are_distinct() {
         .await
         .expect_err("kind mismatch must be refused");
     assert!(
-        kind_err.message.contains("same EHR"),
+        kind_err.message().contains("same EHR"),
         "got: {}",
-        kind_err.message
+        kind_err.message()
     );
 }
 
@@ -1713,8 +1724,8 @@ async fn item_tag_put_replaces_the_whole_collection() {
         assert!(
             matches!(
                 res,
-                Err(StatusError {
-                    status: ServiceStatus::ContentInvalid,
+                Err(ServiceError::Unprocessable {
+                    kind: Invalid::Content,
                     ..
                 })
             ),
@@ -1815,10 +1826,10 @@ async fn duplicate_subject_ehr_creation_conflicts() {
     assert!(
         matches!(
             dup,
-            Err(StatusError {
-                status: ServiceStatus::EhrForSubjectAlreadyExists,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::EhrForSubject,
                 ..
-            })
+            }))
         ),
         "a second EHR for the same subject must 409, got {dup:?}"
     );
@@ -1877,10 +1888,10 @@ async fn version_get_at_time_returns_the_original_version() {
     assert!(
         matches!(
             too_early,
-            Err(StatusError {
-                status: ServiceStatus::ObjectVersionDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::ObjectVersion,
                 ..
-            })
+            }))
         ),
         "no version extant at the time must 404, got {too_early:?}"
     );
@@ -1891,10 +1902,10 @@ async fn version_get_at_time_returns_the_original_version() {
     assert!(
         matches!(
             bad_time,
-            Err(StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            Err(ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            })
+            }))
         ),
         "an invalid version_at_time must 400, got {bad_time:?}"
     );
@@ -2183,10 +2194,10 @@ async fn directory_endpoint_rejects_a_second_directory_create() {
     assert!(
         matches!(
             second,
-            Err(StatusError {
-                status: ServiceStatus::Conflict,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::State,
                 ..
-            })
+            }))
         ),
         "a second directory create must 409, got {second:?}"
     );
@@ -2204,7 +2215,7 @@ async fn change_ehr_status(
     svc: &FerroEhrService,
     ehr: ferroehr::ids::EhrId,
     change: impl FnOnce(&mut serde_json::Map<String, Value>),
-) -> Result<String, StatusError> {
+) -> Result<String, ServiceError> {
     let mut body = svc
         .ehr_status_at_time_response(ehr, None)
         .await
@@ -2360,7 +2371,7 @@ async fn directory_version_exists(
         Err(e) => {
             let shown = format!("{e:?}");
             assert!(
-                matches!(ServiceError::from(e), ServiceError::NotFound(_)),
+                matches!(e, ServiceError::NotFound(_)),
                 "the directory read fails only as not found: {shown}"
             );
             false
@@ -2726,10 +2737,10 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
     assert!(
         matches!(
             dup,
-            Err(StatusError {
-                status: ServiceStatus::EhrForSubjectAlreadyExists,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::EhrForSubject,
                 ..
-            })
+            }))
         ),
         "an exactly-equal subject must still 409, got {dup:?}"
     );
@@ -2837,16 +2848,16 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
 
     // COMPOSITION read addressed with the EHR_STATUS container: not found.
     let cross = svc
-        .composition_latest_response(ehr_uuid, status_container)
+        .read_composition_raw(ehr_uuid, status_container, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"));
     assert!(
         matches!(
             &cross,
-            Err(StatusError {
-                status: ServiceStatus::CompositionDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::Composition,
                 ..
-            })
+            }))
         ),
         "an EHR_STATUS uid is not a COMPOSITION representation: {cross:?}"
     );
@@ -2861,7 +2872,7 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
     );
 
     // The right-kind reads still serve (the filter narrows, never breaks).
-    svc.composition_latest_response(ehr_uuid, comp_vo)
+    svc.read_composition_raw(ehr_uuid, comp_vo, None)
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the composition still reads by its own id");

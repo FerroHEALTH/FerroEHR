@@ -34,6 +34,7 @@ use sqlx::PgPool;
 
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::status::ServiceStatus;
 use ferroehr::storage::marks::RetentionPeriod;
@@ -168,11 +169,11 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
         .await
         .map(|r| r.body)
         .expect_err("a restricted status is refused");
-    assert_eq!(refusal.status, ServiceStatus::ProcessingRestricted);
+    assert!(matches!(&refusal, ServiceError::Restricted(_)));
     assert!(
-        refusal.message.contains("restricted") && refusal.message.contains("Art. 18"),
+        refusal.message().contains("restricted") && refusal.message().contains("Art. 18"),
         "the refusal names the restriction: {}",
-        refusal.message
+        refusal.message()
     );
 
     // The revision history is the same object's change record, refused alike.
@@ -181,7 +182,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
         .await
         .map(|r| r.body)
         .expect_err("a restricted object's revision history is refused");
-    assert_eq!(history.status, ServiceStatus::ProcessingRestricted);
+    assert!(matches!(&history, ServiceError::Restricted(_)));
 
     // A write to it is refused: Art. 18(2) leaves only storage. The body is
     // the one read back before the mark, so the refusal is the restriction's
@@ -191,7 +192,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
             .await
             .map(|m| m.uid)
             .expect_err("a write to a restricted object is refused");
-    assert_eq!(write.status, ServiceStatus::ProcessingRestricted);
+    assert!(matches!(&write, ServiceError::Restricted(_)));
 
     // The stored rows are untouched: a restriction limits processing, it does
     // not remove anything.

@@ -203,7 +203,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     } else {
         state
             .backend()
-            .composition_latest_response(ehr_id, uid.vo_id)
+            .read_composition_raw(ehr_id, uid.vo_id, None)
             .await?
     };
     let RawServiceResponse { body, meta } = read;
