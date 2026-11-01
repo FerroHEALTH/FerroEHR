@@ -6,15 +6,15 @@
 //! Every route is a public HTTP endpoint, so each one enforces the session
 //! itself; the CDR credential never leaves the server.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::error::ViewerError;
 
 /// One deployment-configured link rendered under the sign-in card.
 ///
-/// Doubles as the `[login.links]` configuration entry (ssr side), so the wire
+/// Doubles as the `[login.links]` configuration entry, so the page
 /// and the configuration cannot drift; both fields are required there.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LoginLink {
     /// Visible link text.
@@ -25,7 +25,7 @@ pub struct LoginLink {
 
 /// What the login screen offers and says: the available modes plus the
 /// deployment-configured notice and links.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginScreen {
     /// Offer the Basic (username/password) form.
     pub basic: bool,
@@ -62,23 +62,6 @@ pub(crate) fn same_origin_next(raw: Option<&str>) -> String {
         candidate.to_owned()
     } else {
         DEFAULT_NEXT.to_owned()
-    }
-}
-
-/// Returns the `/login` URL a refused Basic sign-in lands on.
-///
-/// `refused=1` is what makes the login screen say the credentials were
-/// refused, and `next` keeps the destination the user was signing in for,
-/// filtered through `same_origin_next` and left off when it is the shell
-/// root (the screen's own default). The destination is percent-encoded with
-/// the `urlencoding` crate.
-#[must_use]
-pub fn refused_login_url(next: Option<&str>) -> String {
-    let next = same_origin_next(next);
-    if next == DEFAULT_NEXT {
-        "/login?refused=1".to_owned()
-    } else {
-        format!("/login?refused=1&next={}", urlencoding::encode(&next))
     }
 }
 
@@ -182,7 +165,7 @@ pub async fn fetch_status() -> Result<String, ViewerError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{refused_login_url, same_origin_next};
+    use super::same_origin_next;
 
     /// The sign-in routes' `next` is attacker-supplied by construction — it
     /// arrives in a link anyone can craft — so what it accepts is the whole
@@ -209,23 +192,5 @@ mod tests {
         // Absent or empty.
         assert_eq!(same_origin_next(None), "/");
         assert_eq!(same_origin_next(Some("")), "/");
-    }
-
-    #[test]
-    fn a_refused_sign_in_keeps_an_encoded_same_origin_destination_only() {
-        assert_eq!(refused_login_url(None), "/login?refused=1");
-        assert_eq!(refused_login_url(Some("/")), "/login?refused=1");
-        assert_eq!(refused_login_url(Some("")), "/login?refused=1");
-        assert_eq!(
-            refused_login_url(Some("/ehrs/01a06375?tab=status")),
-            "/login?refused=1&next=%2Fehrs%2F01a06375%3Ftab%3Dstatus"
-        );
-        for foreign in ["https://evil.example", "//evil.example", "/\\evil.example"] {
-            assert_eq!(
-                refused_login_url(Some(foreign)),
-                "/login?refused=1",
-                "{foreign}"
-            );
-        }
     }
 }

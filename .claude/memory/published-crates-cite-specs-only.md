@@ -9,8 +9,9 @@ metadata:
 ---
 
 Owner rulings 2026-08-04 (angry, explicit, widened the same day): the
-ambiguity register (`AMB-nnn`) is the CNF RUNNER'S machinery and its ids
-are referenced ONLY inside the instrument's own repository
+conformance instrument's machinery (then the ambiguity register's `AMB-nnn`
+ids; since Veredictum 0.3 its catalogue paths, option names and `report:`
+numbers) is referenced ONLY inside the instrument's own repository
 (Veredictum). The `openehr-*` crates
 (published on crates.io) AND the `app/*` crates cite ONLY the vendored
 openEHR spec text and official external docs — never an AMB id, never

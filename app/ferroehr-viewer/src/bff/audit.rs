@@ -28,7 +28,7 @@ use crate::locale::{tr, tr_with};
 /// One distilled audit record: the promoted facts the table shows plus the
 /// full stored `AuditEvent` JSON for the raw view. Client-safe fields only
 /// (fixed-size ints, no `usize`).
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuditRow {
     /// The event instant (`AuditEvent.recorded`), as stored.
     pub recorded: String,
@@ -53,7 +53,7 @@ pub struct AuditRow {
 }
 
 /// One retrieved page plus the availability verdict.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuditPage {
     /// `false` when the CDR answered `404` — the local Audit Record
     /// Repository is disabled (`[audit.store]`); a first-class state.

@@ -11,30 +11,30 @@ FerroEHR, and how to read the artefacts it produces.
 
 Conformance is checked by **[Veredictum](https://github.com/Vernum-Projecten/Veredictum)**,
 a separate CNF 2.0 reference runner. It lives in its own repository, has the
-same maintainer as FerroEHR, and is consumed here at a pinned version. It is a data-driven
-interpreter over a committed, machine-readable catalogue authored from the openEHR
-Conformance framework itself: protocol-neutral case cores anchored on the official
-platform test schedule (case ids follow the schedule's own naming, e.g.
-`I_EHR_SERVICE.create_ehr-main`), per-operation bindings mapping every outcome to
-its cited wire expectation, closed vocabularies for outcomes/selectors/captures, a
-provenance-stamped corpus (the official openEHR Robot data sets re-adjudicated to
-spec-text-only evidence), and a typed ambiguity register; a specification silence
-is never resolved privately. Every expectation traces to specification text, never
-to any server's observed behaviour. The catalogue spans the schedule's chapters:
+same maintainer as FerroEHR, and is consumed here at a pinned version. Its
+catalogue is a set of Arazzo workflows, one document per behaviour, grouped in
+capability folders. Every workflow cites the specification sentence its
+expectation rests on, quoted from the vendored openEHR text. Where the release
+leaves a behaviour to the implementation, the catalogue names an option with
+its arms and the sentence that leaves it open, and the party statement selects
+one arm. Where the release is silent or contradicts itself, no workflow asserts
+the behaviour, and the citation names the outbound report instead: a
+specification silence is never resolved privately. Every expectation traces to
+specification text, never to any server's observed behaviour. The catalogue
+groups its folders into chapters:
 
 | Chapter | Scope |
 |---|---|
-| EHR / EHR_STATUS | EHR service and status operations |
-| COMPOSITION / CONTRIBUTION / DIRECTORY | Clinical content, change sets, folder trees |
-| DEFINITION | ADL 1.4 + ADL 2 template and stored-query provisioning |
-| QUERY | AQL query execution with committed result-set grounds |
-| CONTENT | Reference-Model and archetype-constraint accept/reject tables |
-| DEMOGRAPHIC / ADMIN / MESSAGING | Party, admin, and messaging services |
-| SYSTEM | The `OPTIONS` capability/conformance manifest |
-| SF | Simplified formats — FLAT and STRUCTURED commit/read, context, examples |
-| SEC / SIG | Authenticated access, authorization separation, audit accountability, and version signing in both depths |
-| SMART | SMART App Launch discovery and resource-scope enforcement |
-| PERF | The measured performance classes ([Performance](performance.md)) |
+| EHR | EHR, EHR_STATUS, COMPOSITION, DIRECTORY, CONTRIBUTION and item tags |
+| Definitions | ADL 1.4 and ADL 2 templates and stored queries |
+| Query | AQL query execution with committed result-set grounds |
+| Demographic | Parties and their versions |
+| Content validation | Reference-Model and archetype-constraint accept and reject tables |
+| Simplified formats | FLAT and STRUCTURED commit and read |
+| Admin | The administrative delete operations |
+| Security and privacy | Authenticated access and authorization separation |
+| SMART on openEHR | SMART App Launch discovery and resource-scope enforcement |
+| System | The `OPTIONS` capability and conformance manifest |
 
 A run judges every row of every case and counts it in one of two parts.
 **BASE** holds what every server that claims a capability must do. **OPTIONS**
@@ -57,8 +57,6 @@ row was not run.
 > system under test runs, for FerroEHR the default `development` profile,
 > RM 1.2.0; the composed stack takes the profile from configuration, so a
 > `stable`-profile run is the same catalogue against the released generation).
-> The upstream Robot suites are reference material; their official data fixtures
-> enter the corpus only as provenance-stamped re-adjudications.
 
 ## The current result
 
@@ -196,11 +194,13 @@ issuer, digest version signing, and FerroTERM as its terminology server, in the
   resolved *at all* is not decided by any openEHR text, so it is a declared
   option arm rather than a verdict.
 
-A measured performance or stress run adds one more posture: rate limiting is
-turned off for the duration, because the instruments deliberately offer load past
-the server's knee and a throttled request would measure the limiter instead of the
-server. Both instruments refuse to write a record if the server answered any
-`429`, so a measurement can never be silently limiter-shaped.
+A measured performance run (`scripts/conformance.sh perf`) changes two things,
+both in `docker/sut-measurement.yml`: rate limiting is off, because the scout
+ramp offers load past the server's knee and a throttled request would measure
+the limiter instead of the server, and response compression is off, because the
+posture the run declares has it off. `veredictum perf` writes no record if the
+server answered any `429`, so a measurement can never be silently
+limiter-shaped.
 
 ## Reading the artefacts
 
@@ -228,8 +228,8 @@ that record at build time, and the build fails when `summary.md` and
 The catalogue measures the openEHR platform surface, including the simplified
 (FLAT/STRUCTURED) formats chapter of the ITS-REST specification. It deliberately
 does not stand in for a performance benchmark: durations recorded during the
-functional run are telemetry only, and the measured classes own that claim
-([Performance](performance.md)).
+functional run are telemetry only, and the measured performance record owns that
+claim ([Performance](performance.md)).
 
 The other honest boundary is the gap between openEHR's *service* model and its
 *released* REST wire. Several service operations were never surfaced as

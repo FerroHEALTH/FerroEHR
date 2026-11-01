@@ -29,26 +29,19 @@ pub const FANOUT_CONCURRENCY: usize = 8;
 /// wire contract defines, and the raw body.
 ///
 /// The header subset is named rather than a whole map because the viewer is a
-/// typed client: `ETag` and `Last-Modified` are the state identifiers a
-/// versioned resource carries, `Location` is the created resource's URL, and
-/// `Preference-Applied` reports which `Prefer` the CDR honoured
+/// typed client: `ETag` is the state identifier a versioned resource carries
+/// and `Location` is the created resource's URL
 /// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
 /// §HTTP headers).
 #[derive(Debug, Clone)]
 pub struct CdrResponse {
     /// The HTTP status the CDR answered with.
     pub status: http::StatusCode,
-    /// The `Content-Type` the CDR declared, if any.
-    pub content_type: Option<String>,
     /// The `ETag` verbatim, weakness indicator and quotes included — read
     /// through [`Self::etag_version_uid`] rather than by hand.
     pub etag: Option<String>,
     /// The `Location` of a newly created resource (`201` answers only).
     pub location: Option<String>,
-    /// The `Last-Modified` instant of the served resource, if any.
-    pub last_modified: Option<String>,
-    /// The `Preference-Applied` the CDR reports for the request's `Prefer`.
-    pub preference_applied: Option<String>,
     /// The raw body bytes as text (all ITS-REST representations are text).
     pub body: String,
 }
@@ -86,13 +79,8 @@ impl CdrResponse {
     fn from_parts(status: http::StatusCode, headers: &http::HeaderMap, body: String) -> Self {
         Self {
             status,
-            content_type: header_text(headers, http::header::CONTENT_TYPE.as_str()),
             etag: header_text(headers, http::header::ETAG.as_str()),
             location: header_text(headers, http::header::LOCATION.as_str()),
-            last_modified: header_text(headers, http::header::LAST_MODIFIED.as_str()),
-            // NOTE: `Preference-Applied` has no `http::header` constant; the
-            // lookup is case-insensitive either way (`http::HeaderMap::get`).
-            preference_applied: header_text(headers, "preference-applied"),
             body,
         }
     }
@@ -522,11 +510,8 @@ mod tests {
     fn response(status: http::StatusCode, body: &str) -> CdrResponse {
         CdrResponse {
             status,
-            content_type: Some("application/json".to_owned()),
             etag: None,
             location: None,
-            last_modified: None,
-            preference_applied: None,
             body: body.to_owned(),
         }
     }
@@ -686,19 +671,10 @@ mod tests {
         }
         let response =
             CdrResponse::from_parts(http::StatusCode::CREATED, &headers, "{}".to_owned());
-        assert_eq!(response.content_type.as_deref(), Some("application/json"));
         assert_eq!(response.etag.as_deref(), Some("W/\"7d44::sys::3\""));
         assert_eq!(
             response.location.as_deref(),
             Some("https://cdr.example.org/ehr/1/composition/7d44")
-        );
-        assert_eq!(
-            response.last_modified.as_deref(),
-            Some("Wed, 22 Jul 2026 19:15:56 GMT")
-        );
-        assert_eq!(
-            response.preference_applied.as_deref(),
-            Some("return=representation")
         );
         // The If-Match round-trip reads the identifier, never the raw field.
         assert_eq!(response.etag_version_uid().as_deref(), Some("7d44::sys::3"));
@@ -707,7 +683,6 @@ mod tests {
         let bare =
             CdrResponse::from_parts(http::StatusCode::OK, &http::HeaderMap::new(), String::new());
         assert_eq!(bare.etag_version_uid(), None);
-        assert_eq!(bare.content_type, None);
         // An empty ETag is an absent identifier, not an empty precondition.
         let mut empty = http::HeaderMap::new();
         assert!(

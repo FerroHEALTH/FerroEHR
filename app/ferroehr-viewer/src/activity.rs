@@ -15,11 +15,9 @@
 //! (`docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.audit_details.adoc`),
 //! whose first ten characters are the `YYYY-MM-DD` calendar day.
 
-use serde::{Deserialize, Serialize};
-
 /// One day of activity: the calendar day and how many events fell on it.
 ///
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActivityPoint {
     /// The `YYYY-MM-DD` calendar day.
     pub day: String,

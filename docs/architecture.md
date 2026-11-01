@@ -383,12 +383,13 @@ restructure changed the schemas' target namespace while leaving every element
 name and `xsi:type` spelled identically, so one generated codec serves both
 published lineages and the wire namespace is a serialize-time choice — v2 by default
 (owner ruling 2026-08-03, issue #1666: only the v2 bundle's schemas model the
-RM 1.2.0 the server emits — register AMB-185), v1 when a request selects it
+RM 1.2.0 the server emits; the conformance instrument leaves the lineage open
+as its `xml-namespace` option), v1 when a request selects it
 with the `version` media-type parameter on `application/xml` (our own
 extension; no openEHR spec governs namespace selection on the REST wire). The two bundles are not interchangeable as
 VALIDATORS, though — the v1 one is frozen at an older RM generation, so a
 correct RM 1.2.0 document can fail against it (`docs/VERSIONS.md` §Spec
-version policy; register AMB-185). Upstream spec changes and releases are detected
+version policy). Upstream spec changes and releases are detected
 automatically by the scheduled watcher workflows and filed as `spec-update`
 issues for triage.
 

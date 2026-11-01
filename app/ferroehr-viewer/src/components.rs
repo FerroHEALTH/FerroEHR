@@ -54,8 +54,6 @@ pub enum EditorLanguage {
     Xml,
     /// AQL.
     Aql,
-    /// Plain text, such as an ADL 2 source.
-    Plain,
 }
 
 impl EditorLanguage {
@@ -65,7 +63,6 @@ impl EditorLanguage {
             Self::Json => Language::Json,
             Self::Xml => Language::Xml,
             Self::Aql => Language::Aql,
-            Self::Plain => Language::Plain,
         }
     }
 }

@@ -17,7 +17,6 @@
 
 use crate::format::ReprFormat;
 use crate::locale::Msg;
-use serde::{Deserialize, Serialize};
 
 /// The canonical JSON and XML representations, the forms every example
 /// comes in.
@@ -54,7 +53,7 @@ pub fn example_formats(root: &str) -> &'static [(&'static str, ReprFormat)] {
 }
 
 /// How much of the template a generated example fills in (`detail_level`).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ExampleDetail {
     /// Only the mandatory data points; expected to be committable as served.
     #[default]
@@ -89,7 +88,7 @@ impl ExampleDetail {
 }
 
 /// Which use the generated example is shaped for (`type`).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ExampleType {
     /// The document as submitted to the repository.
     #[default]

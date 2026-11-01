@@ -275,10 +275,6 @@ pub enum ConfigError {
     Invalid(String),
 }
 
-/// The variable the viewer's former build tool named the listen address
-/// with, which `server.listen` replaced.
-const LEPTOS_SITE_ADDR: &str = "LEPTOS_SITE_ADDR";
-
 /// The loader of the `FERROEHR_VIEWER` namespace, with the viewer's own
 /// defaults for `[server]` under the operator's values and `RUST_LOG` as the
 /// fallback of `telemetry.filter`, as the CDR reads it.
@@ -306,8 +302,8 @@ pub fn loader() -> Result<Loader, ConfigError> {
 /// # Errors
 /// Returns a [`ConfigError`] on an unreadable/invalid file, an unknown key
 /// or variable (strict deserialization), a type mismatch, an unreadable
-/// `*_file` secret, or a value the types cannot refuse (a `LEPTOS_SITE_ADDR`
-/// other than `server.listen`, `server.base_path`, `server.caller_rate`).
+/// `*_file` secret, or a value the types cannot refuse (`server.base_path`,
+/// `server.caller_rate`).
 pub fn load(path: Option<&Path>, sets: &[(String, String)]) -> Result<ViewerConfig, ConfigError> {
     // NOTE: a variable that is not UTF-8 cannot spell a `FERROEHR_VIEWER_` name, so the
     // sweep may leave it out; the loader reads the environment itself.
@@ -317,7 +313,7 @@ pub fn load(path: Option<&Path>, sets: &[(String, String)]) -> Result<ViewerConf
     let viewer_loader = loader()?;
     sweep(&viewer_loader, &environment)?;
     let loaded = viewer_loader.load_with::<ViewerConfig>(path, sets)?;
-    finish(loaded.settings().clone(), &environment)
+    finish(loaded.settings().clone())
 }
 
 /// Refuses every variable under `FERROEHR_VIEWER_` that is neither an
@@ -348,27 +344,11 @@ pub fn load_sources(
     let viewer_loader = loader()?;
     sweep(&viewer_loader, env)?;
     let loaded = viewer_loader.load_sources::<ViewerConfig>(file, None, env)?;
-    finish(loaded.settings().clone(), env)
+    finish(loaded.settings().clone())
 }
 
 /// Resolves the `*_file` secrets and checks the values the types cannot.
-///
-/// `environment` is read for [`LEPTOS_SITE_ADDR`] alone: a value that names
-/// another address than `server.listen` refuses the start, so a deployment
-/// that still sets it learns where the address moved.
-fn finish(
-    mut cfg: ViewerConfig,
-    environment: &BTreeMap<String, String>,
-) -> Result<ViewerConfig, ConfigError> {
-    if let Some(site_addr) = environment.get(LEPTOS_SITE_ADDR)
-        && site_addr.parse::<std::net::SocketAddr>().ok() != Some(cfg.server.listen)
-    {
-        return Err(ConfigError::Invalid(format!(
-            "{LEPTOS_SITE_ADDR} `{site_addr}` no longer sets the listen address: set server.listen \
-             (FERROEHR_VIEWER__SERVER__LISTEN), now `{}`, and unset {LEPTOS_SITE_ADDR}",
-            cfg.server.listen
-        )));
-    }
+fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
     // NOTE: no specification governs this: our own design; the viewer's pages and links
     // are rooted at `/`, and it mounts no per-caller limit, so neither key would apply.
     if !cfg.server.base_path.as_str().is_empty() {
@@ -611,22 +591,6 @@ mod tests {
         assert_eq!("0.0.0.0:3000", partial.server.listen.to_string());
         assert_eq!(5_000, partial.server.drain_delay_ms);
         assert_eq!(16 * 1024 * 1024, partial.server.body_limit_bytes);
-    }
-
-    /// `LEPTOS_SITE_ADDR` no longer binds: one naming another address than
-    /// `server.listen` refuses the start, naming the key that replaced it.
-    #[test]
-    fn a_leptos_site_addr_other_than_the_listen_address_is_refused() {
-        let other = BTreeMap::from([("LEPTOS_SITE_ADDR".to_owned(), "0.0.0.0:8081".to_owned())]);
-        let refused = load_sources(None, &other).unwrap_err().to_string();
-        assert!(refused.contains("server.listen"), "{refused}");
-        assert!(refused.contains("LEPTOS_SITE_ADDR"), "{refused}");
-
-        let same = BTreeMap::from([("LEPTOS_SITE_ADDR".to_owned(), "127.0.0.1:3000".to_owned())]);
-        assert!(
-            load_sources(None, &same).is_ok(),
-            "the former build tool's own value"
-        );
     }
 
     /// The keys of `[server]` the viewer cannot apply refuse the start.

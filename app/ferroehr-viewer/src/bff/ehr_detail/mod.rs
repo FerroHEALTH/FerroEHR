@@ -43,7 +43,6 @@ pub mod contributions;
 pub mod directory;
 pub mod status;
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::ViewerError;
@@ -59,7 +58,7 @@ use crate::locale::{Msg, tr_with};
 /// `ehr_status.type.is_equal("VERSIONED_EHR_STATUS")`) — all from
 /// `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.ehr.ehr.adoc`
 /// §`EHR Class`.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct EhrSummary {
     /// `EHR.ehr_id.value` as the CDR reports it.
     pub ehr_id: String,

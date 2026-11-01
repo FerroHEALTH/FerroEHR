@@ -129,12 +129,12 @@ TERMINAL (owner ruling 2026-08-21, the full lifecycle in
 gains `upstream-confirmed` (amber; NOT `blocked-upstream`, which keeps its
 narrower meaning: resolved in Jira, normative text not yet published) and —
 once its divergence is fully adjudicated in-repo — CLOSES as the standing
-outbound record (the closed issue stays the register's `upstream_issue`
-target; a confirmed report stays open only while something in-repo is blocked
-on it via a native edge); a refuted one is closed and its `ambiguities.yaml`
-entry removed or re-grounded (case made gating). The register (Veredictum's
-`artifacts/registers/ambiguities.yaml`) stays the machine layer and points at
-the issue (`upstream_issue`), never the other way only. **Spec-version
+outbound record (the closed issue stays the target of every citation of it; a
+confirmed report stays open only while something in-repo is blocked on it via
+a native edge); a refuted one is closed and every citation of it removed or
+re-grounded (the workflow made gating). The machine layer is the conformance
+instrument's catalogue: an option in `catalogue/capabilities.yaml` or a
+`report:` on a citation points at the issue, never the other way only. **Spec-version
 triage** (on `spec-update` issues): `spec-version:current` = fix inside a
 pinned line, act immediately; `spec-version:next` = lands in a different
 upstream release, collected under an on-demand `upstream:<comp>-<ver>` label

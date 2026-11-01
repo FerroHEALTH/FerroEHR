@@ -15,5 +15,7 @@ owner does not want a CI-runner stand-in for it this cycle.
 
 **How to apply:** do not propose, scope or run stress/perf measurement in
 v4.3.0; an issue whose acceptance needs one is re-milestoned with the ruling
-recorded on it, never closed on unmeasured numbers. See
+recorded on it, never closed on unmeasured numbers. (`veredictum stress` was
+the instrument of that cycle; the measured lane is now `bash
+scripts/conformance.sh perf`, #4452.) See
 [[measurement-environment-discipline]].

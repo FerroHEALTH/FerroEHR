@@ -18,15 +18,13 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
-
 use crate::bff::ehrs::ResultPage;
 use crate::error::ViewerError;
 use crate::locale::server::ServerMsg;
 use crate::locale::{tr_served, tr_served_with};
 
 /// A stored-query listing row (ITS-REST Definition API).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredQueryRow {
     /// Qualified name (`namespace::name`).
     pub name: String,

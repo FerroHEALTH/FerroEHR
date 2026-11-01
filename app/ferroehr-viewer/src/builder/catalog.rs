@@ -10,11 +10,9 @@
 //! Node shape per `docs/specs/openehr/ITS-REST/docs/simplified_formats/
 //! master04-basic_concepts.adoc` §"Web Template Metadata".
 
-use serde::{Deserialize, Serialize};
-
 /// One selectable coded option (a `DV_CODED_TEXT` code or a `DV_ORDINAL`
 /// step) for the criteria widgets.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeOption {
     /// The code string (`at0037`, a SNOMED code, …).
     pub code: String,
@@ -25,7 +23,7 @@ pub struct CodeOption {
 }
 
 /// One node of the builder's path tree.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CatalogNode {
     /// Display label (localized name → name → json id).
     pub label: String,

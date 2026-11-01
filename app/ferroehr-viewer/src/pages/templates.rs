@@ -13,7 +13,7 @@
 //! and builds its paths from the operational JSON, since the CDR has no Web
 //! Template for ADL 2. The family is the address's `family`, the tab its
 //! `tab`. Each page reads the CDR and answers its post on the server, into
-//! one model that both halves draw. No openEHR spec governs the viewer's
+//! one model the page draws. No openEHR spec governs the viewer's
 //! pages: our own design.
 
 use std::collections::BTreeSet;

@@ -8,21 +8,8 @@
 # one.
 
 not-found-title = No such screen
-not-found-heading = Page not found
 not-found-body = The viewer has no page at { $path }. EHRs live under /ehrs.
 committer-person = The person or their representative
-example = Example
-path-catalog = Path catalog
-aom2-json = AOM2 JSON
-source = Source
-choose-an-adl2-file = Choose an ADL2 file
-choose-opt-xml-file = Choose an OPT/XML file
-operational-template-adl-version-2-0 = operational_template (adl_version=2.0.6; rm_release=1.0.2; generated) …
-template-xmlns-http-schemas-openehr-org = <template xmlns="http://schemas.openehr.org/v1"> …
-upload-adl2-operational-template = Upload an ADL2 operational template
-upload-an-operational-template = Upload an operational template
-upload-adl2 = Upload ADL2
-upload-opt = Upload OPT
 adl-2 = ADL 2
 adl-1-4 = ADL 1.4
 input = Input
@@ -32,21 +19,14 @@ medium = Medium
 required = Required
 log-filter-needs-least-one-directive = a log filter needs at least one directive, e.g. `ferroehr=debug`
 no-metric-name-given = no metric name given
-openehr-specification-pins = openEHR specification pins
 db-connections-in-use = DB connections in use
 aql-queries = AQL queries
 compositions-committed = Compositions committed
-change-type-2 = change type
 no-current-version-known-reload-page = no current version is known: reload the page and retry
 composition-body-empty = the composition body is empty
 pick-date-time-travel = pick a date and time to travel to
 party-id-required = a party id is required
 version-uid-required-read-past-version = a version uid is required to read a past version
-roles = Roles
-people = People
-organisations = Organisations
-groups = Groups
-agents = Agents
 tag-key-required = a tag key is required
 tag-key-required-item-tag-invariant = a tag key is required (ITEM_TAG invariant Inv_key_valid: the key is not empty)
 cancel = Cancel
@@ -66,7 +46,6 @@ latest-version-no-version-sent = Latest version (no version sent)
 no-subscription-id-delete = no subscription id to delete
 no-subscription-id-update = no subscription id to update
 subscription-name-required-may-hold-only = a subscription name is required and may hold only letters, digits, `_`, `.` and `-`
-matches-every-committed-version = Matches every committed version.
 item-tag-list-json = ITEM_TAG list JSON: { $e }
 z = { $with_seconds }Z
 readiness-json = readiness JSON: { $e }
@@ -93,16 +72,10 @@ opt-1-4-parse = OPT 1.4 parse: { $e }
 webtemplate-build-2 = WebTemplate build: { $value0 }
 template-list-json = template list JSON: { $e }
 adl2-template-list-json = ADL2 template list JSON: { $e }
-matches = Matches { $parts }.
 event-subscription-list-json = event subscription list JSON: { $e }
 event-subscription-record-json = event subscription record JSON: { $e }
-cdr-ingests-adl-1-4-operational = The CDR ingests an ADL 1.4 operational template as OPT/XML. Choose a file or paste the source below; the CDR's validation diagnostics are shown verbatim on refusal.
-cdr-ingests-adl2-artefact-source-text = The CDR ingests the ADL2 artefact SOURCE as text/plain. Choose a file or paste the source below; the openEHR-ADL engine's diagnostics are shown verbatim on refusal.
 latest-version-s-full-object-version = the latest version's full OBJECT_VERSION_ID is required to delete a composition: reload this screen and retry
 current-ehr-status-version-uid-required = the current EHR_STATUS version uid is required to update it: reload this tab and retry
-cdr-already-holds-subscription-name-so = The CDR already holds a subscription with that name, so { $object } was not saved ({ $message }). Choose another name, or edit the existing subscription.
-not-cdr-any-more-another-operator = { $object } is not on the CDR any more ({ $message }): another operator may have deleted it. Reload this screen.
-session-may-not-administer-sign-admin = This session may not administer { $object } ({ $message }). Sign in with an ADMIN-role account and retry.
 no-value = (no value)
 count-unavailable = Unavailable
 count-no-row = The CDR answered the count with no row.
@@ -178,7 +151,6 @@ invalid-code = Not sent
 session-ended-code = Session ended
 internal-code = Viewer error
 
-forbidden-body = You are signed in as { $who }, and the CDR shows this only to { $needs }.
 
 page-refused = This page could not be read.
 

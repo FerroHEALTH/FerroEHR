@@ -20,10 +20,9 @@
 //!
 //! ## Ephemeral node identity (`_key`)
 //!
-//! `<For>` rows and the collapse / rename / picker UI state MUST be keyed by a
-//! stable, unique, data-derived identity — never a positional path or index — or
-//! a sibling that shifts into a deleted slot inherits the vacated row's state and
-//! `<For>` view (`view/04_iteration`). The working copy therefore stamps every
+//! A posted rename, move or delete MUST name its folder by a stable, unique,
+//! data-derived identity — never a positional path or index — or a sibling that
+//! shifts into a deleted slot receives the change meant for the vacated row. The working copy therefore stamps every
 //! FOLDER object **and every `items` `OBJECT_REF`** with a `_key` string
 //! (`stamp_keys`), all drawn from one counter so folder and item keys can never
 //! collide. It is a **client-only artifact of the in-memory editing tree**,
@@ -48,7 +47,7 @@ use crate::bff::ehr_detail::directory::{FOLDER_NODE_ID, folder_json};
 /// string (`"n0"`, `"n1"`, …) drawn from `counter`, inserting one only where
 /// absent — so it is idempotent and preserves the keys already carried by
 /// surviving nodes. The key is the stable, data-derived node identity that
-/// `<For>` rows and per-folder UI state key on; folders and items draw from
+/// a posted change names a folder or item by; folders and items draw from
 /// the same `counter`, so no item can ever be handed a folder's key. It is a
 /// viewer-local artifact of the working copy: never persisted to the CDR (see
 /// [`strip_keys`]), never rendered, and no openEHR spec governs it (our own
@@ -99,7 +98,7 @@ pub(crate) fn strip_keys(tree: &mut Value) {
 /// The live positional path of the folder carrying the ephemeral identity
 /// `key`, searched from `root` (`Some([])` for the root, `None` if no folder
 /// carries it). The `_key` is the durable identity; the path is re-derived
-/// from it on every reactive read and mutation so a folder's row stays
+/// from it on every read and mutation so a folder's row stays
 /// correct after a sibling delete shifts indices.
 #[must_use]
 pub(crate) fn find_path_by_key(root: &Value, key: &str) -> Option<Vec<usize>> {

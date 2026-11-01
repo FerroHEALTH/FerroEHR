@@ -13,8 +13,8 @@
 //! a new COMPOSITION *and* the EHR status it belongs with — is one commit here
 //! instead of two independent ones.
 //!
-//! The staging list is **viewer-session state only**: it lives in this tab's
-//! component state, so navigating away discards it. The viewer stores nothing
+//! The staging list is **viewer-session state only**: it rides the page's own
+//! form, so navigating away discards it. The viewer stores nothing
 //! of its own (§No viewer-local domain state), and the screen says so.
 //!
 //! Reads are reused, never re-implemented: the template list, the composition
@@ -35,7 +35,6 @@
 
 pub mod staged;
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::bff::ehr_detail::commit::staged::StagedChange;
@@ -47,7 +46,7 @@ use crate::error::ViewerError;
 /// commit MINTED — the `201` representation's `versions` are the `OBJECT_REF`s
 /// of exactly those (ITS-REST
 /// `specifications/responses/201_CONTRIBUTION.yaml`).
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CommitOutcome {
     /// `CONTRIBUTION.uid.value` — the id the contributions tab looks up.
     pub contribution_uid: String,

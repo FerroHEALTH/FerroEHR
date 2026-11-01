@@ -95,15 +95,6 @@ impl CompositionFilter {
             composer: composer.trim().to_owned(),
         }
     }
-
-    /// Whether no filter is set at all — the tab's default state.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.template.is_empty()
-            && self.from.is_empty()
-            && self.to.is_empty()
-            && self.composer.is_empty()
-    }
 }
 
 /// One `POST /query/aql` request's two halves, built together so they cannot
@@ -303,7 +294,6 @@ mod tests {
     #[test]
     fn whitespace_only_values_are_no_filter_at_all() {
         let filter = CompositionFilter::new("  ", "\t", " \n ", "   ");
-        assert!(filter.is_empty());
         let query = composition_query(EHR, &filter).expect("query");
         assert_eq!(
             query,

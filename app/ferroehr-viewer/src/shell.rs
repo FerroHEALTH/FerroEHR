@@ -24,7 +24,6 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::dock::{DecisionBar, decision_bar};
 use ferrohealth_ui::view::menu::{ThemeChoice, UserLink, UserMenu, user_menu};
@@ -454,10 +453,4 @@ pub async fn framed(content: Html) -> Html {
 #[must_use]
 pub fn centred_page(content: Html) -> Html {
     centred(&crate::locale::current(), content, toasts(), footer())
-}
-
-/// The theme a page is drawn in, for a part that previews it.
-#[must_use]
-pub fn theme_in_force() -> Theme {
-    crate::prefs::current().theme
 }

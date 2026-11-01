@@ -12,7 +12,7 @@
 //! definition_template_adl2_version_get.yaml` under
 //! `docs/specs/openehr/ITS-REST/`). Every derivation the two screens need
 //! from those facts — the family stem, the release version, the versions one
-//! listing holds for a family, the wire paths, the viewer hrefs — lives
+//! listing holds for a family, the wire paths — lives
 //! here as pure functions with unit tests, so the views stay thin.
 //!
 //! NOTE: no openEHR spec governs the viewer's routes or family switch — our
@@ -22,12 +22,7 @@ use crate::example_options::{ExampleDetail, ExampleType};
 use crate::locale::Msg;
 
 /// Which template family a Template Manager view is showing.
-///
-/// Serializable because the listing resource carries the family it fetched
-/// alongside the rows: the screen then reads the family from the DATA rather
-/// than from a signal inside the suspense, which is what keeps the rendered
-/// rows and their family in step.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TemplateFamily {
     /// ADL 1.4 operational templates (`definition/template/adl1.4`) — the
     /// default when `?family=` is absent or unrecognized.
@@ -56,61 +51,6 @@ impl TemplateFamily {
         }
     }
 
-    /// The upload trigger's label — what the header button offers.
-    #[must_use]
-    pub fn upload_label(self) -> Msg {
-        match self {
-            Self::Adl14 => Msg::UploadOpt,
-            Self::Adl2 => Msg::UploadAdl2,
-        }
-    }
-
-    /// The upload dialog's heading.
-    #[must_use]
-    pub fn upload_title(self) -> Msg {
-        match self {
-            Self::Adl14 => Msg::UploadAnOperationalTemplate,
-            Self::Adl2 => Msg::UploadAdl2OperationalTemplate,
-        }
-    }
-
-    /// The upload dialog's one-paragraph help: what the CDR ingests, and that
-    /// a refusal is shown verbatim.
-    #[must_use]
-    pub fn upload_help(self) -> Msg {
-        match self {
-            Self::Adl14 => Msg::CdrIngestsAdl14Operational,
-            Self::Adl2 => Msg::CdrIngestsAdl2ArtefactSourceText,
-        }
-    }
-
-    /// The upload picker's `accept` list.
-    #[must_use]
-    pub fn upload_accept(self) -> &'static [&'static str] {
-        match self {
-            Self::Adl14 => &[".opt", ".xml"],
-            Self::Adl2 => &[".adls", ".adl", ".opt2", ".txt"],
-        }
-    }
-
-    /// The paste area's placeholder: a recognizable first line of the format.
-    #[must_use]
-    pub fn upload_placeholder(self) -> Msg {
-        match self {
-            Self::Adl14 => Msg::TemplateXmlnsHttpSchemasOpenehrOrg,
-            Self::Adl2 => Msg::OperationalTemplateAdlVersion20,
-        }
-    }
-
-    /// The file picker's button label.
-    #[must_use]
-    pub fn upload_choose_label(self) -> Msg {
-        match self {
-            Self::Adl14 => Msg::ChooseOptXmlFile,
-            Self::Adl2 => Msg::ChooseAnAdl2File,
-        }
-    }
-
     /// Read the family out of a `?family=` value.
     ///
     /// Anything other than `adl2` is the ADL 1.4 default: the parameter is
@@ -122,70 +62,6 @@ impl TemplateFamily {
             Self::Adl2
         } else {
             Self::Adl14
-        }
-    }
-
-    /// The `/templates` href showing this family.
-    ///
-    /// Deliberately carries NOTHING else across: the two families are
-    /// different listings, so a page index or window size from the other one
-    /// would point at rows that are not there.
-    #[must_use]
-    pub fn href(self) -> String {
-        match self {
-            Self::Adl14 => "/templates".to_owned(),
-            Self::Adl2 => "/templates?family=adl2".to_owned(),
-        }
-    }
-}
-
-/// Which pane of the ADL2 detail screen is showing (`?tab=`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Adl2Tab {
-    /// The stored ADL2 source, read as `text/plain` — the default.
-    #[default]
-    Source,
-    /// The `OperationalTemplateV2` canonical JSON, read as `application/json`.
-    Json,
-    /// The Web-Template path catalog, built viewer-side from that JSON.
-    Catalog,
-    /// The CDR-generated example composition.
-    Example,
-}
-
-impl Adl2Tab {
-    /// The `?tab=` value naming this pane. Every spelling is a URL-safe
-    /// lowercase word, so a href never has to encode it.
-    #[must_use]
-    pub fn as_query(self) -> &'static str {
-        match self {
-            Self::Source => "source",
-            Self::Json => "json",
-            Self::Catalog => "catalog",
-            Self::Example => "example",
-        }
-    }
-
-    /// The tab's visible label.
-    #[must_use]
-    pub fn label(self) -> Msg {
-        match self {
-            Self::Source => Msg::Source,
-            Self::Json => Msg::Aom2Json,
-            Self::Catalog => Msg::PathCatalog,
-            Self::Example => Msg::Example,
-        }
-    }
-
-    /// Read the pane out of a `?tab=` value; anything unrecognized is the
-    /// default source pane (the parameter is user input).
-    #[must_use]
-    pub fn from_query(value: &str) -> Self {
-        match value {
-            "json" => Self::Json,
-            "catalog" => Self::Catalog,
-            "example" => Self::Example,
-            _ => Self::Source,
         }
     }
 }
@@ -310,37 +186,10 @@ pub fn example_path(template_id: &str, detail: ExampleDetail, kind: ExampleType)
     )
 }
 
-/// The `/templates/adl2/{template_id}` detail href for one list row.
-///
-/// The id is percent-encoded because it is CDR-supplied text: a reserved
-/// character would otherwise split the path segment. The route table
-/// percent-decodes route params, so the read side needs no decode.
-#[must_use]
-pub fn detail_href(template_id: &str) -> String {
-    format!("/templates/adl2/{}", urlencoding::encode(template_id))
-}
-
-/// The ADL2 detail screen's self-link with `tab` selected and `version`
-/// pinned (`None` = the artefact the route names).
-#[must_use]
-pub fn view_href(template_id: &str, tab: Adl2Tab, version: Option<&str>) -> String {
-    let mut href = format!(
-        "/templates/adl2/{}?tab={}",
-        urlencoding::encode(template_id),
-        tab.as_query()
-    );
-    if let Some(version) = version.map(str::trim).filter(|value| !value.is_empty()) {
-        href.push_str("&version=");
-        href.push_str(&urlencoding::encode(version));
-    }
-    href
-}
-
 #[cfg(test)]
 mod tests {
     use crate::adl2::{
-        Adl2Tab, TemplateFamily, artefact_path, detail_href, example_path, family_versions,
-        split_hrid, template_path, view_href,
+        TemplateFamily, artefact_path, example_path, family_versions, split_hrid, template_path,
     };
     use crate::example_options::{ExampleDetail, ExampleType};
 
@@ -353,23 +202,7 @@ mod tests {
         assert_eq!(TemplateFamily::from_query("adl14"), TemplateFamily::Adl14);
         assert_eq!(TemplateFamily::from_query("adl-2"), TemplateFamily::Adl14);
         assert_eq!(TemplateFamily::default(), TemplateFamily::Adl14);
-        assert_eq!(TemplateFamily::Adl14.href(), "/templates");
-        assert_eq!(TemplateFamily::Adl2.href(), "/templates?family=adl2");
         assert_eq!(TemplateFamily::Adl2.as_query(), "adl2");
-    }
-
-    #[test]
-    fn the_detail_tabs_round_trip_their_query_value() {
-        for tab in [
-            Adl2Tab::Source,
-            Adl2Tab::Json,
-            Adl2Tab::Catalog,
-            Adl2Tab::Example,
-        ] {
-            assert_eq!(Adl2Tab::from_query(tab.as_query()), tab);
-        }
-        assert_eq!(Adl2Tab::from_query("nonsense"), Adl2Tab::Source);
-        assert_eq!(Adl2Tab::default(), Adl2Tab::Source);
     }
 
     #[test]
@@ -481,49 +314,5 @@ mod tests {
         // A slash would otherwise address a different resource entirely.
         assert_eq!(artefact_path("a/b"), "definition/artefact/adl2/a%2Fb");
         assert_eq!(artefact_path("a b#c"), "definition/artefact/adl2/a%20b%23c");
-    }
-
-    #[test]
-    fn the_viewer_hrefs_encode_the_template_id() {
-        assert_eq!(
-            detail_href("openEHR-EHR-COMPOSITION.cnf.v1.0.0"),
-            "/templates/adl2/openEHR-EHR-COMPOSITION.cnf.v1.0.0"
-        );
-        assert_eq!(detail_href("a/b#c"), "/templates/adl2/a%2Fb%23c");
-        assert_eq!(
-            view_href("id", Adl2Tab::Json, None),
-            "/templates/adl2/id?tab=json"
-        );
-        assert_eq!(
-            view_href("id", Adl2Tab::Source, Some("1.1.0")),
-            "/templates/adl2/id?tab=source&version=1.1.0"
-        );
-        // A blank version is dropped rather than sent as `version=`.
-        assert_eq!(
-            view_href("id", Adl2Tab::Example, Some(" ")),
-            "/templates/adl2/id?tab=example"
-        );
-    }
-
-    #[test]
-    fn a_detail_href_round_trips_through_the_router_unescape() {
-        // `ParamsMap::insert` percent-decodes every route param on both
-        // targets, so the segment this builder emits must decode back.
-        for id in [
-            "openEHR-EHR-COMPOSITION.cnf_adl2_versioned.v1.0.0",
-            "a/b",
-            "a#b",
-            "a%2Fb",
-            "temperatur-°C",
-        ] {
-            let href = detail_href(id);
-            let segment = href
-                .strip_prefix("/templates/adl2/")
-                .expect("the builder always emits /templates/adl2/<segment>");
-            assert_eq!(
-                urlencoding::decode(segment).expect("valid UTF-8 percent-encoding"),
-                id
-            );
-        }
     }
 }

@@ -55,7 +55,6 @@ pub mod party;
 pub mod relationship;
 pub mod tags;
 
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
@@ -72,7 +71,7 @@ use crate::uid::container_uid_of;
 /// `specifications/demographic.openapi.yaml`), and each RM type is the
 /// payload `_type` that family stores. This is a route key, not a re-model of
 /// the RM: a party document itself is only ever carried verbatim.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PartyKind {
     /// `AGENT` — `/demographic/agent`.
     Agent,
@@ -121,18 +120,6 @@ impl PartyKind {
         }
     }
 
-    /// The plural label the kind switcher shows.
-    #[must_use]
-    pub fn plural(self) -> Msg {
-        match self {
-            Self::Agent => Msg::Agents,
-            Self::Group => Msg::Groups,
-            Self::Organisation => Msg::Organisations,
-            Self::Person => Msg::People,
-            Self::Role => Msg::Roles,
-        }
-    }
-
     /// The kind a URL segment names, or `None` for anything outside the closed
     /// five-kind set (the browser screen answers that with its not-found view).
     #[must_use]
@@ -157,7 +144,7 @@ impl PartyKind {
 /// `versioned_party` is released (`operations/versioned_party_get.yaml`);
 /// `versioned_party_relationship` is the CDR's own extension (module docs
 /// fact 3).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VersionedFamily {
     /// `VERSIONED_PARTY` — `/demographic/versioned_party/{versioned_object_uid}`.
     Party,
@@ -189,8 +176,8 @@ impl VersionedFamily {
 
     /// The family a route segment names, or `None` for anything else.
     ///
-    /// Server functions are a public HTTP API, so the segment they
-    /// interpolate into a CDR path is validated back into this closed set
+    /// A route segment is caller-supplied text, so the segment a page
+    /// interpolates into a CDR path is validated back into this closed set
     /// rather than trusted.
     #[must_use]
     pub fn from_segment(segment: &str) -> Option<Self> {
@@ -204,7 +191,7 @@ impl VersionedFamily {
 
 /// Which demographic resource a document read addresses: one of the five party
 /// families, or the `PARTY_RELATIONSHIP` extension resource.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DemographicResource {
     /// A party of this kind — `/demographic/{kind}/{uid_based_id}`.
     Party(PartyKind),
@@ -251,18 +238,12 @@ impl DemographicResource {
     }
 }
 
-/// The typed refusal a server function answers when a caller hands it a
+/// The typed refusal a page answers when a caller hands it a
 /// segment outside the closed demographic route set.
 fn unknown_segment(segment: &str, expected: &str) -> ViewerError {
     ViewerError::Invalid(format!(
         "{segment:?} is not a {expected} of the demographic API"
     ))
-}
-
-/// The Parties page opened on `kind`.
-#[must_use]
-pub fn browse_href(kind: PartyKind) -> String {
-    format!("/parties?kind={}", kind.segment())
 }
 
 /// The `/parties/{kind}/{uid}` page of a party.
@@ -608,8 +589,8 @@ pub(crate) fn json_str(value: &Value, path: &[&str]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        DemographicResource, PartyKind, VersionedFamily, browse_href, contribution_href,
-        party_href, relationship_href,
+        DemographicResource, PartyKind, VersionedFamily, contribution_href, party_href,
+        relationship_href,
     };
 
     #[test]
@@ -649,7 +630,6 @@ mod tests {
 
     #[test]
     fn hrefs_route_on_the_container_and_percent_encode_the_id() {
-        assert_eq!(browse_href(PartyKind::Person), "/parties?kind=person");
         assert_eq!(
             party_href(PartyKind::Role, "8849182c::sys::3"),
             "/parties/role/8849182c"
@@ -712,7 +692,7 @@ mod tests {
             );
         }
         // …and nothing else does, so no caller-supplied string can steer a CDR
-        // path (a server function is a public HTTP endpoint).
+        // path (every route is a public HTTP endpoint).
         for hostile in ["", "..", "ehr", "versioned_composition", "party", "/"] {
             assert_eq!(VersionedFamily::from_segment(hostile), None, "{hostile}");
             assert_eq!(

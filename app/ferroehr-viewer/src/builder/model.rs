@@ -7,10 +7,8 @@
 //!
 //! Plain serializable data — no components.
 
-use serde::{Deserialize, Serialize};
-
 /// What the query returns.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueryShape {
     /// Whole COMPOSITIONs (`SELECT c …`).
     Compositions,
@@ -25,7 +23,7 @@ pub enum QueryShape {
 
 /// One selected projection column (only meaningful for
 /// [`QueryShape::DataValues`]).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelectedColumn {
     /// The archetype path relative to the COMPOSITION root, as the Web
     /// Template's `aqlPath` carries it (leading `/` optional).
@@ -35,7 +33,7 @@ pub struct SelectedColumn {
 }
 
 /// The boolean connective of a criterion group.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BoolOp {
     /// All children must hold.
     And,
@@ -44,7 +42,7 @@ pub enum BoolOp {
 }
 
 /// A node in the criterion tree: a leaf condition or an n-ary group.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CriterionNode {
     /// One typed condition on one path.
     Leaf(Criterion),
@@ -61,7 +59,7 @@ pub enum CriterionNode {
 }
 
 /// One leaf condition: a path plus a typed constraint.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Criterion {
     /// The Web Template leaf's `aqlPath` (COMPOSITION-relative). Per the
     /// Simplified Formats level-removal rules
@@ -80,7 +78,7 @@ pub struct Criterion {
 /// The per-RM-datatype constraint catalog (each variant lowers to a typed
 /// AQL `WHERE` fragment; unsupported datatypes are rejected at lowering
 /// with a typed error, never silently dropped).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CriterionKind {
     /// `DV_QUANTITY`: magnitude range (inclusive bounds; either side
     /// optional) + optional units equality — independent `AND`-joined
@@ -151,7 +149,7 @@ pub enum CriterionKind {
 }
 
 /// Ordering of the result set.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrderRule {
     /// COMPOSITION-relative path.
     pub aql_path: String,
@@ -160,7 +158,7 @@ pub struct OrderRule {
 }
 
 /// The whole builder state for one query.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BuilderQuery {
     /// Restrict to COMPOSITIONs of this template
     /// (`c/archetype_details/template_id/value = id`); empty = any.

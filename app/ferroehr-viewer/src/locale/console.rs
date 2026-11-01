@@ -74,12 +74,6 @@ crate::locale::messages! {
         LaunchMarker = "launch-marker",
         /// `AuditEvent Bundle JSON: '$e'`
         AuditeventBundleJson = "auditevent-bundle-json",
-        /// HTTP `$status`
-        Http = "http",
-        /// the CDR answered `$status` there
-        TheCdrAnsweredThere = "the-cdr-answered-there",
-        /// the CDR answered `$status` there: `$message`
-        TheCdrAnsweredThere2 = "the-cdr-answered-there-2",
         /// Identity claim · `$name`
         IdentityClaim = "identity-claim",
         /// Launch context · `$other`
@@ -94,14 +88,6 @@ crate::locale::messages! {
         NotResourceMaster08DefinesTemplateTemplateid = "not-resource-master08-defines-template-templateid",
         /// Not a resource scope. The master08 form is `$resource_scope_form` — for example...
         NotResourceScopeMaster08FormExample = "not-resource-scope-master08-form-example",
-        /// SMART discovery could not be read: the CDR is unreachable (`$detail`). This says...
-        SmartDiscoveryCouldNotReadCdr = "smart-discovery-could-not-read-cdr",
-        /// SMART discovery could not be read: the CDR refused this session at `$endpoint`. Sign...
-        SmartDiscoveryCouldNotReadCdr2 = "smart-discovery-could-not-read-cdr-2",
-        /// SMART discovery could not be read: this session may not read `$endpoint`. It needs an...
-        SmartDiscoveryCouldNotReadSession = "smart-discovery-could-not-read-session",
-        /// SMART discovery could not be read from `$endpoint` — `$detail`. Whether SMART is...
-        SmartDiscoveryCouldNotReadFrom = "smart-discovery-could-not-read-from",
         /// The filter choice that keeps every outcome.
         ChoiceAny = "choice-any",
         /// The audit outcome of a success.

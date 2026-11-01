@@ -55,8 +55,6 @@
               (#1694)"
 )]
 
-use serde::{Deserialize, Serialize};
-
 use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
 use crate::locale::tr_served;
@@ -69,7 +67,7 @@ use crate::uid::container_uid_of;
 /// [`Composition`](Self::Composition) and [`EhrStatus`](Self::EhrStatus) — have
 /// the released tag route trios; [`Directory`](Self::Directory) has none (fact
 /// 1 in the module docs), so it is a navigation answer only.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EhrTargetKind {
     /// A COMPOSITION or its `VERSIONED_COMPOSITION`.
     Composition,
@@ -93,7 +91,7 @@ impl EhrTargetKind {
 
     /// The kind a segment names, or `None` for anything else.
     ///
-    /// Server functions are a public HTTP API, so a segment a caller hands one
+    /// A route segment is caller-supplied text, so it
     /// is validated back into this closed set rather than interpolated into a
     /// CDR path.
     #[must_use]
@@ -218,8 +216,7 @@ pub async fn set_ehr_tag(
 
 /// Insert-or-replace one tag in the collection at `url`.
 ///
-/// The plain function behind [`set_ehr_tag`] and [`set_status_tag`], so neither
-/// calls the other.
+/// The plain function behind [`set_ehr_tag`].
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] on a blank key; CDR transport errors pass through;
@@ -296,8 +293,7 @@ pub async fn delete_ehr_tag(
 
 /// Delete every tag under `key` from the collection at `url`.
 ///
-/// The plain function behind [`delete_ehr_tag`] and
-/// [`delete_status_tag`].
+/// The plain function behind [`delete_ehr_tag`].
 ///
 /// # Errors
 /// [`ViewerError::Invalid`] on a blank key; CDR transport errors pass through;
@@ -484,95 +480,6 @@ async fn ehr_status_container(
     ))
 }
 
-/// The `EHR_STATUS`'s own tag collection
-/// (`GET /ehr/{ehr_id}/ehr_status/{versioned_object_uid}/tags`), addressed by
-/// the container the EHR itself names.
-///
-/// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when a body is not valid JSON.
-pub async fn fetch_status_tags(
-    // The EHR whose status tags to read.
-    ehr_id: String,
-) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = status_tags_url(&state, &session.credential, &ehr_id).await?;
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    crate::bff::item_tags::parse_item_tags(&response.body)
-}
-
-/// The tag-collection URL of an EHR's `VERSIONED_EHR_STATUS` container.
-///
-/// # Errors
-/// As [`ehr_status_container`]; the kind is this module's own constant, so the
-/// [`tags_url`] refusal is unreachable here.
-async fn status_tags_url(
-    state: &crate::state::AppState,
-    credential: &crate::session::Credential,
-    ehr_id: &str,
-) -> Result<String, ViewerError> {
-    let container = ehr_status_container(state, credential, ehr_id).await?;
-    tags_url(
-        state,
-        ehr_id,
-        EhrTargetKind::EhrStatus.segment(),
-        &container,
-    )
-}
-
-/// Set one tag on the EHR's `VERSIONED_EHR_STATUS` container, resolving the
-/// container from the EHR itself first.
-///
-/// # Errors
-/// As [`set_ehr_tag`], plus the EHR read's own failures.
-pub async fn set_status_tag(
-    // The EHR whose status to tag.
-    ehr_id: String,
-    // The tag key to set.
-    key: String,
-    // The tag value; blank stores a tag with no value.
-    value: String,
-    // The tag's `target_path`; blank tags the whole object.
-    target_path: String,
-) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = status_tags_url(&state, &session.credential, &ehr_id).await?;
-    set_tag_at(
-        &state,
-        &session.credential,
-        &url,
-        &key,
-        &value,
-        &target_path,
-    )
-    .await
-}
-
-/// Delete the EHR status container's tags carrying `key`, resolving the
-/// container from the EHR itself first.
-///
-/// # Errors
-/// As [`delete_ehr_tag`], plus the EHR read's own failures.
-pub async fn delete_status_tag(
-    // The EHR whose status tag to remove.
-    ehr_id: String,
-    // The tag key to remove.
-    key: String,
-) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = status_tags_url(&state, &session.credential, &ehr_id).await?;
-    delete_tag_at(&state, &session.credential, &url, &key).await
-}
-
 #[cfg(test)]
 mod tests {
     use super::EhrTargetKind;
@@ -587,7 +494,7 @@ mod tests {
             assert_eq!(EhrTargetKind::from_segment(kind.segment()), Some(kind));
         }
         // …and nothing else does, so no caller-supplied string can steer a CDR
-        // path (a server function is a public HTTP endpoint).
+        // path (every route is a public HTTP endpoint).
         for hostile in ["", "..", "ehr", "versioned_composition", "tags", "/"] {
             assert_eq!(EhrTargetKind::from_segment(hostile), None, "{hostile}");
         }
