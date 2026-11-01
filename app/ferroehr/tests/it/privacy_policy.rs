@@ -483,3 +483,92 @@ async fn a_terminology_code_satisfying_a_checksum_is_not_refused() {
         .await
         .expect("a SNOMED code is clinical data, not an identifier");
 }
+
+// ── typed identifiers ─────────────────────────────────────────────────────────
+
+/// Two laboratory filler order numbers that pass the NHS Number modulus 11 by
+/// chance, as a Dutch laboratory deployment reported them (#4702).
+const ORDER_NUMBERS: [&str; 2] = ["8412501861", "8372500932"]; // privacy-allow: lab order numbers, not person identifiers
+
+/// A value the `gb-nhs-number` rule claims. Synthetic.
+const SYNTHETIC_NHS_NUMBER: &str = "9434767016"; // privacy-allow: synthetic, from the published algorithm
+
+/// A lab result carrying `id` typed `kind` in the feeder audit's
+/// originating-system item ids and as the order-id element.
+fn lab_result(id: &str, kind: &str) -> Value {
+    let identifier = json!({
+        "_type": "DV_IDENTIFIER", "id": id, "type": kind, "assigner": "lab.example"
+    });
+    let mut composition = composition_with_text("lab result", "a laboratory result");
+    composition["feeder_audit"] = json!({
+        "_type": "FEEDER_AUDIT",
+        "originating_system_audit": { "_type": "FEEDER_AUDIT_DETAILS", "system_id": "lab.example" },
+        "originating_system_item_ids": [
+            { "_type": "DV_IDENTIFIER", "id": "CL2509-0042", "type": "placer_order_number" },
+            identifier.clone()
+        ]
+    });
+    composition["content"][0]["data"]["items"][0]["value"] = identifier;
+    composition
+}
+
+#[tokio::test]
+async fn a_lab_result_whose_order_number_passes_the_nhs_check_commits() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = service(&db, &PrivacyConfig::default());
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
+    for order in ORDER_NUMBERS {
+        svc.create_composition(
+            ehr_id,
+            uv(&lab_result(order, "filler_order_number"), "249", None),
+        )
+        .await
+        .expect("an identifier typed as an order is not a person identifier");
+    }
+}
+
+#[tokio::test]
+async fn an_nhs_number_typed_as_one_is_still_refused_while_the_rule_is_on() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = service(&db, &PrivacyConfig::default());
+    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
+        .await
+        .map(|(id, _)| id)
+        .expect("create_ehr");
+    let error = svc
+        .create_composition(
+            ehr_id,
+            uv(&lab_result(SYNTHETIC_NHS_NUMBER, "NHS Number"), "249", None),
+        )
+        .await
+        .expect_err("a subject identifier field carrying an NHS Number is refused");
+    assert_refused_service(&error, "COMPOSITION/content[0]/data/items[0]/value/id");
+    assert_refused_service(
+        &error,
+        "COMPOSITION/feeder_audit/originating_system_item_ids[1]/id",
+    );
+    let messages = finding_messages(&error);
+    assert!(messages.contains("gb-nhs-number"), "{messages}");
+    assert!(!messages.contains(SYNTHETIC_NHS_NUMBER), "{messages}");
+
+    let without_nhs = service(
+        &db,
+        &PrivacyConfig {
+            identifier_scan: IdentifierScanConfig {
+                rules: vec!["nl-bsn".to_owned()],
+                ..IdentifierScanConfig::default()
+            },
+            ..PrivacyConfig::default()
+        },
+    );
+    without_nhs
+        .create_composition(
+            ehr_id,
+            uv(&lab_result(SYNTHETIC_NHS_NUMBER, "NHS Number"), "249", None),
+        )
+        .await
+        .expect("a deployment that leaves gb-nhs-number off never claims an NHS Number");
+}

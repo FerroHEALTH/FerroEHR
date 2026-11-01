@@ -718,3 +718,144 @@ fn the_shipped_ruleset_finds_nothing_in_the_vendored_corpus() {
         hits.join("\n")
     );
 }
+
+// ── typed identifiers ─────────────────────────────────────────────────────────
+
+/// Two laboratory filler order numbers that pass the NHS Number modulus 11 by
+/// chance, as a Dutch laboratory deployment reported them.
+const ORDER_NUMBERS: [&str; 2] = ["8412501861", "8372500932"]; // privacy-allow: lab order numbers, not person identifiers
+
+/// A value the `gb-nhs-number` rule claims. Synthetic.
+const SYNTHETIC_NHS_NUMBER: &str = "9434767016"; // privacy-allow: synthetic, from the published algorithm
+
+/// A `DV_IDENTIFIER` with an optional `type`, as canonical JSON.
+fn identifier(id: &str, kind: Option<&str>) -> Value {
+    match kind {
+        Some(kind) => json!({
+            "_type": "DV_IDENTIFIER", "id": id, "type": kind, "assigner": "lab.example"
+        }),
+        None => json!({ "_type": "DV_IDENTIFIER", "id": id, "assigner": "lab.example" }),
+    }
+}
+
+/// A lab result whose order numbers sit where one carries them: the feeder
+/// audit's originating-system item ids and the order id in the protocol.
+fn lab_result(order: &str, order_type: Option<&str>) -> Value {
+    let mut placer = identifier("CL2509-0042", Some("placer_order_number"));
+    if let Some(object) = placer.as_object_mut() {
+        object.remove("_type");
+    }
+    json!({
+        "_type": "COMPOSITION",
+        "name": { "_type": "DV_TEXT", "value": "laboratory result" },
+        "feeder_audit": {
+            "originating_system_audit": { "system_id": "lab.example" },
+            "originating_system_item_ids": [placer, identifier(order, order_type)]
+        },
+        "content": [{
+            "_type": "OBSERVATION",
+            "name": { "_type": "DV_TEXT", "value": "laboratory test result" },
+            "protocol": {
+                "_type": "ITEM_TREE",
+                "name": { "_type": "DV_TEXT", "value": "tree" },
+                "items": [{
+                    "_type": "CLUSTER",
+                    "name": { "_type": "DV_TEXT", "value": "order details" },
+                    "items": [{
+                        "_type": "ELEMENT",
+                        "name": { "_type": "DV_TEXT", "value": "order id" },
+                        "value": identifier(order, order_type)
+                    }]
+                }]
+            }
+        }]
+    })
+}
+
+#[test]
+fn an_order_number_typed_as_one_is_not_a_finding() {
+    let default = policy(&PrivacyConfig::default());
+    for order in ORDER_NUMBERS {
+        for kind in [
+            "filler_order_number",
+            "Filler Order Number",
+            "fillerOrderNumber",
+        ] {
+            assert_eq!(
+                paths(&default.findings("COMPOSITION", &lab_result(order, Some(kind)))),
+                Vec::<&str>::new(),
+                "{kind} declares an order identifier, not a person identifier"
+            );
+        }
+    }
+}
+
+#[test]
+fn an_untyped_item_id_in_the_feeder_audit_is_not_a_finding_but_one_in_content_is() {
+    let default = policy(&PrivacyConfig::default());
+    for order in ORDER_NUMBERS {
+        assert_eq!(
+            paths(&default.findings("COMPOSITION", &lab_result(order, None))),
+            ["COMPOSITION/content[0]/protocol/items[0]/items[0]/value/id"],
+            "FEEDER_AUDIT.originating_system_item_ids identify the item, an untyped \
+             DV_IDENTIFIER elsewhere is still scanned"
+        );
+    }
+}
+
+#[test]
+fn a_person_identifier_is_refused_whatever_slot_or_type_it_sits_in() {
+    let default = policy(&PrivacyConfig::default());
+    for kind in [
+        "NHS Number",
+        "nhs_number",
+        "patient order number",
+        "Social Security Number",
+    ] {
+        let findings =
+            default.findings("COMPOSITION", &lab_result(SYNTHETIC_NHS_NUMBER, Some(kind)));
+        assert_eq!(
+            paths(&findings),
+            [
+                "COMPOSITION/feeder_audit/originating_system_item_ids[1]/id",
+                "COMPOSITION/content[0]/protocol/items[0]/items[0]/value/id",
+            ],
+            "{kind} names a person identifier, so its value is scanned"
+        );
+        assert!(findings[0].message.contains("gb-nhs-number"));
+    }
+    let unknown = default.findings(
+        "COMPOSITION",
+        &lab_result(SYNTHETIC_NHS_NUMBER, Some("reference")),
+    );
+    assert_eq!(
+        paths(&unknown),
+        ["COMPOSITION/content[0]/protocol/items[0]/items[0]/value/id"],
+        "a type that names no kind this scan knows proves nothing outside the item-id slot"
+    );
+}
+
+#[test]
+fn an_order_number_in_free_text_is_still_claimed_by_the_rules_in_force() {
+    let text = json!({
+        "_type": "COMPOSITION",
+        "name": { "_type": "DV_TEXT", "value": format!("order {}", ORDER_NUMBERS[0]) }
+    });
+    assert_eq!(
+        paths(&policy(&PrivacyConfig::default()).findings("COMPOSITION", &text)),
+        ["COMPOSITION/name/value"],
+        "free text declares no type, so the default rule set still claims the run"
+    );
+    let dutch = policy(&PrivacyConfig {
+        identifier_scan: IdentifierScanConfig {
+            rules: vec!["nl-bsn".to_owned()],
+            ..IdentifierScanConfig::default()
+        },
+        ..PrivacyConfig::default()
+    });
+    assert_eq!(
+        dutch.findings("COMPOSITION", &text),
+        Vec::<Finding>::new(),
+        "a deployment that does not enable gb-nhs-number never claims an NHS Number"
+    );
+}
