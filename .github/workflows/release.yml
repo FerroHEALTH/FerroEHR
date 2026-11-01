@@ -165,7 +165,7 @@ jobs:
       # The tag comes from the step above (a dispatch names it, a push carries
       # it), never from the ref alone. THE prerelease rule, one definition.
       - id: kind
-        uses: ./.github/actions/release-kind
+        uses: ./.github/actions/release-kind # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           tag: ${{ steps.tag.outputs.tag }}
 
@@ -186,7 +186,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # The chart-version check of the list below reads the registry with helm.
-      - uses: ./.github/actions/helm-pinned
+      - uses: ./.github/actions/helm-pinned # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
 
       # Every release fact, as ONE list: the milestone, the workspace version,
       # the changelog's structure and Security rules for this section, the
@@ -380,7 +380,7 @@ jobs:
       contents: write # attach the per-arch tarballs to the release
       id-token: write # Sigstore, for the provenance + SBOM attestations
       attestations: write # store them against this repository
-    uses: ./.github/workflows/release-build.yml
+    uses: ./.github/workflows/release-build.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       tag: ${{ needs.plan.outputs.tag }}
       sha: ${{ github.sha }}
@@ -781,7 +781,7 @@ jobs:
     # `defer-tags` pushes BY DIGEST: the tags are applied by scan-and-tag once
     # the vulnerability gate passes, so a HIGH finding can never already be
     # `latest` by the time the lane turns red (#2747).
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr
       defer-tags: true
@@ -882,7 +882,7 @@ jobs:
       id-token: write # Sigstore, for the signed attestations
       attestations: write # store them against this repository
     # The reusable SLSA Build L3 lane; see the app image above.
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr-viewer
       defer-tags: true
@@ -916,7 +916,7 @@ jobs:
     # The reusable SLSA Build L3 lane. QEMU: the one RUN layer (the Debian
     # security upgrade, #2408, and the GnuPG purge, #3673) executes on the
     # non-native platform.
-    uses: ./.github/workflows/build-image.yml
+    uses: ./.github/workflows/build-image.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       image: ghcr.io/ferrohealth/ferroehr-postgres
       defer-tags: true
@@ -949,7 +949,7 @@ jobs:
     permissions:
       contents: read
       packages: write # pull the pushed digests, then tag them
-    uses: ./.github/workflows/scan-and-tag.yml
+    uses: ./.github/workflows/scan-and-tag.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       app-image: ghcr.io/ferrohealth/ferroehr
       app-digest: ${{ needs.app-image.outputs.digest }}
@@ -1194,7 +1194,7 @@ jobs:
     permissions:
       contents: write # the reusable job's badge push, which never happens off main
       packages: read # pull the digests this run pushed
-    uses: ./.github/workflows/conformance.yml
+    uses: ./.github/workflows/conformance.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       server-image: ghcr.io/ferrohealth/ferroehr@${{ needs.app-image.outputs.digest }}
       postgres-image: ghcr.io/ferrohealth/ferroehr-postgres@${{ needs.postgres-image.outputs.digest }}
@@ -1219,7 +1219,7 @@ jobs:
     concurrency:
       group: publish-chart
       cancel-in-progress: false
-    uses: ./.github/workflows/build-chart.yml
+    uses: ./.github/workflows/build-chart.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       publish: true
       release-tag: ${{ needs.plan.outputs.tag }}
@@ -1261,13 +1261,13 @@ jobs:
       # recreate is the fresh boot that migrates the empty database, and the
       # verify below reads the release it just deployed.
       - name: Wipe the sandbox schemas (the deploy migrates a fresh database)
-        uses: ./.github/actions/hosted-deploy
+        uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           verb: wipe
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
       - name: Deploy the hosted sandbox
-        uses: ./.github/actions/hosted-deploy
+        uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           expected-version: ${{ needs.plan.outputs.version }}
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
@@ -1290,7 +1290,7 @@ jobs:
     permissions:
       contents: read
     secrets: inherit # zizmor: ignore[secrets-inherit]
-    uses: ./.github/workflows/sandbox-reseed.yml
+    uses: ./.github/workflows/sandbox-reseed.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
     with:
       seed-only: true
 
@@ -1322,7 +1322,7 @@ jobs:
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
       # This job renders the book and pushes it; it lints and link-checks
       # nothing, so neither link-check tool is installed.
-      - uses: ./.github/actions/docs-toolchain
+      - uses: ./.github/actions/docs-toolchain # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
           lint: "false"
           link-check: "false"

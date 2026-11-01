@@ -45,6 +45,7 @@
 #   publish-crates.sh verify          # read the registry back, with retries
 #   publish-crates.sh version         # print the version in the manifests
 #   publish-crates.sh list            # print the crates, one per line, in publish order
+#   publish-crates.sh --self-test     # stamp fixture trees, with and without git
 #
 # Requires: cargo, curl, git, jq, sha256sum, tar; `plan` and `publish` need
 # the full history (fetch-depth: 0). `stamp` needs only awk, grep and sed. `publish` additionally requires
@@ -327,8 +328,127 @@ do_verify() {
   echo "publish-crates: confirmed on crates.io — all ${#CRATES[@]} crates at $want"
 }
 
+# A fixture tree at lockstep <old>: the nine manifests with their internal
+# requirements, both locks, and decoys the stamp must leave alone (an external
+# dependency, a `[package.metadata]` version, a lock entry of another crate at
+# the same version). This script and the helper it sources sit at their paths.
+stamp_fixture() {
+  local root="$1" old="$2" crate prev="" lock
+  mkdir -p "$root/scripts/release" "$root/scripts/gh" "$root/fuzz"
+  cp scripts/release/publish-crates.sh "$root/scripts/release/"
+  cp scripts/gh/retry-net.sh "$root/scripts/gh/"
+  for crate in "${CRATES[@]}"; do
+    mkdir -p "$root/crates/$crate"
+    {
+      printf '[package]\nname = "%s"\nversion = "%s"\nedition.workspace = true\n\n' "$crate" "$old"
+      printf '[package.metadata.decoy]\nversion = "%s"\n\n[dependencies]\n' "$old"
+      printf 'decoy = { version = "%s" }\n' "$old"
+      [[ -z "$prev" ]] || printf '%s = { path = "../%s", version = "%s" }   # internal\n' "$prev" "$prev" "$old"
+    } >"$root/crates/$crate/Cargo.toml"
+    prev="$crate"
+  done
+  for lock in Cargo.lock fuzz/Cargo.lock; do
+    {
+      printf 'version = 4\n\n[[package]]\nname = "decoy"\nversion = "%s"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n' "$old"
+      printf '\n[[package]]\nname = "ferroehr"\nversion = "%s"\ndependencies = [\n "openehr-base",\n]\n' "$old"
+      for crate in "${CRATES[@]}"; do
+        printf '\n[[package]]\nname = "%s"\nversion = "%s"\n' "$crate" "$old"
+      done
+    } >"$root/$lock"
+  done
+}
+
+# The exit status of the fixture's own copy of this script, so its `cd` lands
+# in the fixture.
+stamp_in() {
+  local root="$1" rc=0
+  shift
+  bash "$root/scripts/release/publish-crates.sh" stamp "$@" >/dev/null 2>&1 || rc=$?
+  printf '%s\n' "$rc"
+}
+
+# The count of lines in <file> that match <pattern> (fixed string).
+count_of() {
+  grep -cF -- "$2" "$1" || true
+}
+
+self_test() {
+  local fails=0 work root crate lock bin tool new=1.2.3 old=0.0.7 want
+  expect() {
+    if [[ "$2" != "$3" ]]; then
+      echo "self-test: $1: got '$2', want '$3'" >&2
+      fails=$((fails + 1))
+    fi
+  }
+  work="$(mktemp -d)"
+  # The image `binary` job stamps in a container with no git, so the second
+  # tree has no .git and the stamp runs on a PATH that holds no git either.
+  bin="$work/bin"
+  mkdir -p "$bin"
+  for tool in bash awk grep sed sort mv rm cp dirname cat; do
+    ln -s "$(command -v "$tool")" "$bin/$tool"
+  done
+  stamp_fixture "$work/git" "$old"
+  git -C "$work/git" init -q
+  stamp_fixture "$work/nogit" "$old"
+  expect "a stamp in a git checkout succeeds" "$(stamp_in "$work/git" "$new")" 0
+  expect "a stamp with no .git and no git on PATH succeeds" "$(PATH="$bin" stamp_in "$work/nogit" "$new")" 0
+  for root in "$work/git" "$work/nogit"; do
+    for crate in "${CRATES[@]}"; do
+      expect "$crate [package] version in ${root##*/}" "$(manifest_version_in "$root" "$crate")" "$new"
+      expect "$crate external requirement in ${root##*/}" \
+        "$(count_of "$root/crates/$crate/Cargo.toml" "decoy = { version = \"$old\" }")" 1
+      expect "$crate keeps its two decoy versions in ${root##*/}" \
+        "$(count_of "$root/crates/$crate/Cargo.toml" "version = \"$old\"")" 2
+    done
+    expect "internal requirements at $new in ${root##*/}" \
+      "$(cat "$root"/crates/*/Cargo.toml | grep -cF -- "\", version = \"$new\" }   # internal" || true)" "$((${#CRATES[@]} - 1))"
+    for lock in Cargo.lock fuzz/Cargo.lock; do
+      for crate in "${CRATES[@]}"; do
+        expect "$lock $crate in ${root##*/}" \
+          "$(grep -A1 -xF "name = \"$crate\"" "$root/$lock" | sed -n 2p)" "version = \"$new\""
+      done
+      for crate in decoy ferroehr; do
+        expect "$lock leaves $crate in ${root##*/}" \
+          "$(grep -A1 -xF "name = \"$crate\"" "$root/$lock" | sed -n 2p)" "version = \"$old\""
+      done
+    done
+  done
+  expect "the two trees stamp alike" "$(diff -r -x .git "$work/git" "$work/nogit" >/dev/null && echo same)" same
+  expect "a second stamp at the same version succeeds" "$(stamp_in "$work/nogit" "$new")" 0
+  expect "a version that is not x.y.z is refused" "$(stamp_in "$work/nogit" "1.2")" 1
+
+  # Refusals: the tree must come out of each as it went in.
+  stamp_fixture "$work/missing" "$old"
+  mv "$work/missing/crates/openehr-adl" "$work/missing/openehr-adl.away"
+  expect "a set missing a crate is refused" "$(stamp_in "$work/missing" "$new")" 1
+  expect "a refused stamp writes nothing" "$(manifest_version_in "$work/missing" openehr-base)" "$old"
+  stamp_fixture "$work/extra" "$old"
+  mkdir -p "$work/extra/crates/openehr-extra"
+  printf '[package]\nname = "openehr-extra"\nversion = "%s"\n\n[dependencies]\nopenehr-base = { path = "../openehr-base", version = "%s" }\n' \
+    "$old" "$old" >"$work/extra/crates/openehr-extra/Cargo.toml"
+  expect "a set with an unknown openehr-* crate is refused" "$(stamp_in "$work/extra" "$new")" 1
+  stamp_fixture "$work/split" "$old"
+  sed 's/^version = "0\.0\.7"$/version = "0.0.6"/' "$work/split/crates/openehr-its/Cargo.toml" >"$work/split.toml"
+  mv "$work/split.toml" "$work/split/crates/openehr-its/Cargo.toml"
+  expect "a set out of lockstep is refused" "$(stamp_in "$work/split" "$new")" 1
+  expect "a refused split writes nothing" "$(manifest_version_in "$work/split" openehr-base)" "$old"
+  rm -r "$work"
+  if [[ "$fails" -gt 0 ]]; then
+    echo "publish-crates.sh self-test FAILED ($fails case(s))" >&2
+    exit 1
+  fi
+  echo "publish-crates.sh self-test OK"
+}
+
+# The `[package]` version of <crate> under <root>, read the way the stamp reads it.
+manifest_version_in() {
+  awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' "$1/crates/$2/Cargo.toml"
+}
+
 case "${1:-}" in
 plan) do_plan ;;
+--self-test) self_test ;;
 stamp)
   [[ "$#" -eq 2 ]] || die "usage: $0 stamp <version>"
   do_stamp "$2"
@@ -338,7 +458,7 @@ verify) do_verify ;;
 version) manifest_version ;;
 list) printf '%s\n' "${CRATES[@]}" ;;
 *)
-  echo "publish-crates: expected 'plan', 'stamp', 'publish', 'verify', 'version' or 'list', got '${1:-<none>}'" >&2
+  echo "publish-crates: expected 'plan', 'stamp', 'publish', 'verify', 'version', 'list' or '--self-test', got '${1:-<none>}'" >&2
   exit 2
   ;;
 esac
