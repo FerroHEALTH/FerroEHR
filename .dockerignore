@@ -23,6 +23,9 @@ target/
 # Vendored spec text + generated site — not needed to compile; large.
 docs/
 docs-dist/
+# The one docs/ file a build reads: app/ferroehr/build.rs derives the
+# `OPTIONS /` conformance profile from it.
+!docs/conformance/ferroehr/summary.md
 
 # The vendored test corpora (~250 MB of clinical models). The builder stage
 # compiles `-p ferroehr-server` only, so no test target — and nothing that
