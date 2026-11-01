@@ -21,7 +21,7 @@ fuzz_target!(|data: &[u8]| {
     let Ok(query) = openehr_query::parser::parse_str(text) else {
         return;
     };
-    let printed = openehr_query::printer::to_aql(&query);
+    let printed = openehr_query::printer::to_aql(&query, None);
     match openehr_query::parser::parse_str(&printed) {
         Ok(reparsed) => assert!(
             reparsed == query,
