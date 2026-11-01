@@ -44,6 +44,15 @@ releases never ride the product version.
 | MSRV | 1.98 |  <!-- the toolchain minus one: see the MSRV bump policy below -->
 | Edition | 2024 |
 | Cargo resolver | v3 |
+| Fuzz toolchain | `nightly-2026-10-31` (rustc 1.101.0-nightly 92b5b8c87 2026-10-29) |  <!-- the `FUZZ_NIGHTLY` pin of .github/workflows/fuzz.yml, moved by toolchain-watcher.yml -->
+
+The fuzz harnesses (`fuzz/`, their own workspace) build on a dated nightly,
+because cargo-fuzz needs `-Zsanitizer`. The pin is the newest nightly that
+builds every harness: nightly-2026-11-01 fails to compile `openehr-its` with
+an E0391 query cycle ("computing when `DvDate` needs async drop") that
+nightly-2026-10-31 does not (#4610). The toolchain watcher moves it weekly to
+the newest nightly whose `cargo fuzz build` passes, so a nightly that breaks
+the build is skipped and the pin stays on the last one that works.
 
 The toolchain is the newest stable Rust release and the MSRV is the
 toolchain minus one minor release, the rule every FerroHEALTH repository
