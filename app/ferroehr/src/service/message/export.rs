@@ -264,17 +264,14 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Whether an EHR with `ehr_id` exists (the `has_ehr` precondition of both
-    /// export calls).
+    /// Whether an EHR with `ehr_id` exists and the request may read it (the
+    /// `has_ehr` precondition of both export calls).
     async fn extract_ehr_exists(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1 \
-                 AND (NOT $2 OR access_restricted_at IS NULL))",
-        )
-        .bind(ehr_id)
-        .bind(crate::system_log::access_context::access_restriction_enforced())
-        .fetch_one(&mut *acquire(&self.pool).await?)
-        .await?)
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM ehr WHERE id = $1)")
+            .bind(ehr_id)
+            .fetch_one(&mut *acquire(&self.pool).await?)
+            .await?;
+        Ok(exists && !self.ehr_hidden_from_request(ehr_id).await?)
     }
 
     /// The `(vo_id, kind)` of every versioned object currently in the EHR (one
@@ -1117,17 +1114,19 @@ async fn resolve_entity_ehr(
         return Err(StatusError::ehr_not_found(format!("no EHR with id {id}")));
     }
     if let Some(subject) = subject_id {
-        let id: Option<EhrId> = sqlx::query_scalar(
-            "SELECT id FROM ehr WHERE subject_id = $1 \
-             AND (NOT $2 OR access_restricted_at IS NULL)",
-        )
-        .bind(subject)
-        .bind(crate::system_log::access_context::access_restriction_enforced())
-        .fetch_optional(&mut *acquire(&svc.pool).await?)
-        .await
-        .map_err(ServiceError::from)?;
-        return id
-            .ok_or_else(|| StatusError::ehr_not_found("no EHR names the requested subject_id"));
+        let id: Option<EhrId> = sqlx::query_scalar("SELECT id FROM ehr WHERE subject_id = $1")
+            .bind(subject)
+            .fetch_optional(&mut *acquire(&svc.pool).await?)
+            .await
+            .map_err(ServiceError::from)?;
+        if let Some(id) = id
+            && svc.extract_ehr_exists(id).await?
+        {
+            return Ok(id);
+        }
+        return Err(StatusError::ehr_not_found(
+            "no EHR names the requested subject_id",
+        ));
     }
     Err(StatusError::precondition(
         "EXTRACT_ENTITY_MANIFEST identifies no entity (neither ehr_id nor subject_id)",

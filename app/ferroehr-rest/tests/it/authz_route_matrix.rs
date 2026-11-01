@@ -390,6 +390,8 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/access-restriction"),
     // The EHDS Art. 3(3) access-delay register (#4351).
     ("GET", "/admin/access-delay"),
+    // The EHDS Art. 10 opt-out register (#4516).
+    ("GET", "/admin/access-opt-out"),
     // The audited read of a party's protected national identifiers (#3776). It
     // also needs `authz.rbac.identifier_reader_role`, checked in its handler.
     ("GET", "/admin/party/identifiers"),
@@ -434,6 +436,10 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // health professional (#4351).
     ("POST", "/admin/access-delay"),
     ("POST", "/admin/access-delay/release"),
+    // The EHDS Art. 10 opt-out from access through the access services,
+    // recorded and reversed on the person's instruction (#4516).
+    ("POST", "/admin/access-opt-out"),
+    ("POST", "/admin/access-opt-out/reverse"),
     // The repair the parity sweep is the diagnosis for. Unlike the sweep it
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).

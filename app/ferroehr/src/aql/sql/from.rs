@@ -1100,11 +1100,8 @@ impl Builder<'_> {
         // `ehr_id` does not make the content answerable.
         for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
             self.q.and_where(col(&alias, Ehr::RestrictedAt).is_null());
-            // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), a whole-EHR access
-            // restriction withholds the EHR itself while the request enforces it.
-            if self.gates.access_restricted {
-                self.q
-                    .and_where(col(&alias, Ehr::AccessRestrictedAt).is_null());
+            for predicate in self.gates.on_ehr(&alias) {
+                self.q.and_where(predicate);
             }
         }
         // Multi-EHR scoping restricts every VO root and every EHR source. A
@@ -1124,15 +1121,16 @@ impl Builder<'_> {
         {
             self.q.and_where(cond);
         }
-        // The per-EHR access decision binds every VO root and EHR source the
-        // same way the explicit scope does, so no query shape reaches a
-        // withheld EHR (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class).
+        // The per-EHR access decision (RM ehr `ehr_access.adoc` §`EHR_ACCESS`
+        // Class) and the EHDS Art. 10 opt-out bind every VO root and EHR source
+        // the way the explicit scope does, so no query shape reaches either.
         let accessed = roots
             .iter()
             .map(|root| col(root, Node::EhrId))
             .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
         for cond in accessed
-            .filter_map(|target| self.access_cond(target))
+            .flat_map(|t| [self.access_cond(t.clone()), self.gates.on_ehr_id(t)])
+            .flatten()
             .collect::<Vec<_>>()
         {
             self.q.and_where(cond);
@@ -1209,6 +1207,7 @@ impl Builder<'_> {
         [
             self.ehr_ids_cond(target.clone()),
             self.access_cond(target.clone()),
+            self.gates.on_ehr_id(target.clone()),
             self.subject_cond(target),
         ]
         .into_iter()

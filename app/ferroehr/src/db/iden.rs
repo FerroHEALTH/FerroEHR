@@ -61,6 +61,9 @@ pub enum Ehr {
     /// health professionals was recorded for the whole EHR; `NULL` =
     /// unrestricted.
     AccessRestrictedAt,
+    /// `opted_out_at` — when an EHDS Art. 10 opt-out from access through the
+    /// access services was recorded for the EHR; `NULL` = none stands.
+    OptedOutAt,
 }
 
 /// `commit_audit` — `AUDIT_DETAILS` of every committed change.
@@ -314,6 +317,7 @@ mod tests {
         include_str!("../../migrations/clinical/0015_access_restriction.sql"),
         include_str!("../../migrations/clinical/0019_node_values.sql"),
         include_str!("../../migrations/clinical/0028_node_header.sql"),
+        include_str!("../../migrations/clinical/0029_access_opt_out.sql"),
     ];
 
     /// Whether a later migration adds `col` to `table`.
@@ -416,6 +420,7 @@ mod tests {
                     Ehr::ResearchObjectedAt.to_string(),
                     Ehr::ResearchObjectionGround.to_string(),
                     Ehr::AccessRestrictedAt.to_string(),
+                    Ehr::OptedOutAt.to_string(),
                 ],
             ),
             (

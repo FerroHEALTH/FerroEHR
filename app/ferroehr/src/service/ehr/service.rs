@@ -276,15 +276,10 @@ impl FerroEhrService {
             namespace,
         )
         .await?;
-        // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), an EHR under a whole-EHR
-        // access restriction is not found by its subject while the request enforces it.
+        // NOTE: EHDS Art. 8 and Art. 10 (`docs/law/eu/ehds/text.html`), an EHR the request
+        // reads as absent under a restriction or an opt-out is not found by its subject.
         let found = match found {
-            Some(id)
-                if crate::system_log::access_context::access_restriction_enforced()
-                    && crate::storage::marks::is_ehr_access_restricted(&self.pool, id).await? =>
-            {
-                None
-            }
+            Some(id) if self.ehr_hidden_from_request(id).await? => None,
             other => other,
         };
         self.emit_subject_resolution(namespace, found)?;
