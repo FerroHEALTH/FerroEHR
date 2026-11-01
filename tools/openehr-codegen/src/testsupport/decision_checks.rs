@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The decision-map checks that read the loaded schemas: the ordered-hash
-//! table and the existence contradictions, each still grounded in a BMM.
+//! table, the existence contradictions and the ITS-JSON `minItems` refusals,
+//! each still grounded in its vendored input.
 
 use super::{DeclEntry, DeclMap, Error, compose, crate_keys};
-use crate::load::bmm::{BmmPropKind, BmmType};
+use crate::load::bmm::{BmmPropKind, BmmProperty, BmmType};
+use crate::plan::its_json_bounds::ITS_JSON_MIN_ITEMS;
 use crate::plan::ordered_hashes::ORDERED_HASHES;
 use crate::plan::overrides;
 
@@ -29,6 +31,19 @@ pub(super) fn ordered_hash_map() -> DeclMap {
 /// Every declaration of `owner.field` across the loaded schemas, each with the
 /// `<crate>/<file>` it comes from and whether it is mandatory and a `Hash`.
 fn declarations(owner: &str, field: &str) -> Result<Vec<(String, bool, bool)>, Error> {
+    Ok(props(owner, field)?
+        .into_iter()
+        .map(|(source, prop)| {
+            let hash = matches!(&prop.kind,
+                BmmPropKind::Single(BmmType::Generic { root, .. }) if root == "Hash");
+            (source, prop.is_mandatory, hash)
+        })
+        .collect())
+}
+
+/// Every declaration of `owner.field` across the loaded schemas, each with the
+/// `<crate>/<file>` it comes from.
+fn props(owner: &str, field: &str) -> Result<Vec<(String, BmmProperty)>, Error> {
     let mut out = Vec::new();
     for key in crate_keys() {
         for u in compose(key)?.generations.iter().flat_map(|g| &g.units) {
@@ -39,9 +54,7 @@ fn declarations(owner: &str, field: &str) -> Result<Vec<(String, bool, bool)>, E
             else {
                 continue;
             };
-            let hash = matches!(&prop.kind,
-                BmmPropKind::Single(BmmType::Generic { root, .. }) if root == "Hash");
-            out.push((format!("{key}/{}", u.spec.file), prop.is_mandatory, hash));
+            out.push((format!("{key}/{}", u.spec.file), prop.clone()));
         }
     }
     Ok(out)
@@ -96,6 +109,46 @@ pub fn stale_existence_contradictions() -> Result<Vec<String>, Error> {
         if found.is_empty() {
             stale.push(format!(
                 "{}.{}: no loaded schema declares the attribute on its owner",
+                entry.owner, entry.field
+            ));
+        }
+    }
+    Ok(stale)
+}
+
+/// Every ITS-JSON `minItems` entry whose vendored ground is gone, as one
+/// message per defect.
+///
+/// An entry stays live while the compiled-in ITS-JSON RM schema
+/// (`crates/openehr-its/schemas/json/openehr_rm_1.1.0_all.json`) gives the
+/// attribute `minItems: 1` on its owner AND some loaded schema declares it an
+/// optional container.
+///
+/// # Errors
+/// Returns an error if the ITS-JSON schema or any composition's BMM files
+/// cannot be loaded.
+pub fn stale_its_json_min_items() -> Result<Vec<String>, Error> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../crates/openehr-its/schemas/json/openehr_rm_1.1.0_all.json");
+    let schema: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+    let mut stale = Vec::new();
+    for entry in ITS_JSON_MIN_ITEMS {
+        let pointer = format!(
+            "/definitions/{}/properties/{}/minItems",
+            entry.owner, entry.field
+        );
+        if schema.pointer(&pointer).and_then(serde_json::Value::as_u64) != Some(1) {
+            stale.push(format!(
+                "{}.{}: ITS-JSON states no minItems 1, which the entry cites as {:?}",
+                entry.owner, entry.field, entry.citation
+            ));
+        }
+        let optional_container = props(entry.owner, entry.field)?
+            .iter()
+            .any(|(_, p)| !p.is_mandatory && matches!(p.kind, BmmPropKind::Container { .. }));
+        if !optional_container {
+            stale.push(format!(
+                "{}.{}: no loaded schema declares it an optional container",
                 entry.owner, entry.field
             ));
         }

@@ -374,7 +374,6 @@ async fn commit_directory_version(
                 "rm_version": "1.1.0"
             },
             "name": { "_type": "DV_TEXT", "value": name },
-            "folders": [],
             "items": [],
         }))
         .send()

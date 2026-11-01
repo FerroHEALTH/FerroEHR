@@ -26,6 +26,7 @@ pub(crate) mod emit_rm_model_api;
 pub(crate) mod emit_templates;
 pub(crate) mod emit_validate;
 pub(crate) mod emit_xml;
+pub(crate) mod json_bounds;
 pub(crate) mod model_query;
 pub(crate) mod model_types;
 pub(crate) mod naming;

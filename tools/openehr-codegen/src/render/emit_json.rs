@@ -126,7 +126,7 @@ struct DeserializeEnv<'a> {
 
 /// The shared hand-written runtime path, as named from inside the crate being
 /// emitted (`openehr-base` cannot refer to itself by crate name).
-fn support_path(krate: &str) -> &'static str {
+pub(super) fn support_path(krate: &str) -> &'static str {
     if krate == "openehr_base" {
         "crate::serde_support"
     } else {
@@ -956,7 +956,7 @@ fn field_final(f: &JsonField, i: usize, schema: &JsonSchema<'_>) -> String {
         }
         (JsonFieldKind::Optional, _) => format!("__s{i}.flatten()"),
         (JsonFieldKind::Container, _) => format!("__s{i}.unwrap_or_default()"),
-        (JsonFieldKind::OptionalContainer, _) => format!("__s{i}"),
+        (JsonFieldKind::OptionalContainer, _) => super::json_bounds::optional_final(f, i, schema),
     }
 }
 
