@@ -33,9 +33,12 @@
 # is judgment; review carries it (comments.md §Enforcement register).
 #
 # Usage:
-#   scripts/checks/comment-style.sh --all               # whole tree
+#   scripts/checks/comment-style.sh [--all]             # whole tree (the CI job)
 #   scripts/checks/comment-style.sh --diff <base> [head]  # changed files only
 #   scripts/checks/comment-style.sh --files <f.rs>...   # named files (hook)
+#
+# A named file is read from the repository root, else from the caller's
+# directory, so a path relative to either works.
 #
 # Exit 0 = clean, 1 = violations (listed as file:line: message), 2 = usage.
 
@@ -44,6 +47,7 @@ set -euo pipefail
 NOTE_MAX=3
 RUN_MAX=8
 
+caller="$PWD"
 cd "$(dirname "$0")/../.."
 
 # --diff reads the change's own paths from the merge base (#4129).
@@ -71,7 +75,13 @@ case "$mode" in
   shift
   for f in "$@"; do
     case "$f" in
-    *.rs) [[ -f "$f" ]] && files+=("$f") ;;
+    *.rs)
+      if [[ -f "$f" ]]; then
+        files+=("$f")
+      elif [[ -f "$caller/$f" ]]; then
+        files+=("$caller/$f")
+      fi
+      ;;
     *) ;;
     esac
   done
@@ -86,38 +96,44 @@ esac
   echo "comment-style: no files to check — OK."
   exit 0
 }
+if [[ "$mode" != --files ]]; then
+  echo "comment-style: checking ${#files[@]} .rs files under app/, crates/ and tools/ ($mode)."
+fi
 
+# One awk reads every file (#4591), each file's state flushed at its first line.
+# The emitter writes its banner as the FIRST line of every generated file, so
+# the skip anchors there. Matching the marker anywhere let a hand-written file
+# exempt itself by merely mentioning it in prose (#2266), and a `head -n 3`
+# window was closed only by the SPDX headers that happened to fill it (#2323).
 fail=0
-for f in "${files[@]}"; do
-  # The emitter writes its banner as the FIRST line of every generated file, so
-  # the skip anchors there. Matching the marker anywhere let a hand-written file
-  # exempt itself by merely mentioning it in prose — `templates/openehr-rm/
-  # validate.rs` did exactly that and carried an over-budget NOTE the guard
-  # never saw (#2266). Narrowing that to `head -n 3` shrank the window without
-  # closing it, and after #2318 it was closed only by accident: SPDX headers
-  # happened to occupy those lines. An accident is not an enforcement (#2323).
-  grep -q '^// @generated' <<<"$(head -n 1 "$f" 2>/dev/null)" && continue
-  out="$(awk -v NOTE_MAX="$NOTE_MAX" -v RUN_MAX="$RUN_MAX" '
+# shellcheck disable=SC2016 # an awk program, which xargs runs
+out="$(printf '%s\0' "${files[@]}" | xargs -0 awk -v NOTE_MAX="$NOTE_MAX" -v RUN_MAX="$RUN_MAX" '
     function flush_note() {
       if (note_len > NOTE_MAX)
-        printf ":%d: NOTE block is %d lines (max %d) — a NOTE is a citation + one sentence; move the essay to the PR/issue\n", note_start, note_len, NOTE_MAX
+        printf "%s:%d: NOTE block is %d lines (max %d) — a NOTE is a citation + one sentence; move the essay to the PR/issue\n", file, note_start, note_len, NOTE_MAX
       note_len = 0
     }
     function flush_run() {
       if (run_len > RUN_MAX)
-        printf ":%d: comment run is %d lines (max %d) — long prose belongs in doc comments or on the PR/issue, not in code\n", run_start, run_len, RUN_MAX
+        printf "%s:%d: comment run is %d lines (max %d) — long prose belongs in doc comments or on the PR/issue, not in code\n", file, run_start, run_len, RUN_MAX
       run_len = 0
     }
     function flush_doc_note() {
       if (doc_note_len > RUN_MAX)
-        printf ":%d: NOTE paragraph in a doc comment is %d lines (max %d) — an adjudication essay lives on the PR/issue, not in rustdoc\n", doc_note_start, doc_note_len, RUN_MAX
+        printf "%s:%d: NOTE paragraph in a doc comment is %d lines (max %d) — an adjudication essay lives on the PR/issue, not in rustdoc\n", file, doc_note_start, doc_note_len, RUN_MAX
       doc_note_len = 0
     }
     function flush_sec() {
       if (sec_start)
-        printf ":%d: `# %s` doc section has no body — it satisfies the doc lint and tells a caller nothing; write the contract or drop the heading\n", sec_start, sec_name
+        printf "%s:%d: `# %s` doc section has no body — it satisfies the doc lint and tells a caller nothing; write the contract or drop the heading\n", file, sec_start, sec_name
       sec_start = 0
     }
+    FNR == 1 {
+      flush_note(); flush_run(); flush_doc_note(); flush_sec()
+      file = FILENAME
+      skip = (index($0, "// @generated") == 1)
+    }
+    skip { next }
     {
       line = $0
       sub(/^[[:space:]]+/, "", line)
@@ -133,7 +149,7 @@ for f in "${files[@]}"; do
         bc = index($0, "/*"); q = index($0, "\"")
         if (bc > 0 && (q == 0 || bc < q) \
             && (bc == 1 || substr($0, bc - 1, 1) ~ /[[:space:]]/))
-          printf ":%d: block comment — use line comments (`//`) only (RFC 505)\n", NR
+          printf "%s:%d: block comment — use line comments (`//`) only (RFC 505)\n", file, FNR
       }
 
       # 2 + 3. marker forms. TODO is judged only as the LEADING marker of a
@@ -141,15 +157,15 @@ for f in "${files[@]}"; do
       # not a marker.
       if (is_doc || is_line) {
         if (line ~ /^\/\/+[!\/]?[[:space:]]*TODO/ && line !~ /TODO\(#[0-9]+\):/)
-          printf ":%d: TODO without an issue reference — the only sanctioned form is `TODO(#NNNN):`\n", NR
+          printf "%s:%d: TODO without an issue reference — the only sanctioned form is `TODO(#NNNN):`\n", file, FNR
         if (line ~ /PORT NOTE|PORT STATUS|TODO\(port\)|PERF\(port\)|NOTE\(port\)|FIXME|HACK:|(^|[^A-Za-z0-9_])XXX([^A-Za-z0-9_]|$)|\/\/[[:space:]]*WIP[: ]/)
-          printf ":%d: unsanctioned comment marker — the only forms are TODO(#NNNN): / NOTE: / SAFETY:\n", NR
+          printf "%s:%d: unsanctioned comment marker — the only forms are TODO(#NNNN): / NOTE: / SAFETY:\n", file, FNR
       }
 
       # 6. orphaned punctuation-only comment lines — residue an earlier
       # rewriting sweep left behind (`//.`, `///:`, `//!,` …).
       if ((is_doc || is_line) && line ~ /^\/\/[\/!]?[[:space:]]*[.;:,)]+[[:space:]]*$/)
-        printf ":%d: comment line carries punctuation only — sweep residue; delete it\n", NR
+        printf "%s:%d: comment line carries punctuation only — sweep residue; delete it\n", file, FNR
 
       # 7. a backtick-quoted marker USED AS a marker — leading the doc
       # line, leading a bullet, or opening a parenthetical — reads as a
@@ -158,17 +174,17 @@ for f in "${files[@]}"; do
       # stays legal: precision over recall keeps the guard trusted.
       if (is_doc && (line ~ /^\/\/[\/!][[:space:]]*([-*][[:space:]]+)?`\/\/[[:space:]]?(NOTE|TODO|SAFETY)/ \
           || line ~ /\(`\/\/[[:space:]]?(NOTE|TODO|SAFETY)/))
-        printf ":%d: doc line uses a backtick-quoted comment marker as a marker — invisible to the marker checks; write a real NOTE/TODO or plain prose\n", NR
+        printf "%s:%d: doc line uses a backtick-quoted comment marker as a marker — invisible to the marker checks; write a real NOTE/TODO or plain prose\n", file, FNR
 
       # 4 + 5. NOTE / plain-run budgets
       if (is_line) {
         if (line ~ /^\/\/[[:space:]]*NOTE/) {
           flush_note(); flush_run()
-          note_start = NR; note_len = 1
+          note_start = FNR; note_len = 1
         } else if (note_len > 0) {
           note_len++
         } else {
-          if (run_len == 0) run_start = NR
+          if (run_len == 0) run_start = FNR
           run_len++
         }
         next
@@ -179,7 +195,7 @@ for f in "${files[@]}"; do
       if (is_doc) {
         if (line ~ /^\/\/[\/!][[:space:]]*NOTE/) {
           flush_doc_note()
-          doc_note_start = NR; doc_note_len = 1
+          doc_note_start = FNR; doc_note_len = 1
         } else if (doc_note_len > 0) {
           # The paragraph ends at a blank doc line (rustdoc paragraph
           # semantics) or at the next list item (a NOTE inside a list does
@@ -197,7 +213,7 @@ for f in "${files[@]}"; do
         # another heading or the end of the doc block.
         if (line ~ /^\/\/[\/!][[:space:]]*#[[:space:]]*(Errors|Panics)[[:space:]]*$/) {
           flush_sec()
-          sec_start = NR
+          sec_start = FNR
           sec_name = (line ~ /Errors/) ? "Errors" : "Panics"
         } else if (sec_start) {
           if (line ~ /^\/\/[\/!][[:space:]]*#/) flush_sec()
@@ -209,12 +225,11 @@ for f in "${files[@]}"; do
       flush_note(); flush_run(); flush_doc_note(); flush_sec()
     }
     END { flush_note(); flush_run(); flush_doc_note(); flush_sec() }
-  ' "$f")"
-  if [[ -n "$out" ]]; then
-    printf '%s\n' "$out" | sed "s|^|$f|"
-    fail=1
-  fi
-done
+  ')"
+if [[ -n "$out" ]]; then
+  printf '%s\n' "$out"
+  fail=1
+fi
 
 if [[ "$fail" -ne 0 ]]; then
   echo "comment-style: violations found (rules: .claude/rules/comments.md)." >&2

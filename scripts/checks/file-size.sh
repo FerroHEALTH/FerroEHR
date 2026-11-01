@@ -32,12 +32,16 @@
 #   scripts/checks/file-size.sh --update           # lower or remove entries that shrank
 #   scripts/checks/file-size.sh --self-test        # prove the guard catches
 #
+# A named file is read from the repository root, else from the caller's
+# directory, so a path relative to either works.
+#
 # Exit 0 = within the budget and the list, 1 = a finding, 2 = usage or a
 # malformed list.
 #
 # No specification governs this: our own design.
 set -Eeuo pipefail
 
+caller="$PWD"
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 readonly BUDGET=800
@@ -116,14 +120,23 @@ entries_of() {
 }
 
 # Prints `<path> <lines>` for every tracked file in scope of the checkout $1.
+# One awk and one wc read every file, so the run costs a few processes, not
+# several per file (#4591).
 measured_of() {
-  local tree="$1" path
+  local tree="$1" path paths=()
   while IFS= read -r path; do
     in_scope "$path" || continue
     [[ -f "$tree/$path" ]] || continue
-    generated "$tree/$path" && continue
-    printf '%s %s\n' "$path" "$(lines_of "$tree/$path")"
+    paths+=("$path")
   done < <(git -C "$tree" ls-files -- 'app/*.rs' 'crates/*.rs' 'tools/*.rs')
+  [[ "${#paths[@]}" -gt 0 ]] || return 0
+  (
+    cd "$tree"
+    # shellcheck disable=SC2016 # an awk program, which xargs runs
+    printf '%s\0' "${paths[@]}" |
+      xargs -0 awk 'FNR == 1 { if (index($0, "// @generated") == 1) print "G", FILENAME; nextfile }'
+    printf '%s\0' "${paths[@]}" | xargs -0 wc -l | awk 'NF == 2 && $2 != "total" { print "N", $2, $1 }'
+  ) | awk '$1 == "G" { generated[$2] = 1; next } { lines[$2] = $3 } END { for (path in lines) if (!(path in generated)) print path, lines[path] }'
 }
 
 # Joins the entries $1 with the measure $2 and prints one verdict per path,
@@ -181,6 +194,7 @@ write_list() {
 ratchet() {
   local tree="$1" list="$2" mode="$3" entries measured table kept status=0
   entries="$(entries_of "$list")" || return 2
+  echo "file-size: measuring the tracked .rs files under {app,crates,tools}/*/src/ against $list (budget $BUDGET lines)."
   measured="$(measured_of "$tree")"
   table="$(verdicts "$entries" "$measured")"
 
@@ -239,6 +253,9 @@ per_edit() {
   shift
   entries="$(entries_of "$list")" || return 2
   for file in "$@"; do
+    if [[ ! -f "$file" && -f "$caller/$file" ]]; then
+      file="$caller/$file"
+    fi
     [[ "$file" == *.rs && -f "$file" ]] || continue
     rel="$(repo_relative "$file")"
     in_scope "$rel" || continue

@@ -39,8 +39,12 @@
 # edit of the baseline in a change that says why.
 #
 # Usage:
-#   scripts/checks/stray-literals.sh [--update] ROOT...
-#   scripts/checks/stray-literals.sh --self-test   # prove the guard catches
+#   scripts/checks/stray-literals.sh [--update] [ROOT...]  # no ROOT: the viewer, as CI runs it
+#   scripts/checks/stray-literals.sh --files <f.rs>...     # named files
+#   scripts/checks/stray-literals.sh --self-test           # prove the guard catches
+#
+# A named file is read from the repository root, else from the caller's
+# directory, so a path relative to either works.
 #
 # The allow file is scripts/checks/stray-literals.allow and the baseline
 # scripts/checks/stray-literals.baseline, both optional.
@@ -49,8 +53,12 @@
 # a usage error.
 set -Eeuo pipefail
 
+caller="$PWD"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
+
+# The tree the CI job reads when no ROOT is named.
+readonly DEFAULT_ROOT=app/ferroehr-viewer/src
 
 # Runs a copy of this guard in a miniature project and asserts its verdicts.
 self_test() {
@@ -109,6 +117,10 @@ self_test() {
   grep -qF 'src/clean.rs:5: "Words number 1"' "$answer" || fail "a new literal was not named: $(cat "$answer")"
   [[ "$(run --update src)" == 1 ]] || fail "--update passed a new literal"
   [[ -z "$(baseline_of clean.rs)" ]] || fail "--update added a file to the baseline"
+  [[ "$(run --files src/clean.rs)" == 1 ]] || fail "--files passed a new literal"
+  grep -qF 'src/clean.rs:5: "Words number 1"' "$answer" || fail "--files did not name the literal: $(cat "$answer")"
+  [[ "$(run --files src/held.rs src/maker.rs)" == 0 ]] || fail "--files refused files within the baseline: $(cat "$answer")"
+  [[ "$(run --update --files src/held.rs)" == 2 ]] || fail "--update took named files"
   literals clean.rs 0
 
   # A rise in a listed file fails, and --update never raises its count.
@@ -136,7 +148,7 @@ self_test() {
   [[ "$(run src)" == 1 ]] || fail "the maker literal passed with no allow line"
   grep -qF 'src/maker.rs:2: "Cadasto B.V."' "$answer" || fail "the literal was not named: $(cat "$answer")"
 
-  echo "stray-literals: self-test OK (a new literal, a rise, a fall with its note, --update lowering and never raising, and an allow line)."
+  echo "stray-literals: self-test OK (a new literal, a rise, a fall with its note, --update lowering and never raising, an allow line and named files)."
 }
 
 if [[ "${1:-}" = "--self-test" ]]; then
@@ -149,28 +161,56 @@ if [[ "${1:-}" = "--update" ]]; then
   update=1
   shift
 fi
-if [[ "$#" -eq 0 ]]; then
-  echo "usage: scripts/checks/stray-literals.sh [--update] ROOT..." >&2
+named=0
+if [[ "${1:-}" = "--files" ]]; then
+  named=1
+  shift
+fi
+case "${1:-}" in
+  -*)
+    echo "usage: scripts/checks/stray-literals.sh [--update] [ROOT...] | --files <f.rs>... | --self-test" >&2
+    exit 2
+    ;;
+esac
+if [[ "$named" -eq 1 && "$update" -eq 1 ]]; then
+  echo "stray-literals: --update measures whole trees and takes no --files" >&2
   exit 2
 fi
-for dir in "$@"; do
-  if [[ ! -d "$dir" ]]; then
-    echo "stray-literals: $dir is no directory" >&2
-    exit 2
-  fi
-done
 
 allow="scripts/checks/stray-literals.allow"
 baseline="scripts/checks/stray-literals.baseline"
 
 files=()
-while IFS= read -r file; do
-  files+=("$file")
-done < <(find "$@" -type f -name '*.rs' | LC_ALL=C sort)
+if [[ "$named" -eq 1 ]]; then
+  scope="the named files"
+  for file in "$@"; do
+    [[ "$file" == *.rs ]] || continue
+    if [[ ! -f "$file" && -f "$caller/$file" ]]; then
+      file="$caller/$file"
+    fi
+    [[ -f "$file" ]] || continue
+    files+=("${file#"$root"/}")
+  done
+else
+  if [[ "$#" -eq 0 ]]; then
+    set -- "$DEFAULT_ROOT"
+  fi
+  for dir in "$@"; do
+    if [[ ! -d "$dir" ]]; then
+      echo "stray-literals: $dir is no directory" >&2
+      exit 2
+    fi
+  done
+  scope="$*"
+  while IFS= read -r file; do
+    files+=("$file")
+  done < <(find "$@" -type f -name '*.rs' | LC_ALL=C sort)
+fi
 if [[ "${#files[@]}" -eq 0 ]]; then
-  echo "stray-literals: no .rs file under $*"
+  echo "stray-literals: no .rs file in $scope"
   exit 0
 fi
+echo "stray-literals: reading ${#files[@]} .rs files in $scope."
 
 found="$(
   awk -v allowfile="$allow" '
@@ -309,7 +349,7 @@ while IFS= read -r entry; do
 done <<< "$counts"
 
 fell=0
-if [[ -f "$baseline" ]]; then
+if [[ "$named" -eq 0 && -f "$baseline" ]]; then
   fell="$(printf '%s\n' "$counts" | awk '
     NR == FNR { if (NF == 2) have[$2] = $1; next }
     /^[[:space:]]*(#|$)/ { next }
@@ -322,7 +362,7 @@ if [[ "$status" -ne 0 ]]; then
   echo "stray-literals: move each string into the catalog under locales/ and look it up, or allow a literal that is no reader's text in $allow with the reason." >&2
   exit 1
 fi
-echo "stray-literals: no stray literal under $*"
+echo "stray-literals: no stray literal in $scope"
 if [[ "$fell" -gt 0 ]]; then
   echo "stray-literals: note: $fell file(s) hold fewer than $baseline allows; the scheduled ratchet-tighten workflow lowers the counts."
 fi

@@ -47,6 +47,9 @@
 #   scripts/checks/duplication.sh --install    # fetch the pinned release binary into target/tools/
 #   scripts/checks/duplication.sh --self-test  # the detector order, a rise, a fall, an unchanged count, a move
 #
+# It takes no --files: a block stands in two places and the count is the
+# tree's total, so a subset of the files measures neither (#4591).
+#
 # Exit 0 = the count held or fell, 1 = it rose, 2 = usage, a missing pin or
 # no detector.
 #
@@ -300,6 +303,7 @@ write_count() {
 ratchet() {
   local tree="$1" count_file="$2" baseline="$3" mode="$4"
   local out prefix total count keyed listing new status=0
+  echo "duplication: scanning app/*/src, crates/*/src and tools/*/src with jscpd $JSCPD_VERSION."
   out="$(mktemp -d "$stage_root/scan.XXXXXX")"
   prefix="$(detect "$tree" "$out")" || status=$?
   if [[ "$status" -ne 0 ]]; then
