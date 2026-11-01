@@ -140,11 +140,11 @@ async fn a_linkage_domain_in_its_own_database_is_prepared_and_verified() {
             .await
             .expect("the relocated layout boots");
     }
-    let mapped: i64 = sqlx::query_scalar("SELECT count(*) FROM subject_ehr")
+    let applied: i64 = sqlx::query_scalar("SELECT count(*) FROM _sqlx_migrations")
         .fetch_one(&pools.linkage)
         .await
         .expect("the linkage pool reads its own domain in the second database");
-    assert_eq!(mapped, 0);
+    assert_eq!(applied, 6, "the linkage set is applied whole");
     pools.close().await;
 
     let inventory = ferroehr::db::erase_inventory(&applying, &storage)

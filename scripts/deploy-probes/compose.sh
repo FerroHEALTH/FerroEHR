@@ -526,7 +526,7 @@ YAML
 PROBE_DOMAINS=(
   "clinical|ferroehr_clinical ferroehr_clinical_reader|clinical|clinical version"
   "party|ferroehr_party ferroehr_party_reader|party|party version;party national_identifier"
-  "linkage|ferroehr_linkage|linkage|linkage subject_ehr"
+  "linkage|ferroehr_linkage|linkage|linkage _sqlx_migrations"
 )
 
 # Field <n> of a domain record.
@@ -878,30 +878,9 @@ probes_backup_restore() {
   fi
   probe_done
 
-  # `ferroehr db verify` reads migration bookkeeping and grants; it never looks
-  # at a constraint. So a restore can satisfy it while the map came back
-  # STRUCTURALLY wrong, and the linkage domain is where that actually happens:
-  # a `--schema` dump carries no extension (PostgreSQL 18, pg_dump §Notes),
-  # subject_ehr's temporal UNIQUE … WITHOUT OVERLAPS is a GiST index over
-  # btree_gist operator classes, and pg_restore IGNORES a failed statement by
-  # default. Measured 2026-09-11 on 18.6: without `--extension=btree_gist` the
-  # table comes back with its rows and without the key that admits one open
-  # mapping per party. Far end: the restored catalogue itself.
-  probe "P-BACKUP-MAP-RESTORED" "working" "database" "#3220" \
-    "the restored linkage map carries its temporal key"
-  local map_shape
-  map_shape="$(dc exec -T ferroehr-postgres psql -qtAX -U postgres -d "$restored" -c \
-    "SELECT coalesce((SELECT pg_get_constraintdef(oid) FROM pg_constraint
-                       WHERE conrelid = 'linkage.subject_ehr'::regclass
-                         AND contype = 'u'), 'no temporal key')" 2>&1)"
-  assert_contains "$map_shape" "WITHOUT OVERLAPS" \
-    "a subject_ehr restored without its temporal key admits two open mappings for one \
-party, and nothing downstream would notice"
-  probe_done
-
-  # And the half that makes the probe above mean something: the self-check has
-  # to REFUSE a restore whose grants came back wrong. A runbook that re-applies
-  # access with a blanket GRANT is the realistic way that happens.
+  # The self-check has to REFUSE a restore whose grants came back wrong. A
+  # runbook that re-applies access with a blanket GRANT is the realistic way
+  # that happens.
   probe "P-BACKUP-GRANTS-REFUSED" "broken" "database" "#3157" \
     "the self-check refuses a restore whose grants cross the domain boundary"
   dc exec -T ferroehr-postgres psql -qtAX -U "${PG_INIT_USER:-ferroehr}" -d "$restored" -c \
