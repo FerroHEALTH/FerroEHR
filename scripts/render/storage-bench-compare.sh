@@ -110,6 +110,12 @@ command -v jq >/dev/null || { echo "error: jq is required" >&2; exit 2; }
 # 1.3 to 2.6, `ehr_by_subject` 1.2 to 4.2, runs 41105458534 and 41105463959).
 readonly PAGE_FLOOR=1
 
+# The page tolerance holds at the `s` class only with eight rounds a build
+# (#4627): `contains_population` read 210 to 695 pages per call across the 16
+# `s` rounds of runs 41263871147 and 40945113344, and resampling them fails
+# unchanged code in about 3.6 % of runs at four rounds and 0.26 % at eight.
+# The workflow refuses fewer than eight rounds for `s`, so the bound stays 10 %.
+
 # The formatting and verdict program, shared by every invocation below.
 #
 # `t` renders nanoseconds the way the book's storage section does; `pc` renders
