@@ -48,8 +48,11 @@ the candidate against the baseline measured there (#4318):
    none, and whether autovacuum's first `ANALYZE` landed before or during a
    group used to decide that group's plans: the same build read `supersede`
    at 9 ms in one round and 14 ms in the next, with ten times the buffer hits
-   (#4340). Eight rounds of the `poc` class take about four hours; dispatch
-   the `s` class with fewer, so the job stays inside its 360 minutes.
+   (#4340). Eight rounds take about four hours in either class, because
+   criterion's measurement time sets the length of a round and the seed adds
+   under a minute: a round took 15.4 minutes at `s` (run 41263871147) and
+   14.9 at `poc` (run 41263869066). The `s` class runs all eight, and the
+   lane refuses fewer for it (#4627, below).
 3. `scripts/render/storage-bench-compare.sh --ab <dir>` reads two verdicts
    from the rounds, and either one fails the run.
 
@@ -77,6 +80,21 @@ in one round is no new plan. The two A/A runs of 2026-10-30 (41105458534 and
 
 10 % sits above the noise of both A/A runs by a factor of two and a half and
 far below any plan change seen so far.
+
+The `s` class needs its eight rounds for that bound to hold (#4627).
+`contains_population` there reads a `LIMIT 50` through a hash join, and its
+pages per call follow the corpus each round seeds: the four rounds of one
+build in one run read 210 to 475 pages, the 16 rounds of the two `s` runs
+(41263871147 and 40945113344) 210 to 695, and the time per call moved with
+the pages. In run 41263871147 two builds with the same code, four rounds
+each, read 210, 383, 456 and 475 against 522, 538, 647 and 684, a median of
+592.5 against a highest round of 475.2, and the plan verdict failed.
+Resampling those 16 rounds, a 10 % bound fails unchanged code in about 3.6 %
+of runs at four rounds a build, 1.0 % at six and 0.26 % at eight, and 9 of
+the 12 870 ways to split the 16 rounds into two builds of eight fail it. A
+wider bound would pass at four rounds only from about 30 % (0.34 %), which
+would also hide a plan change of that size in every other operation, so the
+bound stays and the rounds go up.
 
 **The time verdict** reads the p50 and p99 of each round, divided first by
 the round's machine factor: the median, over the operations, of the round's
