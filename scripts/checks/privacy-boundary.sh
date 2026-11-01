@@ -20,11 +20,10 @@
 # of this - our own design.
 #
 # THE PATH LIST IS A SET OF PATTERNS MATCHED AGAINST THE DIFF, NEVER AN
-# ASSERTION THAT THE PATHS EXIST. The demographic schema, the linkage
-# service, the identifier scanner and the access-event model are being
-# built (issues #3153, #3158, #3154, #3156). The guard has to pass cleanly on a
-# tree where those paths are absent and fire the moment the first of them
-# appears, so it matches names rather than checking a directory listing.
+# ASSERTION THAT THE PATHS EXIST. Paths move as the code is reorganised (the
+# demographic migrations became the party ones), so the guard passes cleanly
+# on a tree where a pattern matches nothing and fires the moment a matching
+# path appears; it matches names rather than checking a directory listing.
 #
 # The eleven-test is arithmetic, not a lookup: a nine-digit number d1..d9 is a
 # candidate BSN when 9*d1 + 8*d2 + 7*d3 + 6*d4 + 5*d5 + 4*d6 + 3*d7 + 2*d8 - d9

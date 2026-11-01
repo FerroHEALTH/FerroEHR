@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `[audit] fail_mode = "closed"` reaches the DOMAIN-level access records
-//! (#3235): the linkage resolution, the subject-to-EHR lookup, the
-//! national-identifier resolution and the EHR-Extract export each emit their
-//! own record, and each must withhold its result when the sender rejects it.
+//! (#3235): the subject-to-EHR lookup and the EHR-Extract export each emit
+//! their own record, and each must withhold its result when the sender rejects
+//! it.
 //!
 //! The rejecting sender is a real one whose store is unreachable: the drain's
 //! first write fails, the store is marked unhealthy, and from then on a
