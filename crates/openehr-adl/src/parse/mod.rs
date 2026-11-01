@@ -44,6 +44,7 @@ use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
 use crate::aom::build::{PrimitiveNode, cobject_to_primitive};
 use crate::error::{SyntaxError, SyntaxErrorCode};
 use crate::odin::regex_inner;
+use crate::parse::primitives::split_contained_regexp;
 use openehr_lang::nesting::Nesting;
 use openehr_lang::v1_1::lexer::{Spanned, Token};
 
@@ -413,19 +414,7 @@ pub(crate) fn parse_inline_primitive_text(raw: &str) -> Result<CPrimitiveObject,
 /// # Errors
 /// [`SyntaxErrorCode::Scsre`] if the regex does not compile.
 pub(crate) fn parse_contained_regexp_text(raw: &str) -> Result<CString, Vec<SyntaxError>> {
-    let body = raw
-        .trim()
-        .trim_start_matches('{')
-        .trim_end_matches('}')
-        .trim();
-    let quoted_assumed = match body.split_once(';') {
-        Some((r, a)) => (
-            r.trim(),
-            a.trim().strip_prefix('"').and_then(|s| s.strip_suffix('"')),
-        ),
-        None => (body, None),
-    };
-    let (regex_part, quoted_assumed) = quoted_assumed;
+    let (regex_part, quoted_assumed) = split_contained_regexp(raw);
     // The regex body itself is NEVER escape-decoded (`master03` §Special
     // Character Sequences, final paragraph); only the `;"assumed"` suffix is.
     let assumed = match quoted_assumed {

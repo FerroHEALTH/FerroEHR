@@ -545,19 +545,7 @@ impl Parser<'_> {
         raw: &str,
         span: std::ops::Range<usize>,
     ) -> PResult<CString> {
-        let body = raw
-            .trim()
-            .trim_start_matches('{')
-            .trim_end_matches('}')
-            .trim();
-        // Optional `;"assumed"` suffix.
-        let (regex_part, quoted_assumed) = match body.split_once(';') {
-            Some((r, a)) => (
-                r.trim(),
-                a.trim().strip_prefix('"').and_then(|s| s.strip_suffix('"')),
-            ),
-            None => (body, None),
-        };
+        let (regex_part, quoted_assumed) = split_contained_regexp(raw);
         // The regex body itself is NEVER escape-decoded (`master03` §Special
         // Character Sequences, final paragraph); only the `;"assumed"` suffix
         // is.
@@ -605,6 +593,27 @@ impl Parser<'_> {
             }
             _ => return None,
         })
+    }
+}
+
+/// Splits a `CONTAINED_REGEXP` token (`{ /re/ [;"assumed"] }` or the `^re^`
+/// form) into its regex, delimiters kept, and the text of its optional quoted
+/// assumed value.
+pub(crate) fn split_contained_regexp(raw: &str) -> (&str, Option<&str>) {
+    let body = raw
+        .trim()
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .trim();
+    match body.split_once(';') {
+        Some((regex, assumed)) => (
+            regex.trim(),
+            assumed
+                .trim()
+                .strip_prefix('"')
+                .and_then(|s| s.strip_suffix('"')),
+        ),
+        None => (body, None),
     }
 }
 
