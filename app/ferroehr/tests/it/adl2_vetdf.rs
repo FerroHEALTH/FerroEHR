@@ -146,7 +146,7 @@ async fn service_at(server: &MockServer) -> (testkit::TestDb, FerroEhrService) {
 
 async fn assert_vetdf_refusal(svc: &FerroEhrService) {
     let err = StatusError::from(
-        svc.template_adl2_upload(archetype_with_external_binding())
+        svc.template_adl2_upload(&archetype_with_external_binding())
             .await
             .expect_err("a term the served code system does not contain must be refused"),
     );
@@ -161,21 +161,17 @@ async fn assert_vetdf_refusal(svc: &FerroEhrService) {
         err.message
     );
     assert!(
-        !svc.has_artefact(HRID.to_owned())
-            .await
-            .expect("has_artefact answers"),
+        !svc.has_artefact(HRID).await.expect("has_artefact answers"),
         "a rejected artefact is not stored"
     );
 }
 
 async fn assert_accepted(svc: &FerroEhrService) {
-    svc.template_adl2_upload(archetype_with_external_binding())
+    svc.template_adl2_upload(&archetype_with_external_binding())
         .await
         .expect("the archetype is accepted");
     assert!(
-        svc.has_artefact(HRID.to_owned())
-            .await
-            .expect("has_artefact answers"),
+        svc.has_artefact(HRID).await.expect("has_artefact answers"),
         "the accepted artefact is stored"
     );
 }

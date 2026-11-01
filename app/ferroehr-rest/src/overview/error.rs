@@ -286,11 +286,7 @@ impl From<ServiceError> for RestError {
     /// per-path violations of [`ServiceError::ValidationFailed`] that the
     /// `StatusError` bridge collapses into a flat message.
     fn from(e: ServiceError) -> Self {
-        let restricted = matches!(
-            &e,
-            ServiceError::NotFound(err) | ServiceError::BadRequest(err) | ServiceError::Conflict(err)
-                if err.status == ServiceStatus::ProcessingRestricted
-        );
+        let restricted = matches!(&e, ServiceError::Restricted(_));
         let aql = match &e {
             ServiceError::BadRequest(err) => Some(err.clone()),
             _ => None,

@@ -44,7 +44,7 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
     Ok(negotiate::respond(
         h,
         StatusCode::OK,
-        &state.backend().query_list(p.qualified_query_name).await?,
+        &state.backend().query_list(&p.qualified_query_name).await?,
     ))
 }
 
@@ -63,7 +63,7 @@ pub(super) async fn list_all(
     Ok(negotiate::respond(
         &parts.headers,
         StatusCode::OK,
-        &state.backend().query_list(String::new()).await?,
+        &state.backend().query_list("").await?,
     ))
 }
 

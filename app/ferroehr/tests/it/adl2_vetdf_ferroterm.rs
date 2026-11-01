@@ -166,7 +166,7 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     // 1. A SNOMED CT concept URI on a server that serves no SNOMED CT: the
     //    binding is unverifiable, so the archetype is accepted (the sandbox
     //    seed's five refused archetypes, #3311).
-    svc.template_adl2_upload(archetype(
+    svc.template_adl2_upload(&archetype(
         "snomed_unserved",
         "SNOMED-CT",
         "http://snomed.info/id/50121007",
@@ -174,14 +174,14 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     .await
     .expect("a code system the server does not serve leaves the binding unverified");
     assert!(
-        svc.has_artefact("openEHR-EHR-OBSERVATION.snomed_unserved.v1.0.0".to_owned())
+        svc.has_artefact("openEHR-EHR-OBSERVATION.snomed_unserved.v1.0.0")
             .await
             .expect("has_artefact answers"),
         "the unverified archetype is stored"
     );
 
     // 2. A concept the served shaped system defines: accepted.
-    svc.template_adl2_upload(archetype(
+    svc.template_adl2_upload(&archetype(
         "shaped_member",
         "CNF-SHAPED",
         &format!("{SHAPED_SYSTEM}/id/{SHAPED_MEMBER}"),
@@ -191,7 +191,7 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
 
     // 3. A concept the served shaped system does not define: VETDF.
     let err = StatusError::from(
-        svc.template_adl2_upload(archetype(
+        svc.template_adl2_upload(&archetype(
             "shaped_absent",
             "CNF-SHAPED",
             &format!("{SHAPED_SYSTEM}/id/{SHAPED_ABSENT}"),
@@ -206,7 +206,7 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
         err.message
     );
     assert!(
-        !svc.has_artefact("openEHR-EHR-OBSERVATION.shaped_absent.v1.0.0".to_owned())
+        !svc.has_artefact("openEHR-EHR-OBSERVATION.shaped_absent.v1.0.0")
             .await
             .expect("has_artefact answers"),
         "a refused archetype is not stored"
@@ -231,11 +231,11 @@ async fn a_ckm_archetype_with_snomed_bindings_uploads_when_snomed_is_not_served(
         ),
     )
     .expect("the vendored CKM archetype");
-    svc.template_adl2_upload(source)
+    svc.template_adl2_upload(&source)
         .await
         .expect("SNOMED CT bindings on a server without SNOMED CT are unverifiable, not invalid");
     assert!(
-        svc.has_artefact("openEHR-EHR-OBSERVATION.refraction.v1.0.0".to_owned())
+        svc.has_artefact("openEHR-EHR-OBSERVATION.refraction.v1.0.0")
             .await
             .expect("has_artefact answers"),
         "the CKM archetype is stored"

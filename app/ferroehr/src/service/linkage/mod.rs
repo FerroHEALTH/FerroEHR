@@ -90,7 +90,8 @@ impl FerroEhrService {
         event.result_count = Some(result_count);
         stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).map_err(LinkageError::Unrecorded)
+        self.record_access(event)
+            .map_err(|e| LinkageError::Unrecorded(StatusError::from(e)))
     }
 }
 

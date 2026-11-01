@@ -409,7 +409,7 @@ mod tests {
         let ServiceError::Conflict(err) = &err else {
             panic!("expected the 409-class conflict, got {err:?}");
         };
-        assert_eq!(err.status, ServiceStatus::Conflict);
+        assert_eq!(err.kind, crate::service::refusal::Clash::State);
         assert!(err.message.contains("1e2::sys::1"), "{}", err.message);
         assert!(err.message.contains("stable"), "{}", err.message);
         assert!(err.message.contains("development"), "{}", err.message);

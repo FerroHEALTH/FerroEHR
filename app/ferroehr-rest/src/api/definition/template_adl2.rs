@@ -111,7 +111,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // its rule codes as violations, and a duplicate HRID a `409`.
     let hrid = state
         .backend()
-        .template_adl2_upload(source.clone())
+        .template_adl2_upload(&source)
         .await
         .map_err(|e| RestError::from(e).into_template_upload_refusal())?;
     let hrid = hrid.as_str();

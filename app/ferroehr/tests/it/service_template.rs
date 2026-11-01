@@ -19,8 +19,9 @@ use serde_json::Value;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::types::TemplateListFilter;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::list::Page;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 
 /// Fixed `ctx/time` default for the FLAT rebuild directions (ITS-REST
 /// `simplified_formats` master04 §Context) so round-trips stay deterministic.
@@ -45,10 +46,7 @@ async fn template_upload_list_get_roundtrip() {
     let xml = corpus_opt(TEMPLATE_REL);
 
     // Upload the OPT XML (arrives as a JSON string, as the lenient body reader hands it over).
-    let desc = svc
-        .template_adl14_upload(xml.clone())
-        .await
-        .expect("upload");
+    let desc = svc.template_adl14_upload(&xml).await.expect("upload");
     assert_eq!(desc["template_id"], TEMPLATE_ID, "descriptor template_id");
     assert!(
         desc["archetype_id"]
@@ -68,10 +66,7 @@ async fn template_upload_list_get_roundtrip() {
     );
 
     // Retrieve returns the stored OPT XML verbatim.
-    let got = svc
-        .template_adl14_get(TEMPLATE_ID.to_owned())
-        .await
-        .expect("get");
+    let got = svc.template_adl14_get(TEMPLATE_ID).await.expect("get");
     assert_eq!(
         got, xml,
         "retrieved OPT XML is byte-identical to the upload"
@@ -81,16 +76,16 @@ async fn template_upload_list_get_roundtrip() {
     // overwrite: OPTs are immutable on the adl1.4 endpoint (ITS-REST
     // `409_template_already_exists.yaml`; CNF `upload_opt-valid_opt_twice_conflict`).
     let conflict = svc
-        .template_adl14_upload(xml.clone())
+        .template_adl14_upload(&xml)
         .await
         .expect_err("re-upload of an existing template_id must conflict");
     assert!(
         matches!(
             conflict,
-            StatusError {
-                status: ServiceStatus::Conflict,
+            ServiceError::Conflict(Refusal {
+                kind: Clash::State,
                 ..
-            }
+            })
         ),
         "got {conflict:?}"
     );
@@ -109,7 +104,7 @@ async fn template_upload_list_get_roundtrip() {
         "conflicting re-upload did not duplicate"
     );
     let still = svc
-        .template_adl14_get(TEMPLATE_ID.to_owned())
+        .template_adl14_get(TEMPLATE_ID)
         .await
         .expect("get after conflict");
     assert_eq!(
@@ -124,16 +119,16 @@ async fn get_unknown_template_is_not_found() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     // An unknown template_id → 404 (`template_does_not_exist`).
     let err = svc
-        .template_adl14_get("unknown template.v0".to_owned())
+        .template_adl14_get("unknown template.v0")
         .await
         .expect_err("expected not-found");
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::TemplateDoesNotExist,
+            ServiceError::NotFound(Refusal {
+                kind: Missing::Template,
                 ..
-            }
+            })
         ),
         "got {err:?}"
     );
@@ -144,14 +139,14 @@ async fn invalid_opt_xml_is_rejected() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     let err = svc
-        .template_adl14_upload("<not-a-template/>".to_owned())
+        .template_adl14_upload("<not-a-template/>")
         .await
         .expect_err("expected rejection of a non-OPT body");
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::InvalidTemplate,
+            ServiceError::Unprocessable {
+                kind: Invalid::Template,
                 ..
             }
         ),
@@ -188,7 +183,7 @@ async fn required_example_validates_and_converts() {
     for (i, rel) in EXAMPLE_TEMPLATES.iter().enumerate() {
         let xml = corpus_opt(rel);
         let desc = svc
-            .template_adl14_upload(xml)
+            .template_adl14_upload(&xml)
             .await
             .unwrap_or_else(|e| panic!("upload {rel}: {e:?}"));
         let template_id = desc["template_id"]
@@ -273,10 +268,10 @@ async fn example_for_unknown_template_is_not_found() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::TemplateDoesNotExist,
+            ServiceError::NotFound(Refusal {
+                kind: Missing::Template,
                 ..
-            }
+            })
         ),
         "got {err:?}"
     );
@@ -288,7 +283,7 @@ async fn example_with_invalid_detail_level_is_bad_request() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     // Upload a template so the failure is the detail_level, not a missing id.
     let xml = corpus_opt(TEMPLATE_REL);
-    svc.template_adl14_upload(xml).await.expect("upload");
+    svc.template_adl14_upload(&xml).await.expect("upload");
     let err = svc
         .template_adl14_example(TEMPLATE_ID.to_owned(), Some("exhaustive".to_owned()), None)
         .await
@@ -296,10 +291,10 @@ async fn example_with_invalid_detail_level_is_bad_request() {
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            }
+            })
         ),
         "got {err:?}"
     );
@@ -315,7 +310,7 @@ async fn opt_converts_to_adl2_sources() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     // A minimal template: a COMPOSITION root with one embedded OBSERVATION root.
     let xml = corpus_opt("knowledge/opt/minimal_observation.opt");
-    let summary = svc.template_adl14_upload(xml).await.expect("upload opt");
+    let summary = svc.template_adl14_upload(&xml).await.expect("upload opt");
     let template_id = summary["template_id"]
         .as_str()
         .expect("the upload names its template_id")
@@ -354,10 +349,10 @@ async fn opt_converts_to_adl2_sources() {
     assert!(
         matches!(
             missing,
-            StatusError {
-                status: ServiceStatus::TemplateDoesNotExist,
+            ServiceError::NotFound(Refusal {
+                kind: Missing::Template,
                 ..
-            }
+            })
         ),
         "got {missing:?}"
     );

@@ -102,7 +102,7 @@ impl FerroEhrService {
         // semantically invalid operational template.
         if template_id.trim().is_empty() {
             return Err(ServiceError::Unprocessable {
-                status: crate::service::status::ServiceStatus::InvalidTemplate,
+                kind: crate::service::refusal::Invalid::Template,
                 violation: Violation::new("is missing from the operational template")
                     .with_path("template_id"),
             });
@@ -111,7 +111,7 @@ impl FerroEhrService {
         // is a malformed OPT (CNF `removed_mandatory_elements/…removed_concept_value`).
         if opt.concept.trim().is_empty() {
             return Err(ServiceError::Unprocessable {
-                status: crate::service::status::ServiceStatus::InvalidTemplate,
+                kind: crate::service::refusal::Invalid::Template,
                 violation: Violation::new("of the operational template is empty")
                     .with_path("concept"),
             });
@@ -121,7 +121,7 @@ impl FerroEhrService {
         // Template is refused before it is stored, never after.
         let web_template = openehr_sdt::flat::webtemplate::builder::build_web_template(&opt)
             .map_err(|e| ServiceError::Unprocessable {
-                status: crate::service::status::ServiceStatus::InvalidTemplate,
+                kind: crate::service::refusal::Invalid::Template,
                 violation: Violation::new(format!(
                     "the operational template could not be built into a Web Template: {}",
                     crate::service::error::ErrorChain::new(&e)

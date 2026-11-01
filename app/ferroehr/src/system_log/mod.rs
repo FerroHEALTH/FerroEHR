@@ -98,7 +98,9 @@ use event::{AuditEvent, EmitOutcome};
 // `ferroehr::system_log::{AuditConfig, AuditHandle, AuditSender, SubjectResolver}`).
 
 use crate::service::FerroEhrService;
-use crate::service::status::{ServiceStatus, StatusError};
+use crate::service::error::ServiceError;
+use crate::service::refusal::Refusal;
+use crate::service::status::StatusError;
 
 /// Errors raised while rendering or shipping an audit record.
 ///
@@ -234,9 +236,9 @@ impl FerroEhrService {
     /// `Enqueued`, and `Dropped` under `fail_mode = "open"`, complete.
     ///
     /// # Errors
-    /// [`StatusError`] with the `service_overloaded` status (the wire's `503`)
-    /// when the sender rejected the record.
-    pub fn record_access(&self, mut event: AuditEvent) -> Result<(), StatusError> {
+    /// [`ServiceError::Unrecorded`] (the wire's `503`) when the sender
+    /// rejected the record.
+    pub fn record_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
         // A service-layer record is built where the request's principal is
         // gone; the roles the authentication layer published for the scope
         // are stamped here so every emitter carries them (#3239).
@@ -252,10 +254,10 @@ impl FerroEhrService {
         }
         match self.emit(event) {
             EmitOutcome::Enqueued | EmitOutcome::Dropped => Ok(()),
-            EmitOutcome::Rejected => Err(StatusError::new(
-                ServiceStatus::ServiceOverloaded,
+            EmitOutcome::Rejected => Err(ServiceError::Unrecorded(Refusal::new(
+                (),
                 "audit trail unavailable (fail-closed)",
-            )),
+            ))),
         }
     }
 
@@ -354,7 +356,7 @@ impl FerroEhrService {
         }
         let served = crate::storage::version_repo::read::content_of_objects(&self.pool, vo_ids)
             .await
-            .map_err(crate::service::error::ServiceError::from)?;
+            .map_err(ServiceError::from)?;
         Ok(served.iter().map(content_ids).collect())
     }
 
@@ -378,7 +380,7 @@ impl FerroEhrService {
             contribution_id,
         )
         .await
-        .map_err(crate::service::error::ServiceError::from)?;
+        .map_err(ServiceError::from)?;
         Ok(served.iter().map(content_ids).collect())
     }
 

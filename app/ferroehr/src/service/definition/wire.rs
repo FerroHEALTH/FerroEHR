@@ -4,9 +4,8 @@
 //! The ITS-REST wire-shaped DEFINITION extension methods: the rich shapes the
 //! `DEFINITION` API group returns (template summaries, the example
 //! COMPOSITION, `StoredQuery` descriptors, glob filters) that the native
-//! definition calls do not carry. Native error types only
-//! (`StatusError`, or `ServiceError` where a structured per-code validation body is
-//! carried — the ADL2 upload), so this layer stays protocol-free; the route
+//! definition calls do not carry. They return [`ServiceError`], so this layer
+//! stays protocol-free; the route
 //! wiring is the ITS-REST layer's concern. The retrieval/store behaviour rides
 //! on the native logic in the sibling files.
 
@@ -25,7 +24,6 @@ use crate::service::FerroEhrService;
 use crate::service::definition::types::{Adl2Template, TemplateListFilter};
 use crate::service::error::ServiceError;
 use crate::service::list::Page;
-use crate::service::status::StatusError;
 
 use super::{paginate, query::is_aql_v1};
 
@@ -36,26 +34,18 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - Unparseable / structurally invalid OPT XML → `invalid_template`,
-    ///   which the REST upload answers `400`, the only refusal
-    ///   `operations/definition_template_adl1.4_upload.yaml` declares.
+    /// - Unparseable / structurally invalid OPT XML → an invalid template,
+    ///   and validation violations joined into one detail
+    ///   ([`ServiceError::flattened`]), which the REST upload answers `400`,
+    ///   the only refusal `operations/definition_template_adl1.4_upload.yaml`
+    ///   declares.
     /// - A template with the same `template_id` already stored → conflict
     ///   (`409`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn template_adl14_upload(&self, opt_xml: String) -> Result<Value, StatusError> {
-        Ok(self.store_template(&opt_xml).await?)
-    }
-
-    /// `GET /definition/template/adl1.4/{template_id}` — the OPT 1.4 canonical
-    /// XML addressed by its `template_id` string (the ITS-REST wire address;
-    /// the native calls key OPTs by `UUID`). Identity is case-insensitive.
-    ///
-    /// # Errors
-    ///
-    /// - No OPT with that `template_id` → `template_does_not_exist` (`404`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn template_adl14_get(&self, template_id: String) -> Result<String, StatusError> {
-        Ok(self.opt_get_by_template_id(&template_id).await?)
+    /// - A database failure (`500`).
+    pub async fn template_adl14_upload(&self, opt_xml: &str) -> Result<Value, ServiceError> {
+        self.store_template(opt_xml)
+            .await
+            .map_err(ServiceError::flattened)
     }
 
     /// `GET /definition/template/adl1.4` — the stored template summaries,
@@ -82,7 +72,7 @@ impl FerroEhrService {
         &self,
         filter: TemplateListFilter,
         page: Page,
-    ) -> Result<Vec<Value>, StatusError> {
+    ) -> Result<Vec<Value>, ServiceError> {
         Ok(filter_templates(
             self.template_summaries().await?,
             &filter,
@@ -109,11 +99,11 @@ impl FerroEhrService {
         template_id: String,
         detail_level: Option<String>,
         kind: Option<String>,
-    ) -> Result<Value, StatusError> {
+    ) -> Result<Value, ServiceError> {
         let level =
-            DetailLevel::from_query(detail_level.as_deref()).map_err(StatusError::precondition)?;
-        let kind = ExampleType::from_query(kind.as_deref()).map_err(StatusError::precondition)?;
-        Ok(self.template_example(&template_id, level, kind).await?)
+            DetailLevel::from_query(detail_level.as_deref()).map_err(ServiceError::precondition)?;
+        let kind = ExampleType::from_query(kind.as_deref()).map_err(ServiceError::precondition)?;
+        self.template_example(&template_id, level, kind).await
     }
 
     /// `GET /definition/template/adl2/{template_id}/example` — an example
@@ -137,31 +127,6 @@ impl FerroEhrService {
             DetailLevel::from_query(detail_level.as_deref()).map_err(ServiceError::precondition)?;
         let kind = ExampleType::from_query(kind.as_deref()).map_err(ServiceError::precondition)?;
         self.adl2_example(&template_id, level, kind).await
-    }
-
-    /// `POST /definition/template/adl2` — validate ADL2 operational-template
-    /// source (text/plain) through the `openehr-adl` engine, store it, and
-    /// return the stored `ARCHETYPE_HRID`; the dispatcher builds `Location` +
-    /// the `Prefer` body from it (`201_Template_adl2_upload`).
-    ///
-    /// Returns [`ServiceError`] rather than `StatusError` so a semantic-validation
-    /// failure keeps its structured per-code violations for the ITS-REST `Error`
-    /// body. The REST contract declares `409_template_already_exists.yaml`, so
-    /// an existing HRID is a `409`.
-    ///
-    /// # Errors
-    ///
-    /// - Unparseable source → `BadRequest` (`400`,
-    ///   `definition_template_adl2_upload.yaml` → `responses/400.yaml`).
-    /// - AOM2-invalid source, a constituent archetype not held included →
-    ///   `ValidationFailed` with the rule-code mnemonics, which the REST upload
-    ///   answers `400`, the only refusal
-    ///   `operations/definition_template_adl2_upload.yaml` declares.
-    /// - An ADL2 artefact with the same HRID already stored → `Conflict`
-    ///   (`409`).
-    /// - A database failure (`500`).
-    pub async fn template_adl2_upload(&self, source: String) -> Result<String, ServiceError> {
-        self.adl2_wire_upload(&source).await
     }
 
     /// `GET /definition/template/adl2/{template_id}` (and the deprecated
@@ -223,29 +188,12 @@ impl FerroEhrService {
         &self,
         filter: TemplateListFilter,
         page: Page,
-    ) -> Result<Vec<Value>, StatusError> {
+    ) -> Result<Vec<Value>, ServiceError> {
         Ok(filter_templates(
             self.adl2_template_list(Page::all()).await?,
             &filter,
             page,
         ))
-    }
-
-    /// `GET /definition/query/{qualified_query_name}` — all stored versions of
-    /// every query whose qualified name starts with `qualified_query_name`
-    /// (a case-insensitive prefix; empty ⇒ all —
-    /// `definition_query_list.yaml`).
-    ///
-    /// # Errors
-    ///
-    /// - A row-decode failure on a `NOT NULL` column (a genuine server fault)
-    ///   → `exception` (`500`).
-    /// - A database failure (`exception` → `500`).
-    pub async fn query_list(
-        &self,
-        qualified_query_name: String,
-    ) -> Result<Vec<Value>, StatusError> {
-        Ok(self.list_stored_queries(&qualified_query_name).await?)
     }
 
     /// `GET /definition/query/{qualified_query_name}/{version}` — one stored
@@ -264,10 +212,9 @@ impl FerroEhrService {
         &self,
         qualified_query_name: String,
         version: String,
-    ) -> Result<Value, StatusError> {
-        Ok(self
-            .get_stored_query(&qualified_query_name, Some(&version))
-            .await?)
+    ) -> Result<Value, ServiceError> {
+        self.get_stored_query(&qualified_query_name, Some(&version))
+            .await
     }
 
     /// `PUT /definition/query/{qualified_query_name}[/{version}]`: stores a
@@ -295,16 +242,15 @@ impl FerroEhrService {
         version: Option<String>,
         query_type: String,
         body: String,
-    ) -> Result<String, StatusError> {
+    ) -> Result<String, ServiceError> {
         if !is_aql_v1(&query_type) {
-            return Err(StatusError::precondition(format!(
+            return Err(ServiceError::precondition(format!(
                 "unsupported query formalism `{query_type}`: only AQL is supported for \
                  stored queries (parameters/query/query_type.yaml)"
             )));
         }
-        Ok(self
-            .store_query_version(&qualified_query_name, version.as_deref(), body)
-            .await?)
+        self.store_query_version(&qualified_query_name, version.as_deref(), body)
+            .await
     }
 }
 

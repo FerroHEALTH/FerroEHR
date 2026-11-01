@@ -111,7 +111,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     let xml = negotiate::text_body(&parts.body)?;
     let meta = state
         .backend()
-        .template_adl14_upload(xml.clone())
+        .template_adl14_upload(&xml)
         .await
         .map_err(|e| RestError::from(e).into_template_upload_refusal())?;
     let template_id = meta
@@ -191,10 +191,7 @@ pub(super) async fn get(state: &AppState, parts: &RequestParts) -> Result<Respon
     };
     // The XML fetch runs regardless: it is the existence probe (an unknown
     // template is a 404) as well as the canonical body.
-    let xml = state
-        .backend()
-        .template_adl14_get(template_id.clone())
-        .await?;
+    let xml = state.backend().template_adl14_get(&template_id).await?;
     match fmt {
         WireFormat::CanonicalXml => {
             let mut resp = negotiate::xml_body(StatusCode::OK, xml);

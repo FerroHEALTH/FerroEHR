@@ -1173,7 +1173,7 @@ async fn stored_query_crud() {
     assert_eq!(got["type"], "AQL");
 
     let list = svc
-        .query_list("org.example::all_comps".to_owned())
+        .query_list("org.example::all_comps")
         .await
         .expect("list");
     assert_eq!(list.len(), 1);
@@ -1256,14 +1256,11 @@ async fn stored_query_list_matches_name_prefix() {
         .expect("store");
     }
 
-    let by_namespace = svc
-        .query_list("org.example".to_owned())
-        .await
-        .expect("prefix list");
+    let by_namespace = svc.query_list("org.example").await.expect("prefix list");
     assert_eq!(by_namespace.len(), 3, "all versions of all org.example::*");
 
     let by_full_name = svc
-        .query_list("org.example::all_comps".to_owned())
+        .query_list("org.example::all_comps")
         .await
         .expect("full-name list");
     assert_eq!(by_full_name.len(), 2, "both versions of the named query");
@@ -1274,7 +1271,7 @@ async fn stored_query_list_matches_name_prefix() {
         "each row carries its own qualified name"
     );
 
-    let all = svc.query_list(String::new()).await.expect("wildcard list");
+    let all = svc.query_list("").await.expect("wildcard list");
     assert_eq!(all.len(), 4, "empty pattern is a wildcard");
 }
 
