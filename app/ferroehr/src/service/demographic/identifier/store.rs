@@ -5,19 +5,16 @@
 //!
 //! **No openEHR spec governs this — our own design/extension.** The split
 //! between the operations is the access-control boundary:
-//! [`IdentifierStore::seal`] writes a value, [`IdentifierStore::open`] reads
-//! one back for the audited expansion, and [`IdentifierStore::resolve`] goes
-//! from an identifier to a party WITHOUT decrypting anything, through the
-//! `SECURITY DEFINER` function, so a caller that only needs the mapping never
-//! touches the ciphertext.
+//! [`IdentifierStore::seal`] writes a value, and [`IdentifierStore::open`]
+//! reads one back for the audited expansion.
 //!
 //! Every row belongs to the one party version whose body references it, and
 //! is never rewritten, so expanding an older version yields the value that
 //! version committed: a versioned repository "is by definition indelible", and
 //! every modification is "achieved by physically committing new Versions" (RM
 //! common `master06-change_control_package.adoc` §Contributions). The rows of
-//! the party's latest version are LIVE (`retired_at IS NULL`); resolution and
-//! the one-party-per-value rule read the live rows only.
+//! the party's latest version are LIVE (`retired_at IS NULL`); the
+//! one-party-per-value rule reads the live rows only.
 //!
 //! The writes run on the caller's connection, never on the store's pool: a
 //! sealed row exists only for a party version that commits, because it is
@@ -422,34 +419,6 @@ impl IdentifierStore {
         let nonce: Vec<u8> = row.try_get("nonce").map_err(StoreError::Database)?;
         let ciphertext: Vec<u8> = row.try_get("ciphertext").map_err(StoreError::Database)?;
         Ok(Some(keys.open(&scheme, &nonce, &ciphertext)?))
-    }
-
-    /// The party whose latest version holds `value` in `scheme`, without
-    /// decrypting anything.
-    ///
-    /// Goes through `party.resolve_national_identifier`, which takes the
-    /// keyed digest rather than the value and matches live rows only: the
-    /// caller proves it already knows the identifier, the plaintext never
-    /// crosses into the database, and a value a party held only in an earlier
-    /// version resolves to nobody.
-    ///
-    /// # Errors
-    /// [`StoreError::Acquire`] when no connection can be obtained, and
-    /// [`StoreError::Database`] when the function call fails.
-    pub async fn resolve(
-        &self,
-        keys: &DomainKeys,
-        scheme: &str,
-        value: &str,
-    ) -> Result<Option<Uuid>, StoreError> {
-        let digest = keys.lookup_digest(scheme, value);
-        let party: Option<Uuid> = sqlx::query_scalar("SELECT resolve_national_identifier($1, $2)")
-            .bind(scheme)
-            .bind(&digest)
-            .fetch_optional(&mut *acquire(&self.pool).await?)
-            .await?
-            .flatten();
-        Ok(party)
     }
 }
 

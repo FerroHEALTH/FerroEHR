@@ -262,15 +262,6 @@ impl IdentifierProtection {
         body::expand(body, &values);
         Ok(schemes)
     }
-
-    /// The party holding `value` in `scheme`, resolved through the keyed digest.
-    ///
-    /// # Errors
-    /// [`StoreError`] when the resolution query fails.
-    pub async fn resolve(&self, scheme: &str, value: &str) -> Result<Option<Uuid>, StoreError> {
-        let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
-        self.store.resolve(&keys, scheme, value).await
-    }
 }
 
 /// Every protected-identifier reference in a stored body, with its pointer.

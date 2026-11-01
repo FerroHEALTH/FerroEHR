@@ -585,8 +585,24 @@ fn test_keys() -> ferroehr::service::demographic::identifier::crypto::DomainKeys
     DomainKeys::derive(&root, KeyDomain::Demographic)
 }
 
-/// A sealed identifier round-trips, and resolution finds its party without
-/// decrypting anything.
+/// The party whose live row stores the lookup digest of `value` in `scheme`.
+///
+/// Reads `party.national_identifier` directly: what these tests check is the
+/// stored digest, computed here under the test key exactly as a seal stores it.
+async fn live_holder(party_pool: &PgPool, scheme: &str, value: &str) -> Option<Uuid> {
+    sqlx::query_scalar(
+        "SELECT party_id FROM party.national_identifier \
+         WHERE scheme = $1 AND lookup_digest = $2 AND retired_at IS NULL",
+    )
+    .bind(scheme)
+    .bind(test_keys().lookup_digest(scheme, value))
+    .fetch_optional(party_pool)
+    .await
+    .expect("read the live identifier row")
+}
+
+/// A sealed identifier round-trips, and its stored digest finds its party
+/// without decrypting anything.
 ///
 /// The two halves are the point of the design: the ciphertext answers "what is
 /// this party's identifier" only to a holder of the key, and the keyed digest
@@ -618,18 +634,12 @@ async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
         "the key holder reads the value back"
     );
     assert_eq!(
-        store
-            .resolve(&keys, "nl-bsn", SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&party_pool, "nl-bsn", SYNTHETIC_BSN).await,
         Some(party),
         "the digest resolves to the party without decryption"
     );
     assert_eq!(
-        store
-            .resolve(&keys, "nl-bsn", "987654321")
-            .await
-            .expect("resolve a value nobody holds"),
+        live_holder(&party_pool, "nl-bsn", "987654321").await,
         None,
         "an identifier nobody holds resolves to nothing, not to an arbitrary party"
     );
@@ -822,15 +832,10 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
     .expect("scan the node rows");
     assert_eq!(nodes, 0, "no decomposed node may carry the identifier");
 
-    // The sealed row exists, and resolution finds this party by the value.
-    let store = ferroehr::service::demographic::identifier::store::IdentifierStore::new(
-        ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party),
-    );
+    // The sealed row exists, and its digest names this party.
+    let party_pool = ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party);
     assert_eq!(
-        store
-            .resolve(&test_keys(), "nl-bsn", SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&party_pool, "nl-bsn", SYNTHETIC_BSN).await,
         Some(vo_id),
         "the identifier resolves to the party that holds it"
     );
@@ -960,10 +965,7 @@ async fn a_failed_commit_leaves_no_sealed_identifier(service: &FerroEhrService, 
         "a committed party keeps its sealed row"
     );
     assert_eq!(
-        protection_engine(harness.clone())
-            .resolve("nl-bsn", SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(harness, "nl-bsn", SYNTHETIC_BSN).await,
         sqlx::query_scalar::<_, Uuid>("SELECT vo_id FROM party.version")
             .fetch_optional(harness)
             .await
@@ -1138,18 +1140,12 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
 
     let party: Uuid = vo.parse().expect("a uuid");
     assert_eq!(
-        engine
-            .resolve("nl-bsn", SECOND_SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&party_pool, "nl-bsn", SECOND_SYNTHETIC_BSN).await,
         Some(party),
         "resolution answers the latest version's value"
     );
     assert_eq!(
-        engine
-            .resolve("nl-bsn", SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&party_pool, "nl-bsn", SYNTHETIC_BSN).await,
         None,
         "a value only an earlier version held resolves to nobody"
     );
@@ -1235,10 +1231,7 @@ async fn a_carried_reference_is_sealed_again_for_the_new_version() {
         assert_eq!(identifier_id(&body), SYNTHETIC_BSN);
     }
     assert_eq!(
-        engine
-            .resolve("nl-bsn", SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&party_pool, "nl-bsn", SYNTHETIC_BSN).await,
         Some(vo.parse().expect("a uuid")),
         "the identifier still resolves to the party"
     );
@@ -1638,18 +1631,12 @@ async fn a_dump_and_load_carries_the_sealed_identifiers() {
     assert_eq!(identifier_id(&versions[0]), SYNTHETIC_BSN);
     assert_eq!(identifier_id(&versions[1]), SECOND_SYNTHETIC_BSN);
     assert_eq!(
-        target_engine
-            .resolve("nl-bsn", SECOND_SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&target_party, "nl-bsn", SECOND_SYNTHETIC_BSN).await,
         Some(vo.parse().expect("a uuid")),
         "the restored live row resolves"
     );
     assert_eq!(
-        target_engine
-            .resolve("nl-bsn", SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&target_party, "nl-bsn", SYNTHETIC_BSN).await,
         None,
         "the restored retired row stays retired"
     );
@@ -1705,7 +1692,7 @@ async fn a_load_refuses_a_plaintext_identifier_per_container() {
 #[tokio::test]
 async fn erasing_a_party_removes_its_sealed_identifiers() {
     let db = testkit::db().await.expect("testkit database");
-    let (service, engine, party_pool) = protected_service(&db);
+    let (service, _engine, party_pool) = protected_service(&db);
 
     let created = service
         .party_create(
@@ -1744,10 +1731,7 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
             .expect("count the sealed rows");
     assert_eq!(kept, 2, "a logical deletion keeps every version's row");
     assert_eq!(
-        engine
-            .resolve("nl-bsn", SECOND_SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&party_pool, "nl-bsn", SECOND_SYNTHETIC_BSN).await,
         None,
         "a deleted party holds no live identifier"
     );
@@ -1768,14 +1752,12 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
 /// A sealed identifier seals and resolves on the SEPARATED demographic
 /// credential.
 ///
-/// Two things meet on this path, and each was proven only on its own: the party
-/// pool authenticating as its own login role, and a `SECURITY DEFINER` resolve
-/// function owned by the migrator. Whether a resolve still returns its party is
-/// a question about the two together.
+/// The party pool authenticates as its own login role here, so the seal, the
+/// open and the read of the stored digest all run on a credential that does
+/// not own the table.
 ///
-/// The digest half is the one that would fail silently: a resolve that finds
-/// nothing returns `None`, which reads exactly like an identifier nobody
-/// holds.
+/// The digest half is the one that would fail silently: a digest that matches
+/// no row reads exactly like an identifier nobody holds.
 #[tokio::test]
 async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() {
     use ferroehr::db::DbConfig;
@@ -1808,7 +1790,7 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
             .await
             .expect("the party pool connects on its own credential");
     let mut conn = demographic.acquire().await.expect("a party connection");
-    let store = IdentifierStore::new(demographic);
+    let store = IdentifierStore::new(demographic.clone());
     let keys = test_keys();
     let party = Uuid::now_v7();
 
@@ -1822,22 +1804,15 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
         "the key holder reads the value back through the separated credential"
     );
     assert_eq!(
-        store
-            .resolve(&keys, "nl-bsn", SYNTHETIC_BSN)
-            .await
-            .expect("resolve"),
+        live_holder(&demographic, "nl-bsn", SYNTHETIC_BSN).await,
         Some(party),
-        "the SECURITY DEFINER resolve returns the party under FORCE row-level \
-         security, on a credential that does not own the function"
+        "the digest the separated credential stored names the party"
     );
     assert_eq!(
-        store
-            .resolve(&keys, "nl-bsn", "987654321")
-            .await
-            .expect("resolve a value nobody holds"),
+        live_holder(&demographic, "nl-bsn", "987654321").await,
         None,
-        "and an identifier nobody holds still resolves to nothing, so the \
-         assertion above cannot be met by a resolve that answers everything"
+        "and an identifier nobody holds matches no row, so the assertion above \
+         cannot be met by a read that answers everything"
     );
 }
 
