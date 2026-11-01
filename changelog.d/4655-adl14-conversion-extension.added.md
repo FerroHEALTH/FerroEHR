@@ -8,7 +8,6 @@
   - each root's conversion log and its `conversion_details`, which name what
     the ADL 2 form drops or changes;
   - the slot fills that joined the roots.
-
   An unknown id answers **404**. A stored source that no longer converts
   answers **422**. No openEHR specification defines the conversion, so both
   routes are FerroEHR's own design.
