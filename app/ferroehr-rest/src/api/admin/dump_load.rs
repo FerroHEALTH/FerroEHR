@@ -78,7 +78,7 @@ pub(crate) fn dump_load_routes() -> OpenApiRouter<AppState> {
                  description = "The export parameters as one object: \
                                 `file_sys_loc` (required, the archive location \
                                 on the SERVER's file system) plus the \
-                                `EXPORT_SPEC` attributes `logical_format` \
+                                export parameters `logical_format` \
                                 (`openehr_canonical_json`, the default, keeps \
                                 each version's payload inline as canonical \
                                 JSON \\| `openehr_canonical_xml` externalizes \
@@ -199,7 +199,7 @@ pub(crate) async fn admin_dump(
                                       segment is CORRUPT (mangled or truncated, \
                                       so it does not parse as part of this \
                                       archive format), or the manifest names no \
-                                      `EXPORT_FORMAT` member. All are the same \
+                                      known `logical_format`. All are the same \
                                       fact — `file_sys_loc` does not hold a \
                                       readable archive — and answer the same \
                                       `500`. A corrupt per-version payload entry is \
@@ -283,7 +283,7 @@ fn file_sys_loc(body: &Value) -> Result<String, RestError> {
     Ok(raw.to_owned())
 }
 
-/// The `EXPORT_SPEC` default `segment_split_size` in kb.
+/// The default `segment_split_size` in kb.
 ///
 /// Build the [`ExportSpec`] from the request body.
 fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
@@ -295,16 +295,23 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
                 .to_owned(),
         )));
     }
-    let logical_format = enum_member::<ExportFormat>(body, "logical_format", "EXPORT_FORMAT")?;
-    let compression_format =
-        enum_member::<CompressionFormat>(body, "compression_format", "COMPRESSION_FORMAT")?;
+    let logical_format = enum_member::<ExportFormat>(
+        body,
+        "logical_format",
+        &one_of(ExportFormat::ALL.iter().map(|f| f.as_str())),
+    )?;
+    let compression_format = enum_member::<CompressionFormat>(
+        body,
+        "compression_format",
+        &one_of(CompressionFormat::ALL.iter().map(|f| f.as_str())),
+    )?;
     let segment_split_size = match body.get("segment_split_size") {
         // NOTE: no openEHR spec governs this wire, our own extension: an omitted
         // size takes 1024 kb so "just dump it" needs no tuning knob.
         None | Some(Value::Null) => 1024,
         Some(value) => value.as_i64().ok_or_else(|| {
             RestError::from(ApiError::BadRequest(format!(
-                "`segment_split_size` is the EXPORT_SPEC Integer size in kb, got {value}"
+                "`segment_split_size` must be an integer size in kb, got {value}"
             )))
         })?,
     };
@@ -331,23 +338,29 @@ fn export_spec(body: &Value) -> Result<ExportSpec, RestError> {
 fn enum_member<T: std::str::FromStr<Err = ()>>(
     body: &Value,
     field: &str,
-    enumeration: &str,
+    accepted: &str,
 ) -> Result<Option<T>, RestError> {
     match body.get(field) {
         None | Some(Value::Null) => Ok(None),
         Some(value) => {
             let raw = value.as_str().ok_or_else(|| {
                 RestError::from(ApiError::BadRequest(format!(
-                    "`{field}` must be a {enumeration} enumeration literal, got {value}"
+                    "`{field}` must be a string, one of {accepted}, got {value}"
                 )))
             })?;
             raw.parse::<T>().map(Some).map_err(|()| {
                 RestError::from(ApiError::BadRequest(format!(
-                    "`{field}` names no {enumeration} member: {raw:?}"
+                    "`{field}` names no accepted value: {raw:?} (expected one of {accepted})"
                 )))
             })
         }
     }
+}
+
+/// The accepted values of one export parameter, comma-separated for a
+/// refusal's text.
+fn one_of(names: impl Iterator<Item = &'static str>) -> String {
+    names.collect::<Vec<_>>().join(", ")
 }
 
 /// Render the fail reports (`entity_type` 1..1, `entity_id` 1..1,

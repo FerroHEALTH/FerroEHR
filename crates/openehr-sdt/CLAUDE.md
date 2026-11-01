@@ -37,8 +37,8 @@ FLAT + STRUCTURED data instances and the Web Template model. This is the ITS-RES
   algorithm, level removal, `|raw`, `|other`, FLAT⇄STRUCTURED algorithms),
   `master05-rm_mapping.adoc` (RM Mappings: the per-RM-type mapping tables),
   `master06-context_information.adoc` (Context Information: the `ctx/`
-  vocabulary), each in that directory. SM SIM-B / SDF are DEVELOPMENT-state
-  model documents: never implement their terse string encodings. SDT
+  vocabulary), each in that directory. Never implement a terse string
+  encoding those chapters do not define. SDT
   (`docs/specs/openehr/ITS-REST/docs/simplified_data_template/`, the crate's
   namesake, with no chapter past `master01-preface.adoc`) carries
   upstream `spec_status: RETIRED` and is never implemented. No vendor
