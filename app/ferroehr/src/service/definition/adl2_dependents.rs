@@ -21,7 +21,7 @@ use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 
 use super::adl2_engine::on_engine_stack;
-use super::adl2_resolution::{Candidate, repository_for};
+use super::adl2_resolution::{parse_stored, repository_of};
 
 impl FerroEhrService {
     /// Refuse the delete of the stored ADL2 artefact `hrid` while another
@@ -63,35 +63,34 @@ impl FerroEhrService {
 ///
 /// `rows` is every stored `(hrid, kind, adl)`. An artefact that does not
 /// compile even with `target` stored is not counted: the delete takes nothing
-/// from it. Each artefact compiles against the releases its own references
-/// resolve to ([`repository_for`]), so with another release of `target`'s
-/// major version stored, the delete leaves its users resolving to that one.
+/// from it. Each artefact compiles against every stored release
+/// ([`repository_of`]), so with another release of `target`'s major version
+/// stored, the delete leaves its users resolving to that one.
 fn dependents_of(target: &str, rows: Vec<(String, String, String)>) -> Vec<String> {
     let is_target = |hrid: &str| hrid.eq_ignore_ascii_case(target);
     let mut users = Vec::new();
     let mut with = Vec::new();
     let mut without = Vec::new();
     for (hrid, kind, adl) in rows {
-        let Some(stored) = Candidate::parse(&hrid, &adl) else {
+        let Some(stored) = parse_stored(&adl) else {
             continue;
         };
         // A stored `operational_template` inlines every constituent and so
         // needs none of them stored (OPT2 `master02-overview.adoc`: a
         // top-level standalone artefact).
         if kind != "operational_template" && !is_target(&hrid) {
-            users.push((hrid.clone(), stored.artefact().clone()));
+            users.push((hrid.clone(), stored.clone()));
         }
         if !is_target(&hrid) {
             without.push(stored.clone());
         }
         with.push(stored);
     }
+    let without = repository_of(without);
+    let with = repository_of(with);
     users
         .into_iter()
-        .filter(|(_, a)| {
-            create_opt(a, &repository_for(a, &without)).is_err()
-                && create_opt(a, &repository_for(a, &with)).is_ok()
-        })
+        .filter(|(_, a)| create_opt(a, &without).is_err() && create_opt(a, &with).is_ok())
         .map(|(hrid, _)| hrid)
         .collect()
 }
