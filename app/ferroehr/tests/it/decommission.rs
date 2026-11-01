@@ -59,12 +59,6 @@ async fn seed_every_domain(pool: &PgPool) {
         .party_create(PartyKind::Person, typed(&a_person()), None)
         .await
         .expect("create a party");
-    sqlx::query("INSERT INTO linkage.subject_ehr (party_id, ehr_id) VALUES ($1, $2)")
-        .bind(Uuid::now_v7())
-        .bind(Uuid::now_v7())
-        .execute(pool)
-        .await
-        .expect("write a linkage row");
     sqlx::query(
         "INSERT INTO audit.audit_event \
          (recorded_at, action, outcome, event_code, resource_class, render_policy, \
@@ -78,13 +72,12 @@ async fn seed_every_domain(pool: &PgPool) {
 }
 
 /// The rows each domain holds, summed over one relation per domain.
-async fn rows_per_domain(pool: &PgPool) -> [i64; 5] {
-    let mut counts = [0; 5];
+async fn rows_per_domain(pool: &PgPool) -> [i64; 4] {
+    let mut counts = [0; 4];
     for (slot, sql) in counts.iter_mut().zip([
         "SELECT count(*) FROM clinical.ehr",
         "SELECT count(*) FROM clinical.version",
         "SELECT count(*) FROM party.version",
-        "SELECT count(*) FROM linkage.subject_ehr",
         "SELECT count(*) FROM audit.audit_event",
     ]) {
         *slot = sqlx::query_scalar(sql)

@@ -58,7 +58,7 @@ three parts. Each schema is a separate category of data with its own role.
 |---|---|---|
 | `clinical` | Clinical content: compositions, EHR status, folders, contributions, attestations, item tags. The subject appears as `EHR_STATUS.subject.external_ref`, which is an opaque pseudonym once `[privacy] subject_namespaces` is declared | Art. 9 special-category health data |
 | `party` | Parties: persons, organisations, groups, agents, roles and their relationships, with names, addresses and contacts as the operational template defines them. Protected national identifiers live in `national_identifier`, sealed under a per-domain key with a keyed digest beside them | Art. 4(1) personal data; a national identifier is Art. 87 national identification number |
-| `linkage` | `subject_ehr`, the EHR id / subject cross-reference: a party id, an EHR id, the opaque subject identifier the clinical side carries, the Service Model's association metadata and a validity period. No attribute of any kind | The additional information of Art. 4(5): identifying only when joined to one of the other two |
+| `linkage` | No relation since its `0006` migration: which EHR belongs to which subject is the EHR's own `EHR_STATUS.subject` in `clinical` | — |
 | `audit` | One record per access: who, from which organisation, under which roles, what they read or wrote, the declared purpose, the outcome and the time | Art. 4(1) personal data about both the subject and the accessing person |
 | `ext` | No personal data. Helper functions, the runtime roles and the deployment posture | — |
 

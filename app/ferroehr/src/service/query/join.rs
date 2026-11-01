@@ -2,26 +2,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Execution of a query that joins a demographic root to the EHR its party is
-//! the subject of ([`crate::aql::join`]), across the party, linkage and
-//! clinical pools.
+//! the subject of ([`crate::aql::join`]), across the party and clinical pools.
 //!
-//! No openEHR spec governs this: our own design. The plan runs in four
+//! No openEHR spec governs this: our own design. The plan runs in three
 //! statements, one pool each, and never in one: the party query on the
-//! demographic pool, the party-to-EHR map in force on the linkage pool, the
-//! EHRs whose `EHR_STATUS.subject.external_ref` names one of those parties on
-//! the clinical pool, and the clinical query on the clinical pool scoped to
-//! the EHRs the two reads name (the cohort query's crossing,
-//! `crate::service::linkage::cohort`). The rows are joined here on the union
-//! of the two reads, sorted by the ranks each pool's own ordering gave the
-//! keys, and paged. Each half is bounded by the server's result
-//! ceiling (`query.max_result_rows`), and a half or a join larger than it is
-//! refused rather than truncated: a silently shortened half would join to a
-//! wrong answer with nothing in the `RESULT_SET` to say so.
+//! demographic pool, the EHRs whose `EHR_STATUS.subject.external_ref` names
+//! one of those parties on the clinical pool, and the clinical query on the
+//! clinical pool scoped to those EHRs (the cohort query's crossing,
+//! `crate::service::linkage::cohort`). The rows are joined here, sorted by the
+//! ranks each pool's own ordering gave the keys, and paged. Each half is
+//! bounded by the server's result ceiling (`query.max_result_rows`), and a
+//! half or a join larger than it is refused rather than truncated: a silently
+//! shortened half would join to a wrong answer with nothing in the
+//! `RESULT_SET` to say so.
 //!
 //! The clinical query carries the caller's per-EHR access decision and ABAC
 //! patient scope as any query does; the party read and the crossing each
-//! leave an access record in their own domain, the subject read on the
-//! linkage record of the crossing as `ehr_id_for_subject` files it.
+//! leave an access record in their own domain.
 
 #![expect(
     clippy::disallowed_types,
@@ -306,8 +303,7 @@ impl FerroEhrService {
         Ok(outcome)
     }
 
-    /// The `(party, EHR)` pairs of the party-to-EHR map in force, read on the
-    /// linkage pool, united with the EHRs whose subject names one of the
+    /// The `(party, EHR)` pairs of the EHRs whose subject names one of the
     /// `parties` as a `root`, read on the clinical pool, each pair once and
     /// ordered, with the linkage-domain access record the crossing owes.
     async fn linked_ehrs(
@@ -315,11 +311,7 @@ impl FerroEhrService {
         parties: &[VoId],
         root: &str,
     ) -> Result<Vec<(VoId, EhrId)>, Failure> {
-        let mut pairs =
-            crate::service::linkage::store::open_mapping_pairs(&self.linkage_pool, parties)
-                .await
-                .map_err(|e| Failure::analysis(linkage_failure(LinkageError::from(e))))?;
-        pairs.extend(self.party_subject_ehrs(parties, root).await?);
+        let mut pairs = self.party_subject_ehrs(parties, root).await?;
         pairs.sort_unstable_by_key(|(party, ehr)| (party.0, ehr.0));
         pairs.dedup();
         self.emit_linkage_access(
@@ -572,11 +564,10 @@ fn empty_result() -> QueryResult {
     }
 }
 
-/// A linkage failure as the query surface reports it: a refused access record
-/// keeps its own status, everything else is the store failing.
+/// A linkage failure as the query surface reports it: the refused access
+/// record keeps its own status.
 fn linkage_failure(error: LinkageError) -> StatusError {
     match error {
         LinkageError::Unrecorded(e) => e,
-        other => internal_fault_caused("read the party-to-EHR map", &other),
     }
 }

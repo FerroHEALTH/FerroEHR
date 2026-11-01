@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Cohort query: select a population in the DEMOGRAPHIC domain, resolve it to
-//! EHRs through the LINKAGE domain, and run the caller's AQL over exactly those
+//! the EHRs whose subject it is, and run the caller's AQL over exactly those
 //! EHRs on the clinical pool.
 //!
 //! **No openEHR spec governs this — our own design/extension.** AQL is defined
@@ -12,15 +12,16 @@
 //! actually asks — "the blood pressures of everyone in this city" — which today
 //! is answered by handing someone a list of patient identifiers.
 //!
-//! ## Three steps, three credentials, identifiers only
+//! ## Three steps, two credentials, identifiers only
 //!
 //! 1. **The predicate** ([`predicate`]) runs on the demographic pool against a
 //!    binding the deployment declared in `[cohort.predicates]`. It selects
 //!    party ids and nothing else — no name, no address, no identifier leaves
 //!    the domain.
-//! 2. **The crossing** (`store::open_mappings`) runs on the linkage pool:
-//!    those party ids in, the EHR ids they are the subject of out. One
-//!    statement, one round trip, no attribute.
+//! 2. **The crossing** runs on the clinical pool: those party ids in, the ids
+//!    of the EHRs whose `EHR_STATUS.subject.external_ref` names one of them
+//!    out (RM ehr master04 §EHR Status). One statement, one round trip, no
+//!    attribute.
 //! 3. **The query** runs on the clinical pool, scoped to those EHR ids through
 //!    [`AqlQueryRequest::ehr_ids`] as a [`EhrScopeKind::PopulationSubset`].
 //!    A cohort is a population query, so the population gate applies to it as
@@ -30,8 +31,8 @@
 //!    EHR should be included in population queries"). The profile gate,
 //!    paging and the access columns apply unchanged.
 //!
-//! The three statements never meet: under `[db].demographic_url` +
-//! `[db].linkage_url` each pool authenticates as its own role, and
+//! The demographic and the clinical statements never meet: under
+//! `[db].demographic_url` each pool authenticates as its own role, and
 //! [`crate::db::verify_domain_isolation`] refuses to boot a database where one
 //! can read another's schema. The caller never learns a party id either — the
 //! result set carries whatever the AQL projected, and the cohort metadata
@@ -52,15 +53,15 @@
 //!
 //! ## Under an IHE patient identity source
 //!
-//! With `[ehr_index] provider = "ihe"` the server holds no party-to-EHR map:
-//! it knows each patient only by the pseudonym `EHR_STATUS` carries in its
-//! own clinical domain, and translates a real identifier forward through the
-//! PIX Manager (ITI-83 with `targetSystem` set to that domain), never a
-//! pseudonym back (RM ehr master04 §EHR Status, `EHR_STATUS.subject`; GDPR
-//! Art. 4(5) and Art. 25). So a cohort that names its subjects by identifier
-//! is resolved one subject at a time through that forward translation, and a
-//! cohort that selects on demographic attributes, which would need the map
-//! or the reverse translation, is refused as [`CohortError::IdentityNotHeld`].
+//! With `[ehr_index] provider = "ihe"` an `EHR_STATUS` names its patient only
+//! by the pseudonym of its own clinical domain, never by a party of this
+//! server: the server translates a real identifier forward through the PIX
+//! Manager (ITI-83 with `targetSystem` set to that domain), never a pseudonym
+//! back (RM ehr master04 §EHR Status, `EHR_STATUS.subject`; GDPR Art. 4(5) and
+//! Art. 25). So a cohort that names its subjects by identifier is resolved one
+//! subject at a time through that forward translation, and a cohort that
+//! selects on demographic attributes, which would need the reverse
+//! translation, is refused as [`CohortError::IdentityNotHeld`].
 //!
 //! ## Every execution is recorded
 //!
@@ -72,6 +73,18 @@
 
 pub mod config;
 pub mod predicate;
+
+/// Every `OBJECT_REF.type` that names a party: the five concrete demographic
+/// classes and their two abstract ancestors (RM demographic `PARTY`, `ACTOR`).
+const PARTY_TYPES: &[&str] = &[
+    "PERSON",
+    "ORGANISATION",
+    "GROUP",
+    "AGENT",
+    "ROLE",
+    "ACTOR",
+    "PARTY",
+];
 
 use std::collections::BTreeSet;
 
@@ -174,33 +187,33 @@ pub enum CohortError {
     #[error("a cohort query names at least one predicate or subject")]
     NoPredicates,
     /// The request selects on demographic predicates while an IHE patient
-    /// identity source holds the subject-to-EHR cross-reference: resolving
-    /// the selected parties to EHRs would need the local map, which that
-    /// provider does not keep, or a translation of the clinical pseudonym
-    /// back to another domain, which the server never asks for.
+    /// identity source holds the subject-to-EHR cross-reference: an
+    /// `EHR_STATUS` there names a clinical pseudonym, never a party, and
+    /// resolving a party would need a translation of the pseudonym back to
+    /// another domain, which the server never asks for.
     #[error(
-        "a cohort predicate selects parties, and under the IHE patient identity source this \
-         server holds no party-to-EHR map and never translates a pseudonym back; name the \
-         cohort's subjects by identifier instead"
+        "a cohort predicate selects parties, and under the IHE patient identity source an \
+         EHR names its subject by a clinical pseudonym and this server never translates a \
+         pseudonym back; name the cohort's subjects by identifier instead"
     )]
     IdentityNotHeld,
     /// A subject the cohort names could not be resolved: no provider is
     /// installed, or the identity source failed or answered no pseudonym.
     #[error("a cohort subject could not be resolved")]
     Subject(#[source] IndexError),
-    /// The EHR index answered an `ehr_id` that is no UUID.
-    #[error("the EHR index answered an ehr_id that is no UUID")]
-    IndexAnswer(#[source] uuid::Error),
     /// The request pre-scopes the inner query to EHRs of its own.
     #[error("a cohort query carries no `ehr_ids` of its own — the cohort is the scope")]
     ScopeNotAllowed,
     /// The inner AQL execution failed.
     #[error("the cohort query failed")]
     Query(#[source] StatusError),
-    /// A demographic or linkage read failed.
+    /// A demographic read failed.
     #[error("the cohort store is unavailable")]
     Database(#[source] sqlx::Error),
-    /// No connection to the demographic or linkage store could be obtained,
+    /// The read of the EHRs whose subject a selected party is failed.
+    #[error("the cohort store is unavailable")]
+    Storage(#[source] crate::storage::error::StorageError),
+    /// No connection to the demographic or clinical store could be obtained,
     /// so nothing ran.
     #[error("the cohort store is unavailable")]
     Acquire(#[from] crate::db::acquire::AcquireError),
@@ -208,15 +221,6 @@ pub enum CohortError {
     /// deployment fails closed, so the result is withheld.
     #[error("the access record could not be taken and the deployment fails closed")]
     Unrecorded(#[source] StatusError),
-}
-
-impl From<super::store::StoreError> for CohortError {
-    fn from(error: super::store::StoreError) -> Self {
-        match error {
-            super::store::StoreError::Acquire(e) => CohortError::Acquire(e),
-            super::store::StoreError::Database(e) => CohortError::Database(e),
-        }
-    }
 }
 
 impl From<CohortError> for StatusError {
@@ -237,7 +241,7 @@ impl From<CohortError> for StatusError {
                 let message = error.to_string();
                 Self::new(ServiceStatus::ContentInvalid, message).with_source(error)
             }
-            CohortError::Database(_) | CohortError::IndexAnswer(_) => {
+            CohortError::Database(_) | CohortError::Storage(_) => {
                 crate::service::error::internal_fault_caused("execute a cohort query", &error)
                     .with_source(error)
             }
@@ -254,8 +258,8 @@ impl FerroEhrService {
         self.cohort.is_enabled()
     }
 
-    /// Select a cohort in the demographic domain, resolve it to EHRs through
-    /// the linkage domain, and run `request.aql` over exactly those EHRs.
+    /// Select a cohort in the demographic domain, resolve it to the EHRs whose
+    /// subject it is, and run `request.aql` over exactly those EHRs.
     ///
     /// The three steps and what each one may carry are the module
     /// documentation. An empty cohort runs no AQL at all — there is nothing to
@@ -270,8 +274,8 @@ impl FerroEhrService {
     /// malformed request, [`CohortError::CohortTooLarge`] above the configured
     /// ceiling, [`CohortError::Acquire`] when no domain connection can be
     /// obtained, [`CohortError::Database`] when a domain read fails,
+    /// [`CohortError::Storage`] when the subject read fails,
     /// [`CohortError::Subject`] when a named subject cannot be resolved,
-    /// [`CohortError::IndexAnswer`] when the index answers no UUID,
     /// [`CohortError::Query`] when the AQL execution fails, and
     /// [`CohortError::Unrecorded`] when the access record could not be taken
     /// under `fail_mode = "closed"`.
@@ -358,8 +362,8 @@ impl FerroEhrService {
         ))
     }
 
-    /// Steps one and two for the predicates: the parties they select, through
-    /// the local map to the EHRs those parties are the subject of.
+    /// Steps one and two for the predicates: the parties they select, and the
+    /// EHRs whose `EHR_STATUS.subject.external_ref` names one of them.
     ///
     /// # Errors
     /// [`CohortError::IdentityNotHeld`] under an IHE patient identity source,
@@ -379,22 +383,24 @@ impl FerroEhrService {
             return Err(CohortError::CohortTooLarge { size, max });
         }
         // Step two: the crossing. Identifiers in, identifiers out.
-        let party_ids: Vec<VoId> = parties.into_iter().collect();
-        Ok(super::store::open_mappings(&self.linkage_pool, &party_ids)
-            .await?
-            .into_iter()
-            .collect())
+        let ids: Vec<String> = parties.iter().map(|party| party.0.to_string()).collect();
+        // NOTE: BASE `OBJECT_REF.type` names "the class (concrete or abstract)", so a party
+        // of any class is named by its own class or an abstract ancestor.
+        let found = crate::storage::ehr_repo::ehrs_by_subject_ids(&self.pool, &ids, PARTY_TYPES)
+            .await
+            .map_err(CohortError::Storage)?;
+        Ok(found.into_iter().map(|(_, ehr)| ehr).collect())
     }
 
     /// The EHRs of the subjects the cohort names, each resolved by the
-    /// installed provider: under an IHE identity source through the forward
-    /// PIXm translation into the clinical domain, under the local map
-    /// through the map. A subject no EHR belongs to adds nothing.
+    /// installed provider into the clinical domain (under an IHE identity
+    /// source through the forward PIXm translation) and matched against the
+    /// subject of each EHR's `EHR_STATUS`. A subject no EHR belongs to adds
+    /// nothing.
     ///
     /// # Errors
-    /// [`CohortError::CohortTooLarge`] for more than `max` subjects,
-    /// [`CohortError::Subject`] when a subject cannot be resolved, and
-    /// [`CohortError::IndexAnswer`] for an `ehr_id` that is no UUID.
+    /// [`CohortError::CohortTooLarge`] for more than `max` subjects, and
+    /// [`CohortError::Subject`] when a subject cannot be resolved.
     async fn named_subject_ehrs(
         &self,
         subjects: &[SubjectRef],
@@ -406,17 +412,11 @@ impl FerroEhrService {
         }
         let mut ehrs = BTreeSet::new();
         for subject in subjects {
-            let entries = self
-                .provider_subject_ehrs(subject)
+            let found = self
+                .subject_ehr(subject)
                 .await
                 .map_err(CohortError::Subject)?;
-            for entry in entries {
-                let id = entry
-                    .ehr_id
-                    .parse::<uuid::Uuid>()
-                    .map_err(CohortError::IndexAnswer)?;
-                ehrs.insert(EhrId(id));
-            }
+            ehrs.extend(found);
         }
         Ok(ehrs)
     }

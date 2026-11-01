@@ -6,7 +6,8 @@
 //! **OUR OWN EXTENSION: no openEHR spec governs this route** — ITS-REST 1.1.0
 //! publishes an ad-hoc and a stored query and nothing else. What the suite pins
 //! is the wire contract the platform behaviour hangs off: a bound deployment
-//! serves the cohort with its `meta.cohort` block, an unbound predicate is a
+//! serves the cohort with its `meta.cohort` block over parties and EHRs created
+//! only over the wire, an unbound predicate is a
 //! `400` in the openEHR error shape, and a deployment that binds nothing
 //! answers `404` as if the surface were not there.
 
@@ -21,6 +22,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use axum::Router;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
 use http::StatusCode;
@@ -124,67 +126,78 @@ fn composition(name: &str) -> Value {
     })
 }
 
-/// The `UPDATE_VERSION` commit envelope for a bare-RM create.
-fn uv<T: serde::de::DeserializeOwned>(
-    data: &Value,
-) -> openehr_its::rest::generated::common::UpdateVersion<T> {
-    use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
-    UpdateVersion {
-        preceding_version_uid: None,
-        lifecycle_state: ferroehr::service::version_update::lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the fixture commit body decodes as its RM type"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: ferroehr::service::version_update::change_type_coded("249"),
-            description: None,
-            committer: openehr_its::json::from_canonical_value(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "cohort tester" }),
-            )
-            .expect("committer"),
-            additional_properties: BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: BTreeMap::new(),
-    }
+/// An `EHR_STATUS` whose subject is a `PARTY_SELF` with an `external_ref`
+/// naming `id` in `namespace` as a `PERSON` (RM ehr master04 §EHR Status).
+fn status_naming(id: &str, namespace: &str) -> Value {
+    json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "id": { "_type": "HIER_OBJECT_ID", "value": id },
+                "namespace": namespace,
+                "type": "PERSON"
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    })
 }
 
-/// Seed three linked subjects in `city`, each with one composition.
-async fn seed(service: &FerroEhrService, city: &str, names: &[&str]) {
+/// `POST /ehr` with the `EHR_STATUS` naming `id` in `namespace`, then one
+/// `POST /ehr/{ehr_id}/composition` named `name`; answers the EHR id.
+async fn ehr_naming(app: &Router, id: &str, namespace: &str, name: &str) -> String {
+    let (status, headers, body) = common::send(
+        app,
+        common::post_json(
+            &format!("{}/ehr", common::BASE),
+            &status_naming(id, namespace).to_string(),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "the EHR is created: {body}");
+    let ehr = common::etag_uid(&headers);
+    let (status, body) = common::send_body(
+        app,
+        common::post_json(
+            &format!("{}/ehr/{ehr}/composition", common::BASE),
+            &composition(name).to_string(),
+        ),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "the composition is committed: {body}"
+    );
+    ehr
+}
+
+/// Seed one PERSON in `city` per name over `POST /demographic/person`, the EHR
+/// whose subject names it over `POST /ehr`, and one composition in it.
+async fn seed(app: &Router, city: &str, names: &[&str]) {
     for name in names {
-        let version: openehr_its::rest::generated::common::UpdateVersion<
-            openehr_rm::prelude::Party,
-        > = uv(&person(name, city));
-        let committal = ferroehr::service::version_update::Committal {
-            audit: version.commit_audit,
-            lifecycle_state: None,
-        };
-        let created = Box::pin(service.party_create(
-            ferroehr::service::demographic::types::PartyKind::Person,
-            version.data.expect("a PERSON"),
-            Some(committal),
-        ))
-        .await
-        .expect("create_party");
-        let created_uid = created.meta.expect("the create answers its version").uid;
-        let party = ferroehr::ids::VoId(
-            created_uid
-                .split("::")
-                .next()
-                .and_then(|vo| vo.parse().ok())
-                .expect("a uuid versioned object id"),
-        );
-        let ehr = Box::pin(service.create_ehr_meta(None, None))
-            .await
-            .map(|(id, _)| id)
-            .expect("create_ehr");
-        service.link(party, ehr).await.expect("link");
-        service
-            .create_composition(ehr, uv(&composition(name)))
-            .await
-            .expect("create_composition");
+        let (status, headers, body) = common::send(
+            app,
+            common::post_json(
+                &format!("{}/demographic/person", common::BASE),
+                &person(name, city).to_string(),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "the PERSON is created: {body}");
+        let uid = common::etag_uid(&headers);
+        let party = uid.split("::").next().expect("a versioned-object id");
+        ehr_naming(app, party, "local", name).await;
     }
 }
 
@@ -206,9 +219,9 @@ async fn a_bound_deployment_serves_a_cohort() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_cohort(bound_config()),
     );
-    seed(&service, "Groningen", &["Ada", "Bram", "Cato"]).await;
-    seed(&service, "Assen", &["Daan"]).await;
     let app = common::router_with(common::api_config(false), service).await;
+    seed(&app, "Groningen", &["Ada", "Bram", "Cato"]).await;
+    seed(&app, "Assen", &["Daan"]).await;
 
     let (status, text) = common::send_body(
         &app,
@@ -294,12 +307,12 @@ async fn an_unconfigured_deployment_answers_not_found() {
 }
 
 /// A body that names `subjects` instead of predicates is served under
-/// `[cohort] subjects = true`, each subject resolved through the local map,
+/// `[cohort] subjects = true` and the local provider, each subject resolved
+/// through the `EHR_STATUS.subject` the EHR was created with over the wire,
 /// and no identifier value reaches the wire.
 #[tokio::test]
 async fn a_cohort_names_its_subjects_by_identifier() {
     use ferroehr::service::ehr_index::provider::EhrIndexProvider;
-    use ferroehr::service::ehr_index::types::SubjectRef;
 
     const DOMAIN: &str = "urn:oid:2.999.1.4114";
     let (db, pool) = common::migrated_pool().await;
@@ -312,17 +325,9 @@ async fn a_cohort_names_its_subjects_by_identifier() {
                 ..CohortConfig::default()
             }),
     );
-    for name in ["wire-a", "wire-b"] {
-        let ehr = service
-            .create_ehr_for_subject(SubjectRef::person(name, DOMAIN), None)
-            .await
-            .expect("create_ehr_for_subject");
-        service
-            .create_composition(ehr, uv(&composition(name)))
-            .await
-            .expect("create_composition");
-    }
     let app = common::router_with(common::api_config(false), service).await;
+    let named = ehr_naming(&app, "wire-a", DOMAIN, "wire-a").await;
+    ehr_naming(&app, "wire-b", DOMAIN, "wire-b").await;
     let request = json!({
         "q": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
         "subjects": [{ "id": "wire-a", "namespace": DOMAIN }],
@@ -339,6 +344,20 @@ async fn a_cohort_names_its_subjects_by_identifier() {
     let served: Value = serde_json::from_str(&text).expect("a RESULT_SET");
     assert_eq!(served["meta"]["cohort"]["size"], json!(1), "{served}");
     assert_eq!(served["rows"].as_array().map(Vec::len), Some(1), "{served}");
+    let (status, body) = common::send_body(
+        &app,
+        common::get(&format!(
+            "{}/ehr/{named}/composition/{}",
+            common::BASE,
+            served["rows"][0][0].as_str().expect("a composition uid")
+        )),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "the served row is the named subject's composition: {body}"
+    );
     assert!(
         !text.contains("wire-a"),
         "no identifier reaches the wire: {text}"

@@ -52,7 +52,7 @@ The database is PostgreSQL 18, split into five schemas:
 | `ext` | FerroEHR's own `IMMUTABLE` helper functions (`openehr_magnitude`, `openehr_timestamp`), the runtime roles and the deployment posture |
 | `clinical` | the clinical CDR: versions, heads, nodes, EHRs, contributions, templates, queries, tags |
 | `party` | the demographic pseudonymisation domain: party versions, heads, nodes, contributions, commit audits, and the sealed `national_identifier` values |
-| `linkage` | the linkage pseudonymisation domain: `subject_ehr`, which party and which subject identifier name which EHR |
+| `linkage` | the linkage pseudonymisation domain, which holds no relation since its `0006` migration |
 | `audit` | the IHE ATNA Audit Record Repository (`audit_event`) |
 
 Each carries its own migration set and its own `_sqlx_migrations` bookkeeping
@@ -87,22 +87,12 @@ unchanged, and no SQL in the server names a domain schema. A test renders both
 files and refuses any difference beyond the kind `CHECK` and the foreign keys
 into the `ehr` relation, which the party domain has none of.
 
-The third domain is one table. `linkage.subject_ehr` is the EHR id / subject
-cross-reference (the EHR index), and
-it records which party and which subject identifier name which EHR,
-temporally: a merge, a split or an index correction closes the row in force and
-opens its successor, and the temporal key
-(`UNIQUE (party_id, sys_period WITHOUT OVERLAPS)`) admits one
-open mapping per party. It carries identifiers, their association metadata,
-and a validity period, and nothing else, because a row
-here is already the additional information that re-attributes a record to a
-person. It holds no foreign key into either schema it joins, since PostgreSQL
-enforces a foreign key by reading the referenced row and no credential here
-may. `ferroehr_linkage` holds `SELECT`, `INSERT` and `UPDATE` on it and no
-`DELETE`, so a mapping is closed rather than removed — with one exception, and
-it is the one the law requires: `linkage.erase_ehr` is a `SECURITY DEFINER`
-function the role may execute, and deleting an EHR calls it so no row survives
-naming a record that no longer exists.
+The third domain holds no relation. Which EHR belongs to which subject is the
+EHR's own `EHR_STATUS.subject.external_ref` (RM ehr §EHR Status), which the
+`ehr` relation promotes to its subject columns on every EHR create and
+`EHR_STATUS` update, so the cohort, the AQL demographic join and the subject
+lookups all read it there. The `linkage` migration set's `0006` dropped the
+cross-reference table that held these associations before.
 
 The wire is unaffected. The ITS-REST Demographic API, the RM change-control
 semantics and every version identifier are exactly what they were; only where

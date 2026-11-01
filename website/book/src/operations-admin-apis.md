@@ -76,8 +76,7 @@ commit audits, item tags, folder memberships, the restriction and retention
 marks, the multimedia blob references and every pending change event of the
 EHR; an erasure tombstone is appended to the change-event stream in the same
 transaction, so a consumer that derived anything from the EHR is told to
-delete it (GDPR Art. 19). The cross-reference row that names the EHR's subject
-is then erased in the linkage domain, and the externalized multimedia blobs no
+delete it (GDPR Art. 19). The externalized multimedia blobs no
 surviving version still references are removed from the object store.
 
 **A party delete announces itself the same way.** `DELETE

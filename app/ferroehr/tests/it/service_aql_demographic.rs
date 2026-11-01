@@ -436,7 +436,8 @@ async fn unserved_demographic_constructs_are_refused() {
     assert!(rows.is_empty(), "no clinical row for {jane}, got {rows:?}");
 }
 
-/// A party, the EHR it is the subject of, and one composition per name in it.
+/// A party, the EHR whose `EHR_STATUS` names it as its subject, and one
+/// composition per name in it.
 async fn linked(svc: &FerroEhrService, name: &str, id: &str, compositions: &[&str]) -> String {
     let uid = create(svc, PartyKind::Person, &person(name, id, "urn:bsn")).await;
     let party = ferroehr::ids::VoId(
@@ -445,13 +446,7 @@ async fn linked(svc: &FerroEhrService, name: &str, id: &str, compositions: &[&st
             .and_then(|s| s.parse().ok())
             .expect("party id"),
     );
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
-    svc.link(party, ehr)
-        .await
-        .expect("link the party to its EHR");
+    let ehr = crate::fixtures::create_ehr_for_party(svc, party).await;
     for composition in compositions {
         svc.create_composition(
             ehr,
@@ -570,13 +565,7 @@ async fn a_join_leaves_out_a_non_queryable_ehr() {
             .and_then(|s| s.parse().ok())
             .expect("party id"),
     );
-    let hidden = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
-    svc.link(bram_party, hidden)
-        .await
-        .expect("link the party to its EHR");
+    let hidden = crate::fixtures::create_ehr_for_party(&svc, bram_party).await;
     svc.create_composition(
         hidden,
         crate::fixtures::uv(&crate::fixtures::composition("visit b"), "249", None),
@@ -634,7 +623,7 @@ fn status_naming(id: &str, namespace: &str, class: &str) -> openehr_rm::prelude:
 }
 
 /// An EHR whose subject names `id` as `class` in `namespace`, holding one
-/// composition named `composition`; no `link` call is made.
+/// composition named `composition`.
 async fn subject_ehr(
     svc: &FerroEhrService,
     id: &str,
@@ -656,14 +645,14 @@ async fn subject_ehr(
 }
 
 /// An EHR created with an `EHR_STATUS.subject.external_ref` that names a party
-/// joins to that party with no `link` call, for each served root, in any
+/// joins to that party, for each served root, in any
 /// namespace, and when the reference names the root's abstract RM ancestor
 /// (BASE `OBJECT_REF.type`: "the class (concrete or abstract)"; `PARTY_REF`
 /// admits `PARTY` and `ACTOR`). A subject naming no party, a subject naming
-/// the party under another class, and a deleted party answer nothing; an EHR
-/// that is both linked and named answers once (#4411).
+/// the party under another class, and a deleted party answer nothing
+/// (#4411).
 #[tokio::test]
-async fn an_ehr_whose_subject_names_the_party_joins_without_a_link() {
+async fn an_ehr_whose_subject_names_the_party_joins() {
     let db = testkit::db().await.expect("testkit database");
     let svc = new_service(&db);
 
@@ -681,15 +670,9 @@ async fn an_ehr_whose_subject_names_the_party_joins_without_a_link() {
     let nurse = create(&svc, PartyKind::Role, &role("Nurse", "R-1", "urn:big")).await;
     let nurse_ehr = subject_ehr(&svc, party_id(&nurse), "local", "ROLE", "visit r").await;
 
-    // Linked through the map AND named by its subject: one EHR, one row.
+    // A second PERSON named in the `local` namespace: one EHR, one row.
     let both = create(&svc, PartyKind::Person, &person("Both", "P-3", "urn:bsn")).await;
     let both_ehr = subject_ehr(&svc, party_id(&both), "local", "PERSON", "visit b").await;
-    svc.link(
-        ferroehr::ids::VoId(party_id(&both).parse().expect("party id")),
-        both_ehr,
-    )
-    .await
-    .expect("link the party to its EHR");
 
     // The subject names the PERSON as an ORGANISATION: no PERSON row.
     let otto = create(&svc, PartyKind::Person, &person("Otto", "P-4", "urn:bsn")).await;

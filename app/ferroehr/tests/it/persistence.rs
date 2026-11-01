@@ -309,17 +309,12 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
     );
 }
 
-/// The cross-reference lives in the linkage domain, and the erasure function is
-/// the only way its rows are ever removed.
-///
-/// The linkage role holds `SELECT`, `INSERT` and `UPDATE` and no `DELETE`, so a
-/// merge corrects forward and nothing quietly drops history; erasure still has
-/// to reach the map, because a row naming an erased EHR is the additional
-/// information of GDPR Art. 4(5) outliving the data it was additional to
-/// (<https://eur-lex.europa.eu/eli/reg/2016/679/oj>). A `SECURITY DEFINER`
-/// function is what squares the two.
+/// The linkage schema holds no relation and no function: which EHR belongs to
+/// which subject is the EHR's own `EHR_STATUS.subject` (RM ehr master04 §EHR
+/// Status), so `linkage/0006_drop_subject_ehr.sql` dropped the cross-reference
+/// and its erasure function.
 #[tokio::test]
-async fn the_linkage_role_erases_only_through_the_definer_function() {
+async fn the_linkage_schema_holds_no_cross_reference() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
 
@@ -331,33 +326,19 @@ async fn the_linkage_role_erases_only_through_the_definer_function() {
     .fetch_all(&pool)
     .await
     .expect("linkage relations");
-    assert_eq!(relations, ["subject_ehr"], "linkage holds one relation");
-
-    let definer: (bool, String) = sqlx::query_as(
-        "SELECT p.prosecdef, pg_get_function_identity_arguments(p.oid) \
-         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace \
-         WHERE n.nspname = 'linkage' AND p.proname = 'erase_ehr'",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("the erase function exists");
-    assert_eq!(
-        definer,
-        (true, "an_ehr_id uuid".to_owned()),
-        "erase_ehr is SECURITY DEFINER over one EHR id"
+    assert!(
+        relations.is_empty(),
+        "linkage holds no relation: {relations:?}"
     );
 
-    // PUBLIC must not hold EXECUTE on a definer function: that would hand every
-    // role the owner's reach, including the DELETE this schema grants nobody.
-    let public_execute: bool = sqlx::query_scalar(
-        "SELECT has_function_privilege('public', p.oid, 'EXECUTE') \
-         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace \
-         WHERE n.nspname = 'linkage' AND p.proname = 'erase_ehr'",
+    let functions: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace \
+         WHERE n.nspname = 'linkage'",
     )
     .fetch_one(&pool)
     .await
-    .expect("read PUBLIC's privilege on the erase function");
-    assert!(!public_execute, "PUBLIC may not execute linkage.erase_ehr");
+    .expect("linkage functions");
+    assert_eq!(functions, 0, "linkage holds no function");
 }
 
 /// A database created by a release older than the storage rewrite is refused at

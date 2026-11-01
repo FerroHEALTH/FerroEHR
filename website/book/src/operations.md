@@ -28,7 +28,7 @@ provisioning and migration:
 | `ferroehr_migrator` | runs the schema migrations; owns the helper functions | the migration step |
 
 and five cover serving, split by **pseudonymisation domain** — the clinical
-record, the identity of its subject, and the map between the two:
+record, the identity of its subject, and the linkage domain:
 
 | Role | Reads and writes | Barred from |
 |---|---|---|
@@ -36,7 +36,7 @@ record, the identity of its subject, and the map between the two:
 | `ferroehr_party` | `party`, archival tier included | `clinical`, `linkage` |
 | `ferroehr_clinical_reader` | read-only over `clinical` | `party`, `linkage` |
 | `ferroehr_party_reader` | read-only over `party` | `clinical`, `linkage` |
-| `ferroehr_linkage` | `linkage` (the party-to-EHR map) | `clinical`, `party` |
+| `ferroehr_linkage` | `linkage`, which holds no relation since its `0006` migration | `clinical`, `party` |
 
 The migrations create these roles idempotently, apply the per-schema grants,
 **and revoke every other domain explicitly in both directions**, and revoke the
@@ -380,11 +380,10 @@ of the relation it archives, inside that domain's own schema, so a
 is no separate mirror schema left to survive a wipe of the tier it mirrors.
 
 Dropping some of the schemas is not a supported reset, because they are not
-independent. `btree_gist` is installed in `ext`, so `DROP SCHEMA ext CASCADE`
-also drops the temporal uniqueness constraint on `linkage.subject_ehr` that the
-extension's operator classes back, and the `linkage` set, still recorded as
-applied, never recreates it. `linkage` also maps parties to EHRs that a dropped
-`clinical` no longer holds. The next boot rebuilds the dropped schemas, and its
+independent. `ext` holds the helper functions the `clinical` and `party`
+relations depend on, so `DROP SCHEMA ext CASCADE` drops them with it, and those
+sets, still recorded as applied, never recreate them. The next boot rebuilds
+the dropped schemas, and its
 migration check reads each set's bookkeeping only, so it passes over a database
 that has lost those guarantees.
 
@@ -462,9 +461,9 @@ pg_dump --dbname="$PARTY_DSN" --format=custom --no-owner \
   --schema=party \
   --file=/backups/party/party-$(date -u +%Y%m%dT%H%M%SZ).dump
 
-# The party-to-EHR map, into a third directory with the narrowest audience
+# The linkage domain's migration record
 pg_dump --dbname="$LINKAGE_DSN" --format=custom --no-owner \
-  --schema=linkage --extension=btree_gist \
+  --schema=linkage \
   --file=/backups/linkage/linkage-$(date -u +%Y%m%dT%H%M%SZ).dump
 
 # The audit trail, ONLY when [storage.audit] names a database of its own —
@@ -475,23 +474,10 @@ pg_dump --dbname="$AUDIT_DSN" --format=custom --no-owner \
   --file=/backups/audit/audit-$(date -u +%Y%m%dT%H%M%SZ).dump
 ```
 
-> [!IMPORTANT]
-> `--extension=btree_gist` on the linkage dump is load-bearing. A `--schema`
-> dump carries no extension — *"pg_dump makes no attempt to dump any other
-> database objects that the selected schema(s) might depend upon"* — and
-> `linkage.subject_ehr`'s temporal `UNIQUE … WITHOUT OVERLAPS` is a GiST
-> index over that extension's operator classes. Without the flag the restore
-> reports *"data type uuid has no default operator class for access method
-> gist"*, `pg_restore` ignores the error by default, and the table comes back
-> with its rows and without the key that admits one open mapping per party.
-
-The third dump is a separate artefact for the same reason the first two are,
-and it is the one that matters most. `linkage.subject_ehr` says which party is
-the subject of which EHR: it is the additional information that turns a
-pseudonymised record back into a person (GDPR Art. 4(5)), so a file carrying it
-beside either side of that map rebuilds the join the split exists to withhold.
-Folding it into the party dump would put the identities and the map in one
-holder's hands — the artefact this whole section is written to prevent.
+The linkage domain has held no relation since its `0006` migration: which EHR
+belongs to which subject is the EHR's own `EHR_STATUS.subject`, so it travels
+in the clinical dump. The linkage dump carries that domain's migration record,
+which `ferroehr db verify` reads after a restore.
 
 All three examples ship. In Compose they are the opt-in `backup` profile:
 
@@ -562,14 +548,7 @@ refuses to start rather than serving from it.
 What it does **not** read is a constraint. `pg_restore` ignores a failed
 statement unless you pass `--exit-on-error`, so a table can come back with its
 rows and without a key while every check above stays green. Read the restore's
-own output, and confirm the map kept its temporal key:
-
-```bash
-psql -d ferroehr_restored -c \
-  "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint
-     WHERE conrelid = 'linkage.subject_ehr'::regclass AND contype = 'u'"
-# expect: uq_subject_ehr_party | UNIQUE (party_id, sys_period WITHOUT OVERLAPS)
-```
+own output.
 
 Restoring only one domain is a supported outcome, not a mistake: a demographic
 dump restored on its own gives a database with identities and no clinical

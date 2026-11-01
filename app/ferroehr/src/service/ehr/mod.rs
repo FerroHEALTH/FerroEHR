@@ -59,14 +59,10 @@ pub(in crate::service) mod tags;
 pub(crate) mod validation;
 
 pub mod access_types;
-pub mod handle;
 
-use openehr_base::prelude::{GenericId, ObjectId, PartyRef};
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
-use openehr_rm::prelude::{PartyProxy, PartySelf};
 use serde_json::Value;
 
-use crate::service::ehr_index::types::SubjectRef;
 use crate::service::response::ResourceMeta;
 use crate::service::status::StatusError;
 
@@ -233,28 +229,4 @@ fn resolve_envelope(
         },
         canonical,
     })
-}
-
-/// Build the `EHR_STATUS` for a subject-scoped EHR creation: the base status
-/// with its `subject` set to a `PARTY_SELF` whose `external_ref` names the
-/// subject (the promoted `ehr.subject_*` columns are kept in sync on commit by
-/// [`FerroEhrService::sync_ehr_subject`](crate::service::FerroEhrService)).
-fn status_for_subject(base: Value, subject: &SubjectRef) -> Value {
-    let mut status = base;
-    if let Value::Object(map) = &mut status {
-        map.insert(
-            "subject".to_owned(),
-            openehr_its::json::to_canonical_value(&PartyProxy::PartySelf(PartySelf {
-                external_ref: Some(PartyRef {
-                    namespace: subject.namespace.clone(),
-                    r#type: subject.r#type.clone(),
-                    id: ObjectId::GenericId(GenericId {
-                        value: subject.id.clone(),
-                        scheme: subject.namespace.clone(),
-                    }),
-                }),
-            })),
-        );
-    }
-    status
 }
