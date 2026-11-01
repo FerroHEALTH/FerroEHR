@@ -125,10 +125,10 @@ in the repository.
   output carry record identifiers (an EHR id, a version uid, a template id) and
   shapes, never the content of a subject's data. A `Debug` impl on a type
   holding personal data prints field names rather than field values.
-- **No grant across the domains:** a database role reaches one of the three
-  pseudonymisation domains, never a second. A migration granting across them
+- **No grant across the domains:** a database role reaches one of the two
+  pseudonymisation domains, never the other. A migration granting across them
   rejoins the identities to the records the split exists to separate.
-- **A review step at the boundary:** a change touching the demographic
+- **A review step at the boundary:** a change touching the party
   migrations, the demographic or linkage services, the identifier
   scanner, the access-event model or an outbox payload builder describes its
   data flow, names the roles involved, and ticks the "Privacy boundary"

@@ -536,15 +536,16 @@ is an HMAC-SHA-256 digest under a separate subkey, which is what lets equality
 lookup work without the plaintext ever reaching the database. Both subkeys are
 derived per domain from one configured root key. The resolve
 function is `SECURITY DEFINER`, `PUBLIC` is revoked from it, and only
-`ferroehr_party` may execute it. Every resolution records an access
-event naming the scheme and whether it matched, never the value. The scheme
+`ferroehr_party` may execute it. No server path calls it: FerroEHR offers no
+lookup from an identifier to its party. The scheme
 registry is a closed set: an identifier whose scheme nobody registered cannot
 be stored as a protected one at all.
 
 Each party version seals rows of its own. When a later version or the logical
 deletion supersedes a version, its rows get a `retired_at` stamp and stay, so
-an older version still expands to the value it committed. Resolution matches
-live rows only, and a value is live for at most one party at a time.
+an older version still expands to the value it committed. The resolve
+function matches live rows only, and a value is live for at most one party at a
+time.
 
 Three paths that move a party version keep the value sealed:
 
@@ -570,17 +571,18 @@ Three paths that move a party version keep the value sealed:
 
 ### The subject pseudonym
 
-**Control.** `mint_subject_pseudonym` derives the value from the party id
-under the linkage key domain, in the first declared pseudonym
-namespace. No caller input enters it, so the same party yields the same
-pseudonym and a national identifier cannot become a subject
-reference through that path.
+**Control.** FerroEHR mints no subject pseudonym. Once `[privacy]
+subject_namespaces` declares a namespace, an `EHR_STATUS.subject.external_ref`
+must name a declared namespace and carry a UUID, and a trigger on `ehr` refuses
+a non-UUID subject reference whichever session writes it. Under the IHE
+provider the patient identity source mints the pseudonym the clinical domain
+holds.
 
 **Residual risk.** A stable per-subject identifier across the whole clinical
 store is what makes it an EHR, and it is also a linkage key. Anyone holding
 the clinical domain can gather every record of one subject, without knowing
-who the subject is. Across instances the derivation differs with the root key,
-so the same person in two instances is two pseudonyms.
+who the subject is. With `subject_namespaces` empty, the default, neither rule
+is in force and a client may write any identifier as the subject reference.
 
 ### The audit trail as a re-identification surface
 

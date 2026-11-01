@@ -64,7 +64,7 @@ instances. openEHR puts multi-tenancy at the layer that hosts several logical
 EHR systems rather than inside one (BASE `architecture_overview`
 `master06-design_of_the_ehr.adoc` §The EHR System).
 
-### The three pseudonymisation domains
+### The two pseudonymisation domains
 
 Parties (PERSON, ORGANISATION, GROUP, AGENT, ROLE, PARTY_RELATIONSHIP) live in
 `party`, never in `clinical`, and the split is enforced by the database in both

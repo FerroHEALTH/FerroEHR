@@ -53,8 +53,8 @@ log; "no test" means none exists.
 
 **Cause:** a route the middleware does not classify; a record dropped when
 the emission queue is full or the store is unreachable; a domain-level
-access (resolving a subject to an EHR, an identifier resolution, an EHR
-Extract export) that skips the middleware; reads made straight against the
+access (resolving a subject to an EHR, an EHR Extract export) that skips
+the middleware; reads made straight against the
 database.
 
 **Effect:** a patient, or the organisation investigating a breach, cannot
@@ -88,9 +88,7 @@ audit failing open, unless each is accepted by name.
   `fail_closed_503_carries_openehr_error_body_and_retry_after`,
   `aql_execute_emits_one_access_record_per_served_ehr`;
 - `app/ferroehr/tests/it/access_event_fail_closed.rs`:
-  `a_linkage_resolution_is_withheld_when_its_record_is_rejected`,
   `a_subject_lookup_is_withheld_when_its_record_is_rejected`,
-  `an_identifier_resolution_is_withheld_when_its_record_is_rejected`,
   `an_extract_export_is_withheld_when_its_record_is_rejected`;
 - `app/ferroehr/src/config/deployment.rs`:
   `production_refuses_each_open_gap_and_names_the_remedy`,

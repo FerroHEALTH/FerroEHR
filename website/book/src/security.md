@@ -935,36 +935,36 @@ deployment step described in
 ### Resolving across the boundary
 
 One question needs both domains at once: *which record belongs to this
-person?* The server answers it in exactly one place — the linkage service —
-and answers it in the application, over two connections, never in the
-database.
+person?* The server answers it in the application, over two connections, never
+in the database. An EHR names its subject in its own
+`EHR_STATUS.subject.external_ref`, which the `ehr` relation copies into its
+subject columns on every EHR create and `EHR_STATUS` update. A cohort and the
+AQL demographic join read the parties on the `party` connection and the EHRs whose subject names them on the `clinical` connection,
+with a second search path and, when `[storage.party] url` is set, a second
+database role. FerroEHR matches, links and merges no patients, and offers no
+lookup from a national identifier to its party.
 
-An external identity (a national identifier, say) is matched against the
-sealed `party.national_identifier` map by keyed digest, which returns a
-party without decrypting anything. The EHR whose `EHR_STATUS.subject` names
-that party is then looked up in `clinical` on a second connection, with a
-second search path and, when `[storage.party] url` is set, a second database
-role. **No statement performs the join, because no credential could**: the
-clinical role holds no grant in `demographic` and the demographic role holds
-none in `clinical`, both revocations are explicit and in both directions, and
-the boot check refuses to serve a database where either has been given one. The crossing exists as an
-application step that can be audited, rather than as a query anyone holding
-one password could write.
+**No statement performs the join, because no credential could**: the
+clinical role holds no grant in `party` and the party role holds none in
+`clinical`, both revocations are explicit and in both directions, and the boot
+check refuses to serve a database where either has been given one. The
+crossing exists as an application step that can be audited, rather than as a
+query anyone holding one password could write.
 
-Every resolution records an access event in the `linkage` domain, naming who
-asked, the purpose of use they declared, and whether anything matched. A miss
+Every crossing records an access event in the `linkage` domain, naming who
+asked, the purpose of use they declared, and how many EHRs it reached. A miss
 is recorded like a hit: it says someone asked whether this deployment holds a
 record for that person. The event deliberately does **not** name the EHR that
 came back. A record pairing a party with its EHR would make the audit trail a
 map from parties to their EHRs, which the split exists to withhold.
 
 Looking an EHR up by subject (`GET /ehr?subject_id=…&subject_namespace=…`)
-does **not** go through any of this. That operation matches the EHR's own
+does **not** cross the boundary. That operation matches the EHR's own
 `EHR_STATUS.subject.external_ref`, which is the opaque pseudonym the privacy
 layer already constrains, so it resolves a pseudonym rather than an identity
-and consults no map. It records a linkage-domain access event all the same,
-because who resolved a subject to a record is worth knowing wherever it
-happened.
+and reads no party. It records a linkage-domain access event all the same,
+naming the subject namespace and the EHR it found, because who resolved a
+subject to a record is worth knowing wherever it happened.
 
 The lookup puts the subject identifier in the URL, because ITS-REST passes it
 as a query parameter. FerroEHR keeps it out of everything it writes: the
