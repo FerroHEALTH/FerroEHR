@@ -121,8 +121,8 @@ pub fn stale_existence_contradictions() -> Result<Vec<String>, Error> {
 ///
 /// An entry stays live while the compiled-in ITS-JSON RM schema
 /// (`crates/openehr-its/schemas/json/openehr_rm_1.1.0_all.json`) gives the
-/// attribute `minItems: 1` on its owner AND some loaded schema declares it an
-/// optional container.
+/// attribute `minItems: 1` on every class the entry names AND some loaded
+/// schema declares it an optional container on the owner.
 ///
 /// # Errors
 /// Returns an error if the ITS-JSON schema or any composition's BMM files
@@ -133,15 +133,14 @@ pub fn stale_its_json_min_items() -> Result<Vec<String>, Error> {
     let schema: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path)?)?;
     let mut stale = Vec::new();
     for entry in ITS_JSON_MIN_ITEMS {
-        let pointer = format!(
-            "/definitions/{}/properties/{}/minItems",
-            entry.owner, entry.field
-        );
-        if schema.pointer(&pointer).and_then(serde_json::Value::as_u64) != Some(1) {
-            stale.push(format!(
-                "{}.{}: ITS-JSON states no minItems 1, which the entry cites as {:?}",
-                entry.owner, entry.field, entry.citation
-            ));
+        for class in entry.its_json_classes {
+            let pointer = format!("/definitions/{class}/properties/{}/minItems", entry.field);
+            if schema.pointer(&pointer).and_then(serde_json::Value::as_u64) != Some(1) {
+                stale.push(format!(
+                    "{}.{} on {class}: ITS-JSON states no minItems 1, which the entry cites as {:?}",
+                    entry.owner, entry.field, entry.citation
+                ));
+            }
         }
         let optional_container = props(entry.owner, entry.field)?
             .iter()

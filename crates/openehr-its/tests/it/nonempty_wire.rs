@@ -490,3 +490,50 @@ fn a_present_but_empty_folder_list_refuses_at_parse() {
         );
     }
 }
+
+/// `HISTORY.events` and `ACTOR.languages` carry no non-empty invariant the
+/// reader can type, but ITS-JSON (`Data_structures/HISTORY.json`,
+/// `Demographic/PERSON.json` and the other ACTORs) gives each array
+/// `minItems: 1`: a present-but-empty array refuses at parse, the schema
+/// refuses the same body, and an absent one reads.
+#[test]
+fn a_present_but_empty_events_or_languages_list_refuses_at_parse() {
+    use openehr_rm::prelude::History;
+    use openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure;
+    let history = json!({
+        "_type": "HISTORY",
+        "archetype_node_id": "at0001",
+        "name": { "_type": "DV_TEXT", "value": "history" },
+        "origin": { "_type": "DV_DATE_TIME", "value": "2026-07-29T10:11:12Z" }
+    });
+    from_canonical_json::<History<ItemStructure>>(&history.to_string())
+        .expect("absent events reads");
+    let mut empty_events = history;
+    empty_events["events"] = json!([]);
+
+    let person = person();
+    from_canonical_json::<Person>(&person.to_string()).expect("absent languages reads");
+    let mut empty_languages = person;
+    empty_languages["languages"] = json!([]);
+
+    let refusals = [
+        (
+            "events",
+            from_canonical_json::<History<ItemStructure>>(&empty_events.to_string()).map(drop),
+            &empty_events,
+        ),
+        (
+            "languages",
+            from_canonical_json::<Person>(&empty_languages.to_string()).map(drop),
+            &empty_languages,
+        ),
+    ];
+    for (member, decoded, body) in refusals {
+        let refused = decoded.expect_err("an empty array is refused");
+        assert!(refused.to_string().contains(member), "{member}: {refused}");
+        assert!(
+            openehr_its::json::validate_canonical_class(body).is_err(),
+            "{member}: the ITS-JSON schema refuses the same body"
+        );
+    }
+}

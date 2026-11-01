@@ -124,8 +124,10 @@ pub struct RmAttribute {
     /// The BMM-declared container cardinality (`None` for a single-valued
     /// attribute, or a container attribute the BMM leaves unconstrained).
     pub cardinality: Option<Cardinality>,
-    /// An optional container carrying a present-implies-non-empty invariant:
-    /// emitted `Option<NonEmptyVec<T>>`, so `[]` refuses at parse.
+    /// An optional container whose present-but-empty array refuses at parse:
+    /// one carrying a present-implies-non-empty invariant (emitted
+    /// `Option<NonEmptyVec<T>>`), or one the ITS-JSON schema bounds with
+    /// `minItems: 1` where the BMM does not.
     pub nonempty: bool,
     /// The class a reference-typed attribute points to (`EHR.ehr_status` →
     /// `EHR_STATUS`), where the RM text names one; `None` for every other
