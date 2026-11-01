@@ -1535,6 +1535,7 @@ jobs:
           TAG: ${{ needs.plan.outputs.tag }}
           VERSION: ${{ needs.plan.outputs.version }}
           CRATE_VERSION: ${{ needs.plan.outputs.crate-version }}
+          CRATES: ${{ needs.plan.outputs.crates }}
           IS_RELEASE: ${{ needs.plan.outputs.is-release }}
           APP_DIGEST: ${{ needs.app-image.outputs.digest }}
           VIEWER_DIGEST: ${{ needs.viewer-image.outputs.digest }}
@@ -1615,6 +1616,9 @@ jobs:
 
           chart_version="$(sed -nE 's/^version: *"?([^"]+)"?$/\1/p' deploy/helm/ferroehr/Chart.yaml | sed -n 1p)"
           crates_version="${CRATE_VERSION:-unknown}"
+          # Counted from the set the crates leg published (plan's list, which
+          # is publish-crates.sh's), so the summary cannot drift from it.
+          crates_count="$(jq -r 'length' <<<"${CRATES:-[]}" 2>/dev/null)"
           repo_url="https://github.com/${GITHUB_REPOSITORY}"
           {
             printf '## %s\n\n' "$TAG"
@@ -1634,11 +1638,11 @@ jobs:
               "$([ "$R_SANDBOX" = "success" ] && echo "serving ${VERSION}" || echo "$R_SANDBOX")"
             printf '| docs | %s |\n' \
               "$([ "$R_DOCS_FREEZE" = "success" ] && echo "/docs/${TAG}/ frozen, /docs/latest/ -> ${TAG}" || echo "$R_DOCS_FREEZE")"
-            # The nine spec crates publish on their own lockstep SemVer line,
+            # The spec crates publish on their own lockstep SemVer line,
             # unrelated to $VERSION — an unchanged cycle re-approves the same
             # version as a no-op.
             printf '| crates.io | %s |\n' \
-              "$([ "$R_CRATES" = "success" ] && echo "8 \`openehr-*\` crates at \`${crates_version}\`" || echo "$R_CRATES")"
+              "$([ "$R_CRATES" = "success" ] && echo "${crates_count:-unknown} \`openehr-*\` crates at \`${crates_version}\`" || echo "$R_CRATES")"
             printf '\n'
             if [ "$fail" != 0 ]; then
               printf '### Recovery\n\n'
@@ -1664,7 +1668,7 @@ jobs:
                 '  Do NOT re-run the leg — bump `Chart.yaml` version and publish the next one' \
                 '  from publish-chart.yml (dispatch with `publish: true`). That lane says the' \
                 '  same thing at the point of failure.' \
-                '- **crates.io refused the token exchange**: each of the nine crates needs a' \
+                '- **crates.io refused the token exchange**: each published crate needs a' \
                 '  Trusted Publisher entry naming `release.yml` (repository, workflow file,' \
                 '  environment `crates-io`) beside the one naming `publish-crates.yml` —' \
                 '  Trusted Publishing matches the top-level workflow filename. Add the entries' \
