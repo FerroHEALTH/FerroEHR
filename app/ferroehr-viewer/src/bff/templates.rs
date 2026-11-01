@@ -20,6 +20,7 @@
 
 use crate::adl2::TemplateFamily;
 use crate::bff::dashboard::Count;
+use crate::bff::template_adl2::{Violation, violations};
 use crate::error::ViewerError;
 use crate::locale::{Msg, tr_served, tr_served_with};
 
@@ -216,15 +217,27 @@ pub async fn list_adl2_templates() -> Result<Vec<TemplateRow>, ViewerError> {
     Ok(rows)
 }
 
+/// What the CDR answered an ADL 2 upload it did not refuse outright.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Adl2Upload {
+    /// Stored, under the HRID the answer names, when it names one.
+    Stored(Option<String>),
+    /// Refused `422`, with every violation the CDR found, in its order.
+    Invalid(Vec<Violation>),
+}
+
 /// Upload an ADL2 operational template (the artefact SOURCE) to the CDR.
 ///
-/// POST `definition/template/adl2` with `Content-Type: text/plain` — the
-/// operation's single declared body type — `Accept: application/json` and
-/// `Prefer: return=identifier`, so the `201` echoes
-/// `{"template_id": "<resolved HRID>"}` and the success toast can name the
-/// artefact the CDR actually stored. The `openehr-adl` engine's refusals
-/// (`400` unparseable, `422` AOM2-invalid with the rule codes, `409` duplicate
-/// HRID) surface verbatim through
+/// POST `definition/template/adl2` with `Content-Type: text/plain`, the
+/// operation's single declared body type, and
+/// `Prefer: return=representation`: a `4xx` then carries the additional
+/// error details (ITS-REST `Requests_and_responses.md` §HTTP status codes),
+/// so a `422` names each AOM2 rule the source breaks
+/// ([`Adl2Upload::Invalid`]). The `201` carries the stored source as its
+/// body, so the stored HRID is read from its `ETag`, else from the last
+/// segment of its `Location` (§Prefer minimal, identifier or full
+/// representation response). The other refusals (`400` unparseable, `409`
+/// duplicate HRID) surface through
 /// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
 ///
 /// # Errors
@@ -235,7 +248,7 @@ pub async fn list_adl2_templates() -> Result<Vec<TemplateRow>, ViewerError> {
 pub async fn upload_adl2_template(
     // The ADL2 operational-template source, pasted or read from a file.
     adl2_source: String,
-) -> Result<String, ViewerError> {
+) -> Result<Adl2Upload, ViewerError> {
     let session = crate::session::require_session()?;
     if adl2_source.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
@@ -250,26 +263,35 @@ pub async fn upload_adl2_template(
             &session.credential,
             &url,
             "text/plain",
-            "application/json",
-            &[("Prefer", "return=identifier")],
+            "text/plain",
+            &[("Prefer", "return=representation")],
             adl2_source,
         )
         .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
-    Ok(accepted_template_id(&body))
+    adl2_upload_answer(response)
 }
 
-/// The `template_id` a `Prefer: return=identifier` upload answer echoes
-/// (`{"template_id": …}`), or the trimmed body when the CDR echoed something
-/// else — the upload SUCCEEDED either way, so an unexpected body shape is
-/// reported as-is rather than turned into a failure.
-fn accepted_template_id(body: &str) -> String {
-    if let Ok(value) = serde_json::from_str::<serde_json::Value>(body)
-        && let Some(id) = value.get("template_id").and_then(serde_json::Value::as_str)
-    {
-        return id.to_owned();
+/// The [`Adl2Upload`] of the CDR's `response` to an upload.
+fn adl2_upload_answer(response: crate::cdr::CdrResponse) -> Result<Adl2Upload, ViewerError> {
+    if response.is(http::StatusCode::UNPROCESSABLE_ENTITY) {
+        let found = violations(&response.body);
+        if !found.is_empty() {
+            return Ok(Adl2Upload::Invalid(found));
+        }
     }
-    body.trim().to_owned()
+    let stored = crate::cdr::CdrClient::expect_success(response)?;
+    Ok(Adl2Upload::Stored(stored_hrid(&stored)))
+}
+
+/// The HRID a `201` names: its `ETag`, else the last segment of its
+/// `Location`, decoded.
+fn stored_hrid(response: &crate::cdr::CdrResponse) -> Option<String> {
+    response.etag_version_uid().or_else(|| {
+        let location = response.location.as_deref()?;
+        let segment = location.trim_end_matches('/').rsplit('/').next()?;
+        let decoded = urlencoding::decode(segment).ok()?;
+        (!decoded.is_empty()).then(|| decoded.into_owned())
+    })
 }
 
 /// Delete one stored ADL2 artefact
@@ -393,19 +415,94 @@ mod tests {
             .expect("the release count AQL must parse");
     }
 
+    fn answer(
+        status: http::StatusCode,
+        etag: Option<&str>,
+        location: Option<&str>,
+        body: &str,
+    ) -> crate::cdr::CdrResponse {
+        crate::cdr::CdrResponse {
+            status,
+            content_type: None,
+            etag: etag.map(str::to_owned),
+            location: location.map(str::to_owned),
+            last_modified: None,
+            preference_applied: None,
+            body: body.to_owned(),
+        }
+    }
+
     #[test]
-    fn the_upload_answer_yields_the_echoed_template_id() {
-        let body = r#"{"template_id":"openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0"}"#;
-        assert_eq!(
-            crate::bff::templates::accepted_template_id(body),
-            "openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0"
+    fn a_stored_upload_names_the_hrid_its_etag_or_location_carries() {
+        use super::{Adl2Upload, adl2_upload_answer};
+        const HRID: &str = "openEHR-EHR-COMPOSITION.cnf_minimal.v1.0.0";
+        let source = "template (adl_version=2.4.0; rm_release=1.1.0)";
+        let by_etag = answer(
+            http::StatusCode::CREATED,
+            Some(&format!("W/\"{HRID}\"")),
+            None,
+            source,
         );
-        // A body that is not the identifier object is reported as-is: the
-        // upload still succeeded.
         assert_eq!(
-            crate::bff::templates::accepted_template_id("  not json  "),
-            "not json"
+            adl2_upload_answer(by_etag),
+            Ok(Adl2Upload::Stored(Some(HRID.to_owned())))
         );
-        assert_eq!(crate::bff::templates::accepted_template_id("{}"), "{}");
+        let by_location = answer(
+            http::StatusCode::CREATED,
+            None,
+            Some(&format!(
+                "https://cdr.example/rest/openehr/v1/definition/template/adl2/{HRID}"
+            )),
+            source,
+        );
+        assert_eq!(
+            adl2_upload_answer(by_location),
+            Ok(Adl2Upload::Stored(Some(HRID.to_owned())))
+        );
+        assert_eq!(
+            adl2_upload_answer(answer(http::StatusCode::CREATED, None, None, source)),
+            Ok(Adl2Upload::Stored(None))
+        );
+    }
+
+    #[test]
+    fn a_refused_upload_lists_each_violation_and_other_refusals_stay_errors() {
+        use super::{Adl2Upload, adl2_upload_answer};
+        use crate::bff::template_adl2::Violation;
+        let problem = r#"{"type":"validation-failed","status":422,"detail":"fails","errors":[
+            {"path":"VARXR","detail":"external reference \"openEHR-EHR-OBSERVATION.cnf_constituent.v1\" does not resolve"}]}"#;
+        assert_eq!(
+            adl2_upload_answer(answer(
+                http::StatusCode::UNPROCESSABLE_ENTITY,
+                None,
+                None,
+                problem
+            )),
+            Ok(Adl2Upload::Invalid(vec![Violation {
+                rule: "VARXR".to_owned(),
+                detail: "external reference \"openEHR-EHR-OBSERVATION.cnf_constituent.v1\" does not resolve"
+                    .to_owned(),
+            }]))
+        );
+        let bare = adl2_upload_answer(answer(
+            http::StatusCode::UNPROCESSABLE_ENTITY,
+            None,
+            None,
+            r#"{"status":422,"detail":"fails"}"#,
+        ));
+        assert!(matches!(
+            bare,
+            Err(crate::error::ViewerError::Cdr { status: 422, .. })
+        ));
+        let duplicate = adl2_upload_answer(answer(
+            http::StatusCode::CONFLICT,
+            None,
+            None,
+            r#"{"status":409,"detail":"the template is already stored"}"#,
+        ));
+        assert!(matches!(
+            duplicate,
+            Err(crate::error::ViewerError::Cdr { status: 409, .. })
+        ));
     }
 }
