@@ -525,7 +525,8 @@ impl FerroEhrService {
         event.purpose = purpose;
         event.permit = crate::system_log::access_context::current_permit();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).map_err(CohortError::Unrecorded)
+        self.record_access(event)
+            .map_err(|e| CohortError::Unrecorded(StatusError::from(e)))
     }
 }
 

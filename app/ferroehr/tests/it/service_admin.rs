@@ -294,7 +294,7 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
     );
 
     // Upload a template; it is deletable while unreferenced, case-insensitively.
-    svc.template_adl14_upload(read_fixture(OPT_FIXTURE_REL))
+    svc.template_adl14_upload(&read_fixture(OPT_FIXTURE_REL))
         .await
         .expect("upload opt");
     assert_eq!(template_rows(pool, OPT_TEMPLATE_ID).await, 1);
@@ -314,7 +314,7 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
     // orphans clinical data. Pointing an existing version row at the template
     // exercises the `version.template_id` FK-reference guard directly (lighter
     // than a full validated composition commit, which the guard does not need).
-    svc.template_adl14_upload(read_fixture(OPT_FIXTURE_REL))
+    svc.template_adl14_upload(&read_fixture(OPT_FIXTURE_REL))
         .await
         .expect("re-upload opt");
     let ehr: Uuid = Box::pin(svc.create_ehr_meta(None, None))

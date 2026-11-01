@@ -29,7 +29,8 @@ use uuid::Uuid;
 use crate::ids::{EhrId, VoId};
 use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
 use crate::service::error::{ServiceError, Violation};
-use crate::service::status::{ServiceStatus, StatusError};
+use crate::service::refusal::{Clash, Refusal};
+use crate::service::status::ServiceStatus;
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::row::NodeRow;
 use crate::versioning::attestation::{self, PendingAttest};
@@ -681,8 +682,8 @@ async fn retire_protected_identifiers(
 pub(crate) fn protection_refusal(error: StoreError) -> ServiceError {
     match error {
         StoreError::ValueTaken { ref scheme } => ServiceError::Conflict(
-            StatusError::new(
-                ServiceStatus::Conflict,
+            Refusal::new(
+                Clash::State,
                 format!("a `{scheme}` identifier of this party is already held by another party"),
             )
             .with_source(error),

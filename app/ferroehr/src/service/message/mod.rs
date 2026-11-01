@@ -80,6 +80,6 @@ impl FerroEhrService {
         event.purpose = crate::system_log::access_context::current_purpose();
         event.permit = crate::system_log::access_context::current_permit();
         event.category = content.and_then(|content| self.audit_classify(&content, action));
-        self.record_access(event)
+        self.record_access(event).map_err(StatusError::from)
     }
 }

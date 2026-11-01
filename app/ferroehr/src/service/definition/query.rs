@@ -30,7 +30,7 @@ use crate::aql::terminology::TerminologyExpander;
 use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::ServiceStatus;
+use crate::service::refusal::Missing;
 
 use super::version_selector::{check_version_selector, is_partial_semver};
 
@@ -114,8 +114,8 @@ impl FerroEhrService {
         .await?
         .rows_affected();
         if deleted == 0 {
-            return Err(ServiceError::new(
-                ServiceStatus::ArtefactDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::Artefact,
                 format!("stored query {qualified_name} at version {version}"),
             ));
         }
@@ -377,10 +377,7 @@ impl FerroEhrService {
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?
         .ok_or_else(|| {
-            ServiceError::new(
-                ServiceStatus::ArtefactDoesNotExist,
-                format!("stored query {qualified_name}"),
-            )
+            ServiceError::not_found(Missing::Artefact, format!("stored query {qualified_name}"))
         })?;
 
         stored_query_json(&row)
@@ -391,10 +388,11 @@ impl FerroEhrService {
     /// `org.openehr` prefix "will list all versions of all queries with names
     /// starting with `org.openehr`"; empty ⇒ wildcard). All stored versions of
     /// every matching name are returned. The prefix match is case-insensitive.
-    pub(super) async fn list_stored_queries(
-        &self,
-        name_pattern: &str,
-    ) -> Result<Vec<Value>, ServiceError> {
+    ///
+    /// # Errors
+    ///
+    /// A row-decode failure (a server fault) or a database failure (`500`).
+    pub async fn query_list(&self, name_pattern: &str) -> Result<Vec<Value>, ServiceError> {
         // A namespace-less pattern also matches its `misc::`-assumed
         // composition — the canonical key
         // every surface stores under.

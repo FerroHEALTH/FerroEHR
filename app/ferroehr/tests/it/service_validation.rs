@@ -37,6 +37,7 @@ use openehr_rm::prelude::PartyProxy;
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::{Clash, Refusal};
 use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
@@ -104,7 +105,7 @@ async fn composition_validation_gates_persistence() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
     // Ingest the IPS operational template (the validation target).
-    svc.template_adl14_upload(fixture(IPS_OPT))
+    svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
 
@@ -195,7 +196,7 @@ async fn composition_update_is_validated() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    svc.template_adl14_upload(fixture(IPS_OPT))
+    svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
     let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
@@ -263,7 +264,7 @@ async fn direct_route_commits_stamp_the_template_id() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    svc.template_adl14_upload(fixture(IPS_OPT))
+    svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
     let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
@@ -370,7 +371,7 @@ async fn incomplete_lifecycle_relaxes_lower_bounds_but_not_wrongness() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    svc.template_adl14_upload(fixture(IPS_OPT))
+    svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
     let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
@@ -463,7 +464,7 @@ async fn warm_template_is_served_from_cache_without_a_store_read() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
     let desc = svc
-        .template_adl14_upload(fixture(IPS_OPT))
+        .template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
     let template_id = desc["template_id"]
@@ -527,7 +528,7 @@ async fn deleting_a_template_invalidates_its_web_template_cache() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
     let desc = svc
-        .template_adl14_upload(fixture(IPS_OPT))
+        .template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
     let template_id = desc["template_id"]
@@ -630,7 +631,7 @@ async fn element_without_value_or_null_flavour_is_rejected_at_commit() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    svc.template_adl14_upload(fixture(IPS_OPT))
+    svc.template_adl14_upload(&fixture(IPS_OPT))
         .await
         .expect("upload IPS OPT");
     let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
@@ -689,10 +690,10 @@ async fn direct_route_commit_against_an_adl2_template_stamps_and_guards() {
         .expect("CNF count archetype source");
     let opt2 = std::fs::read_to_string(artifacts.join("adl2/opt/flat_parity_a.adls"))
         .expect("CNF FLAT-parity OPT2 source");
-    svc.template_adl2_upload(archetype)
+    svc.template_adl2_upload(&archetype)
         .await
         .expect("upload the ADL2 archetype");
-    svc.template_adl2_upload(opt2)
+    svc.template_adl2_upload(&opt2)
         .await
         .expect("upload the ADL2 operational template");
 
@@ -741,19 +742,18 @@ async fn direct_route_commit_against_an_adl2_template_stamps_and_guards() {
     // the same mapping every `ServiceError::Conflict` carries), naming the
     // reference count; the OPT2 row and the registry row both survive.
     let in_use = svc
-        .delete_artefact(ADL2_TEMPLATE_ID.to_owned())
+        .delete_artefact(ADL2_TEMPLATE_ID)
         .await
         .expect_err("an in-use ADL2 template must refuse physical deletion");
     assert!(
         matches!(
             &in_use,
-            StatusError {
-                status: ServiceStatus::Conflict,
+            ServiceError::Conflict(Refusal {
+                kind: Clash::State,
+                message,
                 ..
-            }
-        ) && in_use
-            .message
-            .contains("still referenced by 1 committed version"),
+            }) if message.contains("still referenced by 1 committed version")
+        ),
         "got {in_use:?}"
     );
     let registered: i64 =

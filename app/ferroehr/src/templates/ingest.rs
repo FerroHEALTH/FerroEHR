@@ -54,7 +54,7 @@ pub(crate) fn parse_opt(xml: &str) -> Result<OperationalTemplate, ServiceError> 
         // NOTE: no specification names this status token: our own design for a
         // semantically invalid operational template.
         ServiceError::Unprocessable {
-            status: crate::service::status::ServiceStatus::InvalidTemplate,
+            kind: crate::service::refusal::Invalid::Template,
             violation: crate::service::error::Violation::new(format!("invalid OPT 1.4 XML: {e}")),
         }
     })

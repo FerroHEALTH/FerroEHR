@@ -377,7 +377,7 @@ impl FerroEhrService {
         event.result_count = Some(parties);
         crate::service::linkage::stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_access(event).map_err(StatusError::from)
     }
 }
 

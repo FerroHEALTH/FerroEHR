@@ -214,9 +214,9 @@ fn resolve_envelope(
     // RM common master06 §Logical Deletion: only a deleting version carries no
     // data, and these direct writes create or update content.
     let canonical = data.ok_or_else(|| {
-        crate::service::error::ServiceError::BadRequest(StatusError::precondition(
+        crate::service::error::ServiceError::precondition(
             "the version carries no data, and this operation writes content",
-        ))
+        )
     })?;
     let lifecycle = lifecycle_state.defining_code.code_string;
     Ok(CommitParts {

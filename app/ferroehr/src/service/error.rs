@@ -17,6 +17,7 @@ use openehr_base::validate::InvariantViolation;
 use openehr_its::json::{JsonParseError, SchemaRoot};
 use openehr_its::rest::runtime::ApiError;
 
+use super::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use super::status::{ServiceStatus, StatusError};
 
 /// One violated spec rule, carried as data rather than as a pre-formatted
@@ -176,60 +177,47 @@ impl std::fmt::Display for Violation {
 /// Service-layer error, mapped to the ITS-REST [`ApiError`] at the protocol
 /// boundary so the REST layer stays free of persistence concerns.
 ///
-/// Every variant that stands for a [`ServiceStatus`] row carries the
-/// status it was classified from — as a [`StatusError`], which also carries the
-/// failure that caused it — so the `ServiceError → StatusError` conversion below
-/// restores both verbatim. The one deliberate exception is the `500`-class
-/// [`ServiceError::Internal`] row, whose body and reported status are curated
-/// (see its docs).
-///
-/// A variant that wraps one error is `#[error(transparent)]`: its `Display` is
-/// the wrapped error's and its [`std::error::Error::source`] is that error's
-/// cause, so a chain printer such as [`ErrorChain`] reads every fact once
-/// ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)).
-/// [`ServiceError::Unprocessable`] names its status and leaves the violation to
-/// its source hop. No `Display` here is a wire body: both bridges below render
-/// the carried message or violation themselves.
+/// A refusal variant carries a [`Refusal`], whose kind tells refusals of one
+/// HTTP class apart and whose source is the failure that caused it. A variant
+/// that wraps one error is `#[error(transparent)]`, so a chain printer such as
+/// [`ErrorChain`] reads every fact once
+/// ([RFC 0201](https://rust-lang.github.io/rfcs/0201-error-chaining.html)). No
+/// `Display` here is a wire body: both bridges below render the carried message
+/// or violation themselves.
 #[derive(Debug, thiserror::Error)]
 pub enum ServiceError {
-    /// The requested resource does not exist. Carries the granular
-    /// does-not-exist status ([`ServiceStatus`] `*_does_not_exist` family) —
-    /// construct via [`ServiceError::new`] naming the precise status; resources
-    /// with no status of their own (event subscriptions, item tags) use the
-    /// generic `versioned_object_does_not_exist`.
+    /// The requested resource does not exist; the [`Missing`] kind says what
+    /// was not found. Resources with no kind of their own (event
+    /// subscriptions, item tags) use [`Missing::VersionedObject`].
     #[error(transparent)]
-    NotFound(StatusError),
+    NotFound(Refusal<Missing>),
     /// The request is malformed at the semantic level (e.g. a stale/invalid
     /// `preceding_version_uid`, or an operation on an already-deleted object) —
     /// ITS-REST `400 Bad Request` (`400_already_deleted.yaml`).
     ///
-    /// Carries the `400`-class status: the generic
-    /// `precondition_violation` ([`ServiceError::precondition`]) or the
-    /// definition store's `invalid_id_pattern`.
+    /// The [`Malformed`] kind is the generic precondition
+    /// ([`ServiceError::precondition`]) or the definition store's id pattern.
     #[error(transparent)]
-    BadRequest(StatusError),
+    BadRequest(Refusal<Malformed>),
     /// The request conflicts with current state (e.g. EHR already exists) —
     /// ITS-REST `409 Conflict`.
     ///
-    /// Carries the `409`-class status: `composition_already_exists`,
-    /// `ehr_create_fail_duplicate_id` or `ehr_for_subject_already_exists`,
-    /// or the generic `conflict` the storage bridge classifies.
+    /// The [`Clash`] kind names the state it conflicts with, the generic
+    /// storage-classified one included.
     #[error(transparent)]
-    Conflict(StatusError),
-    /// Optimistic-concurrency precondition (`If-Match`) failed — the
-    /// `version_mismatch` status, ITS-REST `412`.
+    Conflict(Refusal<Clash>),
+    /// Optimistic-concurrency precondition (`If-Match`) failed, ITS-REST `412`.
     #[error(transparent)]
-    VersionConflict(StatusError),
+    VersionConflict(Refusal),
     /// The submitted payload is malformed or fails a structural rule —
     /// carrying the violated rule as DATA ([`Violation`]: path, invariant,
     /// causes), rendered into prose only at the protocol edge.
-    #[error("unprocessable content ({})", .status.as_str())]
+    #[error("unprocessable content ({kind:?})")]
     Unprocessable {
-        /// The `422`-class status the refusal reports: the generic
-        /// `content_invalid` ([`ServiceError::content_invalid`]), one of
-        /// `invalid_archetype`/`invalid_template`/`invalid_artefact`/
-        /// `invalid_query`, or `composition_archetype_invalid`.
-        status: ServiceStatus,
+        /// Which content the refusal is about: the generic
+        /// [`Invalid::Content`] ([`ServiceError::content_invalid`]) or a
+        /// definition kind.
+        kind: Invalid,
         /// The violated rule, as data.
         #[source]
         violation: Violation,
@@ -269,9 +257,7 @@ pub enum ServiceError {
     /// A version-signing or read-time integrity failure (RM common master06
     /// §Digital Signature) — either signing at commit failed, or
     /// `verify_on_read = strict` found a stored signature that does not match
-    /// the served version.
-    ///
-    /// The carried text is a LOG detail, not a wire message: both bridges
+    /// the served version. The carried text is a LOG detail: both bridges
     /// below trace it and answer with `INTERNAL_MESSAGE`.
     #[error("signing: {0}")]
     Signing(String),
@@ -297,7 +283,7 @@ pub enum ServiceError {
     /// statuses — `exception`, `file_not_writable`, `not_implemented`,
     /// `service_overloaded`).
     ///
-    /// The carried [`StatusError`]'s message is a LOG detail, not a wire message,
+    /// The carried message is a LOG detail, not a wire message,
     /// and this is the ONE row whose status does not survive the round trip:
     /// both bridges below trace the detail (and the whole cause chain) and
     /// answer with `exception` + `INTERNAL_MESSAGE`, because a `500` is by
@@ -305,27 +291,28 @@ pub enum ServiceError {
     /// internal error value. Construct with [`ServiceError::exception`], or
     /// with [`ServiceError::internal`] to carry the failure that caused it.
     #[error(transparent)]
-    Internal(StatusError),
+    Internal(Refusal),
     /// The access record for a completed read or write could not be taken
     /// and the deployment fails closed (`[audit] fail_mode = "closed"`), so
     /// the result is withheld — the wire's `503`, `Retry-After` set, the same
     /// answer the REST layer gives when its own request record is rejected.
     ///
-    /// Carries the `service_overloaded` [`StatusError`] that
+    /// Carries the refusal
     /// [`FerroEhrService::record_access`](crate::service::FerroEhrService::record_access)
-    /// produced, so the [`StatusError`] route reports the same status.
+    /// produced.
     #[error(transparent)]
-    Unrecorded(StatusError),
-    /// A refusal the law asks of the server itself, the wire's `403`.
-    ///
-    /// The object's processing is restricted (GDPR Art. 4(3), 18(2),
-    /// `docs/law/eu/gdpr/text.html`; [`ServiceError::restricted`]), or a person
-    /// may not make the change (EHDS Art. 5, `auth_failure`;
-    /// [`ServiceError::not_permitted`]). No openEHR spec governs either: our own
-    /// design/extension; the message names the rule, which tells it from an
-    /// authorization refusal.
+    Unrecorded(Refusal),
+    /// The object's processing is restricted, the wire's `403` (GDPR Art. 4(3),
+    /// 18(2), `docs/law/eu/gdpr/text.html`; [`ServiceError::restricted`]). No
+    /// openEHR spec governs it: our own design/extension; the message names
+    /// the rule, which tells it from an authorization refusal.
     #[error(transparent)]
-    Restricted(StatusError),
+    Restricted(Refusal),
+    /// A person may not make the change, the wire's `403` (EHDS Art. 5;
+    /// [`ServiceError::not_permitted`]). No openEHR spec governs it: our own
+    /// design/extension.
+    #[error(transparent)]
+    Forbidden(Refusal),
 }
 
 /// The client-visible message of a server-side fault (`500`). Deliberately
@@ -421,95 +408,91 @@ impl std::fmt::Display for ErrorChain<'_> {
 }
 
 impl From<StatusError> for ServiceError {
-    /// Classify a call status into its [`ServiceError`] row — the
-    /// service-side entry into the single status ↔ `ServiceError` ↔ HTTP table
-    /// (the statuses of [`super::status`]).
-    ///
-    /// The whole [`StatusError`] travels into the classified variant, so the
-    /// granular status and the carried cause both survive the return trip
-    /// through `From<ServiceError> for StatusError`. The `500`-class rows are the
-    /// one deliberate exception (see [`ServiceError::Internal`]).
+    /// Classify a call status into its [`ServiceError`] row, the kind and the
+    /// cause kept, so the return trip through `From<ServiceError> for
+    /// StatusError` restores both. The `500`-class rows are the one deliberate
+    /// exception (see [`ServiceError::Internal`]).
     fn from(e: StatusError) -> Self {
         use super::status::ServiceStatus as S;
-        match e.status {
-            // `success` is not an error; constructing it is a server bug. The
-            // one service-side auth failure is the EHDS Art. 5 write rule. A
-            // not-implemented status is unreachable (the service implements
-            // every catalog call), and `service_overloaded` originates at the
-            // storage bridge and flows *up* to the wire as a `StatusError`
-            // (→ `503`) rather than back into a `ServiceError`.
+        let (status, message, source) = e.into_parts();
+        let missing = |kind| ServiceError::NotFound(Refusal::new(kind, message.clone()));
+        let clash = |kind| ServiceError::Conflict(Refusal::new(kind, message.clone()));
+        let refused = match status {
+            // `success` is not an error; constructing it is a server bug. A
+            // not-implemented status is unreachable, and `service_overloaded`
+            // originates at the storage bridge and flows up to the wire.
             S::Success
             | S::Exception
             | S::FileNotWritable
             | S::NotImplemented
-            | S::ServiceOverloaded => ServiceError::Internal(e),
-            S::ProcessingRestricted | S::AuthFailure => ServiceError::Restricted(e),
-            S::PreconditionViolation | S::InvalidIdPattern => ServiceError::BadRequest(e),
-            S::ObjectVersionDoesNotExist
-            | S::VersionedObjectDoesNotExist
-            | S::EhrIdDoesNotExist
-            | S::PartyIdDoesNotExist
-            | S::CompositionDoesNotExist
-            | S::ContributionDoesNotExist
-            | S::ArtefactDoesNotExist
-            | S::TemplateDoesNotExist
-            | S::VersionDoesNotExist
-            | S::SubjectIdDoesNotExist
-            | S::VersionedCompositionDoesNotExist => ServiceError::NotFound(e),
-            S::VersionMismatch => ServiceError::VersionConflict(e),
-            S::EhrCreateFailDuplicateId
-            | S::CompositionAlreadyExists
-            | S::EhrForSubjectAlreadyExists
-            // A storage-classified generic conflict is also a `409`.
-            | S::Conflict => ServiceError::Conflict(e),
-            S::CompositionArchetypeInvalid
-            | S::InvalidArchetype
-            | S::InvalidTemplate
-            | S::InvalidArtefact
-            | S::InvalidQuery
-            | S::DefinitionUnknown
-            | S::ContentInvalid => unprocessable_from_status(e),
-        }
+            | S::ServiceOverloaded => ServiceError::Internal(Refusal::new((), message)),
+            S::ProcessingRestricted => ServiceError::Restricted(Refusal::new((), message)),
+            S::AuthFailure => ServiceError::Forbidden(Refusal::new((), message)),
+            S::PreconditionViolation => {
+                ServiceError::BadRequest(Refusal::new(Malformed::Precondition, message))
+            }
+            S::InvalidIdPattern => {
+                ServiceError::BadRequest(Refusal::new(Malformed::IdPattern, message))
+            }
+            S::ObjectVersionDoesNotExist => missing(Missing::ObjectVersion),
+            S::VersionedObjectDoesNotExist => missing(Missing::VersionedObject),
+            S::EhrIdDoesNotExist => missing(Missing::Ehr),
+            S::PartyIdDoesNotExist => missing(Missing::Party),
+            S::CompositionDoesNotExist => missing(Missing::Composition),
+            S::ContributionDoesNotExist => missing(Missing::Contribution),
+            S::ArtefactDoesNotExist => missing(Missing::Artefact),
+            S::TemplateDoesNotExist => missing(Missing::Template),
+            S::VersionDoesNotExist => missing(Missing::Version),
+            S::SubjectIdDoesNotExist => missing(Missing::Subject),
+            S::VersionedCompositionDoesNotExist => missing(Missing::VersionedComposition),
+            S::VersionMismatch => ServiceError::VersionConflict(Refusal::new((), message)),
+            S::EhrCreateFailDuplicateId => clash(Clash::DuplicateEhrId),
+            S::CompositionAlreadyExists => clash(Clash::CompositionExists),
+            S::EhrForSubjectAlreadyExists => clash(Clash::EhrForSubject),
+            S::Conflict => clash(Clash::State),
+            S::CompositionArchetypeInvalid => unprocessable(Invalid::CompositionArchetype, message),
+            S::InvalidArchetype => unprocessable(Invalid::Archetype, message),
+            S::InvalidTemplate => unprocessable(Invalid::Template, message),
+            S::InvalidArtefact => unprocessable(Invalid::Artefact, message),
+            S::InvalidQuery => unprocessable(Invalid::Query, message),
+            S::DefinitionUnknown => unprocessable(Invalid::DefinitionUnknown, message),
+            S::ContentInvalid => unprocessable(Invalid::Content, message),
+        };
+        refused.with_shared_source(source)
     }
 }
 
 /// The `422`-class row of the `From<StatusError>` classifier: a status arrives
-/// with a message and no separable facts, so the [`Violation`] it becomes
-/// carries only its detail — plus the status error itself as the violation's cause
-/// when one was attached, so no chain is dropped on the way in.
-fn unprocessable_from_status(e: StatusError) -> ServiceError {
-    let status = e.status;
-    let violation = Violation::new(e.message.clone());
-    let violation = if std::error::Error::source(&e).is_some() {
-        violation.with_source(e)
-    } else {
-        violation
-    };
-    ServiceError::Unprocessable { status, violation }
+/// with a message and no separable facts, so the [`Violation`] carries only its
+/// detail.
+fn unprocessable(kind: Invalid, message: String) -> ServiceError {
+    ServiceError::Unprocessable {
+        kind,
+        violation: Violation::new(message),
+    }
 }
 
 impl ServiceError {
-    /// Construct the [`ServiceError`] variant for a call status and message.
-    ///
-    /// Consistency with the wire is test-enforced: for every status,
-    /// `ApiError::from(ServiceError::new(s, m))` and the protocol adapter's
-    /// status → HTTP row (`ferroehr-rest::overview::error::status_api_error`) produce
-    /// the same HTTP status.
+    /// Construct the [`ServiceError`] variant for a call status and message;
+    /// the wire agreement with `status_api_error` is test-enforced.
     #[must_use]
     pub fn new(status: ServiceStatus, message: impl Into<String>) -> Self {
         Self::from(StatusError::new(status, message))
     }
 
-    /// A malformed-request refusal (`400`) reporting the generic
-    /// `precondition_violation` status.
+    /// A malformed-request refusal (`400`), the generic precondition.
     ///
     /// The message is client-visible: a `4xx` describes the caller's own
-    /// request, so naming the defect there is the contract. A `400` with a
-    /// more precise status (`invalid_id_pattern`) is built with
-    /// [`ServiceError::new`] instead.
+    /// request, so naming the defect there is the contract.
     #[must_use]
     pub fn precondition(message: impl Into<String>) -> Self {
-        ServiceError::BadRequest(StatusError::precondition(message))
+        ServiceError::BadRequest(Refusal::new(Malformed::Precondition, message))
+    }
+
+    /// A `404` for a missing `missing`, with a client-visible message.
+    #[must_use]
+    pub fn not_found(missing: Missing, message: impl Into<String>) -> Self {
+        ServiceError::NotFound(Refusal::new(missing, message))
     }
 
     /// A restriction refusal (`403`) naming the restricted object.
@@ -523,8 +506,8 @@ impl ServiceError {
     /// governs restriction of processing — our own design/extension.
     #[must_use]
     pub fn restricted(subject: &str) -> Self {
-        ServiceError::Restricted(StatusError::new(
-            ServiceStatus::ProcessingRestricted,
+        ServiceError::Restricted(Refusal::new(
+            (),
             format!(
                 "processing of {subject} is restricted: it is held in storage and is not \
                  otherwise processed until the restriction is lifted (GDPR Art. 18)"
@@ -535,7 +518,7 @@ impl ServiceError {
     /// A refusal (`403`) of a change a person may not make (EHDS Art. 5).
     #[must_use]
     pub fn not_permitted(message: impl Into<String>) -> Self {
-        ServiceError::Restricted(StatusError::new(ServiceStatus::AuthFailure, message))
+        ServiceError::Forbidden(Refusal::new((), message))
     }
 
     /// A refusal (`403`) of a research-side disclosure the subject objected to.
@@ -551,8 +534,8 @@ impl ServiceError {
     /// objection — our own design/extension.
     #[must_use]
     pub fn research_objected(subject: &str) -> Self {
-        ServiceError::Restricted(StatusError::new(
-            ServiceStatus::ProcessingRestricted,
+        ServiceError::Restricted(Refusal::new(
+            (),
             format!(
                 "the subject of {subject} has objected to research processing, so its content \
                  is not exported or published for secondary use (GDPR Art. 21(6))"
@@ -560,25 +543,19 @@ impl ServiceError {
         ))
     }
 
-    /// A state-conflict refusal (`409`) reporting the generic `conflict`
-    /// status.
-    ///
-    /// This is the token for a conflict with no more precise status (a
-    /// duplicate template, a referenced-artefact delete, an extension
-    /// surface); a conflict with its own status
-    /// (`composition_already_exists`, `ehr_create_fail_duplicate_id`,
-    /// `ehr_for_subject_already_exists`) is built with [`ServiceError::new`]
-    /// instead.
+    /// A state-conflict refusal (`409`) of the generic [`Clash::State`] kind:
+    /// a duplicate template, a referenced-artefact delete, an extension
+    /// surface.
     #[must_use]
     pub fn conflict(message: impl Into<String>) -> Self {
-        ServiceError::Conflict(StatusError::new(ServiceStatus::Conflict, message))
+        ServiceError::Conflict(Refusal::new(Clash::State, message))
     }
 
     /// An optimistic-concurrency refusal (`412`) — the `version_mismatch`
     /// status.
     #[must_use]
     pub fn version_conflict(message: impl Into<String>) -> Self {
-        ServiceError::VersionConflict(StatusError::version_mismatch(message))
+        ServiceError::VersionConflict(Refusal::new((), message))
     }
 
     /// A semantic refusal (`422`) reporting the generic `content_invalid`
@@ -592,7 +569,7 @@ impl ServiceError {
     #[must_use]
     pub fn content_invalid(violation: Violation) -> Self {
         ServiceError::Unprocessable {
-            status: ServiceStatus::ContentInvalid,
+            kind: Invalid::Content,
             violation,
         }
     }
@@ -606,26 +583,33 @@ impl ServiceError {
     /// Rows that are never member-scoped pass through unchanged.
     #[must_use]
     pub(crate) fn for_version_member(self, index: usize) -> Self {
-        let prefix_message = |mut err: StatusError| {
-            err.message = format!("versions[{index}]: {}", err.message);
-            err
-        };
+        let prefix = |message: &mut String| *message = format!("versions[{index}]: {message}");
         match self {
-            ServiceError::NotFound(err) => ServiceError::NotFound(prefix_message(err)),
-            ServiceError::BadRequest(err) => ServiceError::BadRequest(prefix_message(err)),
-            ServiceError::Conflict(err) => ServiceError::Conflict(prefix_message(err)),
-            ServiceError::VersionConflict(err) => {
-                ServiceError::VersionConflict(prefix_message(err))
+            ServiceError::NotFound(mut err) => {
+                prefix(&mut err.message);
+                ServiceError::NotFound(err)
+            }
+            ServiceError::BadRequest(mut err) => {
+                prefix(&mut err.message);
+                ServiceError::BadRequest(err)
+            }
+            ServiceError::Conflict(mut err) => {
+                prefix(&mut err.message);
+                ServiceError::Conflict(err)
+            }
+            ServiceError::VersionConflict(mut err) => {
+                prefix(&mut err.message);
+                ServiceError::VersionConflict(err)
             }
             ServiceError::Unprocessable {
-                status,
+                kind,
                 mut violation,
             } => {
                 violation.path = Some(match violation.path.take() {
                     Some(path) => format!("versions[{index}]/{path}"),
                     None => format!("versions[{index}]"),
                 });
-                ServiceError::Unprocessable { status, violation }
+                ServiceError::Unprocessable { kind, violation }
             }
             ServiceError::ValidationFailed(mut violations) => {
                 for violation in &mut violations {
@@ -641,15 +625,11 @@ impl ServiceError {
         }
     }
 
-    /// A server-side fault (`500`) whose diagnosis is a log detail.
-    ///
-    /// `detail` diagnoses the fault (a codec error, an unexpected stored shape,
-    /// a failed conversion); both bridges below put it on the trace record and
-    /// answer with `INTERNAL_MESSAGE`. Use [`ServiceError::internal`] when the
-    /// failure that caused it is available as an error value.
+    /// A server-side fault (`500`) whose `detail` is a log detail, never a
+    /// wire body; [`ServiceError::internal`] carries the failure as well.
     #[must_use]
     pub fn exception(detail: impl Into<String>) -> Self {
-        ServiceError::Internal(StatusError::exception(detail))
+        ServiceError::Internal(Refusal::new((), detail))
     }
 
     /// A server-side fault (`500`) that carries the failure which caused it.
@@ -665,7 +645,7 @@ impl ServiceError {
         context: impl Into<String>,
         source: impl std::error::Error + Send + Sync + 'static,
     ) -> Self {
-        ServiceError::Internal(StatusError::exception(context).with_source(source))
+        ServiceError::Internal(Refusal::new((), context).with_source(source))
     }
 
     /// A malformed-request refusal (`400`) that carries the failure which
@@ -679,7 +659,7 @@ impl ServiceError {
         detail: impl Into<String>,
         source: impl std::error::Error + Send + Sync + 'static,
     ) -> Self {
-        ServiceError::BadRequest(StatusError::precondition(detail).with_source(source))
+        ServiceError::BadRequest(Refusal::new(Malformed::Precondition, detail).with_source(source))
     }
 
     /// The refusal of a canonical-JSON `data` the strict typed reader could
@@ -696,6 +676,48 @@ impl ServiceError {
             )
         } else {
             ServiceError::bad_request(format!("invalid canonical JSON body: {error}"), error)
+        }
+    }
+}
+
+impl ServiceError {
+    /// The validation violations joined into one [`Invalid::Content`] detail.
+    /// It exists only to keep today's wire on the paths whose violations
+    /// reached it as one flat `422`, and goes with the `ApiError` table.
+    #[must_use]
+    pub fn flattened(self) -> Self {
+        match self {
+            ServiceError::ValidationFailed(v) => unprocessable(
+                Invalid::Content,
+                v.into_iter()
+                    .map(|e| format!("{}: {}", e.path, e.message))
+                    .collect::<Vec<_>>()
+                    .join("; "),
+            ),
+            other => other,
+        }
+    }
+
+    /// The same refusal with `source` as its cause.
+    fn with_shared_source(self, source: Option<Arc<dyn std::error::Error + Send + Sync>>) -> Self {
+        match self {
+            ServiceError::NotFound(r) => ServiceError::NotFound(r.with_shared_source(source)),
+            ServiceError::BadRequest(r) => ServiceError::BadRequest(r.with_shared_source(source)),
+            ServiceError::Conflict(r) => ServiceError::Conflict(r.with_shared_source(source)),
+            ServiceError::VersionConflict(r) => {
+                ServiceError::VersionConflict(r.with_shared_source(source))
+            }
+            ServiceError::Internal(r) => ServiceError::Internal(r.with_shared_source(source)),
+            ServiceError::Restricted(r) => ServiceError::Restricted(r.with_shared_source(source)),
+            ServiceError::Forbidden(r) => ServiceError::Forbidden(r.with_shared_source(source)),
+            ServiceError::Unprocessable {
+                kind,
+                mut violation,
+            } => {
+                violation.source = source.or(violation.source);
+                ServiceError::Unprocessable { kind, violation }
+            }
+            other => other,
         }
     }
 }
@@ -722,29 +744,9 @@ impl From<ServiceError> for StatusError {
     /// Maps a service failure onto the native [`StatusError`] the
     /// chapter methods return.
     ///
-    /// This mirrors the `From<ServiceError> for ApiError` table below in
-    /// status terms; the protocol adapter maps the status back to the ITS-REST
-    /// status code (`ferroehr-rest::overview::error::status_api_error`), so the wire
-    /// outcome is identical row for row.
-    ///
-    /// | `ServiceError`            | `ServiceStatus`             | HTTP |
-    /// |---------------------------|------------------------------|------|
-    /// | `NotFound`                | its carried granular status  | 404  |
-    /// | `BadRequest`              | its carried granular status  | 400  |
-    /// | `Conflict`                | its carried granular status  | 409  |
-    /// | `VersionConflict`         | its carried `VersionMismatch`| 412  |
-    /// | `Unprocessable`           | its carried granular status  | 422  |
-    /// | `ValidationFailed`        | `ContentInvalid`             | 422  |
-    /// | `Storage`/`Database`      | classified: 409/503/500      |      |
-    /// | `JsonRead`                | `PreconditionViolation`      | 400  |
-    /// | `JsonWrite`/`Signing`     | `Exception`                  | 500  |
-    /// | `Internal`                | `Exception` (curated)        | 500  |
-    /// | `Unrecorded`              | its carried `ServiceOverloaded` | 503 |
-    ///
-    /// Every status-carrying row restores the [`StatusError`] it was constructed
-    /// with ([`ServiceError::new`]), so the round trip is lossless. Only the
-    /// `500`-class `Internal` row substitutes a curated status and message,
-    /// because its detail must not reach a client.
+    /// Each row restores the status its kind names, so the round trip is
+    /// lossless, except the `500`-class `Internal` row, whose detail must not
+    /// reach a client.
     ///
     /// NOTE: ITS-REST overview `Requests_and_responses.md` §HTTP status codes
     /// gives the 422 row a meaning but no body shape (`responses/422.yaml`), so
@@ -752,25 +754,18 @@ impl From<ServiceError> for StatusError {
     fn from(e: ServiceError) -> Self {
         use super::status::ServiceStatus as S;
         match e {
-            // Lossless: the granular status travels inside the variant, cause
-            // and message untouched (see `From<StatusError> for ServiceError`).
-            ServiceError::NotFound(e)
-            | ServiceError::BadRequest(e)
-            | ServiceError::Conflict(e)
-            | ServiceError::VersionConflict(e) => e,
+            // Lossless: the kind names the granular status, cause and message
+            // untouched (see `From<StatusError> for ServiceError`).
+            ServiceError::NotFound(e) => StatusError::from_refusal(e.kind.into(), e),
+            ServiceError::BadRequest(e) => StatusError::from_refusal(e.kind.into(), e),
+            ServiceError::Conflict(e) => StatusError::from_refusal(e.kind.into(), e),
+            ServiceError::VersionConflict(e) => StatusError::from_refusal(S::VersionMismatch, e),
             // The ONE rendering point of a `Violation` on the status bridge: the
             // facts travel as data all the way from the throw site to here.
-            ServiceError::Unprocessable { status, violation } => {
-                StatusError::new(status, violation.to_string())
+            ServiceError::Unprocessable { kind, violation } => {
+                StatusError::new(kind.into(), violation.to_string())
             }
-            ServiceError::ValidationFailed(v) => {
-                let joined = v
-                    .into_iter()
-                    .map(|e| format!("{}: {}", e.path, e.message))
-                    .collect::<Vec<_>>()
-                    .join("; ");
-                StatusError::new(S::ContentInvalid, joined)
-            }
+            e @ ServiceError::ValidationFailed(_) => StatusError::from(e.flattened()),
             ServiceError::Storage(e) => StatusError::from(e),
             // A raw `sqlx` error carries SQLSTATE/constraint detail: classify it
             // (integrity/serialization conflict → 409, pool exhaustion → 503)
@@ -789,10 +784,13 @@ impl From<ServiceError> for StatusError {
             // The curated row: the detail and the whole cause chain go to the
             // trace record, the client gets `exception` + `INTERNAL_MESSAGE`.
             ServiceError::Internal(err) => internal_fault_caused("complete the request", &err),
-            // Fail-closed: the status the record helper chose travels as is,
-            // and so does the restriction refusal's own status, so the status route
-            // reports what the wire reports.
-            ServiceError::Unrecorded(err) | ServiceError::Restricted(err) => err,
+            // Fail-closed and the two refusals the law asks for keep their
+            // status, so the status route reports what the wire reports.
+            ServiceError::Unrecorded(err) => StatusError::from_refusal(S::ServiceOverloaded, err),
+            ServiceError::Restricted(err) => {
+                StatusError::from_refusal(S::ProcessingRestricted, err)
+            }
+            ServiceError::Forbidden(err) => StatusError::from_refusal(S::AuthFailure, err),
         }
     }
 }
@@ -859,7 +857,9 @@ impl From<ServiceError> for ApiError {
             ServiceError::Unrecorded(err) => ApiError::ServiceUnavailable(err.message),
             // Our own refusal (no openEHR spec governs restriction of
             // processing); RFC 9110 §15.5.4 is the HTTP authority for the 403.
-            ServiceError::Restricted(err) => ApiError::Forbidden(err.message),
+            ServiceError::Restricted(err) | ServiceError::Forbidden(err) => {
+                ApiError::Forbidden(err.message)
+            }
         }
     }
 }

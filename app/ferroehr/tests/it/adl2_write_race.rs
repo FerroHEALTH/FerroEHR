@@ -12,7 +12,7 @@
 
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::{Clash, Refusal};
 
 /// How many times the two writes race.
 const ROUNDS: usize = 24;
@@ -59,25 +59,25 @@ async fn a_template_upload_racing_the_delete_of_its_archetype_never_both_succeed
     for round in 0..ROUNDS {
         let observation = format!("openEHR-EHR-OBSERVATION.race_obs_{round}.v1.0.0");
         let template = format!("openEHR-EHR-COMPOSITION.race_tpl_{round}.v1.0.0");
-        svc.template_adl2_upload(archetype(&observation))
+        svc.template_adl2_upload(&archetype(&observation))
             .await
             .expect("store the archetype");
 
         let delete = tokio::spawn({
             let svc = svc.clone();
             let observation = observation.clone();
-            async move { svc.delete_artefact(observation).await }
+            async move { svc.delete_artefact(&observation).await }
         });
         let upload = tokio::spawn({
             let svc = svc.clone();
             let source = template_using(&template, &observation);
-            async move { svc.template_adl2_upload(source).await }
+            async move { svc.template_adl2_upload(&source).await }
         });
         let deleted = delete.await.expect("the delete task");
         let uploaded = upload.await.expect("the upload task");
 
-        let template_stored = svc.has_artefact(template.clone()).await.expect("has");
-        let observation_stored = svc.has_artefact(observation.clone()).await.expect("has");
+        let template_stored = svc.has_artefact(&template).await.expect("has");
+        let observation_stored = svc.has_artefact(&observation).await.expect("has");
         match (deleted, uploaded) {
             (Ok(()), Err(ServiceError::ValidationFailed(violations))) => {
                 assert!(
@@ -89,11 +89,11 @@ async fn a_template_upload_racing_the_delete_of_its_archetype_never_both_succeed
                 deletes_won += 1;
             }
             (
-                Err(StatusError {
-                    status: ServiceStatus::Conflict,
+                Err(ServiceError::Conflict(Refusal {
+                    kind: Clash::State,
                     message,
                     ..
-                }),
+                })),
                 Ok(_),
             ) => {
                 assert!(message.contains(&template), "round {round}: {message}");

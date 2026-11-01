@@ -11,6 +11,8 @@
 
 use std::sync::Arc;
 
+use super::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
+
 /// The status a failed service call reports, as one flat enum.
 ///
 /// No openEHR spec governs this: our own design. Each variant is one refusal
@@ -247,6 +249,81 @@ impl StatusError {
     #[must_use]
     pub fn exception(message: impl Into<String>) -> Self {
         Self::new(ServiceStatus::Exception, message)
+    }
+}
+
+impl StatusError {
+    /// The status, the message and the shared cause, for the conversion into a
+    /// [`ServiceError`](super::error::ServiceError) refusal.
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        ServiceStatus,
+        String,
+        Option<Arc<dyn std::error::Error + Send + Sync>>,
+    ) {
+        (self.status, self.message, self.source)
+    }
+
+    /// The status error a [`Refusal`] of `status` becomes, its cause kept.
+    pub(crate) fn from_refusal<K>(status: ServiceStatus, refusal: Refusal<K>) -> Self {
+        Self {
+            status,
+            source: refusal.shared_source(),
+            message: refusal.message,
+        }
+    }
+}
+
+impl From<Missing> for ServiceStatus {
+    fn from(missing: Missing) -> Self {
+        match missing {
+            Missing::ObjectVersion => Self::ObjectVersionDoesNotExist,
+            Missing::VersionedObject => Self::VersionedObjectDoesNotExist,
+            Missing::Ehr => Self::EhrIdDoesNotExist,
+            Missing::Party => Self::PartyIdDoesNotExist,
+            Missing::Composition => Self::CompositionDoesNotExist,
+            Missing::Contribution => Self::ContributionDoesNotExist,
+            Missing::Artefact => Self::ArtefactDoesNotExist,
+            Missing::Template => Self::TemplateDoesNotExist,
+            Missing::Version => Self::VersionDoesNotExist,
+            Missing::Subject => Self::SubjectIdDoesNotExist,
+            Missing::VersionedComposition => Self::VersionedCompositionDoesNotExist,
+        }
+    }
+}
+
+impl From<Malformed> for ServiceStatus {
+    fn from(malformed: Malformed) -> Self {
+        match malformed {
+            Malformed::Precondition => Self::PreconditionViolation,
+            Malformed::IdPattern => Self::InvalidIdPattern,
+        }
+    }
+}
+
+impl From<Clash> for ServiceStatus {
+    fn from(clash: Clash) -> Self {
+        match clash {
+            Clash::DuplicateEhrId => Self::EhrCreateFailDuplicateId,
+            Clash::CompositionExists => Self::CompositionAlreadyExists,
+            Clash::EhrForSubject => Self::EhrForSubjectAlreadyExists,
+            Clash::State => Self::Conflict,
+        }
+    }
+}
+
+impl From<Invalid> for ServiceStatus {
+    fn from(invalid: Invalid) -> Self {
+        match invalid {
+            Invalid::Content => Self::ContentInvalid,
+            Invalid::Archetype => Self::InvalidArchetype,
+            Invalid::Template => Self::InvalidTemplate,
+            Invalid::Artefact => Self::InvalidArtefact,
+            Invalid::Query => Self::InvalidQuery,
+            Invalid::DefinitionUnknown => Self::DefinitionUnknown,
+            Invalid::CompositionArchetype => Self::CompositionArchetypeInvalid,
+        }
     }
 }
 

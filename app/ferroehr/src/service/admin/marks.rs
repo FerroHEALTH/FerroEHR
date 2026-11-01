@@ -528,6 +528,6 @@ impl FerroEhrService {
             event.user_id = committer.subject;
         }
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).map_err(ServiceError::Unrecorded)
+        self.record_access(event)
     }
 }

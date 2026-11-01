@@ -211,7 +211,7 @@ async fn seed_template(svc: &FerroEhrService, template: &str) -> (String, Value)
         .expect("the vendored OPT parses")
         .template_id
         .value;
-    svc.template_adl14_upload(xml)
+    svc.template_adl14_upload(&xml)
         .await
         .expect("upload the seed template");
     // `medium` is the generator's fully-populated, committable level.

@@ -50,6 +50,7 @@ pub(crate) mod datetime;
 pub mod error;
 pub mod list;
 pub mod platform_service;
+pub mod refusal;
 pub mod response;
 pub mod status;
 pub mod version_update;

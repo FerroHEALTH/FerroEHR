@@ -61,7 +61,7 @@ async fn store(versions: &[&str]) -> (testkit::TestDb, FerroEhrService) {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
     for version in versions {
-        svc.template_adl2_upload(release(version))
+        svc.template_adl2_upload(&release(version))
             .await
             .unwrap_or_else(|e| panic!("upload {FAMILY}.v{version}: {e:?}"));
     }
@@ -86,7 +86,7 @@ async fn an_interface_reference_resolves_to_the_newest_release_of_its_major_vers
     descending.reverse();
     for order in [ascending, descending] {
         let (_db, svc) = store(&order).await;
-        svc.template_adl2_upload(template_using(TEMPLATE, &format!("{FAMILY}.v1")))
+        svc.template_adl2_upload(&template_using(TEMPLATE, &format!("{FAMILY}.v1")))
             .await
             .unwrap_or_else(|e| panic!("upload the template after {order:?}: {e:?}"));
         let opt = compiled(&svc).await;
@@ -103,7 +103,7 @@ async fn an_interface_reference_resolves_to_the_newest_release_of_its_major_vers
 async fn a_reference_to_an_absent_major_version_is_refused() {
     let (_db, svc) = store(&["1.0.0", "2.0.0"]).await;
     let refused = svc
-        .template_adl2_upload(template_using(TEMPLATE, &format!("{FAMILY}.v3")))
+        .template_adl2_upload(&template_using(TEMPLATE, &format!("{FAMILY}.v3")))
         .await
         .expect_err("no release of major version 3 is stored");
     assert!(

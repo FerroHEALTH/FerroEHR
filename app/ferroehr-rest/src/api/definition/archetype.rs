@@ -499,12 +499,12 @@ async fn run(
         }
         "definition_archetype_adl14_get" => {
             let archetype_id = path_segment(&parts, "archetype_id")?;
-            let adl = state.backend().get_archetype(archetype_id).await?;
+            let adl = state.backend().get_archetype(&archetype_id).await?;
             Ok(adl_text_response(adl))
         }
         "definition_archetype_adl14_delete" => {
             let archetype_id = path_segment(&parts, "archetype_id")?;
-            state.backend().delete_archetype(archetype_id).await?;
+            state.backend().delete_archetype(&archetype_id).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
         "definition_archetype_adl2_list" => {
@@ -525,7 +525,7 @@ async fn run(
         }
         "definition_artefact_adl2_delete" => {
             let artefact_id = path_segment(&parts, "artefact_id")?;
-            state.backend().delete_artefact(artefact_id).await?;
+            state.backend().delete_artefact(&artefact_id).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
