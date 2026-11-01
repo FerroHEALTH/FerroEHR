@@ -2,10 +2,13 @@
 
 FerroEHR measures performance with the **same instrument family that measures
 conformance**: [Veredictum](https://github.com/Vernum-Projecten/Veredictum),
-the separate CNF 2.0 runner described on [Conformance](conformance.md). There is no separate benchmark harness:
-every published number is measured by a committed, re-runnable instrument,
-reported in both directions, and regenerated from committed artefacts. There is no
-chart in this project that you cannot regenerate yourself with one command.
+the separate CNF 2.0 runner described on [Conformance](conformance.md). Below the
+wire, the storage benchmark harness (`cargo bench -p ferroehr --bench storage`,
+[Performance](performance.md#the-storage-benchmark-harness)) times the storage
+layer directly. Every published number is measured by a committed, re-runnable
+instrument, reported in both directions, and regenerated from committed
+artefacts. There is no chart in this project that you cannot regenerate
+yourself with one command.
 
 <!-- toc -->
 
