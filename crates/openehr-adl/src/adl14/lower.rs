@@ -25,14 +25,12 @@ use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_tuple::CPrimitiveTuple;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_terminology_code::CTerminologyCode;
 
 use crate::adl14::domain::{
     DomainLoweringError, adl14_code_phrase_parts, is_adl14_domain_type, lower_adl14_domain,
 };
 use crate::aom::build::{
-    cattr_empty, cinteger_values, cobject_to_primitive, complex_object, creal_values, point_int,
-    point_real,
+    PrimitiveNode, cattr_empty, cobject_to_primitive, complex_object, point_int, point_real,
 };
 use crate::aom::interval::{point_value_f64, point_value_i32};
 use crate::error::SyntaxErrorCode;
@@ -296,13 +294,17 @@ impl Parser<'_> {
                 Some(Token::Real(_))
             );
             let value = if is_real {
-                CPrimitiveObject::CReal(creal_values(vec![point_real(
-                    self.parse_signed_real(SyntaxErrorCode::Scrav)?,
-                )]))
+                CPrimitiveObject::CReal(PrimitiveNode::inline("Real").c_real(
+                    vec![point_real(self.parse_signed_real(SyntaxErrorCode::Scrav)?)],
+                    None,
+                ))
             } else {
-                CPrimitiveObject::CInteger(cinteger_values(vec![point_int(i64::from(
-                    self.parse_signed_int(SyntaxErrorCode::Sciav)?,
-                ))]))
+                CPrimitiveObject::CInteger(PrimitiveNode::inline("Integer").c_integer(
+                    vec![point_int(i64::from(
+                        self.parse_signed_int(SyntaxErrorCode::Sciav)?,
+                    ))],
+                    None,
+                ))
             };
             self.expect(
                 |t| matches!(t, Token::SymIvlDelim),
@@ -605,21 +607,9 @@ fn ordinal_point_value(member: &CPrimitiveObject) -> Option<f64> {
 /// A 1.4 term constraint as a `C_TERMINOLOGY_CODE` carrying the verbatim
 /// `terminology::code[,code]*[;assumed]` spelling for `crate::adl14::convert`.
 fn adl14_terminology_code(constraint: String) -> CObject {
-    CObject::CTerminologyCode(CTerminologyCode {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: "Terminology_code".to_owned(),
-        occurrences: None,
-        node_id: "Primitive_node_id".to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        assumed_value: None,
-        is_enumerated_type_constraint: None,
-        constraint,
-        constraint_status: None,
-    })
+    CObject::CTerminologyCode(
+        PrimitiveNode::inline("Terminology_code").c_terminology_code(constraint, None, None),
+    )
 }
 
 #[cfg(test)]

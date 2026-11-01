@@ -34,6 +34,6 @@ fuzz_target!(|data: &[u8]| {
     openehr_its::wire_validate::validate_rm_invariants(&value, &mut violations);
     violations.clear();
     openehr_its::wire_validate::validate_rm_value(&value, &mut violations);
-    let _ = openehr_sdt::rm_instance::validate_rm_and_terminology(&value);
+    let _ = openehr_sdt::rm_instance::validate_rm_and_terminology(&value, "COMPOSITION");
     let _ = openehr_its::json::from_canonical_value::<openehr_rm::prelude::Composition>(&value);
 });

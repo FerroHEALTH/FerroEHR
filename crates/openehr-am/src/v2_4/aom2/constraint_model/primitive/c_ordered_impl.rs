@@ -11,7 +11,7 @@
 
 use crate::v2_4::aom2::constraint_model::primitive::c_ordered::COrdered;
 use crate::v2_4::aom2::constraint_model::primitive::c_temporal_impl::{
-    temporal_value_conforms, temporal_value_congruent,
+    temporal_any_allowed, temporal_value_conforms, temporal_value_congruent,
 };
 use openehr_base::v1_3::foundation_types::interval::interval::Interval;
 
@@ -25,27 +25,14 @@ impl COrdered {
     /// dispatches to `C_TEMPORAL` for them.
     #[must_use]
     pub fn any_allowed(&self) -> bool {
-        let (range_empty, pattern) = match self {
-            Self::CDate(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                c.pattern_constraint.as_deref(),
-            ),
-            Self::CDateTime(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                c.pattern_constraint.as_deref(),
-            ),
-            Self::CDuration(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                c.pattern_constraint.as_deref(),
-            ),
-            Self::CTime(c) => (
-                c.constraint.as_ref().is_none_or(Vec::is_empty),
-                c.pattern_constraint.as_deref(),
-            ),
-            Self::CInteger(c) => (c.constraint.as_ref().is_none_or(Vec::is_empty), None),
-            Self::CReal(c) => (c.constraint.as_ref().is_none_or(Vec::is_empty), None),
-        };
-        range_empty && pattern.is_none_or(str::is_empty)
+        match self {
+            Self::CDate(c) => temporal_any_allowed(c),
+            Self::CDateTime(c) => temporal_any_allowed(c),
+            Self::CDuration(c) => temporal_any_allowed(c),
+            Self::CTime(c) => temporal_any_allowed(c),
+            Self::CInteger(c) => c.constraint.as_ref().is_none_or(Vec::is_empty),
+            Self::CReal(c) => c.constraint.as_ref().is_none_or(Vec::is_empty),
+        }
     }
 
     /// Returns true if this node's value constraint is the same as, or narrower
@@ -60,48 +47,18 @@ impl COrdered {
     #[must_use]
     pub fn c_value_conforms_to(&self, other: &COrdered) -> bool {
         match (self, other) {
-            (Self::CInteger(own), Self::CInteger(theirs)) => {
-                theirs.constraint.as_deref().unwrap_or_default().is_empty()
-                    || intervals_conform(
-                        own.constraint.as_deref().unwrap_or_default(),
-                        theirs.constraint.as_deref().unwrap_or_default(),
-                    )
-            }
-            (Self::CReal(own), Self::CReal(theirs)) => {
-                theirs.constraint.as_deref().unwrap_or_default().is_empty()
-                    || intervals_conform(
-                        own.constraint.as_deref().unwrap_or_default(),
-                        theirs.constraint.as_deref().unwrap_or_default(),
-                    )
-            }
-            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_conforms(
+            (Self::CInteger(own), Self::CInteger(theirs)) => ordered_value_conforms(
                 own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
                 theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
             ),
-            (Self::CDateTime(own), Self::CDateTime(theirs)) => temporal_value_conforms(
+            (Self::CReal(own), Self::CReal(theirs)) => ordered_value_conforms(
                 own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
                 theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
             ),
-            (Self::CDuration(own), Self::CDuration(theirs)) => temporal_value_conforms(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
-            ),
-            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_conforms(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-                &|child, parent| own.valid_pattern_constraint_replacement(child, parent),
-            ),
+            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_conforms(own, theirs),
+            (Self::CDateTime(own), Self::CDateTime(theirs)) => temporal_value_conforms(own, theirs),
+            (Self::CDuration(own), Self::CDuration(theirs)) => temporal_value_conforms(own, theirs),
+            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_conforms(own, theirs),
             _ => false,
         }
     }
@@ -124,33 +81,23 @@ impl COrdered {
                 own.constraint.as_deref().unwrap_or_default()
                     == theirs.constraint.as_deref().unwrap_or_default()
             }
-            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
-            (Self::CDateTime(own), Self::CDateTime(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
-            (Self::CDuration(own), Self::CDuration(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
-            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_congruent(
-                own.constraint.as_deref().unwrap_or_default(),
-                own.pattern_constraint.as_deref(),
-                theirs.constraint.as_deref().unwrap_or_default(),
-                theirs.pattern_constraint.as_deref(),
-            ),
+            (Self::CDate(own), Self::CDate(theirs)) => temporal_value_congruent(own, theirs),
+            (Self::CDateTime(own), Self::CDateTime(theirs)) => {
+                temporal_value_congruent(own, theirs)
+            }
+            (Self::CDuration(own), Self::CDuration(theirs)) => {
+                temporal_value_congruent(own, theirs)
+            }
+            (Self::CTime(own), Self::CTime(theirs)) => temporal_value_congruent(own, theirs),
             _ => false,
         }
     }
+}
+
+/// The `C_ORDERED` value-conformance body (`master04.5` §Conformance
+/// semantics: C_ORDERED): an unconstrained `other` admits every child.
+fn ordered_value_conforms<T: PartialOrd>(child: &[Interval<T>], other: &[Interval<T>]) -> bool {
+    other.is_empty() || intervals_conform(child, other)
 }
 
 /// The `C_ORDERED` interval-conformance test: every child interval is contained

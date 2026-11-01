@@ -24,13 +24,12 @@ use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_tuple::CPrimitiveTuple;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_terminology_code::CTerminologyCode;
 use openehr_base::prelude::{Interval, ProperInterval, ProperIntervalData};
 use openehr_lang::v1_1::odin::OdinValue;
 
 use crate::aom::build::{
-    cattr_empty, cattr_single, cinteger_values, complex_object, creal_values, cstring_values,
-    point_int, point_real, primitive_to_cobject,
+    PrimitiveNode, cattr_empty, cattr_single, complex_object, point_int, point_real,
+    primitive_to_cobject,
 };
 use crate::aom::interval::{
     int_interval_contains, point_value_f64, point_value_i32, real_interval_contains,
@@ -380,21 +379,10 @@ pub(crate) fn lower_adl14_domain(
         let constraint = tc.trim_start_matches('[').trim_end_matches(']').to_owned();
         attributes.push(cattr_single(
             "property",
-            CObject::CTerminologyCode(CTerminologyCode {
-                parent: None,
-                soc_parent: None,
-                rm_type_name: "Terminology_code".to_owned(),
-                occurrences: None,
-                node_id: "Primitive_node_id".to_owned(),
-                alternative_ids: openehr_base::containers::present(Vec::new()),
-                is_deprecated: None,
-                sibling_order: None,
-                default_value: None,
-                assumed_value: None,
-                is_enumerated_type_constraint: None,
-                constraint,
-                constraint_status: None,
-            }),
+            CObject::CTerminologyCode(
+                PrimitiveNode::inline("Terminology_code")
+                    .c_terminology_code(constraint, None, None),
+            ),
         ));
     }
 
@@ -704,22 +692,25 @@ fn domain_list_rows(list: &OdinValue) -> Vec<Vec<(String, OdinValue)>> {
 /// integral, `magnitude` real).
 fn domain_value_to_primitive(attr: &str, v: &OdinValue) -> Option<CPrimitiveObject> {
     match untyped(v) {
-        OdinValue::String(s) => Some(CPrimitiveObject::CString(cstring_values(
-            std::slice::from_ref(s),
-        ))),
-        OdinValue::Integer(i) => Some(CPrimitiveObject::CInteger(cinteger_values(vec![
-            point_int(*i),
-        ]))),
-        OdinValue::Real(r) => Some(CPrimitiveObject::CReal(creal_values(vec![point_real(*r)]))),
+        OdinValue::String(s) => Some(CPrimitiveObject::CString(
+            PrimitiveNode::inline("String").c_string(vec![s.clone()], None),
+        )),
+        OdinValue::Integer(i) => Some(CPrimitiveObject::CInteger(
+            PrimitiveNode::inline("Integer").c_integer(vec![point_int(*i)], None),
+        )),
+        OdinValue::Real(r) => Some(CPrimitiveObject::CReal(
+            PrimitiveNode::inline("Real").c_real(vec![point_real(*r)], None),
+        )),
         OdinValue::Interval(iv) => {
             if attr == "precision" {
-                Some(CPrimitiveObject::CInteger(cinteger_values(vec![
-                    odin_interval_to_int(iv),
-                ])))
+                Some(CPrimitiveObject::CInteger(
+                    PrimitiveNode::inline("Integer")
+                        .c_integer(vec![odin_interval_to_int(iv)], None),
+                ))
             } else {
-                Some(CPrimitiveObject::CReal(creal_values(vec![
-                    odin_interval_to_real(iv),
-                ])))
+                Some(CPrimitiveObject::CReal(
+                    PrimitiveNode::inline("Real").c_real(vec![odin_interval_to_real(iv)], None),
+                ))
             }
         }
         OdinValue::List(items) => {
@@ -766,9 +757,9 @@ fn merge_primitives(mut items: Vec<CPrimitiveObject>) -> Option<CPrimitiveObject
         }
     }
     Some(match kind {
-        1 => CPrimitiveObject::CString(cstring_values(&strings)),
-        2 => CPrimitiveObject::CReal(creal_values(reals)),
-        _ => CPrimitiveObject::CInteger(cinteger_values(ints)),
+        1 => CPrimitiveObject::CString(PrimitiveNode::inline("String").c_string(strings, None)),
+        2 => CPrimitiveObject::CReal(PrimitiveNode::inline("Real").c_real(reals, None)),
+        _ => CPrimitiveObject::CInteger(PrimitiveNode::inline("Integer").c_integer(ints, None)),
     })
 }
 
