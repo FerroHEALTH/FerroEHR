@@ -211,12 +211,15 @@ A deployment that knows its jurisdictions narrows the list:
 
 ```toml
 [privacy.identifier_scan]
-rules = ["no-fodselsnummer"]
+rules = ["nl-bsn", "no-fodselsnummer"]
 ```
 
 ```bash
-FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES=no-fodselsnummer
+FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES=nl-bsn,no-fodselsnummer
 ```
+
+A Dutch deployment that receives no British content, for example, has no
+use for `gb-nhs-number`, whose check accepts one ten-digit run in eleven.
 
 The boot log states which rules are active, so a jurisdiction that is not
 covered is visible rather than assumed.
@@ -248,6 +251,36 @@ is full of numbers. Three things narrow it:
 
 A deployment measuring its own content runs `warn` first, reads the recorded
 findings, then moves to `strict`.
+
+### Identifiers that declare their own type
+
+A `DV_IDENTIFIER` carries an optional `type`, which the Reference Model
+describes as the "identifier type, such as prescription, or Social Security
+Number", and its examples run from a social security number to an "order id".
+The scanner reads it before it scans the `id`:
+
+| `DV_IDENTIFIER` | In clinical content | In `FEEDER_AUDIT.originating_system_item_ids` or `feeder_system_item_ids` |
+|---|---|---|
+| `type` names a person identifier | scanned | scanned |
+| `type` names an item (an order, specimen, accession, sample, lot) | not scanned | not scanned |
+| no `type`, or one naming neither | scanned | not scanned |
+
+The type is free text, so it is read by its words, in any case and in
+`snake_case`, `camelCase` or spaced form. Words such as `patient`, `person`,
+`subject`, `national`, `social`, `insurance`, `NHS`, `BSN` and the name of
+every shipped rule name a person; `order`, `placer`, `filler`, `accession`,
+`specimen`, `sample`, `requisition`, `prescription`, `lot`, `batch`, `serial`,
+`barcode` and `container` name an item. A person word wins: `patient order
+number` is scanned. The feeder audit's item-id lists are, in the Reference
+Model's words, "Identifiers used for the item in the originating system, e.g.
+filler and placer ids", so an identifier there is scanned only when its type
+says it identifies a person.
+
+A laboratory filler order number typed `filler_order_number` is therefore
+stored even when its ten digits pass the NHS Number check by chance, which one
+ten-digit run in eleven does. The same number written into free text is still
+claimed by every rule in `rules`; a deployment with no NHS Numbers in its
+content leaves `gb-nhs-number` out of that list.
 
 ### Local patterns
 

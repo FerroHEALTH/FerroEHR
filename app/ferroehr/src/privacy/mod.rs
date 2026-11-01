@@ -42,7 +42,10 @@
 //!    active identifier rules claims. The rules are keyed by jurisdiction and
 //!    each transcribes the checksum its own issuing register publishes; a
 //!    deployment selects which are active and adds patterns for the local
-//!    kinds no build can ship a rule for ([`detect`]).
+//!    kinds no build can ship a rule for ([`detect`]). A `DV_IDENTIFIER`
+//!    whose `type` declares an item rather than a person, and one in a
+//!    feeder audit's item-id lists that declares no person, is not scanned
+//!    (`identifier_kind`).
 //!
 //! A finding never carries the offending VALUE, only its RM path and the rule
 //! that matched: a refusal travels into an error body, an access log and a
@@ -58,11 +61,13 @@
 
 pub mod config;
 pub mod detect;
+mod identifier_kind;
 
 use serde_json::Value;
 
 use crate::privacy::config::{PrivacyConfig, ScanMode};
 use crate::privacy::detect::{CustomPattern, IdentifierRule};
+use crate::privacy::identifier_kind::{DeclaredKind, declared_kind};
 
 /// The JSON key whose value is a terminology code by construction, and which
 /// the identifier scanner therefore skips.
@@ -76,6 +81,21 @@ use crate::privacy::detect::{CustomPattern, IdentifierRule};
 /// rather than incidental. The carve-out is structural and jurisdiction-neutral:
 /// it names an RM slot, not a country.
 pub(crate) const TERMINOLOGY_CODE_KEY: &str = "code_string";
+
+/// The `FEEDER_AUDIT` attributes whose `DV_IDENTIFIER`s identify the content
+/// item: "Identifiers used for the item in the originating system, e.g. filler
+/// and placer ids", and the same in the feeder system (RM common
+/// `UML/classes/org.openehr.rm.common.feeder_audit.adoc` §Attributes).
+const ITEM_ID_KEYS: [&str; 2] = ["originating_system_item_ids", "feeder_system_item_ids"];
+
+/// Where in the RM the walk is, as far as the identifier scanner cares.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Slot {
+    /// Any attribute.
+    Content,
+    /// An element of one of the [`ITEM_ID_KEYS`] lists.
+    ItemIds,
+}
 
 /// What a clinical commit body carried that the policy refuses.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -252,7 +272,7 @@ impl PrivacyPolicy {
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
             self.check_subject(root, body, &mut findings);
         }
-        self.walk(root, body, &mut findings);
+        self.walk(root, body, Slot::Content, &mut findings);
         findings
     }
 
@@ -301,22 +321,28 @@ impl PrivacyPolicy {
 
     /// The identified-party rule and the identifier scanner, over every node of
     /// the body.
-    fn walk(&self, at: &str, node: &Value, findings: &mut Vec<Finding>) {
+    fn walk(&self, at: &str, node: &Value, slot: Slot, findings: &mut Vec<Finding>) {
         match node {
             Value::Object(map) => {
                 if !self.allow_identified_parties {
                     check_party(at, map, findings);
                 }
+                let unscanned_id = names_no_person(map, slot);
                 for (key, child) in map {
-                    if key == TERMINOLOGY_CODE_KEY {
+                    if key == TERMINOLOGY_CODE_KEY || (unscanned_id && key == "id") {
                         continue;
                     }
-                    self.walk(&format!("{at}/{key}"), child, findings);
+                    let child_slot = if ITEM_ID_KEYS.contains(&key.as_str()) {
+                        Slot::ItemIds
+                    } else {
+                        Slot::Content
+                    };
+                    self.walk(&format!("{at}/{key}"), child, child_slot, findings);
                 }
             }
             Value::Array(items) => {
                 for (index, child) in items.iter().enumerate() {
-                    self.walk(&format!("{at}[{index}]"), child, findings);
+                    self.walk(&format!("{at}[{index}]"), child, slot, findings);
                 }
             }
             Value::String(text) => self.scan_text(at, text, findings),
@@ -356,6 +382,29 @@ impl PrivacyPolicy {
                 ));
             }
         }
+    }
+}
+
+/// Whether `map` is a `DV_IDENTIFIER` whose `id` the identifier scanner
+/// leaves alone: its `type` declares an item, or it sits in a feeder audit's
+/// item-id list and its `type` declares no person.
+///
+/// A list element may omit `_type` where the static type is concrete, and
+/// `DV_IDENTIFIER` is the only RM 1.2.0 class with a `String` attribute named
+/// `id` (`PARTY_REF.id` and `OBJECT_REF.id` are objects), so an untyped object
+/// with a string `id` is one too.
+fn names_no_person(map: &serde_json::Map<String, Value>, slot: Slot) -> bool {
+    let is_identifier = match map.get("_type").and_then(Value::as_str) {
+        Some(rm_type) => rm_type == "DV_IDENTIFIER",
+        None => map.get("id").is_some_and(Value::is_string),
+    };
+    if !is_identifier {
+        return false;
+    }
+    match declared_kind(map.get("type").and_then(Value::as_str)) {
+        DeclaredKind::Item => true,
+        DeclaredKind::Undeclared => slot == Slot::ItemIds,
+        DeclaredKind::Person => false,
     }
 }
 

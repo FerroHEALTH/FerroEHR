@@ -728,6 +728,8 @@ allow_identified_parties_in_ehr = false
 
 # The identifier scanner, run over every string leaf of every clinical write.
 # CODE_PHRASE.code_string is skipped — its value space is a terminology code.
+# A DV_IDENTIFIER whose `type` names an item (an order, a specimen) is skipped,
+# and so is one in a feeder audit's item-id lists unless its type names a person.
 [privacy.identifier_scan]
 mode = "strict"              # strict (refuse) | warn (accept + record)
 # The national personal-identifier rules to scan for, by key. Every rule the
