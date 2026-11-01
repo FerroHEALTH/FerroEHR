@@ -30,8 +30,9 @@ const METHODS: &[&str] = &[
     "get", "put", "post", "delete", "patch", "head", "options", "trace",
 ];
 
-/// Fetch the full served document through the real router.
-async fn served_document() -> Value {
+/// Fetch the full served document through the real router, as the bytes the
+/// route sends.
+pub(crate) async fn served_bytes() -> bytes::Bytes {
     use axum::body::Body;
     use http::Request;
     use http_body_util::BodyExt;
@@ -49,8 +50,12 @@ async fn served_document() -> Value {
         .await
         .expect("openapi.json response");
     assert_eq!(resp.status(), http::StatusCode::OK);
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    serde_json::from_slice(&bytes).expect("served openapi json")
+    resp.into_body().collect().await.expect("body").to_bytes()
+}
+
+/// The full served document, parsed.
+async fn served_document() -> Value {
+    serde_json::from_slice(&served_bytes().await).expect("served openapi json")
 }
 
 /// The `{param}` names in a path template.

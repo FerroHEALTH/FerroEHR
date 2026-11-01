@@ -84,6 +84,7 @@ mod query_ehr_id_header;
 mod query_refusals_http;
 mod rbac_e2e;
 mod served_openapi;
+mod served_openapi_snapshot;
 mod server_tls;
 mod service_query;
 mod smart_http;
