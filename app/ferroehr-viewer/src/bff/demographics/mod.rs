@@ -5,7 +5,7 @@
 //!
 //! Five screens over one API group: the per-kind party browser
 //! (`browse`), the party detail with its edit / history / relationships /
-//! tags tabs ([`party`], `history`, [`relationship`], [`tags`]), the
+//! tags tabs ([`party`], `history`, [`relationship`], [`PartyKind::tags_path`]), the
 //! `PARTY_RELATIONSHIP` resource ([`relationship`]), and the demographic
 //! CONTRIBUTION viewer ([`contribution`]).
 //!
@@ -53,14 +53,13 @@
 pub mod contribution;
 pub mod party;
 pub mod relationship;
-pub mod tags;
 
 use serde_json::Value;
 
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::error::ViewerError;
 use crate::locale::Msg;
-use crate::locale::{tr_served, tr_with};
+use crate::locale::tr_served;
 use crate::uid::container_uid_of;
 
 /// The five concrete PARTY families the Demographic API routes by.
@@ -118,6 +117,22 @@ impl PartyKind {
             Self::Person => "PERSON",
             Self::Role => "ROLE",
         }
+    }
+
+    /// The path of the tag collection of party `uid`
+    /// (`demographic/{kind}/{uid_based_id}/tags`, `operations/person_tags_*.yaml`).
+    ///
+    /// The path addresses the version CONTAINER: the container and a single
+    /// VERSION are two disjoint collections of the same object
+    /// (`operations/person_tags_get.yaml`), and a container tag survives the
+    /// party's next version, which is what an operator marking a party means.
+    #[must_use]
+    pub fn tags_path(self, uid: &str) -> String {
+        format!(
+            "demographic/{}/{}/tags",
+            self.segment(),
+            urlencoding::encode(&container_uid_of(uid))
+        )
     }
 
     /// The kind a URL segment names, or `None` for anything outside the closed
@@ -303,33 +318,20 @@ pub async fn fetch_versioned_object(
     let cdr = crate::bff::cdr()?;
     let versioned = VersionedFamily::from_segment(&family)
         .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
-    let family = versioned.segment();
-    let container = urlencoding::encode(&container_uid_of(&versioned_object_uid)).into_owned();
-    let object_url = versioned.url(&cdr, &format!("demographic/{family}/{container}"));
-    let object_body = cdr.get(&object_url).ok().await?.body;
-
-    let version_uid = version_uid.trim();
-    let version_url = if version_uid.is_empty() {
-        versioned.url(&cdr, &format!("demographic/{family}/{container}/version"))
-    } else {
-        versioned.url(
-            &cdr,
-            &format!(
-                "demographic/{family}/{container}/version/{}",
-                urlencoding::encode(version_uid)
-            ),
-        )
-    };
-    let version_body = cdr.get(&version_url).ok().await?.body;
-    parse_versioned_object(&object_body, &version_body)
+    let object_url = versioned.url(
+        &cdr,
+        &format!(
+            "demographic/{}/{}",
+            versioned.segment(),
+            urlencoding::encode(&container_uid_of(&versioned_object_uid))
+        ),
+    );
+    crate::bff::wire::read_versioned_facts(&cdr, &object_url, &version_uid).await
 }
 
 /// A demographic versioned object's revision history, newest-first
 /// (`GET /demographic/{family}/{versioned_object_uid}/revision_history` —
 /// `operations/versioned_party_revision_history.yaml`).
-///
-/// The rows are the shared [`VersionEntry`] every History tab renders, parsed by
-/// the same `parse_versions`.
 ///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a
@@ -337,31 +339,21 @@ pub async fn fetch_versioned_object(
 /// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
 /// when the history is not valid JSON.
 pub async fn fetch_demographic_revision_history(
-    // Which versioned-object family the container belongs to, as its route
-    // segment ([`VersionedFamily::segment`]).
-    family: String,
+    // Which versioned-object family the container belongs to.
+    family: VersionedFamily,
     // The container id (`versioned_object_uid`).
-    versioned_object_uid: String,
+    versioned_object_uid: &str,
 ) -> Result<Vec<VersionEntry>, ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let family = VersionedFamily::from_segment(&family)
-        .ok_or_else(|| unknown_segment(&family, "versioned-object family"))?;
     let url = family.url(
         &cdr,
         &format!(
             "demographic/{}/{}/revision_history",
             family.segment(),
-            urlencoding::encode(&container_uid_of(&versioned_object_uid))
+            urlencoding::encode(&container_uid_of(versioned_object_uid))
         ),
     );
-    let response = cdr.get(&url).ok().await?;
-    // NOTE: REVISION_HISTORY.items arrives most-recent-LAST on the wire (RM
-    // common `org.openehr.rm.common.revision_history.adoc` §items); the table
-    // presents newest-first, so reverse here.
-    crate::bff::composition::parse_versions(&response.body).map(|mut entries| {
-        entries.reverse();
-        entries
-    })
+    crate::bff::wire::revision_history(&cdr, &url).await
 }
 
 /// Resolve the `OBJECT_VERSION_ID` of the VERSION extant at `at_time`.
@@ -498,43 +490,6 @@ pub async fn resolve_party_kind(
     Ok(None)
 }
 
-/// Flatten a container body plus a VERSION body into [`VersionedObjectFacts`].
-/// Defensive throughout — an absent attribute reads as empty rather than
-/// failing the card.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when either body is not valid JSON.
-fn parse_versioned_object(
-    object_body: &str,
-    version_body: &str,
-) -> Result<VersionedObjectFacts, ViewerError> {
-    let object: Value = serde_json::from_str(object_body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::VersionedDemographicObjectJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let version: Value = serde_json::from_str(version_body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::DemographicVersionJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    Ok(VersionedObjectFacts {
-        object_uid: crate::uid::uid_value_of_document(&object),
-        owner_id: json_str(&object, &["owner_id", "id", "value"]),
-        time_created: json_str(&object, &["time_created", "value"]),
-        version_id: crate::uid::uid_value_of_document(&version),
-        lifecycle_state: json_str(&version, &["lifecycle_state", "value"]),
-        preceding_version_uid: json_str(&version, &["preceding_version_uid", "value"]),
-        contribution_uid: json_str(&version, &["contribution", "id", "value"]),
-        signed: version
-            .get("signature")
-            .and_then(Value::as_str)
-            .is_some_and(|signature| !signature.is_empty()),
-    })
-}
-
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 pub(crate) fn json_str(value: &Value, path: &[&str]) -> String {
@@ -663,54 +618,5 @@ mod tests {
                 "{hostile}"
             );
         }
-    }
-}
-
-#[cfg(test)]
-mod parse_tests {
-    use super::parse_versioned_object;
-
-    #[test]
-    fn parses_a_demographic_container_and_its_version_envelope() {
-        let object = r#"{
-            "_type": "VERSIONED_PARTY",
-            "uid": {"_type": "HIER_OBJECT_ID", "value": "8849182c"},
-            "time_created": {"_type": "DV_DATE_TIME", "value": "2026-07-12T10:00:00Z"}
-        }"#;
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"_type": "OBJECT_VERSION_ID", "value": "8849182c::example.org::2"},
-            "contribution": {"_type": "OBJECT_REF", "id": {"value": "c9"}},
-            "lifecycle_state": {"_type": "DV_CODED_TEXT", "value": "complete"},
-            "preceding_version_uid": {"value": "8849182c::example.org::1"},
-            "signature": "-----BEGIN PGP SIGNATURE-----"
-        }"#;
-        let facts = parse_versioned_object(object, version).expect("valid bodies");
-        assert_eq!(facts.object_uid, "8849182c");
-        assert_eq!(facts.time_created, "2026-07-12T10:00:00Z");
-        assert_eq!(facts.version_id, "8849182c::example.org::2");
-        assert_eq!(facts.lifecycle_state, "complete");
-        assert_eq!(facts.preceding_version_uid, "8849182c::example.org::1");
-        assert_eq!(facts.contribution_uid, "c9");
-        assert!(facts.signed);
-        // A demographic container has no owning EHR, so `owner_id` is empty.
-        assert_eq!(facts.owner_id, "");
-    }
-
-    #[test]
-    fn a_first_version_has_no_preceding_version_and_no_signature() {
-        // RM common `org.openehr.rm.common.version.adoc` invariant
-        // `Preceding_version_uid_validity`: absent exactly for a first version.
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"value": "8849182c::example.org::1"},
-            "lifecycle_state": {"value": "complete"}
-        }"#;
-        let facts = parse_versioned_object("{}", version).expect("valid bodies");
-        assert_eq!(facts.preceding_version_uid, "");
-        assert!(!facts.signed);
-        assert_eq!(facts.object_uid, "");
-        assert!(parse_versioned_object("not json", "{}").is_err());
-        assert!(parse_versioned_object("{}", "not json").is_err());
     }
 }

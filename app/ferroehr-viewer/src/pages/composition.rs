@@ -30,17 +30,16 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, definitions, editor_heading, page_heading,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::view::versions::{
-    Standing, Version, VersionHistory, older_version, version_history,
-};
+use ferrohealth_ui::view::versions::older_version;
 
-use crate::bff::composition::VersionedCompositionDetails;
 use crate::bff::composition::{
     delete_composition, fetch_composition, fetch_version_at_time, fetch_versioned_composition,
     fetch_versions, update_composition,
 };
-use crate::bff::ehr_tags::{delete_ehr_tag, fetch_ehr_tags, set_ehr_tag};
+use crate::bff::ehr_tags::composition_tags_path;
+use crate::bff::item_tags::{delete_tag, read_tags, set_tag};
 use crate::bff::wire::VersionEntry;
+use crate::bff::wire::VersionedObjectFacts;
 use crate::clinical::{RenderedNode, RenderedSection};
 use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
 use crate::error::ViewerError;
@@ -50,14 +49,14 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section, drawn,
-    findings_of, info_note, marks_of, panel, plain_section, section, short, shortened, state_mark,
-    version_number, when,
+    EditorDock, Refused, card_panel, dock_editor, document_section, drawn, findings_of, info_note,
+    marks_of, panel, plain_section, section, short, shortened, state_mark, version_number, when,
 };
 use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
 use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
+use crate::pages::versions::History;
 use crate::routes::Drawn;
 
 /// The id of Delete composition's confirmation dialog.
@@ -346,45 +345,19 @@ fn history(
     reading: Option<&str>,
     deleted: bool,
 ) -> Html {
-    let latest = versions.first().map(|version| version.version_id.clone());
-    let rows = versions
-        .iter()
-        .map(|version| {
-            let number = version_number(&version.version_id);
-            let current = Some(&version.version_id) == latest.as_ref();
-            let standing = match (current, deleted) {
-                (true, true) => Standing::Deleted,
-                (true, false) => Standing::Current,
-                _ => Standing::Older,
-            };
-            Version {
-                href: (!(current && deleted)).then(|| {
-                    if current {
-                        tab_href(ehr_id, uid, CompTab::Versions, None)
-                    } else {
-                        tab_href(ehr_id, uid, CompTab::Reading, Some(&number))
-                    }
-                }),
-                standing,
-                read: reading == Some(number.as_str()),
-                number,
-                change: version.change_type.clone(),
-                committer: version.committer.clone(),
-                when: ago(&version.committed),
-                contribution: Html::empty(),
-            }
-        })
-        .collect();
-    version_history(
-        &current(),
-        VersionHistory {
+    crate::pages::versions::history(
+        History {
+            versions,
+            reading,
+            deleted,
+            contribution: Html::empty(),
             caption: tr(Msg::CompositionVersions),
-            versions: rows,
-            at_time: Some(at_time_row(
-                composition_href(ehr_id, uid),
-                &crate::request::query("at").unwrap_or_default(),
-                tr(RecordsMsg::CompositionAtTimeOpens),
-            )),
+            at_action: composition_href(ehr_id, uid),
+            at_opens: tr(RecordsMsg::CompositionAtTimeOpens),
+        },
+        |number| match number {
+            None => tab_href(ehr_id, uid, CompTab::Versions, None),
+            Some(number) => tab_href(ehr_id, uid, CompTab::Reading, Some(number)),
         },
     )
 }
@@ -395,7 +368,7 @@ fn versions_panel(
     ehr_id: &str,
     uid: &str,
     versions: &Result<Vec<VersionEntry>, Refused>,
-    details: Result<VersionedCompositionDetails, Refused>,
+    details: Result<VersionedObjectFacts, Refused>,
     reading: Option<&str>,
     deleted: bool,
 ) -> Html {
@@ -408,34 +381,13 @@ fn versions_panel(
     };
     let facts = match details {
         Ok(details) => {
-            let yes_no = |yes: bool| t(tr(if yes { Msg::Yes } else { Msg::No }));
-            let version = section(
-                Some(tr_with(
-                    RecordsMsg::CompositionVersionN,
-                    &[("version", version_number(&details.version_id).into())],
-                )),
-                None,
-                None,
-                definitions(vec![
-                    (tr(RecordsMsg::FactLifecycle), t(&details.lifecycle_state)),
-                    (
-                        tr(RecordsMsg::CompositionPreceding),
-                        if details.preceding_version_uid.is_empty() {
-                            t(tr(RecordsMsg::CompositionFirstVersion))
-                        } else {
-                            short(&details.preceding_version_uid)
-                        },
-                    ),
-                    (
-                        tr(RecordsMsg::FactContribution),
-                        short(&details.contribution_uid),
-                    ),
-                    (tr(RecordsMsg::FactSigned), yes_no(details.signed)),
-                    (
-                        tr(RecordsMsg::CompositionHoldsContent),
-                        yes_no(details.has_data),
-                    ),
-                ]),
+            let version = crate::pages::versions::envelope(
+                &details,
+                short(&details.contribution_uid),
+                vec![(
+                    tr(RecordsMsg::CompositionHoldsContent),
+                    t(tr(if details.has_data { Msg::Yes } else { Msg::No })),
+                )],
             );
             let object = section(
                 Some(tr(RecordsMsg::CompositionVersioned)),
@@ -498,22 +450,10 @@ async fn act(
     let Some(act) = tag_act() else {
         return (None, None);
     };
-    let kind = "composition".to_owned();
+    let tags = composition_tags_path(ehr_id, uid);
     let done = match &act {
-        TagAct::Set { key, value, path } => {
-            set_ehr_tag(
-                ehr_id.to_owned(),
-                kind,
-                uid.to_owned(),
-                key.clone(),
-                value.clone(),
-                path.clone(),
-            )
-            .await
-        }
-        TagAct::Remove(key) => {
-            delete_ehr_tag(ehr_id.to_owned(), kind, uid.to_owned(), key.clone()).await
-        }
+        TagAct::Set { key, value, path } => set_tag(&tags, key, value, path).await,
+        TagAct::Remove(key) => delete_tag(&tags, key).await,
     };
     match done {
         Ok(()) => {
@@ -718,7 +658,7 @@ enum TabBody {
     /// The document in the representation asked for.
     Document(Converted),
     /// The envelope of the version in view.
-    Versions(Result<VersionedCompositionDetails, Refused>),
+    Versions(Result<VersionedObjectFacts, Refused>),
     /// The tags.
     Tags(TagPanel),
 }
@@ -873,8 +813,7 @@ async fn read_page(ehr_id: String, uid: String) -> CompositionModel {
                 .map_err(|error| Refused::new(tr(RecordsMsg::CompositionVersionRefused), error)),
         ),
         CompTab::Tags => {
-            let stored_tags =
-                fetch_ehr_tags(ehr_id.clone(), "composition".to_owned(), uid.clone()).await;
+            let stored_tags = read_tags(&composition_tags_path(&ehr_id, &uid)).await;
             TabBody::Tags(TagPanel {
                 collection: tr(RecordsMsg::TagCollectionComposition),
                 tags: stored_tags,

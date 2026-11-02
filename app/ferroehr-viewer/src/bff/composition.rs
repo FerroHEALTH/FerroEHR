@@ -19,22 +19,14 @@
 //!
 //! No openEHR spec governs the viewer — our own design; the wire it reads is
 //! spec-bound (`Accept` negotiation per
-//! `docs/specs/openehr/ITS-REST/docs/simplified_formats/`). Every read guards
-//! with [`require_session`](crate::session::require_session) first, and the
-//! CDR credential never reaches the page.
+//! `docs/specs/openehr/ITS-REST/docs/simplified_formats/`). Every read takes
+//! the session's handle ([`cdr`](crate::bff::cdr)) first, and the CDR
+//! credential never reaches the page.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
-              (#1694)"
-)]
-
-use serde_json::Value;
-
-use crate::bff::wire::VersionEntry;
+use crate::bff::wire::{VersionEntry, VersionedObjectFacts, revision_history};
 use crate::error::ViewerError;
 use crate::format::ReprFormat;
-use crate::locale::{Msg, tr_with};
+use crate::locale::Msg;
 use crate::locale::{tr_served, tr_served_with};
 
 /// The revision history of a versioned composition, newest-first.
@@ -54,14 +46,7 @@ pub async fn fetch_versions(
         urlencoding::encode(&ehr_id),
         urlencoding::encode(&uid)
     ));
-    let response = cdr.get(&url).ok().await?;
-    // NOTE: REVISION_HISTORY.items arrives most-recent-LAST on the wire (RM
-    // common, generic package — the `items` attribute documentation); the
-    // selector presents newest-first, so reverse here.
-    parse_versions(&response.body).map(|mut entries| {
-        entries.reverse();
-        entries
-    })
+    revision_history(&cdr, &url).await
 }
 
 /// One representation of a composition version, pretty-printed for display, or
@@ -259,45 +244,6 @@ pub async fn delete_composition(
     Ok(())
 }
 
-/// The `VERSIONED_COMPOSITION` container plus the selected VERSION's envelope
-/// facts, flattened for the versioned-object card.
-///
-/// The attributes are the RM classes' own (files under
-/// `docs/specs/openehr/RM/docs/UML/classes/`): `VERSIONED_OBJECT._uid_`,
-/// `_owner_id_` and `_time_created_` (`org.openehr.rm.common.versioned_object.adoc`);
-/// `VERSION._contribution_` and `_signature_` ("`OpenPGP` digital signature or
-/// digest of content committed in this Version") plus
-/// `_preceding_version_uid_`, whose invariant
-/// `Preceding_version_uid_validity` makes it absent exactly for a first
-/// version (`org.openehr.rm.common.version.adoc`); and
-/// `ORIGINAL_VERSION._lifecycle_state_`
-/// (`org.openehr.rm.common.original_version.adoc`).
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct VersionedCompositionDetails {
-    /// `VERSIONED_OBJECT.uid.value` — the versioned-object id.
-    pub object_uid: String,
-    /// `VERSIONED_OBJECT.owner_id.id.value` — the owning EHR.
-    pub owner_id: String,
-    /// `VERSIONED_OBJECT.time_created.value` — when the object's first version
-    /// was committed.
-    pub time_created: String,
-    /// The read VERSION's `uid.value` (`OBJECT_VERSION_ID`).
-    pub version_id: String,
-    /// `ORIGINAL_VERSION.lifecycle_state.value` (the coded text's rubric).
-    pub lifecycle_state: String,
-    /// `VERSION.preceding_version_uid.value` — empty for a first version.
-    pub preceding_version_uid: String,
-    /// `VERSION.contribution.id.value` — the CONTRIBUTION this version was
-    /// committed under.
-    pub contribution_uid: String,
-    /// Whether the VERSION carries a `signature`.
-    pub signed: bool,
-    /// Whether the VERSION carries `data` — a logically deleted version does
-    /// not (`docs/specs/openehr/RM/docs/common/master06-change_control_package.adoc`
-    /// §Logical Deletion).
-    pub has_data: bool,
-}
-
 /// Read the `VERSIONED_COMPOSITION` container and one of its VERSIONS.
 ///
 /// Two reads, one resource: `GET /ehr/{ehr}/versioned_composition/{uid}` for the
@@ -321,225 +267,12 @@ pub async fn fetch_versioned_composition(
     versioned_object_uid: String,
     // The specific version within that versioned object.
     version_uid: String,
-) -> Result<VersionedCompositionDetails, ViewerError> {
+) -> Result<VersionedObjectFacts, ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let ehr = urlencoding::encode(&ehr_id);
-    let object = urlencoding::encode(&versioned_object_uid);
-    let object_url = cdr.rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}"));
-    let object_body = cdr.get(&object_url).ok().await?.body;
-
-    let version_uid = version_uid.trim();
-    let version_url = if version_uid.is_empty() {
-        cdr.rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}/version"))
-    } else {
-        cdr.rest_v1(&format!(
-            "ehr/{ehr}/versioned_composition/{object}/version/{}",
-            urlencoding::encode(version_uid)
-        ))
-    };
-    let version_body = cdr.get(&version_url).ok().await?.body;
-    parse_versioned_details(&object_body, &version_body)
-}
-
-/// Flatten a `VERSIONED_COMPOSITION` body plus a VERSION body into
-/// [`VersionedCompositionDetails`]. Defensive throughout — an absent attribute
-/// reads as empty rather than failing the card.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when either body is not valid JSON.
-fn parse_versioned_details(
-    object_body: &str,
-    version_body: &str,
-) -> Result<VersionedCompositionDetails, ViewerError> {
-    let object: Value = serde_json::from_str(object_body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::VersionedCompositionJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let version: Value = serde_json::from_str(version_body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::VersionJson, &[("e", (e).to_string().into())]))
-    })?;
-    Ok(VersionedCompositionDetails {
-        object_uid: crate::uid::uid_value_of_document(&object),
-        owner_id: json_str(&object, &["owner_id", "id", "value"]),
-        time_created: json_str(&object, &["time_created", "value"]),
-        version_id: crate::uid::uid_value_of_document(&version),
-        lifecycle_state: json_str(&version, &["lifecycle_state", "value"]),
-        preceding_version_uid: json_str(&version, &["preceding_version_uid", "value"]),
-        contribution_uid: json_str(&version, &["contribution", "id", "value"]),
-        signed: version
-            .get("signature")
-            .and_then(Value::as_str)
-            .is_some_and(|signature| !signature.is_empty()),
-        has_data: version.get("data").is_some_and(|data| !data.is_null()),
-    })
-}
-
-/// Parse a `REVISION_HISTORY` body (either the canonical `{ "items": [...] }`
-/// wrapper or a bare array) into version entries. Defensive throughout — a
-/// missing field reads as empty rather than failing.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when the body is not valid JSON.
-pub(crate) fn parse_versions(body: &str) -> Result<Vec<VersionEntry>, ViewerError> {
-    let doc: Value = serde_json::from_str(body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::RevisionHistoryJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let items = doc
-        .get("items")
-        .and_then(Value::as_array)
-        .or_else(|| doc.as_array())
-        .cloned()
-        .unwrap_or_default();
-    Ok(items.iter().map(version_entry).collect())
-}
-
-/// Flatten one `REVISION_HISTORY_ITEM` (`version_id` + `audits`) into a
-/// [`VersionEntry`], reading the first audit for the commit metadata.
-fn version_entry(item: &Value) -> VersionEntry {
-    let version_id = json_str(item, &["version_id", "value"]);
-    let audit = item
-        .get("audits")
-        .and_then(Value::as_array)
-        .and_then(|audits| audits.first());
-    VersionEntry {
-        version_id,
-        committed: audit
-            .map(|a| json_str(a, &["time_committed", "value"]))
-            .unwrap_or_default(),
-        change_type: audit
-            .map(|a| json_str(a, &["change_type", "value"]))
-            .unwrap_or_default(),
-        committer: audit
-            .map(|a| {
-                crate::bff::wire::committer_label(|key| Some(json_str(a, &["committer", key])))
-            })
-            .unwrap_or_default(),
-    }
-}
-
-/// Follow a chain of object keys and return the terminal string value, or an
-/// empty string if any hop is missing / not a string.
-fn json_str(value: &Value, path: &[&str]) -> String {
-    let mut current = value;
-    for key in path {
-        match current.get(*key) {
-            Some(next) => current = next,
-            None => return String::new(),
-        }
-    }
-    current.as_str().unwrap_or_default().to_owned()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{parse_versioned_details, parse_versions};
-
-    /// A `VERSIONED_COMPOSITION` container body, as the wire carries it.
-    const VERSIONED_OBJECT: &str = r#"{
-        "_type": "VERSIONED_COMPOSITION",
-        "uid": {"_type": "HIER_OBJECT_ID", "value": "7d44aa01"},
-        "owner_id": {
-            "_type": "OBJECT_REF",
-            "namespace": "local",
-            "type": "EHR",
-            "id": {"_type": "HIER_OBJECT_ID", "value": "e1"}
-        },
-        "time_created": {"_type": "DV_DATE_TIME", "value": "2026-07-12T10:00:00Z"}
-    }"#;
-
-    #[test]
-    fn parses_the_versioned_object_and_its_version_envelope() {
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"_type": "OBJECT_VERSION_ID", "value": "7d44aa01::sys::2"},
-            "contribution": {
-                "_type": "OBJECT_REF",
-                "id": {"_type": "HIER_OBJECT_ID", "value": "c9"}
-            },
-            "lifecycle_state": {"_type": "DV_CODED_TEXT", "value": "complete"},
-            "preceding_version_uid": {"_type": "OBJECT_VERSION_ID", "value": "7d44aa01::sys::1"},
-            "signature": "-----BEGIN PGP SIGNATURE-----",
-            "data": {"_type": "COMPOSITION"}
-        }"#;
-        let details = parse_versioned_details(VERSIONED_OBJECT, version).expect("valid bodies");
-        assert_eq!(details.object_uid, "7d44aa01");
-        assert_eq!(details.owner_id, "e1");
-        assert_eq!(details.time_created, "2026-07-12T10:00:00Z");
-        assert_eq!(details.version_id, "7d44aa01::sys::2");
-        assert_eq!(details.lifecycle_state, "complete");
-        assert_eq!(details.preceding_version_uid, "7d44aa01::sys::1");
-        assert_eq!(details.contribution_uid, "c9");
-        assert!(details.signed);
-        assert!(details.has_data);
-    }
-
-    #[test]
-    fn a_deleted_first_version_carries_no_data_no_preceding_and_no_signature() {
-        // RM common master06 §Logical Deletion: the deleted version has no
-        // `data`; a first version has no `preceding_version_uid`.
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"_type": "OBJECT_VERSION_ID", "value": "7d44aa01::sys::1"},
-            "lifecycle_state": {"_type": "DV_CODED_TEXT", "value": "deleted"}
-        }"#;
-        let details = parse_versioned_details(VERSIONED_OBJECT, version).expect("valid bodies");
-        assert_eq!(details.lifecycle_state, "deleted");
-        assert_eq!(details.preceding_version_uid, "");
-        assert_eq!(details.contribution_uid, "");
-        assert!(!details.signed);
-        assert!(!details.has_data);
-    }
-
-    #[test]
-    fn versioned_details_reject_a_non_json_body_on_either_side() {
-        assert!(parse_versioned_details("not json", "{}").is_err());
-        assert!(parse_versioned_details(VERSIONED_OBJECT, "not json").is_err());
-    }
-
-    #[test]
-    fn parses_revision_history_wrapper_and_bare_array() {
-        let wrapper = r#"{
-            "items": [{
-                "version_id": {"value": "7d44::sys::2"},
-                "audits": [{
-                    "time_committed": {"value": "2026-07-12T10:00:00Z"},
-                    "change_type": {"value": "creation"},
-                    "committer": {"name": "Dr Bob"}
-                }]
-            }]
-        }"#;
-        let entries = parse_versions(wrapper).expect("valid history");
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].version_id, "7d44::sys::2");
-        assert_eq!(entries[0].committed, "2026-07-12T10:00:00Z");
-        assert_eq!(entries[0].change_type, "creation");
-        assert_eq!(entries[0].committer, "Dr Bob");
-
-        // A bare array (no wrapper) parses identically.
-        let bare = r#"[{"version_id":{"value":"a::b::1"},"audits":[]}]"#;
-        let entries = parse_versions(bare).expect("valid bare history");
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].version_id, "a::b::1");
-        assert_eq!(entries[0].committed, "");
-    }
-
-    /// EHDS Art. 5: a version the person inserted names its committer as the
-    /// person, never by a name a `PARTY_SELF` does not carry.
-    #[test]
-    fn a_party_self_committer_reads_as_the_person() {
-        let history = r#"[{
-            "version_id": {"value": "7d44::sys::1"},
-            "audits": [{"committer": {"_type": "PARTY_SELF"}}]
-        }]"#;
-        let entries = parse_versions(history).expect("valid history");
-        assert_eq!(
-            entries[0].committer,
-            crate::locale::tr(crate::locale::Msg::CommitterPerson)
-        );
-    }
+    let object_url = cdr.rest_v1(&format!(
+        "ehr/{}/versioned_composition/{}",
+        urlencoding::encode(&ehr_id),
+        urlencoding::encode(&versioned_object_uid)
+    ));
+    crate::bff::wire::read_versioned_facts(&cdr, &object_url, &version_uid).await
 }

@@ -45,7 +45,7 @@ use serde_json::Value;
 
 use crate::error::ViewerError;
 use crate::locale::Msg;
-use crate::locale::tr_with;
+use crate::locale::{tr_served, tr_with};
 
 /// One `ITEM_TAG` as the tag routes serve it.
 ///
@@ -112,6 +112,78 @@ pub fn tag_filter_query(key: &str, value: &str, target_path: &str) -> String {
         query.push_str(&urlencoding::encode(value));
     }
     query
+}
+
+/// The tags of the collection at `path` under the ITS-REST base.
+///
+/// A target's own tags, or an aggregate list with its [`tag_filter_query`].
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the `404` of a target
+/// that does not exist included; [`ViewerError::Internal`] when the list is
+/// not valid JSON.
+pub async fn read_tags(path: &str) -> Result<Vec<ItemTagRow>, ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    parse_item_tags(&cdr.get(&cdr.rest_v1(path)).ok().await?.body)
+}
+
+/// Sets one tag in the collection at `path`, keeping every other tag it
+/// carries.
+///
+/// A read-modify-write, because the update replaces the whole collection
+/// (module docs).
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)), the `422` of a tag
+/// that breaks an `ITEM_TAG` invariant included; [`ViewerError::Invalid`] on
+/// a blank key; [`ViewerError::Internal`] when the current list is not valid
+/// JSON.
+pub async fn set_tag(
+    path: &str,
+    key: &str,
+    value: &str,
+    target_path: &str,
+) -> Result<(), ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let key = key.trim();
+    if key.is_empty() {
+        return Err(ViewerError::Invalid(tr_served(
+            Msg::TagKeyRequiredItemTagInvariant,
+        )));
+    }
+    let url = cdr.rest_v1(path);
+    let existing = parse_item_tags(&cdr.get(&url).ok().await?.body)?;
+    let body = merged_tag_body(&existing, key, value.trim(), target_path.trim());
+    // NOTE: clients are "strongly encouraged to always include the `Prefer`
+    // request header explicitly" — ITS-REST
+    // `specifications/docs/overview/Requests_and_responses.md` §Deprecated headers.
+    cdr.put(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=minimal")])
+        .ok()
+        .await?;
+    Ok(())
+}
+
+/// Deletes every tag under `key` from the collection at `path`.
+///
+/// The delete addresses a key, not a `(key, target_path)` pair
+/// (`operations/composition_tags_delete.yaml`), and an unknown key on an
+/// existing target is its `404`.
+///
+/// # Errors
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on a blank key.
+pub async fn delete_tag(path: &str, key: &str) -> Result<(), ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let key = key.trim();
+    if key.is_empty() {
+        return Err(ViewerError::Invalid(tr_served(Msg::TagKeyRequired)));
+    }
+    cdr.delete(&cdr.rest_v1(&format!("{path}/{}", urlencoding::encode(key))))
+        .ok()
+        .await?;
+    Ok(())
 }
 
 /// The whole-collection `UpdateItemTag` body that keeps `existing` and sets one

@@ -19,7 +19,7 @@ use ferrohealth_ui::table::view::{
 };
 use ferrohealth_ui::view::template::list::{ActiveFilters, FilterChip, active_filters, list_empty};
 
-use crate::bff::ehr_tags::{EhrTargetKind, list_ehr_tags, resolve_ehr_target};
+use crate::bff::ehr_tags::{EhrTargetKind, ehr_tags_path, resolve_ehr_target};
 use crate::bff::item_tags::{TagGroup, group_by_target};
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
@@ -173,9 +173,7 @@ async fn target(ehr_id: &str, group: &TagGroup) -> Result<Target, ViewerError> {
     let container = crate::uid::container_uid_of(&group.target);
     let version =
         (container != group.target).then(|| crate::pages::common::version_number(&group.target));
-    let kind = resolve_ehr_target(ehr_id.to_owned(), group.target.clone())
-        .await?
-        .and_then(|segment| EhrTargetKind::from_segment(&segment));
+    let kind = resolve_ehr_target(ehr_id.to_owned(), group.target.clone()).await?;
     let (name, versioned) = match kind {
         Some(EhrTargetKind::Composition) => (
             tr_with(
@@ -240,13 +238,9 @@ async fn load(
 async fn read_page(ehr_id: String) -> EhrModel<Panel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let filters = Filters::read();
-        let tags = list_ehr_tags(
-            ehr_id.clone(),
-            filters.key.clone(),
-            filters.value.clone(),
-            String::new(),
-        )
-        .await;
+        let tags =
+            crate::bff::item_tags::read_tags(&ehr_tags_path(&ehr_id, &filters.key, &filters.value))
+                .await;
         let list = match tags {
             Ok(tags) if tags.is_empty() => List::Empty,
             Ok(tags) => match tagged(&ehr_id, group_by_target(tags)).await {

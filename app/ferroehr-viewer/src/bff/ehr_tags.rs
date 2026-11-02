@@ -39,15 +39,10 @@
 //!    "This will return an empty list when there is no matching `ITEM_TAG`"
 //!    (`operations/ehr_tags_get.yaml`); a `404` means the EHR itself is unknown.
 //!
-//! The row type, the wire codec, the merge, the editor panel and the filter
-//! form are the shared kit (`crate::components::item_tags`) — the same one
-//! the demographic tag surfaces use.
+//! The tag client is the shared one ([`crate::bff::item_tags`]), working on
+//! the paths this module builds; every path segment is percent-encoded.
 //!
 //! No openEHR spec governs the viewer — our own design / product extension.
-//! Every read below guards with
-//! [`require_session`](crate::session::require_session) first, the CDR
-//! credential never reaches client-visible state, and every path segment is
-//! percent-encoded server-side.
 
 #![expect(
     clippy::disallowed_types,
@@ -55,10 +50,9 @@
               (#1694)"
 )]
 
-use crate::bff::item_tags::ItemTagRow;
 use crate::error::ViewerError;
 use crate::locale::tr_served;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, tr_with};
 use crate::uid::container_uid_of;
 
 /// Which EHR-side object an `ITEM_TAG` target turned out to be.
@@ -78,43 +72,6 @@ pub enum EhrTargetKind {
 }
 
 impl EhrTargetKind {
-    /// This kind's own route segment (`composition`, `ehr_status`,
-    /// `directory`) — the viewer's wire key for the kind.
-    #[must_use]
-    pub fn segment(self) -> &'static str {
-        match self {
-            Self::Composition => "composition",
-            Self::EhrStatus => "ehr_status",
-            Self::Directory => "directory",
-        }
-    }
-
-    /// The kind a segment names, or `None` for anything else.
-    ///
-    /// A route segment is caller-supplied text, so it
-    /// is validated back into this closed set rather than interpolated into a
-    /// CDR path.
-    #[must_use]
-    pub fn from_segment(segment: &str) -> Option<Self> {
-        match segment {
-            "composition" => Some(Self::Composition),
-            "ehr_status" => Some(Self::EhrStatus),
-            "directory" => Some(Self::Directory),
-            _ => None,
-        }
-    }
-
-    /// The path segment this kind's tag routes live under, or `None` when the
-    /// release publishes none for it (the directory — module docs).
-    #[must_use]
-    pub fn tags_route(self) -> Option<&'static str> {
-        match self {
-            Self::Composition => Some("composition"),
-            Self::EhrStatus => Some("ehr_status"),
-            Self::Directory => None,
-        }
-    }
-
     /// The viewer screen that owns an object of this kind.
     ///
     /// A composition has its own route; the status and the directory are tabs
@@ -133,153 +90,29 @@ impl EhrTargetKind {
     }
 }
 
-/// The tag collection of one COMPOSITION or `EHR_STATUS` target
-/// (`GET /ehr/{ehr_id}/{kind}/{uid_based_id}/tags`).
+/// The path of the tag collection of composition `uid` inside `ehr_id`
+/// (`ehr/{ehr_id}/composition/{uid_based_id}/tags`, `composition_tags_*`).
 ///
-/// `uid` addresses either the version container or one VERSION, and the two are
-/// disjoint collections (module docs fact 2) — the caller decides which by what
-/// it passes. An existing, untagged target answers `200 []`; a target that does
-/// not exist is a `404`.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Invalid`] on a kind that has no tag routes; a non-2xx CDR
-/// answer (the `404` for an unknown `ehr_id`/`uid_based_id` included)
-/// normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok);
-/// [`ViewerError::Internal`] when the list is not valid JSON.
-pub async fn fetch_ehr_tags(
-    // The EHR that owns the tagged object.
-    ehr_id: String,
-    // The target kind, as its segment ([`EhrTargetKind::segment`]).
-    kind: String,
-    // The addressed `uid_based_id` — a container id or one `OBJECT_VERSION_ID`.
-    uid: String,
-) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let cdr = crate::bff::cdr()?;
-    let url = tags_url(&cdr, &ehr_id, &kind, &uid)?;
-    let response = cdr.get(&url).ok().await?;
-    crate::bff::item_tags::parse_item_tags(&response.body)
+/// `uid` addresses either the version container or one VERSION, two disjoint
+/// collections (module docs fact 2).
+#[must_use]
+pub fn composition_tags_path(ehr_id: &str, uid: &str) -> String {
+    format!(
+        "ehr/{}/composition/{}/tags",
+        urlencoding::encode(ehr_id),
+        urlencoding::encode(uid)
+    )
 }
 
-/// Set one tag on a COMPOSITION or `EHR_STATUS` target, keeping every other tag
-/// that target already carries
-/// (`PUT /ehr/{ehr_id}/{kind}/{uid_based_id}/tags`).
-///
-/// Read-modify-write, because the operation replaces the whole collection —
-/// "Providing an empty list will effectively remove all `ITEM_TAG` associated
-/// with the given target" (`operations/composition_tags_update.yaml`) — so
-/// [`merged_tag_body`](crate::bff::item_tags::merged_tag_body) inserts
-/// or replaces the requested `(key, target_path)` entry into the current list.
-/// No `If-Match` is sent because the operation declares none (module docs fact
-/// 1).
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Invalid`] on a kind that has no tag routes or a blank key;
-/// any non-2xx CDR answer (the `422` for a tag that breaks an `ITEM_TAG`
-/// invariant included) normalizes via
-/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
-/// when the current list is not valid JSON.
-pub async fn set_ehr_tag(
-    // The EHR that owns the tagged object.
-    ehr_id: String,
-    // The target kind, as its segment ([`EhrTargetKind::segment`]).
-    kind: String,
-    // The addressed `uid_based_id`.
-    uid: String,
-    // The tag key to set.
-    key: String,
-    // The tag value; blank stores a tag with no value.
-    value: String,
-    // The tag's `target_path`; blank tags the whole object.
-    target_path: String,
-) -> Result<(), ViewerError> {
-    let cdr = crate::bff::cdr()?;
-    let url = tags_url(&cdr, &ehr_id, &kind, &uid)?;
-    let key = key.trim();
-    if key.is_empty() {
-        return Err(ViewerError::Invalid(tr(
-            Msg::TagKeyRequiredItemTagInvariant,
-        )));
-    }
-    let existing = crate::bff::item_tags::parse_item_tags(&cdr.get(&url).ok().await?.body)?;
-    let body =
-        crate::bff::item_tags::merged_tag_body(&existing, key, value.trim(), target_path.trim());
-    // NOTE: clients are "strongly encouraged to always include the `Prefer`
-    // request header explicitly" — ITS-REST
-    // `specifications/docs/overview/Requests_and_responses.md` §Deprecated headers.
-    cdr.put(&url)
-        .body("application/json", body)
-        .headers(&[("Prefer", "return=minimal")])
-        .ok()
-        .await?;
-    Ok(())
-}
-
-/// Delete a target's tags carrying `key`
-/// (`DELETE /ehr/{ehr_id}/{kind}/{uid_based_id}/tags/{key}`).
-///
-/// A SET delete: identity is the `(key, target_path)` pair and the route has no
-/// `target_path` selector, so every tag under the key on the addressed
-/// collection goes (`operations/composition_tags_delete.yaml`, which deletes
-/// "the `ITEM_TAG` resource(s) identified by `tag_key`"). A key that is not on
-/// the addressed collection is its `404` — including a key that exists only on
-/// the OTHER collection of the same versioned object.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
-/// [`ViewerError::Invalid`] on a kind that has no tag routes or a blank key.
-pub async fn delete_ehr_tag(
-    // The EHR that owns the tagged object.
-    ehr_id: String,
-    // The target kind, as its segment ([`EhrTargetKind::segment`]).
-    kind: String,
-    // The addressed `uid_based_id`.
-    uid: String,
-    // The tag key to remove.
-    key: String,
-) -> Result<(), ViewerError> {
-    let cdr = crate::bff::cdr()?;
-    let url = tags_url(&cdr, &ehr_id, &kind, &uid)?;
-    let key = key.trim();
-    if key.is_empty() {
-        return Err(ViewerError::Invalid(tr(Msg::TagKeyRequired)));
-    }
-    cdr.delete(&format!("{url}/{}", urlencoding::encode(key)))
-        .ok()
-        .await?;
-    Ok(())
-}
-
-/// Every `ITEM_TAG` in one EHR (`GET /ehr/{ehr_id}/tags`), optionally filtered.
-///
-/// The aggregate read: it "retrieves the list of `ITEM_TAG` resources
-/// associated with any target VERSION or `VERSIONED_OBJECT` within the EHR",
-/// so one list spans both target forms and every taggable kind. Each filter is
-/// sent only when non-empty
-/// ([`tag_filter_query`](crate::bff::item_tags::tag_filter_query)) —
-/// the released "omitted parameter constrains nothing" behaviour.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
-/// (the `404` for an unknown `ehr_id`) normalizes via
-/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
-/// when the list is not valid JSON.
-pub async fn list_ehr_tags(
-    // The EHR whose tags to list.
-    ehr_id: String,
-    // Exact `ITEM_TAG.key` filter; empty constrains nothing.
-    key: String,
-    // Exact `ITEM_TAG.value` filter; empty constrains nothing.
-    value: String,
-    // Exact `ITEM_TAG.target_path` filter; empty constrains nothing.
-    target_path: String,
-) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let cdr = crate::bff::cdr()?;
-    let query = crate::bff::item_tags::tag_filter_query(&key, &value, &target_path);
-    let url = cdr.rest_v1(&format!("ehr/{}/tags{query}", urlencoding::encode(&ehr_id)));
-    let response = cdr.get(&url).ok().await?;
-    crate::bff::item_tags::parse_item_tags(&response.body)
+/// The path of the aggregate tag list of `ehr_id` (`ehr_tags_get`), each
+/// filter sent only when it is filled.
+#[must_use]
+pub fn ehr_tags_path(ehr_id: &str, key: &str, value: &str) -> String {
+    format!(
+        "ehr/{}/tags{}",
+        urlencoding::encode(ehr_id),
+        crate::bff::item_tags::tag_filter_query(key, value, "")
+    )
 }
 
 /// Which object inside `ehr_id` holds `uid`, or `None` when none does.
@@ -304,14 +137,14 @@ pub async fn resolve_ehr_target(
     ehr_id: String,
     // The tag's target, in either `uid_based_id` form.
     uid: String,
-) -> Result<Option<String>, ViewerError> {
+) -> Result<Option<EhrTargetKind>, ViewerError> {
     let cdr = crate::bff::cdr()?;
     let container = container_uid_of(&uid);
     if container.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::TagTargetIdRequired)));
     }
     if ehr_status_container(&cdr, &ehr_id).await? == container {
-        return Ok(Some(EhrTargetKind::EhrStatus.segment().to_owned()));
+        return Ok(Some(EhrTargetKind::EhrStatus));
     }
     let ehr = urlencoding::encode(&ehr_id).into_owned();
     let directory = cdr.rest_v1(&format!("ehr/{ehr}/directory"));
@@ -319,7 +152,7 @@ pub async fn resolve_ehr_target(
     if response.is(http::StatusCode::OK)
         && container_uid_of(&crate::uid::uid_value_of(&response.body)) == container
     {
-        return Ok(Some(EhrTargetKind::Directory.segment().to_owned()));
+        return Ok(Some(EhrTargetKind::Directory));
     }
     let composition = cdr.rest_v1(&format!(
         "ehr/{ehr}/composition/{}",
@@ -327,38 +160,12 @@ pub async fn resolve_ehr_target(
     ));
     let response = cdr.get(&composition).send().await?;
     if response.is(http::StatusCode::OK) || response.is(http::StatusCode::NO_CONTENT) {
-        return Ok(Some(EhrTargetKind::Composition.segment().to_owned()));
+        return Ok(Some(EhrTargetKind::Composition));
     }
     if !response.is(http::StatusCode::NOT_FOUND) {
         response.ok()?;
     }
     Ok(None)
-}
-
-/// The `/ehr/{ehr_id}/{kind}/{uid_based_id}/tags` URL of one target's tag
-/// collection.
-///
-/// # Errors
-/// [`ViewerError::Invalid`] when the segment is outside the closed kind set or
-/// names a kind the release publishes no tag route for (the directory).
-fn tags_url(
-    cdr: &crate::cdr::CdrClient,
-    ehr_id: &str,
-    kind: &str,
-    uid: &str,
-) -> Result<String, ViewerError> {
-    let route = EhrTargetKind::from_segment(kind)
-        .and_then(EhrTargetKind::tags_route)
-        .ok_or_else(|| {
-            ViewerError::Invalid(format!(
-                "{kind:?} is not an EHR object the openEHR tag operations address"
-            ))
-        })?;
-    Ok(cdr.rest_v1(&format!(
-        "ehr/{}/{route}/{}/tags",
-        urlencoding::encode(ehr_id),
-        urlencoding::encode(uid)
-    )))
 }
 
 /// The `VERSIONED_EHR_STATUS` container of an EHR, read from the EHR resource's
@@ -394,31 +201,16 @@ async fn ehr_status_container(cdr: &crate::bff::Cdr, ehr_id: &str) -> Result<Str
 
 #[cfg(test)]
 mod tests {
-    use super::EhrTargetKind;
+    use super::{EhrTargetKind, composition_tags_path};
 
     #[test]
-    fn every_kind_round_trips_through_its_segment() {
-        for kind in [
-            EhrTargetKind::Composition,
-            EhrTargetKind::EhrStatus,
-            EhrTargetKind::Directory,
-        ] {
-            assert_eq!(EhrTargetKind::from_segment(kind.segment()), Some(kind));
-        }
-        // …and nothing else does, so no caller-supplied string can steer a CDR
-        // path (every route is a public HTTP endpoint).
-        for hostile in ["", "..", "ehr", "versioned_composition", "tags", "/"] {
-            assert_eq!(EhrTargetKind::from_segment(hostile), None, "{hostile}");
-        }
-    }
-
-    #[test]
-    fn only_the_two_kinds_with_released_tag_routes_are_addressable() {
+    fn a_composition_tag_path_encodes_every_id() {
         // The release publishes composition_tags_* and ehr_status_tags_* and no
         // directory tag route at all (ehr.openapi.yaml).
-        assert_eq!(EhrTargetKind::Composition.tags_route(), Some("composition"));
-        assert_eq!(EhrTargetKind::EhrStatus.tags_route(), Some("ehr_status"));
-        assert_eq!(EhrTargetKind::Directory.tags_route(), None);
+        assert_eq!(
+            composition_tags_path("7d44", "a/b"),
+            "ehr/7d44/composition/a%2Fb/tags"
+        );
     }
 
     #[test]
