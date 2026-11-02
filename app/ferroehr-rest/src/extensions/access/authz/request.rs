@@ -16,8 +16,8 @@
 use ferrohealth_authz::cedar::Model;
 use ferrohealth_authz::request::{Attr, Request, RequestError, Subject};
 
-/// The resource family a clinical operation acts on. Derived from the
-/// operation-id prefix by [`crate::extensions::access::authz::classify::kind_of`].
+/// The resource family a clinical operation acts on, as its row in the
+/// operation table (`crate::api::operation`) records it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ResourceKind {
     /// An EHR (create / get / get-by-subject).

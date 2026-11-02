@@ -45,6 +45,7 @@ use openehr_its::rest::runtime::ApiError;
 use uuid::Uuid;
 
 use crate::api::RequestParts;
+use crate::api::operation::{Operation, operation};
 use crate::extensions::access::authn::{Principal, current_principal};
 use crate::extensions::access::authz::AuthzHandle;
 use crate::overview::error::RestError;
@@ -170,12 +171,6 @@ impl EhrAccessGate {
     }
 }
 
-/// Whether `op` reads a Composition (subject to the privacy ceiling). Mirrors
-/// the composition-read set the ABAC post-check uses.
-pub(crate) fn is_composition_read(op: &str) -> bool {
-    op == "composition_get" || op.starts_with("versioned_composition_")
-}
-
 /// The target versioned Composition uid for a read op, from the path params
 /// (the versioned-object uid, a version uid, or the uid-based id — all
 /// normalised to the versioned-object head by `Privacy::level_for`).
@@ -253,7 +248,7 @@ pub(crate) async fn enforce(
         .map_err(|reason| Box::new(forbidden(principal.as_ref(), &reason)))?;
 
     // 2. The Composition privacy ceiling (Composition read routes).
-    if is_composition_read(op)
+    if operation(op).is_some_and(Operation::reads_composition)
         && let Some(target) = composition_target(parts)
     {
         EhrAccessGate::privacy_gate(settings, subject, roles, target)
