@@ -25,16 +25,6 @@
 //! `csd-code="110100"` (Application Activity / template), `"110110"`
 //! (Patient Record / demographic), `"110112"` (Query), and `"110114"`
 //! (User Authentication, with `EventTypeCode` `"110122"` Login).
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::missing_assert_message,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;

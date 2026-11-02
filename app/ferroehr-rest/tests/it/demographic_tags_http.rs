@@ -10,14 +10,6 @@
 //! write-wrapper request headers land on their own collections, the RM target
 //! shape is the bare `UID_BASED_ID`, and the `owner_id` follows the released
 //! examples' `{namespace: local, type: SYSTEM}` shape.
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use http::{StatusCode, header};
 use serde_json::{Value, json};

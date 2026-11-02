@@ -13,16 +13,6 @@
 //! composer or committer name) takes the parameterized builder rather than a
 //! private copy.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              fixture helpers; a failing fixture must panic at the fixture (the \
-              Rust Book ch11)"
-)]
-
 use serde_json::{Value, json};
 
 use ferroehr::service::version_update::{WriteRequest, change_type_coded, lifecycle_state_coded};

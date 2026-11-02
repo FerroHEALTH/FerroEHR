@@ -12,16 +12,6 @@
 //! its original, no matter how many systems it may be copied through"; RM ehr
 //! master04 §EHR Identifier Allocation for the receiving EHR's own id.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::collections::BTreeSet;
 
 use serde_json::{Value, json};

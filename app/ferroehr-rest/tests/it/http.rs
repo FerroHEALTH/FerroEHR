@@ -11,15 +11,6 @@
 //! implementation, so the old "reaches the stub → 501" probes are re-targeted
 //! to the real server's behaviour for a fresh, empty database (a missing EHR is
 //! a `404`, an invalid AQL a `400`, an empty template list a `200 []`).
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

@@ -21,15 +21,6 @@
 //! `docs/specs/openehr/CNF/docs/platform_test_schedule/master07-func_tc_ehr_composition.adoc`
 //! (`create_composition-event_bad_opt` → 422).
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use crate::fixtures::uv;
 use serde_json::{Value, json};
 use sqlx::PgPool;

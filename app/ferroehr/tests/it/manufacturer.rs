@@ -7,13 +7,6 @@
 //! single point. The name is held to the Licensor the licence files name, and
 //! the container images' manufacturer label to this one constant.
 
-#![expect(
-    clippy::panic_in_result_fn,
-    reason = "the blessed test shape (the Rust Book ch11-01): `?` propagates \
-              plumbing failures — here the file reads — while the assertion \
-              carries the behaviour under test and is meant to panic"
-)]
-
 use std::error::Error;
 use std::path::Path;
 

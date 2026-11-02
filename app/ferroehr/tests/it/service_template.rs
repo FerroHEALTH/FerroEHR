@@ -6,15 +6,6 @@
 //! retrieve its XML, and re-upload (idempotent replace) — driven through the
 //! `FerroEhrService` definition methods the REST layer calls.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use serde_json::Value;
 
 use ferroehr::service::definition::types::TemplateListFilter;

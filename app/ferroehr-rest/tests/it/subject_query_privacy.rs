@@ -11,14 +11,6 @@
 //! none of them and in no error body. No openEHR spec governs logging; keeping
 //! the identifier out of it is our own design.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::fmt::Write as _;
 use std::sync::{Arc, Mutex};
 

@@ -14,14 +14,6 @@
 //! operations and their wire shape are our own design/extension
 //! for both generations. What is asserted here is exactly what the CNF
 //! `adl14-archetype` / `adl2-archetype` `served_extensions` families declare.
-#![expect(
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 

@@ -13,14 +13,6 @@
 //! verification, a record that disappears is NAMED, and the role the server
 //! actually connects as cannot do either — nor run any DDL.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use jiff::Timestamp;
 use sqlx::{AssertSqlSafe, Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;

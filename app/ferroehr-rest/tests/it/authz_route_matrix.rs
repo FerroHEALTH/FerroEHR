@@ -29,14 +29,6 @@
 //! design, except
 //! the 401-vs-403 split (ITS-REST overview `Requests_and_responses.md`).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

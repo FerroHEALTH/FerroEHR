@@ -13,16 +13,6 @@
 //! `agent.policy` (FHIR R4 `AuditEvent.agent.policy`). No openEHR spec
 //! governs access-log content: our own design/extension.
 
-#![expect(
-    clippy::expect_used,
-    clippy::unwrap_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::time::Duration;
 
 use axum::Router;

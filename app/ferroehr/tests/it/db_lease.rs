@@ -9,14 +9,6 @@
 //! and the session's `client_connection_check_interval` makes the backend
 //! notice the closed socket and stop the statement.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::time::{Duration, Instant};
 
 use sqlx::PgPool;

@@ -11,14 +11,6 @@
 //! shares the transaction's fate); (3) the outbox feed serves every row to a
 //! reader in `seq` order until the reader acknowledges it.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 
 use serde_json::{Value, json};

@@ -22,15 +22,6 @@
 //! `403` follows the ITS-REST 401/403 discipline.
 //!
 //! The concrete scheme is our own design — no openEHR spec governs it.
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 

@@ -13,14 +13,6 @@
 //! domain and a demographic predicate, which would need the reverse
 //! translation, is refused. No openEHR spec governs the cohort surface: our own design.
 
-#![expect(
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::collections::BTreeMap;
 

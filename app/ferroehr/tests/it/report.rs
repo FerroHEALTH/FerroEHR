@@ -8,14 +8,6 @@
 //! No openEHR spec governs the report — our own design; Regulation (EU)
 //! 2025/327 (`docs/law/eu/ehds/text.html` Art. 44(5)) is the duty it serves.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              helpers; a failing fixture must panic at the fixture (the Rust Book ch11)"
-)]
-
 use assert_fs::prelude::*;
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::db::domain::DomainPools;

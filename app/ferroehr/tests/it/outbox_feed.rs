@@ -8,11 +8,6 @@
 //!
 //! No openEHR spec governs eventing: our own design/extension.
 
-#![expect(
-    clippy::expect_used,
-    reason = "integration tests fail loudly on harness errors"
-)]
-
 use std::time::Duration;
 
 use ferroehr::extensions::outbox::{

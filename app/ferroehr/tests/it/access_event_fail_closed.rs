@@ -13,14 +13,6 @@
 //! code; the posture is the one an operator meets when the audit database is
 //! down.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::time::{Duration, Instant};
 
 use sqlx::PgPool;

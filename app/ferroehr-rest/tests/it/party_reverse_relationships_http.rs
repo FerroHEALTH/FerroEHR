@@ -11,14 +11,6 @@
 //! `_reverse_relationships_` list, if at the target end." RM 1.2.0 turns the
 //! attribute into a function (SPECRM-124), so the development profile serves
 //! no such member.
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers; panicking assertions are the intended shape here \
-              (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 
 use axum::Router;

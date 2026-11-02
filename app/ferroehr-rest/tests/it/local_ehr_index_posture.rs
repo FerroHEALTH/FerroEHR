@@ -12,13 +12,6 @@
 //! (`docs/specs/openehr/ITS-REST/docs/ehr/ehr.md`). Which posture the server
 //! runs is no openEHR spec's: our own design.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's async bodies; panicking assertions are the intended shape here"
-)]
-
 use std::collections::HashMap;
 use std::sync::Arc;
 

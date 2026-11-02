@@ -5,14 +5,6 @@
 //! queueing to the acquire timeout; a busy pool still queues; and acquires
 //! succeed again as soon as the database accepts connections (#4323).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 

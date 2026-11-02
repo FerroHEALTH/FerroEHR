@@ -23,16 +23,6 @@
 //! AQL text that constrains no EHR itself (a population query,
 //! `Query_types.md` §"Population queries"), so the header is the only thing
 //! narrowing the result: an ignored header yields both compositions.
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};

@@ -9,14 +9,6 @@
 //! `{major}`/`{major}.{minor}` prefix forms of `parameters/path/version.yaml`
 //! are READ-side resolution patterns, and a non-numeric segment would poison
 //! the surface's SEMVER ordering; register-adjudicated `400`).
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 

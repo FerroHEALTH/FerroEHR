@@ -12,14 +12,6 @@
 //! NOTE: no openEHR spec governs migration mechanics or database roles — our
 //! own design/extension.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              fixture helpers and async bodies; a failing fixture must panic at \
-              the fixture (the Rust Book ch11)"
-)]
-
 use crate::fixtures::{throwaway_password, with_role};
 use ferroehr::config::deployment::DeploymentProfile;
 use ferroehr::db::domain::{Domain, DomainDsn, StorageConfig};

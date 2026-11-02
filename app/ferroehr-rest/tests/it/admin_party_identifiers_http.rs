@@ -11,15 +11,6 @@
 //! version committed, and every read leaves an access record naming the
 //! reader, the party and the scheme, never the value.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

@@ -20,8 +20,18 @@
 
 #![expect(
     clippy::disallowed_types,
-    reason = "test fixtures and wire assertions are raw JSON by the testing rule \
-              (.claude/rules/testing.md §Test-fixture construction)"
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::missing_assert_message,
+    clippy::panic,
+    clippy::string_slice,
+    clippy::unwrap_used,
+    reason = "this binary is test code: a panicking assertion, an `expect` on a fixture \
+              and direct fixture indexing are how a test fails (the Rust Book ch11), and \
+              its fixtures and wire assertions are raw JSON (.claude/rules/testing.md \
+              §Test-fixture construction); clippy.toml's `allow-*-in-tests` reaches only \
+              `#[test]` functions, so the binary relaxes these once, here (owner \
+              approval 2026-11-02, #4767)"
 )]
 
 mod canonical_json_literals;

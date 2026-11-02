@@ -46,7 +46,7 @@
 - [Main ruleset review lifted](main-ruleset-review-lifted.md) — review in-session, then `gh pr merge --auto`; never `--admin`
 - [Slim feature lanes: gate helpers](slim-feature-lanes-gate-helpers.md) — run the three `--no-default-features` clippy combos before rest/server pushes
 - [Never soft-reset onto a moved base](never-soft-reset-onto-moved-base.md) — merge main before squashing; check `git diff --stat HEAD origin/main`
-- [expect_used in tests/it helpers](expect-used-in-integration-test-helpers.md) — new tests/it files need file-level `#![expect(clippy::expect_used)]`
+- [Test-lint relaxations in tests/it/main.rs](expect-used-in-integration-test-helpers.md): one `#![expect]` block per test binary (owner 2026-11-02, #4767); a new tests/it file adds no header
 - [Book numbers are generated includes](book-numbers-are-generated-includes.md) — measured numbers on the site come from scripts/render generators
 - [Licence stamp follows the FerroLICENCE design](licence-stamp-follows-ferrolicence-design.md) — stamp copy equals design.md §7; KATs pin it
 - [Compliance corpus direction](compliance-corpus-direction.md) — CDR checkable against vendored EU/NL/DE/CH law; never claim "compliant"

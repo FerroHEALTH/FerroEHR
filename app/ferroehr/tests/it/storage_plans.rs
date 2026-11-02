@@ -37,14 +37,6 @@
 //! No openEHR spec governs storage mechanics, index choice or partitioning —
 //! our own design/extension.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; a failed seed or explain is broken \
-              test infrastructure and must panic where it happens (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 

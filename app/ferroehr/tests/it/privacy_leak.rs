@@ -19,14 +19,6 @@
 //! telemetry, are scanned for the fixture's values alone (the reason is at
 //! that test).
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only reaches \
-              `#[test]`-annotated functions, so it misses this module's fixture helpers; a \
-              failing fixture must panic at the fixture (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 

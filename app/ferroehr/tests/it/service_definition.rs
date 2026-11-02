@@ -8,15 +8,6 @@
 //!
 //! Requires Docker. Each test owns its container (`Drop` removes it).
 
-#![expect(
-    clippy::panic,
-    clippy::string_slice,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::types::TemplateListFilter;
 use ferroehr::service::error::ServiceError;

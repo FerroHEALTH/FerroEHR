@@ -5,13 +5,6 @@
 //! it deliberately leaves alone, and that the default configuration is the
 //! refusing one.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only reaches \
-              `#[test]`-annotated functions, so it misses this module's fixture helpers; a \
-              failing fixture must panic at the fixture (the Rust Book ch11)"
-)]
-
 use serde_json::{Value, json};
 
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};

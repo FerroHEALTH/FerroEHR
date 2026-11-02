@@ -17,15 +17,6 @@
 //! comes from the shared testkit harness. Requires Docker. `SeaweedFS` with no credentials runs in unauthenticated
 //! "allow-all" mode (dev/test only).
 
-#![expect(
-    clippy::expect_used,
-    let_underscore_drop,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 use std::time::Duration;
