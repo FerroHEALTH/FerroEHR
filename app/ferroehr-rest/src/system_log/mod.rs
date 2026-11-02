@@ -24,3 +24,4 @@
 
 pub mod classify;
 pub mod middleware;
+pub mod served;

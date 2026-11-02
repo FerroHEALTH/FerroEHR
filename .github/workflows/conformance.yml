@@ -294,11 +294,17 @@ jobs:
           file: docker/postgres/Dockerfile
           load: true
           tags: ferroehr-postgres:conformance
+      # The released run judges the frozen release, whose RM is 1.1.0, so the
+      # server it judges runs the stable profile, the generation set that
+      # release defines (RM 1.1.0 keeps PARTY.reverse_relationships, which RM
+      # 1.2.0 turns into a function). The development run below judges the
+      # pinned master and keeps the development profile.
       - id: compose
         name: Compose FerroEHR and FerroTERM on fresh volumes
         env:
           FERROEHR_IMAGE: ferroehr:conformance
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
+          FERROEHR__SPEC_PROFILE: stable
           SKIP_BUILD: "1"
         run: bash scripts/conformance.sh up
       # The Basic users of docker/ferroehr.dev.toml and the SMART test issuer
@@ -343,6 +349,7 @@ jobs:
         env:
           FERROEHR_IMAGE: ferroehr:conformance
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
+          FERROEHR__SPEC_PROFILE: development
           SKIP_BUILD: "1"
         run: bash scripts/conformance.sh up
       - name: Head the development run's job summary

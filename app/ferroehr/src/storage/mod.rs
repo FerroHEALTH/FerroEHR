@@ -62,6 +62,7 @@ pub mod header;
 pub mod marks;
 pub mod node_repo;
 pub mod opt_out;
+pub mod party_reverse;
 pub mod promoted;
 pub mod row;
 pub mod slim;

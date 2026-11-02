@@ -77,18 +77,7 @@ pub(super) async fn run(
             super::set_item_tag_headers(&mut out, &resp);
             Ok(out)
         }
-        "get" => {
-            let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
-            let resp = state
-                .backend()
-                .party_get(kind, p.uid_based_id, p.version_at_time)
-                .await?;
-            // A deleted current version → Null body → 204 (like composition_get).
-            if resp.is_empty() {
-                return Ok(negotiate::empty(StatusCode::NO_CONTENT));
-            }
-            Ok(read_party(kind, h, &resp))
-        }
+        "get" => run_get(&state, kind, &parts).await,
         "update" => {
             let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
             let uid = p.uid_based_id.clone();
@@ -147,6 +136,50 @@ pub(super) async fn run(
             "unrouted demographic party operation: {seg}_{other}"
         )))),
     }
+}
+
+/// Reads a party (`person_get.yaml`): a deleted current version is `204`, and
+/// a stable-profile canonical-JSON read carries `reverse_relationships`
+/// ([`serves_reverse_relationships`]).
+async fn run_get(
+    state: &AppState,
+    kind: PartyKind,
+    parts: &RequestParts,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
+    let uid = p.uid_based_id.clone();
+    let mut resp = state
+        .backend()
+        .party_get(kind, p.uid_based_id, p.version_at_time)
+        .await?;
+    // A deleted current version → Null body → 204 (like composition_get).
+    if resp.is_empty() {
+        return Ok(negotiate::empty(StatusCode::NO_CONTENT));
+    }
+    let mut served_sources = Vec::new();
+    if serves_reverse_relationships(state.config().spec_profile, h) {
+        let reverse = state.backend().party_reverse_relationships(&uid).await?;
+        if !reverse.references.is_empty()
+            && let serde_json::Value::Object(map) = &mut resp.body
+        {
+            map.insert(
+                "reverse_relationships".to_owned(),
+                serde_json::Value::Array(reverse.references),
+            );
+            served_sources = reverse.sources;
+        }
+    }
+    let mut out = read_party(kind, h, &resp);
+    // The references disclose each source party's container and relationship,
+    // so each source gets its own access record beside the target's.
+    if !served_sources.is_empty() {
+        out.extensions_mut()
+            .insert(crate::system_log::served::AuditServedParties {
+                parties: served_sources,
+            });
+    }
+    Ok(out)
 }
 
 /// Stores the `ITEM_TAG` lists the wrapper headers asked for on the just-written
@@ -327,6 +360,27 @@ where
     }
     openehr_its::json::from_canonical_value::<Current>(&value)
         .map_err(|e| ApiError::BadRequest(format!("invalid canonical JSON body: {e}")))
+}
+
+/// Whether a party read carries `PARTY.reverse_relationships`: under the
+/// stable profile, whose RM 1.1.0 declares the attribute (`…demographic.party.adoc`
+/// 1.1.0 §Attributes), and in canonical JSON, the one representation served
+/// through that generation's shape.
+///
+/// RM 1.2.0 turns the attribute into a function (SPECRM-124), so a
+/// development-profile read leaves it out. The canonical-XML response re-types
+/// the body through the development generation, which declares no such element.
+// TODO(#4778): serve `reverse_relationships` in a stable-profile canonical-XML party read.
+fn serves_reverse_relationships(
+    profile: ferroehr::config::profile::SpecProfile,
+    h: &HeaderMap,
+) -> bool {
+    profile == ferroehr::config::profile::SpecProfile::Stable
+        && negotiate::resolve_accept(
+            h,
+            negotiate::CANONICAL,
+            negotiate::WireFormat::CanonicalJson,
+        ) == Some(negotiate::WireFormat::CanonicalJson)
 }
 
 /// Renders a party body as JSON or canonical XML, monomorphized per kind.
