@@ -1414,6 +1414,10 @@ jobs:
       # expectations the server lanes never compile (#3703).
       - run: cargo clippy --locked -p ferroehr-ext --no-default-features --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features multimedia --all-targets -- -D warnings
+      # ferroehr alone: the workspace lanes unify its spec-crate features with
+      # ferroehr-rest's, so a feature it uses and never declares stays hidden
+      # there (#4820).
+      - run: cargo clippy --locked -p ferroehr --all-features --all-targets -- -D warnings
 
   # ── openehr-its + openehr-sdt on wasm32: the browser-consumer selection ────
   # `openehr-its` publishes a feature graph whose openEHR content layers
