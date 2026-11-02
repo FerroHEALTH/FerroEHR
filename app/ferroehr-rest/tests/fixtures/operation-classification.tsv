@@ -1,0 +1,201 @@
+# op	generated	class	kind	access	is_write	pep_mode	audit	smart_permission	smart_read	smart_write	composition_read
+admin_access_delay_register	false	-	None	None	-	Skip	None	-	false	false	false
+admin_access_opt_out	false	-	None	None	-	Skip	None	-	false	false	false
+admin_access_opt_out_register	false	-	None	None	-	Skip	None	-	false	false	false
+admin_access_restriction_register	false	-	None	None	-	Skip	None	-	false	false	false
+admin_archive_ehrs	false	-	None	None	-	Skip	None	-	false	false	false
+admin_archive_parties	false	-	None	None	-	Skip	None	-	false	false	false
+admin_config	false	-	None	None	-	Skip	None	-	false	false	false
+admin_delay_access	false	-	None	None	-	Skip	None	-	false	false	false
+admin_dump	false	-	None	None	-	Skip	None	-	false	false	false
+admin_ehr_delete	true	Some(Admin)	None	None	true	Skip	Some(Audited { action: Delete, object: Ehr })	Delete	false	false	false
+admin_ehr_delete_all	true	Some(Admin)	None	None	true	Skip	Some(Audited { action: Delete, object: Ehr })	Delete	false	false	false
+admin_lift_access_restriction	false	-	None	None	-	Skip	None	-	false	false	false
+admin_lift_restriction	false	-	None	None	-	Skip	None	-	false	false	false
+admin_load	false	-	None	None	-	Skip	None	-	false	false	false
+admin_party_delete	false	-	None	None	-	Skip	Some(Audited { action: Delete, object: Demographic })	-	false	false	false
+admin_party_identifiers	false	-	None	None	-	Skip	Some(Audited { action: Read, object: Demographic })	-	false	false	false
+admin_put_retention_policy	false	-	None	None	-	Skip	None	-	false	false	false
+admin_query_delete	false	-	None	None	-	Skip	None	-	false	false	false
+admin_rebuild_version_nodes	false	-	None	None	-	Skip	None	-	false	false	false
+admin_release_access_delay	false	-	None	None	-	Skip	None	-	false	false	false
+admin_report_composition_version_count	false	-	None	None	-	Skip	None	-	false	false	false
+admin_report_contribution_count	false	-	None	None	-	Skip	None	-	false	false	false
+admin_report_contributions	false	-	None	None	-	Skip	None	-	false	false	false
+admin_report_versioned_composition_count	false	-	None	None	-	Skip	None	-	false	false	false
+admin_research_objection	false	-	None	None	-	Skip	None	-	false	false	false
+admin_restore_archived_ehrs	false	-	None	None	-	Skip	None	-	false	false	false
+admin_restore_archived_parties	false	-	None	None	-	Skip	None	-	false	false	false
+admin_restrict_access	false	-	None	None	-	Skip	None	-	false	false	false
+admin_restrict_processing	false	-	None	None	-	Skip	None	-	false	false	false
+admin_restriction_register	false	-	None	None	-	Skip	None	-	false	false	false
+admin_retention_anchor	false	-	None	None	-	Skip	None	-	false	false	false
+admin_retention_due	false	-	None	None	-	Skip	None	-	false	false	false
+admin_retention_hold	false	-	None	None	-	Skip	None	-	false	false	false
+admin_retention_policies	false	-	None	None	-	Skip	None	-	false	false	false
+admin_reverse_access_opt_out	false	-	None	None	-	Skip	None	-	false	false	false
+admin_template_delete	false	-	None	None	-	Skip	None	-	false	false	false
+admin_verify_storage_parity	false	-	None	None	-	Skip	None	-	false	false	false
+agent_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false	false
+agent_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+agent_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+agent_tags_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+agent_tags_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+agent_tags_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+agent_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+audit_event_search	false	-	None	None	-	Skip	None	-	false	false	false
+composition_access_delay_update	false	-	Some(Composition)	Some(Update)	-	Pre	None	Update	true	false	false
+composition_create	true	Some(Clinical)	Some(Composition)	Some(Create)	true	Pre	Some(Audited { action: Create, object: Composition })	Create	true	true	false
+composition_delete	true	Some(Clinical)	Some(Composition)	Some(Delete)	true	Pre	Some(Audited { action: Delete, object: Composition })	Delete	true	true	false
+composition_get	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Post	Some(Audited { action: Read, object: Composition })	Read	true	false	true
+composition_tags_delete	true	Some(Clinical)	Some(Composition)	Some(Delete)	true	Skip	Some(Audited { action: Delete, object: Composition })	Delete	false	false	false
+composition_tags_get	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Skip	Some(Audited { action: Read, object: Composition })	Read	false	false	false
+composition_tags_update	true	Some(Clinical)	Some(Composition)	Some(Update)	true	Skip	Some(Audited { action: Update, object: Composition })	Update	false	false	false
+composition_update	true	Some(Clinical)	Some(Composition)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Composition })	Update	true	true	false
+contribution_create	true	Some(Clinical)	Some(Contribution)	Some(Create)	true	Pre	Some(Audited { action: Create, object: Contribution })	Create	false	false	false
+contribution_get	true	Some(Clinical)	Some(Contribution)	Some(Read)	false	Post	Some(Audited { action: Read, object: Contribution })	Read	false	false	false
+contribution_list	false	-	Some(Contribution)	Some(Read)	-	Pre	None	-	false	false	false
+definition_archetype_adl14_convert	false	-	None	None	-	Skip	None	-	false	false	false
+definition_archetype_adl14_delete	false	-	None	None	-	Skip	None	-	false	false	false
+definition_archetype_adl14_get	false	-	None	None	-	Skip	None	-	false	false	false
+definition_archetype_adl14_list	false	-	None	None	-	Skip	None	-	false	false	false
+definition_archetype_adl14_upload	false	-	None	None	-	Skip	None	-	false	false	false
+definition_archetype_adl2_count	false	-	None	None	-	Skip	None	-	false	false	false
+definition_archetype_adl2_list	false	-	None	None	-	Skip	None	-	false	false	false
+definition_artefact_adl2_count	false	-	None	None	-	Skip	None	-	false	false	false
+definition_artefact_adl2_delete	false	-	None	None	-	Skip	None	-	false	false	false
+definition_artefact_adl2_list	false	-	None	None	-	Skip	None	-	false	false	false
+definition_query_list	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Query })	Read	false	false	false
+definition_query_list_all	false	-	None	None	-	Skip	None	-	false	false	false
+definition_query_store.yaml	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Query })	Create	false	false	false
+definition_query_version_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Query })	Read	false	false	false
+definition_query_version_store.yaml	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Query })	Create	false	false	false
+definition_template_adl1.4_example_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Template })	Read	false	false	false
+definition_template_adl1.4_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Template })	Read	false	false	false
+definition_template_adl1.4_list	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Template })	Read	false	false	false
+definition_template_adl1.4_upload	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Template })	Create	false	false	false
+definition_template_adl14_convert	false	-	None	None	-	Skip	Some(Audited { action: Read, object: Template })	-	false	false	false
+definition_template_adl2_example_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Template })	Read	false	false	false
+definition_template_adl2_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Template })	Read	false	false	false
+definition_template_adl2_list	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Template })	Read	false	false	false
+definition_template_adl2_upload	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Template })	Create	false	false	false
+definition_template_adl2_version_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Template })	Read	false	false	false
+demographic_contribution_create	false	-	None	None	-	Skip	None	-	false	false	false
+demographic_contribution_get	false	-	None	None	-	Skip	None	-	false	false	false
+demographic_tags_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+directory_create	true	Some(Clinical)	Some(Directory)	Some(Create)	true	Pre	Some(Audited { action: Create, object: Directory })	Create	false	false	false
+directory_delete	true	Some(Clinical)	Some(Directory)	Some(Delete)	true	Pre	Some(Audited { action: Delete, object: Directory })	Delete	false	false	false
+directory_get_at_time	true	Some(Clinical)	Some(Directory)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Directory })	Read	false	false	false
+directory_get_by_version_id	true	Some(Clinical)	Some(Directory)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Directory })	Read	false	false	false
+directory_update	true	Some(Clinical)	Some(Directory)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Directory })	Update	false	false	false
+ehr_create	true	Some(Clinical)	Some(Ehr)	Some(Create)	true	Pre	Some(Audited { action: Create, object: Ehr })	Create	false	false	false
+ehr_create_with_id	true	Some(Clinical)	Some(Ehr)	Some(Create)	true	Pre	Some(Audited { action: Create, object: Ehr })	Create	false	false	false
+ehr_get_by_id	true	Some(Clinical)	Some(Ehr)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+ehr_get_by_subject	true	Some(Clinical)	Some(Ehr)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+ehr_status_get_at_time	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+ehr_status_get_by_version_id	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+ehr_status_tags_delete	true	Some(Clinical)	Some(EhrStatus)	Some(Delete)	true	Pre	Some(Audited { action: Delete, object: Ehr })	Delete	false	false	false
+ehr_status_tags_get	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+ehr_status_tags_update	true	Some(Clinical)	Some(EhrStatus)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Ehr })	Update	false	false	false
+ehr_status_update	true	Some(Clinical)	Some(EhrStatus)	Some(Update)	true	Pre	Some(Audited { action: Update, object: Ehr })	Update	false	false	false
+ehr_tags_get	true	Some(Clinical)	Some(Ehr)	Some(Read)	false	Skip	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+env_view	false	-	None	None	-	Skip	None	-	false	false	false
+event_subscription_create	false	-	None	None	-	Skip	None	-	false	false	false
+event_subscription_delete	false	-	None	None	-	Skip	None	-	false	false	false
+event_subscription_get	false	-	None	None	-	Skip	None	-	false	false	false
+event_subscription_list	false	-	None	None	-	Skip	None	-	false	false	false
+event_subscription_update	false	-	None	None	-	Skip	None	-	false	false	false
+family_openapi_json	false	-	None	None	-	Skip	None	-	false	false	false
+flamegraph_view	false	-	None	None	-	Skip	None	-	false	false	false
+group_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false	false
+group_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+group_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+group_tags_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+group_tags_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+group_tags_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+group_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+health_view	false	-	None	None	-	Skip	None	-	false	false	false
+info_view	false	-	None	None	-	Skip	None	-	false	false	false
+liveness	false	-	None	None	-	Skip	None	-	false	false	false
+loggers_get	false	-	None	None	-	Skip	None	-	false	false	false
+loggers_post	false	-	None	None	-	Skip	None	-	false	false	false
+loggers_reset	false	-	None	None	-	Skip	None	-	false	false	false
+management	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_env	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_flamegraph	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_health	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_info	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_loggers_get	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_loggers_reset	false	-	None	None	-	Skip	Some(Audited { action: Delete, object: ApplicationActivity })	-	false	false	false
+management_loggers_set	false	-	None	None	-	Skip	Some(Audited { action: Update, object: ApplicationActivity })	-	false	false	false
+management_metrics	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_prometheus	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+management_status	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false	false
+message_export_ehr_extracts	false	-	None	None	-	Skip	None	-	false	false	false
+message_export_ehrs	false	-	None	None	-	Skip	None	-	false	false	false
+message_import_ehr	false	-	None	None	-	Skip	None	-	false	false	false
+message_import_ehr_extract	false	-	None	None	-	Skip	None	-	false	false	false
+metrics_detail	false	-	None	None	-	Skip	None	-	false	false	false
+metrics_list	false	-	None	None	-	Skip	None	-	false	false	false
+openapi_json	false	-	None	None	-	Skip	None	-	false	false	false
+options	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Execute, object: ApplicationActivity })	Read	false	false	false
+organisation_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false	false
+organisation_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+organisation_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+organisation_tags_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+organisation_tags_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+organisation_tags_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+organisation_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+party_relationship_create	false	-	None	None	-	Skip	None	-	false	false	false
+party_relationship_delete	false	-	None	None	-	Skip	None	-	false	false	false
+party_relationship_get	false	-	None	None	-	Skip	None	-	false	false	false
+party_relationship_revision_history	false	-	None	None	-	Skip	None	-	false	false	false
+party_relationship_update	false	-	None	None	-	Skip	None	-	false	false	false
+party_relationship_version_get_at_time	false	-	None	None	-	Skip	None	-	false	false	false
+party_relationship_version_get_by_id	false	-	None	None	-	Skip	None	-	false	false	false
+person_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false	false
+person_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+person_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+person_tags_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+person_tags_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+person_tags_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+person_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+prometheus_text	false	-	None	None	-	Skip	None	-	false	false	false
+query_execute_adhoc_query	true	Some(Clinical)	Some(Query)	Some(Execute)	false	Skip	Some(Audited { action: Execute, object: Query })	Search	false	false	false
+query_execute_adhoc_query_body	true	Some(Clinical)	Some(Query)	Some(Execute)	false	Skip	Some(Audited { action: Execute, object: Query })	Search	false	false	false
+query_execute_cohort	false	-	Some(Query)	Some(Execute)	-	Skip	Some(Audited { action: Execute, object: Query })	-	false	false	false
+query_execute_stored_query	true	Some(Clinical)	Some(Query)	Some(Execute)	false	Skip	Some(Audited { action: Execute, object: Query })	Search	false	false	false
+query_execute_stored_query_body	true	Some(Clinical)	Some(Query)	Some(Execute)	false	Skip	Some(Audited { action: Execute, object: Query })	Search	false	false	false
+query_execute_stored_query_version	true	Some(Clinical)	Some(Query)	Some(Execute)	false	Skip	Some(Audited { action: Execute, object: Query })	Search	false	false	false
+query_execute_stored_query_version_body	true	Some(Clinical)	Some(Query)	Some(Execute)	false	Skip	Some(Audited { action: Execute, object: Query })	Search	false	false	false
+readiness	false	-	None	None	-	Skip	None	-	false	false	false
+role_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false	false
+role_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+role_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+role_tags_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
+role_tags_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+role_tags_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+role_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
+root_health	false	-	None	None	-	Skip	None	-	false	false	false
+status	false	-	None	None	-	Skip	None	-	false	false	false
+status_view	false	-	None	None	-	Skip	None	-	false	false	false
+swagger_ui_index	false	-	None	None	-	Skip	None	-	false	false	false
+terminology_description	false	-	None	None	-	Skip	None	-	false	false	false
+terminology_get_term	false	-	None	None	-	Skip	None	-	false	false	false
+terminology_ids	false	-	None	None	-	Skip	None	-	false	false	false
+terminology_subsumes	false	-	None	None	-	Skip	None	-	false	false	false
+terminology_value_set	false	-	None	None	-	Skip	None	-	false	false	false
+terminology_value_set_validate	false	-	None	None	-	Skip	None	-	false	false	false
+versioned_composition_get	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Post	Some(Audited { action: Read, object: Composition })	Read	true	false	true
+versioned_composition_revision_history	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Post	Some(Audited { action: Read, object: Composition })	Read	true	false	true
+versioned_composition_version_get_at_time	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Post	Some(Audited { action: Read, object: Composition })	Read	true	false	true
+versioned_composition_version_get_by_id	true	Some(Clinical)	Some(Composition)	Some(Read)	false	Post	Some(Audited { action: Read, object: Composition })	Read	true	false	true
+versioned_ehr_status_get	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+versioned_ehr_status_revision_history	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+versioned_ehr_status_version_get_at_time	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+versioned_ehr_status_version_get_by_id	true	Some(Clinical)	Some(EhrStatus)	Some(Read)	false	Pre	Some(Audited { action: Read, object: Ehr })	Read	false	false	false
+versioned_party_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+versioned_party_relationship_get	false	-	None	None	-	Skip	None	-	false	false	false
+versioned_party_revision_history	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+versioned_party_version_get_at_time	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
+versioned_party_version_get_by_id	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false

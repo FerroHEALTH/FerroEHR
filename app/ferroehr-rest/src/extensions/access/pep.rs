@@ -791,9 +791,18 @@ fn engine_error(
 
 /// Whether `op` is a COMPOSITION operation whose SMART requirement the
 /// policy-enforcement point checks (`crate::smart::routes`, `Need::Composition`).
-fn smart_composition_op(op: &str) -> bool {
+pub(crate) fn smart_composition_op(op: &str) -> bool {
     !op.contains("_tags_")
         && (op.starts_with("composition_") || op.starts_with("versioned_composition_"))
+}
+
+/// Whether `op` is a COMPOSITION write whose SMART requirement the
+/// policy-enforcement point checks before the backend call.
+pub(crate) fn smart_composition_write(op: &str) -> bool {
+    matches!(
+        op,
+        "composition_create" | "composition_update" | "composition_delete"
+    )
 }
 
 /// The SMART gate of a COMPOSITION write, on the template its body names or,
@@ -805,10 +814,7 @@ async fn smart_pre(
     op: &'static str,
     parts: &RequestParts,
 ) -> Result<(), Response> {
-    if !matches!(
-        op,
-        "composition_create" | "composition_update" | "composition_delete"
-    ) {
+    if !smart_composition_write(op) {
         return Ok(());
     }
     let Some(principal) = current_principal() else {

@@ -63,6 +63,7 @@ pub mod demographic;
 pub mod ehr;
 pub(crate) mod item_tags;
 pub mod message;
+pub(crate) mod operation;
 pub mod query;
 pub(crate) mod refusals;
 pub(crate) mod served;

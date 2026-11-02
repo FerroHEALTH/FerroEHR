@@ -172,7 +172,7 @@ impl EhrAccessGate {
 
 /// Whether `op` reads a Composition (subject to the privacy ceiling). Mirrors
 /// the composition-read set the ABAC post-check uses.
-fn is_composition_read(op: &str) -> bool {
+pub(crate) fn is_composition_read(op: &str) -> bool {
     op == "composition_get" || op.starts_with("versioned_composition_")
 }
 
