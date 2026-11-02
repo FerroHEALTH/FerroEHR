@@ -27,6 +27,8 @@ use openehr_rm::prelude::ItemTag;
 use ferroehr::ids::EhrId;
 use ferroehr::service::demographic::types::PartyKind;
 
+use ferroehr::versioning::object_version_id::parse_uid_based_id;
+
 use crate::overview::error::RestError;
 use crate::overview::negotiate;
 use crate::overview::params::{
@@ -232,6 +234,7 @@ async fn write(
     uid: String,
     tags: Vec<UpdateItemTag>,
 ) -> Result<Vec<ItemTag>, RestError> {
+    let uid = parse_uid_based_id(&uid)?;
     Ok(match target {
         TagTarget::EhrContent {
             ehr_id,

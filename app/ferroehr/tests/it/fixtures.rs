@@ -15,7 +15,12 @@
 
 use serde_json::{Value, json};
 
+use ferroehr::ids::{EhrId, VoId};
+use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::version_update::{WriteRequest, change_type_coded, lifecycle_state_coded};
+use ferroehr::versioning::object_version_id::{
+    TreeId, UidAddress, parse_uid_based_id, parse_version_uid,
+};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 use openehr_rm::prelude::PartyProxy;
 
@@ -177,8 +182,41 @@ pub(crate) fn vo_of(ovid: &str) -> &str {
 }
 
 /// The typed id of an EHR a fixture holds as its wire string.
-pub(crate) fn ehr(raw: impl AsRef<str>) -> ferroehr::ids::EhrId {
-    ferroehr::ids::EhrId(raw.as_ref().parse().expect("an EHR uuid"))
+pub(crate) fn ehr(raw: impl AsRef<str>) -> EhrId {
+    EhrId(raw.as_ref().parse().expect("an EHR uuid"))
+}
+
+/// The address a wire `uid_based_id` names: a versioned object, or one of
+/// its versions.
+pub(crate) fn at(raw: impl AsRef<str>) -> UidAddress {
+    parse_uid_based_id(raw.as_ref()).expect("a well-formed uid_based_id")
+}
+
+/// The versioned object a bare id or an `OBJECT_VERSION_ID` names.
+pub(crate) fn object(raw: impl AsRef<str>) -> VoId {
+    VoId(
+        vo_of(raw.as_ref())
+            .parse()
+            .expect("a versioned-object uuid"),
+    )
+}
+
+/// The version tree position an `OBJECT_VERSION_ID` names.
+pub(crate) fn tree(raw: impl AsRef<str>) -> TreeId {
+    parse_version_uid(raw.as_ref())
+        .expect("an OBJECT_VERSION_ID")
+        .1
+}
+
+/// The precondition of a mandatory `If-Match` naming `raw`.
+pub(crate) fn if_match(raw: impl AsRef<str>) -> Precondition {
+    Precondition::parse(Some(raw.as_ref()), None).expect("a well-formed If-Match")
+}
+
+/// The precondition of a delete addressed by the version uid `raw`, with an
+/// optional `If-Match`.
+pub(crate) fn delete_precondition(raw: impl AsRef<str>, if_match: Option<&str>) -> Precondition {
+    Precondition::parse(if_match, at(raw).tree()).expect("a well-formed If-Match")
 }
 
 /// A minimal valid root FOLDER (RM ehr master04 §Folders).
@@ -269,10 +307,7 @@ pub(crate) fn shared_layout() -> ferroehr::db::domain::DomainLayout {
 /// status update, so the EHR leaves every population query (RM
 /// `org.openehr.rm.ehr.ehr_status.adoc`: "True if this EHR should be included
 /// in population queries").
-pub(crate) async fn set_not_queryable(
-    svc: &ferroehr::service::FerroEhrService,
-    ehr: ferroehr::ids::EhrId,
-) {
+pub(crate) async fn set_not_queryable(svc: &ferroehr::service::FerroEhrService, ehr: EhrId) {
     let mut body = svc
         .ehr_status(ehr, None)
         .await
@@ -294,10 +329,7 @@ pub(crate) async fn set_not_queryable(
 /// Whether `ehr` exists, read through the `GET /ehr/{ehr_id}` service call: a
 /// read refused as `ehr_id_does_not_exist` is `false`, any other failure fails
 /// the test.
-pub(crate) async fn ehr_exists(
-    svc: &ferroehr::service::FerroEhrService,
-    ehr: ferroehr::ids::EhrId,
-) -> bool {
+pub(crate) async fn ehr_exists(svc: &ferroehr::service::FerroEhrService, ehr: EhrId) -> bool {
     match svc.ehr_read(ehr).await {
         Ok(_) => true,
         Err(e) => {
@@ -320,15 +352,13 @@ pub(crate) async fn ehr_exists(
 
 /// The versioned object a write response names, read off its
 /// `OBJECT_VERSION_ID`.
-pub(crate) fn written_vo(
-    response: &ferroehr::service::response::ServiceResponse,
-) -> ferroehr::ids::VoId {
+pub(crate) fn written_vo(response: &ferroehr::service::response::ServiceResponse) -> VoId {
     let uid = &response
         .meta
         .as_ref()
         .expect("a write answers its version")
         .uid;
-    ferroehr::ids::VoId(vo_of(uid).parse().expect("a uuid versioned object id"))
+    VoId(vo_of(uid).parse().expect("a uuid versioned object id"))
 }
 
 /// Creates the PARTY an `UPDATE_VERSION` envelope carries through the
@@ -337,7 +367,7 @@ pub(crate) fn written_vo(
 pub(crate) async fn create_party(
     svc: &ferroehr::service::FerroEhrService,
     version: WriteRequest<openehr_rm::prelude::Party>,
-) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
+) -> Result<VoId, ferroehr::service::error::ServiceError> {
     use ferroehr::service::demographic::types::PartyKind;
     use openehr_rm::prelude::Party;
     let kind = match &version.data {
@@ -357,7 +387,7 @@ pub(crate) async fn create_party(
 pub(crate) async fn create_relationship(
     svc: &ferroehr::service::FerroEhrService,
     version: WriteRequest<openehr_rm::prelude::PartyRelationship>,
-) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
+) -> Result<VoId, ferroehr::service::error::ServiceError> {
     let created = svc.party_relationship_create(version).await?;
     Ok(written_vo(&created))
 }
@@ -402,7 +432,7 @@ pub(crate) fn status_naming(
 pub(crate) async fn create_ehr_subject(
     svc: &ferroehr::service::FerroEhrService,
     subject: &ferroehr::service::ehr_index::types::SubjectRef,
-) -> ferroehr::ids::EhrId {
+) -> EhrId {
     Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_naming(
         &subject.id,
         &subject.namespace,
@@ -417,8 +447,8 @@ pub(crate) async fn create_ehr_subject(
 /// party `party` (its versioned-object id, as a `PERSON`).
 pub(crate) async fn create_ehr_for_party(
     svc: &ferroehr::service::FerroEhrService,
-    party: ferroehr::ids::VoId,
-) -> ferroehr::ids::EhrId {
+    party: VoId,
+) -> EhrId {
     create_ehr_subject(
         svc,
         &ferroehr::service::ehr_index::types::SubjectRef::person(party.0.to_string(), "local"),
@@ -519,7 +549,7 @@ pub(crate) async fn service() -> (testkit::TestDb, ferroehr::service::FerroEhrSe
 }
 
 /// Create an EHR with no subject and no supplied id; return its id.
-pub(crate) async fn create_ehr(svc: &ferroehr::service::FerroEhrService) -> ferroehr::ids::EhrId {
+pub(crate) async fn create_ehr(svc: &ferroehr::service::FerroEhrService) -> EhrId {
     Box::pin(svc.create_ehr_meta(WriteRequest::new(None)))
         .await
         .map(|(id, _)| id)
@@ -579,11 +609,7 @@ pub(crate) fn plan_ok(q: &str) -> ferroehr::aql::ir::QueryIr {
     .unwrap_or_else(|e| panic!("plan failed for {q:?}: {e}"))
 }
 
-pub(crate) async fn setup() -> (
-    testkit::TestDb,
-    ferroehr::service::FerroEhrService,
-    ferroehr::ids::EhrId,
-) {
+pub(crate) async fn setup() -> (testkit::TestDb, ferroehr::service::FerroEhrService, EhrId) {
     let (db, svc) = service().await;
     let ehr_id = create_ehr(&svc).await;
     (db, svc, ehr_id)

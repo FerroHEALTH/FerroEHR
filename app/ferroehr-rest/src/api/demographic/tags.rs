@@ -26,6 +26,8 @@ use openehr_its::rest::generated::demographic::{
 };
 use openehr_its::rest::runtime::ApiError;
 
+use ferroehr::versioning::object_version_id::parse_uid_based_id;
+
 use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
@@ -62,7 +64,10 @@ pub(super) async fn run(
                 PartyKind::Person => uid_based_id!(PersonTagsGetParams),
                 PartyKind::Role => uid_based_id!(RoleTagsGetParams),
             };
-            let tags = state.backend().party_tags_get(kind, uid_based_id).await?;
+            let tags = state
+                .backend()
+                .party_tags_get(kind, parse_uid_based_id(&uid_based_id)?)
+                .await?;
             Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
@@ -80,7 +85,7 @@ pub(super) async fn run(
             let body = item_tags::write_body(h, &parts.body)?;
             let tags = state
                 .backend()
-                .party_tags_update(kind, uid_based_id, body)
+                .party_tags_update(kind, parse_uid_based_id(&uid_based_id)?, body)
                 .await?;
             // person_tags_update.yaml — 200 (200_PERSON_ItemTagList_updated)
             // with the tag list on `Prefer: return=representation`; 204
@@ -133,7 +138,7 @@ pub(super) async fn run(
             };
             state
                 .backend()
-                .party_tags_delete(kind, uid_based_id, key)
+                .party_tags_delete(kind, parse_uid_based_id(&uid_based_id)?, key)
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }

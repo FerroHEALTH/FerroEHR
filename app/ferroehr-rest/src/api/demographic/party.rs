@@ -22,6 +22,8 @@ use openehr_its::rest::generated::demographic::{
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::{Agent, Group, Organisation, Party, Person, Role};
 
+use ferroehr::versioning::object_version_id::parse_uid_based_id;
+
 use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
@@ -81,27 +83,20 @@ pub(super) async fn run(
         "get" => run_get(&state, kind, &parts).await,
         "update" => {
             let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
-            let uid = p.uid_based_id.clone();
             let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
             // Judged before the commit, so a defective tag refuses the request
             // while nothing is durable.
             let pending_tags = item_tags::pending(h)?;
+            let request = crate::overview::committal::write_request(
+                h,
+                crate::api::ehr::committer_proxy(),
+                body,
+                None,
+            )?;
+            let (vo_id, precondition) = super::update_target(&p.uid_based_id, &p.if_match)?;
             match state
                 .backend()
-                .party_update(
-                    kind,
-                    p.uid_based_id,
-                    // The `W/"…"`/quoted ETag syntax is decoded here, at the
-                    // adapter seam, so the service compares a bare
-                    // OBJECT_VERSION_ID (overview §"`ETag` and Last-Modified").
-                    crate::overview::version_id::strip_etag(&p.if_match).to_owned(),
-                    crate::overview::committal::write_request(
-                        h,
-                        crate::api::ehr::committer_proxy(),
-                        body,
-                        None,
-                    )?,
-                )
+                .party_update(kind, vo_id, precondition, request)
                 .await
             {
                 Ok(mut resp) => {
@@ -121,7 +116,7 @@ pub(super) async fn run(
                 Err(e) if super::is_precondition(&e) => {
                     let meta = state
                         .backend()
-                        .demographic_latest_meta(kind, uid)
+                        .demographic_latest_meta(kind, vo_id)
                         .await
                         .ok()
                         .flatten();
@@ -150,10 +145,11 @@ async fn run_get(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
-    let uid = p.uid_based_id.clone();
+    let address = parse_uid_based_id(&p.uid_based_id)?;
+    let vo_id = address.vo_id;
     let mut resp = state
         .backend()
-        .party_get(kind, p.uid_based_id, p.version_at_time)
+        .party_get(kind, address, p.version_at_time)
         .await?;
     // A deleted current version → Null body → 204 (like composition_get).
     if resp.is_empty() {
@@ -161,7 +157,7 @@ async fn run_get(
     }
     let mut served_sources = Vec::new();
     if serves_reverse_relationships(state.config().spec_profile, h) {
-        let reverse = state.backend().party_reverse_relationships(&uid).await?;
+        let reverse = state.backend().party_reverse_relationships(vo_id).await?;
         if !reverse.references.is_empty()
             && let serde_json::Value::Object(map) = &mut resp.body
         {
@@ -245,22 +241,19 @@ async fn run_delete(
     let h = &parts.headers;
     // All per-kind delete params are field-identical; reuse one.
     let p = parts.decode(AgentDeleteParams::from_request, AgentDeleteParams::PARAMS)?;
-    let preceding = p.uid_based_id.clone();
+    let request =
+        crate::overview::committal::delete_request(h, crate::api::ehr::committer_proxy(), None)?;
     // NOTE: the preceding version comes from the path `uid_based_id`, so
     // `If-Match` is accepted but never required — overview §"If-Match and
     // accidental overwrites" requires it only when the path lacks it.
+    let (vo_id, precondition) = super::delete_target(
+        &p.uid_based_id,
+        kind.rm_type(),
+        crate::overview::version_id::if_match(h).as_deref(),
+    )?;
     match state
         .backend()
-        .party_delete(
-            kind,
-            preceding.clone(),
-            crate::overview::version_id::if_match(h),
-            crate::overview::committal::delete_request(
-                h,
-                crate::api::ehr::committer_proxy(),
-                None,
-            )?,
-        )
+        .party_delete(kind, vo_id, precondition, request)
         .await
     {
         Ok(resp) => {
@@ -272,7 +265,7 @@ async fn run_delete(
         Err(e @ ServiceError::VersionConflict(_)) => {
             let meta = state
                 .backend()
-                .demographic_latest_meta(kind, preceding)
+                .demographic_latest_meta(kind, vo_id)
                 .await
                 .ok()
                 .flatten();

@@ -1104,8 +1104,8 @@ async fn each_party_version_keeps_the_identifier_it_committed() {
     service
         .party_update(
             PartyKind::Person,
-            vo.clone(),
-            v1,
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(v1),
             WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
@@ -1191,7 +1191,7 @@ async fn a_carried_reference_is_sealed_again_for_the_new_version() {
         .expect("create the person");
     let (vo, v1) = committed_ids(&created.body);
     let served = service
-        .party_get(PartyKind::Person, vo.clone(), None)
+        .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
         .expect("read the person back");
     let carried = identifier_id(&served.body).to_owned();
@@ -1207,8 +1207,8 @@ async fn a_carried_reference_is_sealed_again_for_the_new_version() {
     service
         .party_update(
             PartyKind::Person,
-            vo.clone(),
-            v1,
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(v1),
             WriteRequest::new(typed(&resent)),
         )
         .await
@@ -1262,7 +1262,7 @@ async fn a_reference_to_another_partys_identifier_is_refused() {
         .expect("create the person");
     let (vo, _) = committed_ids(&created.body);
     let stored = service
-        .party_get(PartyKind::Person, vo, None)
+        .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
         .await
         .expect("read the person back");
     let foreign = identifier_id(&stored.body).to_owned();
@@ -1410,7 +1410,7 @@ async fn a_party_write_response_serves_the_stored_form() {
         "the create response carries the reference the store holds"
     );
     let read = service
-        .party_get(PartyKind::Person, vo.clone(), None)
+        .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
         .expect("read the person back");
     assert_eq!(
@@ -1421,8 +1421,8 @@ async fn a_party_write_response_serves_the_stored_form() {
     let updated = service
         .party_update(
             PartyKind::Person,
-            vo.clone(),
-            v1,
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(v1),
             WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
@@ -1435,7 +1435,7 @@ async fn a_party_write_response_serves_the_stored_form() {
         "the update response must not carry the protected value"
     );
     let reread = service
-        .party_get(PartyKind::Person, vo, None)
+        .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
         .await
         .expect("read the update back");
     assert_eq!(
@@ -1638,8 +1638,8 @@ async fn a_dump_and_load_carries_the_sealed_identifiers() {
     source
         .party_update(
             PartyKind::Person,
-            vo.clone(),
-            v1,
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(v1),
             WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
@@ -1751,8 +1751,8 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
     let changed = service
         .party_update(
             PartyKind::Person,
-            vo.clone(),
-            v1,
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(v1),
             WriteRequest::new(typed(&person_carrying(
                 "Lovelace",
                 &[("nl-bsn", SECOND_SYNTHETIC_BSN)],
@@ -1764,7 +1764,12 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
     let party = ferroehr::ids::VoId(vo.parse().expect("a uuid"));
     let latest = changed.meta.expect("the update answers its version").uid;
     service
-        .party_delete(PartyKind::Person, latest, None, WriteRequest::new(()))
+        .party_delete(
+            PartyKind::Person,
+            crate::fixtures::object(&latest),
+            crate::fixtures::delete_precondition(&latest, None),
+            WriteRequest::new(()),
+        )
         .await
         .expect("logically delete the person");
     let kept: i64 =

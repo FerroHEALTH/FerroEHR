@@ -212,7 +212,7 @@ mod tests {
                 preferred_term: None,
             },
             author: std::collections::BTreeMap::new(),
-            accreditaton: None,
+            accreditation: None,
             other_details: None,
         }
     }

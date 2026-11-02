@@ -32,8 +32,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use openehr_its::rest::generated::demographic::{
-    AgentCreateParams, AgentGetParams, AgentUpdateParams, VersionedPartyGetParams,
-    VersionedPartyVersionGetAtTimeParams, VersionedPartyVersionGetByIdParams,
+    AgentCreateParams, AgentGetParams, AgentUpdateParams,
 };
 use openehr_its::rest::runtime::ApiError;
 use openehr_its::xml::LOCATABLE_ROOT;
@@ -45,6 +44,7 @@ use crate::negotiate::body::respond_rm;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use ferroehr::service::response::ServiceResponse;
+use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 /// The `PARTY_RELATIONSHIP` extension routes as a native `utoipa-axum` router,
 /// on our own wire with no ITS-REST contract
@@ -65,10 +65,6 @@ pub(crate) fn relationship_routes() -> OpenApiRouter<AppState> {
             party_relationship_update,
             party_relationship_delete
         ))
-        .routes(routes!(versioned_party_relationship_get))
-        .routes(routes!(party_relationship_revision_history))
-        .routes(routes!(party_relationship_version_get_at_time))
-        .routes(routes!(party_relationship_version_get_by_id))
 }
 
 // ── Handlers (our own wire; no ITS-REST operation governs these) ──────────────
@@ -715,311 +711,6 @@ pub(crate) async fn party_relationship_delete(
     .await
 }
 
-/// Retrieve the `VERSIONED_PARTY_RELATIONSHIP` container
-/// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs) and is excluded from any
-/// conformance-profile claim.
-#[utoipa::path(
-    get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}", tag = "demographic-relationship",
-    params(
-        ("versioned_object_uid" = String, Path,
-         description = "The version-container id of the relationship (a \
-                        HIER_OBJECT_ID / `versioned_object_uid`, `Resources.md` \
-                        §\"Identifier types\").",
-         example = "1f2a3b4c-5d6e-4f70-8192-a3b4c5d6e7f8"),
-        ("Accept" = Option<String>, Header,
-         description = "This container is served as canonical `application/json`; \
-                        an `Accept` that excludes JSON is `406`.",
-         example = "application/json")
-    ),
-    responses(
-        (status = 200, description = "The VERSIONED_OBJECT container of the \
-                                      relationship, as canonical JSON. No \
-                                      `Location`: §Location restricts the header \
-                                      to creation/redirect responses \
-                                      (`Requests_and_responses.md`).",
-         body = serde_json::Value,
-         headers(
-             ("ETag" = String,
-              description = "The weak entity tag `W/\"<versioned_object_uid>\"` — \
-                             the `ETag` value \"is usually taken from e.g. \
-                             VERSIONED_OBJECT.uid.value, VERSION.uid.value\" \
-                             (§\"ETag and Last-Modified\"). A container body \
-                             exposes no commit audit, so no `Last-Modified` \
-                             accompanies it.")
-         )),
-        (status = 400, description = "The `versioned_object_uid` is not a \
-                                      well-formed id — the overview table's `400` \
-                                      row, \"syntactically invalid content\" \
-                                      (`Requests_and_responses.md` §\"HTTP status \
-                                      codes\").",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal) — refused before the request \
-                                      reaches the resource.",
-         body = serde_json::Value),
-        (status = 404, description = "No such relationship container — the \
-                                      overview table's `404` row.",
-         body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                      container is served as canonical JSON only, \
-                                      so an `Accept` excluding `application/json` \
-                                      is refused (`Resources.md` §\"JSON \
-                                      Format\").",
-         body = serde_json::Value),
-        (status = 415, description = "The request DECLARES a Simplified \
-                                      `Content-Type`, refused before the read \
-                                      because an untemplated resource has no \
-                                      template to expand one against \
-                                      (`Resources.md` §\"Simplified Formats\").",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn versioned_party_relationship_get(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "versioned_party_relationship_get",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
-}
-
-/// Retrieve the relationship's `REVISION_HISTORY`
-/// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}/revision_history`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs) and is excluded from any
-/// conformance-profile claim.
-#[utoipa::path(
-    get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}/revision_history", tag = "demographic-relationship",
-    params(
-        ("versioned_object_uid" = String, Path,
-         description = "The version-container id of the relationship (a \
-                        HIER_OBJECT_ID / `versioned_object_uid`).",
-         example = "1f2a3b4c-5d6e-4f70-8192-a3b4c5d6e7f8"),
-        ("Accept" = Option<String>, Header,
-         description = "The history is served as canonical `application/json`; an \
-                        `Accept` that excludes JSON is `406`.",
-         example = "application/json")
-    ),
-    responses(
-        (status = 200, description = "The relationship's REVISION_HISTORY as \
-                                      canonical JSON; `items` runs oldest-first \
-                                      (`REVISION_HISTORY.most_recent_version` is \
-                                      the last item, RM `common/master04` \
-                                      §REVISION_HISTORY).",
-         body = serde_json::Value,
-         headers(
-             ("ETag" = String,
-              description = "The weak entity tag `W/\"<versioned_object_uid>\"` — \
-                             a REVISION_HISTORY carries no `uid` of its own, so \
-                             the addressed container's id is the `ETag` source \
-                             (§\"ETag and Last-Modified\" names \
-                             VERSIONED_OBJECT.uid.value as one)."),
-             ("Last-Modified" = String,
-              description = "The most recent revision's commit instant as an \
-                             HTTP-date, \"derived from \
-                             VERSION.commit_audit.time_committed.value\" \
-                             (§\"ETag and Last-Modified\").")
-         )),
-        (status = 400, description = "The `versioned_object_uid` is not a \
-                                      well-formed id — the overview table's `400` \
-                                      row (`Requests_and_responses.md` §\"HTTP \
-                                      status codes\").",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal) — refused before the request \
-                                      reaches the resource.",
-         body = serde_json::Value),
-        (status = 404, description = "No such relationship container — the \
-                                      overview table's `404` row.",
-         body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                      history is served as canonical JSON only \
-                                      (`Resources.md` §\"JSON Format\").",
-         body = serde_json::Value),
-        (status = 415, description = "The request DECLARES a Simplified \
-                                      `Content-Type`, refused before the read \
-                                      (`Resources.md` §\"Simplified Formats\").",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn party_relationship_revision_history(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "party_relationship_revision_history",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
-}
-
-/// Retrieve the relationship VERSION at a point in time
-/// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}/version`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs) and is excluded from any
-/// conformance-profile claim.
-#[utoipa::path(
-    get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}/version", tag = "demographic-relationship",
-    params(
-        ("versioned_object_uid" = String, Path,
-         description = "The version-container id of the relationship (a \
-                        HIER_OBJECT_ID / `versioned_object_uid`).",
-         example = "1f2a3b4c-5d6e-4f70-8192-a3b4c5d6e7f8"),
-        ("version_at_time" = Option<String>, Query,
-         description = "A given time in the extended ISO 8601 format; selects the \
-                        VERSION extant at that instant (the latest when omitted). \
-                        The timezone is optional — server-local when absent.",
-         example = "2015-01-20T19:30:22.765+01:00"),
-        ("Accept" = Option<String>, Header,
-         description = "The VERSION is served as canonical `application/json`; an \
-                        `Accept` that excludes JSON is `406`.",
-         example = "application/json")
-    ),
-    responses(
-        (status = 200, description = "The ORIGINAL_VERSION wrapper as canonical \
-                                      JSON, `data` carrying the relationship. No \
-                                      `Location` — §Location restricts the header \
-                                      to creation/redirect responses \
-                                      (`Requests_and_responses.md`).",
-         body = serde_json::Value,
-         headers(
-             ("ETag" = String,
-              description = "The weak entity tag `W/\"<version_uid>\"` of the \
-                             served VERSION (§\"ETag and Last-Modified\")."),
-             ("Last-Modified" = String,
-              description = "The served VERSION's commit instant as an HTTP-date, \
-                             \"derived from \
-                             VERSION.commit_audit.time_committed.value\" \
-                             (§\"ETag and Last-Modified\").")
-         )),
-        (status = 400, description = "The `versioned_object_uid` is malformed, or \
-                                      `version_at_time` is not an extended ISO \
-                                      8601 instant — the overview table's `400` \
-                                      row (`Requests_and_responses.md` §\"HTTP \
-                                      status codes\").",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal) — refused before the request \
-                                      reaches the resource.",
-         body = serde_json::Value),
-        (status = 404, description = "No such relationship container, or no \
-                                      version at the requested `version_at_time` \
-                                      — the overview table's `404` row.",
-         body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                      VERSION is served as canonical JSON only \
-                                      (`Resources.md` §\"JSON Format\").",
-         body = serde_json::Value),
-        (status = 415, description = "The request DECLARES a Simplified \
-                                      `Content-Type`, refused before the read \
-                                      (`Resources.md` §\"Simplified Formats\").",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn party_relationship_version_get_at_time(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "party_relationship_version_get_at_time",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
-}
-
-/// Retrieve a specific relationship VERSION by version uid
-/// (`GET /demographic/versioned_party_relationship/{versioned_object_uid}/version/{version_uid}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (see
-/// [`party_relationship_create`] and the module docs) and is excluded from any
-/// conformance-profile claim.
-#[utoipa::path(
-    get, path = "/demographic/versioned_party_relationship/{versioned_object_uid}/version/{version_uid}", tag = "demographic-relationship",
-    params(
-        ("versioned_object_uid" = String, Path,
-         description = "The version-container id of the relationship (a \
-                        HIER_OBJECT_ID / `versioned_object_uid`).",
-         example = "1f2a3b4c-5d6e-4f70-8192-a3b4c5d6e7f8"),
-        ("version_uid" = String, Path,
-         description = "The VERSION identifier (an OBJECT_VERSION_ID) whose \
-                        `object_id` segment is the `versioned_object_uid` above \
-                        (`Resources.md` §\"Identifier types\").",
-         example = "1f2a3b4c-5d6e-4f70-8192-a3b4c5d6e7f8::openEHRSys.example.com::1"),
-        ("Accept" = Option<String>, Header,
-         description = "The VERSION is served as canonical `application/json`; an \
-                        `Accept` that excludes JSON is `406`.",
-         example = "application/json")
-    ),
-    responses(
-        (status = 200, description = "The ORIGINAL_VERSION wrapper as canonical \
-                                      JSON, `data` carrying the relationship. No \
-                                      `Location` — §Location restricts the header \
-                                      to creation/redirect responses \
-                                      (`Requests_and_responses.md`).",
-         body = serde_json::Value,
-         headers(
-             ("ETag" = String,
-              description = "The weak entity tag `W/\"<version_uid>\"` of the \
-                             served VERSION (§\"ETag and Last-Modified\")."),
-             ("Last-Modified" = String,
-              description = "The served VERSION's commit instant as an HTTP-date, \
-                             \"derived from \
-                             VERSION.commit_audit.time_committed.value\" \
-                             (§\"ETag and Last-Modified\").")
-         )),
-        (status = 400, description = "The `versioned_object_uid` or `version_uid` \
-                                      is not well-formed — the overview table's \
-                                      `400` row (`Requests_and_responses.md` \
-                                      §\"HTTP status codes\").",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal) — refused before the request \
-                                      reaches the resource.",
-         body = serde_json::Value),
-        (status = 404, description = "No such relationship container, or a \
-                                      `version_uid` that names no version of it — \
-                                      the overview table's `404` row.",
-         body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: the \
-                                      VERSION is served as canonical JSON only \
-                                      (`Resources.md` §\"JSON Format\").",
-         body = serde_json::Value),
-        (status = 415, description = "The request DECLARES a Simplified \
-                                      `Content-Type`, refused before the read \
-                                      (`Resources.md` §\"Simplified Formats\").",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn party_relationship_version_get_by_id(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = crate::api::into_parts(request).await;
-    guarded_dispatch(
-        state,
-        "party_relationship_version_get_by_id",
-        parts,
-        super::dispatch::dispatch,
-    )
-    .await
-}
-
 /// `PARTY_RELATIONSHIP` operations — same envelope/header rules as the party
 /// routes, one fixed `party_relationship` segment (our own wire; no ITS-REST
 /// operation governs it — see the module docs).
@@ -1069,7 +760,7 @@ pub(super) async fn run(
             let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
             let resp = state
                 .backend()
-                .party_relationship_get(p.uid_based_id, p.version_at_time)
+                .party_relationship_get(parse_uid_based_id(&p.uid_based_id)?, p.version_at_time)
                 .await?;
             if resp.is_empty() {
                 return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
@@ -1078,22 +769,17 @@ pub(super) async fn run(
         }
         "party_relationship_update" => {
             let p = parts.decode(AgentUpdateParams::from_request, AgentUpdateParams::PARAMS)?;
-            let uid = p.uid_based_id.clone();
             let body = negotiate::decode::rm_value::<PartyRelationship>(h, &parts.body)?;
+            let request = crate::overview::committal::write_request(
+                h,
+                crate::api::ehr::committer_proxy(),
+                body,
+                None,
+            )?;
+            let (vo_id, precondition) = super::update_target(&p.uid_based_id, &p.if_match)?;
             match state
                 .backend()
-                .party_relationship_update(
-                    p.uid_based_id,
-                    // Decode the `W/"…"`/quoted ETag syntax at the adapter seam
-                    // so the service compares a bare OBJECT_VERSION_ID.
-                    crate::overview::version_id::strip_etag(&p.if_match).to_owned(),
-                    crate::overview::committal::write_request(
-                        h,
-                        crate::api::ehr::committer_proxy(),
-                        body,
-                        None,
-                    )?,
-                )
+                .party_relationship_update(vo_id, precondition, request)
                 .await
             {
                 Ok(resp) => Ok(write_relationship(
@@ -1107,7 +793,7 @@ pub(super) async fn run(
                 Err(e) if super::is_precondition(&e) => {
                     let meta = state
                         .backend()
-                        .party_relationship_latest_meta(uid)
+                        .party_relationship_latest_meta(vo_id)
                         .await
                         .ok()
                         .flatten();
@@ -1124,18 +810,21 @@ pub(super) async fn run(
         // mirrors (`409_PERSON_with_uid_based_id.yaml`'s convention).
         "party_relationship_delete" => {
             let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
-            let preceding = p.uid_based_id.clone();
+            let request = crate::overview::committal::delete_request(
+                h,
+                crate::api::ehr::committer_proxy(),
+                None,
+            )?;
+            // NOTE: no openEHR spec defines this route (our own extension); it takes the
+            // party delete operations' rule that the path is a version uid, so a container id is a 400.
+            let (vo_id, precondition) = super::delete_target(
+                &p.uid_based_id,
+                "PARTY_RELATIONSHIP",
+                crate::overview::version_id::if_match(h).as_deref(),
+            )?;
             match state
                 .backend()
-                .party_relationship_delete(
-                    p.uid_based_id,
-                    crate::overview::version_id::if_match(h),
-                    crate::overview::committal::delete_request(
-                        h,
-                        crate::api::ehr::committer_proxy(),
-                        None,
-                    )?,
-                )
+                .party_relationship_delete(vo_id, precondition, request)
                 .await
             {
                 Ok(resp) => {
@@ -1146,7 +835,7 @@ pub(super) async fn run(
                 Err(e) if super::is_precondition(&e) => {
                     let meta = state
                         .backend()
-                        .party_relationship_latest_meta(preceding)
+                        .party_relationship_latest_meta(vo_id)
                         .await
                         .ok()
                         .flatten();
@@ -1157,59 +846,6 @@ pub(super) async fn run(
                 }
                 Err(e) => Err(RestError::from(e)),
             }
-        }
-        // The versioned reads carry the weak `ETag` (+ `Last-Modified` where the
-        // served body exposes a commit audit) the overview §"`ETag` and
-        // Last-Modified" asks of VERSION / VERSIONED_OBJECT responses, and no
-        // `Location` (§Location — creation/redirect only).
-        "versioned_party_relationship_get" => {
-            let p = parts.decode(
-                VersionedPartyGetParams::from_request,
-                VersionedPartyGetParams::PARAMS,
-            )?;
-            let vo = p.versioned_object_uid.clone();
-            let resp = state
-                .backend()
-                .versioned_party_relationship_get(p.versioned_object_uid)
-                .await?;
-            Ok(super::read_versioned(h, &vo, &resp.body))
-        }
-        "party_relationship_revision_history" => {
-            let p = parts.decode(
-                VersionedPartyGetParams::from_request,
-                VersionedPartyGetParams::PARAMS,
-            )?;
-            let vo = p.versioned_object_uid.clone();
-            let resp = state
-                .backend()
-                .party_relationship_revision_history(p.versioned_object_uid)
-                .await?;
-            Ok(super::read_versioned(h, &vo, &resp.body))
-        }
-        "party_relationship_version_get_at_time" => {
-            let p = parts.decode(
-                VersionedPartyVersionGetAtTimeParams::from_request,
-                VersionedPartyVersionGetAtTimeParams::PARAMS,
-            )?;
-            let resp = state
-                .backend()
-                .party_relationship_version_get_at_time(p.versioned_object_uid, p.version_at_time)
-                .await?;
-            let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
-            super::set_versioning_headers(&mut out, resp.meta.as_ref());
-            Ok(out)
-        }
-        "party_relationship_version_get_by_id" => {
-            let p = parts.decode(
-                VersionedPartyVersionGetByIdParams::from_request,
-                VersionedPartyVersionGetByIdParams::PARAMS,
-            )?;
-            let vo = p.versioned_object_uid.clone();
-            let resp = state
-                .backend()
-                .party_relationship_version_get_by_id(p.versioned_object_uid, p.version_uid)
-                .await?;
-            Ok(super::read_versioned(h, &vo, &resp.body))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted demographic relationship operation: {other}"

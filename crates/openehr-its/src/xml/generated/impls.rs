@@ -18759,13 +18759,13 @@ impl crate::xml::runtime::ToXml
         for (k, v) in &self.author {
             w.write_kv_element("author", k, v)?;
         }
+        if let Some(v) = &self.accreditation {
+            v.write_xml(w, "accreditation", Some("String"))?;
+        }
         if let Some(m) = &self.other_details {
             for (k, v) in m {
                 w.write_kv_element("other_details", k, v)?;
             }
-        }
-        if let Some(v) = &self.accreditaton {
-            v.write_xml(w, "accreditaton", Some("String"))?;
         }
         w.write_end(tag)?;
         Ok(())
@@ -18781,7 +18781,7 @@ impl crate::xml::runtime::FromXml
     ) -> Result<Self, crate::xml::runtime::XmlError> {
         let mut __language = None;
         let mut __author = std::collections::BTreeMap::new();
-        let mut __accreditaton = None;
+        let mut __accreditation = None;
         let mut __other_details = std::collections::BTreeMap::new();
         loop {
             match reader.read()? {
@@ -18797,8 +18797,8 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __author.insert(__k, __v);
                     }
-                    "accreditaton" => {
-                        __accreditaton =
+                    "accreditation" => {
+                        __accreditation =
                             Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
                     }
                     "other_details" => {
@@ -18809,7 +18809,6 @@ impl crate::xml::runtime::FromXml
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
                     }
-                    "accreditation" => reader.skip_element()?,
                     _ => {
                         return Err(crate::xml::runtime::XmlError::UndeclaredChild {
                             owner: "TRANSLATION_DETAILS".to_owned(),
@@ -18831,7 +18830,7 @@ impl crate::xml::runtime::FromXml
                 language: __language
                     .ok_or_else(|| reader.missing_child("TRANSLATION_DETAILS", "language"))?,
                 author: __author,
-                accreditaton: __accreditaton,
+                accreditation: __accreditation,
                 other_details: if __other_details.is_empty() {
                     None
                 } else {

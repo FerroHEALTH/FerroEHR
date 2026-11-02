@@ -17,7 +17,7 @@ pub struct TranslationDetails {
     /// Translator name and other demographic details.
     pub author: std::collections::BTreeMap<String, String>,
     /// Accreditation of translator, usually a national translator's registration or association membership id.
-    pub accreditaton: Option<String>,
+    pub accreditation: Option<String>,
     /// Any other meta-data.
     pub other_details: Option<std::collections::BTreeMap<String, String>>,
 }
