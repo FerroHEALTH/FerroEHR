@@ -25,8 +25,6 @@
 
 pub mod loader;
 
-use crate::config::loader::{ConfigError, ConfigErrors};
-
 pub mod auth;
 pub mod authz;
 pub mod deployment;
@@ -40,8 +38,10 @@ use std::path::Path;
 
 use ferrohealth_config::loader::Loaded;
 use ferrohealth_secret::secret_url::RedactedUrl;
-
 use serde::{Deserialize, Serialize};
+
+use crate::config::loader::{ConfigError, ConfigErrors};
+use crate::storage::cohort_predicate::PredicateKind;
 
 /// The complete server configuration.
 ///
@@ -441,7 +441,7 @@ impl FerroEhrConfig {
                 )));
                 continue;
             }
-            let is_birth_date = binding.kind == cohort::PredicateKind::BirthDate;
+            let is_birth_date = binding.kind == PredicateKind::BirthDate;
             if (key == cohort::BIRTH_DATE_KEY) != is_birth_date {
                 errors.push(ConfigError::semantic(format!(
                     "cohort.predicates.{key}.kind = \"{}\" — `{}` is the age-band predicate \
@@ -2373,7 +2373,7 @@ mod tests {
     /// nothing while reporting a population of zero.
     #[test]
     fn an_unreachable_cohort_predicate_is_a_boot_error() {
-        use crate::service::linkage::cohort::config::{PredicateBinding, PredicateKind};
+        use crate::service::linkage::cohort::config::PredicateBinding;
 
         let with = |key: &str, binding: PredicateBinding| {
             let mut c = standalone();

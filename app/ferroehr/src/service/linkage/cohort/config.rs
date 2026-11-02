@@ -23,6 +23,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::storage::cohort_predicate::PredicateKind;
+
 /// The predicate keys a deployment may bind.
 ///
 /// Closed, and closed deliberately: the whole point of the allow-list is that
@@ -34,35 +36,6 @@ pub const PREDICATE_KEYS: &[&str] = &["age_band", "city", "organisation", "postc
 /// The key whose binding must be — and whose binding alone may be — a
 /// [`PredicateKind::BirthDate`].
 pub const BIRTH_DATE_KEY: &str = "age_band";
-
-/// How a bound predicate's value is matched against the stored leaf.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PredicateKind {
-    /// Exact equality against a `DV_TEXT`-shaped leaf's `value/value`.
-    Text,
-    /// Prefix match against a `DV_TEXT`-shaped leaf's `value/value`.
-    TextPrefix,
-    /// Exact equality against a `DV_CODED_TEXT` leaf's
-    /// `value/defining_code/code_string`.
-    Coded,
-    /// An inclusive age band in whole years (`"40-49"`) against a `DV_DATE`
-    /// leaf's `value/value`.
-    BirthDate,
-}
-
-impl PredicateKind {
-    /// The kind's configuration spelling, for boot logs and refusals.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Text => "text",
-            Self::TextPrefix => "text_prefix",
-            Self::Coded => "coded",
-            Self::BirthDate => "birth_date",
-        }
-    }
-}
 
 /// One bound predicate: the archetype and at-code whose ELEMENT carries the
 /// value, and how to match it.

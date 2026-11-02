@@ -70,6 +70,7 @@ pub mod adl2_repo;
 pub mod archetype_repo;
 pub mod blob_ref;
 pub mod codec;
+pub mod cohort_predicate;
 pub mod ddl_template;
 pub mod dump_repo;
 pub mod ehr_repo;
