@@ -561,6 +561,11 @@ impl ServiceError {
     /// parses, and an RM rule such as a mandatory member is what fails),
     /// `400` when it does not ([`its_json_admits`]).
     #[must_use]
+    #[expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694): service-surface signatures over stored \
+                  canonical fragments and dynamic shapes"
+    )]
     pub fn canonical_decode(data: &serde_json::Value, error: JsonParseError) -> Self {
         if its_json_admits(data) {
             ServiceError::content_invalid(
@@ -603,6 +608,11 @@ impl ServiceError {
 /// The body must name its `_type` and declare no key its RM class lacks, the
 /// two facts the schema root cannot judge.
 #[must_use]
+#[expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694): service-surface signatures over stored canonical \
+              fragments and dynamic shapes"
+)]
 pub fn its_json_admits(data: &serde_json::Value) -> bool {
     data.get("_type")
         .and_then(serde_json::Value::as_str)
