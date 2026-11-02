@@ -13,15 +13,14 @@
 //! The request half is [`pending`] (parse + RM-invariant judgement, run BEFORE
 //! any content is committed), the write half is [`persist`] (run AFTER the
 //! commit that mints the target version), and the response half is [`echo`].
-//! [`write_body`] serves the dedicated `PUT` operations the headers wrap.
+//! The dedicated `PUT` operations the headers wrap decode their body with
+//! [`crate::overview::negotiate::decode::typed_json`] over `UpdateItemTag`.
 
 use axum::response::Response;
-use bytes::Bytes;
 use http::{HeaderMap, HeaderName};
 
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::generated::common::UpdateItemTag;
-use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::ItemTag;
 
 use ferroehr::ids::EhrId;
@@ -30,7 +29,6 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 use crate::overview::error::RestError;
-use crate::overview::negotiate;
 use crate::overview::params::{
     H_ITEM_TAG, H_VERSION_ITEM_TAG, ItemTagHeaderEntry, emit_item_tag_header,
     item_tag_to_header_entry, parse_item_tag_header, validate_item_tag_entries,
@@ -117,9 +115,9 @@ impl StoredItemTags {
 /// re-versioning of the content".
 ///
 /// # Errors
-/// [`ApiError::BadRequest`] for a malformed header entry;
-/// [`ApiError::Unprocessable`] for an entry that breaks an RM `ITEM_TAG`
-/// invariant.
+/// [`openehr_its::rest::runtime::ApiError::BadRequest`] for a malformed header
+/// entry; [`openehr_its::rest::runtime::ApiError::Unprocessable`] for an entry
+/// that breaks an RM `ITEM_TAG` invariant.
 pub(crate) fn pending(headers: &HeaderMap) -> Result<PendingItemTags, RestError> {
     // `None` = header absent (leave tags intact); `Some(empty)` = empty header
     // value (clear all tags) — the parse helper draws the distinction.
@@ -179,8 +177,9 @@ fn validated_entries(
 /// headers will also be unsupported").
 ///
 /// # Errors
-/// [`ApiError::Internal`] if the just-committed version uid does not parse as an
-/// `OBJECT_VERSION_ID`, plus whatever the storage seam refuses.
+/// [`openehr_its::rest::runtime::ApiError::Internal`] if the just-committed
+/// version uid does not parse as an `OBJECT_VERSION_ID`, plus whatever the
+/// storage seam refuses.
 pub(crate) async fn persist(
     state: &AppState,
     target: TagTarget,
@@ -211,8 +210,9 @@ pub(crate) async fn persist(
 /// accessor (`base_types` §Functions `object_id`), never a local `::` split.
 ///
 /// # Errors
-/// [`ApiError::Internal`]: the just-committed version uid is server-minted, so a
-/// parse failure here is a server fault, never a client one.
+/// [`openehr_its::rest::runtime::ApiError::Internal`]: the just-committed
+/// version uid is server-minted, so a parse failure here is a server fault,
+/// never a client one.
 fn container_uid(version_uid: &str) -> Result<String, RestError> {
     Ok(ObjectVersionId::new(version_uid)
         .map_err(|e| {
@@ -279,23 +279,4 @@ pub(crate) fn echo(resp: &mut Response, object: Option<&[ItemTag]>, version: Opt
                 .insert(HeaderName::from_static(name), value);
         }
     }
-}
-
-/// Decodes the body of a dedicated `ITEM_TAG` write operation
-/// (`{resource}_tags_update`), the operation family the wrapper headers wrap.
-///
-/// The decode is strict against `schemas/common/UpdateItemTag.yaml`
-/// (`additionalProperties: false`, `key` required): an undeclared member or a
-/// non-string `value`/`target_path` is a `400` naming the member by its JSON
-/// path, never a silent drop.
-///
-/// # Errors
-/// [`ApiError::UnsupportedMediaType`] if the `Content-Type` is not canonical
-/// JSON; [`ApiError::BadRequest`] if the bytes are not a JSON array, or if any
-/// element violates the declared schema.
-pub(crate) fn write_body(
-    headers: &HeaderMap,
-    body: &Bytes,
-) -> Result<Vec<UpdateItemTag>, ApiError> {
-    negotiate::decode::typed_json_vec::<UpdateItemTag>(headers, body)
 }

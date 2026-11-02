@@ -196,7 +196,7 @@ async fn run(
             ))
         }
         ACK => {
-            let ack: Ack = negotiate::decode::typed_json(&parts.headers, &parts.body)?;
+            let ack: Ack = negotiate::decode::typed_json(&parts.headers, &parts.body, "JSON body")?;
             state
                 .backend()
                 .outbox_acknowledge(domain, reader, ack.last_seq)

@@ -33,51 +33,25 @@ pub(crate) fn json_value(headers: &HeaderMap, body: &Bytes) -> Result<serde_json
     parse_json(body)
 }
 
-/// Decode a required JSON **array** body against the generated DTO of the
-/// component schema the release binds to it — strictly.
+/// Decode a required JSON body into the typed DTO `T`, strictly, with a
+/// refusal that names the offending member by its JSON path.
 ///
 /// The generated DTOs carry `#[serde(deny_unknown_fields)]` wherever the OAS
 /// schema declares `additionalProperties: false`, so a member the schema does
 /// not define is REFUSED here rather than silently dropped, and a member of the
 /// wrong JSON type is refused rather than silently read as absent. The refusal
-/// names the offending member by its JSON PATH (`[0].value`) — `serde_json`
-/// alone reports only a line/column, which tells a client nothing about which
-/// array element it must fix.
+/// names the member by its JSON PATH (`[0].value`): `serde_json` alone reports
+/// only a line/column, which tells a client nothing about which member it must
+/// fix. `what` names the body in that refusal (`JSON body`, `JSON array body`).
 ///
-/// The one caller family today is the `ITEM_TAG` PUT
-/// (`schemas/common/UpdateItemTag.yaml`: required `key`, optional
-/// `value`/`target_path`, `additionalProperties: false`). The ITS-REST docs
-/// text is silent on the write body's member set, and where the docs text is
-/// silent the released OAS grounds the expectation — the release presents its
-/// OAS files as its computable specification artifacts (ITS-REST overview
-/// `Specifications.md`: "Specifications can be downloaded as YAML files in
-/// OpenAPI Specification 3.0 format") — so the released schema is the ground
-/// here.
-///
-/// # Errors
-/// [`ApiError::UnsupportedMediaType`] if the `Content-Type` is not canonical
-/// JSON; [`ApiError::BadRequest`] if the bytes are not a JSON array, or if any
-/// element violates the declared schema.
-pub(crate) fn typed_json_vec<T: DeserializeOwned>(
-    headers: &HeaderMap,
-    body: &Bytes,
-) -> Result<Vec<T>, ApiError> {
-    require_json(headers)?;
-    let mut de = serde_json::Deserializer::from_slice(body);
-    serde_path_to_error::deserialize::<_, Vec<T>>(&mut de).map_err(|e| {
-        let path = e.path().to_string();
-        let inner = e.into_inner();
-        if path == "." {
-            ApiError::BadRequest(format!("invalid JSON array body: {inner}"))
-        } else {
-            ApiError::BadRequest(format!("invalid JSON array body at {path}: {inner}"))
-        }
-    })
-}
-
-/// Decode a required JSON **object** body into the typed DTO `T` — the scalar
-/// sibling of [`typed_json_vec`], with the same path-named refusal (`400`)
-/// so a client learns which member it must fix.
+/// The `ITEM_TAG` PUT (`schemas/common/UpdateItemTag.yaml`: required `key`,
+/// optional `value`/`target_path`, `additionalProperties: false`) decodes a
+/// `Vec` of its DTO here. The ITS-REST docs text is silent on that body's
+/// member set, and where the docs text is silent the released OAS grounds the
+/// expectation: the release presents its OAS files as its computable
+/// specification artifacts (ITS-REST overview `Specifications.md`:
+/// "Specifications can be downloaded as YAML files in OpenAPI Specification
+/// 3.0 format").
 ///
 /// # Errors
 /// [`ApiError::UnsupportedMediaType`] if the `Content-Type` is not JSON;
@@ -85,6 +59,7 @@ pub(crate) fn typed_json_vec<T: DeserializeOwned>(
 pub(crate) fn typed_json<T: DeserializeOwned>(
     headers: &HeaderMap,
     body: &Bytes,
+    what: &str,
 ) -> Result<T, ApiError> {
     require_json(headers)?;
     let mut de = serde_json::Deserializer::from_slice(body);
@@ -92,9 +67,9 @@ pub(crate) fn typed_json<T: DeserializeOwned>(
         let path = e.path().to_string();
         let inner = e.into_inner();
         if path == "." {
-            ApiError::BadRequest(format!("invalid JSON body: {inner}"))
+            ApiError::BadRequest(format!("invalid {what}: {inner}"))
         } else {
-            ApiError::BadRequest(format!("invalid JSON body at {path}: {inner}"))
+            ApiError::BadRequest(format!("invalid {what} at {path}: {inner}"))
         }
     })
 }

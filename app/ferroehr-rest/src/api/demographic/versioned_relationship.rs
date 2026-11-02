@@ -25,6 +25,7 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
@@ -405,7 +406,9 @@ pub(super) async fn run(
                 )
                 .await?;
             let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
-            super::set_versioning_headers(&mut out, resp.meta.as_ref());
+            if let Some(meta) = resp.meta.as_ref() {
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+            }
             Ok(out)
         }
         "party_relationship_version_get_by_id" => {
