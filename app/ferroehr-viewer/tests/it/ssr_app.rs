@@ -450,7 +450,8 @@ async fn a_guarded_page_without_a_session_redirects_to_the_sign_in_keeping_its_a
 
 /// A post without a session is answered by the session guard before any
 /// page or handler runs: it goes to the sign-in page, which says the session
-/// ended and returns to the page posted to.
+/// ended and returns to the page posted to, or from a post handler, which
+/// has no page, to the dashboard.
 #[tokio::test]
 async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
     let viewer = Viewer::start().await;
@@ -478,7 +479,10 @@ async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
         ferroehr_viewer::paging::PAGING_ROUTE,
     ]
     .map(str::to_owned);
-    for path in pages.chain(handlers) {
+    for (path, back) in pages
+        .map(|page| (page.clone(), page))
+        .chain(handlers.map(|handler| (handler, "/".to_owned())))
+    {
         let answer = viewer
             .send(
                 http::Method::POST,
@@ -488,7 +492,7 @@ async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
             )
             .await;
         assert_eq!(answer.status, http::StatusCode::FOUND, "{path}");
-        let next = urlencoding::encode(&path).into_owned();
+        let next = urlencoding::encode(&back).into_owned();
         assert_eq!(
             answer.location(),
             format!("/login?expired=1&next={next}"),

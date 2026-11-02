@@ -373,8 +373,9 @@ fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Res
 /// sign-in page. A document request (`GET`/`HEAD`) is returned to the page it
 /// asked for after signing in, and is told the session ended when it carried
 /// a session cookie that no longer opens. Any other method is answered as a
-/// page whose session ended ([`crate::session_client::signed_out_url`]), so
-/// no handler runs a post without a session. An authenticated response
+/// page whose session ended ([`crate::session_client::signed_out_url`]),
+/// returning to the page posted to or, for a post handler, to the dashboard,
+/// so no handler runs a post without a session. An authenticated response
 /// leaves with the sliding idle anchor moved, unless the handler wrote the
 /// session itself.
 pub async fn login_guard(
@@ -396,10 +397,16 @@ pub async fn login_guard(
     if !authenticated && !is_public_path(request.uri().path()) {
         let method = request.method();
         if method != http::Method::GET && method != http::Method::HEAD {
+            // NOTE: no specification governs this: our own design; signing in
+            // returns to the page posted to, and a post handler has no page.
             let path = request.uri().path();
-            let search = request.uri().query().unwrap_or_default();
+            let (back, search) = if crate::routes::Page::of(path).is_some() {
+                (path, request.uri().query().unwrap_or_default())
+            } else {
+                ("/", "")
+            };
             return found(&crate::session_client::signed_out_url(
-                crate::request::return_path(path),
+                crate::request::return_path(back),
                 search,
             ));
         }
