@@ -26,7 +26,7 @@ Two measurement-integrity traps hit on 2026-07-25 during the #261 ladder:
 a contaminated or env-shifted number would have been committed as a regression.
 
 **How to apply:** before any `bash scripts/conformance.sh perf` or `perf-aa`
-run (Veredictum 0.3.3's `perf` and `perf-compare --aa`; the 0.1 `stress` and
+run (the pinned Veredictum's `perf` and `perf-compare --aa`; the 0.1 `stress` and
 `aql-probe` instruments are gone): idle box (no agents, no builds), fresh
 volumes (the stages compose them), ixit container names verified against
 `docker ps`. Related: [[owner-work-style]].
