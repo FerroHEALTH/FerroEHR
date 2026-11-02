@@ -45,6 +45,8 @@ use crate::adl14::multiplicity::{elide_multiplicity, materialise_adl14_occurrenc
 use crate::adl14::walk::{
     cco_data_mut, collect_local_value_codes, collect_node_codes, walk_constraints,
 };
+use crate::aom::access::{common_mut, tuple_primitive_node_ids_mut};
+use crate::codes::NodeCoding;
 use crate::error::SyntaxError;
 
 /// Configuration for a 1.4→2 conversion (all spec-silent — our own design).
@@ -790,6 +792,7 @@ impl<'a> Converter<'a> {
 fn renumber_cco(cco: &mut CComplexObject, cx: &mut Converter<'_>) {
     let Some(d) = cco_data_mut(cco) else { return };
     d.node_id = cx.new_node_id(&d.node_id);
+    tuple_primitive_node_ids_mut(d).for_each(|id| NodeCoding::Id.recode_primitive_node_id(id));
     for attr in d.attributes.iter_mut().flatten() {
         for child in attr.children.iter_mut().flatten() {
             renumber_obj(child, cx);
@@ -812,7 +815,7 @@ fn renumber_obj(obj: &mut CObject, cx: &mut Converter<'_>) {
             p.target_path = rewrite_path(&p.target_path, cx);
         }
         CObject::ArchetypeSlot(s) => s.node_id = cx.new_node_id(&s.node_id),
-        _ => {}
+        primitive => NodeCoding::Id.recode_primitive_node_id(common_mut(primitive).1),
     }
 }
 

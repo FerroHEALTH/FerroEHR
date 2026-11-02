@@ -1,0 +1,1 @@
+- An inline primitive constraint in a parsed archetype or template now carries the node id AOM2 `ADL_CODE_DEFINITIONS.Primitive_node_id` defines, `at9999` in an at-coded archetype and `id9999` in an id-coded one, where it carried the constant's name `Primitive_node_id`. An ADL 1.4 archetype converted to ADL2 gets the id-coded form.

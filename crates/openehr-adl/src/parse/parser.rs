@@ -740,7 +740,7 @@ impl Parser<'_> {
                     SyntaxErrorCode::Scoat,
                     "expecting '{' opening a tuple item",
                 )?;
-                let obj = self.parse_c_inline_primitive("Primitive_node_id".to_owned())?;
+                let obj = self.parse_c_inline_primitive(self.node_coding.primitive_node_id())?;
                 self.expect(
                     |t| matches!(t, Token::RCurly),
                     SyntaxErrorCode::Scoat,
@@ -820,9 +820,9 @@ impl Parser<'_> {
         // it always had) and is dispatched per-sibling by the caller's loop.
         let at_adl14_ordinal = self.dialect == Dialect::Adl14 && self.is_adl14_ordinal_start();
         if self.is_inline_primitive_start() && !at_adl14_ordinal {
-            return Ok(Some(vec![
-                self.parse_c_inline_primitive("Primitive_node_id".to_owned())?,
-            ]));
+            return Ok(Some(vec![self.parse_c_inline_primitive(
+                self.node_coding.primitive_node_id(),
+            )?]));
         }
         Ok(None)
     }

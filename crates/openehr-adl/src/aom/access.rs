@@ -13,8 +13,11 @@
 //! dozen.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
-use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
+    CComplexObject, CComplexObjectData,
+};
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
+use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_am::v2_4::aom2::constraint_model::sibling_order::SiblingOrder;
 use openehr_base::prelude::MultiplicityInterval;
 
@@ -233,6 +236,34 @@ pub(crate) fn common_mut(
             &mut c.sibling_order,
         ),
     }
+}
+
+/// A mutable reference to the `node_id` of any [`CPrimitiveObject`].
+pub(crate) fn primitive_node_id_mut(p: &mut CPrimitiveObject) -> &mut String {
+    match p {
+        CPrimitiveObject::CBoolean(c) => &mut c.node_id,
+        CPrimitiveObject::CDate(c) => &mut c.node_id,
+        CPrimitiveObject::CDateTime(c) => &mut c.node_id,
+        CPrimitiveObject::CDuration(c) => &mut c.node_id,
+        CPrimitiveObject::CInteger(c) => &mut c.node_id,
+        CPrimitiveObject::CReal(c) => &mut c.node_id,
+        CPrimitiveObject::CString(c) => &mut c.node_id,
+        CPrimitiveObject::CTerminologyCode(c) => &mut c.node_id,
+        CPrimitiveObject::CTime(c) => &mut c.node_id,
+    }
+}
+
+/// Mutable references to the `node_id` of every primitive in the rows of a
+/// complex object's attribute tuples (`C_ATTRIBUTE_TUPLE.tuples`).
+pub(crate) fn tuple_primitive_node_ids_mut(
+    d: &mut CComplexObjectData,
+) -> impl Iterator<Item = &mut String> {
+    d.attribute_tuples
+        .iter_mut()
+        .flatten()
+        .flat_map(|tuple| tuple.tuples.iter_mut().flatten())
+        .flat_map(|row| row.members.iter_mut())
+        .map(primitive_node_id_mut)
 }
 
 /// The constrained attributes of a [`CComplexObject`] (either concrete
