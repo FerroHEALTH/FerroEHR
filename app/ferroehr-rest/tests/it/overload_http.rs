@@ -91,32 +91,22 @@ async fn app(max_in_flight: usize) -> (testkit::TestDb, Router) {
 /// forever (well within the 30 s request timeout).
 fn parking_request() -> Request<Body> {
     let never = futures::stream::pending::<Result<Bytes, std::io::Error>>();
-    Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{EHR}/composition"))
-        .header("content-type", "application/json")
-        .body(Body::from_stream(never))
-        .expect("request")
+    common::req("POST", format!("{BASE}/ehr/{EHR}/composition"))
+        .json(Body::from_stream(never))
+        .build()
 }
 
 /// A shed-probe on the **same route** as [`parking_request`]. When the route's
 /// permits are exhausted this is shed at `poll_ready` (before its body is read),
 /// so an empty body suffices and the `503` returns immediately.
 fn probe_request() -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{EHR}/composition"))
+    common::req("POST", format!("{BASE}/ehr/{EHR}/composition"))
         .header("content-type", "application/json")
-        .body(Body::empty())
-        .expect("request")
+        .build()
 }
 
 fn get_ehr() -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{EHR}"))
-        .body(Body::empty())
-        .expect("request")
+    common::req("GET", format!("{BASE}/ehr/{EHR}")).build()
 }
 
 /// Probe the (parked) route until a request is shed (`503`), giving the parked
@@ -214,11 +204,7 @@ async fn the_health_routes_are_never_shed() {
     // …but the health routes are outside the bound and answer normally, so an
     // orchestrator can always probe an overloaded server.
     for path in ["/health/readiness", "/health/liveness", "/health"] {
-        let probe = Request::builder()
-            .method("GET")
-            .uri(path)
-            .body(Body::empty())
-            .expect("request");
+        let probe = common::req("GET", path).build();
         let answered = app.clone().oneshot(probe).await.expect("response");
         assert_eq!(answered.status(), StatusCode::OK, "{path}");
     }

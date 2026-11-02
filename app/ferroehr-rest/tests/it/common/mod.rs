@@ -469,6 +469,98 @@ pub(crate) async fn send_status(app: &Router, req: Request<Body>) -> StatusCode 
     app.clone().oneshot(req).await.expect("response").status()
 }
 
+/// A request under construction: [`req`] starts it, and the methods below set
+/// its body and the headers the suites send most.
+pub(crate) struct Req {
+    builder: http::request::Builder,
+    body: Body,
+}
+
+/// A `method` request for the absolute path `uri`, with an empty body until
+/// [`Req::json`] or [`Req::body`] sets one.
+pub(crate) fn req<U>(method: &str, uri: U) -> Req
+where
+    http::Uri: TryFrom<U>,
+    <http::Uri as TryFrom<U>>::Error: Into<http::Error>,
+{
+    Req {
+        builder: Request::builder().method(method).uri(uri),
+        body: Body::empty(),
+    }
+}
+
+impl Req {
+    /// Adds the header `key: value`.
+    pub(crate) fn header<K, V>(mut self, key: K, value: V) -> Self
+    where
+        header::HeaderName: TryFrom<K>,
+        <header::HeaderName as TryFrom<K>>::Error: Into<http::Error>,
+        header::HeaderValue: TryFrom<V>,
+        <header::HeaderValue as TryFrom<V>>::Error: Into<http::Error>,
+    {
+        self.builder = self.builder.header(key, value);
+        self
+    }
+
+    /// Sets `body` as the request body.
+    pub(crate) fn body(mut self, body: impl Into<Body>) -> Self {
+        self.body = body.into();
+        self
+    }
+
+    /// Sets `body` as an `application/json` request body.
+    pub(crate) fn json(self, body: impl Into<Body>) -> Self {
+        self.header(header::CONTENT_TYPE, "application/json")
+            .body(body)
+    }
+
+    /// Adds `Accept: value`.
+    pub(crate) fn accept<V>(self, value: V) -> Self
+    where
+        header::HeaderValue: TryFrom<V>,
+        <header::HeaderValue as TryFrom<V>>::Error: Into<http::Error>,
+    {
+        self.header(header::ACCEPT, value)
+    }
+
+    /// Adds `Prefer: return=representation`.
+    pub(crate) fn prefer_representation(self) -> Self {
+        self.header("Prefer", "return=representation")
+    }
+
+    /// Adds `If-Match: value`.
+    pub(crate) fn if_match<V>(self, value: V) -> Self
+    where
+        header::HeaderValue: TryFrom<V>,
+        <header::HeaderValue as TryFrom<V>>::Error: Into<http::Error>,
+    {
+        self.header(header::IF_MATCH, value)
+    }
+
+    /// Adds `Authorization: credential`.
+    pub(crate) fn auth<V>(self, credential: V) -> Self
+    where
+        header::HeaderValue: TryFrom<V>,
+        <header::HeaderValue as TryFrom<V>>::Error: Into<http::Error>,
+    {
+        self.header(header::AUTHORIZATION, credential)
+    }
+
+    /// The finished request.
+    pub(crate) fn build(self) -> Request<Body> {
+        self.builder.body(self.body).expect("request")
+    }
+}
+
+/// [`send`] with the response body read as JSON.
+pub(crate) async fn send_json(app: &Router, req: Request<Body>) -> (StatusCode, Value) {
+    let (status, _headers, body) = send(app, req).await;
+    (
+        status,
+        serde_json::from_str(&body).expect("a JSON response body"),
+    )
+}
+
 /// A bodyless request for `uri` (an absolute path, not a [`BASE`]-relative one).
 pub(crate) fn request(method: &str, uri: &str) -> Request<Body> {
     Request::builder()

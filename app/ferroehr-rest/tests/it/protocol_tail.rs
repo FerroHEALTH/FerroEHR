@@ -15,7 +15,6 @@
 //! XML asserts the real server-side digest signature (the default `FerroEhrService`
 //! signer is enabled), not the Mock's injected fixture.
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     clippy::missing_assert_message,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
@@ -73,38 +72,25 @@ fn vo_of(ovid: &str) -> &str {
 
 /// [`commit_ips_composition`] with a caller-supplied composition body.
 async fn commit_composition_body(app: &Router, body: Value) -> (String, String) {
-    let (status, h, _b) = send(
-        app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await;
+    let (status, h, _b) = send(app, common::req("POST", format!("{BASE}/ehr")).build()).await;
     assert_eq!(status, StatusCode::CREATED);
     let ehr_id = etag_uid(&h);
 
     let (status, _h, resp) = send(
         app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/definition/template/adl1.4"))
+        common::req("POST", format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(ips_opt_xml()))
-            .unwrap(),
+            .body(ips_opt_xml())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {resp}");
 
     let (status, h, resp) = send(
         app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .json(body.to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "composition commit: {resp}");
@@ -114,38 +100,25 @@ async fn commit_composition_body(app: &Router, body: Value) -> (String, String) 
 /// Create an EHR, upload the IPS OPT, and commit the IPS composition; return the
 /// `(ehr_id, version_uid)` of the committed COMPOSITION.
 async fn commit_ips_composition(app: &Router) -> (String, String) {
-    let (status, h, _b) = send(
-        app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await;
+    let (status, h, _b) = send(app, common::req("POST", format!("{BASE}/ehr")).build()).await;
     assert_eq!(status, StatusCode::CREATED);
     let ehr_id = etag_uid(&h);
 
     let (status, _h, body) = send(
         app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/definition/template/adl1.4"))
+        common::req("POST", format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(ips_opt_xml()))
-            .unwrap(),
+            .body(ips_opt_xml())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 
     let (status, h, body) = send(
         app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(ips_canonical_composition().to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .json(ips_canonical_composition().to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "composition commit: {body}");
@@ -160,11 +133,7 @@ async fn options_root_is_system_options_and_conformance() {
     // The System API mounts at the API base-path root ONLY
     // (`system.openapi.yaml` servers `{baseUrl}/v1`, path `/`); the former
     // bare-`/` alias was our own duplication and is gone.
-    let req = Request::builder()
-        .method("OPTIONS")
-        .uri(BASE)
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("OPTIONS", BASE).build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK);
@@ -236,13 +205,11 @@ async fn committal_headers_merge_into_the_commit() {
     // committal metadata was merged into the commit.
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "version read: {body}");
@@ -290,14 +257,11 @@ async fn a_deleted_lifecycle_header_on_a_content_commit_is_refused() {
 
     let mut body = ips_canonical_composition();
     body.as_object_mut().unwrap().remove("uid");
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{v1}\""))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+        .if_match(format!("\"{v1}\""))
         .header("openehr-version", "lifecycle_state.code_string=\"523\"")
-        .body(Body::from(body.to_string()))
-        .unwrap();
+        .json(body.to_string())
+        .build();
     let (status, _h, resp_body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -312,11 +276,7 @@ async fn a_deleted_lifecycle_header_on_a_content_commit_is_refused() {
     // Nothing was committed: the composition is still readable at v1.
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{v1}")).build(),
     )
     .await;
     assert_eq!(
@@ -337,12 +297,9 @@ async fn a_contradictory_lifecycle_header_on_delete_is_refused() {
     let (_pg, app) = app().await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
 
-    let refused = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
+    let refused = common::req("DELETE", format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
         .header("openehr-version", "lifecycle_state.code_string=\"532\"")
-        .body(Body::empty())
-        .unwrap();
+        .build();
     let (status, _h, resp_body) = send(&app, refused).await;
     assert_eq!(
         status,
@@ -351,12 +308,9 @@ async fn a_contradictory_lifecycle_header_on_delete_is_refused() {
     );
 
     // The accepting twin: the same DELETE stating the state it does commit.
-    let accepted = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
+    let accepted = common::req("DELETE", format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
         .header("openehr-version", "lifecycle_state.code_string=\"523\"")
-        .body(Body::empty())
-        .unwrap();
+        .build();
     let (status, _h, resp_body) = send(&app, accepted).await;
     assert_eq!(
         status,
@@ -394,13 +348,11 @@ async fn client_change_type_amendment_is_merged() {
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "version read: {body}");
@@ -427,17 +379,14 @@ async fn client_change_type_mismatch_and_out_of_group_are_rejected() {
         ("249", StatusCode::BAD_REQUEST),
         ("999", StatusCode::UNPROCESSABLE_ENTITY),
     ] {
-        let req = Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::IF_MATCH, format!("\"{v1}\""))
+        let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+            .if_match(format!("\"{v1}\""))
             .header(
                 "openehr-audit-details",
                 format!("change_type.code_string=\"{token}\""),
             )
-            .body(Body::from(body.to_string()))
-            .unwrap();
+            .json(body.to_string())
+            .build();
         let (status, _h, resp_body) = send(&app, req).await;
         assert_eq!(
             status, expected,
@@ -457,28 +406,23 @@ async fn delete_accepts_and_merges_committal_headers() {
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
+    let req = common::req("DELETE", format!("{BASE}/ehr/{ehr_id}/composition/{v1}"))
         .header(
             "openehr-audit-details",
             "description.value=\"retracted per patient request\",committer.name=\"Dr Chart\"",
         )
-        .body(Body::empty())
-        .unwrap();
+        .build();
     let (status, h, resp_body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "delete: {resp_body}");
     let v2 = etag_uid(&h);
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "deleted-version read: {body}");
@@ -509,20 +453,7 @@ async fn ehr_create_accepts_and_merges_committal_headers() {
 
     // `Prefer: return=representation` yields the RM EHR body, whose
     // `ehr_status` OBJECT_REF carries the committed version's identity.
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .header("Prefer", "return=representation")
-        .header("openehr-version", "lifecycle_state.code_string=\"553\"")
-        .header(
-            "openehr-audit-details",
-            "description.value=\"EHR opened at triage\",committer.name=\"Dr Chart\",\
-             committer.external_ref.id=\"BC8132EA-8F4A-11E7-BB31-BE2E44B06B34\",\
-             committer.external_ref.namespace=\"demographic\",\
-             committer.external_ref.type=\"PERSON\"",
-        )
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr")).prefer_representation().header("openehr-version", "lifecycle_state.code_string=\"553\"").header("openehr-audit-details", "description.value=\"EHR opened at triage\",committer.name=\"Dr Chart\",committer.external_ref.id=\"BC8132EA-8F4A-11E7-BB31-BE2E44B06B34\",committer.external_ref.namespace=\"demographic\",committer.external_ref.type=\"PERSON\"",).build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "ehr create: {body}");
     let ehr_id = etag_uid(&h);
@@ -533,11 +464,7 @@ async fn ehr_create_accepts_and_merges_committal_headers() {
     assert_eq!(ehr["ehr_status"]["id"]["_type"], "HIER_OBJECT_ID");
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr_id}/ehr_status")).build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "status read: {body}");
@@ -549,13 +476,11 @@ async fn ehr_create_accepts_and_merges_committal_headers() {
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/versioned_ehr_status/version/{status_uid}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version/{status_uid}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "status version read: {body}");
@@ -590,30 +515,22 @@ async fn ehr_create_accepts_and_merges_committal_headers() {
 async fn ehr_create_with_id_accepts_and_merges_committal_headers() {
     let (_pg, app) = app().await;
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{CREATED_EHR_ID}"))
-        .header("Prefer", "return=representation")
+    let req = common::req("PUT", format!("{BASE}/ehr/{CREATED_EHR_ID}"))
+        .prefer_representation()
         .header(
             "openehr-audit-details",
             "description.value=\"EHR pre-registered\",committer.name=\"Registrar\"",
         )
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
-    assert_eq!(status, StatusCode::CREATED, "ehr create with id: {body}");
-    let ehr: Value = serde_json::from_str(&body).expect("ehr json");
+        .build();
+    let (status, ehr) = common::send_json(&app, req).await;
+    assert_eq!(status, StatusCode::CREATED, "ehr create with id: {ehr}");
     // The EHR body's ehr_status ref names the CONTAINER (HIER_OBJECT_ID —
     // RM ehr Ehr_status_valid + BASE master05 OBJECT_REF.id); the VERSION
     // uid comes from the served EHR_STATUS itself.
     assert_eq!(ehr["ehr_status"]["id"]["_type"], "HIER_OBJECT_ID");
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{CREATED_EHR_ID}/ehr_status"))
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{CREATED_EHR_ID}/ehr_status")).build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "status read: {body}");
@@ -625,13 +542,11 @@ async fn ehr_create_with_id_accepts_and_merges_committal_headers() {
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{CREATED_EHR_ID}/versioned_ehr_status/version/{status_uid}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{CREATED_EHR_ID}/versioned_ehr_status/version/{status_uid}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "status version read: {body}");
@@ -661,15 +576,12 @@ async fn ehr_create_rejects_a_change_type_that_is_not_a_creation() {
         ("999", StatusCode::UNPROCESSABLE_ENTITY),
         ("249", StatusCode::CREATED),
     ] {
-        let req = Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
+        let req = common::req("POST", format!("{BASE}/ehr"))
             .header(
                 "openehr-audit-details",
                 format!("change_type.code_string=\"{token}\""),
             )
-            .body(Body::empty())
-            .unwrap();
+            .build();
         let (status, _h, body) = send(&app, req).await;
         assert_eq!(
             status, expected,
@@ -689,30 +601,25 @@ async fn bare_deprecated_audit_details_header_is_accepted() {
 
     let mut body = ips_canonical_composition();
     body.as_object_mut().unwrap().remove("uid");
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{v1}\""))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+        .if_match(format!("\"{v1}\""))
         .header(
             "openEHR-AUDIT_DETAILS",
             "description.value=\"from a 1.0.x client\"",
         )
-        .body(Body::from(body.to_string()))
-        .unwrap();
+        .json(body.to_string())
+        .build();
     let (status, h, resp_body) = send(&app, req).await;
     assert!(status.is_success(), "update: {status}: {resp_body}");
     let v2 = etag_uid(&h);
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v2}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "version read: {body}");
@@ -731,13 +638,10 @@ async fn malformed_if_match_is_rejected_not_bypassed() {
     // client error (400), never a silent skip of the precondition — rejected
     // before the backend, so the (non-existent) target ids are irrelevant.
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR_ID}/composition/{VO_ID}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, "\"not-an-object-version-id\"")
-        .body(Body::from(r#"{"_type":"COMPOSITION"}"#))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{EHR_ID}/composition/{VO_ID}"))
+        .if_match("\"not-an-object-version-id\"")
+        .json(r#"{"_type":"COMPOSITION"}"#)
+        .build();
     let (status, _h, _body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
@@ -747,13 +651,10 @@ async fn malformed_if_match_on_ehr_status_update_is_rejected() {
     // The required-If-Match ehr_status update rejects a malformed precondition
     // (400) before the backend, never treating it as no-precondition.
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR_ID}/ehr_status"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, "\"garbage\"")
-        .body(Body::from(r#"{"_type":"EHR_STATUS"}"#))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{EHR_ID}/ehr_status"))
+        .if_match("\"garbage\"")
+        .json(r#"{"_type":"EHR_STATUS"}"#)
+        .build();
     let (status, _h, _body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
@@ -763,13 +664,10 @@ async fn malformed_if_match_on_directory_update_is_rejected() {
     // The required-If-Match directory update rejects a malformed precondition
     // (400) at the wire, never a silent bypass.
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR_ID}/directory"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, "\"a::b::c::3\"")
-        .body(Body::from(r#"{"_type":"FOLDER","name":{"value":"root"}}"#))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{EHR_ID}/directory"))
+        .if_match("\"a::b::c::3\"")
+        .json(r#"{"_type":"FOLDER","name":{"value":"root"}}"#)
+        .build();
     let (status, _h, _body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
@@ -782,12 +680,12 @@ async fn versioned_composition_serves_xml() {
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}"))
-        .header(header::ACCEPT, "application/xml")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}"),
+    )
+    .accept("application/xml")
+    .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK, "body: {body}");
@@ -813,14 +711,12 @@ async fn composition_version_serves_xml_with_signature() {
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v1}"
-        ))
-        .header(header::ACCEPT, "application/xml")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{v1}"),
+    )
+    .accept("application/xml")
+    .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK, "body: {body}");
@@ -866,14 +762,7 @@ async fn composition_get_serves_stored_json_verbatim() {
     let (ehr_id, v1) = commit_composition_body(&app, fixture).await;
     let vo = vo_of(&v1);
 
-    let get = |uri: String, accept: &'static str| {
-        Request::builder()
-            .method("GET")
-            .uri(uri)
-            .header(header::ACCEPT, accept)
-            .body(Body::empty())
-            .unwrap()
-    };
+    let get = |uri: String, accept: &'static str| common::req("GET", uri).accept(accept).build();
 
     // The latest read.
     let (status, h, body) = send(
@@ -961,12 +850,9 @@ async fn versioned_composition_version_by_id_is_container_scoped() {
     let (ehr_id, v_a) = commit_ips_composition(&app).await;
     let (status, h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(ips_canonical_composition().to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .json(ips_canonical_composition().to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "second commit: {body}");
@@ -978,13 +864,11 @@ async fn versioned_composition_version_by_id_is_container_scoped() {
     // Incoherent pair: container A's URL, container B's version → 404.
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/versioned_composition/{container_a}/version/{v_b}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_composition/{container_a}/version/{v_b}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(
@@ -996,13 +880,11 @@ async fn versioned_composition_version_by_id_is_container_scoped() {
     // Coherent pair unchanged.
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/versioned_composition/{container_a}/version/{v_a}"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_composition/{container_a}/version/{v_a}"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "coherent read: {body}");

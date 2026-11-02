@@ -24,8 +24,7 @@
 use std::sync::Arc;
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode};
+use http::StatusCode;
 use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
@@ -213,11 +212,7 @@ async fn every_documented_path_routes() {
         let item = item.as_object().expect("path item object");
         for method in item.keys().filter(|k| is_method(k)) {
             let concrete = concretize(template, &metric_name);
-            let req = Request::builder()
-                .method(method.to_uppercase().as_str())
-                .uri(&concrete)
-                .body(Body::empty())
-                .expect("request");
+            let req = common::req(method.to_uppercase().as_str(), &concrete).build();
             let resp = app.clone().oneshot(req).await.expect("response");
             let status = resp.status();
             let body = resp.into_body().collect().await.expect("body").to_bytes();

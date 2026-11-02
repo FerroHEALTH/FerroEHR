@@ -20,8 +20,7 @@
 )]
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 use serde_json::Value;
 
 use crate::common;
@@ -39,12 +38,10 @@ fn corpus(rel: &str) -> String {
 
 /// Upload an ADL 1.4 source archetype over the archetype extension.
 async fn upload_archetype(app: &Router, adl: String) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{EXT}/definition/archetype/adl1.4"))
+    let req = common::req("POST", format!("{EXT}/definition/archetype/adl1.4"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(adl))
-        .expect("request");
+        .body(adl)
+        .build();
     let (status, _, body) = common::send(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "archetype upload: {body}");
 }
@@ -56,12 +53,10 @@ async fn upload_template(app: &Router, xml: String) -> String {
         .expect("the vendored OPT parses")
         .template_id
         .value;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(xml))
-        .expect("request");
+        .body(xml)
+        .build();
     let (status, _, body) = common::send(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "template upload: {body}");
     template_id

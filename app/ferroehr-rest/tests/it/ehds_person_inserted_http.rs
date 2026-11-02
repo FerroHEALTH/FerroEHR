@@ -252,13 +252,11 @@ async fn record() -> Record {
     .await;
     assert_eq!(status, StatusCode::CREATED, "EHR create: {text}");
     let ehr = common::etag_uid(&headers);
-    let upload = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let upload = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .header(header::AUTHORIZATION, &professional)
-        .body(Body::from(common::ips_opt_xml()))
-        .unwrap();
+        .auth(&professional)
+        .body(common::ips_opt_xml())
+        .build();
     let (status, text) = common::send_body(&app, upload).await;
     assert_eq!(status, StatusCode::CREATED, "IPS OPT upload: {text}");
     let professionals_entry = create(

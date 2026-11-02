@@ -595,9 +595,9 @@ async fn create_after_delete_opens_a_new_hierarchy() {
     );
 
     // The current directory is the new hierarchy…
-    let (status, _h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    let (status, v) =
+        common::send_json(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
     assert_eq!(status, StatusCode::OK);
-    let v: Value = serde_json::from_str(&body).expect("folder json");
     assert_eq!(v["name"]["value"], "second");
 
     // …and the deleted hierarchy's history stays readable by version_uid.
@@ -693,9 +693,9 @@ async fn get_version_at_time_variants() {
     );
 
     // absent time → latest (v2).
-    let (status, _h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    let (status, v) =
+        common::send_json(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
     assert_eq!(status, StatusCode::OK);
-    let v: Value = serde_json::from_str(&body).expect("folder json");
     assert_eq!(v["name"]["value"], "dir-v2", "absent time ⇒ latest");
 
     // a time before the directory's first version → 404 (no version at that time).
@@ -1051,22 +1051,19 @@ async fn directory_xml_root_is_items_typed_folder() {
     }
 
     let other = create_ehr(&app).await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{other}/directory"))
+    let req = common::req("POST", format!("{BASE}/ehr/{other}/directory"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .header("Prefer", "return=representation")
-        .body(Body::from(served))
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
+        .prefer_representation()
+        .body(served)
+        .build();
+    let (status, created) = common::send_json(&app, req).await;
     assert_eq!(
         status,
         StatusCode::CREATED,
-        "the served XML reads back: {body}"
+        "the served XML reads back: {created}"
     );
-    let created: Value = serde_json::from_str(&body).expect("a JSON FOLDER");
-    assert_eq!(created["name"]["value"], "root-xml", "{body}");
-    assert_eq!(created["folders"][0]["name"]["value"], "sub", "{body}");
+    assert_eq!(created["name"]["value"], "root-xml", "{created}");
+    assert_eq!(created["folders"][0]["name"]["value"], "sub", "{created}");
 }
 
 // ── 17. Root FOLDER uid population ────────────────────────────────────────────
@@ -1082,9 +1079,9 @@ async fn root_folder_uid_is_the_version_uid() {
     let (_s, h, _b) = create_directory(&app, &ehr, &folder_json("v1", vec![]), None).await;
     let v1 = etag_uid(&h);
 
-    let (status, _h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let v: Value = serde_json::from_str(&body).expect("folder json");
+    let (status, v) =
+        common::send_json(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    assert_eq!(status, StatusCode::OK, "{v}");
     assert_eq!(
         v["uid"]["value"], v1,
         "root FOLDER.uid.value == the create version uid"
@@ -1099,9 +1096,9 @@ async fn root_folder_uid_is_the_version_uid() {
     )
     .await;
     let v2 = etag_uid(&h);
-    let (status, _h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let v: Value = serde_json::from_str(&body).expect("folder json");
+    let (status, v) =
+        common::send_json(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    assert_eq!(status, StatusCode::OK, "{v}");
     assert_eq!(
         v["uid"]["value"], v2,
         "after update, root FOLDER.uid.value == the v2 version uid"
@@ -1122,17 +1119,14 @@ async fn create_with_committal_headers_is_201() {
     let (_pg, app) = common::test_router().await;
     let ehr = create_ehr(&app).await;
 
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr}/directory"))
-        .header(header::CONTENT_TYPE, "application/json")
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr}/directory"))
         .header(
             "openEHR-AUDIT_DETAILS.description",
             "value=\"initial directory\"",
         )
         .header("openEHR-AUDIT_DETAILS.committer", "name=\"Jane Roe\"")
-        .body(Body::from(folder_json("root", vec![]).to_string()))
-        .unwrap();
+        .json(folder_json("root", vec![]).to_string())
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -1295,9 +1289,9 @@ async fn details_item_structure_commits_and_reads_back() {
         "ITEM_TREE details commit: {body}"
     );
 
-    let (status, _h, body) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
-    assert_eq!(status, StatusCode::OK, "JSON read: {body}");
-    let read: Value = serde_json::from_str(&body).expect("a JSON FOLDER body");
+    let (status, read) =
+        common::send_json(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
+    assert_eq!(status, StatusCode::OK, "JSON read: {read}");
     assert_eq!(
         read["details"], folder["details"],
         "FOLDER.details round-trips verbatim"

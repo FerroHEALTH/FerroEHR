@@ -17,16 +17,16 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-use axum::body::Body;
 use axum::routing::get;
 use axum::{Router, middleware};
-use http::Request;
 use tower::ServiceExt;
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing_subscriber::layer::{Context, Layer};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry::LookupSpan;
+
+use crate::common;
 
 /// One captured span: its metadata name + recorded field values.
 #[derive(Debug, Default, Clone)]
@@ -96,11 +96,7 @@ async fn root_span_is_route_template_and_phi_free() {
         ));
 
     let ehr_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("/ehr/{ehr_id}/composition"))
-        .body(Body::empty())
-        .expect("request");
+    let req = common::req("POST", format!("/ehr/{ehr_id}/composition")).build();
     // (POST has no handler on this route → 405, but the root span is still made.)
     let _response = app.oneshot(req).await.expect("response");
 

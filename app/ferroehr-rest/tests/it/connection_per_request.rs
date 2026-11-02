@@ -13,10 +13,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::Router;
-use axum::body::Body;
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::service::FerroEhrService;
-use http::{Request, StatusCode};
+use http::StatusCode;
 use sqlx::PgPool;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
@@ -74,12 +73,10 @@ async fn the_common_reads_check_out_one_connection() {
         audit: counted(&options, Domain::Audit, &checkouts),
     };
     let app = common::unauthenticated_router(Arc::new(FerroEhrService::new(&pools))).await;
-    let upload = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let upload = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header("content-type", "application/xml")
-        .body(Body::from(common::ips_opt_xml()))
-        .expect("request");
+        .body(common::ips_opt_xml())
+        .build();
     let (status, body) = common::send_body(&app, upload).await;
     assert_eq!(status, StatusCode::CREATED, "IPS OPT upload: {body}");
     let ehr_id = common::create_ehr(&app).await;

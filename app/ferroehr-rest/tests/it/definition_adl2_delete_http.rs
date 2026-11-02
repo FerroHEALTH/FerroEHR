@@ -23,8 +23,7 @@
 )]
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 
 use crate::common;
 use crate::common::send_body;
@@ -35,35 +34,29 @@ const CHILD: &str = "openEHR-EHR-OBSERVATION.del_parent-child.v1.0.0";
 
 /// Upload one ADL2 source and assert it is stored.
 async fn upload(app: &Router, source: String) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(common::full("/definition/template/adl2"))
+    let req = common::req("POST", common::full("/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .header("prefer", "return=representation")
-        .body(Body::from(source))
-        .expect("request");
+        .prefer_representation()
+        .body(source)
+        .build();
     let (status, body) = send_body(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
 }
 
 /// DELETE one stored artefact, asking for the error detail.
 async fn delete(app: &Router, hrid: &str) -> (StatusCode, String) {
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(common::full(&format!("/definition/artefact/adl2/{hrid}")))
-        .header("prefer", "return=representation")
-        .body(Body::empty())
-        .expect("request");
+    let req = common::req(
+        "DELETE",
+        common::full(&format!("/definition/artefact/adl2/{hrid}")),
+    )
+    .prefer_representation()
+    .build();
     send_body(app, req).await
 }
 
 /// The stored artefact ids.
 async fn stored(app: &Router) -> String {
-    let req = Request::builder()
-        .method("GET")
-        .uri(common::full("/definition/artefact/adl2"))
-        .body(Body::empty())
-        .expect("request");
+    let req = common::req("GET", common::full("/definition/artefact/adl2")).build();
     let (status, body) = send_body(app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     body
@@ -184,12 +177,12 @@ async fn deleting_an_archetype_nothing_uses_is_204() {
 
     let (status, body) = delete(&app, unused).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
-    let req = Request::builder()
-        .method("GET")
-        .uri(common::full(&format!("/definition/template/adl2/{user}")))
-        .header(header::ACCEPT, "application/json")
-        .body(Body::empty())
-        .expect("request");
+    let req = common::req(
+        "GET",
+        common::full(&format!("/definition/template/adl2/{user}")),
+    )
+    .accept("application/json")
+    .build();
     let (status, body) = send_body(&app, req).await;
     assert_eq!(
         status,

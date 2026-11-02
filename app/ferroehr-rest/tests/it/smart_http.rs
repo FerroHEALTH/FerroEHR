@@ -149,9 +149,8 @@ fn capabilities(doc: &Value) -> Vec<&str> {
 async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
-    let (status, body) = send_body(&app, get(DISCOVERY, None)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let doc: Value = serde_json::from_str(&body).unwrap();
+    let (status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
+    assert_eq!(status, StatusCode::OK, "{doc}");
     let base = doc["services"]["org.openehr.rest"]["baseUrl"]
         .as_str()
         .expect("baseUrl");
@@ -179,8 +178,7 @@ async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
 async fn discovery_drops_deprecated_flows_plain_pkce_and_the_issuer_s_scopes() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
-    let (_status, body) = send_body(&app, get(DISCOVERY, None)).await;
-    let doc: Value = serde_json::from_str(&body).unwrap();
+    let (_status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
     assert_eq!(
         doc["grant_types_supported"],
         json!(["authorization_code", "client_credentials"])
@@ -202,8 +200,7 @@ async fn discovery_drops_deprecated_flows_plain_pkce_and_the_issuer_s_scopes() {
 async fn a_bound_issuer_declares_patient_permission() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), true, true)).await;
-    let (_status, body) = send_body(&app, get(DISCOVERY, None)).await;
-    let doc: Value = serde_json::from_str(&body).unwrap();
+    let (_status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
     assert!(capabilities(&doc).contains(&"permission-patient"));
 }
 
@@ -244,13 +241,10 @@ async fn the_query_family_needs_an_aql_grant() {
     let uri = issuer.uri();
     let (_pg, app) = app(config(&uri, false, false)).await;
     let query = |credential: &str| {
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/query/aql"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header(header::AUTHORIZATION, credential)
-            .body(Body::from(r#"{"q": "SELECT e/ehr_id/value FROM EHR e"}"#))
-            .unwrap()
+        common::req("POST", format!("{BASE}/query/aql"))
+            .auth(credential)
+            .json(r#"{"q": "SELECT e/ehr_id/value FROM EHR e"}"#)
+            .build()
     };
     let (status, body) =
         send_body(&app, query(&token(&uri, "user/template-*.r", &json!({})))).await;
@@ -377,13 +371,10 @@ async fn an_unserved_method_is_405_with_allow_whatever_the_grants() {
     let uri = issuer.uri();
     let (_pg, app) = app(config(&uri, true, false)).await;
     let request = |method: &str, credential: &str| {
-        Request::builder()
-            .method(method)
-            .uri(format!("{BASE}/ehr"))
-            .header(header::ACCEPT, "application/json")
-            .header(header::AUTHORIZATION, credential)
-            .body(Body::empty())
-            .unwrap()
+        common::req(method, format!("{BASE}/ehr"))
+            .accept("application/json")
+            .auth(credential)
+            .build()
     };
     let authorized = token(&uri, "user/composition-*.cruds", &json!({}));
     let unauthorized = token(&uri, "openid", &json!({}));
@@ -416,11 +407,7 @@ async fn an_unserved_method_is_405_with_allow_whatever_the_grants() {
 async fn an_unserved_method_without_a_credential_is_401() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("DELETE", format!("{BASE}/ehr")).build();
     let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
 }

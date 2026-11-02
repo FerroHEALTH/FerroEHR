@@ -16,7 +16,6 @@
 //! `ETag`/body. The wire assertions (weak `ETag`, `Location` presence/absence,
 //! `Prefer` body policy, status codes) are unchanged.
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     clippy::indexing_slicing,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
@@ -74,24 +73,19 @@ fn vo_of(ovid: &str) -> &str {
 
 /// Upload the Demo Vitals OPT (canonical XML) through the wire.
 async fn upload_opt(app: &Router) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(common::ips_opt_xml()))
-        .unwrap();
+        .body(common::ips_opt_xml())
+        .build();
     let (status, _h, body) = send(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 }
 
 /// Commit the IPS composition into `ehr_id`; return its `version_uid`.
 async fn commit_composition(app: &Router, ehr_id: &str) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(common::ips_canonical_composition().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+        .json(common::ips_canonical_composition().to_string())
+        .build();
     let (status, h, body) = send(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "composition commit: {body}");
     etag_uid(&h)
@@ -99,14 +93,9 @@ async fn commit_composition(app: &Router, ehr_id: &str) -> String {
 
 /// The current `EHR_STATUS` body + its `version_uid`.
 async fn current_ehr_status(app: &Router, ehr_id: &str) -> (Value, String) {
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::OK, "ehr_status read: {body}");
-    let v: Value = serde_json::from_str(&body).expect("json ehr_status");
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}/ehr_status")).build();
+    let (status, v) = common::send_json(app, req).await;
+    assert_eq!(status, StatusCode::OK, "ehr_status read: {v}");
     let ovid = v["uid"]["value"].as_str().expect("status uid").to_owned();
     (v, ovid)
 }
@@ -116,11 +105,7 @@ async fn current_ehr_status(app: &Router, ehr_id: &str) -> (Value, String) {
 #[tokio::test]
 async fn ehr_create_default_is_minimal_with_headers() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr")).build();
     let (status, h, body) = send(&app, req).await;
 
     // 201_EHR default (return=minimal): headers only, no body.
@@ -140,12 +125,9 @@ async fn ehr_create_default_is_minimal_with_headers() {
 #[tokio::test]
 async fn ehr_create_representation_returns_body() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .header("Prefer", "return=representation")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr"))
+        .prefer_representation()
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::CREATED);
@@ -168,13 +150,10 @@ async fn ehr_status_update_default_is_204_with_headers() {
     // Re-commit the current status (a new version) — strip the uid the server owns.
     status_body.as_object_mut().unwrap().remove("uid");
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{current}\""))
-        .body(Body::from(status_body.to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/ehr_status"))
+        .if_match(format!("\"{current}\""))
+        .json(status_body.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     // 204_EHR_STATUS (default minimal): no body, ETag + Location of the new version.
@@ -199,14 +178,11 @@ async fn ehr_status_update_representation_is_200_with_body() {
     let (mut status_body, current) = current_ehr_status(&app, &ehr_id).await;
     status_body.as_object_mut().unwrap().remove("uid");
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{current}\""))
-        .header("Prefer", "return=representation")
-        .body(Body::from(status_body.to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/ehr_status"))
+        .if_match(format!("\"{current}\""))
+        .prefer_representation()
+        .json(status_body.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     // 200_EHR_STATUS_updated (representation): body present.
@@ -230,11 +206,7 @@ async fn composition_get_sets_etag_and_location() {
     let ovid = commit_composition(&app, &ehr_id).await;
     let vo = vo_of(&ovid);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{vo}")).build();
     let (status, h, body) = send(&app, req).await;
 
     // 200_COMPOSITION_retrieved: ETag(version_uid) + Location deprecated (absent).
@@ -261,11 +233,11 @@ async fn versioned_ehr_status_version_at_time_sets_version_headers() {
     let ehr_id = create_ehr(&app).await;
     let (_body, current) = current_ehr_status(&app, &ehr_id).await;
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
+    )
+    .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK);
@@ -289,11 +261,7 @@ async fn composition_delete_is_204_with_headers() {
     upload_opt(&app).await;
     let ovid = commit_composition(&app, &ehr_id).await;
 
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{ovid}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("DELETE", format!("{BASE}/ehr/{ehr_id}/composition/{ovid}")).build();
     let (status, h, body) = send(&app, req).await;
 
     // 204_version_deleted: ETag of the deleted version; its Location is
@@ -331,11 +299,11 @@ async fn version_read_last_modified_is_the_commit_audit_instant() {
     let ehr_id = create_ehr(&app).await;
 
     // …/versioned_ehr_status/version — the ORIGINAL_VERSION at the latest time.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
+    )
+    .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
@@ -349,13 +317,11 @@ async fn version_read_last_modified_is_the_commit_audit_instant() {
 
     // …/versioned_ehr_status/version/{version_uid} — the by-id VERSION read.
     let version_uid = v["uid"]["value"].as_str().expect("VERSION.uid").to_owned();
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}"),
+    )
+    .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
@@ -386,25 +352,21 @@ async fn container_reads_carry_etag_and_newest_commit_last_modified() {
 
     // A second EHR_STATUS version, so "newest" is distinguishable from v1.
     let (status_body, ovid) = current_ehr_status(&app, &ehr_id).await;
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-        .header("content-type", "application/json")
-        .header("if-match", format!("\"{ovid}\""))
-        .body(Body::from(status_body.to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/ehr_status"))
+        .if_match(format!("\"{ovid}\""))
+        .json(status_body.to_string())
+        .build();
     let (status, _, _) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 
     // The newest version's commit instant, read off the served envelope.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _, body) = send(&app, req).await;
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
+    )
+    .build();
+    let (status, latest) = common::send_json(&app, req).await;
     assert_eq!(status, StatusCode::OK);
-    let latest: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
     assert!(
         latest["uid"]["value"]
             .as_str()
@@ -415,11 +377,7 @@ async fn container_reads_carry_etag_and_newest_commit_last_modified() {
     let container_uid = vo_of(latest["uid"]["value"].as_str().expect("uid")).to_owned();
 
     // The VERSIONED_EHR_STATUS container read.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status")).build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).expect("json VERSIONED_EHR_STATUS");
@@ -437,13 +395,11 @@ async fn container_reads_carry_etag_and_newest_commit_last_modified() {
     );
 
     // The REVISION_HISTORY read — same container identity, same newest instant.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/versioned_ehr_status/revision_history"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/revision_history"),
+    )
+    .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let rh: Value = serde_json::from_str(&body).expect("json REVISION_HISTORY");
@@ -467,12 +423,9 @@ async fn composition_read_and_write_carry_the_commit_instant() {
     upload_opt(&app).await;
 
     // POST /composition — the create 201.
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(common::ips_canonical_composition().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+        .json(common::ips_canonical_composition().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "composition commit: {body}");
     let ovid = etag_uid(&h);
@@ -485,13 +438,11 @@ async fn composition_read_and_write_carry_the_commit_instant() {
 
     // The VERSION envelope names the authoritative instant.
     let vo = vo_of(&ovid).to_owned();
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{ovid}"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{ovid}"),
+    )
+    .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let version: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
@@ -509,11 +460,7 @@ async fn composition_read_and_write_carry_the_commit_instant() {
 
     // GET the bare COMPOSITION (latest) — same instant, though the served body
     // carries no commit_audit of its own.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{vo}")).build();
     let (status, h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
@@ -524,11 +471,7 @@ async fn composition_read_and_write_carry_the_commit_instant() {
     );
 
     // GET the bare COMPOSITION addressed by its version uid — same instant.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{ovid}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{ovid}")).build();
     let (status, h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(last_modified(&h), Some(committed.as_str()));
@@ -536,13 +479,10 @@ async fn composition_read_and_write_carry_the_commit_instant() {
     // PUT /composition — the update 200/204 carries the NEW version's instant.
     let mut updated = common::ips_canonical_composition();
     updated.as_object_mut().unwrap().remove("uid");
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{ovid}\""))
-        .body(Body::from(updated.to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+        .if_match(format!("\"{ovid}\""))
+        .json(updated.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     // No Prefer header => return=minimal => 204 (overview
     // Requests_and_responses.md §Prefer: "If no `Prefer` header is provided,
@@ -555,16 +495,13 @@ async fn composition_read_and_write_carry_the_commit_instant() {
         .to_owned();
 
     // The new VERSION envelope confirms the reported instant.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{new_ovid}"
-        ))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_composition/{vo}/version/{new_ovid}"),
+    )
+    .build();
+    let (status, version) = common::send_json(&app, req).await;
     assert_eq!(status, StatusCode::OK);
-    let version: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
     assert_eq!(updated_lm, imf_fixdate(commit_instant(&version)));
 }
 
@@ -577,11 +514,7 @@ async fn ehr_status_read_and_write_carry_the_commit_instant() {
     let ehr_id = create_ehr(&app).await;
 
     // GET /ehr_status.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}/ehr_status")).build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let current: Value = serde_json::from_str(&body).expect("json EHR_STATUS");
@@ -597,11 +530,7 @@ async fn ehr_status_read_and_write_carry_the_commit_instant() {
         .to_owned();
 
     // GET /ehr_status/{version_uid} — the same version, the same instant.
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status/{ovid}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}/ehr_status/{ovid}")).build();
     let (status, h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(last_modified(&h), Some(read_lm.as_str()));
@@ -610,13 +539,10 @@ async fn ehr_status_read_and_write_carry_the_commit_instant() {
     // against the VERSION envelope's commit_audit.
     let mut next = current;
     next.as_object_mut().unwrap().remove("uid");
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{ovid}\""))
-        .body(Body::from(next.to_string()))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/ehr_status"))
+        .if_match(format!("\"{ovid}\""))
+        .json(next.to_string())
+        .build();
     let (status, h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
     let new_ovid = etag_uid(&h);
@@ -624,16 +550,13 @@ async fn ehr_status_read_and_write_carry_the_commit_instant() {
         .expect("overview §\"ETag and Last-Modified\": Last-Modified on the EHR_STATUS write")
         .to_owned();
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/versioned_ehr_status/version/{new_ovid}"
-        ))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version/{new_ovid}"),
+    )
+    .build();
+    let (status, version) = common::send_json(&app, req).await;
     assert_eq!(status, StatusCode::OK);
-    let version: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
     assert_eq!(write_lm, imf_fixdate(commit_instant(&version)));
 }
 
@@ -647,11 +570,7 @@ async fn ehr_get_carries_the_weak_ehr_id_etag() {
     let (_pg, app) = app().await;
     let ehr_id = create_ehr(&app).await;
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}")).build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).expect("json EHR");
@@ -679,11 +598,7 @@ async fn ehr_get_carries_the_weak_ehr_id_etag() {
 #[tokio::test]
 async fn ehr_create_carries_last_modified() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr")).build();
     let (status, h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED);
     let lm = last_modified(&h).expect(
@@ -698,14 +613,13 @@ async fn ehr_create_carries_last_modified() {
     // The EHR's own EHR_STATUS VERSION was committed in the same CONTRIBUTION,
     // so its commit_audit instant is the one reported.
     let ehr_id = etag_uid(&h);
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(&app, req).await;
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
+    )
+    .build();
+    let (status, version) = common::send_json(&app, req).await;
     assert_eq!(status, StatusCode::OK);
-    let version: Value = serde_json::from_str(&body).expect("json ORIGINAL_VERSION");
     assert_eq!(lm, imf_fixdate(commit_instant(&version)));
 }
 
@@ -742,16 +656,13 @@ fn tag_keys(value: &str) -> Vec<String> {
 /// The stored `ITEM_TAG` keys of a COMPOSITION tag target, read back through
 /// the dedicated `composition_tags_get` operation.
 async fn stored_tag_keys(app: &Router, ehr_id: &str, uid_based_id: &str) -> Vec<String> {
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/composition/{uid_based_id}/tags"
-        ))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::OK, "tags read: {body}");
-    let tags: Value = serde_json::from_str(&body).expect("json ITEM_TAG list");
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/composition/{uid_based_id}/tags"),
+    )
+    .build();
+    let (status, tags) = common::send_json(app, req).await;
+    assert_eq!(status, StatusCode::OK, "tags read: {tags}");
     let mut keys: Vec<String> = tags
         .as_array()
         .expect("ITEM_TAG list")
@@ -775,18 +686,15 @@ async fn composition_update_echoes_each_item_tag_target_under_its_own_header() {
 
     let mut updated = common::ips_canonical_composition();
     updated.as_object_mut().unwrap().remove("uid");
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{ovid}\""))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+        .if_match(format!("\"{ovid}\""))
         .header("openehr-item-tag", "key=\"category\",value=\"final\"")
         .header(
             "openehr-version-item-tag",
             "key=\"reviewed\",value=\"true\"",
         )
-        .body(Body::from(updated.to_string()))
-        .unwrap();
+        .json(updated.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     // No Prefer header => return=minimal => 204 (overview
     // Requests_and_responses.md §Prefer: "If no `Prefer` header is provided,
@@ -836,17 +744,14 @@ async fn composition_update_echoes_nothing_for_an_absent_item_tag_header() {
 
     let mut updated = common::ips_canonical_composition();
     updated.as_object_mut().unwrap().remove("uid");
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{ovid}\""))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+        .if_match(format!("\"{ovid}\""))
         .header(
             "openehr-version-item-tag",
             "key=\"reviewed\",value=\"true\"",
         )
-        .body(Body::from(updated.to_string()))
-        .unwrap();
+        .json(updated.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     // No Prefer header => return=minimal => 204 (overview
     // Requests_and_responses.md §Prefer: "If no `Prefer` header is provided,
@@ -892,12 +797,10 @@ async fn writes_declare_the_applied_preference() {
     let ehr_id = create_ehr(&app).await;
 
     // Template upload (the definition group's own identifier body).
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(common::ips_opt_xml()))
-        .unwrap();
+        .body(common::ips_opt_xml())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
     assert_eq!(
@@ -907,13 +810,10 @@ async fn writes_declare_the_applied_preference() {
     );
 
     // COMPOSITION create with an explicit representation preference.
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("Prefer", "return=representation")
-        .body(Body::from(common::ips_canonical_composition().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+        .prefer_representation()
+        .json(common::ips_canonical_composition().to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "composition commit: {body}");
     assert_eq!(
@@ -925,27 +825,17 @@ async fn writes_declare_the_applied_preference() {
 
     // The ITEM_TAG collection write is not a uid-versioned resource; its
     // minimal answer is empty.
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(
-            serde_json::json!([{ "key": "category", "value": "final" }]).to_string(),
-        ))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
+        .json(serde_json::json!([{ "key": "category", "value": "final" }]).to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "tags update: {body}");
     assert_eq!(preference_applied(&h).as_deref(), Some("return=minimal"));
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("Prefer", "return=representation")
-        .body(Body::from(
-            serde_json::json!([{ "key": "category", "value": "final" }]).to_string(),
-        ))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
+        .prefer_representation()
+        .json(serde_json::json!([{ "key": "category", "value": "final" }]).to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "tags update: {body}");
     assert_eq!(
@@ -955,15 +845,10 @@ async fn writes_declare_the_applied_preference() {
 
     // `return=identifier` answers 200 with the stored tag list (owner decision
     // on #4475; RFC 7240 §4.2 lets the server choose the answer).
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
         .header("Prefer", "return=identifier")
-        .body(Body::from(
-            serde_json::json!([{ "key": "category", "value": "final" }]).to_string(),
-        ))
-        .unwrap();
+        .json(serde_json::json!([{ "key": "category", "value": "final" }]).to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "tags update: {body}");
     assert_eq!(preference_applied(&h).as_deref(), Some("return=identifier"));
@@ -982,14 +867,11 @@ async fn ehr_status_update_identifier_is_never_204() {
     let (mut status_body, current) = current_ehr_status(&app, &ehr_id).await;
     status_body.as_object_mut().unwrap().remove("uid");
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{current}\""))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/ehr_status"))
+        .if_match(format!("\"{current}\""))
         .header("Prefer", "return=identifier")
-        .body(Body::from(status_body.to_string()))
-        .unwrap();
+        .json(status_body.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
 
     assert_eq!(
@@ -1052,23 +934,18 @@ async fn contribution_get_carries_etag_and_last_modified() {
             "committer": committer
         }
     });
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/contribution"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(contribution.to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/contribution"))
+        .json(contribution.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "commit: {body}");
     let contribution_uid = etag_uid(&h);
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/contribution/{contribution_uid}"
-        ))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/contribution/{contribution_uid}"),
+    )
+    .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "get: {body}");
     assert_eq!(
@@ -1124,13 +1001,10 @@ async fn commit_contribution(
     contribution: &Value,
     prefer: &str,
 ) -> (header::HeaderMap, String) {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/contribution"))
-        .header(header::CONTENT_TYPE, "application/json")
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/contribution"))
         .header("Prefer", prefer)
-        .body(Body::from(contribution.to_string()))
-        .unwrap();
+        .json(contribution.to_string())
+        .build();
     let (status, h, body) = send(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "commit ({prefer}): {body}");
     (h, body)
@@ -1138,16 +1012,13 @@ async fn commit_contribution(
 
 /// The stored CONTRIBUTION audit's `time_committed`, read back over the wire.
 async fn stored_commit_instant(app: &Router, ehr_id: &str, contribution_uid: &str) -> String {
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!(
-            "{BASE}/ehr/{ehr_id}/contribution/{contribution_uid}"
-        ))
-        .body(Body::empty())
-        .unwrap();
-    let (status, _h, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::OK, "contribution read: {body}");
-    let v: Value = serde_json::from_str(&body).expect("json CONTRIBUTION");
+    let req = common::req(
+        "GET",
+        format!("{BASE}/ehr/{ehr_id}/contribution/{contribution_uid}"),
+    )
+    .build();
+    let (status, v) = common::send_json(app, req).await;
+    assert_eq!(status, StatusCode::OK, "contribution read: {v}");
     v["audit"]["time_committed"]["value"]
         .as_str()
         .expect("CONTRIBUTION.audit.time_committed.value")
@@ -1232,11 +1103,7 @@ async fn tag_get_and_delete_guard_the_target() {
     // Existing target, no tags → 200 [].
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags")).build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -1245,13 +1112,11 @@ async fn tag_get_and_delete_guard_the_target() {
     // Nonexistent target → 404 (the released trigger).
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/composition/00000000-0000-4000-8000-000000000000/tags"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/composition/00000000-0000-4000-8000-000000000000/tags"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "nonexistent target");
@@ -1260,11 +1125,11 @@ async fn tag_get_and_delete_guard_the_target() {
     // the composition route).
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{status_vo}/tags"))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/composition/{status_vo}/tags"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "wrong-kind target");
@@ -1273,11 +1138,11 @@ async fn tag_get_and_delete_guard_the_target() {
     let other_ehr = create_ehr(&app).await;
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{other_ehr}/composition/{vo}/tags"))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{other_ehr}/composition/{vo}/tags"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "foreign EHR's target");
@@ -1286,13 +1151,11 @@ async fn tag_get_and_delete_guard_the_target() {
     // touch an EHR_STATUS container's tags.
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("DELETE")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/composition/{status_vo}/tags/anykey"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "DELETE",
+            format!("{BASE}/ehr/{ehr_id}/composition/{status_vo}/tags/anykey"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "wrong-kind DELETE");
@@ -1316,13 +1179,10 @@ async fn tag_empty_target_path_normalizes_to_absent() {
     ]);
     let (status, _h, resp) = send(
         &app,
-        Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .header("Prefer", "return=representation")
-            .body(Body::from(body.to_string()))
-            .unwrap(),
+        common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags"))
+            .prefer_representation()
+            .json(body.to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "tag put: {resp}");
@@ -1350,11 +1210,7 @@ async fn ehr_wide_tag_listing_guards_the_ehr() {
 
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr_id}/tags"))
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr_id}/tags")).build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -1362,13 +1218,11 @@ async fn ehr_wide_tag_listing_guards_the_ehr() {
 
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/00000000-0000-4000-8000-00000000dead/tags"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/00000000-0000-4000-8000-00000000dead/tags"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(
@@ -1420,13 +1274,11 @@ async fn tag_collection_disciplines() {
     // ehr_tags_get filters: AND-combined, exact.
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!(
-                "{BASE}/ehr/{ehr_id}/tags?tag_key=flag&tag_target_path=/content%5B1%5D"
-            ))
-            .body(Body::empty())
-            .unwrap(),
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/tags?tag_key=flag&tag_target_path=/content%5B1%5D"),
+        )
+        .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -1440,11 +1292,11 @@ async fn tag_collection_disciplines() {
 
     // DELETE by key is a SET delete: both /content paths go; workflow stays.
     let del = |key: &str| {
-        Request::builder()
-            .method("DELETE")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags/{key}"))
-            .body(Body::empty())
-            .unwrap()
+        common::req(
+            "DELETE",
+            format!("{BASE}/ehr/{ehr_id}/composition/{vo}/tags/{key}"),
+        )
+        .build()
     };
     let (status, _h, _b) = send(&app, del("flag")).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
@@ -1483,13 +1335,10 @@ async fn an_undecodable_header_value_is_refused_not_dropped() {
         "openehr-item-tag",
         "openEHR-VERSION.lifecycle_state",
     ] {
-        let req = Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
+        let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
             .header(header_name, opaque.clone())
-            .body(Body::from(common::ips_canonical_composition().to_string()))
-            .unwrap();
+            .json(common::ips_canonical_composition().to_string())
+            .build();
         let (status, _h, body) = send(&app, req).await;
         assert_eq!(
             status,
@@ -1499,12 +1348,9 @@ async fn an_undecodable_header_value_is_refused_not_dropped() {
     }
 
     // The twin: the same write with no undecodable header commits.
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(common::ips_canonical_composition().to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+        .json(common::ips_canonical_composition().to_string())
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -1532,26 +1378,20 @@ async fn an_emptied_item_tag_collection_echoes_no_header_not_an_empty_one() {
     // the remove-all instruction — so the stored collection empties.
     let mut updated = common::ips_canonical_composition();
     updated.as_object_mut().unwrap().remove("uid");
-    let tag_first = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{ovid}\""))
+    let tag_first = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+        .if_match(format!("\"{ovid}\""))
         .header("openehr-item-tag", "key=\"category\",value=\"final\"")
-        .body(Body::from(updated.clone().to_string()))
-        .unwrap();
+        .json(updated.clone().to_string())
+        .build();
     let (status, h, body) = send(&app, tag_first).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "tagging update: {body}");
     let second_ovid = etag_uid(&h);
 
-    let wipe = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{second_ovid}\""))
+    let wipe = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/composition/{vo}"))
+        .if_match(format!("\"{second_ovid}\""))
         .header("openehr-item-tag", "")
-        .body(Body::from(updated.to_string()))
-        .unwrap();
+        .json(updated.to_string())
+        .build();
     let (status, h, body) = send(&app, wipe).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "remove-all update: {body}");
     assert!(
@@ -1597,12 +1437,9 @@ async fn ehr_reads_carry_the_last_modified_of_the_create() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(status_body.to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr"))
+        .json(status_body.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let created = last_modified(&h).expect("create Last-Modified").to_owned();
@@ -1616,7 +1453,7 @@ async fn ehr_reads_carry_the_last_modified_of_the_create() {
         format!("{BASE}/ehr/{ehr_id}"),
         format!("{BASE}/ehr?subject_id=lm-patient-1&subject_namespace=lm-hospital"),
     ] {
-        let req = Request::builder().uri(&uri).body(Body::empty()).unwrap();
+        let req = common::req("GET", &uri).build();
         let (status, h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::OK, "{uri}: {body}");
         assert_eq!(last_modified(&h), Some(created.as_str()), "{uri}");
@@ -1628,11 +1465,7 @@ async fn ehr_reads_carry_the_last_modified_of_the_create() {
 #[tokio::test]
 async fn an_ehr_read_is_dated_by_its_latest_folder_change() {
     let (_pg, app) = app().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr")).build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let created = last_modified(&h).expect("create Last-Modified").to_owned();
@@ -1653,12 +1486,9 @@ async fn an_ehr_read_is_dated_by_its_latest_folder_change() {
         },
         "name": { "_type": "DV_TEXT", "value": "root" }
     });
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr_id}/directory"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(folder.to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr_id}/directory"))
+        .json(folder.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let foldered = last_modified(&h)
@@ -1666,10 +1496,7 @@ async fn an_ehr_read_is_dated_by_its_latest_folder_change() {
         .to_owned();
     assert_ne!(foldered, created);
 
-    let req = Request::builder()
-        .uri(format!("{BASE}/ehr/{ehr_id}"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr_id}")).build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(last_modified(&h), Some(foldered.as_str()));

@@ -74,11 +74,7 @@ async fn create_directory(
 
 /// The EHR-wide `ITEM_TAG` listing (`GET /ehr/{ehr_id}/tags`).
 async fn ehr_tags(app: &Router, ehr: &str) -> Vec<Value> {
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr}/tags"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr}/tags")).build();
     let (status, _h, body) = send(app, req).await;
     assert_eq!(status, StatusCode::OK, "ehr tags: {body}");
     serde_json::from_str::<Value>(&body)
@@ -91,11 +87,7 @@ async fn ehr_tags(app: &Router, ehr: &str) -> Vec<Value> {
 /// `GET /ehr/{ehr_id}/directory` — used to prove a refused create committed
 /// nothing.
 async fn directory_status(app: &Router, ehr: &str) -> StatusCode {
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr}/directory"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr}/directory")).build();
     send(app, req).await.0
 }
 
@@ -107,23 +99,19 @@ async fn put_status_tags(
     status_vo: &str,
     body: &Value,
 ) -> (StatusCode, String) {
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr}/ehr_status/{status_vo}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(body.to_string()))
-        .unwrap();
+    let req = common::req(
+        "PUT",
+        format!("{BASE}/ehr/{ehr}/ehr_status/{status_vo}/tags"),
+    )
+    .json(body.to_string())
+    .build();
     let (status, _h, text) = send(app, req).await;
     (status, text)
 }
 
 /// The `EHR_STATUS` `VERSIONED_OBJECT` id of a freshly created EHR.
 async fn status_vo(app: &Router, ehr: &str) -> String {
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr}/ehr_status"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr}/ehr_status")).build();
     let (status, h, body) = send(app, req).await;
     assert_eq!(status, StatusCode::OK, "ehr_status read: {body}");
     let uid = etag_uid(&h);
@@ -271,12 +259,9 @@ async fn the_demographic_tag_put_is_strict_in_the_same_way() {
             }
         }]
     });
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/demographic/person"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(person.to_string()))
-        .unwrap();
+    let req = common::req("POST", format!("{BASE}/demographic/person"))
+        .json(person.to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "create person: {body}");
     let vo = etag_uid(&h)
@@ -290,12 +275,9 @@ async fn the_demographic_tag_put_is_strict_in_the_same_way() {
         json!([{ "key": "reviewed", "value": 42 }]),
         json!([{ "key": "reviewed", "target_path": 7 }]),
     ] {
-        let req = Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/demographic/person/{vo}/tags"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(bad.to_string()))
-            .unwrap();
+        let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}/tags"))
+            .json(bad.to_string())
+            .build();
         let (status, _h, text) = send(&app, req).await;
         assert_eq!(
             status,
@@ -306,22 +288,16 @@ async fn the_demographic_tag_put_is_strict_in_the_same_way() {
 
     // The accepting twin, including the `target_path: ""` normalization the
     // register fixes identically on both families.
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/demographic/person/{vo}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("Prefer", "return=representation")
-        .body(Body::from(
-            json!([{ "key": "reviewed", "value": "true", "target_path": "" }]).to_string(),
-        ))
-        .unwrap();
-    let (status, _h, text) = send(&app, req).await;
-    assert_eq!(status, StatusCode::OK, "the valid twin: {text}");
-    let tags: Value = serde_json::from_str(&text).expect("json ITEM_TAG list");
+    let req = common::req("PUT", format!("{BASE}/demographic/person/{vo}/tags"))
+        .prefer_representation()
+        .json(json!([{ "key": "reviewed", "value": "true", "target_path": "" }]).to_string())
+        .build();
+    let (status, tags) = common::send_json(&app, req).await;
+    assert_eq!(status, StatusCode::OK, "the valid twin: {tags}");
     assert_eq!(tags[0]["key"], "reviewed");
     assert!(
         tags[0].get("target_path").is_none(),
-        "an empty target_path normalizes to ABSENT on the demographic family too: {text}"
+        "an empty target_path normalizes to ABSENT on the demographic family too: {tags}"
     );
 }
 
@@ -366,14 +342,11 @@ async fn a_folder_may_be_tagged_through_the_wrapper_header() {
     // The UPDATE leg carries the header too — §Usage in Requests binds it to
     // "creation or update operations (`PUT`, `POST`)" — and, being a whole-list
     // replace, it REPLACES the container's collection.
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr}/directory"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(header::IF_MATCH, format!("\"{version_uid}\""))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr}/directory"))
+        .if_match(format!("\"{version_uid}\""))
         .header("openehr-item-tag", r#"key="folder-scope",value="research""#)
-        .body(Body::from(folder("root").to_string()))
-        .unwrap();
+        .json(folder("root").to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "update directory: {body}");
     let echo = h
@@ -411,12 +384,7 @@ async fn no_dedicated_directory_tag_routes_exist() {
             format!("{BASE}/ehr/{ehr}/directory/tags/reviewed"),
         ),
     ] {
-        let req = Request::builder()
-            .method(method)
-            .uri(&path)
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from("[]"))
-            .unwrap();
+        let req = common::req(method, &path).json("[]").build();
         let (status, _h, body) = send(&app, req).await;
         assert!(
             status.is_client_error(),
@@ -506,12 +474,9 @@ async fn a_tag_read_with_an_xml_accept_is_not_acceptable() {
     let (put, text) = put_status_tags(&app, &ehr, &vo, &json!([{ "key": "alpha" }])).await;
     assert_eq!(put, StatusCode::NO_CONTENT, "seed: {text}");
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags"))
-        .header(header::ACCEPT, "application/xml")
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags"))
+        .accept("application/xml")
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -536,12 +501,10 @@ async fn a_tag_put_with_an_unprocessable_content_type_is_refused() {
     let (put, text) = put_status_tags(&app, &ehr, &vo, &json!([{ "key": "alpha" }])).await;
     assert_eq!(put, StatusCode::NO_CONTENT, "seed: {text}");
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags"))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags"))
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(json!([{ "key": "beta" }]).to_string()))
-        .unwrap();
+        .body(json!([{ "key": "beta" }]).to_string())
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -598,15 +561,10 @@ async fn a_tag_put_preferring_an_identifier_answers_the_stored_list() {
     let ehr = create_ehr(&app).await;
     let vo = status_vo(&app, &ehr).await;
 
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags"))
-        .header(header::CONTENT_TYPE, "application/json")
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags"))
         .header("Prefer", "return=identifier")
-        .body(Body::from(
-            json!([{ "key": "alpha", "value": "a" }]).to_string(),
-        ))
-        .unwrap();
+        .json(json!([{ "key": "alpha", "value": "a" }]).to_string())
+        .build();
     let (status, h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
@@ -675,11 +633,11 @@ async fn an_empty_target_path_is_stored_as_absent_and_stays_deletable() {
         "an empty target_path is stored as absent, never served back as \"\": {tags:?}"
     );
 
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags/alpha"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "DELETE",
+        format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags/alpha"),
+    )
+    .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(
         status,
@@ -690,10 +648,10 @@ async fn an_empty_target_path_is_stored_as_absent_and_stays_deletable() {
 
     // The released 404 trigger set includes "when the ITEM_TAG identified by
     // the `key` does not exist", so the second identical DELETE is a miss.
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags/alpha"))
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req(
+        "DELETE",
+        format!("{BASE}/ehr/{ehr}/ehr_status/{vo}/tags/alpha"),
+    )
+    .build();
     assert_eq!(send(&app, req).await.0, StatusCode::NOT_FOUND);
 }

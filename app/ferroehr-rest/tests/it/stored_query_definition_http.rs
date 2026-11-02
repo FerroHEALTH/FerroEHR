@@ -10,7 +10,6 @@
 //! are READ-side resolution patterns, and a non-numeric segment would poison
 //! the surface's SEMVER ordering; register-adjudicated `400`).
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -56,12 +55,10 @@ async fn app() -> (testkit::TestDb, Router) {
 }
 
 fn put(uri: String) -> Request<Body> {
-    Request::builder()
-        .method("PUT")
-        .uri(uri)
+    common::req("PUT", uri)
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(AQL))
-        .unwrap()
+        .body(AQL)
+        .build()
 }
 
 fn location(h: &header::HeaderMap) -> &str {
@@ -179,12 +176,9 @@ async fn version_get_resolves_prefixes_to_highest() {
     // "a pattern as partial prefix … the highest (latest) version matching
     // the prefix will be considered" (parameters/path/version.yaml).
     for (sel, expect) in [("1", "1.2.0"), ("1.0", "1.0.9"), ("1.0.0", "1.0.0")] {
-        let get = Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/definition/query/org.test::f/{sel}"))
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap();
+        let get = common::req("GET", format!("{BASE}/definition/query/org.test::f/{sel}"))
+            .accept("application/json")
+            .build();
         let (status, _h, body) = send(&app, get).await;
         assert_eq!(status, StatusCode::OK, "{sel}: {body}");
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
@@ -208,24 +202,14 @@ async fn version_reads_refuse_a_malformed_version_before_any_lookup() {
     // The definition read, the stored-query GET execution and its POST form all
     // take `parameters/path/version.yaml`.
     let reads = |version: &str| {
-        let get = |uri: String| {
-            Request::builder()
-                .method("GET")
-                .uri(uri)
-                .header(header::ACCEPT, "application/json")
-                .body(Body::empty())
-                .unwrap()
-        };
+        let get = |uri: String| common::req("GET", uri).accept("application/json").build();
         [
             get(format!("{BASE}/definition/query/org.test::v/{version}")),
             get(format!("{BASE}/query/org.test::v/{version}")),
-            Request::builder()
-                .method("POST")
-                .uri(format!("{BASE}/query/org.test::v/{version}"))
-                .header(header::ACCEPT, "application/json")
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from("{}"))
-                .unwrap(),
+            common::req("POST", format!("{BASE}/query/org.test::v/{version}"))
+                .accept("application/json")
+                .json("{}")
+                .build(),
         ]
     };
     // No SEMVER version and no `{major}` / `{major}.{minor}` prefix: a
@@ -268,12 +252,7 @@ async fn stores_refuse_a_declared_foreign_body_type_with_415() {
         format!("{BASE}/definition/query/org.test::g"),
         format!("{BASE}/definition/query/org.test::g/1.0.0"),
     ] {
-        let req = Request::builder()
-            .method("PUT")
-            .uri(uri.clone())
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(AQL))
-            .unwrap();
+        let req = common::req("PUT", uri.clone()).json(AQL).build();
         let (status, _h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "{uri}: {body}");
     }
@@ -284,11 +263,9 @@ async fn stores_accept_an_absent_content_type() {
     let (_pg, app) = app().await;
     // An absent Content-Type declares nothing to refuse (the header is a
     // client MAY) — the operation's own body type applies.
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/definition/query/org.test::h/1.0.0"))
-        .body(Body::from(AQL))
-        .unwrap();
+    let req = common::req("PUT", format!("{BASE}/definition/query/org.test::h/1.0.0"))
+        .body(AQL)
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }
@@ -296,12 +273,10 @@ async fn stores_accept_an_absent_content_type() {
 // ── a store runs the analysis an execution runs ─────────────────────────────
 
 fn put_text(uri: String, aql: &str) -> Request<Body> {
-    Request::builder()
-        .method("PUT")
-        .uri(uri)
+    common::req("PUT", uri)
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(aql.to_owned()))
-        .unwrap()
+        .body(aql.to_owned())
+        .build()
 }
 
 #[tokio::test]
@@ -335,12 +310,9 @@ async fn store_refuses_a_query_the_engine_refuses_and_stores_nothing() {
         assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
     }
     for name in ["org.test::refused", "org.test::refused_v"] {
-        let get = Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/definition/query/{name}"))
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap();
+        let get = common::req("GET", format!("{BASE}/definition/query/{name}"))
+            .accept("application/json")
+            .build();
         // definition_query_list declares `200` only: nothing stored is `[]`.
         let (status, _h, body) = send(&app, get).await;
         assert_eq!(status, StatusCode::OK, "{name}: {body}");

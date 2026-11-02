@@ -24,8 +24,7 @@
 use std::sync::Arc;
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::StatusCode;
 use serde_json::{Value, json};
 
 use ferroehr::service::FerroEhrService;
@@ -59,17 +58,11 @@ async fn local_app() -> (testkit::TestDb, Router) {
 
 /// `POST /query/aql` with `q` and `query_parameters`, answering the rows.
 async fn query(app: &Router, aql: &str, parameters: &Value) -> Vec<Value> {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/query/aql"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(
-            json!({ "q": aql, "query_parameters": parameters }).to_string(),
-        ))
-        .expect("request");
-    let (status, body) = common::send_body(app, req).await;
-    assert_eq!(status, StatusCode::OK, "query {aql}: {body}");
-    let result: Value = serde_json::from_str(&body).expect("RESULT_SET JSON");
+    let req = common::req("POST", format!("{BASE}/query/aql"))
+        .json(json!({ "q": aql, "query_parameters": parameters }).to_string())
+        .build();
+    let (status, result) = common::send_json(app, req).await;
+    assert_eq!(status, StatusCode::OK, "query {aql}: {result}");
     result["rows"].as_array().expect("rows array").clone()
 }
 

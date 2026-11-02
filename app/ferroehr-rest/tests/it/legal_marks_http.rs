@@ -117,13 +117,11 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
     // A write is refused with the same status, and nothing is committed. The
     // body and its precondition are the ones read back before the mark, so the
     // refusal is the restriction's and not a precondition standing in for it.
-    let req = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
+    let req = common::req("PUT", format!("{BASE}/ehr/{ehr_id}/ehr_status"))
         .header(http::header::CONTENT_TYPE, "application/json")
         .header(http::header::IF_MATCH, format!("\"{status_uid}\""))
-        .body(Body::from(status_body.to_string()))
-        .expect("request");
+        .body(status_body.to_string())
+        .build();
     let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "a write is refused: {body}");
 
@@ -335,12 +333,10 @@ async fn the_mark_routes_are_behind_the_admin_switch() {
 async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
     let (_pg, app) = app().await;
 
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
+    let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(http::header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(common::ips_opt_xml()))
-        .expect("request");
+        .body(common::ips_opt_xml())
+        .build();
     let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 
@@ -388,11 +384,7 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
 
     // A DELETE of the restricted composition is refused too: a logical delete
     // commits a new version, which is processing Art. 18(2) does not admit.
-    let req = Request::builder()
-        .method("DELETE")
-        .uri(format!("{BASE}/ehr/{ehr_id}/composition/{ovid}"))
-        .body(Body::empty())
-        .expect("request");
+    let req = common::req("DELETE", format!("{BASE}/ehr/{ehr_id}/composition/{ovid}")).build();
     let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "a delete is refused: {body}");
     // The write raises the restriction as a `ServiceError`, and it answers

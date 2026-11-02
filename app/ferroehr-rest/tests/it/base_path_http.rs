@@ -102,9 +102,8 @@ async fn the_api_moves_with_the_base_path() {
 async fn the_root_surfaces_follow_the_derived_rest_root() {
     let (_pg, app) = short_base_router().await;
 
-    let (status, _headers, body) = common::send(&app, common::request("OPTIONS", SHORT_BASE)).await;
+    let (status, manifest) = common::send_json(&app, common::request("OPTIONS", SHORT_BASE)).await;
     assert_eq!(status, StatusCode::OK);
-    let manifest: Value = serde_json::from_str(&body).expect("Options manifest is JSON");
     assert_eq!(
         manifest.get("solution").and_then(Value::as_str),
         Some("FerroEHR")

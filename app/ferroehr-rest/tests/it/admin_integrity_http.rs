@@ -136,13 +136,12 @@ async fn a_wildcard_accept_keeps_the_aggregated_document() {
     let (_pg, service) = common::test_service().await;
     let app = common::router_with(common::api_config(true), service).await;
 
-    let (status, body) = common::send_body(&app, verify(Some("*/*"))).await;
+    let (status, report) = common::send_json(&app, verify(Some("*/*"))).await;
 
     assert_eq!(status, StatusCode::OK);
-    let report: Value = serde_json::from_str(&body).expect("one JSON document");
     assert!(
         report.get("mismatches").is_some(),
-        "a wildcard must not switch an existing caller onto the stream: {body}"
+        "a wildcard must not switch an existing caller onto the stream: {report}"
     );
 }
 
@@ -150,11 +149,11 @@ async fn a_wildcard_accept_keeps_the_aggregated_document() {
 
 /// The repair route, with an optional query string.
 fn rebuild(query: &str) -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(format!("{EXT}/admin/integrity/rebuild-nodes{query}"))
-        .body(Body::empty())
-        .expect("request")
+    common::req(
+        "POST",
+        format!("{EXT}/admin/integrity/rebuild-nodes{query}"),
+    )
+    .build()
 }
 
 #[tokio::test]
@@ -166,21 +165,20 @@ async fn the_rebuild_answers_a_report_over_an_undamaged_repository() {
         .expect("seed an EHR");
     let app = common::router_with(common::api_config(true), service).await;
 
-    let (status, body) = common::send_body(&app, rebuild("")).await;
+    let (status, report) = common::send_json(&app, rebuild("")).await;
 
     assert_eq!(status, StatusCode::OK);
-    let report: Value = serde_json::from_str(&body).expect("one JSON document");
     assert!(
         report["versions_checked"].as_u64().unwrap_or(0) >= 2,
-        "the sweep behind the repair still read the repository: {body}"
+        "the sweep behind the repair still read the repository: {report}"
     );
-    assert_eq!(report["versions_damaged"], 0, "{body}");
-    assert_eq!(report["versions_rebuilt"], 0, "{body}");
-    assert_eq!(report["versions_refused"], 0, "{body}");
+    assert_eq!(report["versions_damaged"], 0, "{report}");
+    assert_eq!(report["versions_rebuilt"], 0, "{report}");
+    assert_eq!(report["versions_refused"], 0, "{report}");
     assert_eq!(
         report["records"].as_array().map(Vec::len),
         Some(0),
-        "an undamaged repository produces no records: {body}"
+        "an undamaged repository produces no records: {report}"
     );
 }
 

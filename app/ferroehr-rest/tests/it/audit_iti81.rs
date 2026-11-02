@@ -127,12 +127,7 @@ async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditSto
 }
 
 fn get(path: &str, auth: &str) -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(common::full(path))
-        .header("authorization", auth)
-        .body(Body::empty())
-        .expect("request")
+    common::req("GET", common::full(path)).auth(auth).build()
 }
 
 async fn body_json(resp: axum::response::Response) -> Value {
@@ -169,14 +164,7 @@ async fn the_retrieval_is_served_at_the_fhir_root_only() {
     ] {
         let gone = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .method("GET")
-                    .uri(&old)
-                    .header("authorization", basic("root"))
-                    .body(Body::empty())
-                    .expect("request"),
-            )
+            .oneshot(common::req("GET", &old).auth(basic("root")).build())
             .await
             .expect("response");
         assert_eq!(gone.status(), StatusCode::NOT_FOUND, "{old}");

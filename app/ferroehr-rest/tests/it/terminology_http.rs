@@ -22,9 +22,8 @@
 )]
 
 use axum::Router;
-use axum::body::Body;
 use base64::Engine;
-use http::{Request, StatusCode};
+use http::StatusCode;
 use serde_json::Value;
 
 use ferroehr::config::rest::RestConfig;
@@ -122,9 +121,7 @@ async fn disabled_group_answers_404_when_authenticated() {
         .await
         .expect("router builds");
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{EXT}/terminology"))
+    let req = common::req("GET", format!("{EXT}/terminology"))
         .header(
             http::header::AUTHORIZATION,
             format!(
@@ -132,8 +129,7 @@ async fn disabled_group_answers_404_when_authenticated() {
                 base64::engine::general_purpose::STANDARD.encode("alice:pw")
             ),
         )
-        .body(Body::empty())
-        .unwrap();
+        .build();
     let (status, _) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
@@ -141,9 +137,8 @@ async fn disabled_group_answers_404_when_authenticated() {
 #[tokio::test]
 async fn terminology_ids_returns_list() {
     let (_pg, app) = app(true).await;
-    let (status, body) = send_body(&app, get(&format!("{EXT}/terminology"))).await;
+    let (status, v) = common::send_json(&app, get(&format!("{EXT}/terminology"))).await;
     assert_eq!(status, StatusCode::OK);
-    let v: Value = serde_json::from_str(&body).expect("json body");
     let ids = v["terminology_ids"].as_array().expect("terminology_ids");
     // The real bundle exposes "openehr" plus the external code sets.
     assert!(ids.iter().any(|id| id == KNOWN), "ids contain openehr");
@@ -156,9 +151,8 @@ async fn terminology_ids_returns_list() {
 #[tokio::test]
 async fn terminology_description_found_is_200() {
     let (_pg, app) = app(true).await;
-    let (status, body) = send_body(&app, get(&format!("{EXT}/terminology/{KNOWN}"))).await;
+    let (status, v) = common::send_json(&app, get(&format!("{EXT}/terminology/{KNOWN}"))).await;
     assert_eq!(status, StatusCode::OK);
-    let v: Value = serde_json::from_str(&body).expect("json body");
     // Real bundle values (was Mock-scripted "openEHR"/"http://openehr.org/...").
     assert_eq!(v["publisher"], "openEHR Foundation");
     assert_eq!(v["uri"], OPENEHR_TERM_URI);

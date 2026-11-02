@@ -26,7 +26,6 @@
 //! (Patient Record / demographic), `"110112"` (Query), and `"110114"`
 //! (User Authentication, with `EventTypeCode` `"110122"` Login).
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     clippy::panic,
     clippy::missing_assert_message,
@@ -318,21 +317,14 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
     let seed_app = ferroehr_rest::build_with(auth_off_config(), seed_svc)
         .await
         .expect("seed app");
-    let put = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR}"))
-        .body(Body::empty())
-        .unwrap();
+    let put = common::req("PUT", format!("{BASE}/ehr/{EHR}")).build();
     assert_eq!(
         seed_app.clone().oneshot(put).await.unwrap().status(),
         StatusCode::CREATED
     );
-    let post = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{EHR}/composition"))
-        .header("content-type", "application/json")
-        .body(Body::from(composition().to_string()))
-        .unwrap();
+    let post = common::req("POST", format!("{BASE}/ehr/{EHR}/composition"))
+        .json(composition().to_string())
+        .build();
     let resp = seed_app.oneshot(post).await.unwrap();
     assert_eq!(resp.status(), StatusCode::CREATED, "seed composition");
     let uid = resp
@@ -450,15 +442,12 @@ async fn composition_update_emits_update_record() {
     let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
-    let request = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR}/composition/{vo}"))
+    let request = common::req("PUT", format!("{BASE}/ehr/{EHR}/composition/{vo}"))
         .header("x-forwarded-for", CLIENT_IP)
-        .header("content-type", "application/json")
-        .header("authorization", BASIC_ALICE)
-        .header("if-match", &uid)
-        .body(Body::from(composition().to_string()))
-        .expect("request");
+        .auth(BASIC_ALICE)
+        .if_match(&uid)
+        .json(composition().to_string())
+        .build();
     let resp = app.oneshot(request).await.expect("resp");
     // No Prefer header ⇒ return=minimal ⇒ 204 (ITS-REST overview
     // Requests_and_responses.md §Prefer: "If no `Prefer` header is provided,
@@ -507,16 +496,11 @@ async fn composition_tags_update_emits_update_record() {
     let (mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
-    let request = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR}/composition/{vo}/tags"))
+    let request = common::req("PUT", format!("{BASE}/ehr/{EHR}/composition/{vo}/tags"))
         .header("x-forwarded-for", CLIENT_IP)
-        .header("content-type", "application/json")
-        .header("authorization", BASIC_ALICE)
-        .body(Body::from(
-            json!([{ "key": "reviewed", "value": "true" }]).to_string(),
-        ))
-        .expect("request");
+        .auth(BASIC_ALICE)
+        .json(json!([{ "key": "reviewed", "value": "true" }]).to_string())
+        .build();
     let resp = app.oneshot(request).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
     let xml = recv_one(&mut socket).await.expect("audit record");
@@ -534,13 +518,10 @@ async fn composition_tags_delete_emits_delete_record() {
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     // Seed one tag through the audited app, then drain that record.
-    let put = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR}/composition/{vo}/tags"))
-        .header("content-type", "application/json")
-        .header("authorization", BASIC_ALICE)
-        .body(Body::from(json!([{ "key": "reviewed" }]).to_string()))
-        .expect("request");
+    let put = common::req("PUT", format!("{BASE}/ehr/{EHR}/composition/{vo}/tags"))
+        .auth(BASIC_ALICE)
+        .json(json!([{ "key": "reviewed" }]).to_string())
+        .build();
     assert_eq!(
         app.clone().oneshot(put).await.expect("resp").status(),
         StatusCode::NO_CONTENT
@@ -905,11 +886,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         .await
         .expect("build app");
 
-    let put = Request::builder()
-        .method("PUT")
-        .uri(format!("{BASE}/ehr/{EHR}"))
-        .body(Body::empty())
-        .unwrap();
+    let put = common::req("PUT", format!("{BASE}/ehr/{EHR}")).build();
     assert_eq!(
         app.clone().oneshot(put).await.unwrap().status(),
         StatusCode::CREATED
@@ -919,12 +896,9 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         "_type": "FEEDER_AUDIT",
         "originating_system_audit": { "_type": "FEEDER_AUDIT_DETAILS", "system_id": "lab.example" }
     });
-    let post = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{EHR}/composition"))
-        .header("content-type", "application/json")
-        .body(Body::from(imported.to_string()))
-        .unwrap();
+    let post = common::req("POST", format!("{BASE}/ehr/{EHR}/composition"))
+        .json(imported.to_string())
+        .build();
     let resp = app.clone().oneshot(post).await.unwrap();
     assert_eq!(resp.status(), StatusCode::CREATED);
     let uid = resp
@@ -936,11 +910,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         .trim_matches('"')
         .to_owned();
     let vo = uid.split("::").next().unwrap().to_owned();
-    let get = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{EHR}/composition/{vo}"))
-        .body(Body::empty())
-        .unwrap();
+    let get = common::req("GET", format!("{BASE}/ehr/{EHR}/composition/{vo}")).build();
     assert_eq!(app.oneshot(get).await.unwrap().status(), StatusCode::OK);
 
     let row = latest_composition_get_record(&pool).await;

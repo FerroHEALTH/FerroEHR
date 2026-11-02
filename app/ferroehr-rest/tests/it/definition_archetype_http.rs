@@ -15,7 +15,6 @@
 //! for both generations. What is asserted here is exactly what the CNF
 //! `adl14-archetype` / `adl2-archetype` `served_extensions` families declare.
 #![expect(
-    clippy::expect_used,
     clippy::panic,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -43,28 +42,18 @@ fn adl14_source() -> String {
 const ADL14_ID: &str = "openEHR-EHR-COMPOSITION.prescription.v1";
 
 fn get(path: &str) -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(common::full(path))
-        .body(Body::empty())
-        .expect("request")
+    common::req("GET", common::full(path)).build()
 }
 
 fn delete(path: &str) -> Request<Body> {
-    Request::builder()
-        .method("DELETE")
-        .uri(common::full(path))
-        .body(Body::empty())
-        .expect("request")
+    common::req("DELETE", common::full(path)).build()
 }
 
 fn post_text(path: &str, body: String) -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(common::full(path))
+    common::req("POST", common::full(path))
         .header(header::CONTENT_TYPE, "text/plain")
-        .body(Body::from(body))
-        .expect("request")
+        .body(body)
+        .build()
 }
 
 /// The full ADL 1.4 archetype lifecycle over the extension wire: an empty store
@@ -155,12 +144,9 @@ async fn the_adl14_upload_refuses_invalid_source_and_a_wrong_media_type() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
 
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{EXT}/definition/archetype/adl1.4"))
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(adl14_source()))
-        .expect("request");
+    let req = common::req("POST", format!("{EXT}/definition/archetype/adl1.4"))
+        .json(adl14_source())
+        .build();
     let (status, _, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "{body}");
 }

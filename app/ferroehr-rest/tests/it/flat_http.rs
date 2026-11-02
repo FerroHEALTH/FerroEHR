@@ -34,8 +34,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use axum::Router;
-use axum::body::Body;
-use http::{Request, StatusCode, header};
+use http::{StatusCode, header};
 use serde_json::{Value, json};
 
 use ferroehr::config::rest::RestConfig;
@@ -129,25 +128,15 @@ async fn app_with_ehr() -> (testkit::TestDb, Router, String) {
     let app = common::router_with(config(), service).await;
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/definition/template/adl1.4"))
+        common::req("POST", format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(ips_opt_xml()))
-            .unwrap(),
+            .body(ips_opt_xml())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 
-    let (status, h, _b) = send(
-        &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr"))
-            .body(Body::empty())
-            .unwrap(),
-    )
-    .await;
+    let (status, h, _b) = send(&app, common::req("POST", format!("{BASE}/ehr")).build()).await;
     assert_eq!(status, StatusCode::CREATED);
     (pg, app, etag_uid(&h))
 }
@@ -156,12 +145,9 @@ async fn app_with_ehr() -> (testkit::TestDb, Router, String) {
 async fn commit_canonical(app: &Router, ehr_id: &str, comp: &Value) -> String {
     let (status, h, body) = send(
         app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(comp.to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .json(comp.to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "canonical commit: {body}");
@@ -173,12 +159,9 @@ async fn get_composition_as_flat() {
     let (_pg, app, ehr) = app_with_ehr().await;
     let vo = commit_canonical(&app, &ehr, &canonical_composition()).await;
 
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{ehr}/composition/{vo}"))
-        .header(header::ACCEPT, FLAT_MIME)
-        .body(Body::empty())
-        .unwrap();
+    let req = common::req("GET", format!("{BASE}/ehr/{ehr}/composition/{vo}"))
+        .accept(FLAT_MIME)
+        .build();
     let (status, headers, body) = send(&app, req).await;
 
     assert_eq!(status, StatusCode::OK, "flat get: {body}");
@@ -209,13 +192,11 @@ async fn post_flat_composition_is_rebuilt_to_canonical() {
 
     let (status, h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
             .header(header::CONTENT_TYPE, FLAT_MIME)
             .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-            .body(Body::from(flat_body))
-            .unwrap(),
+            .body(flat_body)
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "flat commit: {body}");
@@ -224,12 +205,9 @@ async fn post_flat_composition_is_rebuilt_to_canonical() {
     // The service received (and stored) a canonical COMPOSITION, not the flat map.
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr}/composition/{vo}"))
-            .header(header::ACCEPT, "application/json")
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr}/composition/{vo}"))
+            .accept("application/json")
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "canonical read: {body}");
@@ -253,12 +231,10 @@ async fn post_flat_composition_is_rebuilt_to_canonical() {
 #[tokio::test]
 async fn post_flat_without_template_id_is_400() {
     let (_pg, app, ehr) = app_with_ehr().await;
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr}/composition"))
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
         .header(header::CONTENT_TYPE, FLAT_MIME)
-        .body(Body::from("{\"ctx/language\":\"en\"}"))
-        .unwrap();
+        .body("{\"ctx/language\":\"en\"}")
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
 }
@@ -282,13 +258,11 @@ async fn post_flat_raw_without_type_is_400() {
         .expect("a quantity leaf");
     flat.retain(|k, _| !k.starts_with(&format!("{leaf}|")));
     flat.insert(format!("{leaf}|raw"), json!({ "magnitude": 120 }));
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr/{ehr}/composition"))
+    let req = common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
         .header(header::CONTENT_TYPE, FLAT_MIME)
         .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-        .body(Body::from(serde_json::to_string(&flat).unwrap()))
-        .unwrap();
+        .body(serde_json::to_string(&flat).unwrap())
+        .build();
     let (status, _h, body) = send(&app, req).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
 }
@@ -313,13 +287,11 @@ const BANNED_SIMPLIFIED_TYPES: &[&str] = &[
 async fn post_composition_deprecated_or_legacy_content_type_is_415() {
     let (_pg, app, ehr) = app_with_ehr().await;
     for mime in BANNED_SIMPLIFIED_TYPES {
-        let req = Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        let req = common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
             .header(header::CONTENT_TYPE, *mime)
             .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-            .body(Body::from("{}"))
-            .unwrap();
+            .body("{}")
+            .build();
         let (status, _h, _b) = send(&app, req).await;
         assert_eq!(
             status,
@@ -338,12 +310,9 @@ async fn get_composition_deprecated_or_legacy_accept_is_406() {
     let (_pg, app, ehr) = app_with_ehr().await;
     let vo = commit_canonical(&app, &ehr, &canonical_composition()).await;
     for mime in BANNED_SIMPLIFIED_TYPES {
-        let req = Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr}/composition/{vo}"))
-            .header(header::ACCEPT, *mime)
-            .body(Body::empty())
-            .unwrap();
+        let req = common::req("GET", format!("{BASE}/ehr/{ehr}/composition/{vo}"))
+            .accept(*mime)
+            .build();
         let (status, _h, _b) = send(&app, req).await;
         assert_eq!(
             status,
@@ -364,12 +333,9 @@ async fn ehr_status_simplified_is_rejected() {
     // Simplified Accept on the EHR_STATUS retrieval → 406.
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr}/ehr_status"))
-            .header(header::ACCEPT, FLAT_MIME)
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr}/ehr_status"))
+            .accept(FLAT_MIME)
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_ACCEPTABLE);
@@ -377,13 +343,11 @@ async fn ehr_status_simplified_is_rejected() {
     // Simplified Content-Type on the EHR_STATUS update → 415.
     let (status, _h, _b) = send(
         &app,
-        Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/ehr/{ehr}/ehr_status"))
+        common::req("PUT", format!("{BASE}/ehr/{ehr}/ehr_status"))
             .header(header::CONTENT_TYPE, FLAT_MIME)
-            .header(header::IF_MATCH, "does-not-matter")
-            .body(Body::from("{}"))
-            .unwrap(),
+            .if_match("does-not-matter")
+            .body("{}")
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
@@ -401,13 +365,11 @@ async fn flat_round_trips_through_http() {
     // The template id is supplied via the `openehr-template-id` header.
     let (status, h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
             .header(header::CONTENT_TYPE, FLAT_MIME)
             .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-            .body(Body::from(serde_json::to_string(&flat_in_map).unwrap()))
-            .unwrap(),
+            .body(serde_json::to_string(&flat_in_map).unwrap())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "flat commit: {body}");
@@ -416,12 +378,9 @@ async fn flat_round_trips_through_http() {
     // GET it back as flat.
     let (status, _h, body) = send(
         &app,
-        Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{ehr}/composition/{vo}"))
-            .header(header::ACCEPT, FLAT_MIME)
-            .body(Body::empty())
-            .unwrap(),
+        common::req("GET", format!("{BASE}/ehr/{ehr}/composition/{vo}"))
+            .accept(FLAT_MIME)
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "flat get: {body}");
@@ -453,15 +412,13 @@ async fn post_flat_representation_carries_etag_and_location() {
 
     let (status, h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
             .header(header::CONTENT_TYPE, FLAT_MIME)
-            .header(header::ACCEPT, FLAT_MIME)
-            .header("prefer", "return=representation")
+            .accept(FLAT_MIME)
+            .prefer_representation()
             .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-            .body(Body::from(serde_json::to_string(&flat_map).unwrap()))
-            .unwrap(),
+            .body(serde_json::to_string(&flat_map).unwrap())
+            .build(),
     )
     .await;
 
@@ -498,15 +455,13 @@ async fn post_structured_representation_carries_etag_and_location() {
     // Commit in FLAT, negotiate the STRUCTURED representation back.
     let (status, h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
             .header(header::CONTENT_TYPE, FLAT_MIME)
-            .header(header::ACCEPT, STRUCTURED_MIME)
-            .header("prefer", "return=representation")
+            .accept(STRUCTURED_MIME)
+            .prefer_representation()
             .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-            .body(Body::from(serde_json::to_string(&flat_map).unwrap()))
-            .unwrap(),
+            .body(serde_json::to_string(&flat_map).unwrap())
+            .build(),
     )
     .await;
 
@@ -534,12 +489,9 @@ async fn update_flat_representation_carries_etag_and_location() {
     // Seed a first version canonically to obtain its full version uid for If-Match.
     let (status, seed_h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr}/composition"))
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(canonical_composition().to_string()))
-            .unwrap(),
+        common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
+            .json(canonical_composition().to_string())
+            .build(),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "seed commit: {body}");
@@ -553,16 +505,14 @@ async fn update_flat_representation_carries_etag_and_location() {
     let flat_map: serde_json::Map<String, Value> = flat.into_iter().collect();
     let (status, h, body) = send(
         &app,
-        Request::builder()
-            .method("PUT")
-            .uri(format!("{BASE}/ehr/{ehr}/composition/{vo}"))
+        common::req("PUT", format!("{BASE}/ehr/{ehr}/composition/{vo}"))
             .header(header::CONTENT_TYPE, FLAT_MIME)
-            .header(header::ACCEPT, FLAT_MIME)
-            .header(header::IF_MATCH, &prior_uid)
-            .header("prefer", "return=representation")
+            .accept(FLAT_MIME)
+            .if_match(&prior_uid)
+            .prefer_representation()
             .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-            .body(Body::from(serde_json::to_string(&flat_map).unwrap()))
-            .unwrap(),
+            .body(serde_json::to_string(&flat_map).unwrap())
+            .build(),
     )
     .await;
 
@@ -597,15 +547,13 @@ async fn post_flat_declares_the_applied_preference() {
 
     let (status, h, body) = send(
         &app,
-        Request::builder()
-            .method("POST")
-            .uri(format!("{BASE}/ehr/{ehr}/composition"))
+        common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
             .header(header::CONTENT_TYPE, FLAT_MIME)
-            .header(header::ACCEPT, FLAT_MIME)
-            .header("prefer", "return=representation")
+            .accept(FLAT_MIME)
+            .prefer_representation()
             .header(TEMPLATE_ID_HEADER, TEMPLATE_ID)
-            .body(Body::from(serde_json::to_string(&flat_map).unwrap()))
-            .unwrap(),
+            .body(serde_json::to_string(&flat_map).unwrap())
+            .build(),
     )
     .await;
 

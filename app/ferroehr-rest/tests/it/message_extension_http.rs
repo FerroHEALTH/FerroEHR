@@ -14,7 +14,6 @@
 //! Veredictum's `artifacts/vocab/wire_surface.yaml`, over the same corpus
 //! fixtures the CNF cases carry.
 #![expect(
-    clippy::expect_used,
     clippy::panic,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -44,20 +43,14 @@ fn corpus(name: &str) -> String {
 }
 
 fn get(path: &str) -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(common::full(path))
-        .body(Body::empty())
-        .expect("request")
+    common::req("GET", common::full(path)).build()
 }
 
 fn post(path: &str, content_type: &str, body: String) -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(common::full(path))
+    common::req("POST", common::full(path))
         .header(header::CONTENT_TYPE, content_type)
-        .body(Body::from(body))
-        .expect("request")
+        .body(body)
+        .build()
 }
 
 // ── EHR-Extract export and import ────────────────────────────────────────────
@@ -70,9 +63,9 @@ async fn export_ehrs_returns_one_extract_for_an_existing_ehr() {
     let (_pg, app) = common::test_router().await;
     let ehr_id = create_ehr(&app).await;
 
-    let (status, body) = send_body(&app, get(&format!("/message/export/{ehr_id}"))).await;
-    assert_eq!(status, StatusCode::OK, "export: {body}");
-    let extracts: Value = serde_json::from_str(&body).expect("extract list json");
+    let (status, extracts) =
+        common::send_json(&app, get(&format!("/message/export/{ehr_id}"))).await;
+    assert_eq!(status, StatusCode::OK, "export: {extracts}");
     let list = extracts.as_array().expect("a JSON array");
     assert_eq!(list.len(), 1, "one EXTRACT per exported EHR");
     assert_eq!(list[0]["_type"], "EXTRACT");
