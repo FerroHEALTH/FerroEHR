@@ -17,6 +17,3004 @@
 use crate::xml::runtime::{FromXml, ToXml, XmlError, XmlEvent};
 
 impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::access_group_ref::AccessGroupRef
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ACCESS_GROUP_REF"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ACCESS_GROUP_REF" {
+                __attrs.push(("xsi:type", "ACCESS_GROUP_REF".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.id.write_xml(w, "id", Some("OBJECT_ID"))?;
+        self.namespace.write_xml(w, "namespace", Some("String"))?;
+        self.r#type.write_xml(w, "type", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::access_group_ref::AccessGroupRef
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __namespace = None;
+        let mut __type = None;
+        let mut __id = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "namespace" => {
+                        __namespace = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "id" => {
+                        __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ACCESS_GROUP_REF".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::access_group_ref::AccessGroupRef {
+                namespace: __namespace
+                    .ok_or_else(|| reader.missing_child("ACCESS_GROUP_REF", "namespace"))?,
+                r#type: __type.ok_or_else(|| reader.missing_child("ACCESS_GROUP_REF", "type"))?,
+                id: __id.ok_or_else(|| reader.missing_child("ACCESS_GROUP_REF", "id"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::archetype_id::ArchetypeId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ARCHETYPE_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ARCHETYPE_ID" {
+                __attrs.push(("xsi:type", "ARCHETYPE_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::archetype_id::ArchetypeId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ARCHETYPE_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::archetype_id::ArchetypeId {
+                value: __value.ok_or_else(|| reader.missing_child("ARCHETYPE_ID", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::resource::authored_resource::AuthoredResource
+{
+    fn xml_type_name(&self) -> &'static str {
+        "AUTHORED_RESOURCE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "AUTHORED_RESOURCE" {
+                __attrs.push(("xsi:type", "AUTHORED_RESOURCE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.original_language
+            .write_xml(w, "original_language", Some("Terminology_code"))?;
+        if let Some(v) = &self.is_controlled {
+            v.write_xml(w, "is_controlled", Some("Boolean"))?;
+        }
+        if let Some(v) = &self.description {
+            v.write_xml(w, "description", Some("RESOURCE_DESCRIPTION"))?;
+        }
+        // NOTE: Hash<String, TRANSLATION_DETAILS> field `translations` is off the RM canonical-XML wire (resource metadata); not serialized.
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UUID"))?;
+        }
+        if let Some(v) = &self.annotations {
+            v.write_xml(w, "annotations", Some("RESOURCE_ANNOTATIONS"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::resource::authored_resource::AuthoredResource
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __original_language = None;
+        let mut __description = None;
+        let mut __is_controlled = None;
+        let mut __annotations = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "original_language" => {
+                        __original_language =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "description" => {
+                        __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_controlled" => {
+                        __is_controlled =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "annotations" => {
+                        __annotations = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "translations" => reader.skip_element()?,
+                    "revision_history" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "AUTHORED_RESOURCE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::resource::authored_resource::AuthoredResource {
+                uid: __uid,
+                original_language: __original_language.ok_or_else(|| {
+                    reader.missing_child("AUTHORED_RESOURCE", "original_language")
+                })?,
+                description: __description,
+                is_controlled: __is_controlled,
+                annotations: __annotations,
+                translations: Default::default(),
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::interval::cardinality::Cardinality
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Cardinality"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Cardinality" {
+                __attrs.push(("xsi:type", "Cardinality".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.interval
+            .write_xml(w, "interval", Some("Multiplicity_interval"))?;
+        self.is_ordered
+            .write_xml(w, "is_ordered", Some("Boolean"))?;
+        self.is_unique.write_xml(w, "is_unique", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::interval::cardinality::Cardinality
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __interval = None;
+        let mut __is_ordered = None;
+        let mut __is_unique = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "interval" => {
+                        __interval = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_ordered" => {
+                        __is_ordered = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_unique" => {
+                        __is_unique = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Cardinality".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::interval::cardinality::Cardinality {
+                interval: __interval
+                    .ok_or_else(|| reader.missing_child("Cardinality", "interval"))?,
+                is_ordered: __is_ordered
+                    .ok_or_else(|| reader.missing_child("Cardinality", "is_ordered"))?,
+                is_unique: __is_unique
+                    .ok_or_else(|| reader.missing_child("Cardinality", "is_unique"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::generic_id::GenericId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "GENERIC_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "GENERIC_ID" {
+                __attrs.push(("xsi:type", "GENERIC_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        self.scheme.write_xml(w, "scheme", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::generic_id::GenericId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        let mut __scheme = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "scheme" => {
+                        __scheme = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "GENERIC_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::generic_id::GenericId {
+                value: __value.ok_or_else(|| reader.missing_child("GENERIC_ID", "value"))?,
+                scheme: __scheme.ok_or_else(|| reader.missing_child("GENERIC_ID", "scheme"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::hier_object_id::HierObjectId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "HIER_OBJECT_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "HIER_OBJECT_ID" {
+                __attrs.push(("xsi:type", "HIER_OBJECT_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value().write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::hier_object_id::HierObjectId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "HIER_OBJECT_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        let __a0: String =
+            __value.ok_or_else(|| reader.missing_child("HIER_OBJECT_ID", "value"))?;
+        openehr_base::v1_2::base_types::identification::hier_object_id::HierObjectId::new(__a0)
+            .map_err(|__e| reader.invalid_content(::std::format!("HIER_OBJECT_ID: {__e}")))
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::internet_id::InternetId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "INTERNET_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "INTERNET_ID" {
+                __attrs.push(("xsi:type", "INTERNET_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value().write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::internet_id::InternetId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "INTERNET_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        let __a0: String = __value.ok_or_else(|| reader.missing_child("INTERNET_ID", "value"))?;
+        openehr_base::v1_2::base_types::identification::internet_id::InternetId::new(__a0)
+            .map_err(|__e| reader.invalid_content(::std::format!("INTERNET_ID: {__e}")))
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::iso_oid::IsoOid
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ISO_OID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ISO_OID" {
+                __attrs.push(("xsi:type", "ISO_OID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value().write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::iso_oid::IsoOid
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ISO_OID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        let __a0: String = __value.ok_or_else(|| reader.missing_child("ISO_OID", "value"))?;
+        openehr_base::v1_2::base_types::identification::iso_oid::IsoOid::new(__a0)
+            .map_err(|__e| reader.invalid_content(::std::format!("ISO_OID: {__e}")))
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::interval::interval::Interval<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_base::v1_2::foundation_types::interval::interval::Interval::PointInterval(
+                x,
+            ) => x.xml_type_name(),
+            openehr_base::v1_2::foundation_types::interval::interval::Interval::ProperInterval(
+                x,
+            ) => x.xml_type_name(),
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_base::v1_2::foundation_types::interval::interval::Interval::PointInterval(
+                x,
+            ) => x.write_xml(w, tag, declared),
+            openehr_base::v1_2::foundation_types::interval::interval::Interval::ProperInterval(
+                x,
+            ) => x.write_xml(w, tag, declared),
+        }
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::interval::interval::Interval<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("Multiplicity_interval") => Ok(
+                openehr_base::v1_2::foundation_types::interval::interval::Interval::ProperInterval(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("Point_interval") => Ok(
+                openehr_base::v1_2::foundation_types::interval::interval::Interval::PointInterval(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("Proper_interval") => Ok(
+                openehr_base::v1_2::foundation_types::interval::interval::Interval::ProperInterval(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Interval: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Interval: unknown xsi:type {other}: the ITS-XML RM schemas define no Interval subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_date::Iso8601Date
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_date"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_date" {
+                __attrs.push(("xsi:type", "Iso8601_date".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_date::Iso8601Date
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_date".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::time::iso8601_date::Iso8601Date {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_date", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTime
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_date_time"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_date_time" {
+                __attrs.push(("xsi:type", "Iso8601_date_time".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTime
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_date_time".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTime {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_date_time", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_duration"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_duration" {
+                __attrs.push(("xsi:type", "Iso8601_duration".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_duration".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_duration", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_time::Iso8601Time
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_time"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_time" {
+                __attrs.push(("xsi:type", "Iso8601_time".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_time::Iso8601Time
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_time".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::time::iso8601_time::Iso8601Time {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_time", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_timezone::Iso8601Timezone
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_timezone"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_timezone" {
+                __attrs.push(("xsi:type", "Iso8601_timezone".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_timezone::Iso8601Timezone
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_timezone".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::time::iso8601_timezone::Iso8601Timezone {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_timezone", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Date(x) => x.xml_type_name(),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601DateTime(x) => x.xml_type_name(),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Duration(x) => x.xml_type_name(),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(x) => x.xml_type_name(),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Date(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601DateTime(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Duration(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("Iso8601_date") => Ok(openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Date(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_date_time") => Ok(openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601DateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_duration") => Ok(openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Duration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_time") => Ok(openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_timezone") => Ok(openehr_base::v1_2::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("Iso8601Type: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Type: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_type subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::locatable_ref::LocatableRef
+{
+    fn xml_type_name(&self) -> &'static str {
+        "LOCATABLE_REF"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "LOCATABLE_REF" {
+                __attrs.push(("xsi:type", "LOCATABLE_REF".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.id.write_xml(w, "id", Some("UID_BASED_ID"))?;
+        self.namespace.write_xml(w, "namespace", Some("String"))?;
+        self.r#type.write_xml(w, "type", Some("String"))?;
+        if let Some(v) = &self.path {
+            v.write_xml(w, "path", Some("String"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::locatable_ref::LocatableRef
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __namespace = None;
+        let mut __type = None;
+        let mut __id = None;
+        let mut __path = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "namespace" => {
+                        __namespace = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "id" => {
+                        __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "path" => {
+                        __path = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "LOCATABLE_REF".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::locatable_ref::LocatableRef {
+                namespace: __namespace
+                    .ok_or_else(|| reader.missing_child("LOCATABLE_REF", "namespace"))?,
+                r#type: __type.ok_or_else(|| reader.missing_child("LOCATABLE_REF", "type"))?,
+                id: __id.ok_or_else(|| reader.missing_child("LOCATABLE_REF", "id"))?,
+                path: __path,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::interval::multiplicity_interval::MultiplicityInterval
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Multiplicity_interval"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Multiplicity_interval" {
+                __attrs.push(("xsi:type", "Multiplicity_interval".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.lower {
+            v.write_xml(w, "lower", Some("T"))?;
+        }
+        if let Some(v) = &self.upper {
+            v.write_xml(w, "upper", Some("T"))?;
+        }
+        self.lower_unbounded
+            .write_xml(w, "lower_unbounded", Some("Boolean"))?;
+        self.upper_unbounded
+            .write_xml(w, "upper_unbounded", Some("Boolean"))?;
+        self.lower_included
+            .write_xml(w, "lower_included", Some("Boolean"))?;
+        self.upper_included
+            .write_xml(w, "upper_included", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::interval::multiplicity_interval::MultiplicityInterval
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __lower = None;
+        let mut __upper = None;
+        let mut __lower_unbounded = None;
+        let mut __upper_unbounded = None;
+        let mut __lower_included = None;
+        let mut __upper_included = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "lower" => {
+                        __lower = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper" => {
+                        __upper = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_unbounded" => {
+                        __lower_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_unbounded" => {
+                        __upper_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_included" => {
+                        __lower_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_included" => {
+                        __upper_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Multiplicity_interval".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_base::v1_2::foundation_types::interval::multiplicity_interval::MultiplicityInterval {
+lower: __lower,
+upper: __upper,
+lower_unbounded: __lower_unbounded.unwrap_or(false),
+upper_unbounded: __upper_unbounded.unwrap_or(false),
+lower_included: __lower_included.unwrap_or(true),
+upper_included: __upper_included.unwrap_or(true),
+})
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::object_id::ObjectId
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::ArchetypeId(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::GenericId(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::HierObjectId(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::ObjectVersionId(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::TemplateId(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::TerminologyId(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::ArchetypeId(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::GenericId(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::HierObjectId(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::ObjectVersionId(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::TemplateId(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_id::ObjectId::TerminologyId(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::object_id::ObjectId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("ARCHETYPE_ID") => Ok(openehr_base::v1_2::base_types::identification::object_id::ObjectId::ArchetypeId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("GENERIC_ID") => Ok(openehr_base::v1_2::base_types::identification::object_id::ObjectId::GenericId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("HIER_OBJECT_ID") => Ok(openehr_base::v1_2::base_types::identification::object_id::ObjectId::HierObjectId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("OBJECT_VERSION_ID") => Ok(openehr_base::v1_2::base_types::identification::object_id::ObjectId::ObjectVersionId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("TEMPLATE_ID") => Ok(openehr_base::v1_2::base_types::identification::object_id::ObjectId::TemplateId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("TERMINOLOGY_ID") => Ok(openehr_base::v1_2::base_types::identification::object_id::ObjectId::TerminologyId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("ObjectId: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ObjectId: unknown xsi:type {other}: the ITS-XML RM schemas define no OBJECT_ID subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::object_ref::ObjectRefData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "OBJECT_REF"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "OBJECT_REF" {
+                __attrs.push(("xsi:type", "OBJECT_REF".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.id.write_xml(w, "id", Some("OBJECT_ID"))?;
+        self.namespace.write_xml(w, "namespace", Some("String"))?;
+        self.r#type.write_xml(w, "type", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::object_ref::ObjectRefData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __namespace = None;
+        let mut __type = None;
+        let mut __id = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "namespace" => {
+                        __namespace = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "id" => {
+                        __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "OBJECT_REF".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::object_ref::ObjectRefData {
+                namespace: __namespace
+                    .ok_or_else(|| reader.missing_child("OBJECT_REF", "namespace"))?,
+                r#type: __type.ok_or_else(|| reader.missing_child("OBJECT_REF", "type"))?,
+                id: __id.ok_or_else(|| reader.missing_child("OBJECT_REF", "id"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::object_ref::ObjectRef
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::AccessGroupRef(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::LocatableRef(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::PartyRef(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::ObjectRef(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::AccessGroupRef(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::LocatableRef(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::PartyRef(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::ObjectRef(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::object_ref::ObjectRef
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("ACCESS_GROUP_REF") => Ok(openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::AccessGroupRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("LOCATABLE_REF") => Ok(openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::LocatableRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("OBJECT_REF") => Ok(openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::ObjectRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("PARTY_REF") => Ok(openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::PartyRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_base::v1_2::base_types::identification::object_ref::ObjectRef::ObjectRef(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ObjectRef: unknown xsi:type {other}: the ITS-XML RM schemas define no OBJECT_REF subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::object_version_id::ObjectVersionId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "OBJECT_VERSION_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "OBJECT_VERSION_ID" {
+                __attrs.push(("xsi:type", "OBJECT_VERSION_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value().write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::object_version_id::ObjectVersionId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "OBJECT_VERSION_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        let __a0: String =
+            __value.ok_or_else(|| reader.missing_child("OBJECT_VERSION_ID", "value"))?;
+        openehr_base::v1_2::base_types::identification::object_version_id::ObjectVersionId::new(
+            __a0,
+        )
+        .map_err(|__e| reader.invalid_content(::std::format!("OBJECT_VERSION_ID: {__e}")))
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::party_ref::PartyRef
+{
+    fn xml_type_name(&self) -> &'static str {
+        "PARTY_REF"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PARTY_REF" {
+                __attrs.push(("xsi:type", "PARTY_REF".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.id.write_xml(w, "id", Some("OBJECT_ID"))?;
+        self.namespace.write_xml(w, "namespace", Some("String"))?;
+        self.r#type.write_xml(w, "type", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::party_ref::PartyRef
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __namespace = None;
+        let mut __type = None;
+        let mut __id = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "namespace" => {
+                        __namespace = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "id" => {
+                        __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PARTY_REF".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::party_ref::PartyRef {
+                namespace: __namespace
+                    .ok_or_else(|| reader.missing_child("PARTY_REF", "namespace"))?,
+                r#type: __type.ok_or_else(|| reader.missing_child("PARTY_REF", "type"))?,
+                id: __id.ok_or_else(|| reader.missing_child("PARTY_REF", "id"))?,
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::interval::point_interval::PointInterval<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Point_interval"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Point_interval" {
+                __attrs.push(("xsi:type", "Point_interval".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.lower {
+            v.write_xml(w, "lower", Some("T"))?;
+        }
+        if let Some(v) = &self.upper {
+            v.write_xml(w, "upper", Some("T"))?;
+        }
+        self.lower_unbounded
+            .write_xml(w, "lower_unbounded", Some("Boolean"))?;
+        self.upper_unbounded
+            .write_xml(w, "upper_unbounded", Some("Boolean"))?;
+        self.lower_included
+            .write_xml(w, "lower_included", Some("Boolean"))?;
+        self.upper_included
+            .write_xml(w, "upper_included", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::interval::point_interval::PointInterval<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __lower = None;
+        let mut __upper = None;
+        let mut __lower_unbounded = None;
+        let mut __upper_unbounded = None;
+        let mut __lower_included = None;
+        let mut __upper_included = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "lower" => {
+                        __lower = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper" => {
+                        __upper = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_unbounded" => {
+                        __lower_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_unbounded" => {
+                        __upper_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_included" => {
+                        __lower_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_included" => {
+                        __upper_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Point_interval".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::interval::point_interval::PointInterval {
+                lower: __lower,
+                upper: __upper,
+                lower_unbounded: __lower_unbounded.unwrap_or(false),
+                upper_unbounded: __upper_unbounded.unwrap_or(false),
+                lower_included: __lower_included.unwrap_or(true),
+                upper_included: __upper_included.unwrap_or(true),
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::interval::proper_interval::ProperIntervalData<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Proper_interval"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Proper_interval" {
+                __attrs.push(("xsi:type", "Proper_interval".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.lower {
+            v.write_xml(w, "lower", Some("T"))?;
+        }
+        if let Some(v) = &self.upper {
+            v.write_xml(w, "upper", Some("T"))?;
+        }
+        self.lower_unbounded
+            .write_xml(w, "lower_unbounded", Some("Boolean"))?;
+        self.upper_unbounded
+            .write_xml(w, "upper_unbounded", Some("Boolean"))?;
+        self.lower_included
+            .write_xml(w, "lower_included", Some("Boolean"))?;
+        self.upper_included
+            .write_xml(w, "upper_included", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::interval::proper_interval::ProperIntervalData<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __lower = None;
+        let mut __upper = None;
+        let mut __lower_unbounded = None;
+        let mut __upper_unbounded = None;
+        let mut __lower_included = None;
+        let mut __upper_included = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "lower" => {
+                        __lower = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper" => {
+                        __upper = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_unbounded" => {
+                        __lower_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_unbounded" => {
+                        __upper_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_included" => {
+                        __lower_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_included" => {
+                        __upper_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Proper_interval".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::interval::proper_interval::ProperIntervalData {
+                lower: __lower,
+                upper: __upper,
+                lower_unbounded: __lower_unbounded.unwrap_or(false),
+                upper_unbounded: __upper_unbounded.unwrap_or(false),
+                lower_included: __lower_included.unwrap_or(true),
+                upper_included: __upper_included.unwrap_or(true),
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval::MultiplicityInterval(x) => x.xml_type_name(),
+openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval::ProperInterval(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval::MultiplicityInterval(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval::ProperInterval(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("Multiplicity_interval") => Ok(openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval::MultiplicityInterval(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Proper_interval") => Ok(openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval::ProperInterval(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_base::v1_2::foundation_types::interval::proper_interval::ProperInterval::ProperInterval(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ProperInterval: unknown xsi:type {other}: the ITS-XML RM schemas define no Proper_interval subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::resource::resource_annotations::ResourceAnnotations
+{
+    fn xml_type_name(&self) -> &'static str {
+        "RESOURCE_ANNOTATIONS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "RESOURCE_ANNOTATIONS" {
+                __attrs.push(("xsi:type", "RESOURCE_ANNOTATIONS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        // NOTE: Hash<String, Hash> field `documentation` is off the RM canonical-XML wire (resource metadata); not serialized.
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::resource::resource_annotations::ResourceAnnotations
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "documentation" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "RESOURCE_ANNOTATIONS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::resource::resource_annotations::ResourceAnnotations {
+                documentation: Default::default(),
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::resource::resource_description::ResourceDescription
+{
+    fn xml_type_name(&self) -> &'static str {
+        "RESOURCE_DESCRIPTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "RESOURCE_DESCRIPTION" {
+                __attrs.push(("xsi:type", "RESOURCE_DESCRIPTION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        for (k, v) in &self.original_author {
+            w.write_kv_element("original_author", k, v)?;
+        }
+        if let Some(vs) = &self.other_contributors {
+            for v in vs {
+                v.write_xml(w, "other_contributors", Some("String"))?;
+            }
+        }
+        self.lifecycle_state
+            .write_xml(w, "lifecycle_state", Some("Terminology_code"))?;
+        if let Some(v) = &self.resource_package_uri {
+            v.write_xml(w, "resource_package_uri", Some("String"))?;
+        }
+        if let Some(m) = &self.other_details {
+            for (k, v) in m {
+                w.write_kv_element("other_details", k, v)?;
+            }
+        }
+        // NOTE: Hash<String, RESOURCE_DESCRIPTION_ITEM> field `details` is off the RM canonical-XML wire (resource metadata); not serialized.
+        if let Some(v) = &self.original_namespace {
+            v.write_xml(w, "original_namespace", Some("String"))?;
+        }
+        if let Some(v) = &self.original_publisher {
+            v.write_xml(w, "original_publisher", Some("String"))?;
+        }
+        if let Some(v) = &self.custodian_namespace {
+            v.write_xml(w, "custodian_namespace", Some("String"))?;
+        }
+        if let Some(v) = &self.custodian_organisation {
+            v.write_xml(w, "custodian_organisation", Some("String"))?;
+        }
+        if let Some(v) = &self.copyright {
+            v.write_xml(w, "copyright", Some("String"))?;
+        }
+        if let Some(v) = &self.licence {
+            v.write_xml(w, "licence", Some("String"))?;
+        }
+        if let Some(m) = &self.ip_acknowledgements {
+            for (k, v) in m {
+                w.write_kv_element("ip_acknowledgements", k, v)?;
+            }
+        }
+        if let Some(m) = &self.references {
+            for (k, v) in m {
+                w.write_kv_element("references", k, v)?;
+            }
+        }
+        if let Some(m) = &self.conversion_details {
+            for (k, v) in m {
+                w.write_kv_element("conversion_details", k, v)?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::resource::resource_description::ResourceDescription
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __original_author = std::collections::BTreeMap::new();
+        let mut __original_namespace = None;
+        let mut __original_publisher = None;
+        let mut __other_contributors = Vec::new();
+        let mut __lifecycle_state = None;
+        let mut __custodian_namespace = None;
+        let mut __custodian_organisation = None;
+        let mut __copyright = None;
+        let mut __licence = None;
+        let mut __ip_acknowledgements = std::collections::BTreeMap::new();
+        let mut __references = std::collections::BTreeMap::new();
+        let mut __resource_package_uri = None;
+        let mut __conversion_details = std::collections::BTreeMap::new();
+        let mut __other_details = std::collections::BTreeMap::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "original_author" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __original_author.insert(__k, __v);
+                    }
+                    "original_namespace" => {
+                        __original_namespace =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "original_publisher" => {
+                        __original_publisher =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_contributors" => {
+                        __other_contributors
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lifecycle_state" => {
+                        __lifecycle_state =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "custodian_namespace" => {
+                        __custodian_namespace =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "custodian_organisation" => {
+                        __custodian_organisation =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "copyright" => {
+                        __copyright = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "licence" => {
+                        __licence = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "ip_acknowledgements" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __ip_acknowledgements.insert(__k, __v);
+                    }
+                    "references" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __references.insert(__k, __v);
+                    }
+                    "resource_package_uri" => {
+                        __resource_package_uri =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "conversion_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __conversion_details.insert(__k, __v);
+                    }
+                    "other_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __other_details.insert(__k, __v);
+                    }
+                    "details" => reader.skip_element()?,
+                    "parent_resource" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "RESOURCE_DESCRIPTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::resource::resource_description::ResourceDescription {
+                original_author: __original_author,
+                original_namespace: __original_namespace,
+                original_publisher: __original_publisher,
+                other_contributors: if __other_contributors.is_empty() {
+                    None
+                } else {
+                    Some(__other_contributors)
+                },
+                lifecycle_state: __lifecycle_state.ok_or_else(|| {
+                    reader.missing_child("RESOURCE_DESCRIPTION", "lifecycle_state")
+                })?,
+                custodian_namespace: __custodian_namespace,
+                custodian_organisation: __custodian_organisation,
+                copyright: __copyright,
+                licence: __licence,
+                ip_acknowledgements: if __ip_acknowledgements.is_empty() {
+                    None
+                } else {
+                    Some(__ip_acknowledgements)
+                },
+                references: if __references.is_empty() {
+                    None
+                } else {
+                    Some(__references)
+                },
+                resource_package_uri: __resource_package_uri,
+                conversion_details: if __conversion_details.is_empty() {
+                    None
+                } else {
+                    Some(__conversion_details)
+                },
+                other_details: if __other_details.is_empty() {
+                    None
+                } else {
+                    Some(__other_details)
+                },
+                details: Default::default(),
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::resource::resource_description_item::ResourceDescriptionItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        "RESOURCE_DESCRIPTION_ITEM"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "RESOURCE_DESCRIPTION_ITEM" {
+                __attrs.push(("xsi:type", "RESOURCE_DESCRIPTION_ITEM".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.language
+            .write_xml(w, "language", Some("Terminology_code"))?;
+        self.purpose.write_xml(w, "purpose", Some("String"))?;
+        if let Some(vs) = &self.keywords {
+            for v in vs {
+                v.write_xml(w, "keywords", Some("String"))?;
+            }
+        }
+        if let Some(v) = &self.use_ {
+            v.write_xml(w, "use", Some("String"))?;
+        }
+        if let Some(v) = &self.misuse {
+            v.write_xml(w, "misuse", Some("String"))?;
+        }
+        if let Some(m) = &self.original_resource_uri {
+            for (k, v) in m {
+                w.write_kv_element("original_resource_uri", k, v)?;
+            }
+        }
+        if let Some(m) = &self.other_details {
+            for (k, v) in m {
+                w.write_kv_element("other_details", k, v)?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::resource::resource_description_item::ResourceDescriptionItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __language = None;
+        let mut __purpose = None;
+        let mut __keywords = Vec::new();
+        let mut __use_ = None;
+        let mut __misuse = None;
+        let mut __original_resource_uri = std::collections::BTreeMap::new();
+        let mut __other_details = std::collections::BTreeMap::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "purpose" => {
+                        __purpose = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "keywords" => {
+                        __keywords.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "use" => {
+                        __use_ = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "misuse" => {
+                        __misuse = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "original_resource_uri" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __original_resource_uri.insert(__k, __v);
+                    }
+                    "other_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __other_details.insert(__k, __v);
+                    }
+                    "copyright" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "RESOURCE_DESCRIPTION_ITEM".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::resource::resource_description_item::ResourceDescriptionItem {
+                language: __language
+                    .ok_or_else(|| reader.missing_child("RESOURCE_DESCRIPTION_ITEM", "language"))?,
+                purpose: __purpose
+                    .ok_or_else(|| reader.missing_child("RESOURCE_DESCRIPTION_ITEM", "purpose"))?,
+                keywords: if __keywords.is_empty() {
+                    None
+                } else {
+                    Some(__keywords)
+                },
+                use_: __use_,
+                misuse: __misuse,
+                original_resource_uri: if __original_resource_uri.is_empty() {
+                    None
+                } else {
+                    Some(__original_resource_uri)
+                },
+                other_details: if __other_details.is_empty() {
+                    None
+                } else {
+                    Some(__other_details)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::template_id::TemplateId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "TEMPLATE_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "TEMPLATE_ID" {
+                __attrs.push(("xsi:type", "TEMPLATE_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::template_id::TemplateId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "TEMPLATE_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::template_id::TemplateId {
+                value: __value.ok_or_else(|| reader.missing_child("TEMPLATE_ID", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::terminology_id::TerminologyId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "TERMINOLOGY_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "TERMINOLOGY_ID" {
+                __attrs.push(("xsi:type", "TERMINOLOGY_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::terminology_id::TerminologyId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "TERMINOLOGY_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::base_types::identification::terminology_id::TerminologyId {
+                value: __value.ok_or_else(|| reader.missing_child("TERMINOLOGY_ID", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::resource::translation_details::TranslationDetails
+{
+    fn xml_type_name(&self) -> &'static str {
+        "TRANSLATION_DETAILS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "TRANSLATION_DETAILS" {
+                __attrs.push(("xsi:type", "TRANSLATION_DETAILS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.language
+            .write_xml(w, "language", Some("Terminology_code"))?;
+        for (k, v) in &self.author {
+            w.write_kv_element("author", k, v)?;
+        }
+        if let Some(v) = &self.accreditation {
+            v.write_xml(w, "accreditation", Some("String"))?;
+        }
+        if let Some(m) = &self.other_details {
+            for (k, v) in m {
+                w.write_kv_element("other_details", k, v)?;
+            }
+        }
+        if let Some(v) = &self.version_last_translated {
+            v.write_xml(w, "version_last_translated", Some("String"))?;
+        }
+        if let Some(vs) = &self.other_contributors {
+            for v in vs {
+                v.write_xml(w, "other_contributors", Some("String"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::resource::translation_details::TranslationDetails
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __language = None;
+        let mut __author = std::collections::BTreeMap::new();
+        let mut __accreditation = None;
+        let mut __other_details = std::collections::BTreeMap::new();
+        let mut __version_last_translated = None;
+        let mut __other_contributors = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "author" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __author.insert(__k, __v);
+                    }
+                    "accreditation" => {
+                        __accreditation =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __other_details.insert(__k, __v);
+                    }
+                    "version_last_translated" => {
+                        __version_last_translated =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_contributors" => {
+                        __other_contributors
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "TRANSLATION_DETAILS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::resource::translation_details::TranslationDetails {
+                language: __language
+                    .ok_or_else(|| reader.missing_child("TRANSLATION_DETAILS", "language"))?,
+                author: __author,
+                accreditation: __accreditation,
+                other_details: if __other_details.is_empty() {
+                    None
+                } else {
+                    Some(__other_details)
+                },
+                version_last_translated: __version_last_translated,
+                other_contributors: if __other_contributors.is_empty() {
+                    None
+                } else {
+                    Some(__other_contributors)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::terminology::terminology_code::TerminologyCode
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Terminology_code"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Terminology_code" {
+                __attrs.push(("xsi:type", "Terminology_code".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        // NOTE: BASE 1.3.0 TERMINOLOGY_CODE.terminology_id is a String; ITS-XML 1.0.2 Resource.xsd types the slot CODE_PHRASE, whose terminology_id is a TERMINOLOGY_ID with one value element (BaseTypes.xsd).
+        crate::xml::runtime::write_value_wrapped(w, "terminology_id", &self.terminology_id)?;
+        if let Some(v) = &self.terminology_version {
+            v.write_xml(w, "terminology_version", Some("String"))?;
+        }
+        self.code_string
+            .write_xml(w, "code_string", Some("String"))?;
+        if let Some(v) = &self.uri {
+            v.write_xml(w, "uri", Some("Uri"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::terminology::terminology_code::TerminologyCode
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __terminology_id = None;
+        let mut __terminology_version = None;
+        let mut __code_string = None;
+        let mut __uri = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "terminology_id" => {
+                        __terminology_id =
+                            Some(crate::xml::runtime::read_value_wrapped(reader, &__c)?);
+                    }
+                    "terminology_version" => {
+                        __terminology_version =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "code_string" => {
+                        __code_string = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uri" => {
+                        __uri = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Terminology_code".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::terminology::terminology_code::TerminologyCode {
+                terminology_id: __terminology_id
+                    .ok_or_else(|| reader.missing_child("Terminology_code", "terminology_id"))?,
+                terminology_version: __terminology_version,
+                code_string: __code_string
+                    .ok_or_else(|| reader.missing_child("Terminology_code", "code_string"))?,
+                uri: __uri,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::foundation_types::terminology::terminology_term::TerminologyTerm
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Terminology_term"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Terminology_term" {
+                __attrs.push(("xsi:type", "Terminology_term".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.concept
+            .write_xml(w, "concept", Some("Terminology_code"))?;
+        self.text.write_xml(w, "text", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::foundation_types::terminology::terminology_term::TerminologyTerm
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __concept = None;
+        let mut __text = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "concept" => {
+                        __concept = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "text" => {
+                        __text = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Terminology_term".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_base::v1_2::foundation_types::terminology::terminology_term::TerminologyTerm {
+                concept: __concept
+                    .ok_or_else(|| reader.missing_child("Terminology_term", "concept"))?,
+                text: __text.ok_or_else(|| reader.missing_child("Terminology_term", "text"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_base::v1_2::base_types::identification::uid::Uid {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_base::v1_2::base_types::identification::uid::Uid::InternetId(x) => {
+                x.xml_type_name()
+            }
+            openehr_base::v1_2::base_types::identification::uid::Uid::IsoOid(x) => {
+                x.xml_type_name()
+            }
+            openehr_base::v1_2::base_types::identification::uid::Uid::Uuid(x) => x.xml_type_name(),
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_base::v1_2::base_types::identification::uid::Uid::InternetId(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_base::v1_2::base_types::identification::uid::Uid::IsoOid(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_base::v1_2::base_types::identification::uid::Uid::Uuid(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_base::v1_2::base_types::identification::uid::Uid {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("INTERNET_ID") => Ok(
+                openehr_base::v1_2::base_types::identification::uid::Uid::InternetId(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ISO_OID") => Ok(
+                openehr_base::v1_2::base_types::identification::uid::Uid::IsoOid(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("UUID") => Ok(
+                openehr_base::v1_2::base_types::identification::uid::Uid::Uuid(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Uid: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Uid: unknown xsi:type {other}: the ITS-XML RM schemas define no UID subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId::HierObjectId(x) => x.xml_type_name(),
+openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId::ObjectVersionId(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId::HierObjectId(x) => x.write_xml(w, tag, declared),
+openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId::ObjectVersionId(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("HIER_OBJECT_ID") => Ok(openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId::HierObjectId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("OBJECT_VERSION_ID") => Ok(openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId::ObjectVersionId(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("UidBasedId: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("UidBasedId: unknown xsi:type {other}: the ITS-XML RM schemas define no UID_BASED_ID subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_base::v1_2::base_types::identification::uuid::Uuid {
+    fn xml_type_name(&self) -> &'static str {
+        "UUID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "UUID" {
+                __attrs.push(("xsi:type", "UUID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value().write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_base::v1_2::base_types::identification::uuid::Uuid {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "UUID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        let __a0: uuid::Uuid = __value.ok_or_else(|| reader.missing_child("UUID", "value"))?;
+        Ok(openehr_base::v1_2::base_types::identification::uuid::Uuid::new(__a0))
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::definitions::validity_kind::ValidityKind
+{
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        _declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        w.write_text_element(tag, self.as_str())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::definitions::validity_kind::ValidityKind
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let __s = <::std::string::String as crate::xml::runtime::FromXml>::from_xml(reader, start)?;
+        Ok(
+            openehr_base::v1_2::base_types::definitions::validity_kind::ValidityKind::from_wire(
+                &__s,
+            ),
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::definitions::version_status::VersionStatus
+{
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        _declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        w.write_text_element(tag, self.as_str())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::definitions::version_status::VersionStatus
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let __s = <::std::string::String as crate::xml::runtime::FromXml>::from_xml(reader, start)?;
+        Ok(
+            openehr_base::v1_2::base_types::definitions::version_status::VersionStatus::from_wire(
+                &__s,
+            ),
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_base::v1_2::base_types::identification::version_tree_id::VersionTreeId
+{
+    fn xml_type_name(&self) -> &'static str {
+        "VERSION_TREE_ID"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VERSION_TREE_ID" {
+                __attrs.push(("xsi:type", "VERSION_TREE_ID".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value().write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_base::v1_2::base_types::identification::version_tree_id::VersionTreeId
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VERSION_TREE_ID".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        let __a0: String =
+            __value.ok_or_else(|| reader.missing_child("VERSION_TREE_ID", "value"))?;
+        openehr_base::v1_2::base_types::identification::version_tree_id::VersionTreeId::new(__a0)
+            .map_err(|__e| reader.invalid_content(::std::format!("VERSION_TREE_ID: {__e}")))
+    }
+}
+
+impl crate::xml::runtime::ToXml
     for openehr_base::v1_3::base_types::identification::access_group_ref::AccessGroupRef
 {
     fn xml_type_name(&self) -> &'static str {
@@ -3106,6 +6104,18001 @@ impl crate::xml::runtime::FromXml
             __value.ok_or_else(|| reader.missing_child("VERSION_TREE_ID", "value"))?;
         openehr_base::v1_3::base_types::identification::version_tree_id::VersionTreeId::new(__a0)
             .map_err(|__e| reader.invalid_content(::std::format!("VERSION_TREE_ID: {__e}")))
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::content::entry::action::Action {
+    fn xml_type_name(&self) -> &'static str {
+        "ACTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ACTION" {
+                __attrs.push(("xsi:type", "ACTION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        self.encoding
+            .write_xml(w, "encoding", Some("CODE_PHRASE"))?;
+        self.subject.write_xml(w, "subject", Some("PARTY_PROXY"))?;
+        if let Some(v) = &self.provider {
+            v.write_xml(w, "provider", Some("PARTY_PROXY"))?;
+        }
+        if let Some(vs) = &self.other_participations {
+            for v in vs {
+                v.write_xml(w, "other_participations", Some("PARTICIPATION"))?;
+            }
+        }
+        if let Some(v) = &self.protocol {
+            v.write_xml(w, "protocol", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.guideline_id {
+            v.write_xml(w, "guideline_id", Some("OBJECT_REF"))?;
+        }
+        self.time.write_xml(w, "time", Some("DV_DATE_TIME"))?;
+        self.description
+            .write_xml(w, "description", Some("ITEM_STRUCTURE"))?;
+        self.ism_transition
+            .write_xml(w, "ism_transition", Some("ISM_TRANSITION"))?;
+        if let Some(v) = &self.instruction_details {
+            v.write_xml(w, "instruction_details", Some("INSTRUCTION_DETAILS"))?;
+        }
+        if let Some(v) = &self.workflow_id {
+            v.write_xml(w, "workflow_id", Some("OBJECT_REF"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::action::Action
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __language = None;
+        let mut __encoding = None;
+        let mut __other_participations = Vec::new();
+        let mut __workflow_id = None;
+        let mut __subject = None;
+        let mut __provider = None;
+        let mut __protocol = None;
+        let mut __guideline_id = None;
+        let mut __time = None;
+        let mut __ism_transition = None;
+        let mut __instruction_details = None;
+        let mut __description = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "encoding" => {
+                        __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_participations" => {
+                        __other_participations
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "workflow_id" => {
+                        __workflow_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject" => {
+                        __subject = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "provider" => {
+                        __provider = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "protocol" => {
+                        __protocol = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "guideline_id" => {
+                        __guideline_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time" => {
+                        __time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "ism_transition" => {
+                        __ism_transition =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "instruction_details" => {
+                        __instruction_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "description" => {
+                        __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "work_flow_id" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ACTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::entry::action::Action {
+                name: __name.ok_or_else(|| reader.missing_child("ACTION", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ACTION", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                language: __language.ok_or_else(|| reader.missing_child("ACTION", "language"))?,
+                encoding: __encoding.ok_or_else(|| reader.missing_child("ACTION", "encoding"))?,
+                other_participations: if __other_participations.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_participations)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_participations: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                workflow_id: __workflow_id,
+                subject: __subject.ok_or_else(|| reader.missing_child("ACTION", "subject"))?,
+                provider: __provider,
+                protocol: __protocol,
+                guideline_id: __guideline_id,
+                time: __time.ok_or_else(|| reader.missing_child("ACTION", "time"))?,
+                ism_transition: __ism_transition
+                    .ok_or_else(|| reader.missing_child("ACTION", "ism_transition"))?,
+                instruction_details: __instruction_details,
+                description: __description
+                    .ok_or_else(|| reader.missing_child("ACTION", "description"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::activity::Activity
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ACTIVITY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ACTIVITY" {
+                __attrs.push(("xsi:type", "ACTIVITY".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.description
+            .write_xml(w, "description", Some("ITEM_STRUCTURE"))?;
+        if let Some(v) = &self.timing {
+            v.write_xml(w, "timing", Some("DV_PARSABLE"))?;
+        }
+        self.action_archetype_id
+            .write_xml(w, "action_archetype_id", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::activity::Activity
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __timing = None;
+        let mut __action_archetype_id = None;
+        let mut __description = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "timing" => {
+                        __timing = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "action_archetype_id" => {
+                        __action_archetype_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "description" => {
+                        __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ACTIVITY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::entry::activity::Activity {
+                name: __name.ok_or_else(|| reader.missing_child("ACTIVITY", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ACTIVITY", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                timing: __timing,
+                action_archetype_id: __action_archetype_id
+                    .ok_or_else(|| reader.missing_child("ACTIVITY", "action_archetype_id"))?,
+                description: __description
+                    .ok_or_else(|| reader.missing_child("ACTIVITY", "description"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::actor::Actor {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::demographic::actor::Actor::Agent(x) => x.xml_type_name(),
+            openehr_rm::v1_1::demographic::actor::Actor::Group(x) => x.xml_type_name(),
+            openehr_rm::v1_1::demographic::actor::Actor::Organisation(x) => x.xml_type_name(),
+            openehr_rm::v1_1::demographic::actor::Actor::Person(x) => x.xml_type_name(),
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::demographic::actor::Actor::Agent(x) => x.write_xml(w, tag, declared),
+            openehr_rm::v1_1::demographic::actor::Actor::Group(x) => x.write_xml(w, tag, declared),
+            openehr_rm::v1_1::demographic::actor::Actor::Organisation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::demographic::actor::Actor::Person(x) => x.write_xml(w, tag, declared),
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::actor::Actor {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("AGENT") => Ok(openehr_rm::v1_1::demographic::actor::Actor::Agent(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("GROUP") => Ok(openehr_rm::v1_1::demographic::actor::Actor::Group(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("ORGANISATION") => Ok(openehr_rm::v1_1::demographic::actor::Actor::Organisation(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("PERSON") => Ok(openehr_rm::v1_1::demographic::actor::Actor::Person(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Actor: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Actor: unknown xsi:type {other}: the ITS-XML RM schemas define no ACTOR subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::address::Address {
+    fn xml_type_name(&self) -> &'static str {
+        "ADDRESS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ADDRESS" {
+                __attrs.push(("xsi:type", "ADDRESS".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.details
+            .write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::address::Address {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __details = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ADDRESS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::address::Address {
+            name: __name.ok_or_else(|| reader.missing_child("ADDRESS", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("ADDRESS", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            details: __details.ok_or_else(|| reader.missing_child("ADDRESS", "details"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::message::addressed_message::AddressedMessage
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ADDRESSED_MESSAGE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ADDRESSED_MESSAGE" {
+                __attrs.push(("xsi:type", "ADDRESSED_MESSAGE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.sender.write_xml(w, "sender", Some("String"))?;
+        self.sender_reference
+            .write_xml(w, "sender_reference", Some("String"))?;
+        for v in &self.addressees {
+            v.write_xml(w, "addressees", Some("String"))?;
+        }
+        if let Some(v) = &self.urgency {
+            v.write_xml(w, "urgency", Some("Integer"))?;
+        }
+        self.message.write_xml(w, "message", Some("MESSAGE"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::message::addressed_message::AddressedMessage
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __sender = None;
+        let mut __sender_reference = None;
+        let mut __addressees = Vec::new();
+        let mut __urgency = None;
+        let mut __message = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "sender" => {
+                        __sender = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "sender_reference" => {
+                        __sender_reference =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "addressees" => {
+                        __addressees.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "urgency" => {
+                        __urgency = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "message" => {
+                        __message = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ADDRESSED_MESSAGE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::message::addressed_message::AddressedMessage {
+                sender: __sender
+                    .ok_or_else(|| reader.missing_child("ADDRESSED_MESSAGE", "sender"))?,
+                sender_reference: __sender_reference
+                    .ok_or_else(|| reader.missing_child("ADDRESSED_MESSAGE", "sender_reference"))?,
+                addressees: openehr_base::containers::NonEmptyVec::new(__addressees).map_err(
+                    |__e| reader.invalid_content(::std::format!("element addressees: {__e}")),
+                )?,
+                urgency: __urgency,
+                message: __message
+                    .ok_or_else(|| reader.missing_child("ADDRESSED_MESSAGE", "message"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::admin_entry::AdminEntry
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ADMIN_ENTRY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ADMIN_ENTRY" {
+                __attrs.push(("xsi:type", "ADMIN_ENTRY".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        self.encoding
+            .write_xml(w, "encoding", Some("CODE_PHRASE"))?;
+        self.subject.write_xml(w, "subject", Some("PARTY_PROXY"))?;
+        if let Some(v) = &self.provider {
+            v.write_xml(w, "provider", Some("PARTY_PROXY"))?;
+        }
+        if let Some(vs) = &self.other_participations {
+            for v in vs {
+                v.write_xml(w, "other_participations", Some("PARTICIPATION"))?;
+            }
+        }
+        self.data.write_xml(w, "data", Some("ITEM_STRUCTURE"))?;
+        if let Some(v) = &self.workflow_id {
+            v.write_xml(w, "workflow_id", Some("OBJECT_REF"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::admin_entry::AdminEntry
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __language = None;
+        let mut __encoding = None;
+        let mut __other_participations = Vec::new();
+        let mut __workflow_id = None;
+        let mut __subject = None;
+        let mut __provider = None;
+        let mut __data = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "encoding" => {
+                        __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_participations" => {
+                        __other_participations
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "workflow_id" => {
+                        __workflow_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject" => {
+                        __subject = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "provider" => {
+                        __provider = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "work_flow_id" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ADMIN_ENTRY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::entry::admin_entry::AdminEntry {
+                name: __name.ok_or_else(|| reader.missing_child("ADMIN_ENTRY", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ADMIN_ENTRY", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                language: __language
+                    .ok_or_else(|| reader.missing_child("ADMIN_ENTRY", "language"))?,
+                encoding: __encoding
+                    .ok_or_else(|| reader.missing_child("ADMIN_ENTRY", "encoding"))?,
+                other_participations: if __other_participations.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_participations)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_participations: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                workflow_id: __workflow_id,
+                subject: __subject.ok_or_else(|| reader.missing_child("ADMIN_ENTRY", "subject"))?,
+                provider: __provider,
+                data: __data.ok_or_else(|| reader.missing_child("ADMIN_ENTRY", "data"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::agent::Agent {
+    fn xml_type_name(&self) -> &'static str {
+        "AGENT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "AGENT" {
+                __attrs.push(("xsi:type", "AGENT".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        for v in &self.identities {
+            v.write_xml(w, "identities", Some("PARTY_IDENTITY"))?;
+        }
+        if let Some(vs) = &self.contacts {
+            for v in vs {
+                v.write_xml(w, "contacts", Some("CONTACT"))?;
+            }
+        }
+        if let Some(vs) = &self.relationships {
+            for v in vs {
+                v.write_xml(w, "relationships", Some("PARTY_RELATIONSHIP"))?;
+            }
+        }
+        if let Some(vs) = &self.reverse_relationships {
+            for v in vs {
+                v.write_xml(w, "reverse_relationships", Some("LOCATABLE_REF"))?;
+            }
+        }
+        if let Some(v) = &self.details {
+            v.write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(vs) = &self.roles {
+            for v in vs {
+                v.write_xml(w, "roles", Some("PARTY_REF"))?;
+            }
+        }
+        if let Some(vs) = &self.languages {
+            for v in vs {
+                v.write_xml(w, "languages", Some("DV_TEXT"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::agent::Agent {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __identities = Vec::new();
+        let mut __contacts = Vec::new();
+        let mut __details = None;
+        let mut __reverse_relationships = Vec::new();
+        let mut __relationships = Vec::new();
+        let mut __languages = Vec::new();
+        let mut __roles = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identities" => {
+                        __identities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contacts" => {
+                        __contacts.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reverse_relationships" => {
+                        __reverse_relationships
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "relationships" => {
+                        __relationships.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "languages" => {
+                        __languages.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "roles" => {
+                        __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "AGENT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::agent::Agent {
+            name: __name.ok_or_else(|| reader.missing_child("AGENT", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("AGENT", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            identities: openehr_base::containers::NonEmptyVec::new(__identities).map_err(
+                |__e| reader.invalid_content(::std::format!("element identities: {__e}")),
+            )?,
+            contacts: if __contacts.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__contacts).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element contacts: {__e}"))
+                    })?,
+                )
+            },
+            details: __details,
+            reverse_relationships: if __reverse_relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__reverse_relationships).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!(
+                                "element reverse_relationships: {__e}"
+                            ))
+                        },
+                    )?,
+                )
+            },
+            relationships: if __relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__relationships).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element relationships: {__e}"))
+                    })?,
+                )
+            },
+            languages: if __languages.is_empty() {
+                None
+            } else {
+                Some(__languages)
+            },
+            roles: if __roles.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__roles).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element roles: {__e}"))
+                    })?,
+                )
+            },
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::archetyped::archetyped::Archetyped {
+    fn xml_type_name(&self) -> &'static str {
+        "ARCHETYPED"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ARCHETYPED" {
+                __attrs.push(("xsi:type", "ARCHETYPED".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.archetype_id
+            .write_xml(w, "archetype_id", Some("ARCHETYPE_ID"))?;
+        if let Some(v) = &self.template_id {
+            v.write_xml(w, "template_id", Some("TEMPLATE_ID"))?;
+        }
+        self.rm_version.write_xml(w, "rm_version", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::archetyped::archetyped::Archetyped {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __archetype_id = None;
+        let mut __template_id = None;
+        let mut __rm_version = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "archetype_id" => {
+                        __archetype_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "template_id" => {
+                        __template_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "rm_version" => {
+                        __rm_version = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ARCHETYPED".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::archetyped::archetyped::Archetyped {
+                archetype_id: __archetype_id
+                    .ok_or_else(|| reader.missing_child("ARCHETYPED", "archetype_id"))?,
+                template_id: __template_id,
+                rm_version: __rm_version
+                    .ok_or_else(|| reader.missing_child("ARCHETYPED", "rm_version"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::attestation::Attestation {
+    fn xml_type_name(&self) -> &'static str {
+        "ATTESTATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ATTESTATION" {
+                __attrs.push(("xsi:type", "ATTESTATION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.system_id.write_xml(w, "system_id", Some("String"))?;
+        self.committer
+            .write_xml(w, "committer", Some("PARTY_PROXY"))?;
+        self.time_committed
+            .write_xml(w, "time_committed", Some("DV_DATE_TIME"))?;
+        self.change_type
+            .write_xml(w, "change_type", Some("DV_CODED_TEXT"))?;
+        if let Some(v) = &self.description {
+            v.write_xml(w, "description", Some("DV_TEXT"))?;
+        }
+        if let Some(v) = &self.attested_view {
+            v.write_xml(w, "attested_view", Some("DV_MULTIMEDIA"))?;
+        }
+        if let Some(v) = &self.proof {
+            v.write_xml(w, "proof", Some("String"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("DV_EHR_URI"))?;
+            }
+        }
+        self.reason.write_xml(w, "reason", Some("DV_TEXT"))?;
+        self.is_pending
+            .write_xml(w, "is_pending", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::generic::attestation::Attestation {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __system_id = None;
+        let mut __time_committed = None;
+        let mut __change_type = None;
+        let mut __description = None;
+        let mut __committer = None;
+        let mut __attested_view = None;
+        let mut __proof = None;
+        let mut __items = Vec::new();
+        let mut __reason = None;
+        let mut __is_pending = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "system_id" => {
+                        __system_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_committed" => {
+                        __time_committed =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "change_type" => {
+                        __change_type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "description" => {
+                        __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "committer" => {
+                        __committer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "attested_view" => {
+                        __attested_view =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "proof" => {
+                        __proof = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reason" => {
+                        __reason = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_pending" => {
+                        __is_pending = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ATTESTATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::generic::attestation::Attestation {
+                system_id: __system_id
+                    .ok_or_else(|| reader.missing_child("ATTESTATION", "system_id"))?,
+                time_committed: __time_committed
+                    .ok_or_else(|| reader.missing_child("ATTESTATION", "time_committed"))?,
+                change_type: __change_type
+                    .ok_or_else(|| reader.missing_child("ATTESTATION", "change_type"))?,
+                description: __description,
+                committer: __committer
+                    .ok_or_else(|| reader.missing_child("ATTESTATION", "committer"))?,
+                attested_view: __attested_view,
+                proof: __proof,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__items).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element items: {__e}"))
+                        })?,
+                    )
+                },
+                reason: __reason.ok_or_else(|| reader.missing_child("ATTESTATION", "reason"))?,
+                is_pending: __is_pending
+                    .ok_or_else(|| reader.missing_child("ATTESTATION", "is_pending"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::generic::audit_details::AuditDetailsData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "AUDIT_DETAILS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "AUDIT_DETAILS" {
+                __attrs.push(("xsi:type", "AUDIT_DETAILS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.system_id.write_xml(w, "system_id", Some("String"))?;
+        self.committer
+            .write_xml(w, "committer", Some("PARTY_PROXY"))?;
+        self.time_committed
+            .write_xml(w, "time_committed", Some("DV_DATE_TIME"))?;
+        self.change_type
+            .write_xml(w, "change_type", Some("DV_CODED_TEXT"))?;
+        if let Some(v) = &self.description {
+            v.write_xml(w, "description", Some("DV_TEXT"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::audit_details::AuditDetailsData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __system_id = None;
+        let mut __time_committed = None;
+        let mut __change_type = None;
+        let mut __description = None;
+        let mut __committer = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "system_id" => {
+                        __system_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_committed" => {
+                        __time_committed =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "change_type" => {
+                        __change_type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "description" => {
+                        __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "committer" => {
+                        __committer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "AUDIT_DETAILS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::generic::audit_details::AuditDetailsData {
+                system_id: __system_id
+                    .ok_or_else(|| reader.missing_child("AUDIT_DETAILS", "system_id"))?,
+                time_committed: __time_committed
+                    .ok_or_else(|| reader.missing_child("AUDIT_DETAILS", "time_committed"))?,
+                change_type: __change_type
+                    .ok_or_else(|| reader.missing_child("AUDIT_DETAILS", "change_type"))?,
+                description: __description,
+                committer: __committer
+                    .ok_or_else(|| reader.missing_child("AUDIT_DETAILS", "committer"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::audit_details::AuditDetails {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::common::generic::audit_details::AuditDetails::Attestation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::generic::audit_details::AuditDetails::AuditDetails(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::common::generic::audit_details::AuditDetails::Attestation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::generic::audit_details::AuditDetails::AuditDetails(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::audit_details::AuditDetails
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("ATTESTATION") => Ok(
+                openehr_rm::v1_1::common::generic::audit_details::AuditDetails::Attestation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("AUDIT_DETAILS") => Ok(
+                openehr_rm::v1_1::common::generic::audit_details::AuditDetails::AuditDetails(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Ok(
+                openehr_rm::v1_1::common::generic::audit_details::AuditDetails::AuditDetails(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "AuditDetails: unknown xsi:type {other}: the ITS-XML RM schemas define no AUDIT_DETAILS subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::resource::authored_resource::AuthoredResource
+{
+    fn xml_type_name(&self) -> &'static str {
+        "AUTHORED_RESOURCE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "AUTHORED_RESOURCE" {
+                __attrs.push(("xsi:type", "AUTHORED_RESOURCE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.original_language
+            .write_xml(w, "original_language", Some("CODE_PHRASE"))?;
+        if let Some(v) = &self.is_controlled {
+            v.write_xml(w, "is_controlled", Some("Boolean"))?;
+        }
+        if let Some(v) = &self.description {
+            v.write_xml(w, "description", Some("RESOURCE_DESCRIPTION"))?;
+        }
+        // NOTE: Hash<String, TRANSLATION_DETAILS> field `translations` is off the RM canonical-XML wire (resource metadata); not serialized.
+        if let Some(v) = &self.revision_history {
+            v.write_xml(w, "revision_history", Some("REVISION_HISTORY"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::resource::authored_resource::AuthoredResource
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __original_language = None;
+        let mut __is_controlled = None;
+        let mut __description = None;
+        let mut __revision_history = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "original_language" => {
+                        __original_language =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_controlled" => {
+                        __is_controlled =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "translations" => reader.skip_element()?,
+                    "description" => {
+                        __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "revision_history" => {
+                        __revision_history =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "AUTHORED_RESOURCE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::resource::authored_resource::AuthoredResource {
+                original_language: __original_language.ok_or_else(|| {
+                    reader.missing_child("AUTHORED_RESOURCE", "original_language")
+                })?,
+                is_controlled: __is_controlled,
+                translations: Default::default(),
+                description: __description,
+                revision_history: __revision_history,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::capability::Capability {
+    fn xml_type_name(&self) -> &'static str {
+        "CAPABILITY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CAPABILITY" {
+                __attrs.push(("xsi:type", "CAPABILITY".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.credentials
+            .write_xml(w, "credentials", Some("ITEM_STRUCTURE"))?;
+        if let Some(v) = &self.time_validity {
+            v.write_xml(w, "time_validity", Some("DV_INTERVAL"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::capability::Capability {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __credentials = None;
+        let mut __time_validity = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "credentials" => {
+                        __credentials = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_validity" => {
+                        __time_validity =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CAPABILITY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::capability::Capability {
+            name: __name.ok_or_else(|| reader.missing_child("CAPABILITY", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("CAPABILITY", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            credentials: __credentials
+                .ok_or_else(|| reader.missing_child("CAPABILITY", "credentials"))?,
+            time_validity: __time_validity,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Action(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Evaluation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Instruction(
+                x,
+            ) => x.xml_type_name(),
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Observation(
+                x,
+            ) => x.xml_type_name(),
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Action(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Evaluation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Instruction(
+                x,
+            ) => x.write_xml(w, tag, declared),
+            openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Observation(
+                x,
+            ) => x.write_xml(w, tag, declared),
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("ACTION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Action(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EVALUATION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Evaluation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INSTRUCTION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Instruction(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("OBSERVATION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::care_entry::CareEntry::Observation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "CareEntry: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "CareEntry: unknown xsi:type {other}: the ITS-XML RM schemas define no CARE_ENTRY subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl<L: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::view::citation::Citation<L>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "CITATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CITATION" {
+                __attrs.push(("xsi:type", "CITATION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(v) = &self.meta_data {
+            v.write_xml(w, "meta_data", Some("CLUSTER"))?;
+        }
+        if let Some(v) = &self.source_type {
+            v.write_xml(w, "source_type", Some("String"))?;
+        }
+        self.source_ref
+            .write_xml(w, "source_ref", Some("LOCATABLE_REF"))?;
+        self.source_parent_ref
+            .write_xml(w, "source_parent_ref", Some("LOCATABLE_REF"))?;
+        self.resolved.write_xml(w, "resolved", Some("L"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<L: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::view::citation::Citation<L>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __meta_data = None;
+        let mut __source_type = None;
+        let mut __source_ref = None;
+        let mut __source_parent_ref = None;
+        let mut __resolved = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "meta_data" => {
+                        __meta_data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "source_type" => {
+                        __source_type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "source_ref" => {
+                        __source_ref = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "source_parent_ref" => {
+                        __source_parent_ref =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "resolved" => {
+                        __resolved = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CITATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::composition::view::citation::Citation {
+            name: __name.ok_or_else(|| reader.missing_child("CITATION", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("CITATION", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            meta_data: __meta_data,
+            source_type: __source_type,
+            source_ref: __source_ref
+                .ok_or_else(|| reader.missing_child("CITATION", "source_ref"))?,
+            source_parent_ref: __source_parent_ref
+                .ok_or_else(|| reader.missing_child("CITATION", "source_parent_ref"))?,
+            resolved: __resolved.ok_or_else(|| reader.missing_child("CITATION", "resolved"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::representation::cluster::Cluster
+{
+    fn xml_type_name(&self) -> &'static str {
+        "CLUSTER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CLUSTER" {
+                __attrs.push(("xsi:type", "CLUSTER".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        for v in &self.items {
+            v.write_xml(w, "items", Some("ITEM"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::representation::cluster::Cluster
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CLUSTER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::representation::cluster::Cluster {
+                name: __name.ok_or_else(|| reader.missing_child("CLUSTER", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("CLUSTER", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                items: openehr_base::containers::NonEmptyVec::new(__items).map_err(|__e| {
+                    reader.invalid_content(::std::format!("element items: {__e}"))
+                })?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::code_phrase::CodePhrase {
+    fn xml_type_name(&self) -> &'static str {
+        "CODE_PHRASE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CODE_PHRASE" {
+                __attrs.push(("xsi:type", "CODE_PHRASE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.terminology_id
+            .write_xml(w, "terminology_id", Some("TERMINOLOGY_ID"))?;
+        self.code_string
+            .write_xml(w, "code_string", Some("String"))?;
+        if let Some(v) = &self.preferred_term {
+            v.write_xml(w, "preferred_term", Some("String"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::text::code_phrase::CodePhrase {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __terminology_id = None;
+        let mut __code_string = None;
+        let mut __preferred_term = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "terminology_id" => {
+                        __terminology_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "code_string" => {
+                        __code_string = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "preferred_term" => {
+                        __preferred_term =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CODE_PHRASE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::text::code_phrase::CodePhrase {
+                terminology_id: __terminology_id
+                    .ok_or_else(|| reader.missing_child("CODE_PHRASE", "terminology_id"))?,
+                code_string: __code_string
+                    .ok_or_else(|| reader.missing_child("CODE_PHRASE", "code_string"))?,
+                preferred_term: __preferred_term,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::support::terminology::code_set_access::CodeSetAccess
+{
+    fn xml_type_name(&self) -> &'static str {
+        "CODE_SET_ACCESS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CODE_SET_ACCESS" {
+                __attrs.push(("xsi:type", "CODE_SET_ACCESS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::support::terminology::code_set_access::CodeSetAccess
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CODE_SET_ACCESS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::support::terminology::code_set_access::CodeSetAccess {})
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::composition::Composition {
+    fn xml_type_name(&self) -> &'static str {
+        "COMPOSITION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "COMPOSITION" {
+                __attrs.push(("xsi:type", "COMPOSITION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        self.territory
+            .write_xml(w, "territory", Some("CODE_PHRASE"))?;
+        self.category
+            .write_xml(w, "category", Some("DV_CODED_TEXT"))?;
+        self.composer
+            .write_xml(w, "composer", Some("PARTY_PROXY"))?;
+        if let Some(v) = &self.context {
+            v.write_xml(w, "context", Some("EVENT_CONTEXT"))?;
+        }
+        if let Some(vs) = &self.content {
+            for v in vs {
+                v.write_xml(w, "content", Some("CONTENT_ITEM"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::composition::Composition {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __language = None;
+        let mut __territory = None;
+        let mut __category = None;
+        let mut __context = None;
+        let mut __composer = None;
+        let mut __content = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "territory" => {
+                        __territory = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "category" => {
+                        __category = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "context" => {
+                        __context = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "composer" => {
+                        __composer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "content" => {
+                        __content.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "COMPOSITION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::composition::composition::Composition {
+            name: __name.ok_or_else(|| reader.missing_child("COMPOSITION", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("COMPOSITION", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            language: __language.ok_or_else(|| reader.missing_child("COMPOSITION", "language"))?,
+            territory: __territory
+                .ok_or_else(|| reader.missing_child("COMPOSITION", "territory"))?,
+            category: __category.ok_or_else(|| reader.missing_child("COMPOSITION", "category"))?,
+            context: __context,
+            composer: __composer.ok_or_else(|| reader.missing_child("COMPOSITION", "composer"))?,
+            content: if __content.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__content).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element content: {__e}"))
+                    })?,
+                )
+            },
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::resource::consumable_use::ConsumableUse {
+    fn xml_type_name(&self) -> &'static str {
+        "CONSUMABLE_USE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CONSUMABLE_USE" {
+                __attrs.push(("xsi:type", "CONSUMABLE_USE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.cost_data {
+            v.write_xml(w, "cost_data", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.amount {
+            v.write_xml(w, "amount", Some("DATA_VALUE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::resource::consumable_use::ConsumableUse {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __cost_data = None;
+        let mut __amount = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "cost_data" => {
+                        __cost_data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "amount" => {
+                        __amount = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CONSUMABLE_USE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::resource::consumable_use::ConsumableUse {
+            cost_data: __cost_data,
+            amount: __amount,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::contact::Contact {
+    fn xml_type_name(&self) -> &'static str {
+        "CONTACT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CONTACT" {
+                __attrs.push(("xsi:type", "CONTACT".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(v) = &self.time_validity {
+            v.write_xml(w, "time_validity", Some("DV_INTERVAL"))?;
+        }
+        for v in &self.addresses {
+            v.write_xml(w, "addresses", Some("ADDRESS"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::contact::Contact {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __addresses = Vec::new();
+        let mut __time_validity = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "addresses" => {
+                        __addresses.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_validity" => {
+                        __time_validity =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CONTACT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::contact::Contact {
+            name: __name.ok_or_else(|| reader.missing_child("CONTACT", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("CONTACT", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            addresses: openehr_base::containers::NonEmptyVec::new(__addresses).map_err(|__e| {
+                reader.invalid_content(::std::format!("element addresses: {__e}"))
+            })?,
+            time_validity: __time_validity,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::content_item::ContentItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Action(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::AdminEntry(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Citation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Evaluation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::GenericEntry(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Instruction(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Observation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Section(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::ViewSection(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Action(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::AdminEntry(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Citation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Evaluation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::GenericEntry(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Instruction(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Observation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::Section(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::content_item::ContentItem::ViewSection(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::content_item::ContentItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("ACTION") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::Action(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ADMIN_ENTRY") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::AdminEntry(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CITATION") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::Citation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EVALUATION") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::Evaluation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("GENERIC_ENTRY") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::GenericEntry(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INSTRUCTION") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::Instruction(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("OBSERVATION") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::Observation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("SECTION") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::Section(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("VIEW_SECTION") => Ok(
+                openehr_rm::v1_1::composition::content::content_item::ContentItem::ViewSection(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "ContentItem: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "ContentItem: unknown xsi:type {other}: the ITS-XML RM schemas define no CONTENT_ITEM subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::change_control::contribution::Contribution
+{
+    fn xml_type_name(&self) -> &'static str {
+        "CONTRIBUTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "CONTRIBUTION" {
+                __attrs.push(("xsi:type", "CONTRIBUTION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        for v in &self.versions {
+            v.write_xml(w, "versions", Some("OBJECT_REF"))?;
+        }
+        self.audit.write_xml(w, "audit", Some("AUDIT_DETAILS"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::change_control::contribution::Contribution
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __versions = Vec::new();
+        let mut __audit = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "versions" => {
+                        __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "audit" => {
+                        __audit = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "CONTRIBUTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::change_control::contribution::Contribution {
+                uid: __uid.ok_or_else(|| reader.missing_child("CONTRIBUTION", "uid"))?,
+                versions: openehr_base::containers::NonEmptyVec::new(__versions).map_err(
+                    |__e| reader.invalid_content(::std::format!("element versions: {__e}")),
+                )?,
+                audit: __audit.ok_or_else(|| reader.missing_child("CONTRIBUTION", "audit"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::data_structure::DataStructure
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::History(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemList(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemSingle(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemTable(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemTree(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::History(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemList(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemSingle(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemTable(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemTree(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::data_structure::DataStructure
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("HISTORY") => Ok(
+                openehr_rm::v1_1::data_structures::data_structure::DataStructure::History(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_LIST") => Ok(
+                openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemList(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_SINGLE") => Ok(
+                openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemSingle(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_TABLE") => Ok(
+                openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemTable(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_TREE") => Ok(
+                openehr_rm::v1_1::data_structures::data_structure::DataStructure::ItemTree(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "DataStructure: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "DataStructure: unknown xsi:type {other}: the ITS-XML RM schemas define no DATA_STRUCTURE subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::basic::data_value::DataValue {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvBoolean(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvCount(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDate(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDateTime(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDuration(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvGeneralTimeSpecification(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvIdentifier(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvInterval(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvMultimedia(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvOrdinal(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvParagraph(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvParsable(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvPeriodicTimeSpecification(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvProportion(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvQuantity(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvScale(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvState(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvText(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvTime(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvUri(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvBoolean(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvCount(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDate(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDateTime(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDuration(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvGeneralTimeSpecification(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvIdentifier(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvInterval(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvMultimedia(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvOrdinal(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvParagraph(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvParsable(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvPeriodicTimeSpecification(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvProportion(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvQuantity(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvScale(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvState(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvText(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvTime(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvUri(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::basic::data_value::DataValue {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_BOOLEAN") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvBoolean(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_CODED_TEXT") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvText(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_COUNT") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvCount(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_DATE") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDate(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_DATE_TIME") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_DURATION") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvDuration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_EHR_URI") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvUri(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_GENERAL_TIME_SPECIFICATION") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvGeneralTimeSpecification(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_IDENTIFIER") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvIdentifier(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_INTERVAL") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvInterval(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_MULTIMEDIA") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvMultimedia(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_ORDINAL") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvOrdinal(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_PARAGRAPH") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvParagraph(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_PARSABLE") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvParsable(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_PERIODIC_TIME_SPECIFICATION") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvPeriodicTimeSpecification(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_PROPORTION") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvProportion(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_QUANTITY") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvQuantity(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_SCALE") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvScale(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_STATE") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvState(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_TEXT") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvText(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_TIME") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_URI") => Ok(openehr_rm::v1_1::data_types::basic::data_value::DataValue::DvUri(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("DataValue: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DataValue: unknown xsi:type {other}: the ITS-XML RM schemas define no DATA_VALUE subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvDate(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvDateTime(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvTime(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvDate(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvDateTime(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvTime(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_DATE") => Ok(openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvDate(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_DATE_TIME") => Ok(openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvDateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_TIME") => Ok(openehr_rm::v1_1::data_types::quantity::dv_absolute_quantity::DvAbsoluteQuantity::DvTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("DvAbsoluteQuantity: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvAbsoluteQuantity: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_ABSOLUTE_QUANTITY subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvCount(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvDuration(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvProportion(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvQuantity(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvCount(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvDuration(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvProportion(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvQuantity(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_COUNT") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvCount(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_DURATION") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvDuration(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_PROPORTION") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvProportion(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_QUANTITY") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_amount::DvAmount::DvQuantity(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "DvAmount: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "DvAmount: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_AMOUNT subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::basic::dv_boolean::DvBoolean {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_BOOLEAN"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_BOOLEAN" {
+                __attrs.push(("xsi:type", "DV_BOOLEAN".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::basic::dv_boolean::DvBoolean {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_BOOLEAN".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::data_types::basic::dv_boolean::DvBoolean {
+            value: __value.ok_or_else(|| reader.missing_child("DV_BOOLEAN", "value"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::dv_coded_text::DvCodedText {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_CODED_TEXT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_CODED_TEXT" {
+                __attrs.push(("xsi:type", "DV_CODED_TEXT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        if let Some(v) = &self.hyperlink {
+            v.write_xml(w, "hyperlink", Some("DV_URI"))?;
+        }
+        if let Some(v) = &self.formatting {
+            v.write_xml(w, "formatting", Some("String"))?;
+        }
+        if let Some(vs) = &self.mappings {
+            for v in vs {
+                v.write_xml(w, "mappings", Some("TERM_MAPPING"))?;
+            }
+        }
+        if let Some(v) = &self.language {
+            v.write_xml(w, "language", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.encoding {
+            v.write_xml(w, "encoding", Some("CODE_PHRASE"))?;
+        }
+        self.defining_code
+            .write_xml(w, "defining_code", Some("CODE_PHRASE"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::text::dv_coded_text::DvCodedText
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        let mut __hyperlink = None;
+        let mut __formatting = None;
+        let mut __mappings = Vec::new();
+        let mut __language = None;
+        let mut __encoding = None;
+        let mut __defining_code = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "hyperlink" => {
+                        __hyperlink = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "formatting" => {
+                        __formatting = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "mappings" => {
+                        __mappings.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "encoding" => {
+                        __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "defining_code" => {
+                        __defining_code =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_CODED_TEXT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::text::dv_coded_text::DvCodedText {
+                value: __value.ok_or_else(|| reader.missing_child("DV_CODED_TEXT", "value"))?,
+                hyperlink: __hyperlink,
+                formatting: __formatting,
+                mappings: if __mappings.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__mappings).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element mappings: {__e}"))
+                        })?,
+                    )
+                },
+                language: __language,
+                encoding: __encoding,
+                defining_code: __defining_code
+                    .ok_or_else(|| reader.missing_child("DV_CODED_TEXT", "defining_code"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_count::DvCount {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_COUNT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_COUNT" {
+                __attrs.push(("xsi:type", "DV_COUNT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.magnitude_status {
+            v.write_xml(w, "magnitude_status", Some("String"))?;
+        }
+        if let Some(v) = &self.accuracy {
+            v.write_xml(w, "accuracy", Some("Real"))?;
+        }
+        if let Some(v) = &self.accuracy_is_percent {
+            v.write_xml(w, "accuracy_is_percent", Some("Boolean"))?;
+        }
+        self.magnitude
+            .write_xml(w, "magnitude", Some("Integer64"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::quantity::dv_count::DvCount {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __magnitude_status = None;
+        let mut __accuracy = None;
+        let mut __accuracy_is_percent = None;
+        let mut __magnitude = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude_status" => {
+                        __magnitude_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy" => {
+                        __accuracy = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy_is_percent" => {
+                        __accuracy_is_percent =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude" => {
+                        __magnitude = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_COUNT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::data_types::quantity::dv_count::DvCount {
+            normal_status: __normal_status,
+            normal_range: __normal_range,
+            other_reference_ranges: if __other_reference_ranges.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__other_reference_ranges).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!(
+                                "element other_reference_ranges: {__e}"
+                            ))
+                        },
+                    )?,
+                )
+            },
+            magnitude_status: __magnitude_status,
+            accuracy: __accuracy,
+            accuracy_is_percent: __accuracy_is_percent,
+            magnitude: __magnitude.ok_or_else(|| reader.missing_child("DV_COUNT", "magnitude"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_date::DvDate
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_DATE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_DATE" {
+                __attrs.push(("xsi:type", "DV_DATE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.magnitude_status {
+            v.write_xml(w, "magnitude_status", Some("String"))?;
+        }
+        if let Some(v) = &self.accuracy {
+            v.write_xml(w, "accuracy", Some("DV_DURATION"))?;
+        }
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_date::DvDate
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __magnitude_status = None;
+        let mut __accuracy = None;
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude_status" => {
+                        __magnitude_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy" => {
+                        __accuracy = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_DATE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::date_time::dv_date::DvDate {
+                normal_status: __normal_status,
+                normal_range: __normal_range,
+                other_reference_ranges: if __other_reference_ranges.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_reference_ranges)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_reference_ranges: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                magnitude_status: __magnitude_status,
+                accuracy: __accuracy,
+                value: __value.ok_or_else(|| reader.missing_child("DV_DATE", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_date_time::DvDateTime
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_DATE_TIME"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_DATE_TIME" {
+                __attrs.push(("xsi:type", "DV_DATE_TIME".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.magnitude_status {
+            v.write_xml(w, "magnitude_status", Some("String"))?;
+        }
+        if let Some(v) = &self.accuracy {
+            v.write_xml(w, "accuracy", Some("DV_DURATION"))?;
+        }
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_date_time::DvDateTime
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __magnitude_status = None;
+        let mut __accuracy = None;
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude_status" => {
+                        __magnitude_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy" => {
+                        __accuracy = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_DATE_TIME".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::date_time::dv_date_time::DvDateTime {
+                normal_status: __normal_status,
+                normal_range: __normal_range,
+                other_reference_ranges: if __other_reference_ranges.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_reference_ranges)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_reference_ranges: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                magnitude_status: __magnitude_status,
+                accuracy: __accuracy,
+                value: __value.ok_or_else(|| reader.missing_child("DV_DATE_TIME", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_duration::DvDuration
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_DURATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_DURATION" {
+                __attrs.push(("xsi:type", "DV_DURATION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.magnitude_status {
+            v.write_xml(w, "magnitude_status", Some("String"))?;
+        }
+        if let Some(v) = &self.accuracy {
+            v.write_xml(w, "accuracy", Some("Real"))?;
+        }
+        if let Some(v) = &self.accuracy_is_percent {
+            v.write_xml(w, "accuracy_is_percent", Some("Boolean"))?;
+        }
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_duration::DvDuration
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __magnitude_status = None;
+        let mut __accuracy = None;
+        let mut __accuracy_is_percent = None;
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude_status" => {
+                        __magnitude_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy" => {
+                        __accuracy = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy_is_percent" => {
+                        __accuracy_is_percent =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_DURATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::date_time::dv_duration::DvDuration {
+                normal_status: __normal_status,
+                normal_range: __normal_range,
+                other_reference_ranges: if __other_reference_ranges.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_reference_ranges)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_reference_ranges: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                magnitude_status: __magnitude_status,
+                accuracy: __accuracy,
+                accuracy_is_percent: __accuracy_is_percent,
+                value: __value.ok_or_else(|| reader.missing_child("DV_DURATION", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::uri::dv_ehr_uri::DvEhrUri {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_EHR_URI"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_EHR_URI" {
+                __attrs.push(("xsi:type", "DV_EHR_URI".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::uri::dv_ehr_uri::DvEhrUri {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_EHR_URI".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::data_types::uri::dv_ehr_uri::DvEhrUri {
+            value: __value.ok_or_else(|| reader.missing_child("DV_EHR_URI", "value"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvMultimedia(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvParsable(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvMultimedia(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvParsable(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_MULTIMEDIA") => Ok(openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvMultimedia(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_PARSABLE") => Ok(openehr_rm::v1_1::data_types::encapsulated::dv_encapsulated::DvEncapsulated::DvParsable(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("DvEncapsulated: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvEncapsulated: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_ENCAPSULATED subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::time_specification::dv_general_time_specification::DvGeneralTimeSpecification {
+fn xml_type_name(&self) -> &'static str { "DV_GENERAL_TIME_SPECIFICATION" }
+fn write_xml(&self, w: &mut crate::xml::runtime::XmlWriter, tag: &str, declared: Option<&str>) -> Result<(), crate::xml::runtime::XmlError> {
+let mut __attrs: Vec<(&str, String)> = Vec::new();
+if let Some(d) = declared { if d != "DV_GENERAL_TIME_SPECIFICATION" { __attrs.push(("xsi:type", "DV_GENERAL_TIME_SPECIFICATION".to_string())); } }
+let mut __e = quick_xml::events::BytesStart::new(tag);
+for (k, v) in &__attrs { __e.push_attribute((*k, v.as_str())); }
+w.write_start(__e)?;
+self.value.write_xml(w, "value", Some("DV_PARSABLE"))?;
+w.write_end(tag)?;
+Ok(())
+}
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::time_specification::dv_general_time_specification::DvGeneralTimeSpecification {
+fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let mut __value = None;
+loop { match reader.read()? {
+crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+"value" => { __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "DV_GENERAL_TIME_SPECIFICATION".to_owned(), child: __c.name.clone() }),
+},
+crate::xml::runtime::XmlEvent::End => break,
+crate::xml::runtime::XmlEvent::Text(_) => {}
+crate::xml::runtime::XmlEvent::Eof => return Err(crate::xml::runtime::XmlError::Parse("unexpected EOF".into())),
+} }
+Ok(openehr_rm::v1_1::data_types::time_specification::dv_general_time_specification::DvGeneralTimeSpecification {
+value: __value.ok_or_else(|| reader.missing_child("DV_GENERAL_TIME_SPECIFICATION", "value"))?,
+})
+}
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::basic::dv_identifier::DvIdentifier
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_IDENTIFIER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_IDENTIFIER" {
+                __attrs.push(("xsi:type", "DV_IDENTIFIER".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.issuer {
+            v.write_xml(w, "issuer", Some("String"))?;
+        }
+        if let Some(v) = &self.assigner {
+            v.write_xml(w, "assigner", Some("String"))?;
+        }
+        self.id.write_xml(w, "id", Some("String"))?;
+        if let Some(v) = &self.r#type {
+            v.write_xml(w, "type", Some("String"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::basic::dv_identifier::DvIdentifier
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __issuer = None;
+        let mut __assigner = None;
+        let mut __id = None;
+        let mut __type = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "issuer" => {
+                        __issuer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "assigner" => {
+                        __assigner = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "id" => {
+                        __id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_IDENTIFIER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::basic::dv_identifier::DvIdentifier {
+                issuer: __issuer,
+                assigner: __assigner,
+                id: __id.ok_or_else(|| reader.missing_child("DV_IDENTIFIER", "id"))?,
+                r#type: __type,
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::dv_interval::DvInterval<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_INTERVAL"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_INTERVAL" {
+                __attrs.push(("xsi:type", "DV_INTERVAL".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.lower {
+            v.write_xml(w, "lower", Some("T"))?;
+        }
+        if let Some(v) = &self.upper {
+            v.write_xml(w, "upper", Some("T"))?;
+        }
+        self.lower_included
+            .write_xml(w, "lower_included", Some("Boolean"))?;
+        self.upper_included
+            .write_xml(w, "upper_included", Some("Boolean"))?;
+        self.lower_unbounded
+            .write_xml(w, "lower_unbounded", Some("Boolean"))?;
+        self.upper_unbounded
+            .write_xml(w, "upper_unbounded", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::dv_interval::DvInterval<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __lower = None;
+        let mut __upper = None;
+        let mut __lower_unbounded = None;
+        let mut __upper_unbounded = None;
+        let mut __lower_included = None;
+        let mut __upper_included = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "lower" => {
+                        __lower = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper" => {
+                        __upper = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_unbounded" => {
+                        __lower_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_unbounded" => {
+                        __upper_unbounded =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lower_included" => {
+                        __lower_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "upper_included" => {
+                        __upper_included =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_INTERVAL".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::dv_interval::DvInterval {
+                lower: __lower,
+                upper: __upper,
+                lower_unbounded: __lower_unbounded.unwrap_or(false),
+                upper_unbounded: __upper_unbounded.unwrap_or(false),
+                lower_included: __lower_included.unwrap_or(true),
+                upper_included: __upper_included.unwrap_or(true),
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::encapsulated::dv_multimedia::DvMultimedia
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_MULTIMEDIA"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_MULTIMEDIA" {
+                __attrs.push(("xsi:type", "DV_MULTIMEDIA".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.charset {
+            v.write_xml(w, "charset", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.language {
+            v.write_xml(w, "language", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.alternate_text {
+            v.write_xml(w, "alternate_text", Some("String"))?;
+        }
+        if let Some(v) = &self.uri {
+            v.write_xml(w, "uri", Some("DV_URI"))?;
+        }
+        if let Some(v) = &self.data {
+            v.write_xml(w, "data", Some("Octet"))?;
+        }
+        self.media_type
+            .write_xml(w, "media_type", Some("CODE_PHRASE"))?;
+        if let Some(v) = &self.compression_algorithm {
+            v.write_xml(w, "compression_algorithm", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.integrity_check {
+            v.write_xml(w, "integrity_check", Some("Octet"))?;
+        }
+        if let Some(v) = &self.integrity_check_algorithm {
+            v.write_xml(w, "integrity_check_algorithm", Some("CODE_PHRASE"))?;
+        }
+        self.size.write_xml(w, "size", Some("Integer"))?;
+        if let Some(v) = &self.thumbnail {
+            v.write_xml(w, "thumbnail", Some("DV_MULTIMEDIA"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::encapsulated::dv_multimedia::DvMultimedia
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __charset = None;
+        let mut __language = None;
+        let mut __alternate_text = None;
+        let mut __uri = None;
+        let mut __data = None;
+        let mut __media_type = None;
+        let mut __compression_algorithm = None;
+        let mut __integrity_check = None;
+        let mut __integrity_check_algorithm = None;
+        let mut __thumbnail = None;
+        let mut __size = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "charset" => {
+                        __charset = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "alternate_text" => {
+                        __alternate_text =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uri" => {
+                        __uri = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "media_type" => {
+                        __media_type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "compression_algorithm" => {
+                        __compression_algorithm =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "integrity_check" => {
+                        __integrity_check =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "integrity_check_algorithm" => {
+                        __integrity_check_algorithm =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "thumbnail" => {
+                        __thumbnail = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "size" => {
+                        __size = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_MULTIMEDIA".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::encapsulated::dv_multimedia::DvMultimedia {
+                charset: __charset,
+                language: __language,
+                alternate_text: __alternate_text,
+                uri: __uri,
+                data: __data,
+                media_type: __media_type
+                    .ok_or_else(|| reader.missing_child("DV_MULTIMEDIA", "media_type"))?,
+                compression_algorithm: __compression_algorithm,
+                integrity_check: __integrity_check,
+                integrity_check_algorithm: __integrity_check_algorithm,
+                thumbnail: __thumbnail,
+                size: __size.ok_or_else(|| reader.missing_child("DV_MULTIMEDIA", "size"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvCount(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDate(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDateTime(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDuration(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvOrdinal(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvProportion(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvQuantity(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvScale(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvTime(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvCount(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDate(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDateTime(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDuration(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvOrdinal(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvProportion(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvQuantity(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvScale(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvTime(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_COUNT") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvCount(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_DATE") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDate(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_DATE_TIME") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDateTime(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_DURATION") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvDuration(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_ORDINAL") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvOrdinal(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_PROPORTION") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvProportion(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_QUANTITY") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvQuantity(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_SCALE") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvScale(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_TIME") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_ordered::DvOrdered::DvTime(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "DvOrdered: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "DvOrdered: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_ORDERED subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_ordinal::DvOrdinal {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_ORDINAL"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_ORDINAL" {
+                __attrs.push(("xsi:type", "DV_ORDINAL".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        self.value.write_xml(w, "value", Some("Integer"))?;
+        self.symbol.write_xml(w, "symbol", Some("DV_CODED_TEXT"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::dv_ordinal::DvOrdinal
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __symbol = None;
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "symbol" => {
+                        __symbol = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_ORDINAL".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::dv_ordinal::DvOrdinal {
+                normal_status: __normal_status,
+                normal_range: __normal_range,
+                other_reference_ranges: if __other_reference_ranges.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_reference_ranges)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_reference_ranges: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                symbol: __symbol.ok_or_else(|| reader.missing_child("DV_ORDINAL", "symbol"))?,
+                value: __value.ok_or_else(|| reader.missing_child("DV_ORDINAL", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::dv_paragraph::DvParagraph {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_PARAGRAPH"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_PARAGRAPH" {
+                __attrs.push(("xsi:type", "DV_PARAGRAPH".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        for v in &self.items {
+            v.write_xml(w, "items", Some("DV_TEXT"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::text::dv_paragraph::DvParagraph
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_PARAGRAPH".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::text::dv_paragraph::DvParagraph {
+                items: openehr_base::containers::NonEmptyVec::new(__items).map_err(|__e| {
+                    reader.invalid_content(::std::format!("element items: {__e}"))
+                })?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::encapsulated::dv_parsable::DvParsable
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_PARSABLE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_PARSABLE" {
+                __attrs.push(("xsi:type", "DV_PARSABLE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.charset {
+            v.write_xml(w, "charset", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.language {
+            v.write_xml(w, "language", Some("CODE_PHRASE"))?;
+        }
+        self.value.write_xml(w, "value", Some("String"))?;
+        self.formalism.write_xml(w, "formalism", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::encapsulated::dv_parsable::DvParsable
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __charset = None;
+        let mut __language = None;
+        let mut __value = None;
+        let mut __formalism = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "charset" => {
+                        __charset = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "formalism" => {
+                        __formalism = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_PARSABLE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::encapsulated::dv_parsable::DvParsable {
+                charset: __charset,
+                language: __language,
+                value: __value.ok_or_else(|| reader.missing_child("DV_PARSABLE", "value"))?,
+                formalism: __formalism
+                    .ok_or_else(|| reader.missing_child("DV_PARSABLE", "formalism"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::time_specification::dv_periodic_time_specification::DvPeriodicTimeSpecification {
+fn xml_type_name(&self) -> &'static str { "DV_PERIODIC_TIME_SPECIFICATION" }
+fn write_xml(&self, w: &mut crate::xml::runtime::XmlWriter, tag: &str, declared: Option<&str>) -> Result<(), crate::xml::runtime::XmlError> {
+let mut __attrs: Vec<(&str, String)> = Vec::new();
+if let Some(d) = declared { if d != "DV_PERIODIC_TIME_SPECIFICATION" { __attrs.push(("xsi:type", "DV_PERIODIC_TIME_SPECIFICATION".to_string())); } }
+let mut __e = quick_xml::events::BytesStart::new(tag);
+for (k, v) in &__attrs { __e.push_attribute((*k, v.as_str())); }
+w.write_start(__e)?;
+self.value.write_xml(w, "value", Some("DV_PARSABLE"))?;
+w.write_end(tag)?;
+Ok(())
+}
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::time_specification::dv_periodic_time_specification::DvPeriodicTimeSpecification {
+fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let mut __value = None;
+loop { match reader.read()? {
+crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+"value" => { __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "DV_PERIODIC_TIME_SPECIFICATION".to_owned(), child: __c.name.clone() }),
+},
+crate::xml::runtime::XmlEvent::End => break,
+crate::xml::runtime::XmlEvent::Text(_) => {}
+crate::xml::runtime::XmlEvent::Eof => return Err(crate::xml::runtime::XmlError::Parse("unexpected EOF".into())),
+} }
+Ok(openehr_rm::v1_1::data_types::time_specification::dv_periodic_time_specification::DvPeriodicTimeSpecification {
+value: __value.ok_or_else(|| reader.missing_child("DV_PERIODIC_TIME_SPECIFICATION", "value"))?,
+})
+}
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::dv_proportion::DvProportion
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_PROPORTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_PROPORTION" {
+                __attrs.push(("xsi:type", "DV_PROPORTION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.magnitude_status {
+            v.write_xml(w, "magnitude_status", Some("String"))?;
+        }
+        if let Some(v) = &self.accuracy {
+            v.write_xml(w, "accuracy", Some("Real"))?;
+        }
+        if let Some(v) = &self.accuracy_is_percent {
+            v.write_xml(w, "accuracy_is_percent", Some("Boolean"))?;
+        }
+        self.numerator.write_xml(w, "numerator", Some("Real"))?;
+        self.denominator.write_xml(w, "denominator", Some("Real"))?;
+        self.r#type.write_xml(w, "type", Some("Integer"))?;
+        if let Some(v) = &self.precision {
+            v.write_xml(w, "precision", Some("Integer"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::dv_proportion::DvProportion
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __magnitude_status = None;
+        let mut __accuracy = None;
+        let mut __accuracy_is_percent = None;
+        let mut __numerator = None;
+        let mut __denominator = None;
+        let mut __type = None;
+        let mut __precision = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude_status" => {
+                        __magnitude_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy" => {
+                        __accuracy = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy_is_percent" => {
+                        __accuracy_is_percent =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "numerator" => {
+                        __numerator = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "denominator" => {
+                        __denominator = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "precision" => {
+                        __precision = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_PROPORTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::dv_proportion::DvProportion {
+                normal_status: __normal_status,
+                normal_range: __normal_range,
+                other_reference_ranges: if __other_reference_ranges.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_reference_ranges)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_reference_ranges: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                magnitude_status: __magnitude_status,
+                accuracy: __accuracy,
+                accuracy_is_percent: __accuracy_is_percent,
+                numerator: __numerator
+                    .ok_or_else(|| reader.missing_child("DV_PROPORTION", "numerator"))?,
+                denominator: __denominator
+                    .ok_or_else(|| reader.missing_child("DV_PROPORTION", "denominator"))?,
+                r#type: __type.ok_or_else(|| reader.missing_child("DV_PROPORTION", "type"))?,
+                precision: __precision,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvCount(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDate(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDateTime(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDuration(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvProportion(
+                x,
+            ) => x.xml_type_name(),
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvQuantity(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvTime(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvCount(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDate(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDateTime(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDuration(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvProportion(
+                x,
+            ) => x.write_xml(w, tag, declared),
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvQuantity(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvTime(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_COUNT") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvCount(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_DATE") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDate(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_DATE_TIME") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDateTime(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_DURATION") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvDuration(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_PROPORTION") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvProportion(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_QUANTITY") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvQuantity(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_TIME") => Ok(
+                openehr_rm::v1_1::data_types::quantity::dv_quantified::DvQuantified::DvTime(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "DvQuantified: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "DvQuantified: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_QUANTIFIED subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::dv_quantity::DvQuantity
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_QUANTITY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_QUANTITY" {
+                __attrs.push(("xsi:type", "DV_QUANTITY".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.magnitude_status {
+            v.write_xml(w, "magnitude_status", Some("String"))?;
+        }
+        if let Some(v) = &self.accuracy {
+            v.write_xml(w, "accuracy", Some("Real"))?;
+        }
+        if let Some(v) = &self.accuracy_is_percent {
+            v.write_xml(w, "accuracy_is_percent", Some("Boolean"))?;
+        }
+        self.magnitude.write_xml(w, "magnitude", Some("Real"))?;
+        self.units.write_xml(w, "units", Some("String"))?;
+        if let Some(v) = &self.precision {
+            v.write_xml(w, "precision", Some("Integer"))?;
+        }
+        if let Some(v) = &self.units_system {
+            v.write_xml(w, "units_system", Some("String"))?;
+        }
+        if let Some(v) = &self.units_display_name {
+            v.write_xml(w, "units_display_name", Some("String"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::dv_quantity::DvQuantity
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __magnitude_status = None;
+        let mut __accuracy = None;
+        let mut __accuracy_is_percent = None;
+        let mut __magnitude = None;
+        let mut __precision = None;
+        let mut __units = None;
+        let mut __units_system = None;
+        let mut __units_display_name = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude_status" => {
+                        __magnitude_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy" => {
+                        __accuracy = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy_is_percent" => {
+                        __accuracy_is_percent =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude" => {
+                        __magnitude = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "precision" => {
+                        __precision = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "units" => {
+                        __units = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "units_system" => {
+                        __units_system =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "units_display_name" => {
+                        __units_display_name =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_QUANTITY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::dv_quantity::DvQuantity {
+                normal_status: __normal_status,
+                normal_range: __normal_range,
+                other_reference_ranges: if __other_reference_ranges.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_reference_ranges)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_reference_ranges: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                magnitude_status: __magnitude_status,
+                accuracy: __accuracy,
+                accuracy_is_percent: __accuracy_is_percent,
+                magnitude: __magnitude
+                    .ok_or_else(|| reader.missing_child("DV_QUANTITY", "magnitude"))?,
+                precision: __precision,
+                units: __units.ok_or_else(|| reader.missing_child("DV_QUANTITY", "units"))?,
+                units_system: __units_system,
+                units_display_name: __units_display_name,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_scale::DvScale {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_SCALE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_SCALE" {
+                __attrs.push(("xsi:type", "DV_SCALE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        self.symbol.write_xml(w, "symbol", Some("DV_CODED_TEXT"))?;
+        self.value.write_xml(w, "value", Some("Real"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::quantity::dv_scale::DvScale {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __symbol = None;
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "symbol" => {
+                        __symbol = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_SCALE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::data_types::quantity::dv_scale::DvScale {
+            normal_status: __normal_status,
+            normal_range: __normal_range,
+            other_reference_ranges: if __other_reference_ranges.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__other_reference_ranges).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!(
+                                "element other_reference_ranges: {__e}"
+                            ))
+                        },
+                    )?,
+                )
+            },
+            symbol: __symbol.ok_or_else(|| reader.missing_child("DV_SCALE", "symbol"))?,
+            value: __value.ok_or_else(|| reader.missing_child("DV_SCALE", "value"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::basic::dv_state::DvState {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_STATE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_STATE" {
+                __attrs.push(("xsi:type", "DV_STATE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("DV_CODED_TEXT"))?;
+        self.is_terminal
+            .write_xml(w, "is_terminal", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::basic::dv_state::DvState {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        let mut __is_terminal = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_terminal" => {
+                        __is_terminal = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_STATE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::data_types::basic::dv_state::DvState {
+            value: __value.ok_or_else(|| reader.missing_child("DV_STATE", "value"))?,
+            is_terminal: __is_terminal
+                .ok_or_else(|| reader.missing_child("DV_STATE", "is_terminal"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvDate(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvDateTime(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvTime(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvDate(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvDateTime(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvTime(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_DATE") => Ok(openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvDate(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_DATE_TIME") => Ok(openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvDateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_TIME") => Ok(openehr_rm::v1_1::data_types::quantity::date_time::dv_temporal::DvTemporal::DvTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("DvTemporal: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvTemporal: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_TEMPORAL subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::dv_text::DvTextData {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_TEXT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_TEXT" {
+                __attrs.push(("xsi:type", "DV_TEXT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        if let Some(v) = &self.hyperlink {
+            v.write_xml(w, "hyperlink", Some("DV_URI"))?;
+        }
+        if let Some(v) = &self.formatting {
+            v.write_xml(w, "formatting", Some("String"))?;
+        }
+        if let Some(vs) = &self.mappings {
+            for v in vs {
+                v.write_xml(w, "mappings", Some("TERM_MAPPING"))?;
+            }
+        }
+        if let Some(v) = &self.language {
+            v.write_xml(w, "language", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.encoding {
+            v.write_xml(w, "encoding", Some("CODE_PHRASE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::text::dv_text::DvTextData {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        let mut __hyperlink = None;
+        let mut __formatting = None;
+        let mut __mappings = Vec::new();
+        let mut __language = None;
+        let mut __encoding = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "hyperlink" => {
+                        __hyperlink = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "formatting" => {
+                        __formatting = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "mappings" => {
+                        __mappings.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "encoding" => {
+                        __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_TEXT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::data_types::text::dv_text::DvTextData {
+            value: __value.ok_or_else(|| reader.missing_child("DV_TEXT", "value"))?,
+            hyperlink: __hyperlink,
+            formatting: __formatting,
+            mappings: if __mappings.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__mappings).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element mappings: {__e}"))
+                    })?,
+                )
+            },
+            language: __language,
+            encoding: __encoding,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::dv_text::DvText {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_types::text::dv_text::DvText::DvCodedText(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_types::text::dv_text::DvText::DvText(x) => x.xml_type_name(),
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_types::text::dv_text::DvText::DvCodedText(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::text::dv_text::DvText::DvText(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::text::dv_text::DvText {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_CODED_TEXT") => Ok(
+                openehr_rm::v1_1::data_types::text::dv_text::DvText::DvCodedText(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("DV_TEXT") => Ok(openehr_rm::v1_1::data_types::text::dv_text::DvText::DvText(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            None => Ok(openehr_rm::v1_1::data_types::text::dv_text::DvText::DvText(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "DvText: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_TEXT subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_time::DvTime
+{
+    fn xml_type_name(&self) -> &'static str {
+        "DV_TIME"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_TIME" {
+                __attrs.push(("xsi:type", "DV_TIME".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.normal_range {
+            v.write_xml(w, "normal_range", Some("DV_INTERVAL"))?;
+        }
+        if let Some(vs) = &self.other_reference_ranges {
+            for v in vs {
+                v.write_xml(w, "other_reference_ranges", Some("REFERENCE_RANGE"))?;
+            }
+        }
+        if let Some(v) = &self.normal_status {
+            v.write_xml(w, "normal_status", Some("CODE_PHRASE"))?;
+        }
+        if let Some(v) = &self.magnitude_status {
+            v.write_xml(w, "magnitude_status", Some("String"))?;
+        }
+        if let Some(v) = &self.accuracy {
+            v.write_xml(w, "accuracy", Some("DV_DURATION"))?;
+        }
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::date_time::dv_time::DvTime
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __normal_status = None;
+        let mut __normal_range = None;
+        let mut __other_reference_ranges = Vec::new();
+        let mut __magnitude_status = None;
+        let mut __accuracy = None;
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "normal_status" => {
+                        __normal_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "normal_range" => {
+                        __normal_range =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_reference_ranges" => {
+                        __other_reference_ranges
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "magnitude_status" => {
+                        __magnitude_status =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "accuracy" => {
+                        __accuracy = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_TIME".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::date_time::dv_time::DvTime {
+                normal_status: __normal_status,
+                normal_range: __normal_range,
+                other_reference_ranges: if __other_reference_ranges.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_reference_ranges)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_reference_ranges: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                magnitude_status: __magnitude_status,
+                accuracy: __accuracy,
+                value: __value.ok_or_else(|| reader.missing_child("DV_TIME", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvGeneralTimeSpecification(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvPeriodicTimeSpecification(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvGeneralTimeSpecification(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvPeriodicTimeSpecification(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_GENERAL_TIME_SPECIFICATION") => Ok(openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvGeneralTimeSpecification(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_PERIODIC_TIME_SPECIFICATION") => Ok(openehr_rm::v1_1::data_types::time_specification::dv_time_specification::DvTimeSpecification::DvPeriodicTimeSpecification(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("DvTimeSpecification: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("DvTimeSpecification: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_TIME_SPECIFICATION subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::uri::dv_uri::DvUriData {
+    fn xml_type_name(&self) -> &'static str {
+        "DV_URI"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "DV_URI" {
+                __attrs.push(("xsi:type", "DV_URI".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::uri::dv_uri::DvUriData {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "DV_URI".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::data_types::uri::dv_uri::DvUriData {
+            value: __value.ok_or_else(|| reader.missing_child("DV_URI", "value"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::uri::dv_uri::DvUri {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_types::uri::dv_uri::DvUri::DvEhrUri(x) => x.xml_type_name(),
+            openehr_rm::v1_1::data_types::uri::dv_uri::DvUri::DvUri(x) => x.xml_type_name(),
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_types::uri::dv_uri::DvUri::DvEhrUri(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_types::uri::dv_uri::DvUri::DvUri(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::uri::dv_uri::DvUri {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_EHR_URI") => Ok(openehr_rm::v1_1::data_types::uri::dv_uri::DvUri::DvEhrUri(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("DV_URI") => Ok(openehr_rm::v1_1::data_types::uri::dv_uri::DvUri::DvUri(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            None => Ok(openehr_rm::v1_1::data_types::uri::dv_uri::DvUri::DvUri(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "DvUri: unknown xsi:type {other}: the ITS-XML RM schemas define no DV_URI subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr::ehr::Ehr {
+    fn xml_type_name(&self) -> &'static str {
+        "EHR"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EHR" {
+                __attrs.push(("xsi:type", "EHR".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.system_id
+            .write_xml(w, "system_id", Some("HIER_OBJECT_ID"))?;
+        self.ehr_id.write_xml(w, "ehr_id", Some("HIER_OBJECT_ID"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        if let Some(vs) = &self.contributions {
+            for v in vs {
+                v.write_xml(w, "contributions", Some("OBJECT_REF"))?;
+            }
+        }
+        self.ehr_access
+            .write_xml(w, "ehr_access", Some("OBJECT_REF"))?;
+        self.ehr_status
+            .write_xml(w, "ehr_status", Some("OBJECT_REF"))?;
+        if let Some(v) = &self.directory {
+            v.write_xml(w, "directory", Some("OBJECT_REF"))?;
+        }
+        if let Some(vs) = &self.folders {
+            for v in vs {
+                v.write_xml(w, "folders", Some("OBJECT_REF"))?;
+            }
+        }
+        if let Some(vs) = &self.compositions {
+            for v in vs {
+                v.write_xml(w, "compositions", Some("OBJECT_REF"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr::ehr::Ehr {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __system_id = None;
+        let mut __ehr_id = None;
+        let mut __contributions = Vec::new();
+        let mut __ehr_status = None;
+        let mut __ehr_access = None;
+        let mut __compositions = Vec::new();
+        let mut __directory = None;
+        let mut __time_created = None;
+        let mut __folders = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "system_id" => {
+                        __system_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "ehr_id" => {
+                        __ehr_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contributions" => {
+                        __contributions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "ehr_status" => {
+                        __ehr_status = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "ehr_access" => {
+                        __ehr_access = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "compositions" => {
+                        __compositions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "directory" => {
+                        __directory = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "folders" => {
+                        __folders.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EHR".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr::ehr::Ehr {
+            system_id: __system_id.ok_or_else(|| reader.missing_child("EHR", "system_id"))?,
+            ehr_id: __ehr_id.ok_or_else(|| reader.missing_child("EHR", "ehr_id"))?,
+            contributions: if __contributions.is_empty() {
+                None
+            } else {
+                Some(__contributions)
+            },
+            ehr_status: __ehr_status.ok_or_else(|| reader.missing_child("EHR", "ehr_status"))?,
+            ehr_access: __ehr_access.ok_or_else(|| reader.missing_child("EHR", "ehr_access"))?,
+            compositions: if __compositions.is_empty() {
+                None
+            } else {
+                Some(__compositions)
+            },
+            directory: __directory,
+            time_created: __time_created
+                .ok_or_else(|| reader.missing_child("EHR", "time_created"))?,
+            folders: if __folders.is_empty() {
+                None
+            } else {
+                Some(__folders)
+            },
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr::ehr_access::EhrAccess {
+    fn xml_type_name(&self) -> &'static str {
+        "EHR_ACCESS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EHR_ACCESS" {
+                __attrs.push(("xsi:type", "EHR_ACCESS".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(v) = &self.settings {
+            v.write_xml(w, "settings", Some("ACCESS_CONTROL_SETTINGS"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr::ehr_access::EhrAccess {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __settings = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "settings" => {
+                        __settings = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EHR_ACCESS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr::ehr_access::EhrAccess {
+            name: __name.ok_or_else(|| reader.missing_child("EHR_ACCESS", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("EHR_ACCESS", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            settings: __settings,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr::ehr_status::EhrStatus {
+    fn xml_type_name(&self) -> &'static str {
+        "EHR_STATUS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EHR_STATUS" {
+                __attrs.push(("xsi:type", "EHR_STATUS".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.subject.write_xml(w, "subject", Some("PARTY_SELF"))?;
+        self.is_queryable
+            .write_xml(w, "is_queryable", Some("Boolean"))?;
+        self.is_modifiable
+            .write_xml(w, "is_modifiable", Some("Boolean"))?;
+        if let Some(v) = &self.other_details {
+            v.write_xml(w, "other_details", Some("ITEM_STRUCTURE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr::ehr_status::EhrStatus {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __subject = None;
+        let mut __is_queryable = None;
+        let mut __is_modifiable = None;
+        let mut __other_details = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject" => {
+                        __subject = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_queryable" => {
+                        __is_queryable =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_modifiable" => {
+                        __is_modifiable =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_details" => {
+                        __other_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EHR_STATUS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr::ehr_status::EhrStatus {
+            name: __name.ok_or_else(|| reader.missing_child("EHR_STATUS", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("EHR_STATUS", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            subject: __subject.ok_or_else(|| reader.missing_child("EHR_STATUS", "subject"))?,
+            is_queryable: __is_queryable
+                .ok_or_else(|| reader.missing_child("EHR_STATUS", "is_queryable"))?,
+            is_modifiable: __is_modifiable
+                .ok_or_else(|| reader.missing_child("EHR_STATUS", "is_modifiable"))?,
+            other_details: __other_details,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::representation::element::Element
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ELEMENT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ELEMENT" {
+                __attrs.push(("xsi:type", "ELEMENT".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(v) = &self.value {
+            v.write_xml(w, "value", Some("DATA_VALUE"))?;
+        }
+        if let Some(v) = &self.null_flavour {
+            v.write_xml(w, "null_flavour", Some("DV_CODED_TEXT"))?;
+        }
+        if let Some(v) = &self.null_reason {
+            v.write_xml(w, "null_reason", Some("DV_TEXT"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::representation::element::Element
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __null_flavour = None;
+        let mut __value = None;
+        let mut __null_reason = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "null_flavour" => {
+                        __null_flavour =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "null_reason" => {
+                        __null_reason = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ELEMENT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::representation::element::Element {
+                name: __name.ok_or_else(|| reader.missing_child("ELEMENT", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ELEMENT", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                null_flavour: __null_flavour,
+                value: __value,
+                null_reason: __null_reason,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::content::entry::entry::Entry {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Action(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::AdminEntry(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Evaluation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Instruction(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Observation(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Action(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::AdminEntry(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Evaluation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Instruction(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::content::entry::entry::Entry::Observation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::content::entry::entry::Entry {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("ACTION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::entry::Entry::Action(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ADMIN_ENTRY") => Ok(
+                openehr_rm::v1_1::composition::content::entry::entry::Entry::AdminEntry(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EVALUATION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::entry::Entry::Evaluation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INSTRUCTION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::entry::Entry::Instruction(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("OBSERVATION") => Ok(
+                openehr_rm::v1_1::composition::content::entry::entry::Entry::Observation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Entry: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Entry: unknown xsi:type {other}: the ITS-XML RM schemas define no ENTRY subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::evaluation::Evaluation
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EVALUATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EVALUATION" {
+                __attrs.push(("xsi:type", "EVALUATION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        self.encoding
+            .write_xml(w, "encoding", Some("CODE_PHRASE"))?;
+        self.subject.write_xml(w, "subject", Some("PARTY_PROXY"))?;
+        if let Some(v) = &self.provider {
+            v.write_xml(w, "provider", Some("PARTY_PROXY"))?;
+        }
+        if let Some(vs) = &self.other_participations {
+            for v in vs {
+                v.write_xml(w, "other_participations", Some("PARTICIPATION"))?;
+            }
+        }
+        if let Some(v) = &self.protocol {
+            v.write_xml(w, "protocol", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.guideline_id {
+            v.write_xml(w, "guideline_id", Some("OBJECT_REF"))?;
+        }
+        self.data.write_xml(w, "data", Some("ITEM_STRUCTURE"))?;
+        if let Some(v) = &self.workflow_id {
+            v.write_xml(w, "workflow_id", Some("OBJECT_REF"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::evaluation::Evaluation
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __language = None;
+        let mut __encoding = None;
+        let mut __other_participations = Vec::new();
+        let mut __workflow_id = None;
+        let mut __subject = None;
+        let mut __provider = None;
+        let mut __protocol = None;
+        let mut __guideline_id = None;
+        let mut __data = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "encoding" => {
+                        __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_participations" => {
+                        __other_participations
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "workflow_id" => {
+                        __workflow_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject" => {
+                        __subject = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "provider" => {
+                        __provider = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "protocol" => {
+                        __protocol = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "guideline_id" => {
+                        __guideline_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "work_flow_id" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EVALUATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::entry::evaluation::Evaluation {
+                name: __name.ok_or_else(|| reader.missing_child("EVALUATION", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("EVALUATION", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                language: __language
+                    .ok_or_else(|| reader.missing_child("EVALUATION", "language"))?,
+                encoding: __encoding
+                    .ok_or_else(|| reader.missing_child("EVALUATION", "encoding"))?,
+                other_participations: if __other_participations.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_participations)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_participations: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                workflow_id: __workflow_id,
+                subject: __subject.ok_or_else(|| reader.missing_child("EVALUATION", "subject"))?,
+                provider: __provider,
+                protocol: __protocol,
+                guideline_id: __guideline_id,
+                data: __data.ok_or_else(|| reader.missing_child("EVALUATION", "data"))?,
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::history::event::Event<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_structures::history::event::Event::IntervalEvent(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_structures::history::event::Event::PointEvent(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_structures::history::event::Event::IntervalEvent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_structures::history::event::Event::PointEvent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::history::event::Event<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("INTERVAL_EVENT") => Ok(
+                openehr_rm::v1_1::data_structures::history::event::Event::IntervalEvent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("POINT_EVENT") => Ok(
+                openehr_rm::v1_1::data_structures::history::event::Event::PointEvent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Event: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Event: unknown xsi:type {other}: the ITS-XML RM schemas define no EVENT subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::event_context::EventContext {
+    fn xml_type_name(&self) -> &'static str {
+        "EVENT_CONTEXT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EVENT_CONTEXT" {
+                __attrs.push(("xsi:type", "EVENT_CONTEXT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.start_time
+            .write_xml(w, "start_time", Some("DV_DATE_TIME"))?;
+        if let Some(v) = &self.end_time {
+            v.write_xml(w, "end_time", Some("DV_DATE_TIME"))?;
+        }
+        if let Some(v) = &self.location {
+            v.write_xml(w, "location", Some("String"))?;
+        }
+        self.setting
+            .write_xml(w, "setting", Some("DV_CODED_TEXT"))?;
+        if let Some(v) = &self.other_context {
+            v.write_xml(w, "other_context", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.health_care_facility {
+            v.write_xml(w, "health_care_facility", Some("PARTY_IDENTIFIED"))?;
+        }
+        if let Some(vs) = &self.participations {
+            for v in vs {
+                v.write_xml(w, "participations", Some("PARTICIPATION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::event_context::EventContext {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __start_time = None;
+        let mut __end_time = None;
+        let mut __location = None;
+        let mut __setting = None;
+        let mut __other_context = None;
+        let mut __health_care_facility = None;
+        let mut __participations = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "start_time" => {
+                        __start_time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "end_time" => {
+                        __end_time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "location" => {
+                        __location = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "setting" => {
+                        __setting = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_context" => {
+                        __other_context =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "health_care_facility" => {
+                        __health_care_facility =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "participations" => {
+                        __participations
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EVENT_CONTEXT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::composition::event_context::EventContext {
+            start_time: __start_time
+                .ok_or_else(|| reader.missing_child("EVENT_CONTEXT", "start_time"))?,
+            end_time: __end_time,
+            location: __location,
+            setting: __setting.ok_or_else(|| reader.missing_child("EVENT_CONTEXT", "setting"))?,
+            other_context: __other_context,
+            health_care_facility: __health_care_facility,
+            participations: if __participations.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__participations).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!("element participations: {__e}"))
+                        },
+                    )?,
+                )
+            },
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr_extract::common::extract::Extract {
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT" {
+                __attrs.push(("xsi:type", "EXTRACT".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(v) = &self.request_id {
+            v.write_xml(w, "request_id", Some("HIER_OBJECT_ID"))?;
+        }
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        self.system_id
+            .write_xml(w, "system_id", Some("HIER_OBJECT_ID"))?;
+        if let Some(vs) = &self.participations {
+            for v in vs {
+                v.write_xml(w, "participations", Some("EXTRACT_PARTICIPATION"))?;
+            }
+        }
+        self.sequence_nr
+            .write_xml(w, "sequence_nr", Some("Integer"))?;
+        if let Some(vs) = &self.chapters {
+            for v in vs {
+                v.write_xml(w, "chapters", Some("EXTRACT_CHAPTER"))?;
+            }
+        }
+        if let Some(v) = &self.specification {
+            v.write_xml(w, "specification", Some("EXTRACT_SPEC"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr_extract::common::extract::Extract {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __chapters = Vec::new();
+        let mut __specification = None;
+        let mut __request_id = None;
+        let mut __time_created = None;
+        let mut __system_id = None;
+        let mut __sequence_nr = None;
+        let mut __participations = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "chapters" => {
+                        __chapters.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "specification" => {
+                        __specification =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "request_id" => {
+                        __request_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "system_id" => {
+                        __system_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "sequence_nr" => {
+                        __sequence_nr = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "participations" => {
+                        __participations
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr_extract::common::extract::Extract {
+            name: __name.ok_or_else(|| reader.missing_child("EXTRACT", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("EXTRACT", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            chapters: if __chapters.is_empty() {
+                None
+            } else {
+                Some(__chapters)
+            },
+            specification: __specification,
+            request_id: __request_id,
+            time_created: __time_created
+                .ok_or_else(|| reader.missing_child("EXTRACT", "time_created"))?,
+            system_id: __system_id.ok_or_else(|| reader.missing_child("EXTRACT", "system_id"))?,
+            sequence_nr: __sequence_nr
+                .ok_or_else(|| reader.missing_child("EXTRACT", "sequence_nr"))?,
+            participations: if __participations.is_empty() {
+                None
+            } else {
+                Some(__participations)
+            },
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_action_request::ExtractActionRequest
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_ACTION_REQUEST"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_ACTION_REQUEST" {
+                __attrs.push(("xsi:type", "EXTRACT_ACTION_REQUEST".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.request_id
+            .write_xml(w, "request_id", Some("OBJECT_REF"))?;
+        self.action.write_xml(w, "action", Some("DV_CODED_TEXT"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_action_request::ExtractActionRequest
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __request_id = None;
+        let mut __action = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "request_id" => {
+                        __request_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "action" => {
+                        __action = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_ACTION_REQUEST".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_action_request::ExtractActionRequest {
+                name: __name
+                    .ok_or_else(|| reader.missing_child("EXTRACT_ACTION_REQUEST", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| {
+                        reader.missing_attribute("EXTRACT_ACTION_REQUEST", "archetype_node_id")
+                    })?
+                    .to_string(),
+                uid: __uid.ok_or_else(|| reader.missing_child("EXTRACT_ACTION_REQUEST", "uid"))?,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                request_id: __request_id
+                    .ok_or_else(|| reader.missing_child("EXTRACT_ACTION_REQUEST", "request_id"))?,
+                action: __action
+                    .ok_or_else(|| reader.missing_child("EXTRACT_ACTION_REQUEST", "action"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapterData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_CHAPTER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_CHAPTER" {
+                __attrs.push(("xsi:type", "EXTRACT_CHAPTER".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("EXTRACT_ITEM"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapterData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_CHAPTER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapterData {
+                name: __name.ok_or_else(|| reader.missing_child("EXTRACT_CHAPTER", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| {
+                        reader.missing_attribute("EXTRACT_CHAPTER", "archetype_node_id")
+                    })?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(__items)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter::ExtractEntityChapter(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter::ExtractChapter(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter::ExtractEntityChapter(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter::ExtractChapter(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("EXTRACT_CHAPTER") => Ok(openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter::ExtractChapter(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("EXTRACT_ENTITY_CHAPTER") => Ok(openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter::ExtractEntityChapter(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapter::ExtractChapter(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractChapter: unknown xsi:type {other}: the ITS-XML RM schemas define no EXTRACT_CHAPTER subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem::GenericContentItem(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem::OpenehrContentItem(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem::GenericContentItem(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem::OpenehrContentItem(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("GENERIC_CONTENT_ITEM") => Ok(openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem::GenericContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("OPENEHR_CONTENT_ITEM") => Ok(openehr_rm::v1_1::ehr_extract::common::extract_content_item::ExtractContentItem::OpenehrContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("ExtractContentItem: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractContentItem: unknown xsi:type {other}: the ITS-XML RM schemas define no EXTRACT_CONTENT_ITEM subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_entity_chapter::ExtractEntityChapter
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_ENTITY_CHAPTER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_ENTITY_CHAPTER" {
+                __attrs.push(("xsi:type", "EXTRACT_ENTITY_CHAPTER".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("EXTRACT_ITEM"))?;
+            }
+        }
+        self.extract_id_key
+            .write_xml(w, "extract_id_key", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_entity_chapter::ExtractEntityChapter
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        let mut __extract_id_key = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_id_key" => {
+                        __extract_id_key =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_ENTITY_CHAPTER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_entity_chapter::ExtractEntityChapter {
+                name: __name
+                    .ok_or_else(|| reader.missing_child("EXTRACT_ENTITY_CHAPTER", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| {
+                        reader.missing_attribute("EXTRACT_ENTITY_CHAPTER", "archetype_node_id")
+                    })?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(__items)
+                },
+                extract_id_key: __extract_id_key.ok_or_else(|| {
+                    reader.missing_child("EXTRACT_ENTITY_CHAPTER", "extract_id_key")
+                })?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_entity_manifest::ExtractEntityManifest
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_ENTITY_MANIFEST"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_ENTITY_MANIFEST" {
+                __attrs.push(("xsi:type", "EXTRACT_ENTITY_MANIFEST".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.extract_id_key
+            .write_xml(w, "extract_id_key", Some("String"))?;
+        if let Some(v) = &self.ehr_id {
+            v.write_xml(w, "ehr_id", Some("String"))?;
+        }
+        if let Some(v) = &self.subject_id {
+            v.write_xml(w, "subject_id", Some("String"))?;
+        }
+        if let Some(vs) = &self.other_ids {
+            for v in vs {
+                v.write_xml(w, "other_ids", Some("String"))?;
+            }
+        }
+        if let Some(vs) = &self.item_list {
+            for v in vs {
+                v.write_xml(w, "item_list", Some("OBJECT_REF"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_entity_manifest::ExtractEntityManifest
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __extract_id_key = None;
+        let mut __ehr_id = None;
+        let mut __subject_id = None;
+        let mut __other_ids = Vec::new();
+        let mut __item_list = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "extract_id_key" => {
+                        __extract_id_key =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "ehr_id" => {
+                        __ehr_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject_id" => {
+                        __subject_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_ids" => {
+                        __other_ids.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item_list" => {
+                        __item_list.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_ENTITY_MANIFEST".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_entity_manifest::ExtractEntityManifest {
+                extract_id_key: __extract_id_key.ok_or_else(|| {
+                    reader.missing_child("EXTRACT_ENTITY_MANIFEST", "extract_id_key")
+                })?,
+                ehr_id: __ehr_id,
+                subject_id: __subject_id,
+                other_ids: if __other_ids.is_empty() {
+                    None
+                } else {
+                    Some(__other_ids)
+                },
+                item_list: if __item_list.is_empty() {
+                    None
+                } else {
+                    Some(__item_list)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_error::ExtractError
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_ERROR"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_ERROR" {
+                __attrs.push(("xsi:type", "EXTRACT_ERROR".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.request_id {
+            v.write_xml(w, "request_id", Some("OBJECT_REF"))?;
+        }
+        self.reason.write_xml(w, "reason", Some("DV_TEXT"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_error::ExtractError
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __request_id = None;
+        let mut __reason = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "request_id" => {
+                        __request_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reason" => {
+                        __reason = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_ERROR".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_error::ExtractError {
+                request_id: __request_id,
+                reason: __reason.ok_or_else(|| reader.missing_child("EXTRACT_ERROR", "reason"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_folder::ExtractFolder
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_FOLDER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_FOLDER" {
+                __attrs.push(("xsi:type", "EXTRACT_FOLDER".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("EXTRACT_ITEM"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_folder::ExtractFolder
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_FOLDER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_folder::ExtractFolder {
+                name: __name.ok_or_else(|| reader.missing_child("EXTRACT_FOLDER", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("EXTRACT_FOLDER", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(__items)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::ExtractFolder(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::GenericContentItem(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::OpenehrContentItem(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::ExtractFolder(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::GenericContentItem(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::OpenehrContentItem(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("EXTRACT_FOLDER") => Ok(openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::ExtractFolder(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("GENERIC_CONTENT_ITEM") => Ok(openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::GenericContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("OPENEHR_CONTENT_ITEM") => Ok(openehr_rm::v1_1::ehr_extract::common::extract_item::ExtractItem::OpenehrContentItem(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("ExtractItem: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ExtractItem: unknown xsi:type {other}: the ITS-XML RM schemas define no EXTRACT_ITEM subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_manifest::ExtractManifest
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_MANIFEST"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_MANIFEST" {
+                __attrs.push(("xsi:type", "EXTRACT_MANIFEST".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        for v in &self.entities {
+            v.write_xml(w, "entities", Some("EXTRACT_ENTITY_MANIFEST"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_manifest::ExtractManifest
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __entities = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "entities" => {
+                        __entities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_MANIFEST".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_manifest::ExtractManifest {
+                entities: openehr_base::containers::NonEmptyVec::new(__entities).map_err(
+                    |__e| reader.invalid_content(::std::format!("element entities: {__e}")),
+                )?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_participation::ExtractParticipation
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_PARTICIPATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_PARTICIPATION" {
+                __attrs.push(("xsi:type", "EXTRACT_PARTICIPATION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.time {
+            v.write_xml(w, "time", Some("DV_INTERVAL"))?;
+        }
+        self.function.write_xml(w, "function", Some("DV_TEXT"))?;
+        if let Some(v) = &self.mode {
+            v.write_xml(w, "mode", Some("DV_CODED_TEXT"))?;
+        }
+        self.performer.write_xml(w, "performer", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_participation::ExtractParticipation
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __time = None;
+        let mut __function = None;
+        let mut __mode = None;
+        let mut __performer = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "time" => {
+                        __time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "function" => {
+                        __function = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "mode" => {
+                        __mode = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "performer" => {
+                        __performer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_PARTICIPATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_participation::ExtractParticipation {
+                time: __time,
+                function: __function
+                    .ok_or_else(|| reader.missing_child("EXTRACT_PARTICIPATION", "function"))?,
+                mode: __mode,
+                performer: __performer
+                    .ok_or_else(|| reader.missing_child("EXTRACT_PARTICIPATION", "performer"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_request::ExtractRequest
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_REQUEST"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_REQUEST" {
+                __attrs.push(("xsi:type", "EXTRACT_REQUEST".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.extract_spec
+            .write_xml(w, "extract_spec", Some("EXTRACT_SPEC"))?;
+        if let Some(v) = &self.update_spec {
+            v.write_xml(w, "update_spec", Some("EXTRACT_UPDATE_SPEC"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_request::ExtractRequest
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __extract_spec = None;
+        let mut __update_spec = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_spec" => {
+                        __extract_spec =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "update_spec" => {
+                        __update_spec = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_REQUEST".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_request::ExtractRequest {
+                name: __name.ok_or_else(|| reader.missing_child("EXTRACT_REQUEST", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| {
+                        reader.missing_attribute("EXTRACT_REQUEST", "archetype_node_id")
+                    })?
+                    .to_string(),
+                uid: __uid.ok_or_else(|| reader.missing_child("EXTRACT_REQUEST", "uid"))?,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                extract_spec: __extract_spec
+                    .ok_or_else(|| reader.missing_child("EXTRACT_REQUEST", "extract_spec"))?,
+                update_spec: __update_spec,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_spec::ExtractSpec
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_SPEC"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_SPEC" {
+                __attrs.push(("xsi:type", "EXTRACT_SPEC".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.extract_type
+            .write_xml(w, "extract_type", Some("DV_CODED_TEXT"))?;
+        self.link_depth
+            .write_xml(w, "link_depth", Some("Integer"))?;
+        if let Some(vs) = &self.criteria {
+            for v in vs {
+                v.write_xml(w, "criteria", Some("DV_PARSABLE"))?;
+            }
+        }
+        if let Some(v) = &self.other_details {
+            v.write_xml(w, "other_details", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.version_spec {
+            v.write_xml(w, "version_spec", Some("EXTRACT_VERSION_SPEC"))?;
+        }
+        self.manifest
+            .write_xml(w, "manifest", Some("EXTRACT_MANIFEST"))?;
+        self.priority.write_xml(w, "priority", Some("Integer"))?;
+        self.include_multimedia
+            .write_xml(w, "include_multimedia", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_spec::ExtractSpec
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __version_spec = None;
+        let mut __manifest = None;
+        let mut __extract_type = None;
+        let mut __include_multimedia = None;
+        let mut __priority = None;
+        let mut __link_depth = None;
+        let mut __criteria = Vec::new();
+        let mut __other_details = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "version_spec" => {
+                        __version_spec =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "manifest" => {
+                        __manifest = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_type" => {
+                        __extract_type =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "include_multimedia" => {
+                        __include_multimedia =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "priority" => {
+                        __priority = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "link_depth" => {
+                        __link_depth = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "criteria" => {
+                        __criteria.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_details" => {
+                        __other_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "includes_multimedia" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_SPEC".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_spec::ExtractSpec {
+                version_spec: __version_spec,
+                manifest: __manifest
+                    .ok_or_else(|| reader.missing_child("EXTRACT_SPEC", "manifest"))?,
+                extract_type: __extract_type
+                    .ok_or_else(|| reader.missing_child("EXTRACT_SPEC", "extract_type"))?,
+                include_multimedia: __include_multimedia
+                    .ok_or_else(|| reader.missing_child("EXTRACT_SPEC", "include_multimedia"))?,
+                priority: __priority
+                    .ok_or_else(|| reader.missing_child("EXTRACT_SPEC", "priority"))?,
+                link_depth: __link_depth
+                    .ok_or_else(|| reader.missing_child("EXTRACT_SPEC", "link_depth"))?,
+                criteria: if __criteria.is_empty() {
+                    None
+                } else {
+                    Some(__criteria)
+                },
+                other_details: __other_details,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_update_spec::ExtractUpdateSpec
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_UPDATE_SPEC"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_UPDATE_SPEC" {
+                __attrs.push(("xsi:type", "EXTRACT_UPDATE_SPEC".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.persist_in_server
+            .write_xml(w, "persist_in_server", Some("Boolean"))?;
+        if let Some(v) = &self.repeat_period {
+            v.write_xml(w, "repeat_period", Some("DV_DURATION"))?;
+        }
+        if let Some(vs) = &self.trigger_events {
+            for v in vs {
+                v.write_xml(w, "trigger_events", Some("DV_CODED_TEXT"))?;
+            }
+        }
+        self.update_method
+            .write_xml(w, "update_method", Some("CODE_PHRASE"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_update_spec::ExtractUpdateSpec
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __persist_in_server = None;
+        let mut __repeat_period = None;
+        let mut __trigger_events = Vec::new();
+        let mut __update_method = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "persist_in_server" => {
+                        __persist_in_server =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "repeat_period" => {
+                        __repeat_period =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "trigger_events" => {
+                        __trigger_events
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "update_method" => {
+                        __update_method =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_UPDATE_SPEC".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_update_spec::ExtractUpdateSpec {
+                persist_in_server: __persist_in_server.ok_or_else(|| {
+                    reader.missing_child("EXTRACT_UPDATE_SPEC", "persist_in_server")
+                })?,
+                repeat_period: __repeat_period,
+                trigger_events: if __trigger_events.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__trigger_events).map_err(
+                            |__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element trigger_events: {__e}"
+                                ))
+                            },
+                        )?,
+                    )
+                },
+                update_method: __update_method
+                    .ok_or_else(|| reader.missing_child("EXTRACT_UPDATE_SPEC", "update_method"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_version_spec::ExtractVersionSpec
+{
+    fn xml_type_name(&self) -> &'static str {
+        "EXTRACT_VERSION_SPEC"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "EXTRACT_VERSION_SPEC" {
+                __attrs.push(("xsi:type", "EXTRACT_VERSION_SPEC".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.include_all_versions
+            .write_xml(w, "include_all_versions", Some("Boolean"))?;
+        if let Some(v) = &self.commit_time_interval {
+            v.write_xml(w, "commit_time_interval", Some("DV_INTERVAL"))?;
+        }
+        self.include_revision_history
+            .write_xml(w, "include_revision_history", Some("Boolean"))?;
+        self.include_data
+            .write_xml(w, "include_data", Some("Boolean"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::common::extract_version_spec::ExtractVersionSpec
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __include_all_versions = None;
+        let mut __commit_time_interval = None;
+        let mut __include_revision_history = None;
+        let mut __include_data = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "include_all_versions" => {
+                        __include_all_versions =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "commit_time_interval" => {
+                        __commit_time_interval =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "include_revision_history" => {
+                        __include_revision_history =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "include_data" => {
+                        __include_data =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "includes_data" => reader.skip_element()?,
+                    "includes_revision_history" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "EXTRACT_VERSION_SPEC".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::common::extract_version_spec::ExtractVersionSpec {
+                include_all_versions: __include_all_versions.ok_or_else(|| {
+                    reader.missing_child("EXTRACT_VERSION_SPEC", "include_all_versions")
+                })?,
+                commit_time_interval: __commit_time_interval,
+                include_revision_history: __include_revision_history.ok_or_else(|| {
+                    reader.missing_child("EXTRACT_VERSION_SPEC", "include_revision_history")
+                })?,
+                include_data: __include_data
+                    .ok_or_else(|| reader.missing_child("EXTRACT_VERSION_SPEC", "include_data"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::archetyped::feeder_audit::FeederAudit
+{
+    fn xml_type_name(&self) -> &'static str {
+        "FEEDER_AUDIT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "FEEDER_AUDIT" {
+                __attrs.push(("xsi:type", "FEEDER_AUDIT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(vs) = &self.originating_system_item_ids {
+            for v in vs {
+                v.write_xml(w, "originating_system_item_ids", Some("DV_IDENTIFIER"))?;
+            }
+        }
+        if let Some(vs) = &self.feeder_system_item_ids {
+            for v in vs {
+                v.write_xml(w, "feeder_system_item_ids", Some("DV_IDENTIFIER"))?;
+            }
+        }
+        if let Some(v) = &self.original_content {
+            v.write_xml(w, "original_content", Some("DV_ENCAPSULATED"))?;
+        }
+        self.originating_system_audit.write_xml(
+            w,
+            "originating_system_audit",
+            Some("FEEDER_AUDIT_DETAILS"),
+        )?;
+        if let Some(v) = &self.feeder_system_audit {
+            v.write_xml(w, "feeder_system_audit", Some("FEEDER_AUDIT_DETAILS"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::archetyped::feeder_audit::FeederAudit
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __originating_system_item_ids = Vec::new();
+        let mut __feeder_system_item_ids = Vec::new();
+        let mut __original_content = None;
+        let mut __originating_system_audit = None;
+        let mut __feeder_system_audit = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "originating_system_item_ids" => {
+                        __originating_system_item_ids
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_system_item_ids" => {
+                        __feeder_system_item_ids
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "original_content" => {
+                        __original_content =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "originating_system_audit" => {
+                        __originating_system_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_system_audit" => {
+                        __feeder_system_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "FEEDER_AUDIT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::archetyped::feeder_audit::FeederAudit {
+                originating_system_item_ids: if __originating_system_item_ids.is_empty() {
+                    None
+                } else {
+                    Some(__originating_system_item_ids)
+                },
+                feeder_system_item_ids: if __feeder_system_item_ids.is_empty() {
+                    None
+                } else {
+                    Some(__feeder_system_item_ids)
+                },
+                original_content: __original_content,
+                originating_system_audit: __originating_system_audit.ok_or_else(|| {
+                    reader.missing_child("FEEDER_AUDIT", "originating_system_audit")
+                })?,
+                feeder_system_audit: __feeder_system_audit,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::archetyped::feeder_audit_details::FeederAuditDetails
+{
+    fn xml_type_name(&self) -> &'static str {
+        "FEEDER_AUDIT_DETAILS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "FEEDER_AUDIT_DETAILS" {
+                __attrs.push(("xsi:type", "FEEDER_AUDIT_DETAILS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.system_id.write_xml(w, "system_id", Some("String"))?;
+        if let Some(v) = &self.location {
+            v.write_xml(w, "location", Some("PARTY_IDENTIFIED"))?;
+        }
+        if let Some(v) = &self.provider {
+            v.write_xml(w, "provider", Some("PARTY_IDENTIFIED"))?;
+        }
+        if let Some(v) = &self.subject {
+            v.write_xml(w, "subject", Some("PARTY_PROXY"))?;
+        }
+        if let Some(v) = &self.time {
+            v.write_xml(w, "time", Some("DV_DATE_TIME"))?;
+        }
+        if let Some(v) = &self.version_id {
+            v.write_xml(w, "version_id", Some("String"))?;
+        }
+        if let Some(v) = &self.other_details {
+            v.write_xml(w, "other_details", Some("ITEM_STRUCTURE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::archetyped::feeder_audit_details::FeederAuditDetails
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __system_id = None;
+        let mut __location = None;
+        let mut __subject = None;
+        let mut __provider = None;
+        let mut __time = None;
+        let mut __version_id = None;
+        let mut __other_details = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "system_id" => {
+                        __system_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "location" => {
+                        __location = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject" => {
+                        __subject = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "provider" => {
+                        __provider = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time" => {
+                        __time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "version_id" => {
+                        __version_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_details" => {
+                        __other_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "FEEDER_AUDIT_DETAILS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::archetyped::feeder_audit_details::FeederAuditDetails {
+                system_id: __system_id
+                    .ok_or_else(|| reader.missing_child("FEEDER_AUDIT_DETAILS", "system_id"))?,
+                location: __location,
+                subject: __subject,
+                provider: __provider,
+                time: __time,
+                version_id: __version_id,
+                other_details: __other_details,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::directory::folder::Folder {
+    fn xml_type_name(&self) -> &'static str {
+        "FOLDER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "FOLDER" {
+                __attrs.push(("xsi:type", "FOLDER".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.folders {
+            for v in vs {
+                v.write_xml(w, "folders", Some("FOLDER"))?;
+            }
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("OBJECT_REF"))?;
+            }
+        }
+        if let Some(v) = &self.details {
+            v.write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::directory::folder::Folder {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        let mut __folders = Vec::new();
+        let mut __details = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "folders" => {
+                        __folders.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "FOLDER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::common::directory::folder::Folder {
+            name: __name.ok_or_else(|| reader.missing_child("FOLDER", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("FOLDER", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            items: if __items.is_empty() {
+                None
+            } else {
+                Some(__items)
+            },
+            folders: if __folders.is_empty() {
+                None
+            } else {
+                Some(__folders)
+            },
+            details: __details,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::generic_extract::generic_content_item::GenericContentItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        "GENERIC_CONTENT_ITEM"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "GENERIC_CONTENT_ITEM" {
+                __attrs.push(("xsi:type", "GENERIC_CONTENT_ITEM".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.is_primary
+            .write_xml(w, "is_primary", Some("Boolean"))?;
+        if let Some(v) = &self.is_changed {
+            v.write_xml(w, "is_changed", Some("Boolean"))?;
+        }
+        if let Some(v) = &self.is_masked {
+            v.write_xml(w, "is_masked", Some("Boolean"))?;
+        }
+        if let Some(v) = &self.item_type {
+            v.write_xml(w, "item_type", Some("DV_CODED_TEXT"))?;
+        }
+        if let Some(v) = &self.item_type_version {
+            v.write_xml(w, "item_type_version", Some("String"))?;
+        }
+        if let Some(v) = &self.author {
+            v.write_xml(w, "author", Some("String"))?;
+        }
+        if let Some(v) = &self.creation_time {
+            v.write_xml(w, "creation_time", Some("Iso8601_date_time"))?;
+        }
+        if let Some(v) = &self.authoriser {
+            v.write_xml(w, "authoriser", Some("String"))?;
+        }
+        if let Some(v) = &self.authorisation_time {
+            v.write_xml(w, "authorisation_time", Some("Iso8601_date_time"))?;
+        }
+        if let Some(v) = &self.item_status {
+            v.write_xml(w, "item_status", Some("DV_CODED_TEXT"))?;
+        }
+        if let Some(v) = &self.version_id {
+            v.write_xml(w, "version_id", Some("String"))?;
+        }
+        if let Some(v) = &self.version_set_id {
+            v.write_xml(w, "version_set_id", Some("String"))?;
+        }
+        if let Some(v) = &self.system_id {
+            v.write_xml(w, "system_id", Some("String"))?;
+        }
+        if let Some(m) = &self.other_details {
+            for (k, v) in m {
+                w.write_kv_element("other_details", k, v)?;
+            }
+        }
+        if let Some(v) = &self.item {
+            v.write_xml(w, "item", Some("LOCATABLE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::generic_extract::generic_content_item::GenericContentItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __is_primary = None;
+        let mut __is_changed = None;
+        let mut __is_masked = None;
+        let mut __item = None;
+        let mut __item_type = None;
+        let mut __item_type_version = None;
+        let mut __author = None;
+        let mut __creation_time = None;
+        let mut __authoriser = None;
+        let mut __authorisation_time = None;
+        let mut __item_status = None;
+        let mut __version_id = None;
+        let mut __version_set_id = None;
+        let mut __system_id = None;
+        let mut __other_details = std::collections::BTreeMap::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_primary" => {
+                        __is_primary = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_changed" => {
+                        __is_changed = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_masked" => {
+                        __is_masked = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item" => {
+                        __item = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item_type" => {
+                        __item_type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item_type_version" => {
+                        __item_type_version =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "author" => {
+                        __author = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "creation_time" => {
+                        __creation_time =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "authoriser" => {
+                        __authoriser = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "authorisation_time" => {
+                        __authorisation_time =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item_status" => {
+                        __item_status = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "version_id" => {
+                        __version_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "version_set_id" => {
+                        __version_set_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "system_id" => {
+                        __system_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __other_details.insert(__k, __v);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "GENERIC_CONTENT_ITEM".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr_extract::generic_extract::generic_content_item::GenericContentItem {
+name: __name.ok_or_else(|| reader.missing_child("GENERIC_CONTENT_ITEM", "name"))?,
+archetype_node_id: start.attr("archetype_node_id").ok_or_else(|| reader.missing_attribute("GENERIC_CONTENT_ITEM", "archetype_node_id"))?.to_string(),
+uid: __uid,
+links: if __links.is_empty() { None } else { Some(openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| reader.invalid_content(::std::format!("element links: {__e}")))?) },
+archetype_details: __archetype_details,
+feeder_audit: __feeder_audit,
+is_primary: __is_primary.ok_or_else(|| reader.missing_child("GENERIC_CONTENT_ITEM", "is_primary"))?,
+is_changed: __is_changed,
+is_masked: __is_masked,
+item: __item,
+item_type: __item_type,
+item_type_version: __item_type_version,
+author: __author,
+creation_time: __creation_time,
+authoriser: __authoriser,
+authorisation_time: __authorisation_time,
+item_status: __item_status,
+version_id: __version_id,
+version_set_id: __version_set_id,
+system_id: __system_id,
+other_details: if __other_details.is_empty() { None } else { Some(__other_details) },
+})
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::integration::generic_entry::GenericEntry {
+    fn xml_type_name(&self) -> &'static str {
+        "GENERIC_ENTRY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "GENERIC_ENTRY" {
+                __attrs.push(("xsi:type", "GENERIC_ENTRY".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.data.write_xml(w, "data", Some("ITEM_TREE"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::integration::generic_entry::GenericEntry {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __data = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "GENERIC_ENTRY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::integration::generic_entry::GenericEntry {
+            name: __name.ok_or_else(|| reader.missing_child("GENERIC_ENTRY", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("GENERIC_ENTRY", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            data: __data.ok_or_else(|| reader.missing_child("GENERIC_ENTRY", "data"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::group::Group {
+    fn xml_type_name(&self) -> &'static str {
+        "GROUP"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "GROUP" {
+                __attrs.push(("xsi:type", "GROUP".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        for v in &self.identities {
+            v.write_xml(w, "identities", Some("PARTY_IDENTITY"))?;
+        }
+        if let Some(vs) = &self.contacts {
+            for v in vs {
+                v.write_xml(w, "contacts", Some("CONTACT"))?;
+            }
+        }
+        if let Some(vs) = &self.relationships {
+            for v in vs {
+                v.write_xml(w, "relationships", Some("PARTY_RELATIONSHIP"))?;
+            }
+        }
+        if let Some(vs) = &self.reverse_relationships {
+            for v in vs {
+                v.write_xml(w, "reverse_relationships", Some("LOCATABLE_REF"))?;
+            }
+        }
+        if let Some(v) = &self.details {
+            v.write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(vs) = &self.roles {
+            for v in vs {
+                v.write_xml(w, "roles", Some("PARTY_REF"))?;
+            }
+        }
+        if let Some(vs) = &self.languages {
+            for v in vs {
+                v.write_xml(w, "languages", Some("DV_TEXT"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::group::Group {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __identities = Vec::new();
+        let mut __contacts = Vec::new();
+        let mut __details = None;
+        let mut __reverse_relationships = Vec::new();
+        let mut __relationships = Vec::new();
+        let mut __languages = Vec::new();
+        let mut __roles = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identities" => {
+                        __identities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contacts" => {
+                        __contacts.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reverse_relationships" => {
+                        __reverse_relationships
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "relationships" => {
+                        __relationships.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "languages" => {
+                        __languages.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "roles" => {
+                        __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "GROUP".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::group::Group {
+            name: __name.ok_or_else(|| reader.missing_child("GROUP", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("GROUP", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            identities: openehr_base::containers::NonEmptyVec::new(__identities).map_err(
+                |__e| reader.invalid_content(::std::format!("element identities: {__e}")),
+            )?,
+            contacts: if __contacts.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__contacts).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element contacts: {__e}"))
+                    })?,
+                )
+            },
+            details: __details,
+            reverse_relationships: if __reverse_relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__reverse_relationships).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!(
+                                "element reverse_relationships: {__e}"
+                            ))
+                        },
+                    )?,
+                )
+            },
+            relationships: if __relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__relationships).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element relationships: {__e}"))
+                    })?,
+                )
+            },
+            languages: if __languages.is_empty() {
+                None
+            } else {
+                Some(__languages)
+            },
+            roles: if __roles.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__roles).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element roles: {__e}"))
+                    })?,
+                )
+            },
+        })
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::history::history::History<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "HISTORY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "HISTORY" {
+                __attrs.push(("xsi:type", "HISTORY".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.origin.write_xml(w, "origin", Some("DV_DATE_TIME"))?;
+        if let Some(v) = &self.period {
+            v.write_xml(w, "period", Some("DV_DURATION"))?;
+        }
+        if let Some(v) = &self.duration {
+            v.write_xml(w, "duration", Some("DV_DURATION"))?;
+        }
+        if let Some(vs) = &self.events {
+            for v in vs {
+                v.write_xml(w, "events", Some("EVENT"))?;
+            }
+        }
+        if let Some(v) = &self.summary {
+            v.write_xml(w, "summary", Some("ITEM_STRUCTURE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::history::history::History<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __origin = None;
+        let mut __period = None;
+        let mut __duration = None;
+        let mut __summary = None;
+        let mut __events = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "origin" => {
+                        __origin = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "period" => {
+                        __period = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "duration" => {
+                        __duration = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "summary" => {
+                        __summary = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "events" => {
+                        __events.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "HISTORY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::history::history::History {
+                name: __name.ok_or_else(|| reader.missing_child("HISTORY", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("HISTORY", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                origin: __origin.ok_or_else(|| reader.missing_child("HISTORY", "origin"))?,
+                period: __period,
+                duration: __duration,
+                summary: __summary,
+                events: if __events.is_empty() {
+                    None
+                } else {
+                    Some(__events)
+                },
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::change_control::imported_version::ImportedVersion<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "IMPORTED_VERSION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "IMPORTED_VERSION" {
+                __attrs.push(("xsi:type", "IMPORTED_VERSION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.contribution
+            .write_xml(w, "contribution", Some("OBJECT_REF"))?;
+        self.commit_audit
+            .write_xml(w, "commit_audit", Some("AUDIT_DETAILS"))?;
+        if let Some(v) = &self.signature {
+            v.write_xml(w, "signature", Some("String"))?;
+        }
+        self.item.write_xml(w, "item", Some("ORIGINAL_VERSION"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::change_control::imported_version::ImportedVersion<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __contribution = None;
+        let mut __signature = None;
+        let mut __commit_audit = None;
+        let mut __item = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "contribution" => {
+                        __contribution =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "signature" => {
+                        __signature = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "commit_audit" => {
+                        __commit_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item" => {
+                        __item = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "IMPORTED_VERSION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::change_control::imported_version::ImportedVersion {
+                contribution: __contribution
+                    .ok_or_else(|| reader.missing_child("IMPORTED_VERSION", "contribution"))?,
+                signature: __signature,
+                commit_audit: __commit_audit
+                    .ok_or_else(|| reader.missing_child("IMPORTED_VERSION", "commit_audit"))?,
+                item: __item.ok_or_else(|| reader.missing_child("IMPORTED_VERSION", "item"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::instruction::Instruction
+{
+    fn xml_type_name(&self) -> &'static str {
+        "INSTRUCTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "INSTRUCTION" {
+                __attrs.push(("xsi:type", "INSTRUCTION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        self.encoding
+            .write_xml(w, "encoding", Some("CODE_PHRASE"))?;
+        self.subject.write_xml(w, "subject", Some("PARTY_PROXY"))?;
+        if let Some(v) = &self.provider {
+            v.write_xml(w, "provider", Some("PARTY_PROXY"))?;
+        }
+        if let Some(vs) = &self.other_participations {
+            for v in vs {
+                v.write_xml(w, "other_participations", Some("PARTICIPATION"))?;
+            }
+        }
+        if let Some(v) = &self.protocol {
+            v.write_xml(w, "protocol", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.guideline_id {
+            v.write_xml(w, "guideline_id", Some("OBJECT_REF"))?;
+        }
+        self.narrative.write_xml(w, "narrative", Some("DV_TEXT"))?;
+        if let Some(v) = &self.expiry_time {
+            v.write_xml(w, "expiry_time", Some("DV_DATE_TIME"))?;
+        }
+        if let Some(v) = &self.wf_definition {
+            v.write_xml(w, "wf_definition", Some("DV_PARSABLE"))?;
+        }
+        if let Some(vs) = &self.activities {
+            for v in vs {
+                v.write_xml(w, "activities", Some("ACTIVITY"))?;
+            }
+        }
+        if let Some(v) = &self.workflow_id {
+            v.write_xml(w, "workflow_id", Some("OBJECT_REF"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::instruction::Instruction
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __language = None;
+        let mut __encoding = None;
+        let mut __other_participations = Vec::new();
+        let mut __workflow_id = None;
+        let mut __subject = None;
+        let mut __provider = None;
+        let mut __protocol = None;
+        let mut __guideline_id = None;
+        let mut __narrative = None;
+        let mut __expiry_time = None;
+        let mut __wf_definition = None;
+        let mut __activities = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "encoding" => {
+                        __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_participations" => {
+                        __other_participations
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "workflow_id" => {
+                        __workflow_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject" => {
+                        __subject = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "provider" => {
+                        __provider = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "protocol" => {
+                        __protocol = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "guideline_id" => {
+                        __guideline_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "narrative" => {
+                        __narrative = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "expiry_time" => {
+                        __expiry_time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "wf_definition" => {
+                        __wf_definition =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "activities" => {
+                        __activities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "work_flow_id" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "INSTRUCTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::entry::instruction::Instruction {
+                name: __name.ok_or_else(|| reader.missing_child("INSTRUCTION", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("INSTRUCTION", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                language: __language
+                    .ok_or_else(|| reader.missing_child("INSTRUCTION", "language"))?,
+                encoding: __encoding
+                    .ok_or_else(|| reader.missing_child("INSTRUCTION", "encoding"))?,
+                other_participations: if __other_participations.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_participations)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_participations: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                workflow_id: __workflow_id,
+                subject: __subject.ok_or_else(|| reader.missing_child("INSTRUCTION", "subject"))?,
+                provider: __provider,
+                protocol: __protocol,
+                guideline_id: __guideline_id,
+                narrative: __narrative
+                    .ok_or_else(|| reader.missing_child("INSTRUCTION", "narrative"))?,
+                expiry_time: __expiry_time,
+                wf_definition: __wf_definition,
+                activities: if __activities.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__activities).map_err(
+                            |__e| {
+                                reader.invalid_content(::std::format!("element activities: {__e}"))
+                            },
+                        )?,
+                    )
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::instruction_details::InstructionDetails
+{
+    fn xml_type_name(&self) -> &'static str {
+        "INSTRUCTION_DETAILS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "INSTRUCTION_DETAILS" {
+                __attrs.push(("xsi:type", "INSTRUCTION_DETAILS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.instruction_id
+            .write_xml(w, "instruction_id", Some("LOCATABLE_REF"))?;
+        self.activity_id
+            .write_xml(w, "activity_id", Some("String"))?;
+        if let Some(v) = &self.wf_details {
+            v.write_xml(w, "wf_details", Some("ITEM_STRUCTURE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::instruction_details::InstructionDetails
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __instruction_id = None;
+        let mut __activity_id = None;
+        let mut __wf_details = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "instruction_id" => {
+                        __instruction_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "activity_id" => {
+                        __activity_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "wf_details" => {
+                        __wf_details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "INSTRUCTION_DETAILS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::composition::content::entry::instruction_details::InstructionDetails {
+instruction_id: __instruction_id.ok_or_else(|| reader.missing_child("INSTRUCTION_DETAILS", "instruction_id"))?,
+activity_id: __activity_id.ok_or_else(|| reader.missing_child("INSTRUCTION_DETAILS", "activity_id"))?,
+wf_details: __wf_details,
+})
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::history::interval_event::IntervalEvent<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "INTERVAL_EVENT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "INTERVAL_EVENT" {
+                __attrs.push(("xsi:type", "INTERVAL_EVENT".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.time.write_xml(w, "time", Some("DV_DATE_TIME"))?;
+        self.data.write_xml(w, "data", Some("T"))?;
+        if let Some(v) = &self.state {
+            v.write_xml(w, "state", Some("ITEM_STRUCTURE"))?;
+        }
+        self.width.write_xml(w, "width", Some("DV_DURATION"))?;
+        if let Some(v) = &self.sample_count {
+            v.write_xml(w, "sample_count", Some("Integer"))?;
+        }
+        self.math_function
+            .write_xml(w, "math_function", Some("DV_CODED_TEXT"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::history::interval_event::IntervalEvent<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __time = None;
+        let mut __state = None;
+        let mut __data = None;
+        let mut __width = None;
+        let mut __sample_count = None;
+        let mut __math_function = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time" => {
+                        __time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "state" => {
+                        __state = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "width" => {
+                        __width = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "sample_count" => {
+                        __sample_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "math_function" => {
+                        __math_function =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "INTERVAL_EVENT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::history::interval_event::IntervalEvent {
+                name: __name.ok_or_else(|| reader.missing_child("INTERVAL_EVENT", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("INTERVAL_EVENT", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                time: __time.ok_or_else(|| reader.missing_child("INTERVAL_EVENT", "time"))?,
+                state: __state,
+                data: __data.ok_or_else(|| reader.missing_child("INTERVAL_EVENT", "data"))?,
+                width: __width.ok_or_else(|| reader.missing_child("INTERVAL_EVENT", "width"))?,
+                sample_count: __sample_count,
+                math_function: __math_function
+                    .ok_or_else(|| reader.missing_child("INTERVAL_EVENT", "math_function"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::ism_transition::IsmTransition
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ISM_TRANSITION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ISM_TRANSITION" {
+                __attrs.push(("xsi:type", "ISM_TRANSITION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.current_state
+            .write_xml(w, "current_state", Some("DV_CODED_TEXT"))?;
+        if let Some(v) = &self.transition {
+            v.write_xml(w, "transition", Some("DV_CODED_TEXT"))?;
+        }
+        if let Some(v) = &self.careflow_step {
+            v.write_xml(w, "careflow_step", Some("DV_CODED_TEXT"))?;
+        }
+        if let Some(vs) = &self.reason {
+            for v in vs {
+                v.write_xml(w, "reason", Some("DV_TEXT"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::ism_transition::IsmTransition
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __current_state = None;
+        let mut __transition = None;
+        let mut __careflow_step = None;
+        let mut __reason = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "current_state" => {
+                        __current_state =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "transition" => {
+                        __transition = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "careflow_step" => {
+                        __careflow_step =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reason" => {
+                        __reason.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ISM_TRANSITION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::entry::ism_transition::IsmTransition {
+                current_state: __current_state
+                    .ok_or_else(|| reader.missing_child("ISM_TRANSITION", "current_state"))?,
+                transition: __transition,
+                careflow_step: __careflow_step,
+                reason: if __reason.is_empty() {
+                    None
+                } else {
+                    Some(__reason)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_structures::representation::item::Item {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::data_structures::representation::item::Item::Cluster(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::data_structures::representation::item::Item::Element(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::data_structures::representation::item::Item::Cluster(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::data_structures::representation::item::Item::Element(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::representation::item::Item
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("CLUSTER") => Ok(
+                openehr_rm::v1_1::data_structures::representation::item::Item::Cluster(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ELEMENT") => Ok(
+                openehr_rm::v1_1::data_structures::representation::item::Item::Element(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Item: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Item: unknown xsi:type {other}: the ITS-XML RM schemas define no ITEM subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_list::ItemList
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ITEM_LIST"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ITEM_LIST" {
+                __attrs.push(("xsi:type", "ITEM_LIST".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("ELEMENT"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_list::ItemList
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ITEM_LIST".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::item_structure::item_list::ItemList {
+                name: __name.ok_or_else(|| reader.missing_child("ITEM_LIST", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ITEM_LIST", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(__items)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_single::ItemSingle
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ITEM_SINGLE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ITEM_SINGLE" {
+                __attrs.push(("xsi:type", "ITEM_SINGLE".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.item.write_xml(w, "item", Some("ELEMENT"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_single::ItemSingle
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __item = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item" => {
+                        __item = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ITEM_SINGLE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::item_structure::item_single::ItemSingle {
+                name: __name.ok_or_else(|| reader.missing_child("ITEM_SINGLE", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ITEM_SINGLE", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                item: __item.ok_or_else(|| reader.missing_child("ITEM_SINGLE", "item"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemList(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemSingle(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemTable(x) => x.xml_type_name(),
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemTree(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemList(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemSingle(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemTable(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemTree(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("ITEM_LIST") => Ok(openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemList(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("ITEM_SINGLE") => Ok(openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemSingle(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("ITEM_TABLE") => Ok(openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemTable(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("ITEM_TREE") => Ok(openehr_rm::v1_1::data_structures::item_structure::item_structure::ItemStructure::ItemTree(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("ItemStructure: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("ItemStructure: unknown xsi:type {other}: the ITS-XML RM schemas define no ITEM_STRUCTURE subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_table::ItemTable
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ITEM_TABLE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ITEM_TABLE" {
+                __attrs.push(("xsi:type", "ITEM_TABLE".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.rows {
+            for v in vs {
+                v.write_xml(w, "rows", Some("CLUSTER"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_table::ItemTable
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __rows = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "rows" => {
+                        __rows.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ITEM_TABLE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::item_structure::item_table::ItemTable {
+                name: __name.ok_or_else(|| reader.missing_child("ITEM_TABLE", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ITEM_TABLE", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                rows: if __rows.is_empty() {
+                    None
+                } else {
+                    Some(__rows)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::tags::item_tag::ItemTag {
+    fn xml_type_name(&self) -> &'static str {
+        "ITEM_TAG"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ITEM_TAG" {
+                __attrs.push(("xsi:type", "ITEM_TAG".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.target().write_xml(w, "target", Some("UID_BASED_ID"))?;
+        if let Some(v) = &self.target_path() {
+            v.write_xml(w, "target_path", Some("String"))?;
+        }
+        self.key().write_xml(w, "key", Some("String"))?;
+        if let Some(v) = &self.value() {
+            v.write_xml(w, "value", Some("String"))?;
+        }
+        self.owner_id()
+            .write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::tags::item_tag::ItemTag {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __target = None;
+        let mut __target_path = None;
+        let mut __key = None;
+        let mut __value = None;
+        let mut __owner_id = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "target" => {
+                        __target = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "target_path" => {
+                        __target_path = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "key" => {
+                        __key = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ITEM_TAG".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        let __a0: String = __key.ok_or_else(|| reader.missing_child("ITEM_TAG", "key"))?;
+        let __a1: Option<String> = __value;
+        let __a2: openehr_base::v1_2::base_types::identification::uid_based_id::UidBasedId =
+            __target.ok_or_else(|| reader.missing_child("ITEM_TAG", "target"))?;
+        let __a3: Option<String> = __target_path;
+        let __a4: openehr_base::v1_2::base_types::identification::object_ref::ObjectRef =
+            __owner_id.ok_or_else(|| reader.missing_child("ITEM_TAG", "owner_id"))?;
+        openehr_rm::v1_1::common::tags::item_tag::ItemTag::new(__a0, __a1, __a2, __a3, __a4)
+            .map_err(|__e| reader.invalid_content(::std::format!("ITEM_TAG: {__e}")))
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_tree::ItemTree
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ITEM_TREE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ITEM_TREE" {
+                __attrs.push(("xsi:type", "ITEM_TREE".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("ITEM"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::item_structure::item_tree::ItemTree
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ITEM_TREE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::item_structure::item_tree::ItemTree {
+                name: __name.ok_or_else(|| reader.missing_child("ITEM_TREE", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("ITEM_TREE", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(__items)
+                },
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::interval::interval::Interval<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::foundation_types::interval::interval::Interval::DvInterval(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::foundation_types::interval::interval::Interval::PointInterval(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::foundation_types::interval::interval::Interval::ProperInterval(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::foundation_types::interval::interval::Interval::DvInterval(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::foundation_types::interval::interval::Interval::PointInterval(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::foundation_types::interval::interval::Interval::ProperInterval(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::interval::interval::Interval<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_INTERVAL") => Ok(
+                openehr_rm::v1_1::foundation_types::interval::interval::Interval::DvInterval(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("Multiplicity_interval") => Ok(
+                openehr_rm::v1_1::foundation_types::interval::interval::Interval::ProperInterval(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("Point_interval") => Ok(
+                openehr_rm::v1_1::foundation_types::interval::interval::Interval::PointInterval(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("Proper_interval") => Ok(
+                openehr_rm::v1_1::foundation_types::interval::interval::Interval::ProperInterval(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Interval: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Interval: unknown xsi:type {other}: the ITS-XML RM schemas define no Interval subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601DateData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_date"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_date" {
+                __attrs.push(("xsi:type", "Iso8601_date".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601DateData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_date".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601DateData {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_date", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date::DvDate(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date::Iso8601Date(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date::DvDate(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date::Iso8601Date(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_DATE") => Ok(
+                openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date::DvDate(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("Iso8601_date") => Ok(
+                openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date::Iso8601Date(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Ok(
+                openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601Date::Iso8601Date(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Iso8601Date: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_date subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTimeData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_date_time"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_date_time" {
+                __attrs.push(("xsi:type", "Iso8601_date_time".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTimeData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_date_time".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTimeData {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_date_time", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime::DvDateTime(x) => x.xml_type_name(),
+openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime::Iso8601DateTime(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime::DvDateTime(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime::Iso8601DateTime(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_DATE_TIME") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime::DvDateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_date_time") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime::Iso8601DateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTime::Iso8601DateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601DateTime: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_date_time subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601DurationData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_duration"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_duration" {
+                __attrs.push(("xsi:type", "Iso8601_duration".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601DurationData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_duration".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601DurationData {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_duration", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration::DvDuration(x) => x.xml_type_name(),
+openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration::Iso8601Duration(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration::DvDuration(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration::Iso8601Duration(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_DURATION") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration::DvDuration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_duration") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration::Iso8601Duration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601Duration::Iso8601Duration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Duration: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_duration subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601TimeData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "Iso8601_time"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "Iso8601_time" {
+                __attrs.push(("xsi:type", "Iso8601_time".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.value.write_xml(w, "value", Some("String"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601TimeData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __value = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "value" => {
+                        __value = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "Iso8601_time".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601TimeData {
+                value: __value.ok_or_else(|| reader.missing_child("Iso8601_time", "value"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time::DvTime(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time::Iso8601Time(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time::DvTime(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time::Iso8601Time(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("DV_TIME") => Ok(
+                openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time::DvTime(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("Iso8601_time") => Ok(
+                openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time::Iso8601Time(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Ok(
+                openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601Time::Iso8601Time(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Iso8601Time: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_time subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Date(x) => x.xml_type_name(),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601DateTime(x) => x.xml_type_name(),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Duration(x) => x.xml_type_name(),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(x) => x.xml_type_name(),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Date(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601DateTime(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Duration(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("DV_DATE") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Date(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_DATE_TIME") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601DateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_DURATION") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Duration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("DV_TIME") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_date") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Date(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_date_time") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601DateTime(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_duration") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Duration(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_time") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Time(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("Iso8601_timezone") => Ok(openehr_rm::v1_1::foundation_types::time::iso8601_type::Iso8601Type::Iso8601Timezone(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("Iso8601Type: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("Iso8601Type: unknown xsi:type {other}: the ITS-XML RM schemas define no Iso8601_type subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::archetyped::link::Link {
+    fn xml_type_name(&self) -> &'static str {
+        "LINK"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "LINK" {
+                __attrs.push(("xsi:type", "LINK".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.meaning.write_xml(w, "meaning", Some("DV_TEXT"))?;
+        self.r#type.write_xml(w, "type", Some("DV_TEXT"))?;
+        self.target.write_xml(w, "target", Some("DV_EHR_URI"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::archetyped::link::Link {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __meaning = None;
+        let mut __type = None;
+        let mut __target = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "meaning" => {
+                        __meaning = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "target" => {
+                        __target = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "LINK".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::common::archetyped::link::Link {
+            meaning: __meaning.ok_or_else(|| reader.missing_child("LINK", "meaning"))?,
+            r#type: __type.ok_or_else(|| reader.missing_child("LINK", "type"))?,
+            target: __target.ok_or_else(|| reader.missing_child("LINK", "target"))?,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::archetyped::locatable::Locatable {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Action(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Activity(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Address(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::AdminEntry(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Agent(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Capability(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Citation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Cluster(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Composition(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Contact(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::EhrAccess(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::EhrStatus(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Element(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Evaluation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Extract(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractActionRequest(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractChapter(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractFolder(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractRequest(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Folder(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::GenericContentItem(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::GenericEntry(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Group(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::History(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Instruction(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::IntervalEvent(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemList(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemSingle(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemTable(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemTree(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Observation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::OpenehrContentItem(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Organisation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::PartyIdentity(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::PartyRelationship(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Person(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::PointEvent(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Role(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Section(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ViewSection(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Action(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Activity(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Address(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::AdminEntry(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Agent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Capability(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Citation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Cluster(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Composition(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Contact(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::EhrAccess(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::EhrStatus(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Element(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Evaluation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Extract(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractActionRequest(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractChapter(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractFolder(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractRequest(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Folder(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::GenericContentItem(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::GenericEntry(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Group(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::History(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Instruction(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::IntervalEvent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemList(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemSingle(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemTable(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemTree(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Observation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::OpenehrContentItem(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Organisation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::PartyIdentity(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::PartyRelationship(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Person(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::PointEvent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Role(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::Section(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::locatable::Locatable::ViewSection(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::archetyped::locatable::Locatable {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("ACTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Action(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ACTIVITY") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Activity(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ADDRESS") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Address(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ADMIN_ENTRY") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::AdminEntry(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("AGENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Agent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CAPABILITY") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Capability(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CITATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Citation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CLUSTER") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Cluster(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("COMPOSITION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Composition(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CONTACT") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Contact(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EHR_ACCESS") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::EhrAccess(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EHR_STATUS") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::EhrStatus(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ELEMENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Element(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EVALUATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Evaluation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Extract(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_ACTION_REQUEST") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractActionRequest(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_CHAPTER") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractChapter(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_ENTITY_CHAPTER") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractChapter(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_FOLDER") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractFolder(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_REQUEST") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ExtractRequest(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("FOLDER") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Folder(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("GENERIC_CONTENT_ITEM") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::GenericContentItem(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("GENERIC_ENTRY") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::GenericEntry(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("GROUP") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Group(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("HISTORY") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::History(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INSTRUCTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Instruction(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INTERVAL_EVENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::IntervalEvent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_LIST") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemList(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_SINGLE") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemSingle(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_TABLE") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemTable(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_TREE") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ItemTree(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("OBSERVATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Observation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("OPENEHR_CONTENT_ITEM") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::OpenehrContentItem(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ORGANISATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Organisation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PARTY_IDENTITY") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::PartyIdentity(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PARTY_RELATIONSHIP") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::PartyRelationship(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PERSON") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Person(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("POINT_EVENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::PointEvent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ROLE") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Role(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("SECTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::Section(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("VIEW_SECTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::locatable::Locatable::ViewSection(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Locatable: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Locatable: unknown xsi:type {other}: the ITS-XML RM schemas define no LOCATABLE subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::support::measurement::measurement_service::MeasurementService
+{
+    fn xml_type_name(&self) -> &'static str {
+        "MEASUREMENT_SERVICE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "MEASUREMENT_SERVICE" {
+                __attrs.push(("xsi:type", "MEASUREMENT_SERVICE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::support::measurement::measurement_service::MeasurementService
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "MEASUREMENT_SERVICE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::support::measurement::measurement_service::MeasurementService {})
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr_extract::message::message::Message {
+    fn xml_type_name(&self) -> &'static str {
+        "MESSAGE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "MESSAGE" {
+                __attrs.push(("xsi:type", "MESSAGE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.author.write_xml(w, "author", Some("PARTY_PROXY"))?;
+        self.audit.write_xml(w, "audit", Some("AUDIT_DETAILS"))?;
+        self.content
+            .write_xml(w, "content", Some("MESSAGE_CONTENT"))?;
+        if let Some(v) = &self.signature {
+            v.write_xml(w, "signature", Some("String"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr_extract::message::message::Message {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __audit = None;
+        let mut __author = None;
+        let mut __content = None;
+        let mut __signature = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "audit" => {
+                        __audit = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "author" => {
+                        __author = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "content" => {
+                        __content = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "signature" => {
+                        __signature = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "MESSAGE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr_extract::message::message::Message {
+            audit: __audit.ok_or_else(|| reader.missing_child("MESSAGE", "audit"))?,
+            author: __author.ok_or_else(|| reader.missing_child("MESSAGE", "author"))?,
+            content: __content.ok_or_else(|| reader.missing_child("MESSAGE", "content"))?,
+            signature: __signature,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent::SyncExtract(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent::SyncExtractRequest(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent::SyncExtract(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent::SyncExtractRequest(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("SYNC_EXTRACT") => Ok(openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent::SyncExtract(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("SYNC_EXTRACT_REQUEST") => Ok(openehr_rm::v1_1::ehr_extract::message::message_content::MessageContent::SyncExtractRequest(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Err(crate::xml::runtime::XmlError::Parse("MessageContent: missing xsi:type".into())),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("MessageContent: unknown xsi:type {other}: the ITS-XML RM schemas define no MESSAGE_CONTENT subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::entry::observation::Observation
+{
+    fn xml_type_name(&self) -> &'static str {
+        "OBSERVATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "OBSERVATION" {
+                __attrs.push(("xsi:type", "OBSERVATION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        self.encoding
+            .write_xml(w, "encoding", Some("CODE_PHRASE"))?;
+        self.subject.write_xml(w, "subject", Some("PARTY_PROXY"))?;
+        if let Some(v) = &self.provider {
+            v.write_xml(w, "provider", Some("PARTY_PROXY"))?;
+        }
+        if let Some(vs) = &self.other_participations {
+            for v in vs {
+                v.write_xml(w, "other_participations", Some("PARTICIPATION"))?;
+            }
+        }
+        if let Some(v) = &self.protocol {
+            v.write_xml(w, "protocol", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.guideline_id {
+            v.write_xml(w, "guideline_id", Some("OBJECT_REF"))?;
+        }
+        self.data.write_xml(w, "data", Some("HISTORY"))?;
+        if let Some(v) = &self.state {
+            v.write_xml(w, "state", Some("HISTORY"))?;
+        }
+        if let Some(v) = &self.workflow_id {
+            v.write_xml(w, "workflow_id", Some("OBJECT_REF"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::entry::observation::Observation
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __language = None;
+        let mut __encoding = None;
+        let mut __other_participations = Vec::new();
+        let mut __workflow_id = None;
+        let mut __subject = None;
+        let mut __provider = None;
+        let mut __protocol = None;
+        let mut __guideline_id = None;
+        let mut __data = None;
+        let mut __state = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "encoding" => {
+                        __encoding = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_participations" => {
+                        __other_participations
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "workflow_id" => {
+                        __workflow_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "subject" => {
+                        __subject = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "provider" => {
+                        __provider = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "protocol" => {
+                        __protocol = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "guideline_id" => {
+                        __guideline_id =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "state" => {
+                        __state = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "work_flow_id" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "OBSERVATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::entry::observation::Observation {
+                name: __name.ok_or_else(|| reader.missing_child("OBSERVATION", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("OBSERVATION", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                language: __language
+                    .ok_or_else(|| reader.missing_child("OBSERVATION", "language"))?,
+                encoding: __encoding
+                    .ok_or_else(|| reader.missing_child("OBSERVATION", "encoding"))?,
+                other_participations: if __other_participations.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_participations)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_participations: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                workflow_id: __workflow_id,
+                subject: __subject.ok_or_else(|| reader.missing_child("OBSERVATION", "subject"))?,
+                provider: __provider,
+                protocol: __protocol,
+                guideline_id: __guideline_id,
+                data: __data.ok_or_else(|| reader.missing_child("OBSERVATION", "data"))?,
+                state: __state,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiersData {
+fn xml_type_name(&self) -> &'static str { "OPENEHR_CODE_SET_IDENTIFIERS" }
+fn write_xml(&self, w: &mut crate::xml::runtime::XmlWriter, tag: &str, declared: Option<&str>) -> Result<(), crate::xml::runtime::XmlError> {
+let mut __attrs: Vec<(&str, String)> = Vec::new();
+if let Some(d) = declared { if d != "OPENEHR_CODE_SET_IDENTIFIERS" { __attrs.push(("xsi:type", "OPENEHR_CODE_SET_IDENTIFIERS".to_string())); } }
+let mut __e = quick_xml::events::BytesStart::new(tag);
+for (k, v) in &__attrs { __e.push_attribute((*k, v.as_str())); }
+w.write_start(__e)?;
+w.write_end(tag)?;
+Ok(())
+}
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiersData {
+fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+loop { match reader.read()? {
+crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_CODE_SET_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
+},
+crate::xml::runtime::XmlEvent::End => break,
+crate::xml::runtime::XmlEvent::Text(_) => {}
+crate::xml::runtime::XmlEvent::Eof => return Err(crate::xml::runtime::XmlError::Parse("unexpected EOF".into())),
+} }
+Ok(openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiersData {
+})
+}
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers {
+fn xml_type_name(&self) -> &'static str { match self {
+openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::TerminologyService(x) => x.xml_type_name(),
+openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::OpenehrCodeSetIdentifiers(x) => x.xml_type_name(),
+} }
+fn write_xml(&self, w: &mut crate::xml::runtime::XmlWriter, tag: &str, declared: Option<&str>) -> Result<(), crate::xml::runtime::XmlError> { match self {
+openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::TerminologyService(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::OpenehrCodeSetIdentifiers(x) => x.write_xml(w, tag, declared),
+} }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers {
+fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+match start.xsi_type() {
+Some("OPENEHR_CODE_SET_IDENTIFIERS") => Ok(openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::OpenehrCodeSetIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("TERMINOLOGY_SERVICE") => Ok(openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::TerminologyService(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiers::OpenehrCodeSetIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("OpenehrCodeSetIdentifiers: unknown xsi:type {other}: the ITS-XML RM schemas define no OPENEHR_CODE_SET_IDENTIFIERS subtype of that name"))),
+}
+}
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::openehr_content_item::OpenehrContentItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        "OPENEHR_CONTENT_ITEM"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "OPENEHR_CONTENT_ITEM" {
+                __attrs.push(("xsi:type", "OPENEHR_CONTENT_ITEM".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.is_primary
+            .write_xml(w, "is_primary", Some("Boolean"))?;
+        if let Some(v) = &self.is_changed {
+            v.write_xml(w, "is_changed", Some("Boolean"))?;
+        }
+        if let Some(v) = &self.is_masked {
+            v.write_xml(w, "is_masked", Some("Boolean"))?;
+        }
+        if let Some(v) = &self.item {
+            v.write_xml(w, "item", Some("X_VERSIONED_OBJECT"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::openehr_content_item::OpenehrContentItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __is_primary = None;
+        let mut __is_changed = None;
+        let mut __is_masked = None;
+        let mut __item = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_primary" => {
+                        __is_primary = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_changed" => {
+                        __is_changed = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "is_masked" => {
+                        __is_masked = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "item" => {
+                        __item = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "OPENEHR_CONTENT_ITEM".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::openehr_content_item::OpenehrContentItem {
+name: __name.ok_or_else(|| reader.missing_child("OPENEHR_CONTENT_ITEM", "name"))?,
+archetype_node_id: start.attr("archetype_node_id").ok_or_else(|| reader.missing_attribute("OPENEHR_CONTENT_ITEM", "archetype_node_id"))?.to_string(),
+uid: __uid,
+links: if __links.is_empty() { None } else { Some(openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| reader.invalid_content(::std::format!("element links: {__e}")))?) },
+archetype_details: __archetype_details,
+feeder_audit: __feeder_audit,
+is_primary: __is_primary.ok_or_else(|| reader.missing_child("OPENEHR_CONTENT_ITEM", "is_primary"))?,
+is_changed: __is_changed,
+is_masked: __is_masked,
+item: __item,
+})
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiersData {
+fn xml_type_name(&self) -> &'static str { "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS" }
+fn write_xml(&self, w: &mut crate::xml::runtime::XmlWriter, tag: &str, declared: Option<&str>) -> Result<(), crate::xml::runtime::XmlError> {
+let mut __attrs: Vec<(&str, String)> = Vec::new();
+if let Some(d) = declared { if d != "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS" { __attrs.push(("xsi:type", "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS".to_string())); } }
+let mut __e = quick_xml::events::BytesStart::new(tag);
+for (k, v) in &__attrs { __e.push_attribute((*k, v.as_str())); }
+w.write_start(__e)?;
+w.write_end(tag)?;
+Ok(())
+}
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiersData {
+fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+loop { match reader.read()? {
+crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
+},
+crate::xml::runtime::XmlEvent::End => break,
+crate::xml::runtime::XmlEvent::Text(_) => {}
+crate::xml::runtime::XmlEvent::Eof => return Err(crate::xml::runtime::XmlError::Parse("unexpected EOF".into())),
+} }
+Ok(openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiersData {
+})
+}
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers {
+fn xml_type_name(&self) -> &'static str { match self {
+openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::TerminologyService(x) => x.xml_type_name(),
+openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::OpenehrTerminologyGroupIdentifiers(x) => x.xml_type_name(),
+} }
+fn write_xml(&self, w: &mut crate::xml::runtime::XmlWriter, tag: &str, declared: Option<&str>) -> Result<(), crate::xml::runtime::XmlError> { match self {
+openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::TerminologyService(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::OpenehrTerminologyGroupIdentifiers(x) => x.write_xml(w, tag, declared),
+} }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers {
+fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+match start.xsi_type() {
+Some("OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS") => Ok(openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::OpenehrTerminologyGroupIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("TERMINOLOGY_SERVICE") => Ok(openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::TerminologyService(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiers::OpenehrTerminologyGroupIdentifiers(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("OpenehrTerminologyGroupIdentifiers: unknown xsi:type {other}: the ITS-XML RM schemas define no OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS subtype of that name"))),
+}
+}
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::organisation::Organisation {
+    fn xml_type_name(&self) -> &'static str {
+        "ORGANISATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ORGANISATION" {
+                __attrs.push(("xsi:type", "ORGANISATION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        for v in &self.identities {
+            v.write_xml(w, "identities", Some("PARTY_IDENTITY"))?;
+        }
+        if let Some(vs) = &self.contacts {
+            for v in vs {
+                v.write_xml(w, "contacts", Some("CONTACT"))?;
+            }
+        }
+        if let Some(vs) = &self.relationships {
+            for v in vs {
+                v.write_xml(w, "relationships", Some("PARTY_RELATIONSHIP"))?;
+            }
+        }
+        if let Some(vs) = &self.reverse_relationships {
+            for v in vs {
+                v.write_xml(w, "reverse_relationships", Some("LOCATABLE_REF"))?;
+            }
+        }
+        if let Some(v) = &self.details {
+            v.write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(vs) = &self.roles {
+            for v in vs {
+                v.write_xml(w, "roles", Some("PARTY_REF"))?;
+            }
+        }
+        if let Some(vs) = &self.languages {
+            for v in vs {
+                v.write_xml(w, "languages", Some("DV_TEXT"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::organisation::Organisation {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __identities = Vec::new();
+        let mut __contacts = Vec::new();
+        let mut __details = None;
+        let mut __reverse_relationships = Vec::new();
+        let mut __relationships = Vec::new();
+        let mut __languages = Vec::new();
+        let mut __roles = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identities" => {
+                        __identities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contacts" => {
+                        __contacts.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reverse_relationships" => {
+                        __reverse_relationships
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "relationships" => {
+                        __relationships.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "languages" => {
+                        __languages.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "roles" => {
+                        __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ORGANISATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::organisation::Organisation {
+            name: __name.ok_or_else(|| reader.missing_child("ORGANISATION", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("ORGANISATION", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            identities: openehr_base::containers::NonEmptyVec::new(__identities).map_err(
+                |__e| reader.invalid_content(::std::format!("element identities: {__e}")),
+            )?,
+            contacts: if __contacts.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__contacts).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element contacts: {__e}"))
+                    })?,
+                )
+            },
+            details: __details,
+            reverse_relationships: if __reverse_relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__reverse_relationships).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!(
+                                "element reverse_relationships: {__e}"
+                            ))
+                        },
+                    )?,
+                )
+            },
+            relationships: if __relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__relationships).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element relationships: {__e}"))
+                    })?,
+                )
+            },
+            languages: if __languages.is_empty() {
+                None
+            } else {
+                Some(__languages)
+            },
+            roles: if __roles.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__roles).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element roles: {__e}"))
+                    })?,
+                )
+            },
+        })
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::change_control::original_version::OriginalVersion<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "ORIGINAL_VERSION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ORIGINAL_VERSION" {
+                __attrs.push(("xsi:type", "ORIGINAL_VERSION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.contribution
+            .write_xml(w, "contribution", Some("OBJECT_REF"))?;
+        self.commit_audit
+            .write_xml(w, "commit_audit", Some("AUDIT_DETAILS"))?;
+        if let Some(v) = &self.signature {
+            v.write_xml(w, "signature", Some("String"))?;
+        }
+        self.uid.write_xml(w, "uid", Some("OBJECT_VERSION_ID"))?;
+        if let Some(v) = &self.data {
+            v.write_xml(w, "data", Some("T"))?;
+        }
+        if let Some(v) = &self.preceding_version_uid {
+            v.write_xml(w, "preceding_version_uid", Some("OBJECT_VERSION_ID"))?;
+        }
+        if let Some(vs) = &self.other_input_version_uids {
+            for v in vs {
+                v.write_xml(w, "other_input_version_uids", Some("OBJECT_VERSION_ID"))?;
+            }
+        }
+        if let Some(vs) = &self.attestations {
+            for v in vs {
+                v.write_xml(w, "attestations", Some("ATTESTATION"))?;
+            }
+        }
+        self.lifecycle_state
+            .write_xml(w, "lifecycle_state", Some("DV_CODED_TEXT"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::change_control::original_version::OriginalVersion<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __contribution = None;
+        let mut __signature = None;
+        let mut __commit_audit = None;
+        let mut __uid = None;
+        let mut __preceding_version_uid = None;
+        let mut __other_input_version_uids = Vec::new();
+        let mut __lifecycle_state = None;
+        let mut __attestations = Vec::new();
+        let mut __data = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "contribution" => {
+                        __contribution =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "signature" => {
+                        __signature = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "commit_audit" => {
+                        __commit_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "preceding_version_uid" => {
+                        __preceding_version_uid =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_input_version_uids" => {
+                        __other_input_version_uids
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lifecycle_state" => {
+                        __lifecycle_state =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "attestations" => {
+                        __attestations.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ORIGINAL_VERSION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::change_control::original_version::OriginalVersion {
+                contribution: __contribution
+                    .ok_or_else(|| reader.missing_child("ORIGINAL_VERSION", "contribution"))?,
+                signature: __signature,
+                commit_audit: __commit_audit
+                    .ok_or_else(|| reader.missing_child("ORIGINAL_VERSION", "commit_audit"))?,
+                uid: __uid.ok_or_else(|| reader.missing_child("ORIGINAL_VERSION", "uid"))?,
+                preceding_version_uid: __preceding_version_uid,
+                other_input_version_uids: if __other_input_version_uids.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__other_input_version_uids)
+                            .map_err(|__e| {
+                                reader.invalid_content(::std::format!(
+                                    "element other_input_version_uids: {__e}"
+                                ))
+                            })?,
+                    )
+                },
+                lifecycle_state: __lifecycle_state
+                    .ok_or_else(|| reader.missing_child("ORIGINAL_VERSION", "lifecycle_state"))?,
+                attestations: if __attestations.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__attestations).map_err(
+                            |__e| {
+                                reader
+                                    .invalid_content(::std::format!("element attestations: {__e}"))
+                            },
+                        )?,
+                    )
+                },
+                data: __data,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::generic::participation::Participation
+{
+    fn xml_type_name(&self) -> &'static str {
+        "PARTICIPATION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PARTICIPATION" {
+                __attrs.push(("xsi:type", "PARTICIPATION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.function.write_xml(w, "function", Some("DV_TEXT"))?;
+        self.performer
+            .write_xml(w, "performer", Some("PARTY_PROXY"))?;
+        if let Some(v) = &self.time {
+            v.write_xml(w, "time", Some("DV_INTERVAL"))?;
+        }
+        if let Some(v) = &self.mode {
+            v.write_xml(w, "mode", Some("DV_CODED_TEXT"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::participation::Participation
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __function = None;
+        let mut __mode = None;
+        let mut __performer = None;
+        let mut __time = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "function" => {
+                        __function = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "mode" => {
+                        __mode = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "performer" => {
+                        __performer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time" => {
+                        __time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PARTICIPATION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::generic::participation::Participation {
+                function: __function
+                    .ok_or_else(|| reader.missing_child("PARTICIPATION", "function"))?,
+                mode: __mode,
+                performer: __performer
+                    .ok_or_else(|| reader.missing_child("PARTICIPATION", "performer"))?,
+                time: __time,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::party::Party {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::demographic::party::Party::Agent(x) => x.xml_type_name(),
+            openehr_rm::v1_1::demographic::party::Party::Group(x) => x.xml_type_name(),
+            openehr_rm::v1_1::demographic::party::Party::Organisation(x) => x.xml_type_name(),
+            openehr_rm::v1_1::demographic::party::Party::Person(x) => x.xml_type_name(),
+            openehr_rm::v1_1::demographic::party::Party::Role(x) => x.xml_type_name(),
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::demographic::party::Party::Agent(x) => x.write_xml(w, tag, declared),
+            openehr_rm::v1_1::demographic::party::Party::Group(x) => x.write_xml(w, tag, declared),
+            openehr_rm::v1_1::demographic::party::Party::Organisation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::demographic::party::Party::Person(x) => x.write_xml(w, tag, declared),
+            openehr_rm::v1_1::demographic::party::Party::Role(x) => x.write_xml(w, tag, declared),
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::party::Party {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("AGENT") => Ok(openehr_rm::v1_1::demographic::party::Party::Agent(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("GROUP") => Ok(openehr_rm::v1_1::demographic::party::Party::Group(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("ORGANISATION") => Ok(openehr_rm::v1_1::demographic::party::Party::Organisation(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("PERSON") => Ok(openehr_rm::v1_1::demographic::party::Party::Person(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            Some("ROLE") => Ok(openehr_rm::v1_1::demographic::party::Party::Role(
+                crate::xml::runtime::FromXml::from_xml(reader, start)?,
+            )),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Party: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Party: unknown xsi:type {other}: the ITS-XML RM schemas define no PARTY subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::generic::party_identified::PartyIdentifiedData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "PARTY_IDENTIFIED"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PARTY_IDENTIFIED" {
+                __attrs.push(("xsi:type", "PARTY_IDENTIFIED".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.external_ref {
+            v.write_xml(w, "external_ref", Some("PARTY_REF"))?;
+        }
+        if let Some(v) = &self.name {
+            v.write_xml(w, "name", Some("String"))?;
+        }
+        if let Some(vs) = &self.identifiers {
+            for v in vs {
+                v.write_xml(w, "identifiers", Some("DV_IDENTIFIER"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::party_identified::PartyIdentifiedData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __external_ref = None;
+        let mut __name = None;
+        let mut __identifiers = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "external_ref" => {
+                        __external_ref =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identifiers" => {
+                        __identifiers.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PARTY_IDENTIFIED".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::generic::party_identified::PartyIdentifiedData {
+                external_ref: __external_ref,
+                name: __name,
+                identifiers: if __identifiers.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__identifiers).map_err(
+                            |__e| {
+                                reader.invalid_content(::std::format!("element identifiers: {__e}"))
+                            },
+                        )?,
+                    )
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::generic::party_identified::PartyIdentified
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::common::generic::party_identified::PartyIdentified::PartyRelated(x) => x.xml_type_name(),
+openehr_rm::v1_1::common::generic::party_identified::PartyIdentified::PartyIdentified(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::common::generic::party_identified::PartyIdentified::PartyRelated(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::common::generic::party_identified::PartyIdentified::PartyIdentified(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::party_identified::PartyIdentified
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("PARTY_IDENTIFIED") => Ok(openehr_rm::v1_1::common::generic::party_identified::PartyIdentified::PartyIdentified(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("PARTY_RELATED") => Ok(openehr_rm::v1_1::common::generic::party_identified::PartyIdentified::PartyRelated(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::common::generic::party_identified::PartyIdentified::PartyIdentified(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("PartyIdentified: unknown xsi:type {other}: the ITS-XML RM schemas define no PARTY_IDENTIFIED subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::party_identity::PartyIdentity {
+    fn xml_type_name(&self) -> &'static str {
+        "PARTY_IDENTITY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PARTY_IDENTITY" {
+                __attrs.push(("xsi:type", "PARTY_IDENTITY".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.details
+            .write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::party_identity::PartyIdentity {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __details = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PARTY_IDENTITY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::demographic::party_identity::PartyIdentity {
+                name: __name.ok_or_else(|| reader.missing_child("PARTY_IDENTITY", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("PARTY_IDENTITY", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                details: __details
+                    .ok_or_else(|| reader.missing_child("PARTY_IDENTITY", "details"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::party_proxy::PartyProxy {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::common::generic::party_proxy::PartyProxy::PartyIdentified(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::generic::party_proxy::PartyProxy::PartySelf(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::common::generic::party_proxy::PartyProxy::PartyIdentified(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::generic::party_proxy::PartyProxy::PartySelf(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::generic::party_proxy::PartyProxy {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("PARTY_IDENTIFIED") => Ok(
+                openehr_rm::v1_1::common::generic::party_proxy::PartyProxy::PartyIdentified(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PARTY_RELATED") => Ok(
+                openehr_rm::v1_1::common::generic::party_proxy::PartyProxy::PartyIdentified(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PARTY_SELF") => Ok(
+                openehr_rm::v1_1::common::generic::party_proxy::PartyProxy::PartySelf(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "PartyProxy: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "PartyProxy: unknown xsi:type {other}: the ITS-XML RM schemas define no PARTY_PROXY subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::party_related::PartyRelated {
+    fn xml_type_name(&self) -> &'static str {
+        "PARTY_RELATED"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PARTY_RELATED" {
+                __attrs.push(("xsi:type", "PARTY_RELATED".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.external_ref {
+            v.write_xml(w, "external_ref", Some("PARTY_REF"))?;
+        }
+        if let Some(v) = &self.name {
+            v.write_xml(w, "name", Some("String"))?;
+        }
+        if let Some(vs) = &self.identifiers {
+            for v in vs {
+                v.write_xml(w, "identifiers", Some("DV_IDENTIFIER"))?;
+            }
+        }
+        self.relationship
+            .write_xml(w, "relationship", Some("DV_CODED_TEXT"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::party_related::PartyRelated
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __external_ref = None;
+        let mut __name = None;
+        let mut __identifiers = Vec::new();
+        let mut __relationship = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "external_ref" => {
+                        __external_ref =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identifiers" => {
+                        __identifiers.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "relationship" => {
+                        __relationship =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PARTY_RELATED".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::generic::party_related::PartyRelated {
+                external_ref: __external_ref,
+                name: __name,
+                identifiers: if __identifiers.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__identifiers).map_err(
+                            |__e| {
+                                reader.invalid_content(::std::format!("element identifiers: {__e}"))
+                            },
+                        )?,
+                    )
+                },
+                relationship: __relationship
+                    .ok_or_else(|| reader.missing_child("PARTY_RELATED", "relationship"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::demographic::party_relationship::PartyRelationship
+{
+    fn xml_type_name(&self) -> &'static str {
+        "PARTY_RELATIONSHIP"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PARTY_RELATIONSHIP" {
+                __attrs.push(("xsi:type", "PARTY_RELATIONSHIP".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(v) = &self.details {
+            v.write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.time_validity {
+            v.write_xml(w, "time_validity", Some("DV_INTERVAL"))?;
+        }
+        self.source.write_xml(w, "source", Some("PARTY_REF"))?;
+        self.target.write_xml(w, "target", Some("PARTY_REF"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::demographic::party_relationship::PartyRelationship
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __details = None;
+        let mut __target = None;
+        let mut __time_validity = None;
+        let mut __source = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "target" => {
+                        __target = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_validity" => {
+                        __time_validity =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "source" => {
+                        __source = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PARTY_RELATIONSHIP".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::demographic::party_relationship::PartyRelationship {
+                name: __name.ok_or_else(|| reader.missing_child("PARTY_RELATIONSHIP", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| {
+                        reader.missing_attribute("PARTY_RELATIONSHIP", "archetype_node_id")
+                    })?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                details: __details,
+                target: __target
+                    .ok_or_else(|| reader.missing_child("PARTY_RELATIONSHIP", "target"))?,
+                time_validity: __time_validity,
+                source: __source
+                    .ok_or_else(|| reader.missing_child("PARTY_RELATIONSHIP", "source"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::party_self::PartySelf {
+    fn xml_type_name(&self) -> &'static str {
+        "PARTY_SELF"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PARTY_SELF" {
+                __attrs.push(("xsi:type", "PARTY_SELF".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.external_ref {
+            v.write_xml(w, "external_ref", Some("PARTY_REF"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::generic::party_self::PartySelf {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __external_ref = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "external_ref" => {
+                        __external_ref =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PARTY_SELF".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::common::generic::party_self::PartySelf {
+            external_ref: __external_ref,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::archetyped::pathable::Pathable {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Action(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Activity(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Address(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::AdminEntry(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Agent(x) => x.xml_type_name(),
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Capability(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Citation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Cluster(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Composition(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Contact(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::EhrAccess(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::EhrStatus(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Element(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Evaluation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::EventContext(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Extract(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractActionRequest(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractChapter(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractFolder(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractRequest(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Folder(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::GenericContentItem(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::GenericEntry(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Group(x) => x.xml_type_name(),
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::History(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Instruction(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::InstructionDetails(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::IntervalEvent(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::IsmTransition(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemList(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemSingle(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemTable(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemTree(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Observation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::OpenehrContentItem(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Organisation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::PartyIdentity(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::PartyRelationship(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Person(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::PointEvent(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Role(x) => x.xml_type_name(),
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Section(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ViewSection(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Action(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Activity(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Address(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::AdminEntry(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Agent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Capability(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Citation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Cluster(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Composition(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Contact(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::EhrAccess(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::EhrStatus(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Element(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Evaluation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::EventContext(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Extract(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractActionRequest(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractChapter(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractFolder(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractRequest(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Folder(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::GenericContentItem(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::GenericEntry(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Group(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::History(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Instruction(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::InstructionDetails(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::IntervalEvent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::IsmTransition(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemList(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemSingle(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemTable(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemTree(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Observation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::OpenehrContentItem(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Organisation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::PartyIdentity(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::PartyRelationship(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Person(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::PointEvent(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Role(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::Section(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::archetyped::pathable::Pathable::ViewSection(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::archetyped::pathable::Pathable {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("ACTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Action(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ACTIVITY") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Activity(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ADDRESS") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Address(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ADMIN_ENTRY") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::AdminEntry(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("AGENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Agent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CAPABILITY") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Capability(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CITATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Citation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CLUSTER") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Cluster(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("COMPOSITION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Composition(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("CONTACT") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Contact(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EHR_ACCESS") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::EhrAccess(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EHR_STATUS") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::EhrStatus(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ELEMENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Element(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EVALUATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Evaluation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EVENT_CONTEXT") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::EventContext(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Extract(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_ACTION_REQUEST") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractActionRequest(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_CHAPTER") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractChapter(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_ENTITY_CHAPTER") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractChapter(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_FOLDER") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractFolder(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("EXTRACT_REQUEST") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ExtractRequest(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("FOLDER") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Folder(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("GENERIC_CONTENT_ITEM") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::GenericContentItem(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("GENERIC_ENTRY") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::GenericEntry(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("GROUP") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Group(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("HISTORY") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::History(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INSTRUCTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Instruction(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INSTRUCTION_DETAILS") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::InstructionDetails(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("INTERVAL_EVENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::IntervalEvent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ISM_TRANSITION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::IsmTransition(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_LIST") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemList(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_SINGLE") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemSingle(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_TABLE") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemTable(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ITEM_TREE") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ItemTree(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("OBSERVATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Observation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("OPENEHR_CONTENT_ITEM") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::OpenehrContentItem(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ORGANISATION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Organisation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PARTY_IDENTITY") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::PartyIdentity(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PARTY_RELATIONSHIP") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::PartyRelationship(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("PERSON") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Person(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("POINT_EVENT") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::PointEvent(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ROLE") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Role(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("SECTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::Section(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("VIEW_SECTION") => Ok(
+                openehr_rm::v1_1::common::archetyped::pathable::Pathable::ViewSection(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Pathable: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Pathable: unknown xsi:type {other}: the ITS-XML RM schemas define no PATHABLE subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::person::Person {
+    fn xml_type_name(&self) -> &'static str {
+        "PERSON"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "PERSON" {
+                __attrs.push(("xsi:type", "PERSON".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        for v in &self.identities {
+            v.write_xml(w, "identities", Some("PARTY_IDENTITY"))?;
+        }
+        if let Some(vs) = &self.contacts {
+            for v in vs {
+                v.write_xml(w, "contacts", Some("CONTACT"))?;
+            }
+        }
+        if let Some(vs) = &self.relationships {
+            for v in vs {
+                v.write_xml(w, "relationships", Some("PARTY_RELATIONSHIP"))?;
+            }
+        }
+        if let Some(vs) = &self.reverse_relationships {
+            for v in vs {
+                v.write_xml(w, "reverse_relationships", Some("LOCATABLE_REF"))?;
+            }
+        }
+        if let Some(v) = &self.details {
+            v.write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(vs) = &self.roles {
+            for v in vs {
+                v.write_xml(w, "roles", Some("PARTY_REF"))?;
+            }
+        }
+        if let Some(vs) = &self.languages {
+            for v in vs {
+                v.write_xml(w, "languages", Some("DV_TEXT"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::person::Person {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __identities = Vec::new();
+        let mut __contacts = Vec::new();
+        let mut __details = None;
+        let mut __reverse_relationships = Vec::new();
+        let mut __relationships = Vec::new();
+        let mut __languages = Vec::new();
+        let mut __roles = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identities" => {
+                        __identities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contacts" => {
+                        __contacts.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reverse_relationships" => {
+                        __reverse_relationships
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "relationships" => {
+                        __relationships.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "languages" => {
+                        __languages.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "roles" => {
+                        __roles.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "PERSON".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::person::Person {
+            name: __name.ok_or_else(|| reader.missing_child("PERSON", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("PERSON", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            identities: openehr_base::containers::NonEmptyVec::new(__identities).map_err(
+                |__e| reader.invalid_content(::std::format!("element identities: {__e}")),
+            )?,
+            contacts: if __contacts.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__contacts).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element contacts: {__e}"))
+                    })?,
+                )
+            },
+            details: __details,
+            reverse_relationships: if __reverse_relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__reverse_relationships).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!(
+                                "element reverse_relationships: {__e}"
+                            ))
+                        },
+                    )?,
+                )
+            },
+            relationships: if __relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__relationships).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element relationships: {__e}"))
+                    })?,
+                )
+            },
+            languages: if __languages.is_empty() {
+                None
+            } else {
+                Some(__languages)
+            },
+            roles: if __roles.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__roles).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element roles: {__e}"))
+                    })?,
+                )
+            },
+        })
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_structures::history::point_event::PointEvent<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "POINT_EVENT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "POINT_EVENT" {
+                __attrs.push(("xsi:type", "POINT_EVENT".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        self.time.write_xml(w, "time", Some("DV_DATE_TIME"))?;
+        self.data.write_xml(w, "data", Some("T"))?;
+        if let Some(v) = &self.state {
+            v.write_xml(w, "state", Some("ITEM_STRUCTURE"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_structures::history::point_event::PointEvent<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __time = None;
+        let mut __state = None;
+        let mut __data = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time" => {
+                        __time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "state" => {
+                        __state = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "data" => {
+                        __data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "POINT_EVENT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_structures::history::point_event::PointEvent {
+                name: __name.ok_or_else(|| reader.missing_child("POINT_EVENT", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("POINT_EVENT", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                time: __time.ok_or_else(|| reader.missing_child("POINT_EVENT", "time"))?,
+                state: __state,
+                data: __data.ok_or_else(|| reader.missing_child("POINT_EVENT", "data"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::proportion_kind::ProportionKind
+{
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        _declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        w.write_text_element(tag, &self.value().to_string())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::proportion_kind::ProportionKind
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let __v = <i32 as crate::xml::runtime::FromXml>::from_xml(reader, start)?;
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::proportion_kind::ProportionKind::from_value(
+                __v,
+            ),
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange
+{
+    fn xml_type_name(&self) -> &'static str {
+        "REFERENCE_RANGE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "REFERENCE_RANGE" {
+                __attrs.push(("xsi:type", "REFERENCE_RANGE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.meaning.write_xml(w, "meaning", Some("DV_TEXT"))?;
+        self.range.write_xml(w, "range", Some("DV_INTERVAL"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __meaning = None;
+        let mut __range = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "meaning" => {
+                        __meaning = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "range" => {
+                        __range = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "REFERENCE_RANGE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange {
+                meaning: __meaning
+                    .ok_or_else(|| reader.missing_child("REFERENCE_RANGE", "meaning"))?,
+                range: __range.ok_or_else(|| reader.missing_child("REFERENCE_RANGE", "range"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::resource::resource_description::ResourceDescription
+{
+    fn xml_type_name(&self) -> &'static str {
+        "RESOURCE_DESCRIPTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "RESOURCE_DESCRIPTION" {
+                __attrs.push(("xsi:type", "RESOURCE_DESCRIPTION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        for (k, v) in &self.original_author {
+            w.write_kv_element("original_author", k, v)?;
+        }
+        if let Some(vs) = &self.other_contributors {
+            for v in vs {
+                v.write_xml(w, "other_contributors", Some("String"))?;
+            }
+        }
+        self.lifecycle_state
+            .write_xml(w, "lifecycle_state", Some("String"))?;
+        if let Some(v) = &self.resource_package_uri {
+            v.write_xml(w, "resource_package_uri", Some("String"))?;
+        }
+        if let Some(m) = &self.other_details {
+            for (k, v) in m {
+                w.write_kv_element("other_details", k, v)?;
+            }
+        }
+        // NOTE: Hash<String, RESOURCE_DESCRIPTION_ITEM> field `details` is off the RM canonical-XML wire (resource metadata); not serialized.
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::resource::resource_description::ResourceDescription
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __original_author = std::collections::BTreeMap::new();
+        let mut __other_contributors = Vec::new();
+        let mut __lifecycle_state = None;
+        let mut __resource_package_uri = None;
+        let mut __other_details = std::collections::BTreeMap::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "original_author" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __original_author.insert(__k, __v);
+                    }
+                    "other_contributors" => {
+                        __other_contributors
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "lifecycle_state" => {
+                        __lifecycle_state =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "resource_package_uri" => {
+                        __resource_package_uri =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __other_details.insert(__k, __v);
+                    }
+                    "details" => reader.skip_element()?,
+                    "parent_resource" => reader.skip_element()?,
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "RESOURCE_DESCRIPTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::resource::resource_description::ResourceDescription {
+                original_author: __original_author,
+                other_contributors: if __other_contributors.is_empty() {
+                    None
+                } else {
+                    Some(__other_contributors)
+                },
+                lifecycle_state: __lifecycle_state.ok_or_else(|| {
+                    reader.missing_child("RESOURCE_DESCRIPTION", "lifecycle_state")
+                })?,
+                resource_package_uri: __resource_package_uri,
+                other_details: if __other_details.is_empty() {
+                    None
+                } else {
+                    Some(__other_details)
+                },
+                details: Default::default(),
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::resource::resource_description_item::ResourceDescriptionItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        "RESOURCE_DESCRIPTION_ITEM"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "RESOURCE_DESCRIPTION_ITEM" {
+                __attrs.push(("xsi:type", "RESOURCE_DESCRIPTION_ITEM".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        self.purpose.write_xml(w, "purpose", Some("String"))?;
+        if let Some(vs) = &self.keywords {
+            for v in vs {
+                v.write_xml(w, "keywords", Some("String"))?;
+            }
+        }
+        if let Some(v) = &self.use_ {
+            v.write_xml(w, "use", Some("String"))?;
+        }
+        if let Some(v) = &self.misuse {
+            v.write_xml(w, "misuse", Some("String"))?;
+        }
+        if let Some(v) = &self.copyright {
+            v.write_xml(w, "copyright", Some("String"))?;
+        }
+        if let Some(m) = &self.original_resource_uri {
+            for (k, v) in m {
+                w.write_kv_element("original_resource_uri", k, v)?;
+            }
+        }
+        if let Some(m) = &self.other_details {
+            for (k, v) in m {
+                w.write_kv_element("other_details", k, v)?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::resource::resource_description_item::ResourceDescriptionItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __language = None;
+        let mut __purpose = None;
+        let mut __keywords = Vec::new();
+        let mut __use_ = None;
+        let mut __misuse = None;
+        let mut __copyright = None;
+        let mut __original_resource_uri = std::collections::BTreeMap::new();
+        let mut __other_details = std::collections::BTreeMap::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "purpose" => {
+                        __purpose = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "keywords" => {
+                        __keywords.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "use" => {
+                        __use_ = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "misuse" => {
+                        __misuse = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "copyright" => {
+                        __copyright = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "original_resource_uri" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __original_resource_uri.insert(__k, __v);
+                    }
+                    "other_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __other_details.insert(__k, __v);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "RESOURCE_DESCRIPTION_ITEM".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::common::resource::resource_description_item::ResourceDescriptionItem {
+language: __language.ok_or_else(|| reader.missing_child("RESOURCE_DESCRIPTION_ITEM", "language"))?,
+purpose: __purpose.ok_or_else(|| reader.missing_child("RESOURCE_DESCRIPTION_ITEM", "purpose"))?,
+keywords: if __keywords.is_empty() { None } else { Some(__keywords) },
+use_: __use_,
+misuse: __misuse,
+copyright: __copyright,
+original_resource_uri: if __original_resource_uri.is_empty() { None } else { Some(__original_resource_uri) },
+other_details: if __other_details.is_empty() { None } else { Some(__other_details) },
+})
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::resource::resource_usage::ResourceUsage {
+    fn xml_type_name(&self) -> &'static str {
+        "RESOURCE_USAGE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "RESOURCE_USAGE" {
+                __attrs.push(("xsi:type", "RESOURCE_USAGE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.prospective
+            .write_xml(w, "prospective", Some("RESOURCE_USE"))?;
+        self.actual.write_xml(w, "actual", Some("RESOURCE_USE"))?;
+        self.r#type.write_xml(w, "type", Some("DV_TEXT"))?;
+        if let Some(v) = &self.description {
+            v.write_xml(w, "description", Some("String"))?;
+        }
+        if let Some(v) = &self.reference {
+            v.write_xml(w, "reference", Some("Any"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::resource::resource_usage::ResourceUsage {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __prospective = None;
+        let mut __actual = None;
+        let mut __type = None;
+        let mut __description = None;
+        let mut __reference = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "prospective" => {
+                        __prospective = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "actual" => {
+                        __actual = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "type" => {
+                        __type = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "description" => {
+                        __description = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reference" => {
+                        __reference = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "RESOURCE_USAGE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::resource::resource_usage::ResourceUsage {
+            prospective: __prospective
+                .ok_or_else(|| reader.missing_child("RESOURCE_USAGE", "prospective"))?,
+            actual: __actual.ok_or_else(|| reader.missing_child("RESOURCE_USAGE", "actual"))?,
+            r#type: __type.ok_or_else(|| reader.missing_child("RESOURCE_USAGE", "type"))?,
+            description: __description,
+            reference: __reference,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::resource::resource_use::ResourceUse {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::resource::resource_use::ResourceUse::ConsumableUse(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::resource::resource_use::ResourceUse::ServiceUse(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::resource::resource_use::ResourceUse::ConsumableUse(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::resource::resource_use::ResourceUse::ServiceUse(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::resource::resource_use::ResourceUse {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("CONSUMABLE_USE") => Ok(
+                openehr_rm::v1_1::resource::resource_use::ResourceUse::ConsumableUse(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("SERVICE_USE") => Ok(
+                openehr_rm::v1_1::resource::resource_use::ResourceUse::ServiceUse(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "ResourceUse: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "ResourceUse: unknown xsi:type {other}: the ITS-XML RM schemas define no RESOURCE_USE subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::generic::revision_history::RevisionHistory
+{
+    fn xml_type_name(&self) -> &'static str {
+        "REVISION_HISTORY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "REVISION_HISTORY" {
+                __attrs.push(("xsi:type", "REVISION_HISTORY".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        for v in &self.items {
+            v.write_xml(w, "items", Some("REVISION_HISTORY_ITEM"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::revision_history::RevisionHistory
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "REVISION_HISTORY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::generic::revision_history::RevisionHistory {
+                items: openehr_base::containers::NonEmptyVec::new(__items).map_err(|__e| {
+                    reader.invalid_content(::std::format!("element items: {__e}"))
+                })?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::generic::revision_history_item::RevisionHistoryItem
+{
+    fn xml_type_name(&self) -> &'static str {
+        "REVISION_HISTORY_ITEM"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "REVISION_HISTORY_ITEM" {
+                __attrs.push(("xsi:type", "REVISION_HISTORY_ITEM".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.version_id
+            .write_xml(w, "version_id", Some("OBJECT_VERSION_ID"))?;
+        for v in &self.audits {
+            v.write_xml(w, "audits", Some("AUDIT_DETAILS"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::generic::revision_history_item::RevisionHistoryItem
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __version_id = None;
+        let mut __audits = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "version_id" => {
+                        __version_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "audits" => {
+                        __audits.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "REVISION_HISTORY_ITEM".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::generic::revision_history_item::RevisionHistoryItem {
+                version_id: __version_id
+                    .ok_or_else(|| reader.missing_child("REVISION_HISTORY_ITEM", "version_id"))?,
+                audits: openehr_base::containers::NonEmptyVec::new(__audits).map_err(|__e| {
+                    reader.invalid_content(::std::format!("element audits: {__e}"))
+                })?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::role::Role {
+    fn xml_type_name(&self) -> &'static str {
+        "ROLE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "ROLE" {
+                __attrs.push(("xsi:type", "ROLE".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        for v in &self.identities {
+            v.write_xml(w, "identities", Some("PARTY_IDENTITY"))?;
+        }
+        if let Some(vs) = &self.contacts {
+            for v in vs {
+                v.write_xml(w, "contacts", Some("CONTACT"))?;
+            }
+        }
+        if let Some(vs) = &self.relationships {
+            for v in vs {
+                v.write_xml(w, "relationships", Some("PARTY_RELATIONSHIP"))?;
+            }
+        }
+        if let Some(vs) = &self.reverse_relationships {
+            for v in vs {
+                v.write_xml(w, "reverse_relationships", Some("LOCATABLE_REF"))?;
+            }
+        }
+        if let Some(v) = &self.details {
+            v.write_xml(w, "details", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(vs) = &self.capabilities {
+            for v in vs {
+                v.write_xml(w, "capabilities", Some("CAPABILITY"))?;
+            }
+        }
+        if let Some(v) = &self.time_validity {
+            v.write_xml(w, "time_validity", Some("DV_INTERVAL"))?;
+        }
+        self.performer
+            .write_xml(w, "performer", Some("PARTY_REF"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::role::Role {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __identities = Vec::new();
+        let mut __contacts = Vec::new();
+        let mut __details = None;
+        let mut __reverse_relationships = Vec::new();
+        let mut __relationships = Vec::new();
+        let mut __time_validity = None;
+        let mut __performer = None;
+        let mut __capabilities = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identities" => {
+                        __identities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contacts" => {
+                        __contacts.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "details" => {
+                        __details = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "reverse_relationships" => {
+                        __reverse_relationships
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "relationships" => {
+                        __relationships.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_validity" => {
+                        __time_validity =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "performer" => {
+                        __performer = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "capabilities" => {
+                        __capabilities.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "ROLE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::demographic::role::Role {
+            name: __name.ok_or_else(|| reader.missing_child("ROLE", "name"))?,
+            archetype_node_id: start
+                .attr("archetype_node_id")
+                .ok_or_else(|| reader.missing_attribute("ROLE", "archetype_node_id"))?
+                .to_string(),
+            uid: __uid,
+            links: if __links.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element links: {__e}"))
+                    })?,
+                )
+            },
+            archetype_details: __archetype_details,
+            feeder_audit: __feeder_audit,
+            identities: openehr_base::containers::NonEmptyVec::new(__identities).map_err(
+                |__e| reader.invalid_content(::std::format!("element identities: {__e}")),
+            )?,
+            contacts: if __contacts.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__contacts).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element contacts: {__e}"))
+                    })?,
+                )
+            },
+            details: __details,
+            reverse_relationships: if __reverse_relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__reverse_relationships).map_err(
+                        |__e| {
+                            reader.invalid_content(::std::format!(
+                                "element reverse_relationships: {__e}"
+                            ))
+                        },
+                    )?,
+                )
+            },
+            relationships: if __relationships.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__relationships).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element relationships: {__e}"))
+                    })?,
+                )
+            },
+            time_validity: __time_validity,
+            performer: __performer.ok_or_else(|| reader.missing_child("ROLE", "performer"))?,
+            capabilities: if __capabilities.is_empty() {
+                None
+            } else {
+                Some(
+                    openehr_base::containers::NonEmptyVec::new(__capabilities).map_err(|__e| {
+                        reader.invalid_content(::std::format!("element capabilities: {__e}"))
+                    })?,
+                )
+            },
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::composition::content::navigation::section::Section
+{
+    fn xml_type_name(&self) -> &'static str {
+        "SECTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "SECTION" {
+                __attrs.push(("xsi:type", "SECTION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("CONTENT_ITEM"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::content::navigation::section::Section
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "SECTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::content::navigation::section::Section {
+                name: __name.ok_or_else(|| reader.missing_child("SECTION", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("SECTION", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__items).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element items: {__e}"))
+                        })?,
+                    )
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::resource::service_use::ServiceUse {
+    fn xml_type_name(&self) -> &'static str {
+        "SERVICE_USE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "SERVICE_USE" {
+                __attrs.push(("xsi:type", "SERVICE_USE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        if let Some(v) = &self.cost_data {
+            v.write_xml(w, "cost_data", Some("ITEM_STRUCTURE"))?;
+        }
+        if let Some(v) = &self.identifier {
+            v.write_xml(w, "identifier", Some("GENERIC_ID"))?;
+        }
+        if let Some(v) = &self.start_time {
+            v.write_xml(w, "start_time", Some("Iso8601_date_time"))?;
+        }
+        if let Some(v) = &self.duration {
+            v.write_xml(w, "duration", Some("Iso8601_duration"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::resource::service_use::ServiceUse {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __cost_data = None;
+        let mut __identifier = None;
+        let mut __start_time = None;
+        let mut __duration = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "cost_data" => {
+                        __cost_data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "identifier" => {
+                        __identifier = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "start_time" => {
+                        __start_time = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "duration" => {
+                        __duration = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "SERVICE_USE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::resource::service_use::ServiceUse {
+            cost_data: __cost_data,
+            identifier: __identifier,
+            start_time: __start_time,
+            duration: __duration,
+        })
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract::SyncExtract
+{
+    fn xml_type_name(&self) -> &'static str {
+        "SYNC_EXTRACT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "SYNC_EXTRACT" {
+                __attrs.push(("xsi:type", "SYNC_EXTRACT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.specification
+            .write_xml(w, "specification", Some("SYNC_EXTRACT_SPEC"))?;
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("X_CONTRIBUTION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract::SyncExtract
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __specification = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "specification" => {
+                        __specification =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "SYNC_EXTRACT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract::SyncExtract {
+                specification: __specification
+                    .ok_or_else(|| reader.missing_child("SYNC_EXTRACT", "specification"))?,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(__items)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_request::SyncExtractRequest
+{
+    fn xml_type_name(&self) -> &'static str {
+        "SYNC_EXTRACT_REQUEST"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "SYNC_EXTRACT_REQUEST" {
+                __attrs.push(("xsi:type", "SYNC_EXTRACT_REQUEST".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.specification
+            .write_xml(w, "specification", Some("SYNC_EXTRACT_SPEC"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_request::SyncExtractRequest
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __specification = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "specification" => {
+                        __specification =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "SYNC_EXTRACT_REQUEST".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_request::SyncExtractRequest {
+                specification: __specification
+                    .ok_or_else(|| reader.missing_child("SYNC_EXTRACT_REQUEST", "specification"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_spec::SyncExtractSpec
+{
+    fn xml_type_name(&self) -> &'static str {
+        "SYNC_EXTRACT_SPEC"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "SYNC_EXTRACT_SPEC" {
+                __attrs.push(("xsi:type", "SYNC_EXTRACT_SPEC".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.includes_versions
+            .write_xml(w, "includes_versions", Some("Boolean"))?;
+        if let Some(vs) = &self.contribution_list {
+            for v in vs {
+                v.write_xml(w, "contribution_list", Some("HIER_OBJECT_ID"))?;
+            }
+        }
+        if let Some(v) = &self.contributions_since {
+            v.write_xml(w, "contributions_since", Some("DV_DATE_TIME"))?;
+        }
+        if let Some(v) = &self.all_contributions {
+            v.write_xml(w, "all_contributions", Some("Boolean"))?;
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_spec::SyncExtractSpec
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __includes_versions = None;
+        let mut __contribution_list = Vec::new();
+        let mut __contributions_since = None;
+        let mut __all_contributions = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "includes_versions" => {
+                        __includes_versions =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contribution_list" => {
+                        __contribution_list
+                            .push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "contributions_since" => {
+                        __contributions_since =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "all_contributions" => {
+                        __all_contributions =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "SYNC_EXTRACT_SPEC".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_spec::SyncExtractSpec {
+                includes_versions: __includes_versions.ok_or_else(|| {
+                    reader.missing_child("SYNC_EXTRACT_SPEC", "includes_versions")
+                })?,
+                contribution_list: if __contribution_list.is_empty() {
+                    None
+                } else {
+                    Some(__contribution_list)
+                },
+                contributions_since: __contributions_since,
+                all_contributions: __all_contributions,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::support::terminology::terminology_access::TerminologyAccess
+{
+    fn xml_type_name(&self) -> &'static str {
+        "TERMINOLOGY_ACCESS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "TERMINOLOGY_ACCESS" {
+                __attrs.push(("xsi:type", "TERMINOLOGY_ACCESS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::support::terminology::terminology_access::TerminologyAccess
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "TERMINOLOGY_ACCESS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::support::terminology::terminology_access::TerminologyAccess {})
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::support::terminology::terminology_service::TerminologyService
+{
+    fn xml_type_name(&self) -> &'static str {
+        "TERMINOLOGY_SERVICE"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "TERMINOLOGY_SERVICE" {
+                __attrs.push(("xsi:type", "TERMINOLOGY_SERVICE".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::support::terminology::terminology_service::TerminologyService
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "TERMINOLOGY_SERVICE".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::support::terminology::terminology_service::TerminologyService {})
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::term_mapping::TermMapping {
+    fn xml_type_name(&self) -> &'static str {
+        "TERM_MAPPING"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "TERM_MAPPING" {
+                __attrs.push(("xsi:type", "TERM_MAPPING".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.r#match.write_xml(w, "match", Some("Character"))?;
+        if let Some(v) = &self.purpose {
+            v.write_xml(w, "purpose", Some("DV_CODED_TEXT"))?;
+        }
+        self.target.write_xml(w, "target", Some("CODE_PHRASE"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::text::term_mapping::TermMapping
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __match = None;
+        let mut __purpose = None;
+        let mut __target = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "match" => {
+                        __match = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "purpose" => {
+                        __purpose = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "target" => {
+                        __target = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "TERM_MAPPING".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::data_types::text::term_mapping::TermMapping {
+                r#match: __match.ok_or_else(|| reader.missing_child("TERM_MAPPING", "match"))?,
+                purpose: __purpose,
+                target: __target.ok_or_else(|| reader.missing_child("TERM_MAPPING", "target"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::resource::translation_details::TranslationDetails
+{
+    fn xml_type_name(&self) -> &'static str {
+        "TRANSLATION_DETAILS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "TRANSLATION_DETAILS" {
+                __attrs.push(("xsi:type", "TRANSLATION_DETAILS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.language
+            .write_xml(w, "language", Some("CODE_PHRASE"))?;
+        for (k, v) in &self.author {
+            w.write_kv_element("author", k, v)?;
+        }
+        if let Some(v) = &self.accreditaton {
+            v.write_xml(w, "accreditation", Some("String"))?;
+        }
+        if let Some(m) = &self.other_details {
+            for (k, v) in m {
+                w.write_kv_element("other_details", k, v)?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::resource::translation_details::TranslationDetails
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __language = None;
+        let mut __author = std::collections::BTreeMap::new();
+        let mut __accreditaton = None;
+        let mut __other_details = std::collections::BTreeMap::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "language" => {
+                        __language = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "author" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __author.insert(__k, __v);
+                    }
+                    "accreditation" => {
+                        __accreditaton =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "other_details" => {
+                        let __k = __c
+                            .attr("id")
+                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .to_string();
+                        let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
+                        __other_details.insert(__k, __v);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "TRANSLATION_DETAILS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::resource::translation_details::TranslationDetails {
+                language: __language
+                    .ok_or_else(|| reader.missing_child("TRANSLATION_DETAILS", "language"))?,
+                author: __author,
+                accreditaton: __accreditaton,
+                other_details: if __other_details.is_empty() {
+                    None
+                } else {
+                    Some(__other_details)
+                },
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::change_control::version::Version<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::common::change_control::version::Version::ImportedVersion(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::common::change_control::version::Version::OriginalVersion(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::common::change_control::version::Version::ImportedVersion(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::common::change_control::version::Version::OriginalVersion(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::change_control::version::Version<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("IMPORTED_VERSION") => Ok(
+                openehr_rm::v1_1::common::change_control::version::Version::ImportedVersion(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("ORIGINAL_VERSION") => Ok(
+                openehr_rm::v1_1::common::change_control::version::Version::OriginalVersion(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "Version: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "Version: unknown xsi:type {other}: the ITS-XML RM schemas define no VERSION subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr::versioned_composition::VersionedComposition
+{
+    fn xml_type_name(&self) -> &'static str {
+        "VERSIONED_COMPOSITION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VERSIONED_COMPOSITION" {
+                __attrs.push(("xsi:type", "VERSIONED_COMPOSITION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr::versioned_composition::VersionedComposition
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VERSIONED_COMPOSITION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr::versioned_composition::VersionedComposition {
+                uid: __uid.ok_or_else(|| reader.missing_child("VERSIONED_COMPOSITION", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("VERSIONED_COMPOSITION", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("VERSIONED_COMPOSITION", "time_created"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr::versioned_ehr_access::VersionedEhrAccess
+{
+    fn xml_type_name(&self) -> &'static str {
+        "VERSIONED_EHR_ACCESS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VERSIONED_EHR_ACCESS" {
+                __attrs.push(("xsi:type", "VERSIONED_EHR_ACCESS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr::versioned_ehr_access::VersionedEhrAccess
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VERSIONED_EHR_ACCESS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr::versioned_ehr_access::VersionedEhrAccess {
+                uid: __uid.ok_or_else(|| reader.missing_child("VERSIONED_EHR_ACCESS", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("VERSIONED_EHR_ACCESS", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("VERSIONED_EHR_ACCESS", "time_created"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr::versioned_ehr_status::VersionedEhrStatus
+{
+    fn xml_type_name(&self) -> &'static str {
+        "VERSIONED_EHR_STATUS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VERSIONED_EHR_STATUS" {
+                __attrs.push(("xsi:type", "VERSIONED_EHR_STATUS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr::versioned_ehr_status::VersionedEhrStatus
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VERSIONED_EHR_STATUS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr::versioned_ehr_status::VersionedEhrStatus {
+                uid: __uid.ok_or_else(|| reader.missing_child("VERSIONED_EHR_STATUS", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("VERSIONED_EHR_STATUS", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("VERSIONED_EHR_STATUS", "time_created"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::directory::versioned_folder::VersionedFolder
+{
+    fn xml_type_name(&self) -> &'static str {
+        "VERSIONED_FOLDER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VERSIONED_FOLDER" {
+                __attrs.push(("xsi:type", "VERSIONED_FOLDER".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::directory::versioned_folder::VersionedFolder
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VERSIONED_FOLDER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::directory::versioned_folder::VersionedFolder {
+                uid: __uid.ok_or_else(|| reader.missing_child("VERSIONED_FOLDER", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("VERSIONED_FOLDER", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("VERSIONED_FOLDER", "time_created"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::change_control::versioned_object::VersionedObjectData
+{
+    fn xml_type_name(&self) -> &'static str {
+        "VERSIONED_OBJECT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VERSIONED_OBJECT" {
+                __attrs.push(("xsi:type", "VERSIONED_OBJECT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::change_control::versioned_object::VersionedObjectData
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VERSIONED_OBJECT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::common::change_control::versioned_object::VersionedObjectData {
+                uid: __uid.ok_or_else(|| reader.missing_child("VERSIONED_OBJECT", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("VERSIONED_OBJECT", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("VERSIONED_OBJECT", "time_created"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedComposition(x) => x.xml_type_name(),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedEhrAccess(x) => x.xml_type_name(),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedEhrStatus(x) => x.xml_type_name(),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedFolder(x) => x.xml_type_name(),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedParty(x) => x.xml_type_name(),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedObject(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedComposition(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedEhrAccess(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedEhrStatus(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedFolder(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedParty(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedObject(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("VERSIONED_COMPOSITION") => Ok(openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedComposition(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("VERSIONED_EHR_ACCESS") => Ok(openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedEhrAccess(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("VERSIONED_EHR_STATUS") => Ok(openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedEhrStatus(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("VERSIONED_FOLDER") => Ok(openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedFolder(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("VERSIONED_OBJECT") => Ok(openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("VERSIONED_PARTY") => Ok(openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedParty(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::common::change_control::versioned_object::VersionedObject::VersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("VersionedObject: unknown xsi:type {other}: the ITS-XML RM schemas define no VERSIONED_OBJECT subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::versioned_party::VersionedParty {
+    fn xml_type_name(&self) -> &'static str {
+        "VERSIONED_PARTY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VERSIONED_PARTY" {
+                __attrs.push(("xsi:type", "VERSIONED_PARTY".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::demographic::versioned_party::VersionedParty
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VERSIONED_PARTY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::demographic::versioned_party::VersionedParty {
+                uid: __uid.ok_or_else(|| reader.missing_child("VERSIONED_PARTY", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("VERSIONED_PARTY", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("VERSIONED_PARTY", "time_created"))?,
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::view::view_entry::ViewEntry {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::composition::view::view_entry::ViewEntry::Citation(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::composition::view::view_entry::ViewEntry::Citation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::view::view_entry::ViewEntry {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("CITATION") => Ok(
+                openehr_rm::v1_1::composition::view::view_entry::ViewEntry::Citation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "ViewEntry: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "ViewEntry: unknown xsi:type {other}: the ITS-XML RM schemas define no VIEW_ENTRY subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::view::view_item::ViewItem {
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+            openehr_rm::v1_1::composition::view::view_item::ViewItem::Citation(x) => {
+                x.xml_type_name()
+            }
+            openehr_rm::v1_1::composition::view::view_item::ViewItem::ViewSection(x) => {
+                x.xml_type_name()
+            }
+        }
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+            openehr_rm::v1_1::composition::view::view_item::ViewItem::Citation(x) => {
+                x.write_xml(w, tag, declared)
+            }
+            openehr_rm::v1_1::composition::view::view_item::ViewItem::ViewSection(x) => {
+                x.write_xml(w, tag, declared)
+            }
+        }
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::view::view_item::ViewItem {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+            Some("CITATION") => Ok(
+                openehr_rm::v1_1::composition::view::view_item::ViewItem::Citation(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            Some("VIEW_SECTION") => Ok(
+                openehr_rm::v1_1::composition::view::view_item::ViewItem::ViewSection(
+                    crate::xml::runtime::FromXml::from_xml(reader, start)?,
+                ),
+            ),
+            None => Err(crate::xml::runtime::XmlError::Parse(
+                "ViewItem: missing xsi:type".into(),
+            )),
+            Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!(
+                "ViewItem: unknown xsi:type {other}: the ITS-XML RM schemas define no VIEW_ITEM subtype of that name"
+            ))),
+        }
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::view::view_section::ViewSection {
+    fn xml_type_name(&self) -> &'static str {
+        "VIEW_SECTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "VIEW_SECTION" {
+                __attrs.push(("xsi:type", "VIEW_SECTION".to_string()));
+            }
+        }
+        __attrs.push(("archetype_node_id", self.archetype_node_id.to_string()));
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.name.write_xml(w, "name", Some("DV_TEXT"))?;
+        if let Some(v) = &self.uid {
+            v.write_xml(w, "uid", Some("UID_BASED_ID"))?;
+        }
+        if let Some(vs) = &self.links {
+            for v in vs {
+                v.write_xml(w, "links", Some("LINK"))?;
+            }
+        }
+        if let Some(v) = &self.archetype_details {
+            v.write_xml(w, "archetype_details", Some("ARCHETYPED"))?;
+        }
+        if let Some(v) = &self.feeder_audit {
+            v.write_xml(w, "feeder_audit", Some("FEEDER_AUDIT"))?;
+        }
+        if let Some(v) = &self.meta_data {
+            v.write_xml(w, "meta_data", Some("CLUSTER"))?;
+        }
+        if let Some(vs) = &self.items {
+            for v in vs {
+                v.write_xml(w, "items", Some("VIEW_ITEM"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::composition::view::view_section::ViewSection
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __name = None;
+        let mut __uid = None;
+        let mut __links = Vec::new();
+        let mut __archetype_details = None;
+        let mut __feeder_audit = None;
+        let mut __meta_data = None;
+        let mut __items = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "name" => {
+                        __name = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "links" => {
+                        __links.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "archetype_details" => {
+                        __archetype_details =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "feeder_audit" => {
+                        __feeder_audit =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "meta_data" => {
+                        __meta_data = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "items" => {
+                        __items.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "VIEW_SECTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::composition::view::view_section::ViewSection {
+                name: __name.ok_or_else(|| reader.missing_child("VIEW_SECTION", "name"))?,
+                archetype_node_id: start
+                    .attr("archetype_node_id")
+                    .ok_or_else(|| reader.missing_attribute("VIEW_SECTION", "archetype_node_id"))?
+                    .to_string(),
+                uid: __uid,
+                links: if __links.is_empty() {
+                    None
+                } else {
+                    Some(
+                        openehr_base::containers::NonEmptyVec::new(__links).map_err(|__e| {
+                            reader.invalid_content(::std::format!("element links: {__e}"))
+                        })?,
+                    )
+                },
+                archetype_details: __archetype_details,
+                feeder_audit: __feeder_audit,
+                meta_data: __meta_data,
+                items: if __items.is_empty() {
+                    None
+                } else {
+                    Some(__items)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::view::view_status::ViewStatus {
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        _declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        w.write_text_element(tag, self.as_str())
+    }
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::view::view_status::ViewStatus {
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let __s = <::std::string::String as crate::xml::runtime::FromXml>::from_xml(reader, start)?;
+        Ok(openehr_rm::v1_1::composition::view::view_status::ViewStatus::from_wire(&__s))
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::x_contribution::XContribution
+{
+    fn xml_type_name(&self) -> &'static str {
+        "X_CONTRIBUTION"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "X_CONTRIBUTION" {
+                __attrs.push(("xsi:type", "X_CONTRIBUTION".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.audit.write_xml(w, "audit", Some("AUDIT_DETAILS"))?;
+        if let Some(vs) = &self.versions {
+            for v in vs {
+                v.write_xml(w, "versions", Some("VERSION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::sync_extract::x_contribution::XContribution
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __audit = None;
+        let mut __versions = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "audit" => {
+                        __audit = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "versions" => {
+                        __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "X_CONTRIBUTION".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::sync_extract::x_contribution::XContribution {
+                uid: __uid.ok_or_else(|| reader.missing_child("X_CONTRIBUTION", "uid"))?,
+                audit: __audit.ok_or_else(|| reader.missing_child("X_CONTRIBUTION", "audit"))?,
+                versions: if __versions.is_empty() {
+                    None
+                } else {
+                    Some(__versions)
+                },
+            },
+        )
+    }
+}
+
+impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_composition::XVersionedComposition {
+fn xml_type_name(&self) -> &'static str { "X_VERSIONED_COMPOSITION" }
+fn write_xml(&self, w: &mut crate::xml::runtime::XmlWriter, tag: &str, declared: Option<&str>) -> Result<(), crate::xml::runtime::XmlError> {
+let mut __attrs: Vec<(&str, String)> = Vec::new();
+if let Some(d) = declared { if d != "X_VERSIONED_COMPOSITION" { __attrs.push(("xsi:type", "X_VERSIONED_COMPOSITION".to_string())); } }
+let mut __e = quick_xml::events::BytesStart::new(tag);
+for (k, v) in &__attrs { __e.push_attribute((*k, v.as_str())); }
+w.write_start(__e)?;
+self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+self.time_created.write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+self.total_version_count.write_xml(w, "total_version_count", Some("Integer"))?;
+self.extract_version_count.write_xml(w, "extract_version_count", Some("Integer"))?;
+if let Some(v) = &self.revision_history { v.write_xml(w, "revision_history", Some("REVISION_HISTORY"))?; }
+if let Some(vs) = &self.versions { for v in vs { v.write_xml(w, "versions", Some("ORIGINAL_VERSION"))?; } }
+w.write_end(tag)?;
+Ok(())
+}
+}
+
+impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_composition::XVersionedComposition {
+fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let mut __uid = None;
+let mut __owner_id = None;
+let mut __time_created = None;
+let mut __total_version_count = None;
+let mut __extract_version_count = None;
+let mut __revision_history = None;
+let mut __versions = Vec::new();
+loop { match reader.read()? {
+crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+"uid" => { __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+"owner_id" => { __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+"time_created" => { __time_created = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+"total_version_count" => { __total_version_count = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+"extract_version_count" => { __extract_version_count = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+"revision_history" => { __revision_history = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+"versions" => { __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?); }
+_ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "X_VERSIONED_COMPOSITION".to_owned(), child: __c.name.clone() }),
+},
+crate::xml::runtime::XmlEvent::End => break,
+crate::xml::runtime::XmlEvent::Text(_) => {}
+crate::xml::runtime::XmlEvent::Eof => return Err(crate::xml::runtime::XmlError::Parse("unexpected EOF".into())),
+} }
+Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_composition::XVersionedComposition {
+uid: __uid.ok_or_else(|| reader.missing_child("X_VERSIONED_COMPOSITION", "uid"))?,
+owner_id: __owner_id.ok_or_else(|| reader.missing_child("X_VERSIONED_COMPOSITION", "owner_id"))?,
+time_created: __time_created.ok_or_else(|| reader.missing_child("X_VERSIONED_COMPOSITION", "time_created"))?,
+total_version_count: __total_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_COMPOSITION", "total_version_count"))?,
+extract_version_count: __extract_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_COMPOSITION", "extract_version_count"))?,
+revision_history: __revision_history,
+versions: if __versions.is_empty() { None } else { Some(__versions) },
+})
+}
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_access::XVersionedEhrAccess
+{
+    fn xml_type_name(&self) -> &'static str {
+        "X_VERSIONED_EHR_ACCESS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "X_VERSIONED_EHR_ACCESS" {
+                __attrs.push(("xsi:type", "X_VERSIONED_EHR_ACCESS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        self.total_version_count
+            .write_xml(w, "total_version_count", Some("Integer"))?;
+        self.extract_version_count
+            .write_xml(w, "extract_version_count", Some("Integer"))?;
+        if let Some(v) = &self.revision_history {
+            v.write_xml(w, "revision_history", Some("REVISION_HISTORY"))?;
+        }
+        if let Some(vs) = &self.versions {
+            for v in vs {
+                v.write_xml(w, "versions", Some("ORIGINAL_VERSION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_access::XVersionedEhrAccess
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        let mut __total_version_count = None;
+        let mut __extract_version_count = None;
+        let mut __revision_history = None;
+        let mut __versions = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "total_version_count" => {
+                        __total_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_version_count" => {
+                        __extract_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "revision_history" => {
+                        __revision_history =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "versions" => {
+                        __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "X_VERSIONED_EHR_ACCESS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_access::XVersionedEhrAccess {
+uid: __uid.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_ACCESS", "uid"))?,
+owner_id: __owner_id.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_ACCESS", "owner_id"))?,
+time_created: __time_created.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_ACCESS", "time_created"))?,
+total_version_count: __total_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_ACCESS", "total_version_count"))?,
+extract_version_count: __extract_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_ACCESS", "extract_version_count"))?,
+revision_history: __revision_history,
+versions: if __versions.is_empty() { None } else { Some(__versions) },
+})
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_status::XVersionedEhrStatus
+{
+    fn xml_type_name(&self) -> &'static str {
+        "X_VERSIONED_EHR_STATUS"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "X_VERSIONED_EHR_STATUS" {
+                __attrs.push(("xsi:type", "X_VERSIONED_EHR_STATUS".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        self.total_version_count
+            .write_xml(w, "total_version_count", Some("Integer"))?;
+        self.extract_version_count
+            .write_xml(w, "extract_version_count", Some("Integer"))?;
+        if let Some(v) = &self.revision_history {
+            v.write_xml(w, "revision_history", Some("REVISION_HISTORY"))?;
+        }
+        if let Some(vs) = &self.versions {
+            for v in vs {
+                v.write_xml(w, "versions", Some("ORIGINAL_VERSION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_status::XVersionedEhrStatus
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        let mut __total_version_count = None;
+        let mut __extract_version_count = None;
+        let mut __revision_history = None;
+        let mut __versions = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "total_version_count" => {
+                        __total_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_version_count" => {
+                        __extract_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "revision_history" => {
+                        __revision_history =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "versions" => {
+                        __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "X_VERSIONED_EHR_STATUS".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_status::XVersionedEhrStatus {
+uid: __uid.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_STATUS", "uid"))?,
+owner_id: __owner_id.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_STATUS", "owner_id"))?,
+time_created: __time_created.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_STATUS", "time_created"))?,
+total_version_count: __total_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_STATUS", "total_version_count"))?,
+extract_version_count: __extract_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_EHR_STATUS", "extract_version_count"))?,
+revision_history: __revision_history,
+versions: if __versions.is_empty() { None } else { Some(__versions) },
+})
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_folder::XVersionedFolder
+{
+    fn xml_type_name(&self) -> &'static str {
+        "X_VERSIONED_FOLDER"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "X_VERSIONED_FOLDER" {
+                __attrs.push(("xsi:type", "X_VERSIONED_FOLDER".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        self.total_version_count
+            .write_xml(w, "total_version_count", Some("Integer"))?;
+        self.extract_version_count
+            .write_xml(w, "extract_version_count", Some("Integer"))?;
+        if let Some(v) = &self.revision_history {
+            v.write_xml(w, "revision_history", Some("REVISION_HISTORY"))?;
+        }
+        if let Some(vs) = &self.versions {
+            for v in vs {
+                v.write_xml(w, "versions", Some("ORIGINAL_VERSION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_folder::XVersionedFolder
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        let mut __total_version_count = None;
+        let mut __extract_version_count = None;
+        let mut __revision_history = None;
+        let mut __versions = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "total_version_count" => {
+                        __total_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_version_count" => {
+                        __extract_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "revision_history" => {
+                        __revision_history =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "versions" => {
+                        __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "X_VERSIONED_FOLDER".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_folder::XVersionedFolder {
+                uid: __uid.ok_or_else(|| reader.missing_child("X_VERSIONED_FOLDER", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("X_VERSIONED_FOLDER", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("X_VERSIONED_FOLDER", "time_created"))?,
+                total_version_count: __total_version_count.ok_or_else(|| {
+                    reader.missing_child("X_VERSIONED_FOLDER", "total_version_count")
+                })?,
+                extract_version_count: __extract_version_count.ok_or_else(|| {
+                    reader.missing_child("X_VERSIONED_FOLDER", "extract_version_count")
+                })?,
+                revision_history: __revision_history,
+                versions: if __versions.is_empty() {
+                    None
+                } else {
+                    Some(__versions)
+                },
+            },
+        )
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObjectData<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        "X_VERSIONED_OBJECT"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "X_VERSIONED_OBJECT" {
+                __attrs.push(("xsi:type", "X_VERSIONED_OBJECT".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        self.total_version_count
+            .write_xml(w, "total_version_count", Some("Integer"))?;
+        self.extract_version_count
+            .write_xml(w, "extract_version_count", Some("Integer"))?;
+        if let Some(v) = &self.revision_history {
+            v.write_xml(w, "revision_history", Some("REVISION_HISTORY"))?;
+        }
+        if let Some(vs) = &self.versions {
+            for v in vs {
+                v.write_xml(w, "versions", Some("ORIGINAL_VERSION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObjectData<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        let mut __total_version_count = None;
+        let mut __extract_version_count = None;
+        let mut __revision_history = None;
+        let mut __versions = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "total_version_count" => {
+                        __total_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_version_count" => {
+                        __extract_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "revision_history" => {
+                        __revision_history =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "versions" => {
+                        __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "X_VERSIONED_OBJECT".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObjectData {
+uid: __uid.ok_or_else(|| reader.missing_child("X_VERSIONED_OBJECT", "uid"))?,
+owner_id: __owner_id.ok_or_else(|| reader.missing_child("X_VERSIONED_OBJECT", "owner_id"))?,
+time_created: __time_created.ok_or_else(|| reader.missing_child("X_VERSIONED_OBJECT", "time_created"))?,
+total_version_count: __total_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_OBJECT", "total_version_count"))?,
+extract_version_count: __extract_version_count.ok_or_else(|| reader.missing_child("X_VERSIONED_OBJECT", "extract_version_count"))?,
+revision_history: __revision_history,
+versions: if __versions.is_empty() { None } else { Some(__versions) },
+})
+    }
+}
+
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject<T>
+{
+    fn xml_type_name(&self) -> &'static str {
+        match self {
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedComposition(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedEhrAccess(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedEhrStatus(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedFolder(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedParty(x) => x.xml_type_name(),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedObject(x) => x.xml_type_name(),
+}
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        match self {
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedComposition(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedEhrAccess(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedEhrStatus(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedFolder(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedParty(x) => x.write_xml(w, tag, declared),
+openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedObject(x) => x.write_xml(w, tag, declared),
+}
+    }
+}
+
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject<T>
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        match start.xsi_type() {
+Some("X_VERSIONED_COMPOSITION") => Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedComposition(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("X_VERSIONED_EHR_ACCESS") => Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedEhrAccess(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("X_VERSIONED_EHR_STATUS") => Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedEhrStatus(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("X_VERSIONED_FOLDER") => Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedFolder(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("X_VERSIONED_OBJECT") => Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some("X_VERSIONED_PARTY") => Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedParty(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+None => Ok(openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObject::XVersionedObject(crate::xml::runtime::FromXml::from_xml(reader, start)?)),
+Some(other) => Err(crate::xml::runtime::XmlError::Parse(format!("XVersionedObject: unknown xsi:type {other}: the ITS-XML RM schemas define no X_VERSIONED_OBJECT subtype of that name"))),
+}
+    }
+}
+
+impl crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_party::XVersionedParty
+{
+    fn xml_type_name(&self) -> &'static str {
+        "X_VERSIONED_PARTY"
+    }
+    fn write_xml(
+        &self,
+        w: &mut crate::xml::runtime::XmlWriter,
+        tag: &str,
+        declared: Option<&str>,
+    ) -> Result<(), crate::xml::runtime::XmlError> {
+        let mut __attrs: Vec<(&str, String)> = Vec::new();
+        if let Some(d) = declared {
+            if d != "X_VERSIONED_PARTY" {
+                __attrs.push(("xsi:type", "X_VERSIONED_PARTY".to_string()));
+            }
+        }
+        let mut __e = quick_xml::events::BytesStart::new(tag);
+        for (k, v) in &__attrs {
+            __e.push_attribute((*k, v.as_str()));
+        }
+        w.write_start(__e)?;
+        self.uid.write_xml(w, "uid", Some("HIER_OBJECT_ID"))?;
+        self.owner_id.write_xml(w, "owner_id", Some("OBJECT_REF"))?;
+        self.time_created
+            .write_xml(w, "time_created", Some("DV_DATE_TIME"))?;
+        self.total_version_count
+            .write_xml(w, "total_version_count", Some("Integer"))?;
+        self.extract_version_count
+            .write_xml(w, "extract_version_count", Some("Integer"))?;
+        if let Some(v) = &self.revision_history {
+            v.write_xml(w, "revision_history", Some("REVISION_HISTORY"))?;
+        }
+        if let Some(vs) = &self.versions {
+            for v in vs {
+                v.write_xml(w, "versions", Some("ORIGINAL_VERSION"))?;
+            }
+        }
+        w.write_end(tag)?;
+        Ok(())
+    }
+}
+
+impl crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_party::XVersionedParty
+{
+    fn from_xml(
+        reader: &mut crate::xml::runtime::XmlReader,
+        start: &crate::xml::runtime::StartTag,
+    ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let mut __uid = None;
+        let mut __owner_id = None;
+        let mut __time_created = None;
+        let mut __total_version_count = None;
+        let mut __extract_version_count = None;
+        let mut __revision_history = None;
+        let mut __versions = Vec::new();
+        loop {
+            match reader.read()? {
+                crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
+                    "uid" => {
+                        __uid = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "owner_id" => {
+                        __owner_id = Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "time_created" => {
+                        __time_created =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "total_version_count" => {
+                        __total_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "extract_version_count" => {
+                        __extract_version_count =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "revision_history" => {
+                        __revision_history =
+                            Some(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    "versions" => {
+                        __versions.push(crate::xml::runtime::FromXml::from_xml(reader, &__c)?);
+                    }
+                    _ => {
+                        return Err(crate::xml::runtime::XmlError::UndeclaredChild {
+                            owner: "X_VERSIONED_PARTY".to_owned(),
+                            child: __c.name.clone(),
+                        });
+                    }
+                },
+                crate::xml::runtime::XmlEvent::End => break,
+                crate::xml::runtime::XmlEvent::Text(_) => {}
+                crate::xml::runtime::XmlEvent::Eof => {
+                    return Err(crate::xml::runtime::XmlError::Parse(
+                        "unexpected EOF".into(),
+                    ));
+                }
+            }
+        }
+        Ok(
+            openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_party::XVersionedParty {
+                uid: __uid.ok_or_else(|| reader.missing_child("X_VERSIONED_PARTY", "uid"))?,
+                owner_id: __owner_id
+                    .ok_or_else(|| reader.missing_child("X_VERSIONED_PARTY", "owner_id"))?,
+                time_created: __time_created
+                    .ok_or_else(|| reader.missing_child("X_VERSIONED_PARTY", "time_created"))?,
+                total_version_count: __total_version_count.ok_or_else(|| {
+                    reader.missing_child("X_VERSIONED_PARTY", "total_version_count")
+                })?,
+                extract_version_count: __extract_version_count.ok_or_else(|| {
+                    reader.missing_child("X_VERSIONED_PARTY", "extract_version_count")
+                })?,
+                revision_history: __revision_history,
+                versions: if __versions.is_empty() {
+                    None
+                } else {
+                    Some(__versions)
+                },
+            },
+        )
     }
 }
 

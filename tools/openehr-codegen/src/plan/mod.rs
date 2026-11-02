@@ -19,12 +19,14 @@ pub(crate) mod its_json_bounds;
 pub(crate) mod ordered_hashes;
 pub(crate) mod overrides;
 pub(crate) mod rest_tagged;
+pub(crate) mod xml_overrides;
 
 use crate::analyze::Model;
 use crate::load::bmm::{BmmClass, BmmEnumeration, BmmPropKind, BmmSchema, BmmType};
 use crate::plan::overrides::{
     ContradictionKind, back_reference, contradicted, field_default, primitive,
 };
+use crate::plan::xml_overrides::xml_wire_rename;
 use crate::render::naming;
 use std::collections::BTreeSet;
 
@@ -499,7 +501,8 @@ impl Model {
                     _ => None,
                 };
                 XmlField {
-                    wire_name: p.name.clone(),
+                    wire_name: xml_wire_rename(&rp.owner, &p.name)
+                        .map_or_else(|| p.name.clone(), str::to_owned),
                     rust_name: naming::field_ident(&p.name),
                     optional: !p.is_mandatory,
                     multiple,
