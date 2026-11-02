@@ -151,7 +151,6 @@ where
     F: FnOnce(Vec<String>) -> Fut,
     Fut: Future<Output = T>,
 {
-    crate::session::require_session()?;
     let Some(ids) = list_terminologies().await? else {
         return Ok(None);
     };
@@ -351,7 +350,6 @@ pub async fn load_terminology(
     // The terminology's id.
     id: String,
 ) -> Result<Option<TerminologyDescriptor>, ViewerError> {
-    crate::session::require_session()?;
     let descriptor = fetch_terminology_description(id).await;
     if let Err(error) = &descriptor
         && crate::pages::common::is_status(error, http::StatusCode::NOT_FOUND)

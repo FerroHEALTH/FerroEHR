@@ -55,11 +55,12 @@ use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::is_status;
 use crate::pages::common::{
-    EditorDock, Refused, at_time_row, card_panel, dock_editor, drawn, info_note, panel,
-    plain_section, quiet, section, shortened, version_number,
+    EditorDock, Refused, at_time_row, card_panel, dock_editor, info_note, panel, plain_section,
+    quiet, section, shortened, version_number,
 };
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
+use crate::pages::form::Form;
 use crate::routes::Drawn;
 
 /// The id of Delete the directory's confirmation dialog.
@@ -533,20 +534,7 @@ fn unreadable(error: &serde_json::Error) -> Refused {
     )
 }
 
-/// Loads the Directory tab: answers its post, then reads the version the
-/// address asks for, its versions and the folder at the path asked for.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_tab(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<EhrModel<DirectoryPanel>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_tab(ehr_id).await)
-}
-
-/// What [`load_tab`] reads.
+/// What the page reads.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the post, the version asked for, its versions and the folder at a path"
@@ -818,11 +806,12 @@ pub async fn page() -> Drawn {
         RecordsMsg::DirectoryTitle,
         &[("id", shortened(&ehr_id).into())],
     );
-    let body = drawn(load_tab(ehr_id.clone()).await, |model| {
+    let body = {
+        let model = read_tab(ehr_id.clone()).await;
         ehr_view(&ehr_id, EhrTab::Directory, model, |shown| {
             directory_panel(&ehr_id, shown)
         })
-    });
+    };
     Drawn::page(title, body)
 }
 
@@ -936,44 +925,18 @@ struct Editor {
     picker: Option<Picker>,
 }
 
-/// Edit the directory's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum EditModel {
-    /// The form.
-    Editor(Box<Editor>),
-    /// The EHR has no directory.
-    None,
-    /// The CDR's refusal, or a document that is not JSON.
-    Refused(Refused),
-    /// The post redirected.
-    Left,
-}
-
-/// Loads Edit the directory: answers its post (Discard, an edit of the
-/// tree, Save, Overwrite) over the directory the CDR holds.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_edit(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<EditModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_edit(ehr_id).await)
-}
-
-/// What [`load_edit`] reads.
-async fn read_edit(ehr_id: String) -> EditModel {
+/// What the page reads.
+async fn read_edit(ehr_id: String) -> Form<Editor, ()> {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
         crate::request::redirect(&tab_href(&ehr_id, EhrTab::Directory));
-        return EditModel::Left;
+        return Form::Left;
     }
     let current = match fetch_directory(ehr_id.clone()).await {
         Ok(Some(current)) => current,
-        Ok(None) => return EditModel::None,
+        Ok(None) => return Form::Not(()),
         Err(error) => {
-            return EditModel::Refused(Refused::new(tr(RecordsMsg::DirectoryRefused), error));
+            return Form::Refused(Refused::new(tr(RecordsMsg::DirectoryRefused), error));
         }
     };
     let opened = posted
@@ -983,7 +946,7 @@ async fn read_edit(ehr_id: String) -> EditModel {
         .unwrap_or_else(|| current.version_uid.clone());
     let base: Value = match serde_json::from_str(&current.body) {
         Ok(base) => base,
-        Err(error) => return EditModel::Refused(unreadable(&error)),
+        Err(error) => return Form::Refused(unreadable(&error)),
     };
     let mut working = working_tree(posted.as_ref(), &base);
     let renaming = posted
@@ -1014,7 +977,7 @@ async fn read_edit(ehr_id: String) -> EditModel {
                         &[("version", version_number(&uid).into())],
                     )),
                 );
-                return EditModel::Left;
+                return Form::Left;
             }
             Err(error) => unsaved = Some(Unsaved::new(tr(RecordsMsg::DirectorySaveRefused), error)),
         }
@@ -1045,7 +1008,7 @@ async fn read_edit(ehr_id: String) -> EditModel {
         }
         None => None,
     };
-    EditModel::Editor(Box::new(Editor {
+    Form::Shown(Box::new(Editor {
         opened,
         current_uid: current.version_uid,
         working,
@@ -1179,12 +1142,12 @@ fn edit_form(ehr_id: &str, editor: Editor) -> Html {
 /// Edit the directory.
 pub async fn edit_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let body = drawn(load_edit(ehr_id.clone()).await, |model| match model {
-        EditModel::Editor(editor) => edit_form(&ehr_id, *editor),
-        EditModel::None => quiet(tr(RecordsMsg::DirectoryNone)),
-        EditModel::Refused(refusal) => refusal.view(),
-        EditModel::Left => Html::empty(),
-    });
+    let body = match read_edit(ehr_id.clone()).await {
+        Form::Shown(editor) => edit_form(&ehr_id, *editor),
+        Form::Not(()) => quiet(tr(RecordsMsg::DirectoryNone)),
+        Form::Refused(refusal) => refusal.view(),
+        Form::Left => Html::empty(),
+    };
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(
         tr(RecordsMsg::EhrTabDirectory),

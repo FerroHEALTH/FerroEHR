@@ -44,7 +44,7 @@ use crate::management::{
 };
 use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
-    Refused, count, document_section, drawn, info_note, panel, plain_section, section, state_mark,
+    Refused, count, document_section, info_note, panel, plain_section, section, state_mark,
 };
 use crate::routes::Drawn;
 
@@ -226,16 +226,7 @@ struct Overview {
     build: Result<Option<BuildInfoView>, Refused>,
 }
 
-/// Loads Overview: the status the shell read and the build information.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_overview() -> Result<Tabbed<Overview>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_overview().await)
-}
-
-/// What [`load_overview`] reads, on the server.
+/// What the page reads, on the server.
 async fn read_overview() -> Tabbed<Overview> {
     load_tab(ServerTab::Overview, || async {
         let status = crate::shell::status().await;
@@ -386,9 +377,10 @@ fn overview(model: Overview) -> Html {
 /// Server: Overview.
 /// Server › Overview.
 pub async fn overview_page() -> Drawn {
-    let page = drawn(load_overview().await, |tabbed| {
+    let page = {
+        let tabbed = read_overview().await;
         server_page(ServerTab::Overview, tabbed, overview)
-    });
+    };
     Drawn::page(tr(Msg::NavServer), page)
 }
 
@@ -412,16 +404,7 @@ fn flow_of(status: &str) -> FlowState {
     }
 }
 
-/// Loads Health: the readiness document.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_health() -> Result<Tabbed<Result<ReadinessView, Refused>>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_health().await)
-}
-
-/// What [`load_health`] reads, on the server.
+/// What the page reads, on the server.
 async fn read_health() -> Tabbed<Result<ReadinessView, Refused>> {
     load_tab(ServerTab::Health, || async {
         fetch_readiness()
@@ -434,9 +417,10 @@ async fn read_health() -> Tabbed<Result<ReadinessView, Refused>> {
 /// Server: Health.
 /// Server › Health.
 pub async fn health_page() -> Drawn {
-    let page = drawn(load_health().await, |tabbed| {
+    let page = {
+        let tabbed = read_health().await;
         server_page(ServerTab::Health, tabbed, health)
-    });
+    };
     Drawn::page(tr(Msg::NavServer), page)
 }
 
@@ -493,16 +477,7 @@ struct Metrics {
     samples: Option<Result<Option<MetricDetailView>, Refused>>,
 }
 
-/// Loads Metrics: the headline, the names and the picked metric.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_metrics() -> Result<Tabbed<Metrics>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_metrics().await)
-}
-
-/// What [`load_metrics`] reads, on the server.
+/// What the page reads, on the server.
 async fn read_metrics() -> Tabbed<Metrics> {
     load_tab(ServerTab::Metrics, || async {
         let refused = |error| Refused::new(tr(ConsoleMsg::ServerMetricsRefused), error);
@@ -649,9 +624,10 @@ fn metrics(model: Metrics) -> Html {
 /// Server: Metrics.
 /// Server › Metrics.
 pub async fn metrics_page() -> Drawn {
-    let page = drawn(load_metrics().await, |tabbed| {
+    let page = {
+        let tabbed = read_metrics().await;
         server_page(ServerTab::Metrics, tabbed, metrics)
-    });
+    };
     Drawn::page(tr(Msg::NavServer), page)
 }
 
@@ -671,16 +647,7 @@ enum Logging {
     Left,
 }
 
-/// Loads Logging: answers its post (Apply, Reset) and reads the filters.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_logging() -> Result<Tabbed<Logging>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_logging().await)
-}
-
-/// What [`load_logging`] reads, on the server.
+/// What the page reads, on the server.
 async fn read_logging() -> Tabbed<Logging> {
     load_tab(ServerTab::Logging, || async {
         let posted = crate::posted::posted();
@@ -821,9 +788,10 @@ fn logging(model: Logging) -> Html {
 /// Server: Logging.
 /// Server › Logging.
 pub async fn logging_page() -> Drawn {
-    let page = drawn(load_logging().await, |tabbed| {
+    let page = {
+        let tabbed = read_logging().await;
         server_page(ServerTab::Logging, tabbed, logging)
-    });
+    };
     Drawn::page(tr(Msg::NavServer), page)
 }
 
@@ -847,16 +815,7 @@ struct Api {
     listed: Result<Document, Refused>,
 }
 
-/// Loads API: the document of the family the address picks.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_api() -> Result<Tabbed<Api>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_api().await)
-}
-
-/// What [`load_api`] reads, on the server.
+/// What the page reads, on the server.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's OpenAPI JSON document to list it"
@@ -982,9 +941,10 @@ fn api(model: Api) -> Html {
 /// Server: API.
 /// Server › Api.
 pub async fn api_page() -> Drawn {
-    let page = drawn(load_api().await, |tabbed| {
+    let page = {
+        let tabbed = read_api().await;
         server_page(ServerTab::Api, tabbed, api)
-    });
+    };
     Drawn::page(tr(Msg::NavServer), page)
 }
 
@@ -1003,16 +963,7 @@ struct Smart {
     text: String,
 }
 
-/// Loads SMART: the CDR's discovery document, `None` when it serves none.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_smart() -> Result<Tabbed<Result<Option<Smart>, Refused>>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_smart().await)
-}
-
-/// What [`load_smart`] reads, on the server.
+/// What the page reads, on the server.
 #[expect(
     clippy::disallowed_types,
     reason = "the viewer reads the CDR's SMART JSON document to list it"
@@ -1102,8 +1053,9 @@ fn smart(read: Result<Option<Smart>, Refused>) -> Html {
 /// Server: SMART.
 /// Server › Smart.
 pub async fn smart_page() -> Drawn {
-    let page = drawn(load_smart().await, |tabbed| {
+    let page = {
+        let tabbed = read_smart().await;
         server_page(ServerTab::Smart, tabbed, smart)
-    });
+    };
     Drawn::page(tr(Msg::NavServer), page)
 }

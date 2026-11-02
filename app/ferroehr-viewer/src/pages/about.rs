@@ -21,7 +21,7 @@ use crate::error::ViewerError;
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, current, tr, tr_with};
 use crate::markup::t;
-use crate::pages::common::{Refused, drawn};
+use crate::pages::common::Refused;
 use crate::routes::Drawn;
 
 /// The route the manifest's Download reads the document from.
@@ -46,16 +46,7 @@ struct Model {
     manifest: Result<String, Refused>,
 }
 
-/// Loads About: the status the shell read and the conformance manifest.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load() -> Result<Model, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_page().await)
-}
-
-/// What [`load`] reads.
+/// What the page reads.
 async fn read_page() -> Model {
     let status = crate::shell::status().await;
     let document = match crate::request::state() {
@@ -166,7 +157,7 @@ fn about(model: Model) -> Html {
 
 /// About.
 pub async fn page() -> Drawn {
-    Drawn::page(tr(Msg::NavAbout), drawn(load().await, about))
+    Drawn::page(tr(Msg::NavAbout), about(read_page().await))
 }
 
 /// The FerroUI release the viewer draws with: the exact pin of the

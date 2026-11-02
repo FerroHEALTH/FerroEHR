@@ -36,12 +36,13 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, dock_editor, document_section, drawn, panel, plain_section,
-    section, short, shortened, version_number,
+    EditorDock, Refused, card_panel, dock_editor, document_section, panel, plain_section, section,
+    short, shortened, version_number,
 };
 use crate::pages::common::{is_status, version_uid_at};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
+use crate::pages::form::Form;
 use crate::pages::versions::History;
 use crate::routes::Drawn;
 
@@ -114,20 +115,7 @@ enum StatusPanel {
     Refused(Refused),
 }
 
-/// Loads the Status tab: the version the request asks for, its facts and the
-/// versions.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_status(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<EhrModel<StatusPanel>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_status(ehr_id).await)
-}
-
-/// What [`load_status`] reads.
+/// What the page reads.
 async fn read_status(ehr_id: String) -> EhrModel<StatusPanel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |facts| {
         let asked = crate::request::query("version");
@@ -297,11 +285,12 @@ pub async fn page() -> Drawn {
         RecordsMsg::StatusTitle,
         &[("id", shortened(&ehr_id).into())],
     );
-    let body = drawn(load_status(ehr_id.clone()).await, |model| {
+    let body = {
+        let model = read_status(ehr_id.clone()).await;
         ehr_view(&ehr_id, EhrTab::Status, model, |shown| {
             status_panel(&ehr_id, shown)
         })
-    });
+    };
     Drawn::page(title, body)
 }
 
@@ -336,41 +325,17 @@ struct Editor {
     unsaved: Option<Unsaved>,
 }
 
-/// Edit status's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum EditModel {
-    /// The form.
-    Editor(Box<Editor>),
-    /// The CDR's refusal of the current status.
-    Refused(Refused),
-    /// The post redirected.
-    Left,
-}
-
-/// Loads Edit status: answers its post (Discard, Save) and reads the current
-/// status.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_edit(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<EditModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_edit(ehr_id).await)
-}
-
-/// What [`load_edit`] reads.
-async fn read_edit(ehr_id: String) -> EditModel {
+/// What the page reads.
+async fn read_edit(ehr_id: String) -> Form<Editor> {
     let posted = crate::posted::posted();
     if crate::pages::common::discarded(posted.as_ref()) {
         crate::request::redirect(&tab_href(&ehr_id, EhrTab::Status));
-        return EditModel::Left;
+        return Form::Left;
     }
     let current = match fetch_ehr_status(ehr_id.clone()).await {
         Ok(current) => current,
         Err(error) => {
-            return EditModel::Refused(Refused::new(tr(RecordsMsg::StatusRefused), error));
+            return Form::Refused(Refused::new(tr(RecordsMsg::StatusRefused), error));
         }
     };
     let opened_uid = posted
@@ -418,7 +383,7 @@ async fn read_edit(ehr_id: String) -> EditModel {
                     &tab_href(&ehr_id, EhrTab::Status),
                     &Done::ok(tr(RecordsMsg::StatusSaved)).line(line),
                 );
-                return EditModel::Left;
+                return Form::Left;
             }
             Err(error) => {
                 unsaved = Some(Unsaved {
@@ -428,7 +393,7 @@ async fn read_edit(ehr_id: String) -> EditModel {
             }
         }
     }
-    EditModel::Editor(Box::new(Editor {
+    Form::Shown(Box::new(Editor {
         opened_uid,
         current_uid: current.version_uid,
         queryable,
@@ -540,11 +505,11 @@ fn edit_form(ehr_id: &str, editor: Editor) -> Html {
 /// Edit status.
 pub async fn edit_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let body = drawn(load_edit(ehr_id.clone()).await, |model| match model {
-        EditModel::Editor(editor) => edit_form(&ehr_id, *editor),
-        EditModel::Refused(refusal) => refusal.view(),
-        EditModel::Left => Html::empty(),
-    });
+    let body = match read_edit(ehr_id.clone()).await {
+        Form::Shown(editor) => edit_form(&ehr_id, *editor),
+        Form::Refused(refusal) => refusal.view(),
+        Form::Left => Html::empty(),
+    };
     let mut trail = crumbs(&ehr_id);
     trail.push(Crumb::new(
         tr(RecordsMsg::EhrTabStatus),

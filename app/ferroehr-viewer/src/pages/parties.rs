@@ -57,11 +57,11 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, count, dock_editor, document_section, drawn, findings_of,
-    info_note, marks_of, panel, plain_section, section, short, shortened, state_mark,
-    version_number, when,
+    EditorDock, Refused, card_panel, count, dock_editor, document_section, findings_of, info_note,
+    marks_of, panel, plain_section, section, short, shortened, state_mark, version_number, when,
 };
 use crate::pages::common::{discarded, is_status, version_uid_at};
+use crate::pages::form::Form;
 use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
 use crate::pages::versions::{History, history};
@@ -304,17 +304,7 @@ enum PartiesModel {
     Left,
 }
 
-/// Loads Parties: opens the party the address asks for, or reads the tag
-/// index.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_parties() -> Result<PartiesModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_parties().await)
-}
-
-/// What [`load_parties`] reads, on the server.
+/// What the page reads, on the server.
 async fn read_parties() -> PartiesModel {
     let kind = crate::request::query("kind")
         .as_deref()
@@ -427,7 +417,7 @@ pub async fn list_page() -> Drawn {
             Act::Link("/parties/new".to_owned()),
         )),
     );
-    let body = drawn(load_parties().await, parties_view);
+    let body = parties_view(read_parties().await);
     Drawn::page(tr(Msg::NavParties), heading.then(body))
 }
 
@@ -499,30 +489,21 @@ struct NewParty {
     refused: Option<Refused>,
 }
 
-/// A creating page's model: its form, or the redirect its post answered.
+/// Why an edit page draws no form.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Creating<T> {
-    /// The form.
-    Form(Box<T>),
-    /// The post redirected.
-    Left,
+enum Gone {
+    /// The object is deleted, so this note says it cannot be edited.
+    Deleted(String),
+    /// The address names no kind of party.
+    NoKind,
 }
 
-/// Loads New party: answers its post (Discard, Start over, Create).
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_new_party() -> Result<Creating<NewParty>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_new_party().await)
-}
-
-/// What [`load_new_party`] reads, on the server.
-async fn read_new_party() -> Creating<NewParty> {
+/// What the page reads, on the server.
+async fn read_new_party() -> Form<NewParty> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         crate::request::redirect("/parties");
-        return Creating::Left;
+        return Form::Left;
     }
     let kind = posted
         .as_ref()
@@ -547,12 +528,12 @@ async fn read_new_party() -> Creating<NewParty> {
                     &party_href(kind, &uid),
                     &Done::ok(tr(RecordsMsg::PartyCreated)).line(shortened(&uid)),
                 );
-                return Creating::Left;
+                return Form::Left;
             }
             Err(error) => refused = Some(Refused::new(tr(RecordsMsg::PartyCreateRefused), error)),
         }
     }
-    Creating::Form(Box::new(NewParty {
+    Form::Shown(Box::new(NewParty {
         kind,
         text,
         refused,
@@ -560,8 +541,8 @@ async fn read_new_party() -> Creating<NewParty> {
 }
 
 /// New party's page, its decision bar docked.
-fn new_party_view(model: Creating<NewParty>) -> Html {
-    let Creating::Form(form) = model else {
+fn new_party_view(model: Form<NewParty>) -> Html {
+    let Form::Shown(form) = model else {
         return Html::empty();
     };
     let NewParty {
@@ -635,7 +616,7 @@ fn new_party_view(model: Creating<NewParty>) -> Html {
 pub async fn new_party_page() -> Drawn {
     Drawn::page(
         tr(RecordsMsg::PartiesNew),
-        drawn(load_new_party().await, new_party_view),
+        new_party_view(read_new_party().await),
     )
 }
 
@@ -994,23 +975,7 @@ enum PartyModel {
     NoKind,
 }
 
-/// Loads the party `uid` of `kind`: answers its post, reads its versions,
-/// the version asked for and what the tab shows; a party the CDR does not
-/// hold, or a kind it has not, answers `404`.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_party(
-    // The kind of party the route names, as its segment.
-    kind: String,
-    // The party the route names.
-    uid: String,
-) -> Result<PartyModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_party(&kind, uid).await)
-}
-
-/// What [`load_party`] reads, on the server.
+/// What the page reads, on the server.
 #[expect(
     clippy::too_many_lines,
     reason = "one loader: the versions, the version in view, the post and the tab's read"
@@ -1348,20 +1313,16 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
 pub async fn party_page() -> Drawn {
     let uid = uid_param();
     let (kind_segment, uid_segment) = party_route();
-    match load_party(kind_segment, uid_segment).await {
-        Ok(PartyModel::Shown(party)) => {
+    match read_party(&kind_segment, uid_segment).await {
+        PartyModel::Shown(party) => {
             let (title, body) = party_view(&uid, *party);
             Drawn::page(title, body)
         }
-        Ok(PartyModel::Missing(refusal)) => {
+        PartyModel::Missing(refusal) => {
             let (title, body) = party_missing(&uid, &refusal);
             Drawn::page(title, body)
         }
-        Ok(PartyModel::NoKind) => crate::pages::errors::not_found_page(),
-        Err(error) => Drawn::page(
-            tr(RecordsMsg::PartyRefused),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
+        PartyModel::NoKind => crate::pages::errors::not_found_page(),
     }
 }
 
@@ -1530,52 +1491,22 @@ struct PartyEditor {
     unsaved: Option<Unsaved>,
 }
 
-/// An editing page's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Editing<T> {
-    /// The form.
-    Editor(Box<T>),
-    /// The object is deleted, so this note says it cannot be edited.
-    Deleted(String),
-    /// The CDR's refusal.
-    Refused(Refused),
-    /// The address names no kind of party.
-    NoKind,
-    /// The post redirected.
-    Left,
-}
-
-/// Loads Edit a party: answers its post (Discard, Save) over the current
-/// version.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_edit_party(
-    // The kind of party the route names, as its segment.
-    kind: String,
-    // The party the route names.
-    uid: String,
-) -> Result<Editing<PartyEditor>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_edit_party(&kind, uid).await)
-}
-
-/// What [`load_edit_party`] reads, on the server.
-async fn read_edit_party(kind: &str, uid: String) -> Editing<PartyEditor> {
+/// What the page reads, on the server.
+async fn read_edit_party(kind: &str, uid: String) -> Form<PartyEditor, Gone> {
     let kind = PartyKind::from_segment(kind);
     let posted = crate::posted::posted();
     let Some(kind) = kind else {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
-        return Editing::NoKind;
+        return Form::Not(Gone::NoKind);
     };
     if discarded(posted.as_ref()) {
         crate::request::redirect(&party_href(kind, &uid));
-        return Editing::Left;
+        return Form::Left;
     }
     let state = match fetch_party(kind.segment().to_owned(), uid.clone()).await {
         Ok(Some(state)) => state,
-        Ok(None) => return Editing::Deleted(tr(RecordsMsg::PartyDeletedNoEdit)),
-        Err(error) => return Editing::Refused(Refused::new(tr(RecordsMsg::PartyRefused), error)),
+        Ok(None) => return Form::Not(Gone::Deleted(tr(RecordsMsg::PartyDeletedNoEdit))),
+        Err(error) => return Form::Refused(Refused::new(tr(RecordsMsg::PartyRefused), error)),
     };
     let current = crate::bff::pretty_body(&state.body, crate::format::ReprFormat::CanonicalJson);
     let opened = posted
@@ -1612,12 +1543,12 @@ async fn read_edit_party(kind: &str, uid: String) -> Editing<PartyEditor> {
                         &[("version", version_number(&saved).into())],
                     )),
                 );
-                return Editing::Left;
+                return Form::Left;
             }
             Err(error) => unsaved = Some(Unsaved::new(tr(RecordsMsg::PartySaveRefused), error)),
         }
     }
-    Editing::Editor(Box::new(PartyEditor {
+    Form::Shown(Box::new(PartyEditor {
         kind,
         current,
         current_uid: state.version_uid,
@@ -1740,16 +1671,16 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> (String, Html) {
 }
 
 /// The page an editing model draws when it holds no form.
-fn not_editing<T>(model: Editing<T>, draw: impl FnOnce(T) -> (String, Html)) -> Drawn {
+fn not_editing<T>(model: Form<T, Gone>, draw: impl FnOnce(T) -> (String, Html)) -> Drawn {
     match model {
-        Editing::Editor(editor) => {
+        Form::Shown(editor) => {
             let (title, body) = draw(*editor);
             Drawn::page(title, body)
         }
-        Editing::Deleted(note) => Drawn::page(note.clone(), info_note(t(note))),
-        Editing::Refused(refusal) => Drawn::page(refusal.summary.clone(), refusal.view()),
-        Editing::NoKind => crate::pages::errors::not_found_page(),
-        Editing::Left => Drawn::default(),
+        Form::Not(Gone::Deleted(note)) => Drawn::page(note.clone(), info_note(t(note))),
+        Form::Refused(refusal) => Drawn::page(refusal.summary.clone(), refusal.view()),
+        Form::Not(Gone::NoKind) => crate::pages::errors::not_found_page(),
+        Form::Left => Drawn::default(),
     }
 }
 
@@ -1758,13 +1689,10 @@ fn not_editing<T>(model: Editing<T>, draw: impl FnOnce(T) -> (String, Html)) -> 
 pub async fn edit_party_page() -> Drawn {
     let uid = uid_param();
     let (kind_segment, uid_segment) = party_route();
-    match load_edit_party(kind_segment, uid_segment).await {
-        Ok(model) => not_editing(model, |editor| edit_party_view(&uid, editor)),
-        Err(error) => Drawn::page(
-            tr(RecordsMsg::PartyRefused),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
-    }
+    not_editing(
+        read_edit_party(&kind_segment, uid_segment).await,
+        |editor| edit_party_view(&uid, editor),
+    )
 }
 
 /// The facts of a relationship's two ends.
@@ -1804,20 +1732,7 @@ enum RelationshipModel {
     Left,
 }
 
-/// Loads the relationship `uid`: answers its delete and reads its versions;
-/// one the CDR does not hold answers `404`.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_relationship(
-    // The id the route names.
-    uid: String,
-) -> Result<RelationshipModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_relationship(uid).await)
-}
-
-/// What [`load_relationship`] reads, on the server.
+/// What the page reads, on the server.
 async fn read_relationship(uid: String) -> RelationshipModel {
     let state = match fetch_relationship(uid.clone()).await {
         Ok(Some(state)) => state,
@@ -1983,23 +1898,17 @@ fn relationship_view(
 /// One relationship.
 pub async fn relationship_page() -> Drawn {
     let uid = uid_param();
-    match load_relationship(uid.clone()).await {
-        Ok(RelationshipModel::Shown(state, versions)) => {
+    match read_relationship(uid.clone()).await {
+        RelationshipModel::Shown(state, versions) => {
             let (title, body) = relationship_view(&uid, &state, &versions);
             Drawn::page(title, body)
         }
-        Ok(RelationshipModel::Deleted) => Drawn::page(
+        RelationshipModel::Deleted => Drawn::page(
             tr(RecordsMsg::RelationshipDeleted),
             info_note(t(tr(RecordsMsg::RelationshipDeleted))),
         ),
-        Ok(RelationshipModel::Refused(refusal)) => {
-            Drawn::page(refusal.summary.clone(), refusal.view())
-        }
-        Ok(RelationshipModel::Left) => Drawn::default(),
-        Err(error) => Drawn::page(
-            tr(RecordsMsg::PartyRefused),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
+        RelationshipModel::Refused(refusal) => Drawn::page(refusal.summary.clone(), refusal.view()),
+        RelationshipModel::Left => Drawn::default(),
     }
 }
 
@@ -2064,18 +1973,8 @@ struct NewRelationship {
     unwritten: Option<Unwritten>,
 }
 
-/// Loads New relationship: answers its post (Discard, Create) and names the
-/// source party.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_new_relationship() -> Result<Creating<NewRelationship>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_new_relationship().await)
-}
-
-/// What [`load_new_relationship`] reads, on the server.
-async fn read_new_relationship() -> Creating<NewRelationship> {
+/// What the page reads, on the server.
+async fn read_new_relationship() -> Form<NewRelationship> {
     let posted = crate::posted::posted();
     let field = |name: &str| {
         posted
@@ -2101,7 +2000,7 @@ async fn read_new_relationship() -> Creating<NewRelationship> {
             PartyTab::Relationships,
             None,
         ));
-        return Creating::Left;
+        return Form::Left;
     }
     let saving = posted
         .as_ref()
@@ -2135,7 +2034,7 @@ async fn read_new_relationship() -> Creating<NewRelationship> {
                     &relationship_href(&uid),
                     &Done::ok(tr(RecordsMsg::RelationshipCreated)).line(kind_type.clone()),
                 );
-                return Creating::Left;
+                return Form::Left;
             }
             Err(error) => {
                 unwritten = Some(Unwritten::Refused(Unsaved {
@@ -2149,7 +2048,7 @@ async fn read_new_relationship() -> Creating<NewRelationship> {
         Ok(Some(state)) => display_name(&state),
         _ => shortened(&source),
     };
-    Creating::Form(Box::new(NewRelationship {
+    Form::Shown(Box::new(NewRelationship {
         source,
         source_kind,
         source_name,
@@ -2162,8 +2061,8 @@ async fn read_new_relationship() -> Creating<NewRelationship> {
 }
 
 /// New relationship's page, its decision bar docked.
-fn new_relationship_view(model: Creating<NewRelationship>) -> Html {
-    let Creating::Form(form) = model else {
+fn new_relationship_view(model: Form<NewRelationship>) -> Html {
+    let Form::Shown(form) = model else {
         return Html::empty();
     };
     let NewRelationship {
@@ -2257,7 +2156,7 @@ fn new_relationship_view(model: Creating<NewRelationship>) -> Html {
 pub async fn new_relationship_page() -> Drawn {
     Drawn::page(
         tr(RecordsMsg::RelationshipNewPageTitle),
-        drawn(load_new_relationship().await, new_relationship_view),
+        new_relationship_view(read_new_relationship().await),
     )
 }
 
@@ -2276,31 +2175,18 @@ struct RelationshipEditor {
     unwritten: Option<Unwritten>,
 }
 
-/// Loads Edit a relationship: answers its post (Discard, Save) over the
-/// current version.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_edit_relationship(
-    // The id the route names.
-    uid: String,
-) -> Result<Editing<RelationshipEditor>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_edit_relationship(uid).await)
-}
-
-/// What [`load_edit_relationship`] reads, on the server.
-async fn read_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
+/// What the page reads, on the server.
+async fn read_edit_relationship(uid: String) -> Form<RelationshipEditor, Gone> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         crate::request::redirect(&relationship_href(&uid));
-        return Editing::Left;
+        return Form::Left;
     }
     let state = match fetch_relationship(uid.clone()).await {
         Ok(Some(state)) => state,
-        Ok(None) => return Editing::Deleted(tr(RecordsMsg::RelationshipDeleted)),
+        Ok(None) => return Form::Not(Gone::Deleted(tr(RecordsMsg::RelationshipDeleted))),
         Err(error) => {
-            return Editing::Refused(Refused::new(tr(RecordsMsg::RelationshipRefused), error));
+            return Form::Refused(Refused::new(tr(RecordsMsg::RelationshipRefused), error));
         }
     };
     let opened = posted
@@ -2339,7 +2225,7 @@ async fn read_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
                         &[("version", version_number(&saved).into())],
                     )),
                 );
-                return Editing::Left;
+                return Form::Left;
             }
             Err(error) => {
                 unwritten = Some(Unwritten::Refused(Unsaved::new(
@@ -2349,7 +2235,7 @@ async fn read_edit_relationship(uid: String) -> Editing<RelationshipEditor> {
             }
         }
     }
-    Editing::Editor(Box::new(RelationshipEditor {
+    Form::Shown(Box::new(RelationshipEditor {
         state,
         opened,
         name,
@@ -2471,29 +2357,12 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> (String, Htm
 /// Edit a relationship as a new version.
 pub async fn edit_relationship_page() -> Drawn {
     let uid = uid_param();
-    match load_edit_relationship(uid.clone()).await {
-        Ok(model) => not_editing(model, |editor| edit_relationship_view(&uid, editor)),
-        Err(error) => Drawn::page(
-            tr(RecordsMsg::PartyRefused),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
-    }
+    not_editing(read_edit_relationship(uid.clone()).await, |editor| {
+        edit_relationship_view(&uid, editor)
+    })
 }
 
-/// Loads the demographic contribution `uid`; one the CDR does not hold
-/// answers `404`.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_party_contribution(
-    // The id the route names.
-    uid: String,
-) -> Result<Result<ContributionState, Refused>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_party_contribution(uid).await)
-}
-
-/// What [`load_party_contribution`] reads, on the server.
+/// What the page reads, on the server.
 async fn read_party_contribution(uid: String) -> Result<ContributionState, Refused> {
     match fetch_demographic_contribution(uid).await {
         Ok(mut state) => {
@@ -2592,13 +2461,10 @@ pub async fn party_contribution_page() -> Drawn {
         },
         ActionGroup::none(),
     );
-    let body = drawn(
-        load_party_contribution(uid).await,
-        |model: Result<ContributionState, Refused>| match model {
-            Ok(state) => party_contribution_view(&state),
-            Err(refusal) => refusal.view(),
-        },
-    );
+    let body = match read_party_contribution(uid).await {
+        Ok(state) => party_contribution_view(&state),
+        Err(refusal) => refusal.view(),
+    };
     Drawn::page(
         title,
         heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),

@@ -195,27 +195,14 @@ async fn form_of(
 /// it with the form posted to it in reach ([`crate::posted::posted`]).
 ///
 /// The page answers with a redirect when its work succeeded, or with itself,
-/// the fields as posted and the refusal beside them, when it did not. A post
-/// without a session (but to the sign-in page) goes to the sign-in page,
-/// which returns to the page posted to.
+/// the fields as posted and the refusal beside them, when it did not.
+/// [`login_guard`] answers a post without a session before it gets here.
 async fn page(
     Extension(state): Extension<AppState>,
     request: axum::extract::Request,
 ) -> axum::response::Response {
     let (parts, body) = request.into_parts();
     let posted = if parts.method == http::Method::POST {
-        let path = parts.uri.path().to_owned();
-        let signed_in = crate::session::unseal(
-            &state.session_keys,
-            &parts.headers,
-            state.config.session.idle_minutes,
-        )
-        .get::<ViewerSession>(SESSION_KEY)
-        .is_some();
-        if !signed_in && path != "/login" {
-            let to = crate::session_client::signed_out_url(crate::request::return_path(&path), "");
-            return found(&to);
-        }
         match form_of(&state, &parts, body).await {
             Ok(posted) => Some(posted),
             Err(refusal) => return *refusal,
@@ -382,12 +369,15 @@ fn icon(content_type: &'static str, bytes: &'static [u8]) -> axum::response::Res
 
 /// The session guard, ahead of every page.
 ///
-/// A document request (`GET`/`HEAD`) for a guarded path without a live
-/// session goes to the sign-in page, which returns the reader to the page
-/// they asked for after signing in, and says the session ended when the
-/// request carried a session cookie that no longer opens. An authenticated
-/// response leaves with the sliding idle anchor moved, unless the handler
-/// wrote the session itself.
+/// Every request for a guarded path without a live session goes to the
+/// sign-in page. A document request (`GET`/`HEAD`) is returned to the page it
+/// asked for after signing in, and is told the session ended when it carried
+/// a session cookie that no longer opens. Any other method is answered as a
+/// page whose session ended ([`crate::session_client::signed_out_url`]),
+/// returning to the page posted to or, for a post handler, to the dashboard,
+/// so no handler runs a post without a session. An authenticated response
+/// leaves with the sliding idle anchor moved, unless the handler wrote the
+/// session itself.
 pub async fn login_guard(
     request: axum::extract::Request,
     next: axum::middleware::Next,
@@ -404,10 +394,22 @@ pub async fn login_guard(
         .as_ref()
         .is_some_and(|s| s.get::<ViewerSession>(SESSION_KEY).is_some());
 
-    let method = request.method();
-    let guarded = (method == http::Method::GET || method == http::Method::HEAD)
-        && !is_public_path(request.uri().path());
-    if guarded && !authenticated {
+    if !authenticated && !is_public_path(request.uri().path()) {
+        let method = request.method();
+        if method != http::Method::GET && method != http::Method::HEAD {
+            // NOTE: no specification governs this: our own design; signing in
+            // returns to the page posted to, and a post handler has no page.
+            let path = request.uri().path();
+            let (back, search) = if crate::routes::Page::of(path).is_some() {
+                (path, request.uri().query().unwrap_or_default())
+            } else {
+                ("/", "")
+            };
+            return found(&crate::session_client::signed_out_url(
+                crate::request::return_path(back),
+                search,
+            ));
+        }
         let had_cookie = carries_session_cookie(request.headers());
         let path_and_query = request
             .uri()
@@ -488,6 +490,7 @@ fn sets_session_cookie(headers: &http::HeaderMap) -> bool {
 /// of a redirect).
 fn is_public_path(path: &str) -> bool {
     path == "/login"
+        || path == crate::shell::SIGN_OUT_ROUTE
         || path == FAVICON_ICO_PATH
         || path == crate::app::ICON_PATH
         || path == crate::shell::MARK_PATH

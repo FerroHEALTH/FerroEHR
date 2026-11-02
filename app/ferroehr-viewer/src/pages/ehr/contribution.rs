@@ -49,10 +49,11 @@ use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, document_section, drawn,
-    panel, section, shortened, version_number, when,
+    EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, document_section, panel,
+    section, shortened, version_number, when,
 };
 use crate::pages::ehr::{EhrModel, EhrTab, crumbs, ehr_href, ehr_id_param, ehr_view, tab_href};
+use crate::pages::form::Form;
 use crate::paging::Listing;
 use crate::routes::Drawn;
 
@@ -166,19 +167,7 @@ struct ContributionsPanel {
     list: Result<Listed, Refused>,
 }
 
-/// Loads the Contributions tab.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_tab(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<EhrModel<ContributionsPanel>, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_tab(ehr_id).await)
-}
-
-/// What [`load_tab`] reads.
+/// What the page reads.
 async fn read_tab(ehr_id: String) -> EhrModel<ContributionsPanel> {
     crate::pages::ehr::load_ehr(&ehr_id, async |_facts| {
         let activity = contribution_activity(ehr_id.clone())
@@ -254,11 +243,12 @@ pub async fn tab_page() -> Drawn {
         RecordsMsg::ContributionsTitle,
         &[("id", shortened(&ehr_id).into())],
     );
-    let body = drawn(load_tab(ehr_id.clone()).await, |model| {
+    let body = {
+        let model = read_tab(ehr_id.clone()).await;
         ehr_view(&ehr_id, EhrTab::Contributions, model, |listed| {
             contributions_panel(&ehr_id, listed)
         })
-    });
+    };
     Drawn::page(title, body)
 }
 
@@ -371,22 +361,7 @@ enum ContributionModel {
     Refused(Refused),
 }
 
-/// Loads the contribution `uid` of the EHR `ehr_id`; one the CDR does not
-/// hold answers `404`.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_contribution(
-    // The EHR the route names.
-    ehr_id: String,
-    // The id the route names.
-    uid: String,
-) -> Result<ContributionModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_contribution(ehr_id, uid).await)
-}
-
-/// What [`load_contribution`] reads.
+/// What the page reads.
 async fn read_contribution(ehr_id: String, uid: String) -> ContributionModel {
     let body = match fetch_contribution(ehr_id, uid).await {
         Ok(body) => body,
@@ -477,13 +452,10 @@ pub async fn page() -> Drawn {
         },
         ActionGroup::none(),
     );
-    let body = drawn(
-        load_contribution(ehr_id.clone(), uid).await,
-        |model| match model {
-            ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
-            ContributionModel::Refused(refusal) => refusal.view(),
-        },
-    );
+    let body = match read_contribution(ehr_id.clone(), uid).await {
+        ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
+        ContributionModel::Refused(refusal) => refusal.view(),
+    };
     Drawn::page(
         title,
         heading.then(h(format!(r#"<div class="fui-stack">{body}</div>"#))),
@@ -867,34 +839,12 @@ struct NewForm {
     pick_trouble: Option<Refused>,
 }
 
-/// New contribution's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum NewModel {
-    /// The form.
-    Form(Box<NewForm>),
-    /// The post redirected.
-    Left,
-}
-
-/// Loads New contribution: answers its post (Discard, a step of the form,
-/// Commit) and reads what its changes start from and what the picks offer.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_new(
-    // The EHR the route names.
-    ehr_id: String,
-) -> Result<NewModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_new(ehr_id).await)
-}
-
-/// What [`load_new`] reads.
-async fn read_new(ehr_id: String) -> NewModel {
+/// What the page reads.
+async fn read_new(ehr_id: String) -> Form<NewForm> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         crate::request::redirect(&tab_href(&ehr_id, EhrTab::Contributions));
-        return NewModel::Left;
+        return Form::Left;
     }
     let mut drafts = drafts(posted.as_ref());
     let mut troubles = Vec::new();
@@ -936,7 +886,7 @@ async fn read_new(ehr_id: String) -> NewModel {
                         &[("count", count(outcome.version_uids.len()))],
                     )),
                 );
-                return NewModel::Left;
+                return Form::Left;
             }
             Err(error) => {
                 refused = Some(Refused::new(
@@ -956,7 +906,7 @@ async fn read_new(ehr_id: String) -> NewModel {
             )),
         ),
     };
-    NewModel::Form(Box::new(NewForm {
+    Form::Shown(Box::new(NewForm {
         drafts: drafts.into_iter().zip(troubles).collect(),
         description,
         committer,
@@ -1045,10 +995,11 @@ fn new_form(ehr_id: &str, form: NewForm) -> Html {
 /// New contribution: several changes staged and committed together.
 pub async fn new_page() -> Drawn {
     let ehr_id = ehr_id_param();
-    let body = drawn(load_new(ehr_id.clone()).await, |model| match model {
-        NewModel::Form(form) => new_form(&ehr_id, *form),
-        NewModel::Left => Html::empty(),
-    });
+    let body = match read_new(ehr_id.clone()).await {
+        Form::Shown(form) => new_form(&ehr_id, *form),
+        Form::Refused(refusal) => refusal.view(),
+        Form::Left => Html::empty(),
+    };
     let heading = editor_heading(
         &current(),
         message(RecordsMsg::ContributionNewTitle),

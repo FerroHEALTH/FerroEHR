@@ -27,15 +27,15 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
 
-use crate::error::ViewerError;
 use crate::flash::{Done, redirect_with};
 use crate::locale::console::ConsoleMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, Refused, ago, card_panel, dock_editor, drawn, info_note, section, state_mark,
+    EditorDock, Refused, ago, card_panel, dock_editor, info_note, section, state_mark,
 };
+use crate::pages::form;
 use crate::routes::Drawn;
 use crate::subscriptions::SubscriptionRow;
 use crate::subscriptions::{
@@ -168,16 +168,7 @@ enum ListModel {
     Left,
 }
 
-/// Loads Subscriptions: the list, and the toggle a post asks for.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_list() -> Result<ListModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_list().await)
-}
-
-/// What [`load_list`] reads.
+/// What the page reads.
 async fn read_list() -> ListModel {
     let rows = match list_event_subscriptions().await {
         Ok(Some(rows)) => rows,
@@ -324,12 +315,12 @@ fn list_view(rows: &[SubscriptionRow], top: Option<Refused>) -> Html {
 /// Subscriptions.
 /// Subscriptions.
 pub async fn page() -> Drawn {
-    let body = drawn(load_list().await, |model| match model {
+    let body = match read_list().await {
         ListModel::Listed { rows, top } => list_view(&rows, top),
         ListModel::Off => off(),
         ListModel::Refused(refusal) => refusal.view(),
         ListModel::Left => Html::empty(),
-    });
+    };
     Drawn::page(tr(Msg::NavSubscriptions), heading().then(body))
 }
 
@@ -507,31 +498,12 @@ struct Editor {
     templates: Vec<String>,
 }
 
-/// New subscription's model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum NewModel {
-    /// The editor.
-    Editor(Box<Editor>),
-    /// The post redirected.
-    Left,
-}
-
-/// Loads New subscription: answers its post (Discard, Save) and reads the
-/// templates it offers.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_new() -> Result<NewModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_new().await)
-}
-
-/// What [`load_new`] reads.
-async fn read_new() -> NewModel {
+/// What the page reads.
+async fn read_new() -> form::Form<Editor> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         crate::request::redirect("/subscriptions");
-        return NewModel::Left;
+        return form::Form::Left;
     }
     let form = Form::read(None);
     let mut top = None;
@@ -552,7 +524,7 @@ async fn read_new() -> NewModel {
                             ))
                             .link(tr(Msg::PartyEdit), edit_href(&row.name)),
                     );
-                    return NewModel::Left;
+                    return form::Form::Left;
                 }
                 Err(error) => {
                     if crate::pages::common::is_status(&error, http::StatusCode::CONFLICT) {
@@ -569,7 +541,7 @@ async fn read_new() -> NewModel {
             name_error = Some(tr(ConsoleMsg::SubNameInvalid));
         }
     }
-    NewModel::Editor(Box::new(Editor {
+    form::Form::Shown(Box::new(Editor {
         form,
         top,
         name_error,
@@ -618,56 +590,38 @@ fn new_editor(editor: Editor) -> Html {
 
 /// New subscription.
 pub async fn new_page() -> Drawn {
-    let page = drawn(load_new().await, |model| match model {
-        NewModel::Editor(editor) => new_editor(*editor),
-        NewModel::Left => Html::empty(),
-    });
+    let page = match read_new().await {
+        form::Form::Shown(editor) => new_editor(*editor),
+        form::Form::Refused(refusal) => refusal.view(),
+        form::Form::Left => Html::empty(),
+    };
     Drawn::page(tr(ConsoleMsg::SubNew), page)
 }
 
-/// Edit a subscription's model.
+/// Why Edit subscription draws no form.
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum EditModel {
-    /// The editor.
-    Editor(Box<Editor>),
+enum Absent {
     /// The CDR serves no subscription API.
     Off,
-    /// The CDR's refusal of the list.
-    Refused(Refused),
     /// No subscription goes by this name.
     Missing(String),
-    /// The post redirected.
-    Left,
 }
 
-/// Loads Edit a subscription: finds it, answers its post (Discard, Save,
-/// Delete) and reads the templates it offers.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-async fn load_edit(
-    // The subscription the route names.
-    name: String,
-) -> Result<EditModel, ViewerError> {
-    crate::session::require_session()?;
-    Ok(read_edit(name).await)
-}
-
-/// What [`load_edit`] reads.
-async fn read_edit(name: String) -> EditModel {
+/// What the page reads.
+async fn read_edit(name: String) -> form::Form<Editor, Absent> {
     let posted = crate::posted::posted();
     if discarded(posted.as_ref()) {
         crate::request::redirect("/subscriptions");
-        return EditModel::Left;
+        return form::Form::Left;
     }
     let rows = match list_event_subscriptions().await {
         Ok(Some(rows)) => rows,
-        Ok(None) => return EditModel::Off,
-        Err(error) => return EditModel::Refused(Refused::new(tr(ConsoleMsg::SubRefused), error)),
+        Ok(None) => return form::Form::Not(Absent::Off),
+        Err(error) => return form::Form::Refused(Refused::new(tr(ConsoleMsg::SubRefused), error)),
     };
     let Some(row) = rows.into_iter().find(|row| row.name == name) else {
         crate::request::set_status(http::StatusCode::NOT_FOUND);
-        return EditModel::Missing(name);
+        return form::Form::Not(Absent::Missing(name));
     };
     let form = Form::read(Some(&row));
     let mut top = None;
@@ -682,7 +636,7 @@ async fn read_edit(name: String) -> EditModel {
                     "/subscriptions",
                     &Done::ok(tr(ConsoleMsg::SubSaved)).line(row.name.clone()),
                 );
-                return EditModel::Left;
+                return form::Form::Left;
             }
             Err(error) => top = Some(Refused::new(tr(ConsoleMsg::SubSaveRefused), error)),
         },
@@ -692,13 +646,13 @@ async fn read_edit(name: String) -> EditModel {
                     "/subscriptions",
                     &Done::ok(tr(ConsoleMsg::SubDeleted)).line(row.name.clone()),
                 );
-                return EditModel::Left;
+                return form::Form::Left;
             }
             Err(error) => top = Some(Refused::new(tr(ConsoleMsg::SubDeleteRefused), error)),
         },
         _ => {}
     }
-    EditModel::Editor(Box::new(Editor {
+    form::Form::Shown(Box::new(Editor {
         form,
         top,
         name_error: None,
@@ -796,22 +750,18 @@ fn edit_editor(editor: Editor) -> (String, Html) {
 /// Edit a subscription.
 pub async fn edit_page() -> Drawn {
     let name = crate::routes::params().get("name").unwrap_or_default();
-    let (title, page) = match load_edit(name).await {
-        Ok(EditModel::Editor(editor)) => edit_editor(*editor),
-        Ok(EditModel::Off) => (tr(Msg::NavSubscriptions), heading().then(off())),
-        Ok(EditModel::Refused(refusal)) => (tr(Msg::NavSubscriptions), refusal.view()),
-        Ok(EditModel::Missing(name)) => (
+    let (title, page) = match read_edit(name).await {
+        form::Form::Shown(editor) => edit_editor(*editor),
+        form::Form::Not(Absent::Off) => (tr(Msg::NavSubscriptions), heading().then(off())),
+        form::Form::Refused(refusal) => (tr(Msg::NavSubscriptions), refusal.view()),
+        form::Form::Not(Absent::Missing(name)) => (
             tr(Msg::NavSubscriptions),
             heading().then(info_note(t(tr_with(
                 ConsoleMsg::SubNone,
                 &[("name", name.into())],
             )))),
         ),
-        Ok(EditModel::Left) => (String::new(), Html::empty()),
-        Err(error) => (
-            tr(Msg::NavSubscriptions),
-            drawn(Err::<(), _>(error), |()| Html::empty()),
-        ),
+        form::Form::Left => (String::new(), Html::empty()),
     };
     Drawn::page(title, page)
 }

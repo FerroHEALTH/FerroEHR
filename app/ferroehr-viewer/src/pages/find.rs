@@ -182,19 +182,6 @@ pub async fn find_answer(
     Ok(find(&q).await.answer())
 }
 
-/// Reads what the CDR holds under the words `q`, for the find page.
-///
-/// # Errors
-/// Returns [`crate::error::ViewerError::Unauthenticated`] with no live
-/// session.
-pub async fn load_found(
-    // The words typed.
-    q: String,
-) -> Result<Found, crate::error::ViewerError> {
-    crate::session::require_session()?;
-    Ok(find(&q).await)
-}
-
 /// The sentence naming the kinds the CDR did not answer for.
 fn failed_line(failed: &[Kind]) -> String {
     let kinds = failed
@@ -385,17 +372,7 @@ pub async fn page() -> Drawn {
         let body = heading.then(info_note(t(tr(OverviewMsg::FindEmpty))));
         return Drawn::page(tr(OverviewMsg::FindTitle), body);
     };
-    let found = match load_found(typed).await {
-        Ok(found) => found,
-        Err(error) => {
-            let body = heading.then(crate::pages::common::refused(
-                tr(OverviewMsg::FindUnfinishedTitle),
-                &error,
-                None,
-            ));
-            return Drawn::page(tr(OverviewMsg::FindTitle), body);
-        }
-    };
+    let found = find(&typed).await;
     let read = if found.hits.is_empty() {
         let line = if found.id_shaped {
             tr_with(

@@ -365,12 +365,12 @@ async fn the_result_export_serves_the_rows_on_screen() {
     let refused = post_export(&base, None, &csv_form).await;
     assert_eq!(
         refused.status(),
-        StatusCode::SEE_OTHER,
+        StatusCode::FOUND,
         "an export request with no viewer session is redirected, never served"
     );
     assert_eq!(
         header(&refused, reqwest::header::LOCATION),
-        "/login",
+        "/login?expired=1&next=%2F",
         "the refusal sends the caller to sign in"
     );
 

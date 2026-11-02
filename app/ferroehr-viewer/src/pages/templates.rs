@@ -62,11 +62,11 @@ use crate::pages::common::{
     EditorDock, card_panel, count, dock_editor, document_section, findings_of, info_note, panel,
     plain_section, refused, section, when,
 };
-use crate::pages::template_releases::{CompareAsk, Releases, lineage_table, load_releases};
+use crate::pages::template_releases::{CompareAsk, Releases, lineage_table, read_releases};
 use crate::routes::Drawn;
 use crate::template_releases::{Lineage, lineages};
-use adl2::{Adl2Body, Adl2Template, adl2_tabs, load_adl2_template};
-use upload::{Uploaded, load_upload};
+use adl2::{Adl2Body, Adl2Template, adl2_tabs, read_adl2_template};
+use upload::{Uploaded, read_upload};
 
 /// The id of Delete template's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-template";
@@ -212,17 +212,13 @@ pub struct Templates {
 
 /// Answers a delete posted to Templates, which returns to `family`, and reads
 /// both families' lists.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-pub async fn load_templates(
+pub async fn read_templates(
     // The family the page shows.
     family: TemplateFamily,
-) -> Result<Templates, ViewerError> {
-    crate::session::require_session()?;
+) -> Templates {
     let acted = delete_posted(&format!("/templates?family={}", family.as_query())).await;
     let (adl14, adl2) = (list_templates().await, list_adl2_templates().await);
-    Ok(Templates { acted, adl14, adl2 })
+    Templates { acted, adl14, adl2 }
 }
 
 /// Templates.
@@ -250,15 +246,7 @@ pub async fn list_page() -> Drawn {
             Act::Link(format!("/templates/upload?family={}", family.as_query())),
         )),
     );
-    let Templates { acted, adl14, adl2 } = match load_templates(family).await {
-        Ok(templates) => templates,
-        Err(error) => {
-            return Drawn::page(
-                tr(Msg::NavTemplates),
-                heading.then(refused(tr(DefinitionsMsg::TemplatesRefused), &error, None)),
-            );
-        }
-    };
+    let Templates { acted, adl14, adl2 } = read_templates(family).await;
     let acted = delete_refused(acted.as_ref());
     let needle = find.to_lowercase();
     let matches = |row: &TemplateRow| {
@@ -383,16 +371,16 @@ pub async fn upload_page() -> Drawn {
         crate::request::redirect(&format!("/templates?family={}", family.as_query()));
         return Drawn::default();
     }
-    let uploaded = load_upload(family).await;
+    let uploaded = read_upload(family).await;
     let source = posted
         .as_ref()
         .and_then(|posted| posted.get("source-text"))
         .unwrap_or_default();
     let top = match uploaded {
-        Ok(Uploaded::Fresh) => None,
-        Ok(Uploaded::Left) => return Drawn::default(),
-        Ok(Uploaded::Invalid(found)) => Some(upload::violations_refused(&found)),
-        Ok(Uploaded::Refused(error)) | Err(error) => {
+        Uploaded::Fresh => None,
+        Uploaded::Left => return Drawn::default(),
+        Uploaded::Invalid(found) => Some(upload::violations_refused(&found)),
+        Uploaded::Refused(error) => {
             let found = findings_of(&error, &source, "source-text")
                 .map(|(heading, file)| diagnostics(&current(), &heading, &file));
             Some(
@@ -853,29 +841,25 @@ pub struct Template {
 
 /// Answers a delete posted to the ADL 1.4 template `template_id` and reads
 /// its releases and what its tab `tab` draws, the example as `ask` names it.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-pub async fn load_template(
+pub async fn read_template(
     // The template's id.
     template_id: String,
     // The tab shown.
     tab: TemplateTab,
     // The example options the address names.
     ask: ExampleAsk,
-) -> Result<Template, ViewerError> {
-    crate::session::require_session()?;
+) -> Template {
     let acted = delete_posted("/templates").await;
     let download = crate::download::template_href(TemplateFamily::Adl14, &template_id);
     let mut detail = fetch_template_detail(template_id.clone()).await;
-    let releases = load_releases(
+    let releases = read_releases(
         TemplateFamily::Adl14,
         list_templates().await,
         &template_id,
         tab,
         CompareAsk::asked(),
     )
-    .await?;
+    .await;
     let mut example = None;
     match &mut detail {
         Err(error) => {
@@ -912,13 +896,13 @@ pub async fn load_template(
             }
         }
     }
-    Ok(Template {
+    Template {
         acted,
         detail,
         download,
         releases,
         example,
-    })
+    }
 }
 
 /// One ADL 1.4 template.
@@ -942,15 +926,7 @@ pub async fn page() -> Drawn {
         download,
         releases,
         example,
-    } = match load_template(template_id.clone(), tab, ask.clone()).await {
-        Ok(template) => template,
-        Err(error) => {
-            return Drawn::page(
-                template_id,
-                refused(tr(DefinitionsMsg::TemplateRefused), &error, None),
-            );
-        }
-    };
+    } = read_template(template_id.clone(), tab, ask.clone()).await;
     let acted = delete_refused(acted.as_ref());
     let detail: TemplateDetail = match detail {
         Ok(detail) => detail,
@@ -1103,22 +1079,13 @@ pub async fn adl2_page() -> Drawn {
         params.get("release"),
     );
     let ask = ExampleAsk::asked();
-    let template = match load_adl2_template(
+    let template = read_adl2_template(
         asked_id.clone(),
         asked_release.clone(),
         TemplateTab::asked(),
         ask.clone(),
     )
-    .await
-    {
-        Ok(template) => template,
-        Err(error) => {
-            return Drawn::page(
-                asked_id,
-                refused(tr(DefinitionsMsg::TemplateRefused), &error, None),
-            );
-        }
-    };
+    .await;
     let Adl2Template {
         acted,
         stem,

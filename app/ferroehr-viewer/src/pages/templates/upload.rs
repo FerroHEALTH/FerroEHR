@@ -32,23 +32,19 @@ pub(super) enum Uploaded {
 }
 
 /// Answers an upload posted to Upload a template, of `family`.
-///
-/// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
-pub(super) async fn load_upload(
+pub(super) async fn read_upload(
     // The family uploaded to.
     family: TemplateFamily,
-) -> Result<Uploaded, ViewerError> {
-    crate::session::require_session()?;
+) -> Uploaded {
     let Some(posted) = crate::posted::posted_for("save") else {
-        return Ok(Uploaded::Fresh);
+        return Uploaded::Fresh;
     };
     let source = posted.get("source-text").unwrap_or_default();
     let answered = match family {
         TemplateFamily::Adl14 => upload_template(source).await,
         TemplateFamily::Adl2 => upload_adl2_template(source).await,
     };
-    Ok(match answered {
+    match answered {
         Ok(TemplateUpload::Stored(id)) => {
             redirect_with(
                 &stored_href(family, id.as_deref()),
@@ -58,7 +54,7 @@ pub(super) async fn load_upload(
         }
         Ok(TemplateUpload::Invalid(found)) => Uploaded::Invalid(found),
         Err(error) => Uploaded::Refused(error),
-    })
+    }
 }
 
 /// The page of the template of `family` stored under `id`, else the list of

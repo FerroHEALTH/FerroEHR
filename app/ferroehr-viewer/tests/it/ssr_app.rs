@@ -448,6 +448,61 @@ async fn a_guarded_page_without_a_session_redirects_to_the_sign_in_keeping_its_a
     assert_eq!(answer.location(), "/login?next=%2Fehrs");
 }
 
+/// A post without a session is answered by the session guard before any
+/// page or handler runs: it goes to the sign-in page, which says the session
+/// ended and returns to the page posted to, or from a post handler, which
+/// has no page, to the dashboard.
+#[tokio::test]
+async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
+    let viewer = Viewer::start().await;
+    let pages = ferroehr_viewer::routes::ROUTES
+        .iter()
+        .filter(|route| **route != "/login")
+        .map(|route| {
+            route
+                .split('/')
+                .map(|segment| {
+                    if segment.starts_with(':') {
+                        "x"
+                    } else {
+                        segment
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("/")
+        });
+    let handlers = [
+        "/export/aql/csv",
+        ferroehr_viewer::prefs::PREFERENCE_ROUTE,
+        ferroehr_viewer::prefs::RESET_ROUTE,
+        ferroehr_viewer::prefs::SIDEBAR_ROUTE,
+        ferroehr_viewer::paging::PAGING_ROUTE,
+    ]
+    .map(str::to_owned);
+    for path in pages.chain(handlers) {
+        let back = if ferroehr_viewer::routes::Page::of(&path).is_some() {
+            path.as_str()
+        } else {
+            "/"
+        };
+        let answer = viewer
+            .send(
+                http::Method::POST,
+                &path,
+                None,
+                Some(&[("intent", "save"), ("name", "x")]),
+            )
+            .await;
+        assert_eq!(answer.status, http::StatusCode::FOUND, "{path}");
+        let next = urlencoding::encode(back).into_owned();
+        assert_eq!(
+            answer.location(),
+            format!("/login?expired=1&next={next}"),
+            "{path}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn a_form_of_another_origin_is_refused() {
     let viewer = Viewer::start().await;

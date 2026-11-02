@@ -65,7 +65,6 @@ pub struct Dashboard {
 /// [`ViewerError::Unauthenticated`] without a viewer session, and the
 /// refusal of the headline counts, which leaves the page nothing to draw.
 pub async fn load_dashboard() -> Result<Dashboard, ViewerError> {
-    crate::session::require_session()?;
     let (ehrs, compositions, templates) = crate::bff::dashboard::dashboard_counts().await?;
     // NOTE: no openEHR spec governs this: our own design; a stored-query list
     // the CDR refused is an unknown count, drawn as the dash (R12), never 0.
