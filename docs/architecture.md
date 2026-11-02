@@ -552,36 +552,53 @@ EHR system to include both harmonised software components:
 
 | Component | Shipped by | Where |
 |---|---|---|
-| European logging software component (Annex II 3) | FerroEHR | the shared crates `ehds-logging` 0.1.1 (the Annex II 3.2 access record, the Art 14(1) categories and their classification, the Art 9(2) retention floor, the Art 11(5) emergency mark) and `ihe-atna` 0.1.1 (the BALP `AuditEvent`, the DICOM audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX: FHIR Feed), from FerroAUDIT and pinned exactly in the root `Cargo.toml`; `ferroehr::system_log` (the access-event model, the audit store, what each rendering says, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /ferroehr/rest/fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
+| European logging software component (Annex II 3) | FerroEHR, and FerroBRIDGE for the accesses of its FHIR facade (below) | the shared crates `ehds-logging` 0.1.1 (the Annex II 3.2 access record, the Art 14(1) categories and their classification, the Art 9(2) retention floor, the Art 11(5) emergency mark) and `ihe-atna` 0.1.1 (the BALP `AuditEvent`, the DICOM audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX: FHIR Feed), from FerroAUDIT and pinned exactly in the root `Cargo.toml`; `ferroehr::system_log` (the access-event model, the audit store, what each rendering says, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /ferroehr/rest/fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
 | European interoperability software component (Annex II 2.1 to 2.3) | FerroBRIDGE | the openEHR-to-exchange-format mappings (#3206), and FHIR R4 resource mapping (<https://github.com/FerroHEALTH/FerroBRIDGE>, BUSL-1.1), reaching FerroEHR over ITS-REST; FerroEHR carries no FHIR mapping of its own, and keeps the AuditEvent route above and the FHIR terminology client |
 
-The two components are independent of each other (Art 2(2)(n) and (o), Art
-30(1)(b)) because they are separate products that meet only over ITS-REST. The
-technical documentation and the declaration of conformity name the pair;
-FerroBRIDGE declares the interoperability component's requirements and
-FerroEHR the logging component's and the system-level ones (Annex II 1). A
-change to a module in the logging row above is a change to a harmonised
-component under Art 30(2) and updates the technical documentation in the same
-release.
+**FerroBRIDGE records the accesses of its FHIR facade** (owner decision on
+FerroHEALTH/FerroBRIDGE#1301, built in FerroHEALTH/FerroBRIDGE#1377, from
+FerroBRIDGE 0.0.16). ITS-REST 1.1.0 carries no end-user identity on a read, so
+FerroEHR's record of a facade read names the bridge's credential and cannot
+name the natural person Annex II 3.2(b) asks for. The bridge knows that person,
+so for each facade interaction it writes the Annex II 3.2 record through
+`ehds-logging` and sends it as an IHE BALP `AuditEvent` through `ihe-atna`
+over the ITI-20 FHIR feed to an Audit Record Repository the operator
+configures, and it refuses an access whose record it cannot take. The
+recording part of the logging component therefore sits in each product that
+sees the access: FerroEHR for its own API, FerroBRIDGE for the facade. The
+store, the review tools and the ITI-81 retrieval stay with FerroEHR.
+
+The two components stay independent of each other (Art 2(2)(n) and (o), Art
+30(1)(b)). FerroEHR carries no interoperability component and meets
+FerroBRIDGE only over ITS-REST. Inside FerroBRIDGE only its server crate links
+`ehds-logging` and `ihe-atna`, and an architecture test fails when `eehrxf`,
+the interoperability component, or the mapping crates under it reach either.
+The technical documentation and the declaration of conformity name the pair;
+FerroBRIDGE declares the interoperability component's requirements and its
+facade recorder, and FerroEHR the rest of the logging component's
+requirements and the system-level ones (Annex II 1). A change to a module in
+the logging row above is a change to a harmonised component under Art 30(2)
+and updates the technical documentation in the same release.
 
 **When the central log moves to FerroSYS, the EHR system becomes three
 products.** The owner direction of 2026-10-06 (#3661, milestone v6.0.0) makes
 the access log a shared FerroHEALTH service in FerroSYS. From the release that
 ships it, the logging component is split between two products, and the
-declared EHR system is FerroEHR, FerroBRIDGE and FerroSYS. Until then FerroEHR
-ships the whole component as the table above says.
+declared EHR system is FerroEHR, FerroBRIDGE and FerroSYS. Until then the
+component ships as the table above says.
 
 | Part of the logging component | Shipped by | Annex II |
 |---|---|---|
 | Recording at the moment of access: the access-event model, the classification from FerroEHR's own data, the local durable spool that refuses an access whose record cannot be written (fail-closed), and the forwarding to FerroSYS with at-least-once delivery | FerroEHR | 3.2 (a) to (e) |
+| Recording at the moment of a FHIR facade access, with the natural person behind it, refused when its record cannot be taken | FerroBRIDGE | 3.2 (a) to (e) |
 | The central store, the review and analysis tools, retention per origin and category, the natural person's access-log route (EHDS Art 9), ITI-81 retrieval and export | FerroSYS | 3.3, 3.4 |
 
 The boundary is the forwarding: a record stays in FerroEHR's spool until
 FerroSYS has ingested it, and a FerroSYS outage queues records without
 blocking clinical reads. The split leaves the independence of the two
-harmonised components as it is (Art 2(2)(n) and (o), Art 30(1)(b)): both
-parts of the logging component sit outside FerroBRIDGE, which still meets
-FerroEHR only over ITS-REST and holds no part of the log. The technical
+harmonised components as it is (Art 2(2)(n) and (o), Art 30(1)(b)): the
+central store and the review sit outside FerroBRIDGE, whose facade recorder
+stays out of reach of its interoperability crates as above. The technical
 documentation then covers FerroSYS's part as well, and the declaration of
 conformity names the three products with the version of each.
 
