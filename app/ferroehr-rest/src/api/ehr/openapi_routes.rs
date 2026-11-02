@@ -19,6 +19,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::api::guarded_dispatch;
+use crate::api::refusals::SpecProfileConflict;
 use crate::state::AppState;
 
 /// The EHR-group routes as a native `utoipa-axum` router, each
@@ -720,43 +721,9 @@ pub(crate) async fn ehr_create_with_id(
         (status = 404, description = "Unknown `ehr_id`, or no EHR_STATUS version \
                                       with `version_uid`.",
          body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                      the EHR_STATUS resource has only the \
-                                      canonical `application/json` / \
-                                      `application/xml` representations \
-                                      (`Resources.md` §\"XML Format\"/§\"JSON \
-                                      Format\": \"If the service cannot fulfill \
-                                      this aspect of the request, it MUST respond \
-                                      with HTTP status code `406 Not \
-                                      Acceptable`\"; the Simplified Formats are \
-                                      defined for templated COMPOSITION content \
-                                      only, and EHR_STATUS is not templated).",
-         body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        refusals::EhrStatusNotAcceptable,
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn ehr_status_get_by_version_id(
@@ -863,43 +830,9 @@ pub(crate) async fn ehr_status_get_by_version_id(
         (status = 404, description = "Unknown `ehr_id`, or no EHR_STATUS version \
                                       at the specified time.",
          body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                      the EHR_STATUS resource has only the \
-                                      canonical `application/json` / \
-                                      `application/xml` representations \
-                                      (`Resources.md` §\"XML Format\"/§\"JSON \
-                                      Format\": \"If the service cannot fulfill \
-                                      this aspect of the request, it MUST respond \
-                                      with HTTP status code `406 Not \
-                                      Acceptable`\"; the Simplified Formats are \
-                                      defined for templated COMPOSITION content \
-                                      only, and EHR_STATUS is not templated).",
-         body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        refusals::EhrStatusNotAcceptable,
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn ehr_status_get_at_time(
@@ -1148,18 +1081,7 @@ pub(crate) async fn ehr_status_get_at_time(
          body = serde_json::Value),
         (status = 404, description = "Unknown `ehr_id`.",
          body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                      the EHR_STATUS resource has only the \
-                                      canonical `application/json` / \
-                                      `application/xml` representations \
-                                      (`Resources.md` §\"XML Format\"/§\"JSON \
-                                      Format\": \"If the service cannot fulfill \
-                                      this aspect of the request, it MUST respond \
-                                      with HTTP status code `406 Not \
-                                      Acceptable`\"; the Simplified Formats are \
-                                      defined for templated COMPOSITION content \
-                                      only, and EHR_STATUS is not templated).",
-         body = serde_json::Value),
+        refusals::EhrStatusNotAcceptable,
         (status = 412, description = "`If-Match` does not name the latest \
                                       EHR_STATUS version, so the update was not \
                                       performed (`Requests_and_responses.md` \
@@ -1191,19 +1113,7 @@ pub(crate) async fn ehr_status_get_at_time(
                                       §\"Simplified Formats\" carries the same \
                                       MUST for the simplified types).",
          body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn ehr_status_update(
@@ -1395,19 +1305,7 @@ pub(crate) async fn versioned_ehr_status_get(
                                       Acceptable`\"; the Simplified Formats are \
                                       not defined for this resource).",
          body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn versioned_ehr_status_revision_history(
@@ -1564,31 +1462,8 @@ pub(crate) async fn versioned_ehr_status_revision_history(
                                       Acceptable`\"; the Simplified Formats are \
                                       not defined for this resource).",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn versioned_ehr_status_version_get_at_time(
@@ -1744,31 +1619,8 @@ pub(crate) async fn versioned_ehr_status_version_get_at_time(
                                       Acceptable`\"; the Simplified Formats are \
                                       not defined for this resource).",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn versioned_ehr_status_version_get_by_id(
@@ -1934,13 +1786,13 @@ pub(crate) async fn versioned_ehr_status_version_get_by_id(
             (serde_json::Value = "application/openehr.wt.structured+json")
         ),
         description = "The COMPOSITION, in canonical JSON/XML or one of the two \
-                       Simplified Formats per `Content-Type` (`Resources.md` \
-                       §\"Simplified Formats\": \
-                       `application/openehr.wt.flat+json` for Simplified Flat \
-                       JSON, `application/openehr.wt.structured+json` for \
-                       Simplified Structured JSON). The example is canonical \
-                       JSON; a simplified body additionally requires the \
-                       `openehr-template-id` request header."
+                          Simplified Formats per `Content-Type` (`Resources.md` \
+                          §\"Simplified Formats\": \
+                          `application/openehr.wt.flat+json` for Simplified Flat \
+                          JSON, `application/openehr.wt.structured+json` for \
+                          Simplified Structured JSON). The example is canonical \
+                          JSON; a simplified body additionally requires the \
+                          `openehr-template-id` request header."
     ),
     responses(
         (
@@ -2131,19 +1983,7 @@ pub(crate) async fn versioned_ehr_status_version_get_by_id(
                                       underlying template is not known or is not \
                                       validating the supplied resource\").",
          body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn composition_create(
@@ -2369,31 +2209,8 @@ pub(crate) async fn composition_create(
                                       request, it MUST respond with HTTP status \
                                       code `406 Not Acceptable`\").",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn composition_get(
@@ -2582,11 +2399,11 @@ pub(crate) async fn composition_get(
             (serde_json::Value = "application/openehr.wt.structured+json")
         ),
         description = "The new COMPOSITION, in canonical JSON/XML or one of the \
-                       two Simplified Formats per `Content-Type` (`Resources.md` \
-                       §\"Simplified Formats\"). A body `uid` is optional; when \
-                       present its `object_id` part must equal the path \
-                       `uid_based_id`. A simplified body additionally requires the \
-                       `openehr-template-id` request header."
+                          two Simplified Formats per `Content-Type` (`Resources.md` \
+                          §\"Simplified Formats\"). A body `uid` is optional; when \
+                          present its `object_id` part must equal the path \
+                          `uid_based_id`. A simplified body additionally requires the \
+                          `openehr-template-id` request header."
     ),
     responses(
         (
@@ -2836,19 +2653,7 @@ pub(crate) async fn composition_get(
                                       catalogue carries the rule as a \
                                       register-backed, reported-only expectation.",
          body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn composition_update(
@@ -3001,19 +2806,7 @@ pub(crate) async fn composition_update(
                              an HTTP-date, carried alongside the `ETag` \
                              (§\"ETag and Last-Modified\")."),
          )),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn composition_delete(
@@ -3241,19 +3034,7 @@ pub(crate) async fn versioned_composition_get(
                                       `406`; the Simplified Formats are not \
                                       defined for this resource).",
          body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn versioned_composition_revision_history(
@@ -3449,31 +3230,8 @@ pub(crate) async fn versioned_composition_revision_history(
                                       COMPOSITION content, not the VERSION \
                                       envelope).",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn versioned_composition_version_get_at_time(
@@ -3686,31 +3444,8 @@ pub(crate) async fn versioned_composition_version_get_at_time(
                                       COMPOSITION content, not the VERSION \
                                       envelope).",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn versioned_composition_version_get_by_id(
@@ -3902,31 +3637,8 @@ pub(crate) async fn versioned_composition_version_get_by_id(
                                       defined for templated COMPOSITION \
                                       content, and a FOLDER is not templated).",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn directory_get_at_time(
@@ -4074,17 +3786,17 @@ pub(crate) async fn directory_get_at_time(
             (serde_json::Value = "application/xml")
         ),
         description = "The COMPLETE new directory FOLDER tree — the update \
-                       replaces the hierarchy, it does not patch it. \
-                       Canonical JSON or XML per \
-                       `Content-Type`; the two Simplified Formats do NOT apply \
-                       — they are defined for templated COMPOSITION content \
-                       (`Resources.md` §\"Simplified Formats\") and a FOLDER is \
-                       not templated, so a simplified `Content-Type` is `415` \
-                       here. Sub-folders nest under `folders`; the contents of \
-                       a folder are `items`, a list of OBJECT_REFs — \"Folder \
-                       structures do not contain Compositions, only references \
-                       to them\" (RM ehr master04 §Folders), so an inline \
-                       LOCATABLE is `422`."
+                          replaces the hierarchy, it does not patch it. \
+                          Canonical JSON or XML per \
+                          `Content-Type`; the two Simplified Formats do NOT apply \
+                          — they are defined for templated COMPOSITION content \
+                          (`Resources.md` §\"Simplified Formats\") and a FOLDER is \
+                          not templated, so a simplified `Content-Type` is `415` \
+                          here. Sub-folders nest under `folders`; the contents of \
+                          a folder are `items`, a list of OBJECT_REFs — \"Folder \
+                          structures do not contain Compositions, only references \
+                          to them\" (RM ehr master04 §Folders), so an inline \
+                          LOCATABLE is `422`."
     ),
     responses(
         (
@@ -4296,54 +4008,8 @@ pub(crate) async fn directory_get_at_time(
                                       templated, so no simplified form of it \
                                       exists.",
          body = serde_json::Value),
-        (status = 422, description = "The request was well-formed and converted \
-                                      to a FOLDER tree, but the tree cannot be \
-                                      followed as a directory \
-                                      (`Requests_and_responses.md` §\"HTTP \
-                                      status codes\", the `422` row: \"The \
-                                      request was well-formed but was unable to \
-                                      be followed due to semantic errors\"). The \
-                                      shape rules are RM, checked at every node \
-                                      of the tree: `FOLDER.name` is mandatory \
-                                      and `archetype_node_id` mandatory and \
-                                      non-empty (LOCATABLE, RM common \
-                                      master03), and every `items` member must \
-                                      be an OBJECT_REF (`id` + `namespace` + \
-                                      `type`, and never an inline LOCATABLE) — \
-                                      \"Folder structures do not contain \
-                                      Compositions, only references to them\" \
-                                      (RM ehr master04 §Folders; RM common \
-                                      master05 §Overview types `FOLDER.items` \
-                                      `List<OBJECT_REF>`). A committal \
-                                      `change_type`/`lifecycle_state` that is \
-                                      not a member of its openEHR terminology \
-                                      group is `422` too. An `items` OBJECT_REF \
-                                      whose `namespace` claims this system \
-                                      (`local`, or the configured system id) \
-                                      must resolve to a versioned object in \
-                                      this EHR; an unresolvable one is `422` \
-                                      naming each dangling reference at its \
-                                      tree path — no released text constrains \
-                                      reference targets, so this is our own \
-                                      extension, and foreign-namespace \
-                                      references pass unchecked (BASE \
-                                      `object_ref.adoc`: targets \"may exist \
-                                      locally or be maintained outside the \
-                                      current namespace\").",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::FolderTreeUnprocessable,
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn directory_update(
@@ -4464,15 +4130,15 @@ pub(crate) async fn directory_update(
             (serde_json::Value = "application/xml")
         ),
         description = "The directory FOLDER tree, canonical JSON or XML per \
-                       `Content-Type`. The two Simplified Formats do NOT apply \
-                       — they are defined for templated COMPOSITION content \
-                       (`Resources.md` §\"Simplified Formats\") and a FOLDER is \
-                       not templated, so a simplified `Content-Type` is `415` \
-                       here. Sub-folders nest under `folders`; the contents of \
-                       a folder are `items`, a list of OBJECT_REFs \
-                       (`{ id, namespace, type }`) — \"Folder structures do not \
-                       contain Compositions, only references to them\" (RM ehr \
-                       master04 §Folders), so an inline LOCATABLE is `422`."
+                          `Content-Type`. The two Simplified Formats do NOT apply \
+                          — they are defined for templated COMPOSITION content \
+                          (`Resources.md` §\"Simplified Formats\") and a FOLDER is \
+                          not templated, so a simplified `Content-Type` is `415` \
+                          here. Sub-folders nest under `folders`; the contents of \
+                          a folder are `items`, a list of OBJECT_REFs \
+                          (`{ id, namespace, type }`) — \"Folder structures do not \
+                          contain Compositions, only references to them\" (RM ehr \
+                          master04 §Folders), so an inline LOCATABLE is `422`."
     ),
     responses(
         (
@@ -4627,54 +4293,8 @@ pub(crate) async fn directory_update(
                                       templated, so no simplified form of it \
                                       exists.",
          body = serde_json::Value),
-        (status = 422, description = "The request was well-formed and converted \
-                                      to a FOLDER tree, but the tree cannot be \
-                                      followed as a directory \
-                                      (`Requests_and_responses.md` §\"HTTP \
-                                      status codes\", the `422` row: \"The \
-                                      request was well-formed but was unable to \
-                                      be followed due to semantic errors\"). The \
-                                      shape rules are RM, checked at every node \
-                                      of the tree: `FOLDER.name` is mandatory \
-                                      and `archetype_node_id` mandatory and \
-                                      non-empty (LOCATABLE, RM common \
-                                      master03), and every `items` member must \
-                                      be an OBJECT_REF (`id` + `namespace` + \
-                                      `type`, and never an inline LOCATABLE) — \
-                                      \"Folder structures do not contain \
-                                      Compositions, only references to them\" \
-                                      (RM ehr master04 §Folders; RM common \
-                                      master05 §Overview types `FOLDER.items` \
-                                      `List<OBJECT_REF>`). A committal \
-                                      `change_type`/`lifecycle_state` that is \
-                                      not a member of its openEHR terminology \
-                                      group is `422` too. An `items` OBJECT_REF \
-                                      whose `namespace` claims this system \
-                                      (`local`, or the configured system id) \
-                                      must resolve to a versioned object in \
-                                      this EHR; an unresolvable one is `422` \
-                                      naming each dangling reference at its \
-                                      tree path — no released text constrains \
-                                      reference targets, so this is our own \
-                                      extension, and foreign-namespace \
-                                      references pass unchecked (BASE \
-                                      `object_ref.adoc`: targets \"may exist \
-                                      locally or be maintained outside the \
-                                      current namespace\").",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::FolderTreeUnprocessable,
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn directory_create(
@@ -4867,19 +4487,7 @@ pub(crate) async fn directory_create(
                                       the request is refused uniformly — even \
                                       though this operation takes no body.",
          body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn directory_delete(
@@ -5059,31 +4667,8 @@ pub(crate) async fn directory_delete(
                                       defined for templated COMPOSITION \
                                       content, and a FOLDER is not templated).",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. Processing of the addressed \
-                                      object is restricted, so the server holds \
-                                      it in storage and serves nothing from it \
-                                      (GDPR Art. 18(2) leaves storage as the \
-                                      only processing a restriction admits). \
-                                      Distinct from an authorization refusal: \
-                                      the same caller with the same rights is \
-                                      refused until the restriction is lifted, \
-                                      and the body says so. The 401/403 rows of \
-                                      the access layer are unchanged.",
-         body = serde_json::Value)
+        SpecProfileConflict,
+        refusals::RestrictedRead
     )
 )]
 pub(crate) async fn directory_get_by_version_id(
@@ -5291,64 +4876,64 @@ pub(crate) async fn directory_get_by_version_id(
             (serde_json::Value = "application/openehr.wt.structured+json")
         ),
         description = "The un-committed CONTRIBUTION — the RELAXED envelope the \
-                       released operation defines (ITS-REST \
-                       `specifications/operations/contribution_create.yaml`): \
-                       `versions[]` of UPDATE_VERSION \
-                       (`preceding_version_uid`?, `signature`?, \
-                       `lifecycle_state`, `attestations`?, `data`, \
-                       `commit_audit`) plus the change-set `audit` \
-                       (UPDATE_AUDIT: `change_type`, `committer`, \
-                       `description`?, `system_id`?), and an OPTIONAL `uid` \
-                       — the three relaxations quoted verbatim: `uid` \"when \
-                       provided, it will be accepted in case is not in-use, \
-                       otherwise error will be returned\"; \
-                       `audit.time_committed` \"server will always set it\"; \
-                       `audit.system_id` \"when provided, it will be \
-                       validated\" (an omitted one defaults to the server's \
-                       configured identifier). `audit` and each \
-                       `versions[i].commit_audit` are UPDATE_AUDIT objects — \
-                       \"Clients SHOULD send `_type: \"UPDATE_AUDIT\"`; for \
-                       interoperability servers SHOULD additionally accept \
-                       `_type: \"AUDIT_DETAILS\"` or an omitted `_type`\", \
-                       and all three are accepted here. Every audit states its \
-                       own `committer` (`UpdateAudit.yaml` lists it under \
-                       `required`) and a member keeps the one it states. The \
-                       copy-down of RM common master06 §\"Committal and \
-                       Audits\" (\"should be copied into the corresponding \
-                       attributes of the `commit_audit` of each VERSION \
-                       included in the CONTRIBUTION\") applies to `system_id` \
-                       and `time_committed` only, the two attributes \
-                       `UpdateAudit.yaml` leaves to the server: the \
-                       CONTRIBUTION audit's `system_id` is \
-                       copied into every member that omits one, and one \
-                       server-set `time_committed` is stamped on every audit \
-                       of the set; a member's `committer` is never copied. \
-                       The envelope \
-                       `change_type` is the \
-                       aggregate of the members' — \"This may sometimes be \
-                       approximate, and is not expected to be used as a \
-                       computable value\" (master06 §Contributions), so it is \
-                       NOT cross-checked against them. `preceding_version_uid` \
-                       is the OBJECT_VERSION_ID object shown; a bare string is \
-                       also accepted. A `523|deleted|` member carries NO `data` \
-                       — logical deletion \"delete its `data`… set the \
-                       `lifecycle_state` value to the code for `deleted`\" (RM \
-                       common master06 §\"Logical Deletion\"), which is why \
-                       this server does not enforce the released UpdateVersion \
-                       schema's `data: required` on such a member \
-                       (adjudicated: we \
-                       follow RM). The example is canonical JSON with two \
-                       members (a COMPOSITION creation + an EHR_STATUS \
-                       modification). Under a Simplified-Format \
-                       `Content-Type`, SPECITS-84 fixes what changes: \"the \
-                       CONTRIBUTION envelope itself remains canonical JSON \
-                       (i.e. `uid`, `versions[]` metadata, and `audit` follow \
-                       the canonical RM serialization). Only the inner \
-                       versioned payload - each `versions[i].data` (the \
-                       embedded `COMPOSITION`, `EHR_STATUS`, or `FOLDER`) - is \
-                       serialized in the chosen FLAT or STRUCTURED form\" — and \
-                       such a body additionally requires the \
-                       `openehr-template-id` header."
+                          released operation defines (ITS-REST \
+                          `specifications/operations/contribution_create.yaml`): \
+                          `versions[]` of UPDATE_VERSION \
+                          (`preceding_version_uid`?, `signature`?, \
+                          `lifecycle_state`, `attestations`?, `data`, \
+                          `commit_audit`) plus the change-set `audit` \
+                          (UPDATE_AUDIT: `change_type`, `committer`, \
+                          `description`?, `system_id`?), and an OPTIONAL `uid` \
+                          — the three relaxations quoted verbatim: `uid` \"when \
+                          provided, it will be accepted in case is not in-use, \
+                          otherwise error will be returned\"; \
+                          `audit.time_committed` \"server will always set it\"; \
+                          `audit.system_id` \"when provided, it will be \
+                          validated\" (an omitted one defaults to the server's \
+                          configured identifier). `audit` and each \
+                          `versions[i].commit_audit` are UPDATE_AUDIT objects — \
+                          \"Clients SHOULD send `_type: \"UPDATE_AUDIT\"`; for \
+                          interoperability servers SHOULD additionally accept \
+                          `_type: \"AUDIT_DETAILS\"` or an omitted `_type`\", \
+                          and all three are accepted here. Every audit states its \
+                          own `committer` (`UpdateAudit.yaml` lists it under \
+                          `required`) and a member keeps the one it states. The \
+                          copy-down of RM common master06 §\"Committal and \
+                          Audits\" (\"should be copied into the corresponding \
+                          attributes of the `commit_audit` of each VERSION \
+                          included in the CONTRIBUTION\") applies to `system_id` \
+                          and `time_committed` only, the two attributes \
+                          `UpdateAudit.yaml` leaves to the server: the \
+                          CONTRIBUTION audit's `system_id` is \
+                          copied into every member that omits one, and one \
+                          server-set `time_committed` is stamped on every audit \
+                          of the set; a member's `committer` is never copied. \
+                          The envelope \
+                          `change_type` is the \
+                          aggregate of the members' — \"This may sometimes be \
+                          approximate, and is not expected to be used as a \
+                          computable value\" (master06 §Contributions), so it is \
+                          NOT cross-checked against them. `preceding_version_uid` \
+                          is the OBJECT_VERSION_ID object shown; a bare string is \
+                          also accepted. A `523|deleted|` member carries NO `data` \
+                          — logical deletion \"delete its `data`… set the \
+                          `lifecycle_state` value to the code for `deleted`\" (RM \
+                          common master06 §\"Logical Deletion\"), which is why \
+                          this server does not enforce the released UpdateVersion \
+                          schema's `data: required` on such a member \
+                          (adjudicated: we \
+                          follow RM). The example is canonical JSON with two \
+                          members (a COMPOSITION creation + an EHR_STATUS \
+                          modification). Under a Simplified-Format \
+                          `Content-Type`, SPECITS-84 fixes what changes: \"the \
+                          CONTRIBUTION envelope itself remains canonical JSON \
+                          (i.e. `uid`, `versions[]` metadata, and `audit` follow \
+                          the canonical RM serialization). Only the inner \
+                          versioned payload - each `versions[i].data` (the \
+                          embedded `COMPOSITION`, `EHR_STATUS`, or `FOLDER`) - is \
+                          serialized in the chosen FLAT or STRUCTURED form\" — and \
+                          such a body additionally requires the \
+                          `openehr-template-id` header."
     ),
     responses(
         (
@@ -5646,19 +5231,7 @@ pub(crate) async fn directory_get_by_version_id(
                                       failure, not a `422`. `other_input_version_uids` is \
                                       recorded; other undeclared members are ignored.",
          body = serde_json::Value),
-        (status = 403, description = "OUR OWN EXTENSION — no ITS-REST \
-                                      operation defines restriction of \
-                                      processing. The addressed object, or the \
-                                      whole EHR, is restricted, so the write is \
-                                      refused and the stored content stays \
-                                      exactly as it is (GDPR Art. 18(2) leaves \
-                                      storage as the only processing a \
-                                      restriction admits). Distinct from an \
-                                      authorization refusal, and from the 409 a \
-                                      non-modifiable EHR answers with. The \
-                                      401/403 rows of the access layer are \
-                                      unchanged.",
-         body = serde_json::Value)
+        refusals::RestrictedWrite
     )
 )]
 pub(crate) async fn contribution_create(
@@ -5957,18 +5530,7 @@ pub(crate) async fn contribution_list(
                                       with HTTP status code `406 Not \
                                       Acceptable`\").",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value)
+        SpecProfileConflict
     )
 )]
 pub(crate) async fn contribution_get(
@@ -6116,19 +5678,7 @@ pub(crate) async fn contribution_get(
                                       An EXISTING EHR whose tags do not match \
                                       the filters is `200 []`, not `404`.",
          body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                      an ITEM_TAG list is served as canonical \
-                                      `application/json` only. The canonical \
-                                      XML ITS defines no ITEM_TAG type, so an \
-                                      `application/xml` Accept — a member of \
-                                      the released `Accept_canonical` enum, \
-                                      stalled shape on this operation — is \
-                                      refused (`Resources.md` §\"XML Format\": \
-                                      \"If the service cannot fulfill this \
-                                      aspect of the request, it MUST respond \
-                                      with HTTP status code `406 Not \
-                                      Acceptable`\").",
-         body = serde_json::Value)
+        refusals::TagListNotAcceptable
     )
 )]
 pub(crate) async fn ehr_tags_get(
@@ -6263,19 +5813,7 @@ pub(crate) async fn ehr_tags_get(
                                       COMPOSITION target with no tags is \
                                       `200 []`, not `404`.",
          body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                      an ITEM_TAG list is served as canonical \
-                                      `application/json` only. The canonical \
-                                      XML ITS defines no ITEM_TAG type, so an \
-                                      `application/xml` Accept — a member of \
-                                      the released `Accept_canonical` enum, \
-                                      stalled shape on this operation — is \
-                                      refused (`Resources.md` §\"XML Format\": \
-                                      \"If the service cannot fulfill this \
-                                      aspect of the request, it MUST respond \
-                                      with HTTP status code `406 Not \
-                                      Acceptable`\").",
-         body = serde_json::Value)
+        refusals::TagListNotAcceptable
     )
 )]
 pub(crate) async fn composition_tags_get(
@@ -6527,24 +6065,7 @@ pub(crate) async fn composition_tags_get(
                                       declares nothing and is accepted as \
                                       JSON.",
          body = serde_json::Value),
-        (status = 422, description = "The body is well-formed but an entry \
-                                      breaks an ITEM_TAG rule: a missing or \
-                                      empty `key`, a `key` with leading or \
-                                      trailing whitespace (RM `item_tag.adoc` \
-                                      __Inv_key_valid__: \"not key.is_empty \
-                                      and key.is_justified\"), or an EMPTY \
-                                      `value` (__Inv_value_valid__: \"value /= \
-                                      Void implies not value.is_empty\" — omit \
-                                      the member instead). The released \
-                                      operation declares only `400` for a bad \
-                                      request; answering `422` for these \
-                                      SEMANTIC failures follows \
-                                      `Requests_and_responses.md` §\"HTTP \
-                                      status codes\", the `422` row (\"The \
-                                      request was well-formed but was unable \
-                                      to be followed due to semantic errors\") \
-                                      and is OURS, adjudicated.",
-         body = serde_json::Value)
+        refusals::TagRuleBroken
     )
 )]
 pub(crate) async fn composition_tags_update(
@@ -6783,19 +6304,7 @@ pub(crate) async fn composition_tags_delete(
                                       EHR_STATUS target with no tags is \
                                       `200 []`, not `404`.",
          body = serde_json::Value),
-        (status = 406, description = "The `Accept` header cannot be satisfied: \
-                                      an ITEM_TAG list is served as canonical \
-                                      `application/json` only. The canonical \
-                                      XML ITS defines no ITEM_TAG type, so an \
-                                      `application/xml` Accept — a member of \
-                                      the released `Accept_canonical` enum, \
-                                      stalled shape on this operation — is \
-                                      refused (`Resources.md` §\"XML Format\": \
-                                      \"If the service cannot fulfill this \
-                                      aspect of the request, it MUST respond \
-                                      with HTTP status code `406 Not \
-                                      Acceptable`\").",
-         body = serde_json::Value)
+        refusals::TagListNotAcceptable
     )
 )]
 pub(crate) async fn ehr_status_tags_get(
@@ -7047,24 +6556,7 @@ pub(crate) async fn ehr_status_tags_get(
                                       declares nothing and is accepted as \
                                       JSON.",
          body = serde_json::Value),
-        (status = 422, description = "The body is well-formed but an entry \
-                                      breaks an ITEM_TAG rule: a missing or \
-                                      empty `key`, a `key` with leading or \
-                                      trailing whitespace (RM `item_tag.adoc` \
-                                      __Inv_key_valid__: \"not key.is_empty \
-                                      and key.is_justified\"), or an EMPTY \
-                                      `value` (__Inv_value_valid__: \"value /= \
-                                      Void implies not value.is_empty\" — omit \
-                                      the member instead). The released \
-                                      operation declares only `400` for a bad \
-                                      request; answering `422` for these \
-                                      SEMANTIC failures follows \
-                                      `Requests_and_responses.md` §\"HTTP \
-                                      status codes\", the `422` row (\"The \
-                                      request was well-formed but was unable \
-                                      to be followed due to semantic errors\") \
-                                      and is OURS, adjudicated.",
-         body = serde_json::Value)
+        refusals::TagRuleBroken
     )
 )]
 pub(crate) async fn ehr_status_tags_update(
@@ -7191,4 +6683,167 @@ pub(crate) async fn ehr_status_tags_delete(
         crate::api::ehr::dispatch::dispatch,
     )
     .await
+}
+
+// ── Shared response maps ──────────────────────────────────────────────────────
+
+/// The answers several EHR-group operations declare word for word, each as a
+/// response map an operation's `responses(...)` names.
+#[expect(
+    dead_code,
+    reason = "response maps the OpenAPI document reads; the answers themselves are built by \
+              the service and the access layer"
+)]
+mod refusals {
+    /// A read of an object whose processing is restricted.
+    #[derive(utoipa::IntoResponses)]
+    pub(super) enum RestrictedRead {
+        #[response(
+            status = 403,
+            description = "OUR OWN EXTENSION — no ITS-REST \
+                          operation defines restriction of \
+                          processing. Processing of the addressed \
+                          object is restricted, so the server holds \
+                          it in storage and serves nothing from it \
+                          (GDPR Art. 18(2) leaves storage as the \
+                          only processing a restriction admits). \
+                          Distinct from an authorization refusal: \
+                          the same caller with the same rights is \
+                          refused until the restriction is lifted, \
+                          and the body says so. The 401/403 rows of \
+                          the access layer are unchanged."
+        )]
+        Restricted,
+    }
+
+    /// A write to an object, or an `EHR`, whose processing is restricted.
+    #[derive(utoipa::IntoResponses)]
+    pub(super) enum RestrictedWrite {
+        #[response(
+            status = 403,
+            description = "OUR OWN EXTENSION — no ITS-REST \
+                          operation defines restriction of \
+                          processing. The addressed object, or the \
+                          whole EHR, is restricted, so the write is \
+                          refused and the stored content stays \
+                          exactly as it is (GDPR Art. 18(2) leaves \
+                          storage as the only processing a \
+                          restriction admits). Distinct from an \
+                          authorization refusal, and from the 409 a \
+                          non-modifiable EHR answers with. The \
+                          401/403 rows of the access layer are \
+                          unchanged."
+        )]
+        Restricted,
+    }
+
+    /// An `Accept` an `EHR_STATUS` representation cannot satisfy.
+    #[derive(utoipa::IntoResponses)]
+    pub(super) enum EhrStatusNotAcceptable {
+        #[response(
+            status = 406,
+            description = "The `Accept` header cannot be satisfied: \
+                          the EHR_STATUS resource has only the \
+                          canonical `application/json` / \
+                          `application/xml` representations \
+                          (`Resources.md` §\"XML Format\"/§\"JSON \
+                          Format\": \"If the service cannot fulfill \
+                          this aspect of the request, it MUST respond \
+                          with HTTP status code `406 Not \
+                          Acceptable`\"; the Simplified Formats are \
+                          defined for templated COMPOSITION content \
+                          only, and EHR_STATUS is not templated)."
+        )]
+        NotAcceptable,
+    }
+
+    /// An `Accept` an `ITEM_TAG` list cannot satisfy.
+    #[derive(utoipa::IntoResponses)]
+    pub(super) enum TagListNotAcceptable {
+        #[response(
+            status = 406,
+            description = "The `Accept` header cannot be satisfied: \
+                          an ITEM_TAG list is served as canonical \
+                          `application/json` only. The canonical \
+                          XML ITS defines no ITEM_TAG type, so an \
+                          `application/xml` Accept — a member of \
+                          the released `Accept_canonical` enum, \
+                          stalled shape on this operation — is \
+                          refused (`Resources.md` §\"XML Format\": \
+                          \"If the service cannot fulfill this \
+                          aspect of the request, it MUST respond \
+                          with HTTP status code `406 Not \
+                          Acceptable`\")."
+        )]
+        NotAcceptable,
+    }
+
+    /// A converted `FOLDER` tree that cannot be followed.
+    #[derive(utoipa::IntoResponses)]
+    pub(super) enum FolderTreeUnprocessable {
+        #[response(
+            status = 422,
+            description = "The request was well-formed and converted \
+                          to a FOLDER tree, but the tree cannot be \
+                          followed as a directory \
+                          (`Requests_and_responses.md` §\"HTTP \
+                          status codes\", the `422` row: \"The \
+                          request was well-formed but was unable to \
+                          be followed due to semantic errors\"). The \
+                          shape rules are RM, checked at every node \
+                          of the tree: `FOLDER.name` is mandatory \
+                          and `archetype_node_id` mandatory and \
+                          non-empty (LOCATABLE, RM common \
+                          master03), and every `items` member must \
+                          be an OBJECT_REF (`id` + `namespace` + \
+                          `type`, and never an inline LOCATABLE) — \
+                          \"Folder structures do not contain \
+                          Compositions, only references to them\" \
+                          (RM ehr master04 §Folders; RM common \
+                          master05 §Overview types `FOLDER.items` \
+                          `List<OBJECT_REF>`). A committal \
+                          `change_type`/`lifecycle_state` that is \
+                          not a member of its openEHR terminology \
+                          group is `422` too. An `items` OBJECT_REF \
+                          whose `namespace` claims this system \
+                          (`local`, or the configured system id) \
+                          must resolve to a versioned object in \
+                          this EHR; an unresolvable one is `422` \
+                          naming each dangling reference at its \
+                          tree path — no released text constrains \
+                          reference targets, so this is our own \
+                          extension, and foreign-namespace \
+                          references pass unchecked (BASE \
+                          `object_ref.adoc`: targets \"may exist \
+                          locally or be maintained outside the \
+                          current namespace\")."
+        )]
+        Unprocessable,
+    }
+
+    /// A tag list entry that breaks an `ITEM_TAG` rule.
+    #[derive(utoipa::IntoResponses)]
+    pub(super) enum TagRuleBroken {
+        #[response(
+            status = 422,
+            description = "The body is well-formed but an entry \
+                          breaks an ITEM_TAG rule: a missing or \
+                          empty `key`, a `key` with leading or \
+                          trailing whitespace (RM `item_tag.adoc` \
+                          __Inv_key_valid__: \"not key.is_empty \
+                          and key.is_justified\"), or an EMPTY \
+                          `value` (__Inv_value_valid__: \"value /= \
+                          Void implies not value.is_empty\" — omit \
+                          the member instead). The released \
+                          operation declares only `400` for a bad \
+                          request; answering `422` for these \
+                          SEMANTIC failures follows \
+                          `Requests_and_responses.md` §\"HTTP \
+                          status codes\", the `422` row (\"The \
+                          request was well-formed but was unable \
+                          to be followed due to semantic errors\") \
+                          and is OURS, adjudicated."
+        )]
+        Unprocessable,
+    }
 }

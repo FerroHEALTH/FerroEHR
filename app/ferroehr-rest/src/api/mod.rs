@@ -64,6 +64,7 @@ pub mod ehr;
 pub(crate) mod item_tags;
 pub mod message;
 pub mod query;
+pub(crate) mod refusals;
 pub(crate) mod served;
 pub mod system;
 

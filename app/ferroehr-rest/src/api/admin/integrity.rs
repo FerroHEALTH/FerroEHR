@@ -51,6 +51,7 @@ use ferroehr::service::admin::integrity::{
     StorageParityEvent, StorageParityReport, StorageParityScope,
 };
 
+use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -143,22 +144,9 @@ pub(crate) fn integrity_routes() -> OpenApiRouter<AppState> {
                    \"versions_without_body\":2,\"mismatch_count\":1,\"elapsed_ms\":431}\n"
              )),
          )),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Our own authorization design \
-                                      — the released admin operations carry \
-                                      `security: []` and declare no such \
-                                      branch.",
-         body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value)
+        AdminUnauthenticated,
+        NotAdminClass,
+        AdminDisabled
     )
 )]
 pub(crate) async fn admin_verify_storage_parity(
@@ -241,16 +229,8 @@ pub(crate) async fn admin_verify_storage_parity(
         (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                       principal). Our own authorization design.",
          body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value)
+        NotAdminClass,
+        AdminDisabled
     )
 )]
 pub(crate) async fn admin_rebuild_version_nodes(

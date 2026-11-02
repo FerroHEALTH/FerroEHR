@@ -47,6 +47,8 @@ use utoipa_axum::routes;
 
 use openehr_its::rest::runtime::ApiError;
 
+use super::body::{AdminDisabled, NotAdminClass};
+use crate::api::refusals::JsonBodyRequired;
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
@@ -94,23 +96,13 @@ pub(crate) fn archive_routes() -> OpenApiRouter<AppState> {
                                       — the released admin operations carry \
                                       `security: []`.",
          body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
+        NotAdminClass,
         (status = 404, description = "An id in the list names no EHR. \
                                       Nothing is \
                                       archived (all-or-nothing).",
          body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        AdminDisabled,
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_archive_ehrs(
@@ -155,14 +147,8 @@ pub(crate) async fn admin_archive_ehrs(
                                       root and is refused the same way). Nothing \
                                       is archived.",
          body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        AdminDisabled,
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_archive_parties(
@@ -214,23 +200,13 @@ pub(crate) async fn admin_archive_parties(
                                       — the released admin operations carry \
                                       `security: []`.",
          body = serde_json::Value),
-        (status = 403, description = "Authenticated but not in the Admin class \
-                                      (`OperationClass::Admin`, keyed off the \
-                                      `/admin/` path). Our own authorization \
-                                      design.",
-         body = serde_json::Value),
+        NotAdminClass,
         (status = 404, description = "An id in the list names no EHR. Nothing is \
                                       restored (all-or-nothing) — the same \
                                       existence check the archive half applies.",
          body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        AdminDisabled,
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_restore_archived_ehrs(
@@ -283,14 +259,8 @@ pub(crate) async fn admin_restore_archived_ehrs(
                                       restored, never reported missing. Nothing \
                                       is restored.",
          body = serde_json::Value),
-        (status = 405, description = "The admin API is disabled on this server \
-                                      (`AppConfig::admin.enabled`, default \
-                                      false), answered with an empty `Allow` \
-                                      per RFC 9110 §10.2.1.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        AdminDisabled,
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_restore_archived_parties(

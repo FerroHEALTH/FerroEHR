@@ -42,6 +42,7 @@ use ferroehr::storage::marks::RetentionPeriod;
 use openehr_its::rest::runtime::ApiError;
 
 use super::body::{optional_str, required_query, required_str};
+use crate::api::refusals::JsonBodyRequired;
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -106,9 +107,7 @@ pub(crate) fn marks_routes() -> OpenApiRouter<AppState> {
          body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_restrict_processing(
@@ -175,9 +174,7 @@ pub(crate) async fn admin_restriction_register(
          body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_lift_restriction(
@@ -223,9 +220,7 @@ pub(crate) async fn admin_lift_restriction(
         (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_research_objection(
@@ -316,9 +311,7 @@ pub(crate) async fn admin_retention_policies(
         (status = 403, description = "Not in the Admin class.", body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_put_retention_policy(
@@ -360,9 +353,7 @@ pub(crate) async fn admin_put_retention_policy(
         (status = 404, description = "The EHR is unknown.", body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_retention_anchor(
@@ -400,9 +391,7 @@ pub(crate) async fn admin_retention_anchor(
          body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_retention_hold(
@@ -485,9 +474,7 @@ pub(crate) async fn admin_retention_due(
          body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_restrict_access(
@@ -551,9 +538,7 @@ pub(crate) async fn admin_access_restriction_register(
          body = serde_json::Value),
         (status = 405, description = "The admin API is disabled on this server.",
          body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is not \
-                                      `application/json`.",
-         body = serde_json::Value)
+        JsonBodyRequired
     )
 )]
 pub(crate) async fn admin_lift_access_restriction(

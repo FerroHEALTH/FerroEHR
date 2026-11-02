@@ -59,6 +59,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::api::guarded_dispatch;
+use crate::api::refusals::SpecProfileConflict;
 use crate::state::AppState;
 
 /// The standard Demographic API group as a native `utoipa-axum` router.
@@ -643,18 +644,7 @@ macro_rules! party_kind_handlers {
                                               §\"Simplified Formats\"). An absent \
                                               `Content-Type` declares nothing to refuse.",
                  body = serde_json::Value),
-                (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                              governs runtime specification-generation \
-                                              selection. The stored version body uses \
-                                              openEHR specification surface this \
-                                              deployment's active `spec_profile` does \
-                                              not define, so it is refused rather than \
-                                              served under a generation set that cannot \
-                                              express it — and never down-converted. \
-                                              Reachable only where `spec_profile = \"stable\"` \
-                                              is configured; the body names switching \
-                                              back to `development` as the remedy.",
-                 body = serde_json::Value)
+                SpecProfileConflict
             )
         )]
         pub(crate) async fn $get(
@@ -2502,18 +2492,7 @@ pub(crate) async fn versioned_party_revision_history(
                                       released operation does not enumerate `406`; \
                                       the MUST is cross-cutting.",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value)
+        SpecProfileConflict
     )
 )]
 pub(crate) async fn versioned_party_version_get_at_time(
@@ -2620,18 +2599,7 @@ pub(crate) async fn versioned_party_version_get_at_time(
                                       released operation does not enumerate `406`; \
                                       the MUST is cross-cutting.",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value)
+        SpecProfileConflict
     )
 )]
 pub(crate) async fn versioned_party_version_get_by_id(
@@ -3111,18 +3079,7 @@ pub(crate) async fn contribution_create(
                                       released operation does not enumerate `406`; \
                                       the MUST is cross-cutting.",
          body = serde_json::Value),
-        (status = 409, description = "OUR OWN EXTENSION — no openEHR spec \
-                                      governs runtime specification-generation \
-                                      selection. The stored version body uses \
-                                      openEHR specification surface this \
-                                      deployment's active `spec_profile` does \
-                                      not define, so it is refused rather than \
-                                      served under a generation set that cannot \
-                                      express it — and never down-converted. \
-                                      Reachable only where `spec_profile = \"stable\"` \
-                                      is configured; the body names switching \
-                                      back to `development` as the remedy.",
-         body = serde_json::Value)
+        SpecProfileConflict
     )
 )]
 pub(crate) async fn contribution_get(
