@@ -42,9 +42,9 @@ what you query and what you read back.
   upstream. A specification update is a regeneration.
 - **Two selectable specification generations.** One configuration key,
   `spec_profile`, chooses the whole generation set the server runs:
-  `development` (Reference Model 1.2.0 with BASE 1.3.0 and LANG 1.1.0 — the
-  default) or `stable` (the latest *released* generations, Reference Model
-  1.1.0 with BASE 1.2.0 and LANG 1.0.0). See
+  `development` (Reference Model 1.2.0 with BASE 1.3.0, the default) or
+  `stable` (the latest *released* generations, Reference Model 1.1.0 with
+  BASE 1.2.0). See
   [`spec_profile`](installation/configuration.md#spec_profile).
 - **One self-contained binary.** No JVM, no language runtime, and a pure-Rust
   TLS stack, so there is nothing to provision beside PostgreSQL. The container

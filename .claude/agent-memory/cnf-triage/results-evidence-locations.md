@@ -21,9 +21,9 @@ themselves are in `recording.har`, which is never committed.
   `catalogue/cases/<folder>/<document>.arazzo.yaml` at the pinned tag, each
   with its `x-veredictum-cite` (source, section, quote, `report:`); setups
   under `catalogue/cases/_setup/`; option arms in `catalogue/capabilities.yaml`.
-- Corpus: `corpus/MANIFEST.yaml` maps data-set
-  aliases (`cnf.*`) → fixture files + `template_id`; fixtures under
-  `corpus/fixtures/**`, templates under `corpus/templates/**`.
+- Corpus: `corpus/PROVENANCE.md` indexes the shared tree: fixtures under
+  `corpus/fixtures/**`, templates under `corpus/templates/**`, the
+  catalogue's ADL 2 content cases under `corpus/veredictum/adl2-content/`.
 - Party/statement: `docs/conformance/party/ferroehr/{statement.json,ixit.json}`
   — `statement.options` holds the selected option arms.
 - Spec oracle: `docs/specs/openehr/` (index in its README). SF cases →

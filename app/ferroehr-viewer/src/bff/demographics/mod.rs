@@ -225,14 +225,6 @@ impl DemographicResource {
         }
     }
 
-    /// The CDR URL of `path` (a `demographic/...` path of this resource):
-    /// under the openEHR API for a party, under the CDR's extensions root for
-    /// a relationship.
-    #[must_use]
-    pub fn url(self, cdr: &crate::cdr::CdrClient, path: &str) -> String {
-        self.family().url(cdr, path)
-    }
-
     /// The versioned-object family this resource's versions live in.
     #[must_use]
     pub fn family(self) -> VersionedFamily {
@@ -430,7 +422,7 @@ pub async fn fetch_demographic_version_document(
             Msg::VersionUidRequiredReadPastVersion,
         )));
     }
-    let url = resource.url(
+    let url = resource.family().url(
         &cdr,
         &format!(
             "demographic/{}/{}",

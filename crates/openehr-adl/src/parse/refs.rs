@@ -307,7 +307,7 @@ impl Parser<'_> {
         // Parse the assertion tree(s) (`EXPR_ARCHETYPE_REF matches
         // EXPR_ARCHETYPE_ID_CONSTRAINT`, `master05` / `master04.3`) via the BEL
         // AOM composition.
-        match crate::rules::parse_slot_assertions(text) {
+        match crate::rules::parse_slot_assertions(text, self.node_coding) {
             Ok(assertions) => Ok(assertions),
             Err(errs) => {
                 for e in errs {

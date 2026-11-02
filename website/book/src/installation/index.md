@@ -60,8 +60,8 @@ deployment at real patient data.
 
 One top-level key, **`spec_profile`**, selects which openEHR specification
 generation set the deployment runs: `development` (the default: Reference
-Model 1.2.0 with BASE 1.3.0 and LANG 1.1.0) or `stable` (the latest released
-generations: Reference Model 1.1.0 with BASE 1.2.0 and LANG 1.0.0). It is a
+Model 1.2.0 with BASE 1.3.0) or `stable` (the latest released generations:
+Reference Model 1.1.0 with BASE 1.2.0). It is a
 single coupled choice, and `stable → development` is always safe while the
 reverse is not, so decide it before you commit clinical data. The full
 semantics, defaults, and the direction contract are in
