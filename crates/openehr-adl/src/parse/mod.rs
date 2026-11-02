@@ -147,6 +147,14 @@ pub fn parse_definition_body(
     }
 }
 
+/// The node coding of the archetype whose `definition` section body is `body`,
+/// read off its root node id; a body that does not lex reads as at-coded,
+/// since it fails to parse whatever its coding.
+pub(crate) fn definition_coding(body: &str) -> NodeCoding {
+    openehr_lang::v1_1::lexer::lex(openehr_lang::v1_1::lexer::Language::Adl, body)
+        .map_or(NodeCoding::At, |toks| root_coding(&toks))
+}
+
 /// The coding of the archetype whose definition `toks` lexes, read off its
 /// first node id, the root's. A body with no node id fails to parse whatever
 /// its coding, so it reads as at-coded.
@@ -374,12 +382,16 @@ impl Parser<'_> {
 ///
 /// This is the reusable entry the rules / slot-assertion BEL builder
 /// ([`crate::rules`]) drives to construct an `EXPR_CONSTRAINT` leaf
-/// (`AOM2` master05; primitive grammar `master04.5`).
+/// (`AOM2` master05; primitive grammar `master04.5`). The leaf takes the
+/// short-form primitive node id of `coding`, the archetype's own.
 ///
 /// # Errors
 /// Returns the cADL `S*` catalogue errors if the constraint is malformed or its
 /// body is not a single primitive constraint.
-pub(crate) fn parse_inline_primitive_text(raw: &str) -> Result<CPrimitiveObject, Vec<SyntaxError>> {
+pub(crate) fn parse_inline_primitive_text(
+    raw: &str,
+    coding: NodeCoding,
+) -> Result<CPrimitiveObject, Vec<SyntaxError>> {
     let toks = openehr_lang::v1_1::lexer::lex(openehr_lang::v1_1::lexer::Language::Adl, raw)
         .map_err(|failure| vec![crate::error::lexical(&failure, raw)])?;
     let mut parser = Parser {
@@ -389,7 +401,7 @@ pub(crate) fn parse_inline_primitive_text(raw: &str) -> Result<CPrimitiveObject,
         errors: Vec::new(),
         dialect: Dialect::Adl2,
         nesting: Nesting::ROOT,
-        node_coding: NodeCoding::At,
+        node_coding: coding,
     };
     let parsed: PResult<CObject> = (|| {
         parser.expect(
@@ -429,13 +441,17 @@ pub(crate) fn parse_inline_primitive_text(raw: &str) -> Result<CPrimitiveObject,
 }
 
 /// Parse a contained-regexp right-hand side (`{ /re/ }` / `{ ^re^ }`, verbatim)
-/// into a [`CString`] — the regex matcher for an archetype-id slot assertion
+/// into a [`CString`], the regex matcher for an archetype-id slot assertion
 /// (`EXPR_ARCHETYPE_ID_CONSTRAINT`, `AOM2` master05; `master04.3` §Archetype
-/// Slots). The regex is compile-checked (`SCSRE`).
+/// Slots), carrying the short-form primitive node id of `coding`. The regex is
+/// compile-checked (`SCSRE`).
 ///
 /// # Errors
 /// [`SyntaxErrorCode::Scsre`] if the regex does not compile.
-pub(crate) fn parse_contained_regexp_text(raw: &str) -> Result<CString, Vec<SyntaxError>> {
+pub(crate) fn parse_contained_regexp_text(
+    raw: &str,
+    coding: NodeCoding,
+) -> Result<CString, Vec<SyntaxError>> {
     let (regex_part, quoted_assumed) = split_contained_regexp(raw);
     // The regex body itself is NEVER escape-decoded (`master03` §Special
     // Character Sequences, final paragraph); only the `;"assumed"` suffix is.
@@ -459,7 +475,7 @@ pub(crate) fn parse_contained_regexp_text(raw: &str) -> Result<CString, Vec<Synt
             raw,
         )]);
     }
-    Ok(ObjectNode::inline("String", NodeCoding::At).c_string(vec![regex_part.to_owned()], assumed))
+    Ok(ObjectNode::inline("String", coding).c_string(vec![regex_part.to_owned()], assumed))
 }
 
 #[cfg(test)]

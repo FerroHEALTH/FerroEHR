@@ -80,7 +80,7 @@ pub(super) fn archetype_id_include(
         "archetype_id/value matches {{/{}/}}",
         regex_escape(child_archetype_id)
     );
-    match crate::rules::parse_slot_assertions(&text) {
+    match crate::rules::parse_slot_assertions(&text, crate::codes::NodeCoding::At) {
         Ok(list) if !list.is_empty() => list,
         _ => {
             cx.note(
@@ -120,9 +120,9 @@ pub(super) fn map_slot_assertions(
             .string_expression
             .clone()
             .or_else(|| render_expr(&a.expression));
-        let parsed = text
-            .as_deref()
-            .and_then(|t| crate::rules::parse_slot_assertions(t).ok());
+        let parsed = text.as_deref().and_then(|t| {
+            crate::rules::parse_slot_assertions(t, crate::codes::NodeCoding::At).ok()
+        });
         match parsed {
             Some(mut list) if !list.is_empty() => out.append(&mut list),
             _ => {

@@ -122,15 +122,15 @@ openEHR publishes released specification versions and keeps developing the
 next ones. FerroEHR generates **both**, and this key decides which set the
 running server serves.
 
-| Value | RM | BASE | LANG | Choose it when |
-|---|---|---|---|---|
-| `development` *(default)* | 1.2.0 | 1.3.0 | 1.1.0 | You want the generations this build is developed against. This is the default for every deployment that does not set the key. |
-| `stable` | 1.1.0 | 1.2.0 | 1.0.0 | Your governance requires running on released openEHR specifications only. |
+| Value | RM | BASE | Choose it when |
+|---|---|---|---|
+| `development` *(default)* | 1.2.0 | 1.3.0 | You want the generations this build is developed against. This is the default for every deployment that does not set the key. |
+| `stable` | 1.1.0 | 1.2.0 | Your governance requires running on released openEHR specifications only. |
 
 Environment form: `FERROEHR__SPEC_PROFILE=stable`. The key is a top-level
 scalar, not a section; there is no `[spec_profile]` table.
 
-### Why it is one key and not three
+### Why it is one key and not two
 
 The components' generations are modelled against each other, not
 independently: RM 1.1.0's own machine-readable model declares that it includes

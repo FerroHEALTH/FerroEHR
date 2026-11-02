@@ -88,7 +88,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(applied("ext").await, 9);
     assert_eq!(applied("clinical").await, 30);
     assert_eq!(applied("party").await, 23);
-    assert_eq!(applied("audit").await, 21);
+    assert_eq!(applied("audit").await, 22);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();
@@ -766,7 +766,7 @@ async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_n
 async fn an_as_of_read_resolves_along_the_trunk() {
     use ferroehr::ids::{EhrId, VoId};
     use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_versions_verbatim};
-    use ferroehr::storage::version_repo::read::version_at;
+    use ferroehr::storage::version_repo::read::{Body, VersionAt, read_one};
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -815,7 +815,7 @@ async fn an_as_of_read_resolves_along_the_trunk() {
         .await
         .expect("db now()")
         .to_jiff();
-    let read = version_at(&pool, VoId(vo), at)
+    let read = read_one(&pool, VersionAt::Instant(VoId(vo), at), Body::Parsed)
         .await
         .expect("as-of read")
         .expect("the trunk version is current at this instant");
@@ -832,7 +832,7 @@ async fn an_as_of_read_resolves_along_the_trunk() {
         .await
         .expect("a branch-only container");
     assert!(
-        version_at(&pool, branch_only, at)
+        read_one(&pool, VersionAt::Instant(branch_only, at), Body::Parsed)
             .await
             .expect("as-of read")
             .is_none(),

@@ -31,7 +31,7 @@ FerroEHR publishes three container images to GHCR:
 | Image | Contents |
 |---|---|
 | `ghcr.io/ferrohealth/ferroehr` | The `ferroehr` server binary on a distroless, non-root, shell-less multi-arch base (amd64 + arm64). Configured by a mounted TOML file and/or `FERROEHR__*` environment variables. |
-| `ghcr.io/ferrohealth/ferroehr-postgres` | `postgres:18.6` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the `NOLOGIN` group roles (`ferroehr_migrator` and the four domain roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`, plus `ferroehr_linkage`, which the released grant files still name), the database and the schemas (`clinical`, `ext`, `audit`), so the app role never needs superuser. |
+| `ghcr.io/ferrohealth/ferroehr-postgres` | `postgres:18.6` (with Debian security updates applied at image build) plus init scripts that pre-create the application login role, the `NOLOGIN` group roles (`ferroehr_migrator` and the four database roles `ferroehr_clinical`, `ferroehr_party`, `ferroehr_clinical_reader`, `ferroehr_party_reader`, plus `ferroehr_linkage`, which the released grant files still name), the database and the schemas (`clinical`, `ext`, `audit`), so the app role never needs superuser. |
 | `ghcr.io/ferrohealth/ferroehr-viewer` | The [viewer](../viewer/index.md), a standalone web application that talks to the CDR strictly over ITS-REST. Optional; see the `viewer` profile below. |
 
 Each image is published under several tags:

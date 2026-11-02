@@ -39,12 +39,11 @@ use openehr_am::v2_4::aom2::terminology::archetype_term::ArchetypeTerm;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 use openehr_am::v2_4::aom2::terminology::value_set::ValueSet;
 
+use crate::adl14::code_shift::{first_num, highest_ac_number, shift_code};
 use crate::adl14::log::ConversionLog;
 use crate::adl14::metadata::{set_release_version, transform_description};
 use crate::adl14::multiplicity::{elide_multiplicity, materialise_adl14_occurrences};
-use crate::adl14::walk::{
-    cco_data_mut, collect_local_value_codes, collect_node_codes, walk_constraints,
-};
+use crate::adl14::walk::{cco_data_mut, collect_local_value_codes, collect_node_codes};
 use crate::aom::access::{common_mut, tuple_primitive_node_ids_mut};
 use crate::codes::NodeCoding;
 use crate::error::SyntaxError;
@@ -814,7 +813,11 @@ fn renumber_obj(obj: &mut CObject, cx: &mut Converter<'_>) {
             p.node_id = cx.new_node_id(&p.node_id);
             p.target_path = rewrite_path(&p.target_path, cx);
         }
-        CObject::ArchetypeSlot(s) => s.node_id = cx.new_node_id(&s.node_id),
+        CObject::ArchetypeSlot(s) => {
+            s.node_id = cx.new_node_id(&s.node_id);
+            let assertions = s.includes.iter_mut().chain(s.excludes.iter_mut()).flatten();
+            assertions.for_each(|a| crate::rules::recode_slot_matcher(a, NodeCoding::Id));
+        }
         primitive => NodeCoding::Id.recode_primitive_node_id(common_mut(primitive).1),
     }
 }
@@ -916,76 +919,6 @@ fn converted_predicate_code(code: &str, cx: &Converter<'_>) -> String {
         return shift_code(code, "id");
     }
     code.to_owned()
-}
-
-// ── code shifting ────────────────────────────────────────────────────────────
-
-/// The highest ac-number the source already uses, across its terminology
-/// entries and its bare constraint refs.
-///
-/// Synthesised and minted acs must allocate ABOVE the shifted range, so a
-/// fresh `acN` never collides with an existing `ac000(N-1)` → `acN`.
-fn highest_ac_number(data: &AuthoredArchetypeData) -> i64 {
-    let mut highest = 0i64;
-    let mut track = |code: &str| {
-        if AdlCodeDefinitionsData::is_value_set_code(code)
-            && !code.contains('.')
-            && let Some(n) = first_num(&shift_code(code, "ac"))
-        {
-            highest = highest.max(n);
-        }
-    };
-    for terms in data.terminology.term_definitions.values() {
-        for code in terms.keys() {
-            track(code);
-        }
-    }
-    walk_constraints(&data.definition, &mut |raw, _| {
-        let body = raw.split_once(';').map_or(raw, |(b, _)| b);
-        if !body.contains("::") {
-            track(body.trim());
-        }
-    });
-    highest
-}
-
-/// Shift a 1.4 code to an ADL2 code with the given `prefix` (`"id"`/`"at"`).
-/// The first segment's number is incremented by one (`at0000`→`id1`,
-/// `at0003.1`→`id4.1`), except the specialisation new-code prefix `at0`
-/// (`at0.89`→`id0.89` — number kept). No openEHR spec governs this — fixture-pinned.
-fn shift_code(code: &str, prefix: &str) -> String {
-    let bare = code
-        .trim_start_matches("at")
-        .trim_start_matches("id")
-        .trim_start_matches("ac");
-    let mut segs = bare.split('.');
-    let Some(first) = segs.next() else {
-        return code.to_owned();
-    };
-    let rest: Vec<&str> = segs.collect();
-    let has_suffix = !rest.is_empty();
-    let shifted_first = if first == "0" && has_suffix {
-        // `at0.K` new-at-level code: keep the 0.
-        "0".to_owned()
-    } else {
-        match first.parse::<i64>() {
-            Ok(n) => (n + 1).to_string(),
-            Err(_) => first.to_owned(),
-        }
-    };
-    if has_suffix {
-        format!("{prefix}{shifted_first}.{}", rest.join("."))
-    } else {
-        format!("{prefix}{shifted_first}")
-    }
-}
-
-fn first_num(code: &str) -> Option<i64> {
-    let bare = code
-        .trim_start_matches("at")
-        .trim_start_matches("id")
-        .trim_start_matches("ac");
-    bare.split('.').next()?.parse::<i64>().ok()
 }
 
 fn term_with_code(term: &ArchetypeTerm, code: String) -> ArchetypeTerm {

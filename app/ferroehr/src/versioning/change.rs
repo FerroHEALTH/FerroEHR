@@ -32,6 +32,7 @@ use crate::service::error::{ServiceError, Violation};
 use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::storage::codec::reassemble;
 use crate::storage::row::NodeRow;
+use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::lifecycle::{
@@ -860,25 +861,19 @@ async fn commit_resolved(
     // The folded statements BIND `r.time_committed` (the instant the signature
     // was computed over) as the audit time and the version row's own
     // `committed_at`, so stored == signed holds by construction.
-    let time_committed = match contribution {
-        ContributionCtx::New => {
-            let (_cid, _aid, tc) = crate::storage::version_repo::commit::commit_new_version(
-                tx,
-                &audit_row,
-                Some(contribution_id),
-                &folded,
-            )
-            .await?;
-            tc
-        }
-        ContributionCtx::Existing(cid) => {
-            let (_aid, tc) = crate::storage::version_repo::commit::commit_version_into(
-                tx, &audit_row, cid, &folded,
-            )
-            .await?;
-            tc
-        }
+    let statement = match contribution {
+        ContributionCtx::New => Folded::Standalone {
+            id: contribution_id,
+            version: &folded,
+        },
+        ContributionCtx::Existing(id) => Folded::Into {
+            id,
+            version: &folded,
+        },
     };
+    let time_committed = commit_folded(tx, &audit_row, statement)
+        .await?
+        .time_committed;
 
     // A newly created FOLDER hierarchy joins `EHR.folders` as a new member (RM
     // ehr master04 §Folders). Recorded only on CREATION.
@@ -1352,14 +1347,16 @@ pub(crate) async fn commit_contribution(
     // per-version `commit_audit`s are inserted per change below). A uid the
     // client did not supply is minted here, stamped, never by the database.
     let uid = supplied_uid.unwrap_or_else(|| ctx.stamp.mint());
-    let (contribution_id, _contribution_commit_audit_id, contribution_time) =
-        crate::storage::version_repo::commit::write_contribution(
-            tx,
-            ehr_id,
-            &contribution_audit.row(),
-            Some(uid),
-        )
-        .await?;
+    let FoldedRows {
+        contribution_id,
+        time_committed: contribution_time,
+        ..
+    } = commit_folded(
+        tx,
+        &contribution_audit.row(),
+        Folded::Contribution { id: uid, ehr_id },
+    )
+    .await?;
     let mut committed = Vec::with_capacity(changes.len() + attests.len());
     for (version_audit, change) in changes {
         // Each change writes its own `commit_audit` + `version` under the

@@ -3,8 +3,9 @@
 
 //! The local commit write path.
 //!
-//! Covers the `commit_audit` + `contribution` inserts, the folded
-//! one-statement version commit with its head upsert, and the
+//! Covers the folded commit statement ([`commit_folded`]): the `commit_audit`
+//! row with its `contribution`, its version with the head upsert and node
+//! rows, or both, in one statement; and the
 //! folder-membership + event-outbox writes that ride along inside the same
 //! commit transaction.
 //!
@@ -17,6 +18,8 @@
     reason = "owner-approved 2026-08-03 (#1694 family 1): stored canonical fragments — a typed \
               round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
 )]
+
+use std::sync::LazyLock;
 
 use serde_json::Value;
 use sqlx::{PgConnection, Row};
@@ -73,129 +76,6 @@ pub async fn advisory_lock(tx: &mut PgConnection, vo_id: VoId) -> Result<(), Sto
         .execute(&mut *tx)
         .await?;
     Ok(())
-}
-
-/// Inserts a `commit_audit` row, returning its id and the server-computed
-/// timestamp.
-///
-/// The `time_committed` (master06 §Committal and Audits) is captured via `RETURNING` so
-/// the commit path can build the exact `ORIGINAL_VERSION` it will later serve —
-/// the signed bytes must match the read-time canonical form.
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver/insert failure.
-pub async fn insert_audit(
-    tx: &mut PgConnection,
-    audit: &AuditRow<'_>,
-) -> Result<(Uuid, jiff::Timestamp), StorageError> {
-    let row = sqlx::query(
-        "INSERT INTO commit_audit (system_id, change_type, description, committer, attestation) \
-         VALUES ($1, $2, $3, $4, $5) RETURNING id, time_committed",
-    )
-    .bind(audit.system_id)
-    .bind(audit.change_type)
-    .bind(&audit.description)
-    .bind(&audit.committer)
-    .bind(&audit.attestation)
-    .fetch_one(&mut *tx)
-    .await?;
-    let id: Uuid = row.try_get("id")?;
-    let time_committed = row
-        .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
-        .to_jiff();
-    Ok((id, time_committed))
-}
-
-/// Insert a `contribution` row referencing its audit under the server-minted
-/// `id` ([`crate::licence::stamp`]), returning it. `ehr_id` is `None` for a
-/// demographic CONTRIBUTION (no EHR scope).
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver/insert failure.
-/// ([`StorageError::ContributionUidInUse`] is structurally unreachable here —
-/// the id is freshly minted — but kept as the absent-`RETURNING` mapping so
-/// the statement stays identical to the supplied-uid path in
-/// [`write_contribution`].)
-pub async fn insert_contribution(
-    tx: &mut PgConnection,
-    id: Uuid,
-    ehr_id: Option<EhrId>,
-    commit_audit_id: Uuid,
-) -> Result<Uuid, StorageError> {
-    let inserted: Option<Uuid> = sqlx::query_scalar(
-        "INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-         VALUES ($1, $2, $3) \
-         ON CONFLICT (id) DO NOTHING RETURNING id",
-    )
-    .bind(id)
-    .bind(ehr_id)
-    .bind(commit_audit_id)
-    .fetch_optional(&mut *tx)
-    .await?;
-    inserted.ok_or(StorageError::ContributionUidInUse(None))
-}
-
-/// Insert a `commit_audit` row and its enclosing `contribution` in ONE round trip
-/// via a data-modifying CTE, returning `(contribution_id, commit_audit_id,
-/// time_committed)`.
-///
-/// The `contribution` references the just-inserted `audit`; `time_committed`
-/// is the server-computed commit instant (master06 §Committal and Audits) the
-/// version's `commit_audit` is signed against. A client-supplied CONTRIBUTION
-/// uid is honoured (`supplied`); a duplicate id is a
-/// [`StorageError::ContributionUidInUse`] conflict, never an overwrite
-/// (ITS-REST `contribution_create`).
-///
-/// The audit-to-contribution insert is a dependent chain, the CONTRIBUTION and
-/// its `AUDIT_DETAILS` committing together (master06 §Committal and Audits);
-/// merging the two statements into one CTE is a round-trip optimisation whose
-/// rows and returned values are byte-identical to two separate inserts, both
-/// inside the caller's transaction. No openEHR spec governs statement batching —
-/// our own design.
-///
-/// On a `supplied`-uid conflict the `contribution` CTE inserts nothing (`ON
-/// CONFLICT DO NOTHING`), so the outer `LEFT JOIN` yields a NULL
-/// `contribution_id` and [`StorageError::ContributionUidInUse`]; the audit CTE
-/// is discarded when the transaction unwinds.
-///
-/// # Errors
-/// Returns [`StorageError::ContributionUidInUse`] on a duplicate supplied uid,
-/// else [`StorageError::Database`] on a driver/insert failure.
-pub async fn write_contribution(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    audit: &AuditRow<'_>,
-    supplied: Option<Uuid>,
-) -> Result<(Uuid, Uuid, jiff::Timestamp), StorageError> {
-    let row = sqlx::query(
-        "WITH a AS ( \
-             INSERT INTO commit_audit (system_id, change_type, description, committer, attestation) \
-             VALUES ($1, $2, $3, $4, $5) RETURNING id, time_committed \
-         ), c AS ( \
-             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-             SELECT COALESCE($6, uuidv7()), $7, a.id FROM a \
-             ON CONFLICT (id) DO NOTHING \
-             RETURNING id \
-         ) \
-         SELECT a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id \
-         FROM a LEFT JOIN c ON true",
-    )
-    .bind(audit.system_id)
-    .bind(audit.change_type)
-    .bind(&audit.description)
-    .bind(&audit.committer)
-    .bind(&audit.attestation)
-    .bind(supplied)
-    .bind(ehr_id)
-    .fetch_one(&mut *tx)
-    .await?;
-    let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
-    let contribution_id = contribution_id.ok_or(StorageError::ContributionUidInUse(supplied))?;
-    let commit_audit_id: Uuid = row.try_get("commit_audit_id")?;
-    let time_committed = row
-        .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
-        .to_jiff();
-    Ok((contribution_id, commit_audit_id, time_committed))
 }
 
 /// The `version` columns for a **folded** commit.
@@ -346,50 +226,93 @@ impl HeadUpsert<'_> {
     }
 }
 
-/// A **standalone** folded commit.
+/// What one folded commit statement writes beside its `commit_audit` row.
 ///
-/// `audit` + `contribution` + `version` + the decomposed `node` rows in
-/// ONE data-modifying CTE chain, returning `(contribution_id, commit_audit_id,
-/// time_committed)`.
+/// Each shape is one data-modifying CTE chain, run inside the caller's
+/// transaction: the round-trip-collapsed equivalent of the separate inserts,
+/// byte-identical in the rows written and the values returned. No openEHR spec
+/// governs statement batching: our own design.
+#[derive(Debug, Clone, Copy)]
+pub enum Folded<'a> {
+    /// The CONTRIBUTION `id` and its own audit, the versions of its change set
+    /// following under [`Folded::Into`]. `ehr_id` is `None` for a demographic
+    /// CONTRIBUTION. The audit's `time_committed` is the database's.
+    Contribution {
+        /// The CONTRIBUTION uid, server-minted or client-supplied.
+        id: Uuid,
+        /// The owning EHR.
+        ehr_id: Option<EhrId>,
+    },
+    /// A standalone version under the new CONTRIBUTION `id`, the one audit row
+    /// serving both (a direct write is one CONTRIBUTION of one change, master06
+    /// §Committal and Audits).
+    Standalone {
+        /// The CONTRIBUTION uid.
+        id: Uuid,
+        /// The version, its head upsert and its node rows.
+        version: &'a FoldedVersion<'a>,
+    },
+    /// A version within the CONTRIBUTION `id` an earlier
+    /// [`Folded::Contribution`] of this transaction wrote, under the version's
+    /// own `commit_audit`.
+    Into {
+        /// The CONTRIBUTION uid.
+        id: Uuid,
+        /// The version, its head upsert and its node rows.
+        version: &'a FoldedVersion<'a>,
+    },
+}
+
+/// The rows one folded commit wrote.
+#[derive(Debug, Clone, Copy)]
+pub struct FoldedRows {
+    /// The CONTRIBUTION the statement wrote or wrote into.
+    pub contribution_id: Uuid,
+    /// The `commit_audit` row the statement inserted.
+    pub commit_audit_id: Uuid,
+    /// The audit's `time_committed` as stored (master06 §Committal and Audits).
+    pub time_committed: jiff::Timestamp,
+}
+
+/// The three statement texts, one per [`Folded`] variant.
+#[derive(Debug, Clone, Copy)]
+enum Shape {
+    /// [`Folded::Contribution`].
+    Contribution,
+    /// [`Folded::Standalone`].
+    Standalone,
+    /// [`Folded::Into`].
+    Into,
+}
+
+/// The statement text of one [`Folded`] shape.
 ///
-/// The single audit row serves both the CONTRIBUTION and the version's
-/// `commit_audit` (a direct write is one CONTRIBUTION of one change —
-/// master06 §Committal and Audits). `time_committed` is the server-computed
-/// commit instant (master06 §Committal and Audits).
-///
-/// The externalized multimedia URIs the node rows reference are indexed in the
-/// same transaction ([`crate::storage::blob_ref::record`]), which issues no
-/// statement when there are none.
-///
-/// This is the round-trip-collapsed equivalent of [`write_contribution`]
-/// followed by a plain `version` insert, byte-identical in the rows written
-/// and the values returned: the version's `committed_at` and the audit's
-/// `time_committed` are both the caller's bound
-/// [`FoldedVersion::time_committed`], and everything runs inside the caller's
-/// transaction. No openEHR spec governs statement batching — our own design.
-///
-/// # Errors
-/// Returns [`StorageError::ContributionUidInUse`] on a duplicate supplied uid
-/// (the `contribution` CTE inserts nothing → NULL `contribution_id`), else
-/// [`StorageError::Database`] on a driver/insert failure.
-pub async fn commit_new_version(
-    tx: &mut PgConnection,
-    audit: &AuditRow<'_>,
-    supplied: Option<Uuid>,
-    v: &FoldedVersion<'_>,
-) -> Result<(Uuid, Uuid, jiff::Timestamp), StorageError> {
-    static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+/// Every shape binds the same parameters in the same order: `$1` to `$5` the
+/// audit, `$6` the CONTRIBUTION uid, `$7` the owning EHR, `$8` to `$24` the
+/// version and `$25` on the node arrays, so one binder serves all three.
+fn folded_statement(shape: Shape) -> String {
+    let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
+    let version = matches!(shape, Shape::Standalone | Shape::Into);
+    let audit_time = if version { ", time_committed" } else { "" };
+    let audit_time_value = if version { ", $22::timestamptz" } else { "" };
+    let contribution_cte = if contribution {
+        ", c AS ( \
+             INSERT INTO contribution (id, ehr_id, commit_audit_id) \
+             SELECT $6, $7, a.id FROM a \
+             ON CONFLICT (id) DO NOTHING \
+             RETURNING id \
+         )"
+    } else {
+        ""
+    };
+    let version_cte = if version {
+        let (contribution_id, from) = if contribution {
+            ("c.id", "a, c")
+        } else {
+            ("$6", "a")
+        };
         format!(
-            "WITH a AS ( \
-                 INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                           attestation, time_committed) \
-                 VALUES ($1, $2, $3, $4, $5, $22::timestamptz) RETURNING id, time_committed \
-             ), c AS ( \
-                 INSERT INTO contribution (id, ehr_id, commit_audit_id) \
-                 SELECT COALESCE($6, uuidv7()), $7, a.id FROM a \
-                 ON CONFLICT (id) DO NOTHING \
-                 RETURNING id \
-             ), v AS ( \
+            ", v AS ( \
                  INSERT INTO version \
                    (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
                     lifecycle_state, creating_system_id, preceding_version_uid, \
@@ -397,14 +320,12 @@ pub async fn commit_new_version(
                     signature_client_supplied, stable_compatible, body, origins, committed_at, \
                     other_input_version_uids) \
                  SELECT $8, $9, $7, $10, $11, $12, $13, \
-                        $14, $15, $16, c.id, a.id, $17, $18, $19, $20, $21, $23, \
+                        $14, $15, $16, {contribution_id}, a.id, $17, $18, $19, $20, $21, $23, \
                         $22::timestamptz, $24 \
-                 FROM a, c \
+                 FROM {from} \
                  RETURNING 1 \
              ), h AS ( {} \
-             ), n AS ( {} ) \
-             SELECT a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id \
-             FROM a LEFT JOIN c ON true",
+             ), n AS ( {} )",
             HeadUpsert {
                 vo: "$8",
                 kind: "$9",
@@ -418,139 +339,103 @@ pub async fn commit_new_version(
             .sql(),
             crate::storage::node_repo::node_insert_cte("$8", "$10", "$7", 25)
         )
-    });
-    let row = sqlx::query(sqlx::AssertSqlSafe(SQL.as_str()))
-        .bind(audit.system_id)
-        .bind(audit.change_type)
-        .bind(&audit.description)
-        .bind(&audit.committer)
-        .bind(&audit.attestation)
-        .bind(supplied)
-        .bind(v.ehr_id)
-        .bind(v.vo_id)
-        .bind(v.kind)
-        .bind(v.sys_version)
-        .bind(v.trunk_version)
-        .bind(v.branch_number)
-        .bind(v.branch_version)
-        .bind(v.lifecycle_state)
-        .bind(v.creating_system_id)
-        .bind(v.preceding_version_uid)
-        .bind(v.template_id)
-        .bind(v.signature)
-        .bind(v.signature_client_supplied)
-        .bind(v.stable_compatible)
-        .bind(v.body)
-        .bind(v.time_committed.to_string())
-        .bind(serde_json::json!(v.origins))
-        .bind(super::optional_json_array(v.other_input_version_uids));
-    let node_refs: Vec<&crate::storage::row::NodeRow> = v.rows.iter().collect();
-    let row = crate::storage::node_repo::bind_node_arrays(row, &node_refs)
-        .fetch_one(&mut *tx)
-        .await?;
-    let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
-    let contribution_id = contribution_id.ok_or(StorageError::ContributionUidInUse(supplied))?;
-    let commit_audit_id: Uuid = row.try_get("commit_audit_id")?;
-    let time_committed = row
-        .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
-        .to_jiff();
-    crate::storage::blob_ref::record(tx, &[(v.vo_id, v.sys_version, v.rows)]).await?;
-    Ok((contribution_id, commit_audit_id, time_committed))
+    } else {
+        String::new()
+    };
+    let select = if contribution {
+        " SELECT a.id AS commit_audit_id, a.time_committed, c.id AS contribution_id \
+          FROM a LEFT JOIN c ON true"
+    } else {
+        " SELECT a.id AS commit_audit_id, a.time_committed, $6::uuid AS contribution_id FROM a"
+    };
+    format!(
+        "WITH a AS ( \
+             INSERT INTO commit_audit (system_id, change_type, description, committer, \
+                                       attestation{audit_time}) \
+             VALUES ($1, $2, $3, $4, $5{audit_time_value}) RETURNING id, time_committed \
+         ){contribution_cte}{version_cte}{select}"
+    )
 }
 
-/// A folded commit WITHIN an already-opened CONTRIBUTION.
+/// Run one folded commit statement ([`Folded`]), returning the rows it wrote.
 ///
-/// The version's own `commit_audit` + `version` + the decomposed `node`
-/// rows in ONE data-modifying CTE chain, referencing the pre-existing
-/// `contribution_id`.
+/// A version's audit `time_committed` and its row's `committed_at` are both the
+/// caller's bound [`FoldedVersion::time_committed`], the instant its
+/// `VERSION.signature` was computed over, so stored and signed agree by
+/// construction. The externalized multimedia URIs a version's node rows
+/// reference are indexed in the same transaction
+/// ([`crate::storage::blob_ref::record`]), which issues no statement when there
+/// are none.
 ///
-/// Returns `(commit_audit_id, time_committed)`, and indexes the externalized
-/// multimedia URIs of the node rows in the same transaction
-/// ([`crate::storage::blob_ref::record`]). The CONTRIBUTION and its own audit
-/// were written earlier in the same transaction ([`write_contribution`]);
-/// each change carries its own `commit_audit` (master06 §Committal and
-/// Audits), stamped with the caller's bound [`FoldedVersion::time_committed`]
-/// exactly as [`commit_new_version`] does. No openEHR spec governs statement
-/// batching — our own design.
+/// On a CONTRIBUTION uid already in use the `contribution` CTE inserts nothing
+/// (`ON CONFLICT DO NOTHING`), so the outer `LEFT JOIN` yields a NULL id; the
+/// audit row is discarded when the transaction unwinds.
 ///
 /// # Errors
-/// Returns [`StorageError::Database`] on a driver/insert failure.
-pub async fn commit_version_into(
+/// Returns [`StorageError::ContributionUidInUse`] when a new CONTRIBUTION's uid
+/// is already in use (ITS-REST `contribution_create`: a duplicate is a
+/// conflict, never an overwrite), else [`StorageError::Database`] on a
+/// driver/insert failure.
+pub async fn commit_folded(
     tx: &mut PgConnection,
     audit: &AuditRow<'_>,
-    contribution_id: Uuid,
-    v: &FoldedVersion<'_>,
-) -> Result<(Uuid, jiff::Timestamp), StorageError> {
-    static SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        format!(
-            "WITH a AS ( \
-                 INSERT INTO commit_audit (system_id, change_type, description, committer, \
-                                           attestation, time_committed) \
-                 VALUES ($1, $2, $3, $4, $5, $22::timestamptz) RETURNING id, time_committed \
-             ), v AS ( \
-                 INSERT INTO version \
-                   (vo_id, kind, ehr_id, sys_version, trunk_version, branch_number, branch_version, \
-                    lifecycle_state, creating_system_id, preceding_version_uid, \
-                    contribution_id, commit_audit_id, template_id, signature, \
-                    signature_client_supplied, stable_compatible, body, origins, committed_at, \
-                    other_input_version_uids) \
-                 SELECT $6, $7, $8, $9, $10, $11, $12, \
-                        $13, $14, $15, $16, a.id, $17, $18, $19, $20, $21, $23, \
-                        $22::timestamptz, $24 \
-                 FROM a \
-                 RETURNING 1 \
-             ), h AS ( {} \
-             ), n AS ( {} ) \
-             SELECT a.id AS commit_audit_id, a.time_committed FROM a",
-            HeadUpsert {
-                vo: "$6",
-                kind: "$7",
-                ehr: "$8",
-                ordinal: "$9",
-                branch: "$11",
-                lifecycle: "$13",
-                template: "$17",
-                committed_at: "$22",
-            }
-            .sql(),
-            crate::storage::node_repo::node_insert_cte("$6", "$9", "$8", 25)
-        )
-    });
-    let row = sqlx::query(sqlx::AssertSqlSafe(SQL.as_str()))
+    folded: Folded<'_>,
+) -> Result<FoldedRows, StorageError> {
+    static CONTRIBUTION: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Contribution));
+    static STANDALONE: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Standalone));
+    static INTO: LazyLock<String> = LazyLock::new(|| folded_statement(Shape::Into));
+    let (sql, id, ehr_id, version) = match folded {
+        Folded::Contribution { id, ehr_id } => (&CONTRIBUTION, id, ehr_id, None),
+        Folded::Standalone { id, version } => (&STANDALONE, id, version.ehr_id, Some(version)),
+        Folded::Into { id, version } => (&INTO, id, version.ehr_id, Some(version)),
+    };
+    let query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(audit.system_id)
         .bind(audit.change_type)
         .bind(&audit.description)
         .bind(&audit.committer)
         .bind(&audit.attestation)
-        .bind(v.vo_id)
-        .bind(v.kind)
-        .bind(v.ehr_id)
-        .bind(v.sys_version)
-        .bind(v.trunk_version)
-        .bind(v.branch_number)
-        .bind(v.branch_version)
-        .bind(v.lifecycle_state)
-        .bind(v.creating_system_id)
-        .bind(v.preceding_version_uid)
-        .bind(contribution_id)
-        .bind(v.template_id)
-        .bind(v.signature)
-        .bind(v.signature_client_supplied)
-        .bind(v.stable_compatible)
-        .bind(v.body)
-        .bind(v.time_committed.to_string())
-        .bind(serde_json::json!(v.origins))
-        .bind(super::optional_json_array(v.other_input_version_uids));
-    let node_refs: Vec<&crate::storage::row::NodeRow> = v.rows.iter().collect();
-    let row = crate::storage::node_repo::bind_node_arrays(row, &node_refs)
-        .fetch_one(&mut *tx)
-        .await?;
-    let commit_audit_id: Uuid = row.try_get("commit_audit_id")?;
-    let time_committed = row
-        .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
-        .to_jiff();
-    crate::storage::blob_ref::record(tx, &[(v.vo_id, v.sys_version, v.rows)]).await?;
-    Ok((commit_audit_id, time_committed))
+        .bind(id)
+        .bind(ehr_id);
+    let row = match version {
+        None => query.fetch_one(&mut *tx).await?,
+        Some(v) => {
+            let query = query
+                .bind(v.vo_id)
+                .bind(v.kind)
+                .bind(v.sys_version)
+                .bind(v.trunk_version)
+                .bind(v.branch_number)
+                .bind(v.branch_version)
+                .bind(v.lifecycle_state)
+                .bind(v.creating_system_id)
+                .bind(v.preceding_version_uid)
+                .bind(v.template_id)
+                .bind(v.signature)
+                .bind(v.signature_client_supplied)
+                .bind(v.stable_compatible)
+                .bind(v.body)
+                .bind(v.time_committed.to_string())
+                .bind(serde_json::json!(v.origins))
+                .bind(super::optional_json_array(v.other_input_version_uids));
+            let node_refs: Vec<&crate::storage::row::NodeRow> = v.rows.iter().collect();
+            crate::storage::node_repo::bind_node_arrays(query, &node_refs)
+                .fetch_one(&mut *tx)
+                .await?
+        }
+    };
+    let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
+    let rows = FoldedRows {
+        contribution_id: contribution_id.ok_or(StorageError::ContributionUidInUse(Some(id)))?,
+        commit_audit_id: row.try_get("commit_audit_id")?,
+        time_committed: row
+            .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
+            .to_jiff(),
+    };
+    if let Some(v) = version {
+        crate::storage::blob_ref::record(tx, &[(v.vo_id, v.sys_version, v.rows)]).await?;
+    }
+    Ok(rows)
 }
 
 // ── folder membership ─────────────────────────────────────────────────────────

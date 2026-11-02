@@ -712,28 +712,6 @@ impl AuditStore {
         Ok(())
     }
 
-    /// Delete records older than `retention_days` (0 = keep forever).
-    /// Returns the number of reaped rows.
-    ///
-    /// Reaping goes through `audit.reap_audit_events`, the only deletion path
-    /// the table permits: it removes a PREFIX of the hash chain and advances
-    /// the retention low-water mark in the same transaction, so the surviving
-    /// records still verify and an unrecorded deletion of the oldest records
-    /// remains detectable. A direct `DELETE` is refused by the table's trigger.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the reap fails.
-    pub async fn reap(&self, retention_days: u32) -> Result<u64, AuditError> {
-        if retention_days == 0 {
-            return Ok(0);
-        }
-        let removed: i64 = sqlx::query_scalar("SELECT audit.reap_audit_events($1)")
-            .bind(i32::try_from(retention_days).unwrap_or(i32::MAX))
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
-        Ok(u64::try_from(removed).unwrap_or(0))
-    }
-
     /// Delete every record whose own retention end is on or before `today`,
     /// and every record that states no end (written before per-record ends)
     /// once it is older than `horizon`; returns the number of reaped rows.

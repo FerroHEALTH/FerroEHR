@@ -160,8 +160,8 @@ possibly data migration".
   every future re-vendor keeps the previous generation emitted and
   selectable, and dropping a generation is an owner decision, never a bump
   side effect. Selection is the ONE coupled `spec_profile` configuration key
-  (`development` = RM 1.2.0 + BASE 1.3.0 + LANG 1.1.0, the default;
-  `stable` = RM 1.1.0 + BASE 1.2.0 + LANG 1.0.0) — per-component free choice
+  (`development` = RM 1.2.0 + BASE 1.3.0, the default;
+  `stable` = RM 1.1.0 + BASE 1.2.0) — per-component free choice
   is rejected because the generations are modelled against each other
   (RM 1.1.0's own BMM `includes` names BASE 1.2.0), so incoherent
   combinations stay unrepresentable. Runtime behaviour: one typed core on

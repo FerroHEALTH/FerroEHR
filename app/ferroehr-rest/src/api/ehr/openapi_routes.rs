@@ -6689,161 +6689,144 @@ pub(crate) async fn ehr_status_tags_delete(
 
 /// The answers several EHR-group operations declare word for word, each as a
 /// response map an operation's `responses(...)` names.
-#[expect(
-    dead_code,
-    reason = "response maps the OpenAPI document reads; the answers themselves are built by \
-              the service and the access layer"
-)]
 mod refusals {
     /// A read of an object whose processing is restricted.
     #[derive(utoipa::IntoResponses)]
-    pub(super) enum RestrictedRead {
-        #[response(
-            status = 403,
-            description = "OUR OWN EXTENSION — no ITS-REST \
-                          operation defines restriction of \
-                          processing. Processing of the addressed \
-                          object is restricted, so the server holds \
-                          it in storage and serves nothing from it \
-                          (GDPR Art. 18(2) leaves storage as the \
-                          only processing a restriction admits). \
-                          Distinct from an authorization refusal: \
-                          the same caller with the same rights is \
-                          refused until the restriction is lifted, \
-                          and the body says so. The 401/403 rows of \
-                          the access layer are unchanged."
-        )]
-        Restricted,
-    }
+    #[response(
+        status = 403,
+        description = "OUR OWN EXTENSION — no ITS-REST \
+                      operation defines restriction of \
+                      processing. Processing of the addressed \
+                      object is restricted, so the server holds \
+                      it in storage and serves nothing from it \
+                      (GDPR Art. 18(2) leaves storage as the \
+                      only processing a restriction admits). \
+                      Distinct from an authorization refusal: \
+                      the same caller with the same rights is \
+                      refused until the restriction is lifted, \
+                      and the body says so. The 401/403 rows of \
+                      the access layer are unchanged."
+    )]
+    pub(super) struct RestrictedRead;
 
     /// A write to an object, or an `EHR`, whose processing is restricted.
     #[derive(utoipa::IntoResponses)]
-    pub(super) enum RestrictedWrite {
-        #[response(
-            status = 403,
-            description = "OUR OWN EXTENSION — no ITS-REST \
-                          operation defines restriction of \
-                          processing. The addressed object, or the \
-                          whole EHR, is restricted, so the write is \
-                          refused and the stored content stays \
-                          exactly as it is (GDPR Art. 18(2) leaves \
-                          storage as the only processing a \
-                          restriction admits). Distinct from an \
-                          authorization refusal, and from the 409 a \
-                          non-modifiable EHR answers with. The \
-                          401/403 rows of the access layer are \
-                          unchanged."
-        )]
-        Restricted,
-    }
+    #[response(
+        status = 403,
+        description = "OUR OWN EXTENSION — no ITS-REST \
+                      operation defines restriction of \
+                      processing. The addressed object, or the \
+                      whole EHR, is restricted, so the write is \
+                      refused and the stored content stays \
+                      exactly as it is (GDPR Art. 18(2) leaves \
+                      storage as the only processing a \
+                      restriction admits). Distinct from an \
+                      authorization refusal, and from the 409 a \
+                      non-modifiable EHR answers with. The \
+                      401/403 rows of the access layer are \
+                      unchanged."
+    )]
+    pub(super) struct RestrictedWrite;
 
     /// An `Accept` an `EHR_STATUS` representation cannot satisfy.
     #[derive(utoipa::IntoResponses)]
-    pub(super) enum EhrStatusNotAcceptable {
-        #[response(
-            status = 406,
-            description = "The `Accept` header cannot be satisfied: \
-                          the EHR_STATUS resource has only the \
-                          canonical `application/json` / \
-                          `application/xml` representations \
-                          (`Resources.md` §\"XML Format\"/§\"JSON \
-                          Format\": \"If the service cannot fulfill \
-                          this aspect of the request, it MUST respond \
-                          with HTTP status code `406 Not \
-                          Acceptable`\"; the Simplified Formats are \
-                          defined for templated COMPOSITION content \
-                          only, and EHR_STATUS is not templated)."
-        )]
-        NotAcceptable,
-    }
+    #[response(
+        status = 406,
+        description = "The `Accept` header cannot be satisfied: \
+                      the EHR_STATUS resource has only the \
+                      canonical `application/json` / \
+                      `application/xml` representations \
+                      (`Resources.md` §\"XML Format\"/§\"JSON \
+                      Format\": \"If the service cannot fulfill \
+                      this aspect of the request, it MUST respond \
+                      with HTTP status code `406 Not \
+                      Acceptable`\"; the Simplified Formats are \
+                      defined for templated COMPOSITION content \
+                      only, and EHR_STATUS is not templated)."
+    )]
+    pub(super) struct EhrStatusNotAcceptable;
 
     /// An `Accept` an `ITEM_TAG` list cannot satisfy.
     #[derive(utoipa::IntoResponses)]
-    pub(super) enum TagListNotAcceptable {
-        #[response(
-            status = 406,
-            description = "The `Accept` header cannot be satisfied: \
-                          an ITEM_TAG list is served as canonical \
-                          `application/json` only. The canonical \
-                          XML ITS defines no ITEM_TAG type, so an \
-                          `application/xml` Accept — a member of \
-                          the released `Accept_canonical` enum, \
-                          stalled shape on this operation — is \
-                          refused (`Resources.md` §\"XML Format\": \
-                          \"If the service cannot fulfill this \
-                          aspect of the request, it MUST respond \
-                          with HTTP status code `406 Not \
-                          Acceptable`\")."
-        )]
-        NotAcceptable,
-    }
+    #[response(
+        status = 406,
+        description = "The `Accept` header cannot be satisfied: \
+                      an ITEM_TAG list is served as canonical \
+                      `application/json` only. The canonical \
+                      XML ITS defines no ITEM_TAG type, so an \
+                      `application/xml` Accept — a member of \
+                      the released `Accept_canonical` enum, \
+                      stalled shape on this operation — is \
+                      refused (`Resources.md` §\"XML Format\": \
+                      \"If the service cannot fulfill this \
+                      aspect of the request, it MUST respond \
+                      with HTTP status code `406 Not \
+                      Acceptable`\")."
+    )]
+    pub(super) struct TagListNotAcceptable;
 
     /// A converted `FOLDER` tree that cannot be followed.
     #[derive(utoipa::IntoResponses)]
-    pub(super) enum FolderTreeUnprocessable {
-        #[response(
-            status = 422,
-            description = "The request was well-formed and converted \
-                          to a FOLDER tree, but the tree cannot be \
-                          followed as a directory \
-                          (`Requests_and_responses.md` §\"HTTP \
-                          status codes\", the `422` row: \"The \
-                          request was well-formed but was unable to \
-                          be followed due to semantic errors\"). The \
-                          shape rules are RM, checked at every node \
-                          of the tree: `FOLDER.name` is mandatory \
-                          and `archetype_node_id` mandatory and \
-                          non-empty (LOCATABLE, RM common \
-                          master03), and every `items` member must \
-                          be an OBJECT_REF (`id` + `namespace` + \
-                          `type`, and never an inline LOCATABLE) — \
-                          \"Folder structures do not contain \
-                          Compositions, only references to them\" \
-                          (RM ehr master04 §Folders; RM common \
-                          master05 §Overview types `FOLDER.items` \
-                          `List<OBJECT_REF>`). A committal \
-                          `change_type`/`lifecycle_state` that is \
-                          not a member of its openEHR terminology \
-                          group is `422` too. An `items` OBJECT_REF \
-                          whose `namespace` claims this system \
-                          (`local`, or the configured system id) \
-                          must resolve to a versioned object in \
-                          this EHR; an unresolvable one is `422` \
-                          naming each dangling reference at its \
-                          tree path — no released text constrains \
-                          reference targets, so this is our own \
-                          extension, and foreign-namespace \
-                          references pass unchecked (BASE \
-                          `object_ref.adoc`: targets \"may exist \
-                          locally or be maintained outside the \
-                          current namespace\")."
-        )]
-        Unprocessable,
-    }
+    #[response(
+        status = 422,
+        description = "The request was well-formed and converted \
+                      to a FOLDER tree, but the tree cannot be \
+                      followed as a directory \
+                      (`Requests_and_responses.md` §\"HTTP \
+                      status codes\", the `422` row: \"The \
+                      request was well-formed but was unable to \
+                      be followed due to semantic errors\"). The \
+                      shape rules are RM, checked at every node \
+                      of the tree: `FOLDER.name` is mandatory \
+                      and `archetype_node_id` mandatory and \
+                      non-empty (LOCATABLE, RM common \
+                      master03), and every `items` member must \
+                      be an OBJECT_REF (`id` + `namespace` + \
+                      `type`, and never an inline LOCATABLE) — \
+                      \"Folder structures do not contain \
+                      Compositions, only references to them\" \
+                      (RM ehr master04 §Folders; RM common \
+                      master05 §Overview types `FOLDER.items` \
+                      `List<OBJECT_REF>`). A committal \
+                      `change_type`/`lifecycle_state` that is \
+                      not a member of its openEHR terminology \
+                      group is `422` too. An `items` OBJECT_REF \
+                      whose `namespace` claims this system \
+                      (`local`, or the configured system id) \
+                      must resolve to a versioned object in \
+                      this EHR; an unresolvable one is `422` \
+                      naming each dangling reference at its \
+                      tree path — no released text constrains \
+                      reference targets, so this is our own \
+                      extension, and foreign-namespace \
+                      references pass unchecked (BASE \
+                      `object_ref.adoc`: targets \"may exist \
+                      locally or be maintained outside the \
+                      current namespace\")."
+    )]
+    pub(super) struct FolderTreeUnprocessable;
 
     /// A tag list entry that breaks an `ITEM_TAG` rule.
     #[derive(utoipa::IntoResponses)]
-    pub(super) enum TagRuleBroken {
-        #[response(
-            status = 422,
-            description = "The body is well-formed but an entry \
-                          breaks an ITEM_TAG rule: a missing or \
-                          empty `key`, a `key` with leading or \
-                          trailing whitespace (RM `item_tag.adoc` \
-                          __Inv_key_valid__: \"not key.is_empty \
-                          and key.is_justified\"), or an EMPTY \
-                          `value` (__Inv_value_valid__: \"value /= \
-                          Void implies not value.is_empty\" — omit \
-                          the member instead). The released \
-                          operation declares only `400` for a bad \
-                          request; answering `422` for these \
-                          SEMANTIC failures follows \
-                          `Requests_and_responses.md` §\"HTTP \
-                          status codes\", the `422` row (\"The \
-                          request was well-formed but was unable \
-                          to be followed due to semantic errors\") \
-                          and is OURS, adjudicated."
-        )]
-        Unprocessable,
-    }
+    #[response(
+        status = 422,
+        description = "The body is well-formed but an entry \
+                      breaks an ITEM_TAG rule: a missing or \
+                      empty `key`, a `key` with leading or \
+                      trailing whitespace (RM `item_tag.adoc` \
+                      __Inv_key_valid__: \"not key.is_empty \
+                      and key.is_justified\"), or an EMPTY \
+                      `value` (__Inv_value_valid__: \"value /= \
+                      Void implies not value.is_empty\" — omit \
+                      the member instead). The released \
+                      operation declares only `400` for a bad \
+                      request; answering `422` for these \
+                      SEMANTIC failures follows \
+                      `Requests_and_responses.md` §\"HTTP \
+                      status codes\", the `422` row (\"The \
+                      request was well-formed but was unable \
+                      to be followed due to semantic errors\") \
+                      and is OURS, adjudicated."
+    )]
+    pub(super) struct TagRuleBroken;
 }

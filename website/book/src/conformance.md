@@ -57,8 +57,9 @@ contradicts (`cited-text-absent`, `contested-in-development`).
 > consumer can validate a record without trusting the tool that produced it. The
 > instrument is built from the currently pinned specifications (AQL 1.1.0,
 > Terminology 3.1.0, ITS-REST 1.1.0, and the Reference Model generation the
-> system under test runs, for FerroEHR the default `development` profile,
-> RM 1.2.0; the composed stack takes the profile from configuration, so a
+> system under test runs: for FerroEHR's development run the default
+> `development` profile, RM 1.2.0, and for its released run the `stable`
+> profile; the composed stack takes the profile from configuration, so a
 > `stable`-profile run is the same catalogue against the released generation).
 
 ## The current result
@@ -66,7 +67,9 @@ contradicts (`cited-text-absent`, `contested-in-development`).
 Every run on `main` draws its own badges and pushes them to a branch of the
 repository, so these show the latest run, the same badges the README carries.
 The released profile reads every citation against the frozen openEHR release
-and is the record:
+and is the record. The server it judges runs `spec_profile = "stable"`, the
+generation set that release defines; the development run keeps the default
+`development` profile:
 
 [![openEHR BASE · released][base-rel]][runs]
 [![openEHR OPTIONS · released][options-rel]][runs]

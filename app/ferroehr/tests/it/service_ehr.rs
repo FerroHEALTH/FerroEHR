@@ -2526,7 +2526,7 @@ async fn the_default_ehr_status_satisfies_the_locatable_root_invariants() {
         details["rm_version"]
             .as_str()
             .is_some_and(|v| !v.is_empty()),
-        "ARCHETYPED.rm_version is 1..1, got {details}"
+        "ARCHETYPED.rm_version is 1..1 and must be a non-empty string"
     );
     // Our own defaults for the generated status.
     assert_eq!(status["is_modifiable"], json!(true));
