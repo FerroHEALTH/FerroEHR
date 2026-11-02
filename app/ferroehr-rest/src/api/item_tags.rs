@@ -115,9 +115,9 @@ impl StoredItemTags {
 /// re-versioning of the content".
 ///
 /// # Errors
-/// [`ApiError::BadRequest`] for a malformed header entry;
-/// [`ApiError::Unprocessable`] for an entry that breaks an RM `ITEM_TAG`
-/// invariant.
+/// [`openehr_its::rest::runtime::ApiError::BadRequest`] for a malformed header
+/// entry; [`openehr_its::rest::runtime::ApiError::Unprocessable`] for an entry
+/// that breaks an RM `ITEM_TAG` invariant.
 pub(crate) fn pending(headers: &HeaderMap) -> Result<PendingItemTags, RestError> {
     // `None` = header absent (leave tags intact); `Some(empty)` = empty header
     // value (clear all tags) — the parse helper draws the distinction.
@@ -177,8 +177,9 @@ fn validated_entries(
 /// headers will also be unsupported").
 ///
 /// # Errors
-/// [`ApiError::Internal`] if the just-committed version uid does not parse as an
-/// `OBJECT_VERSION_ID`, plus whatever the storage seam refuses.
+/// [`openehr_its::rest::runtime::ApiError::Internal`] if the just-committed
+/// version uid does not parse as an `OBJECT_VERSION_ID`, plus whatever the
+/// storage seam refuses.
 pub(crate) async fn persist(
     state: &AppState,
     target: TagTarget,
@@ -209,8 +210,9 @@ pub(crate) async fn persist(
 /// accessor (`base_types` §Functions `object_id`), never a local `::` split.
 ///
 /// # Errors
-/// [`ApiError::Internal`]: the just-committed version uid is server-minted, so a
-/// parse failure here is a server fault, never a client one.
+/// [`openehr_its::rest::runtime::ApiError::Internal`]: the just-committed
+/// version uid is server-minted, so a parse failure here is a server fault,
+/// never a client one.
 fn container_uid(version_uid: &str) -> Result<String, RestError> {
     Ok(ObjectVersionId::new(version_uid)
         .map_err(|e| {
