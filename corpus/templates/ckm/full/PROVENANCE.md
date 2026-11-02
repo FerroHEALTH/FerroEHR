@@ -2,7 +2,7 @@
 
 Every template the official openEHR CKM (`https://ckm.openehr.org/ckm/rest/v1`) publishes, exported
 by CKM itself as an Operational Template and vendored verbatim by
-`scripts/vendor/ckm-templates.sh` on 2026-08-01T15:09:43Z.
+`scripts/vendor/ckm-templates.sh` on 2026-11-02T00:03:32Z.
 
 This is the BREADTH pack: real-world OPT 1.4 shapes for the reader /
 WebTemplate builder gates. The curated hospital-simulation journey
@@ -12,10 +12,14 @@ are derived from CKM display names and are NOT a naming contract.
 ## Licensing
 
 CKM publishes no repository-level license; each OPT embeds its source
-archetypes' `licence` metadata (predominantly CC-BY-SA 3.0 where
-stated — see the individual file). Vendored verbatim, so authorship
-and licence metadata ride along; root reference copy:
-`LICENSE-CC-BY-SA-3.0`.
+archetypes' `licence` metadata, and the pack is **mixed**. Counted by
+this script over the vendored files at the stamp above: **113** name
+CC-BY-SA 4.0, **10** name CC-BY-SA 3.0, **0** name both, and
+**182** name no Creative Commons licence. Read the individual
+file; its own metadata is the authority. Vendored verbatim, so
+authorship and licence metadata ride along; root reference copies:
+`LICENSE-CC-BY-SA-3.0` and `LICENSE-CC-BY-SA-4.0`, and `REUSE.toml`
+declares this tree as `CC-BY-SA-3.0 AND CC-BY-SA-4.0`.
 
 - published by CKM: **306**
 - vendored: **305**
@@ -96,8 +100,8 @@ only exportable by a signed-in account with access.
 | 1013.26.1339 | `blood-donation-summary-jm.opt` | Blood donation summary - JM | INITIAL | 2025-12-15T05:30:17+01:00 | 1 |
 | 1013.26.134 | `follow-up-schedule-for-cg.opt` | Follow-up schedule for CG | INITIAL | 2016-07-24T11:49:33+02:00 | 2 |
 | 1013.26.1351 | `travel-event-jm.opt` | Travel event - JM | INITIAL | 2025-12-19T03:19:12+01:00 | 2 |
-| 1013.26.1363 | `ips-problem-list.opt` | IPS Problem List | INITIAL | 2026-04-14T15:16:52+02:00 | 2 |
-| 1013.26.1365 | `ips-allergies-and-intolerances.opt` | IPS Allergies and Intolerances | INITIAL | 2026-04-14T15:23:46+02:00 | 1 |
+| 1013.26.1363 | `ips-problem-list.opt` | IPS Problem List | INITIAL | 2026-08-19T11:33:13+02:00 | 3 |
+| 1013.26.1365 | `ips-allergies-and-intolerances.opt` | IPS Allergies and Intolerances | INITIAL | 2026-08-19T11:24:49+02:00 | 2 |
 | 1013.26.138 | `planning-the-diagnostic-tests-to-follow-up-the-progression-of-cg.opt` | Planning the diagnostic tests to follow-up the progression of CG | INITIAL | 2016-07-24T11:46:08+02:00 | 1 |
 | 1013.26.141 | `intraocular-pressure-study.opt` | Intraocular pressure study | INITIAL | 2016-07-25T16:26:59+02:00 | 2 |
 | 1013.26.142 | `acquisition-and-validation-of-vf-test.opt` | Acquisition and validation of VF test | INITIAL | 2016-07-24T16:01:56+02:00 | 1 |
