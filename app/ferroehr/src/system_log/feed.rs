@@ -154,7 +154,7 @@ impl Outbox for StoreOutbox {
                 Err(e) => {
                     tracing::error!(
                         chain_seq = sequence,
-                        error = %crate::service::error::ErrorChain::new(&e),
+                        error = %crate::error::ErrorChain::new(&e),
                         "ATNA audit FHIR feed: the record cannot be rendered; it is held aside \
                          until the next start"
                     );

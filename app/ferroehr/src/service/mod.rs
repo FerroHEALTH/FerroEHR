@@ -17,8 +17,7 @@
 //! and the clinical domain, and the access record each one owes.
 //!
 //! The root modules beside the chapters carry the cross-chapter service
-//! vocabulary: the service error ([`error`]) and its refusal kinds
-//! ([`refusal`]), the version-commit envelope
+//! vocabulary: the version-commit envelope
 //! ([`version_update`]), the list cursor ([`list`]), the
 //! platform-service enumeration ([`platform_service`]), the
 //! protocol-adapter response envelope ([`response`]), the
@@ -26,7 +25,7 @@
 //! ITS-REST datetime-request-parameter decoder (`datetime`).
 //!
 //! NOTE: no openEHR spec governs the internal layering: our own design; every
-//! service call returns [`error::ServiceError`], which the protocol adapter maps onto the wire.
+//! service call returns [`crate::error::ServiceError`], which the protocol adapter maps onto the wire.
 
 #![expect(
     clippy::disallowed_types,
@@ -46,10 +45,8 @@ pub mod terminology;
 
 pub mod committer;
 pub(crate) mod datetime;
-pub mod error;
 pub mod list;
 pub mod platform_service;
-pub mod refusal;
 pub mod response;
 pub mod version_update;
 mod write;

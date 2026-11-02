@@ -26,16 +26,16 @@
 )]
 
 use crate::db::acquire::acquire;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
-use crate::service::refusal::Missing;
 use crate::service::response::ResourceMeta;
 use crate::service::response::ServiceResponse;
 use openehr_base::prelude::ObjectVersionId;
 use openehr_rm::prelude::Folder;
 use serde_json::Value;
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::storage::version_repo::read::VersionAt;

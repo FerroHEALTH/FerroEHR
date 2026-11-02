@@ -454,7 +454,7 @@ async fn corrupted_blob_fails_integrity_on_expand() {
     // never serving corrupted data.
     let err = svc.expand_multimedia(stored).await.expect_err("must fail");
     assert!(
-        matches!(err, ferroehr::service::error::ServiceError::Internal(_)),
+        matches!(err, ferroehr::error::ServiceError::Internal(_)),
         "integrity failure maps to a server fault (500)"
     );
 }
@@ -700,7 +700,7 @@ async fn unreachable_store_refuses_expansion_instead_of_answering_silently() {
     // The wire body stays the curated opaque 500 text; the actionable detail is
     // on the trace record, never on the wire.
     assert!(
-        matches!(err, ferroehr::service::error::ServiceError::Internal(_)),
+        matches!(err, ferroehr::error::ServiceError::Internal(_)),
         "expected a server fault, got {err:?}"
     );
 }

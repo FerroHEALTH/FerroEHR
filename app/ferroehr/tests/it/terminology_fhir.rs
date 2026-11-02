@@ -13,8 +13,8 @@
 
 use std::time::Duration;
 
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Missing;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Missing;
 use serde_json::json;
 use wiremock::{MockServer, ResponseTemplate};
 

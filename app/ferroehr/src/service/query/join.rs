@@ -36,9 +36,9 @@ use crate::aql::exec::{ColumnMeta, QueryResult};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::join::{JoinPlan, Side};
 use crate::aql::sql::{EhrAccessScope, EhrScopeKind, SqlCtx};
+use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,

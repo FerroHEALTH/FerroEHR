@@ -35,9 +35,9 @@ mod export;
 mod extract_type;
 mod import;
 
+use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 

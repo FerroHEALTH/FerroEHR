@@ -26,9 +26,9 @@
 //! surfaces, read the record as before.
 
 use axum::response::{IntoResponse, Response};
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Missing;
 use ferroehr::ids::EhrId;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Missing;
 use uuid::Uuid;
 
 use super::authn::{Principal, current_principal};

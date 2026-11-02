@@ -20,14 +20,14 @@
 //! Art. 5(1)(e) with Art. 30(1)(f) (the periods and what has fallen due) —
 //! `docs/law/eu/gdpr/text.html`.
 
-use ferroehr::service::refusal::{Malformed, Missing};
+use ferroehr::error::refusal::{Malformed, Missing};
 use serde_json::json;
 use sqlx::PgPool;
 
+use ferroehr::error::ServiceError;
 use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::storage::marks::RetentionPeriod;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};

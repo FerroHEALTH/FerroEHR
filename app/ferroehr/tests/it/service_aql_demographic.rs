@@ -20,11 +20,11 @@ use std::collections::BTreeMap;
 use serde_json::{Value, json};
 
 use crate::typed_body::typed;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Malformed;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::refusal::Malformed;
 
 const IDENTIFIER_CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2";
 

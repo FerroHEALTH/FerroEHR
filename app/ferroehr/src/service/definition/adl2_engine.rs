@@ -8,7 +8,7 @@ use openehr_adl::opt::OptError;
 use openehr_adl::validate::catalogue::ValidationCode;
 use openehr_base::validate::InvariantViolation;
 
-use crate::service::error::{ErrorChain, ServiceError, Violation};
+use crate::error::{ErrorChain, ServiceError, Violation};
 
 /// The refusal of an operational template that cannot be compiled.
 pub(super) fn not_compiled(e: OptError) -> ServiceError {

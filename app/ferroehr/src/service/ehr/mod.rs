@@ -54,8 +54,8 @@ pub mod access_types;
 
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::service::response::ResourceMeta;
 
 /// The committed version's full [`ResourceMeta`] (version uid + commit

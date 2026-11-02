@@ -21,6 +21,7 @@ use uuid::Uuid;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use ferroehr::error::ServiceError;
 use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::PrivacyConfig;
 use ferroehr::service::FerroEhrService;
@@ -28,7 +29,6 @@ use ferroehr::service::ehr_index::config::EhrIndexConfig;
 use ferroehr::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::linkage::cohort::CohortQueryRequest;
 use ferroehr::service::linkage::cohort::config::CohortConfig;
 use ferrohealth_secret::secret_url::SecretUrl;

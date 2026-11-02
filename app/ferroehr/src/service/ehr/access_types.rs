@@ -32,8 +32,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
-use crate::service::error::{ServiceError, Violation};
 
 /// The `_type` discriminator of this scheme's `ACCESS_CONTROL_SETTINGS`
 /// subtype on the wire (canonical JSON). `EHR_ACCESS.scheme()` derives from

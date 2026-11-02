@@ -13,9 +13,9 @@ use serde_json::{Value, json};
 use openehr_base::prelude::ObjectVersionId;
 use openehr_rm::prelude::{ItemTag, PartyProxy};
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::versioning::change::Committed;
 
 use crate::fixtures::{change_type, composition, folder, uid, uv};

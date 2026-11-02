@@ -22,11 +22,11 @@ use openehr_base::prelude::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use serde_json::Value;
 
+use crate::error::refusal::Missing;
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
-use crate::service::error::{ServiceError, Violation};
-use crate::service::refusal::Missing;
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};

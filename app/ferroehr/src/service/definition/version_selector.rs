@@ -15,7 +15,7 @@
 
 use semver::Version;
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// Whether `version` is an exact SEMVER version or a `{major}` /
 /// `{major}.{minor}` prefix of one.

@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use quick_xml::Reader;
 use quick_xml::events::Event;
 
-use crate::service::error::{ServiceError, Violation};
+use crate::error::{ServiceError, Violation};
 
 /// The legal direct children of the root `<template>` element (the serialized
 /// `OPERATIONAL_TEMPLATE` attributes).
@@ -109,7 +109,7 @@ pub(crate) fn validate_opt_structure(xml: &str) -> Result<(), ServiceError> {
 #[cfg(test)]
 mod tests {
     use super::validate_opt_structure;
-    use crate::service::error::ServiceError;
+    use crate::error::ServiceError;
 
     /// The refused element and the rule it broke, read from the violation.
     fn refusal(xml: &str) -> String {

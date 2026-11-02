@@ -30,10 +30,10 @@ use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::sql::SqlCtx;
+use crate::error::refusal::{Missing, Refusal};
+use crate::error::{ErrorChain, ServiceError};
 use crate::service::FerroEhrService;
-use crate::service::error::{ErrorChain, ServiceError};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
-use crate::service::refusal::{Missing, Refusal};
 use crate::storage::ehr_repo;
 use crate::storage::error::StorageError;
 use crate::system_log::categories::{AccessedContent, ContentIds};
@@ -640,8 +640,8 @@ impl From<AqlError> for ServiceError {
 #[cfg(test)]
 mod tests {
     use super::{AqlError, ExecError, map_exec_error};
-    use crate::service::error::ServiceError;
-    use crate::service::refusal::Malformed;
+    use crate::error::ServiceError;
+    use crate::error::refusal::Malformed;
 
     /// Whether `error` is the overload the wire answers `503` (plus
     /// `Retry-After`).

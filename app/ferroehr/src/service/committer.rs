@@ -16,7 +16,7 @@ use openehr_base::prelude::{GenericId, ObjectId, PartyRef};
 use openehr_rm::prelude::{PartyIdentified, PartyProxy, PartySelf};
 use tokio::task_local;
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// The authenticated identity a protocol adapter attributes commits to.
 #[derive(Debug, Clone)]

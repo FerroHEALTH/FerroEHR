@@ -21,8 +21,8 @@
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::error::ServiceError;
 use crate::ids::VoId;
-use crate::service::error::ServiceError;
 use crate::versioning::SigningCtx;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::TreeId;

@@ -29,8 +29,8 @@ use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
+use ferroehr::error::ServiceError;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::response::ServiceResponse;
 
 /// The per-kind CRUD operations (`create`/`get`/`update`/`delete`).

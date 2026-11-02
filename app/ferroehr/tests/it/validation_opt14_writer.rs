@@ -15,7 +15,7 @@ use openehr_its::opt14_writer::{
     ArchetypeLibrary, ArchetypeUse, Narrowing, NodeClone, SlotFill, TemplateDefinition,
 };
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::validation::validate_opt_artefact;
 
 /// CKM archetypes whose own `existence` on a reference-model attribute is

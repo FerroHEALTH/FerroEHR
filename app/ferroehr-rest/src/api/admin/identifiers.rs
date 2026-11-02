@@ -33,7 +33,7 @@ use utoipa_axum::routes;
 
 use openehr_its::rest::runtime::ApiError;
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};

@@ -8,8 +8,8 @@ use std::str::FromStr;
 
 use openehr_base::prelude::ObjectVersionId;
 
+use crate::error::ServiceError;
 use crate::ids::VoId;
-use crate::service::error::ServiceError;
 use crate::storage::version_repo::placement::TipRow;
 use crate::versioning::change::tip_uid;
 use crate::versioning::object_version_id::{

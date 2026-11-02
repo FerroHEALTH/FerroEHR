@@ -10,8 +10,8 @@
 //! racing writes: our own design. Whichever write comes second gets the
 //! refusal it gets alone, so no stored template is left without its archetype.
 
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Refusal};
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Refusal};
 
 /// How many times the two writes race.
 const ROUNDS: usize = 24;

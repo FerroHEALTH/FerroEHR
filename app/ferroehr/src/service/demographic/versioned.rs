@@ -20,10 +20,10 @@
 
 use serde_json::Value;
 
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::service::response::ServiceResponse;
 use crate::versioning::object_version_id::TreeId;
 

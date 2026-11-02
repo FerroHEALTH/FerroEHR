@@ -26,9 +26,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Invalid;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Invalid;
 use testcontainers::core::{ContainerPort, Mount};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt};

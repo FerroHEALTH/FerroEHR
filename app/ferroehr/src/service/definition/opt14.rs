@@ -42,9 +42,9 @@ use openehr_sdt::flat::example::{DetailLevel, ExampleType};
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use serde_json::{Value, json};
 
+use crate::error::refusal::{Invalid, Missing};
+use crate::error::{ErrorChain, ServiceError, Violation};
 use crate::service::FerroEhrService;
-use crate::service::error::{ErrorChain, ServiceError, Violation};
-use crate::service::refusal::{Invalid, Missing};
 use crate::storage::template_repo::{self, NewTemplate, TemplateRow};
 use crate::templates::identity;
 
@@ -458,7 +458,7 @@ fn require_well_formed_xml(xml: &str) -> Result<(), ServiceError> {
 #[cfg(test)]
 mod tests {
     use super::require_well_formed_xml;
-    use crate::service::error::ServiceError;
+    use crate::error::ServiceError;
     use crate::templates::identity;
 
     #[test]

@@ -17,8 +17,8 @@
 )]
 
 use crate::db::acquire::acquire;
+use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::EhrId;
-use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::system_log::event::{
@@ -29,8 +29,8 @@ use openehr_rm::prelude::{Archetyped, DvText, DvTextData, Ehr, EhrStatus, PartyS
 use serde_json::Value;
 use sqlx::Connection as _;
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};

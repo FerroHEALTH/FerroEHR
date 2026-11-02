@@ -29,7 +29,7 @@ use openehr_its::rest::generated::ehr::{
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::Folder;
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::service::response::ServiceResponse;
 
 use crate::api::RequestParts;

@@ -10,8 +10,8 @@
 //! §Referencing): an interface reference, the identifier down to its major
 //! version, "will match the latest release available of that major version".
 
+use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 
 const FAMILY: &str = "openEHR-EHR-OBSERVATION.res_obs";
 const TEMPLATE: &str = "openEHR-EHR-COMPOSITION.res_uses_v1.v1.0.0";

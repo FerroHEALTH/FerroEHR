@@ -43,8 +43,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::service::error::{INTERNAL_MESSAGE, ServiceError};
-use crate::service::refusal::Missing;
+use crate::error::refusal::Missing;
+use crate::error::{INTERNAL_MESSAGE, ServiceError};
 use crate::service::terminology::types::{
     DefinedTerm, TermEntry, TermRelationship, TerminologyExtract, TerminologyRelation,
 };
@@ -459,7 +459,7 @@ mod wire {
         Absence, CHILD_RELATION, Expansion, FhirTerminologyProvider, GRANT_REFUSED,
         TerminologyServerConfig,
     };
-    use crate::service::error::{ErrorChain, INTERNAL_MESSAGE, ServiceError};
+    use crate::error::{ErrorChain, INTERNAL_MESSAGE, ServiceError};
     use crate::service::terminology::types::{DefinedTerm, TermCode, TermEntry, TermRelationship};
 
     /// The `tx-issue-type` code for "the code system is not known to the

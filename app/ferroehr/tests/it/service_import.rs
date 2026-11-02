@@ -41,12 +41,12 @@ use serde_json::{Value, json};
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 
 use crate::fixtures::db_now;
 use crate::fixtures::status_for_subject;

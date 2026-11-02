@@ -48,9 +48,9 @@ use sqlx::{Connection as _, PgConnection, PgPool};
 
 use crate::db::acquire::{AcquireError, acquire};
 use crate::db::domain::DomainPools;
+use crate::error::refusal::Missing;
+use crate::error::{ErrorChain, ServiceError};
 use crate::service::FerroEhrService;
-use crate::service::error::{ErrorChain, ServiceError};
-use crate::service::refusal::Missing;
 
 /// The exclusive form of the lock every outbox insert holds shared, keyed on
 /// the connection's domain schema.

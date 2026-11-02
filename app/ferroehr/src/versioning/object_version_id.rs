@@ -29,8 +29,8 @@ use openehr_base::v1_3::base_types::identification::version_tree_id::VersionTree
 use openehr_its::rest::runtime::ApiError;
 use uuid::Uuid;
 
+use crate::error::{ErrorChain, ServiceError};
 use crate::ids::VoId;
-use crate::service::error::{ErrorChain, ServiceError};
 
 /// A decoded `VERSION_TREE_ID`.
 ///
@@ -243,7 +243,7 @@ impl VersionIdError {
 
 impl From<VersionIdError> for ServiceError {
     fn from(e: VersionIdError) -> Self {
-        ServiceError::content_invalid(crate::service::error::Violation::new(e.wire_message()))
+        ServiceError::content_invalid(crate::error::Violation::new(e.wire_message()))
     }
 }
 
@@ -472,8 +472,7 @@ pub(crate) fn expected_from_if_match(if_match: &str) -> Result<Option<TreeId>, V
 /// (`ORIGINAL_VERSION.Other_input_version_uids_valid`).
 pub(crate) fn parse_merge_inputs(value: &serde_json::Value) -> Result<Vec<String>, ServiceError> {
     let invalid = |message: String, invariant: Option<&'static str>| {
-        let violation =
-            crate::service::error::Violation::new(message).with_path("other_input_version_uids");
+        let violation = crate::error::Violation::new(message).with_path("other_input_version_uids");
         ServiceError::content_invalid(match invariant {
             Some(invariant) => violation.with_invariant(invariant),
             None => violation,

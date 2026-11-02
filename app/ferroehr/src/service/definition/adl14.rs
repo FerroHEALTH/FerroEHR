@@ -39,10 +39,10 @@ use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
 use openehr_base::prelude::ArchetypeId;
 use openehr_base::validate::InvariantViolation;
 
+use crate::error::refusal::{Invalid, Missing};
+use crate::error::{ServiceError, Violation};
 use crate::service::FerroEhrService;
-use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
-use crate::service::refusal::{Invalid, Missing};
 use crate::storage::archetype_repo;
 
 use super::page_bounds;

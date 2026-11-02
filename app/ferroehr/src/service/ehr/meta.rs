@@ -24,8 +24,8 @@ use crate::ids::{EhrId, VoId};
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use serde_json::Value;
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id, version_id};

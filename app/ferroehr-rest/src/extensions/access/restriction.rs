@@ -22,9 +22,9 @@
 //! carries the emergency mark the declared purpose gives it.
 
 use axum::response::{IntoResponse, Response};
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Missing;
 use ferroehr::ids::{EhrId, VoId};
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Missing;
 use uuid::Uuid;
 
 use crate::api::RequestParts;

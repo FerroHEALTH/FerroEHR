@@ -21,9 +21,9 @@
 
 use std::sync::Arc;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Invalid;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Invalid;
 use serde_json::json;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};

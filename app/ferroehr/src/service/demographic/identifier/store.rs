@@ -19,10 +19,10 @@ use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::error::refusal::{Clash, Refusal};
+use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::service::demographic::identifier::crypto::{CryptoError, DomainKeys};
-use crate::service::error::{ServiceError, Violation};
-use crate::service::refusal::{Clash, Refusal};
 use crate::storage::identifier_repo::{self, IdentifierRepoError, NewSealed};
 
 /// What went wrong holding or reading a protected identifier.

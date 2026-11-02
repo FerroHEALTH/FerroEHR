@@ -26,10 +26,10 @@ use crate::terminology_wire::{operation, parameter};
 
 use openehr_rm::prelude::PartyProxy;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Malformed;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::refusal::Malformed;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 

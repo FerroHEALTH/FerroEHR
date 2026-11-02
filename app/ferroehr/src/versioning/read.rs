@@ -21,8 +21,8 @@
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
-use crate::service::error::{ServiceError, Violation};
 use crate::storage::version_repo::read::{Body, VersionAt, read_one};
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;

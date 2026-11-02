@@ -9,8 +9,8 @@
 //! A free function rather than `impl From<ServiceError> for ApiError`, because
 //! both types are foreign to this crate and the orphan rule forbids that impl.
 
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{ArchiveDefect, Malformed};
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{ArchiveDefect, Malformed};
 use openehr_its::rest::runtime::{ApiError, ValidationError};
 
 use crate::overview::error::{internal_fault, internal_fault_caused};
@@ -99,8 +99,8 @@ pub(crate) fn api_error(e: ServiceError) -> ApiError {
 
 #[cfg(test)]
 mod tests {
-    use ferroehr::service::error::{ServiceError, Violation};
-    use ferroehr::service::refusal::{ArchiveDefect, Clash, Invalid, Malformed, Missing, Refusal};
+    use ferroehr::error::refusal::{ArchiveDefect, Clash, Invalid, Malformed, Missing, Refusal};
+    use ferroehr::error::{ServiceError, Violation};
     use http::StatusCode as C;
     use openehr_base::validate::InvariantViolation;
     use openehr_its::rest::runtime::ApiError;

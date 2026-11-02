@@ -25,6 +25,8 @@
 //!
 //! **Spec-silent internals and extensions** (no openEHR spec governs these —
 //! our own design, each flagged in its module docs):
+//! - [`error`] — the one error type every layer answers, [`error::ServiceError`],
+//!   and its refusal kinds ([`error::refusal`]).
 //! - [`storage`] — the decomposed node model, node codec, and row I/O.
 //! - [`db`] — pool, settings, migrators.
 //! - [`telemetry`] — observability infrastructure.
@@ -45,6 +47,7 @@ pub mod banner;
 pub mod config;
 pub mod db;
 pub mod decommission;
+pub mod error;
 pub mod extensions;
 pub mod ids;
 pub mod licence;

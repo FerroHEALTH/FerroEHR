@@ -46,8 +46,8 @@
 use openehr_term::bundle::openehr;
 use openehr_term::v3_1::terminology::code_set::CodeSet;
 
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::service::terminology::types::{
     DefinedTerm, TermCode, TermEntry, TerminologyDescription, TerminologyExtract,
 };

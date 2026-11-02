@@ -21,9 +21,9 @@ use serde_json::Value;
 use sqlx::{Connection as _, PgConnection, PgPool};
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::service::version_update::WriteRequest;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::{Committed, Write, WriteEnvelope, commit, record_commit};

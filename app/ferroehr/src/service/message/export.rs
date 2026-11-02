@@ -37,10 +37,10 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::storage::ehr_repo;
 use crate::storage::extract_repo::{self, Enforced};
 use crate::storage::version_repo::read::VersionAt;

@@ -65,10 +65,10 @@ use serde_json::Value;
 use sqlx::Connection as _;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
+use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::storage::ehr_repo;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::EventActionCode;
@@ -318,7 +318,7 @@ impl FerroEhrService {
             Ok(content) => AccessedContent::Objects(content),
             Err(e) => {
                 tracing::warn!(
-                    error = %crate::service::error::ErrorChain::new(&e),
+                    error = %crate::error::ErrorChain::new(&e),
                     "reading the categories of an imported Extract failed; the access \
                      record is written unclassified"
                 );

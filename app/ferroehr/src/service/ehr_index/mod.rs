@@ -21,7 +21,7 @@ pub mod ihe;
 pub mod provider;
 pub mod types;
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// The precise EHR-index failure kind.
 ///
@@ -73,7 +73,7 @@ impl From<IndexError> for ServiceError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::refusal::{Missing, Refusal};
+    use crate::error::refusal::{Missing, Refusal};
 
     /// A generic service miss passes through with its kind.
     #[test]

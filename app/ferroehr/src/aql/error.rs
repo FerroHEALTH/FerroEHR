@@ -475,7 +475,7 @@ pub enum ExecError {
     /// openEHR spec governs runtime generation selection — our own
     /// design/extension.
     #[error(transparent)]
-    Profile(crate::service::error::ServiceError),
+    Profile(crate::error::ServiceError),
 
     /// A `RESULT_SET` column spec reached the executor without one of the
     /// generated SQL aliases its [`super::sql::CellKind`] declares (a

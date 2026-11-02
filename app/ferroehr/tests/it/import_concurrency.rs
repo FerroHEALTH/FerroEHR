@@ -10,8 +10,8 @@
 //! §Copying implies for a version already held, never a bare unique-index
 //! violation.
 
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Clash;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Clash;
 use serde_json::{Value, json};
 
 use openehr_rm::v1_2::ehr_extract::common::extract::Extract;

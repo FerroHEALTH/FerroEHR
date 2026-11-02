@@ -15,8 +15,8 @@
 //! the current state from the preceding version and rejecting a transition the
 //! spec does not sanction.
 
+use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
-use crate::service::error::{ServiceError, Violation};
 use crate::versioning::Kind;
 use openehr_term::bundle::openehr;
 

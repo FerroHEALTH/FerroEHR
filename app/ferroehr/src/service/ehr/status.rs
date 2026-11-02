@@ -18,15 +18,15 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::{EhrId, VoId};
-use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use openehr_rm::prelude::EhrStatus;
 use serde_json::Value;
 use sqlx::PgConnection;
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::storage::ehr_repo::{self, PromotedColumns};

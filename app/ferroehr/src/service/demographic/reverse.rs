@@ -16,9 +16,9 @@
 use openehr_base::prelude::{HierObjectId, LocatableRef, UidBasedId};
 use serde_json::Value;
 
+use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::storage::party_reverse::ReverseRelationship;
 
 /// One party's `reverse_relationships`: the references, and the source

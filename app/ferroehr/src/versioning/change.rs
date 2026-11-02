@@ -26,9 +26,9 @@ use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::storage::codec::reassemble;
 use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;

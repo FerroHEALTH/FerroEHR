@@ -38,9 +38,9 @@ use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::error::refusal::Missing;
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
-use crate::service::error::{ServiceError, Violation};
-use crate::service::refusal::Missing;
 use crate::versioning::Kind;
 use crate::versioning::audit::{
     change_type, change_type_rubric, check_committer, dv_date_time, openehr_coded_text,

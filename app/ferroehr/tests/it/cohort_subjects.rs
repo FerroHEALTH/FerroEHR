@@ -20,16 +20,16 @@ use uuid::Uuid;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Malformed;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr_index::IndexError;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding};
 use ferroehr::service::linkage::cohort::{CohortError, CohortPredicate, CohortQueryRequest};
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::refusal::Malformed;
 use ferroehr::storage::cohort_predicate::PredicateKind;
 
 use crate::ehr_index_ihe::{

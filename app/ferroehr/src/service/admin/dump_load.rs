@@ -76,14 +76,14 @@ use serde::de::DeserializeOwned;
 use crate::db::acquire::acquire;
 use crate::db::domain::Domain;
 use crate::db::parent_statistics;
+use crate::error::ServiceError;
+use crate::error::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
 use crate::service::demographic::identifier::store::StoreError;
-use crate::service::error::ServiceError;
-use crate::service::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
 use crate::storage::codec::decompose;
 use crate::storage::dump_repo::write::StoredAudit;
 use crate::storage::dump_repo::{
@@ -1613,12 +1613,12 @@ impl FerroEhrService {
         // instants, so it checks what the regular write path holds by
         // construction: one version of a lineage per instant.
         if dump_repo::write::ambiguous_commit_instant(&mut tx, ehr_id).await? {
-            return Err(ServiceError::content_invalid(
-                crate::service::error::Violation::new(format!(
+            return Err(ServiceError::content_invalid(crate::error::Violation::new(
+                format!(
                     "archive for EHR {ehr_id} carries two versions of one lineage committed at \
                      the same instant"
-                )),
-            ));
+                ),
+            )));
         }
 
         // Every loaded row went into the hot tier; the ones the record marks

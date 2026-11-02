@@ -28,10 +28,10 @@ use openehr_rm::prelude::ItemTag;
 use sqlx::Connection as _;
 
 use crate::db::acquire::acquire;
+use crate::error::refusal::Missing;
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::{ServiceError, Violation};
-use crate::service::refusal::Missing;
 use crate::versioning::object_version_id::{UidAddress, VersionIdError};
 
 impl FerroEhrService {

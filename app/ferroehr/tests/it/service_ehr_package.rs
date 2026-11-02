@@ -10,7 +10,7 @@
 //! `org.openehr.rm.ehr.ehr.adoc` `EHR.tags` + master04 §Tags ("Tag `_target_`
 //! values can only be within the same EHR").
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 use openehr_rm::prelude::PartyProxy;

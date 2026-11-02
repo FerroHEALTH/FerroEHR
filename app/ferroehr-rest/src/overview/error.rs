@@ -27,7 +27,7 @@ use axum::response::{IntoResponse, Response};
 use http::{HeaderValue, StatusCode, header};
 
 use ferroehr::aql::error::AqlError;
-use ferroehr::service::error::{ErrorChain, ServiceError};
+use ferroehr::error::{ErrorChain, ServiceError};
 use ferroehr::versioning::object_version_id::VersionIdError;
 use openehr_its::rest::runtime::ApiError;
 use openehr_query::lexer::LexError;
@@ -589,7 +589,7 @@ mod tests {
     /// wire still answers the `408` of `responses/408_Query.yaml`.
     #[test]
     fn a_service_timeout_renders_408_with_clean_detail() {
-        use ferroehr::service::{error::ServiceError, refusal::Refusal};
+        use ferroehr::error::{ServiceError, refusal::Refusal};
         let err = ServiceError::Timeout(Refusal::new((), "query aborted after 5000ms"));
         let full = full_problem_of(RestError::from(err));
         assert_eq!(full["type"], format!("{BASE}query-timeout"));
@@ -602,7 +602,7 @@ mod tests {
     #[test]
     fn an_aql_parse_service_refusal_is_aql_invalid_with_its_position() {
         let err = openehr_query::parser::parse_str("SELECT e FROM EHR e WHERE").unwrap_err();
-        let err = ferroehr::service::error::ServiceError::bad_request("invalid AQL", err);
+        let err = ferroehr::error::ServiceError::bad_request("invalid AQL", err);
         let full = full_problem_of(RestError::from(err));
         assert_eq!(full["type"], format!("{BASE}aql-invalid"));
         assert_eq!(full["status"], 400);
@@ -612,7 +612,7 @@ mod tests {
 
     #[test]
     fn a_processing_restriction_is_its_own_type() {
-        let err = ferroehr::service::error::ServiceError::restricted("EHR e1");
+        let err = ferroehr::error::ServiceError::restricted("EHR e1");
         let full = full_problem_of(RestError::from(err));
         assert_eq!(full["type"], format!("{BASE}processing-restricted"));
         assert_eq!(full["status"], 403);
@@ -639,7 +639,7 @@ mod tests {
         // A storage-classified pool exhaustion (`ServiceOverloaded`)
         // surfaces as 503 + Retry-After (our overload contract; RFC 9110
         // §15.6.4).
-        let err = ferroehr::service::error::ServiceError::overloaded(
+        let err = ferroehr::error::ServiceError::overloaded(
             "overloaded",
             std::io::Error::other("the pool timed out"),
         );
@@ -657,7 +657,7 @@ mod tests {
     async fn storage_conflict_maps_to_409() {
         // A storage-classified integrity/serialization conflict
         // (`Conflict`) surfaces as 409 (ITS-REST overview §HTTP status codes).
-        let err = ferroehr::service::error::ServiceError::conflict("duplicate key");
+        let err = ferroehr::error::ServiceError::conflict("duplicate key");
         let resp = RestError::from(err).into_response();
         assert_eq!(resp.status(), StatusCode::CONFLICT);
     }

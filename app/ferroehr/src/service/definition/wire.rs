@@ -20,9 +20,9 @@ use serde_json::Value;
 
 use openehr_sdt::flat::example::{DetailLevel, ExampleType};
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::service::definition::types::{Adl2Template, TemplateListFilter};
-use crate::service::error::ServiceError;
 use crate::service::list::Page;
 use crate::storage::template_repo;
 

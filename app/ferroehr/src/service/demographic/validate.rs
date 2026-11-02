@@ -31,8 +31,8 @@ use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVer
 use openehr_base::validate::Validate;
 use serde_json::Value;
 
+use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
-use crate::service::error::{ServiceError, Violation};
 
 /// The RM `_type` a `PARTY_RELATIONSHIP` versioned object stores.
 const RELATIONSHIP_RM_TYPE: &str = "PARTY_RELATIONSHIP";

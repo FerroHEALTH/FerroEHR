@@ -19,8 +19,8 @@
 //!    full `REVISION_HISTORY`).
 
 use crate::fixtures::uv;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Malformed, Missing};
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Malformed, Missing};
 use serde_json::{Value, json};
 
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;

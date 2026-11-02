@@ -58,7 +58,7 @@ use std::collections::HashSet;
 
 use openehr_its::opt14::types::{CAttribute, CObject, Intervalofinteger, OperationalTemplate};
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// One artefact-validity violation: the AOM2 rule code + a human detail.
 struct RuleViolation {

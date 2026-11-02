@@ -23,12 +23,12 @@ use openehr_rm::prelude::ItemTag;
 use sqlx::Connection as _;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::{item_tag_refusal, normalized_target_path, tag_target_tail};
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::storage::tag_repo;
 use crate::versioning::object_version_id::{VersionIdError, hier_object_id};
 

@@ -97,9 +97,9 @@ use event::{AuditEvent, EmitOutcome};
 // The paths the binary and the config tree consume (`crate::system_log::sender::start`,
 // `ferroehr::system_log::{AuditConfig, AuditHandle, AuditSender, SubjectResolver}`).
 
+use crate::error::ServiceError;
+use crate::error::refusal::Refusal;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Refusal;
 
 /// Errors raised while rendering or shipping an audit record.
 ///
