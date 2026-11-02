@@ -1185,3 +1185,57 @@ slot assertion (#4770); chart 21.0.0-rc8 with `appVersion` 5.6.0-rc9.
 - Everything the 5.6.0-rc8 review left open: the development-profile run's
   failed rows (#4776, #4777), the canonical-XML `reverse_relationships`
   (#4778), the 5.5.0 sandbox and the performance page's earlier figures.
+
+## The review of 2026-11-02, for 5.6.0-rc10
+
+Read on the tree after commit `797ceb527`, for the FerroEHR release candidate
+5.6.0-rc10. 5.6.0-rc8 and 5.6.0-rc9 were tagged and not published, so the
+claims of their reviews above reach users first with this release. The facts
+added since 5.6.0-rc9 and checked in every text in scope: the outbox served to
+its named readers over a cursor feed under the `__ferroehr.outbox` scope, and
+FerroEHR's own broker publisher, `[events]`, the subscription routes and the
+viewer's Subscriptions page removed (#4786, #4766); the access record of a
+VERSION read naming the content it served (#4660); the BASE 1.3.0 description
+invariants of an ADL 2 template under the `development` profile (#4776); a
+slow database connect no longer recorded as an outage, and a reset one
+recorded as an outage on the pool's own connect too (#4782, #4807); `Prefer`
+read on every route as RFC 7240 §2 defines it (#4722); chart
+21.0.0-rc9 with `appVersion` 5.6.0-rc10.
+
+### Changed on 2026-11-02, for 5.6.0-rc10
+
+- **The README, the landing page, [beyond core](../beyond-core/index.md) and
+  [change events](../beyond-core/outbox-feed.md)** said FerroBRIDGE reads the
+  feed and delivers the events to an AMQP broker, and the landing page listed
+  "RabbitMQ via FerroBRIDGE". FerroBRIDGE's broker delivery is still in
+  progress (FerroHEALTH/FerroBRIDGE issue 1367), so each text now says so, and
+  the change-events page says a deployment that needs broker events keeps a
+  release with FerroEHR's own publisher until a FerroBRIDGE release carries it.
+  The removal fragment of the changelog says the same.
+
+### Read and kept on 2026-11-02, for 5.6.0-rc10
+
+- **The configuration, integrations, administration API, audit and privacy
+  pages** describe `[outbox] readers`, the feed's scope and its access
+  records, and the change-events page the removed `[events]`,
+  `secrets.eventsUrl` and `plaintext_broker`, which the server refuses at
+  boot.
+- **The hazard log and the technical documentation**: the logging component's
+  modules did not change since 5.6.0-rc9; the hazard log gains review 18 and
+  the technical documentation its 5.6.0-rc10 row for the VERSION read's
+  record and the feed's access records.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc9 and image 5.6.0-rc10 in the book of main.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-02, for 5.6.0-rc10
+
+- Broker delivery waits on a FerroBRIDGE release (FerroHEALTH/FerroBRIDGE
+  issue 1367), as the change-events page says.
+- Everything the 5.6.0-rc8 review left open: the development-profile run's
+  failed row tracked on #4777, the canonical-XML `reverse_relationships`
+  (#4778), the 5.5.0 sandbox and the performance page's earlier figures.
