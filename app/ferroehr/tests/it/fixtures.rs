@@ -336,12 +336,10 @@ pub(crate) async fn ehr_exists(svc: &ferroehr::service::FerroEhrService, ehr: Eh
             assert!(
                 matches!(
                     e,
-                    ferroehr::service::error::ServiceError::NotFound(
-                        ferroehr::service::refusal::Refusal {
-                            kind: ferroehr::service::refusal::Missing::Ehr,
-                            ..
-                        }
-                    )
+                    ferroehr::error::ServiceError::NotFound(ferroehr::error::refusal::Refusal {
+                        kind: ferroehr::error::refusal::Missing::Ehr,
+                        ..
+                    })
                 ),
                 "the EHR read fails only as an unknown EHR: {e}"
             );
@@ -367,7 +365,7 @@ pub(crate) fn written_vo(response: &ferroehr::service::response::ServiceResponse
 pub(crate) async fn create_party(
     svc: &ferroehr::service::FerroEhrService,
     version: WriteRequest<openehr_rm::prelude::Party>,
-) -> Result<VoId, ferroehr::service::error::ServiceError> {
+) -> Result<VoId, ferroehr::error::ServiceError> {
     use ferroehr::service::demographic::types::PartyKind;
     use openehr_rm::prelude::Party;
     let kind = match &version.data {
@@ -387,7 +385,7 @@ pub(crate) async fn create_party(
 pub(crate) async fn create_relationship(
     svc: &ferroehr::service::FerroEhrService,
     version: WriteRequest<openehr_rm::prelude::PartyRelationship>,
-) -> Result<VoId, ferroehr::service::error::ServiceError> {
+) -> Result<VoId, ferroehr::error::ServiceError> {
     let created = svc.party_relationship_create(version).await?;
     Ok(written_vo(&created))
 }
@@ -475,12 +473,10 @@ pub(crate) async fn subject_ehr_ids(
             assert!(
                 matches!(
                     e,
-                    ferroehr::service::error::ServiceError::NotFound(
-                        ferroehr::service::refusal::Refusal {
-                            kind: ferroehr::service::refusal::Missing::Ehr,
-                            ..
-                        }
-                    )
+                    ferroehr::error::ServiceError::NotFound(ferroehr::error::refusal::Refusal {
+                        kind: ferroehr::error::refusal::Missing::Ehr,
+                        ..
+                    })
                 ),
                 "the subject read fails only as an unknown subject: {e}"
             );

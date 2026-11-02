@@ -13,9 +13,9 @@
 //! `ORIGINAL_VERSION` and in `REVISION_HISTORY`; and `CONTRIBUTION.versions` +
 //! the aggregate change-type semantics. Plus the error surface (400/422/404).
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::version_update::WriteRequest;
 
 use serde_json::{Value, json};

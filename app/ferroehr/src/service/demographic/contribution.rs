@@ -29,9 +29,9 @@ use openehr_its::rest::generated::demographic::NewContribution;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::storage::version_repo;
 use crate::versioning::audit::AuditInput;

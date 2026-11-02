@@ -22,10 +22,10 @@
 use sqlx::Connection as _;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::storage::marks;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,

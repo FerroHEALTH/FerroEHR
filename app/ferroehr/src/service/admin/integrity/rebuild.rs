@@ -44,10 +44,10 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::integrity::{StorageDomain, StorageParityDefect, StorageParityEvent};
-use crate::service::error::ServiceError;
 use crate::storage::codec::decompose;
 use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::{delete_version_nodes, read_version_canonical, write_nodes};

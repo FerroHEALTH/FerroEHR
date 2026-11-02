@@ -30,11 +30,11 @@ use serde_json::{Value, json};
 use openehr_rm::prelude::PartyProxy;
 use uuid::Uuid;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Malformed, Missing};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::config::QueryConfig;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::refusal::{Malformed, Missing};
 
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};

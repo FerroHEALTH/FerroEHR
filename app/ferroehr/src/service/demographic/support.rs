@@ -27,11 +27,11 @@ use openehr_rm::prelude::{
 };
 use serde_json::Value;
 
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::storage::version_repo;
 use crate::storage::version_repo::read::VersionAt;

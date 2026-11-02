@@ -24,9 +24,9 @@ use crate::aql::ir::{ParamValue, Params};
 use crate::aql::lineage::ArchetypeLineage;
 use crate::aql::sql::{EhrAccessScope, SqlCtx};
 use crate::aql::terminology::TerminologyExpander;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::storage::stored_query_repo::{self, QueryName, StoredQueryRow, VersionMatch};
 
 use super::version_selector::{check_version_selector, is_partial_semver};
@@ -223,7 +223,7 @@ impl FerroEhrService {
             ServiceError::bad_request(
                 format!(
                     "stored query text is not valid AQL: {}",
-                    crate::service::error::ErrorChain::new(&err)
+                    crate::error::ErrorChain::new(&err)
                 ),
                 err,
             )

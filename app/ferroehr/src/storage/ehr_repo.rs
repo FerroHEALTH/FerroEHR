@@ -25,9 +25,9 @@ use sqlx::{PgConnection, PgExecutor, PgPool, Row};
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::storage::error::StorageError;
 use crate::storage::version_repo::meta::CurrentMeta;
 

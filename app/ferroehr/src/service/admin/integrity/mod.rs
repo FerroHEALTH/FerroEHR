@@ -41,9 +41,9 @@ use std::time::Instant;
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::read_version_rows_all;

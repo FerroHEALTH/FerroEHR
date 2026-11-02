@@ -14,9 +14,9 @@
 
 use sqlx::PgConnection;
 
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::versioning::change::Committed;
 use crate::versioning::{Kind, SigningCtx};
 

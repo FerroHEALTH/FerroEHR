@@ -319,7 +319,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             stored_tags.echo(&mut resp);
             Ok(resp)
         }
-        Err(e @ ferroehr::service::error::ServiceError::VersionConflict(_)) => {
+        Err(e @ ferroehr::error::ServiceError::VersionConflict(_)) => {
             let meta = state
                 .backend()
                 .composition_latest_meta(ehr_id, uid.vo_id)
@@ -392,7 +392,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 Ok(deleted) => deleted,
                 Err(e) => {
                     tracing::warn!(
-                        error = %ferroehr::service::error::ErrorChain::new(&e),
+                        error = %ferroehr::error::ErrorChain::new(&e),
                         "reading the categories of a deleted COMPOSITION failed; the access \
                          record is written unclassified"
                     );
@@ -408,8 +408,8 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
         // `version_uid` in `ETag` (overview §"If-Match and accidental
         // overwrites").
         Err(
-            e @ (ferroehr::service::error::ServiceError::Conflict(_)
-            | ferroehr::service::error::ServiceError::VersionConflict(_)),
+            e @ (ferroehr::error::ServiceError::Conflict(_)
+            | ferroehr::error::ServiceError::VersionConflict(_)),
         ) => {
             let meta = state
                 .backend()

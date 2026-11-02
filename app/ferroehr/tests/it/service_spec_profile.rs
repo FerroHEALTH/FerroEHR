@@ -17,12 +17,12 @@
 use serde_json::{Value, json};
 
 use ferroehr::config::profile::SpecProfile;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Refusal};
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::refusal::{Clash, Refusal};
 
 use crate::fixtures::uv;
 

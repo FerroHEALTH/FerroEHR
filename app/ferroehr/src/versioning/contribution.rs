@@ -27,10 +27,10 @@ use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::error::refusal::Missing;
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::{ServiceError, Violation};
-use crate::service::refusal::Missing;
 use crate::versioning::attestation::{AttestationInput, AttestationParts, PendingAttest};
 use crate::versioning::audit::{
     AuditInput, change_type, change_type_code, decode_description, party_proxy, plain_audit,

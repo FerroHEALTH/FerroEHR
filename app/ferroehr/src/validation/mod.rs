@@ -50,7 +50,7 @@ pub(crate) mod structure;
 
 use openehr_its::opt14::types::OperationalTemplate;
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// Validate an uploaded OPT 1.4 artefact against the AOM2/08
 /// standalone-artefact validity rules

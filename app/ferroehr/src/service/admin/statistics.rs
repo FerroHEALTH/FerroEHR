@@ -12,9 +12,9 @@
 //! `commit_audit` tables (`clinical/0003_change_control.sql`), whose
 //! statements are `crate::storage::statistics`.
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::service::admin::types::StatTimeRange;
-use crate::service::error::ServiceError;
 use crate::service::platform_service::PlatformService;
 use crate::storage::statistics::{self, CompositionCount, ContributionScope};
 

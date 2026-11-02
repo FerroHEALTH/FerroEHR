@@ -26,10 +26,10 @@ use sqlx::Connection as _;
 use sqlx::PgConnection;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::storage::{erasure, identifier_repo, template_repo, version_repo};
 
 impl FerroEhrService {

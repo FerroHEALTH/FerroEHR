@@ -21,7 +21,7 @@
 use serde_json::Value;
 
 use crate::config::profile::SpecProfile;
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 use crate::versioning::Kind;
 
 /// Reads `canonical` with the RELEASED (`stable` profile) generation's strict
@@ -405,7 +405,7 @@ mod tests {
         let ServiceError::Conflict(err) = &err else {
             panic!("expected the 409-class conflict, got {err:?}");
         };
-        assert_eq!(err.kind, crate::service::refusal::Clash::State);
+        assert_eq!(err.kind, crate::error::refusal::Clash::State);
         assert!(err.message.contains("1e2::sys::1"), "{}", err.message);
         assert!(err.message.contains("stable"), "{}", err.message);
         assert!(err.message.contains("development"), "{}", err.message);

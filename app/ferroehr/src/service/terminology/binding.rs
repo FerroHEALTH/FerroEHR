@@ -48,8 +48,8 @@ use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use openehr_sdt::rm_instance::{ValidationKind, ValidationMessage};
 use serde_json::Value;
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::service::terminology::fhir::FhirTerminologyProvider;
 
 impl FerroEhrService {

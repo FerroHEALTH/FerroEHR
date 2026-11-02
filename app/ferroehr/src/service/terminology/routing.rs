@@ -12,8 +12,8 @@
 
 use std::collections::BTreeMap;
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::service::terminology::types::TerminologyExtract;
 
 use super::bundle;

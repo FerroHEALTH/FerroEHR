@@ -19,8 +19,8 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 use uuid::Uuid;
 
+use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,

@@ -14,8 +14,8 @@
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
+use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 use ferroehr::versioning::signature::config::{Mode, SigningConfig, VerifyOnRead};
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr::versioning::signature::verify::Verdict;

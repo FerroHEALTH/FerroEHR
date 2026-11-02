@@ -25,7 +25,7 @@ use openehr_its::rest::generated::ehr::{
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::EhrStatus;
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::service::response::ServiceResponse;
 
 use ferroehr::versioning::object_version_id::parse_uid_based_id;

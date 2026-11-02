@@ -27,13 +27,13 @@
 
 use serde_json::Value;
 
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
 use crate::service::demographic::validate::relationship_check;
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};

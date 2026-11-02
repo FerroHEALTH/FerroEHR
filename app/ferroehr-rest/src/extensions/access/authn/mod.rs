@@ -336,7 +336,7 @@ impl Authenticator {
     /// patient claim, as the `ferrohealth-smart` `PatientClaim`.
     pub async fn new(config: &AppConfig, patient_claim: Option<&str>) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth)
-            .map_err(|e| ferroehr::service::error::ErrorChain::new(&e).to_string())?;
+            .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let mut gate = Gate::open();
         let mut primary = None;
         let claim = patient_claim
@@ -349,7 +349,7 @@ impl Authenticator {
                 let mut introspector = Introspector::discover(settings).await.map_err(|e| {
                     format!(
                         "the introspection endpoint of {issuer} could not be read: {}",
-                        ferroehr::service::error::ErrorChain::new(&e)
+                        ferroehr::error::ErrorChain::new(&e)
                     )
                 })?;
                 if let Some(claim) = &claim {
@@ -374,7 +374,7 @@ impl Authenticator {
                             format!(
                                 "smart.issuer_metadata_file does not fit the first [auth] \
                                  issuer {issuer}: {}",
-                                ferroehr::service::error::ErrorChain::new(&e)
+                                ferroehr::error::ErrorChain::new(&e)
                             )
                         })?;
                     }
@@ -816,7 +816,7 @@ fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthE
         tracing::warn!(
             mechanism,
             reason,
-            detail = %ferroehr::service::error::ErrorChain::new(e),
+            detail = %ferroehr::error::ErrorChain::new(e),
             "authentication refused"
         );
     }

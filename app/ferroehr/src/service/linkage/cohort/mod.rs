@@ -91,12 +91,12 @@ use std::collections::BTreeSet;
 use sha2::Digest;
 
 use crate::aql::sql::EhrScopeKind;
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::IndexError;
 use crate::service::ehr_index::provider::EhrIndexProvider;
 use crate::service::ehr_index::types::SubjectRef;
-use crate::service::error::{ServiceError, Violation};
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
@@ -605,7 +605,7 @@ mod tests {
 
     #[test]
     fn the_refusals_map_onto_their_call_statuses() {
-        use crate::service::refusal::{Invalid, Malformed, Refusal};
+        use crate::error::refusal::{Invalid, Malformed, Refusal};
         type Expect<'a> = &'a dyn Fn(&ServiceError) -> bool;
         let precondition = |e: &ServiceError| matches!(e, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition);
         let too_large = |e: &ServiceError| {

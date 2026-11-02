@@ -10,7 +10,7 @@
 //! rejects no previously-accepted artefact — this test IS that record, and
 //! keeps it true as the corpora grow.
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::validation::validate_opt_artefact;
 
 /// The invariant-named codes the resource-meta pass can report.

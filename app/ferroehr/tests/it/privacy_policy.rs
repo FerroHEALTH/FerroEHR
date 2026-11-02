@@ -26,11 +26,11 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 use sqlx::Row;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Invalid;
 use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::{IdentifierScanConfig, PrivacyConfig, ScanMode};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Invalid;
 
 use crate::fixtures::{composition, uv};
 

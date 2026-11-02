@@ -29,10 +29,10 @@ use sqlx::{Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
 
 use crate::typed_body::typed;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Invalid, Refusal};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Invalid, Refusal};
 
 /// Write the audit and contribution rows every version row needs, leaving the
 /// boundary constraints exactly as the migrated clone carries them.

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The payload of a [`ServiceError`](super::error::ServiceError) refusal, and
+//! The payload of a [`ServiceError`](super::ServiceError) refusal, and
 //! the kinds that tell refusals of one HTTP class apart.
 //!
 //! No openEHR spec governs the service error model: our own design. A variant
@@ -67,7 +67,7 @@ impl<K: std::fmt::Debug> std::error::Error for Refusal<K> {
     }
 }
 
-/// The payload of a [`Fault`](super::error::ServiceError::Fault).
+/// The payload of a [`Fault`](super::ServiceError::Fault).
 ///
 /// The message of this `500` reaches the response body, so it is curated
 /// text fixed at the raise site and never a cause's `Display`, SQL, a path or
@@ -167,9 +167,9 @@ pub enum Invalid {
     Template,
 }
 
-impl super::error::ServiceError {
+impl super::ServiceError {
     /// A `500` whose curated `message` reaches the body
-    /// ([`Fault`](super::error::ServiceError::Fault)).
+    /// ([`Fault`](super::ServiceError::Fault)).
     #[must_use]
     pub fn fault(message: &'static str) -> Self {
         Self::Fault(Curated {
@@ -178,7 +178,7 @@ impl super::error::ServiceError {
         })
     }
 
-    /// A [`Fault`](super::error::ServiceError::Fault) that carries the failure
+    /// A [`Fault`](super::ServiceError::Fault) that carries the failure
     /// which caused it as its source, never in its message.
     #[must_use]
     pub fn fault_caused(
@@ -192,7 +192,7 @@ impl super::error::ServiceError {
     }
 
     /// A `503` whose curated `message` reaches the body
-    /// ([`Overloaded`](super::error::ServiceError::Overloaded)), its cause kept
+    /// ([`Overloaded`](super::ServiceError::Overloaded)), its cause kept
     /// as the source.
     #[must_use]
     pub fn overloaded(
@@ -211,7 +211,7 @@ impl super::error::ServiceError {
     /// malformed read or a timeout.
     #[must_use]
     pub fn message(&self) -> String {
-        use super::error::ServiceError as E;
+        use super::ServiceError as E;
         match self {
             E::NotFound(r) => r.message.clone(),
             E::BadRequest(r) => r.message.clone(),
@@ -227,7 +227,7 @@ impl super::error::ServiceError {
             | E::SigningFailed(_)
             | E::SigningCanonical(_)
             | E::Database(_)
-            | E::Acquire(_) => super::error::INTERNAL_MESSAGE.to_owned(),
+            | E::Acquire(_) => super::INTERNAL_MESSAGE.to_owned(),
             E::Storage(e) => storage_message(e),
             E::Unprocessable { violation, .. } => violation.to_string(),
             E::ValidationFailed(v) => v

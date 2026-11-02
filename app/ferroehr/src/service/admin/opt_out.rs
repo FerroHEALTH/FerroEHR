@@ -18,9 +18,9 @@
 use sqlx::Connection as _;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::storage::opt_out;
 use crate::system_log::event::EventActionCode;
 

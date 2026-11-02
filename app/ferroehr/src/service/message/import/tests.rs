@@ -3,8 +3,8 @@
 
 //! Unit tests of the parent module.
 
-use crate::service::error::ServiceError;
-use crate::service::refusal::Invalid;
+use crate::error::ServiceError;
+use crate::error::refusal::Invalid;
 use serde_json::json;
 
 use super::*;

@@ -13,9 +13,9 @@ use crate::fixtures::db_now;
 use crate::fixtures::uv;
 use crate::fixtures::{uid, vo_of};
 use crate::typed_body::typed;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Missing, Refusal};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Missing, Refusal};
 
 /// The bare versioned-object UUID of a versioned-object body.
 fn vo_uuid(v: &Value) -> String {

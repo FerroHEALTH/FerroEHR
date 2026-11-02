@@ -10,8 +10,8 @@
 
 use uuid::Uuid;
 
-use crate::service::error::ServiceError;
-use crate::service::refusal::{Clash, Refusal};
+use crate::error::ServiceError;
+use crate::error::refusal::{Clash, Refusal};
 
 /// Errors produced by the node-storage codec and the row repositories.
 #[derive(Debug, thiserror::Error)]
@@ -474,7 +474,7 @@ pub(crate) mod tests {
 
     use sqlx::error::{DatabaseError, ErrorKind};
 
-    use crate::service::error::ServiceError;
+    use crate::error::ServiceError;
 
     use super::{StorageError, classify_sqlx, classify_storage};
 

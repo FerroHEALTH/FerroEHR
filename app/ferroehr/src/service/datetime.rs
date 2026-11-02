@@ -37,7 +37,7 @@
 //! the spec's MUST is the extended format, while jiff's `Timestamp` grammar is
 //! Temporal's and tolerates the basic date form.
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// Whether the value starts with an extended-format ISO 8601 DATE —
 /// `YYYY-MM-DD…` (hyphen-separated, the `-`s at byte offsets 4 and 7).

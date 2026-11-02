@@ -13,10 +13,10 @@ use serde_json::{Value, json};
 
 use crate::fixtures::db_now;
 use crate::typed_body::typed;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Invalid, Malformed, Missing, Refusal};
 
 /// The `uid.value` (`OBJECT_VERSION_ID`) of a versioned-object body.
 fn ovid(v: &Value) -> &str {

@@ -25,10 +25,10 @@ use crate::admin_fixture::{count_for_ehr, party_relationship, repository, seed_f
 use crate::fixtures::uid;
 use crate::fixtures::uv;
 use crate::typed_body::typed;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Malformed, Missing, Refusal};
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::platform_service::PlatformService;
-use ferroehr::service::refusal::{Clash, Malformed, Missing, Refusal};
 use ferroehr::storage::statistics::CompositionCount;
 
 /// Row counts scoped to one EHR across every table a physical delete must clear.

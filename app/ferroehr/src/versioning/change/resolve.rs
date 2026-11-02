@@ -18,8 +18,8 @@ use super::{
     retire_protected_identifiers, seal_protected_identifiers, stamp_version_uid,
     validate_transition,
 };
+use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
 use crate::storage::codec::decompose;
 use crate::storage::row::NodeRow;
 use crate::versioning::object_version_id::{TreeId, object_version_id};

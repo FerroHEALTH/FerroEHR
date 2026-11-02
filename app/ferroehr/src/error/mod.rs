@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The service-layer error model, [`ServiceError`].
+//! The error model every layer answers, [`ServiceError`].
 //!
-//! A variant is the HTTP class of a refusal and its [`Refusal`] kind tells
-//! refusals of one class apart. The protocol adapter (`ferroehr-rest`) maps it
-//! onto the ITS-REST wire codes (ITS-REST overview §HTTP status codes); no
-//! openEHR spec governs the service error model itself: our own design.
+//! The service, versioning and storage return it. A variant is the HTTP class
+//! of a refusal and its [`Refusal`] kind tells refusals of one class apart.
+//! The protocol adapter (`ferroehr-rest`) maps it onto the ITS-REST wire codes
+//! (ITS-REST overview §HTTP status codes); no openEHR spec governs the error
+//! model itself: our own design.
 
 use crate::versioning::signature::signer::SignError;
 use std::sync::Arc;
@@ -14,7 +15,9 @@ use std::sync::Arc;
 use openehr_base::validate::InvariantViolation;
 use openehr_its::json::{JsonParseError, SchemaRoot};
 
-use super::refusal::{Clash, Curated, Invalid, Malformed, Missing, Refusal};
+pub mod refusal;
+
+use crate::error::refusal::{Clash, Curated, Invalid, Malformed, Missing, Refusal};
 use crate::storage::error::{classify_acquire, classify_sqlx, classify_storage};
 
 /// One violated spec rule, carried as data rather than as a pre-formatted
@@ -333,7 +336,7 @@ pub(crate) const INTERNAL_MESSAGE: &str = "the server encountered an internal er
 /// # Examples
 ///
 /// ```
-/// use ferroehr::service::error::ErrorChain;
+/// use ferroehr::error::ErrorChain;
 ///
 /// #[derive(Debug, thiserror::Error)]
 /// #[error("outer")]
@@ -558,6 +561,11 @@ impl ServiceError {
     /// parses, and an RM rule such as a mandatory member is what fails),
     /// `400` when it does not ([`its_json_admits`]).
     #[must_use]
+    #[expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694): service-surface signatures over stored \
+                  canonical fragments and dynamic shapes"
+    )]
     pub fn canonical_decode(data: &serde_json::Value, error: JsonParseError) -> Self {
         if its_json_admits(data) {
             ServiceError::content_invalid(
@@ -600,6 +608,11 @@ impl ServiceError {
 /// The body must name its `_type` and declare no key its RM class lacks, the
 /// two facts the schema root cannot judge.
 #[must_use]
+#[expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694): service-surface signatures over stored canonical \
+              fragments and dynamic shapes"
+)]
 pub fn its_json_admits(data: &serde_json::Value) -> bool {
     data.get("_type")
         .and_then(serde_json::Value::as_str)

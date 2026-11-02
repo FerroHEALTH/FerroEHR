@@ -7,9 +7,9 @@
 
 use sqlx::PgConnection;
 
+use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
-use crate::service::error::ServiceError;
-use crate::service::refusal::Missing;
 
 /// Refuse a write that would process an object whose processing is restricted.
 ///

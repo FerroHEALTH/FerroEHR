@@ -18,8 +18,8 @@ use async_trait::async_trait;
 
 use crate::aql::error::{AqlError, AqlFeatureError, ExecError};
 use crate::aql::terminology::TerminologyExpander;
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::versioning::audit::OPENEHR;
 
 use super::bundle;

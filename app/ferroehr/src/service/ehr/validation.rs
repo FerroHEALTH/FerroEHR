@@ -29,15 +29,15 @@
               fragment the seam produced once; stored-content serving"
 )]
 
-use crate::service::refusal::{Clash, Refusal};
+use crate::error::refusal::{Clash, Refusal};
 use openehr_base::validate::InvariantViolation;
 use serde_json::Value;
 use sqlx::PgConnection;
 
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::ehr::category::code;
-use crate::service::error::{ServiceError, Violation};
 use crate::versioning::{Kind, lifecycle};
 
 /// The instance size, in JSON nodes, above which the COMPOSITION validation
@@ -888,9 +888,9 @@ mod tests {
         collect_local_item_refs, exceeds_node_count, item_ref_root, run_validation_pass,
         validate_ehr_access, validate_ehr_status, validate_folder,
     };
+    use crate::error::ServiceError;
     use crate::service::ehr::access::initial_ehr_access;
     use crate::service::ehr::service::initial_ehr_status;
-    use crate::service::error::ServiceError;
 
     /// `EHR_STATUS.other_details` must be a concrete `ITEM_STRUCTURE`
     /// (RM ehr `ehr_status.adoc`): the four concrete subtypes pass, a foreign

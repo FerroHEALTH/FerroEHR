@@ -13,10 +13,10 @@
 
 use openehr_query::parser::MAX_EXPRESSION_DEPTH;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Malformed;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::refusal::Malformed;
 
 /// The stack the server gives each runtime thread.
 const SERVER_THREAD_STACK_BYTES: usize = 16 * 1024 * 1024;

@@ -27,9 +27,9 @@
 
 pub mod cohort;
 
+use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };

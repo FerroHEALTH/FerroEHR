@@ -7,7 +7,7 @@
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 use serde_json::Value;
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// The RM-named string tokens `EXTRACT_SPEC.extract_type` may carry, beside
 /// the TERM `extract_content_type` vocabulary codes.

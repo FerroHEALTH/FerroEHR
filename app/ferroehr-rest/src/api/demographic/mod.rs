@@ -37,10 +37,10 @@ use openehr_its::rest::runtime::ApiError;
 
 use crate::overview::error::RestError;
 use crate::overview::negotiate::resource::{Tree, set_versioning_headers};
+use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
 use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 

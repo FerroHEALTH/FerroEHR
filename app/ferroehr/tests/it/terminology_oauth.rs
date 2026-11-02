@@ -191,7 +191,7 @@ async fn a_refused_grant_is_a_typed_error_not_an_anonymous_request() {
     // the operator detail (which client, and the authorization server's own
     // error) stays on the trace record, off the wire body.
     assert!(
-        matches!(&err, ferroehr::service::error::ServiceError::Fault(_)),
+        matches!(&err, ferroehr::error::ServiceError::Fault(_)),
         "got {err:?}"
     );
     assert!(

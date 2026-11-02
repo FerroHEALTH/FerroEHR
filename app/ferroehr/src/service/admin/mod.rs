@@ -48,7 +48,7 @@ pub mod marks;
 pub mod opt_out;
 pub mod types;
 
-use crate::service::error::ServiceError;
+use crate::error::ServiceError;
 
 /// Whether a `version.kind` string names a demographic PARTY root (the five
 /// concrete `ACTOR`/`PARTY` leaves — RM demographic) — as opposed to a

@@ -32,7 +32,7 @@ use openehr_rm::prelude::{
 use openehr_term::bundle::openehr;
 use serde_json::Value;
 
-use crate::service::error::{ServiceError, Violation};
+use crate::error::{ServiceError, Violation};
 use crate::versioning::attestation::AttestationParts;
 
 /// The openEHR internal terminology id (`Terminology_id_openehr`).

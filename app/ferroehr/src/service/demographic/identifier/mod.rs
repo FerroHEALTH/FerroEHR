@@ -25,10 +25,10 @@ pub mod store;
 
 use serde_json::Value;
 
+use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::identifier::store::StoreError;
-use crate::service::error::ServiceError;
 use crate::storage::identifier_repo::IdentifierRepoError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,

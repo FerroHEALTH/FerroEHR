@@ -25,10 +25,10 @@ use std::time::Duration;
 use sqlx::Connection as _;
 
 use crate::db::acquire::acquire;
+use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::admin::access_delay::config::AccessDelayPolicy;
-use crate::service::error::ServiceError;
 use crate::storage::access_delay;
 use crate::system_log::event::EventActionCode;
 

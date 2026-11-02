@@ -13,11 +13,11 @@
 //! CONTRIBUTION path. A name only is kept as the caller's account. No openEHR
 //! spec governs who checks the committer: our own design.
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Invalid;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::committer::{CommitterIdentity, with_committer};
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Invalid;
 use ferroehr::service::version_update::WriteRequest;
 use openehr_its::rest::generated::common::UpdateAudit;
 use serde_json::{Value, json};

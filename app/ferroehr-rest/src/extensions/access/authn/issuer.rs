@@ -23,7 +23,7 @@ pub(super) fn unreadable_issuer(issuer: &str, error: &ResourceError) -> String {
         ),
         _ => format!(
             "the authorization server {issuer} could not be read: {}",
-            ferroehr::service::error::ErrorChain::new(error)
+            ferroehr::error::ErrorChain::new(error)
         ),
     }
 }

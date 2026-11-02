@@ -13,8 +13,8 @@
 //! shipped rule in `strict` mode. The library default is the refusing posture
 //! (#3243), so the permissive side has to say so.
 
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Invalid;
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::Invalid;
 use std::sync::Arc;
 
 use serde_json::json;

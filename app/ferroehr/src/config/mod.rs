@@ -650,7 +650,7 @@ impl FerroEhrConfig {
         if let Err(e) = auth::validate(&self.auth) {
             errors.push(ConfigError::semantic(format!(
                 "auth: {}",
-                crate::service::error::ErrorChain::new(&e)
+                crate::error::ErrorChain::new(&e)
             )));
         }
         if let Err(e) = self.authz.validate() {

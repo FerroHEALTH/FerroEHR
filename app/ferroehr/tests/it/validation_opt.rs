@@ -19,7 +19,7 @@ use openehr_its::opt14::types::{
     TermBindingItem, Termbindingset,
 };
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::validation::validate_opt_artefact;
 
 fn manifest() -> &'static str {

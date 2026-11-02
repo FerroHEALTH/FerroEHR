@@ -17,8 +17,8 @@ use axum::response::IntoResponse;
 use http::StatusCode;
 use http_body_util::BodyExt;
 
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Missing, Refusal};
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Missing, Refusal};
 use ferroehr_rest::overview::error::RestError;
 
 use crate::common;

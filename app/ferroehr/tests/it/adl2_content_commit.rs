@@ -18,9 +18,9 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value, json};
 
+use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use http::StatusCode;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};

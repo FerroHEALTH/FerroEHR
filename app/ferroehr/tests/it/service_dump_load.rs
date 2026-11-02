@@ -30,8 +30,8 @@
 //!    storage-JSON → RM → canonical XML → RM → storage-JSON is byte-equal at
 //!    the served-version level, in all three containers.
 
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{ArchiveDefect, Malformed};
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{ArchiveDefect, Malformed};
 use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::PgPool;

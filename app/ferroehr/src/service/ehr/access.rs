@@ -24,9 +24,9 @@
 
 use std::sync::Arc;
 
+use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_types::{EhrAccessIndex, EhrAccessSettings};
-use crate::service::error::ServiceError;
 use moka::future::Cache;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
 use serde_json::Value;
@@ -397,7 +397,7 @@ impl Default for EhrAccessCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::refusal::{Missing, Refusal};
+    use crate::error::refusal::{Missing, Refusal};
 
     /// The refusal a missing EHR's settings load answers.
     fn missing() -> ServiceError {

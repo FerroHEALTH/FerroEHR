@@ -25,9 +25,9 @@ use crate::fixtures::uv;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Invalid, Refusal};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Invalid, Refusal};
 
 /// Read a workspace fixture relative to this crate's manifest dir.
 fn fixture(rel: &str) -> String {

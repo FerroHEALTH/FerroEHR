@@ -15,8 +15,8 @@
 use serde_json::Value;
 use sqlx::PgConnection;
 
+use crate::error::ServiceError;
 use crate::ids::VoId;
-use crate::service::error::ServiceError;
 use crate::versioning::Kind;
 use crate::versioning::object_version_id::TreeId;
 

@@ -8,10 +8,10 @@
 
 use serde_json::Value;
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::definition::types::TemplateListFilter;
-use ferroehr::service::error::ServiceError;
 use ferroehr::service::list::Page;
-use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 
 /// Fixed `ctx/time` default for the FLAT rebuild directions (ITS-REST
 /// `simplified_formats` master04 §Context) so round-trips stay deterministic.

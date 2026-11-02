@@ -25,8 +25,8 @@ use openehr_its::rest::generated::ehr::NewContribution;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
 use crate::versioning::contribution::{
     commit_version_set, count_contributions, decode_new_contribution, get_contribution,
 };
@@ -227,7 +227,7 @@ impl FerroEhrService {
             match self.audit_content_of_objects(&vo_ids).await {
                 Ok(read) => ids.extend(read),
                 Err(e) => tracing::warn!(
-                    error = %crate::service::error::ErrorChain::new(&e),
+                    error = %crate::error::ErrorChain::new(&e),
                     "reading the categories of the objects a CONTRIBUTION deleted failed; the \
                      access record leaves them unclassified"
                 ),

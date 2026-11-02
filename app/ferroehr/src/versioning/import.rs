@@ -43,8 +43,8 @@ use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
-use crate::service::error::{ServiceError, Violation};
 use crate::storage::codec::{decompose, reassemble};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::TreeId;

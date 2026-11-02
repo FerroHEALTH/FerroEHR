@@ -27,7 +27,7 @@ use ihe_atna::retrieve::date::Bound;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use ferroehr::system_log::store::{AuditCriterion, AuditElement, AuditToken, AuditTokenSystem};
 
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
@@ -263,7 +263,7 @@ const ACTION_SYSTEM: &str = "http://hl7.org/fhir/audit-event-action";
 /// §3.1.1.4.7 has a server assume its own zone).
 fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
     let query = Query::parse(query.unwrap_or_default())
-        .map_err(|e| Refused::Invalid(ferroehr::service::error::ErrorChain::new(&e).to_string()))?;
+        .map_err(|e| Refused::Invalid(ferroehr::error::ErrorChain::new(&e).to_string()))?;
     let mut store = ferroehr::system_log::store::AuditSearchFilter {
         // NOTE: the page size when the query names none, our own design.
         count: 50,

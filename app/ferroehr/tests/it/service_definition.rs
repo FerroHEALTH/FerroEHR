@@ -8,10 +8,10 @@
 //!
 //! Requires Docker. Each test owns its container (`Drop` removes it).
 
+use ferroehr::error::ServiceError;
+use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::types::TemplateListFilter;
-use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 
 use ferroehr::service::list::Page;
 

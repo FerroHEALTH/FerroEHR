@@ -34,7 +34,7 @@ use crate::extensions::access::authz::request::{AccessMode, AuthzRequest, Resour
 use ferrohealth_authz::request::Attr;
 use openehr_its::rest::runtime::ApiError;
 
-use ferroehr::service::error::ServiceError;
+use ferroehr::error::ServiceError;
 use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;

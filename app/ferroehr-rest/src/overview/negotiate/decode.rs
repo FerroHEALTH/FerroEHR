@@ -91,7 +91,7 @@ pub(crate) fn text_body(body: &Bytes) -> Result<String, ApiError> {
 /// refused body the published ITS-JSON schema refuses too could not be parsed
 /// (**400**, ITS-REST `responses/400.yaml`); one the schema admits parses and
 /// breaks an RM rule, such as a mandatory member ITS-JSON leaves optional
-/// (**422**, `responses/422.yaml`, [`ferroehr::service::error::its_json_admits`]).
+/// (**422**, `responses/422.yaml`, [`ferroehr::error::its_json_admits`]).
 ///
 /// # Errors
 /// [`ApiError::BadRequest`] if the body cannot be parsed in the declared
@@ -129,7 +129,7 @@ where
 /// decode: `422` when it parses and the ITS-JSON schema admits it, else `400`.
 pub(crate) fn canonical_json_refusal(json: &str, error: &JsonParseError) -> ApiError {
     let admitted = serde_json::from_str::<serde_json::Value>(json)
-        .is_ok_and(|value| ferroehr::service::error::its_json_admits(&value));
+        .is_ok_and(|value| ferroehr::error::its_json_admits(&value));
     if admitted {
         ApiError::Unprocessable(format!("content does not satisfy the RM: {error}"))
     } else {
