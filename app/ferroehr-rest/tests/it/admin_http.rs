@@ -93,6 +93,35 @@ async fn enabled_delete_unknown_maps_to_404() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
+/// A malformed EHR id is refused `400` before any deletion runs.
+#[tokio::test]
+async fn enabled_delete_malformed_id_is_400() {
+    let (_pg, app) = common::app(common::api_config(true)).await;
+    let (status, body) = common::send_body(
+        &app,
+        common::delete(&format!("{BASE}/admin/ehr/not-a-uuid")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body.contains("invalid EHR id: not-a-uuid"), "{body}");
+}
+
+/// One malformed id in the bulk list refuses the whole request `400`, and
+/// the well-formed EHR beside it is not deleted.
+#[tokio::test]
+async fn enabled_delete_all_with_a_malformed_id_is_400_and_deletes_nothing() {
+    let (_pg, app) = common::app(common::api_config(true)).await;
+    let kept = common::create_ehr(&app).await;
+    let (status, body) = common::send_body(
+        &app,
+        common::delete(&format!("{BASE}/admin/ehr/all?ehr_id={kept},not-a-uuid")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body.contains("invalid EHR id: not-a-uuid"), "{body}");
+    assert!(ehr_exists(&app, &kept).await, "the listed EHR must survive");
+}
+
 #[tokio::test]
 async fn enabled_delete_all_is_204_bodyless() {
     // `admin_ehr_delete_all.yaml:18-26`: the only declared success responses are

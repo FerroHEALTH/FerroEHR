@@ -109,7 +109,7 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
     svc.create_composition(archived, uv(&composition("archived"), "249", None))
         .await
         .expect("commit into the EHR that is about to be archived");
-    svc.archive_ehrs(vec![archived.to_string()])
+    svc.archive_ehrs(&[archived])
         .await
         .expect("archive an EHR into the cold tier");
     for relation in ["version", "node"] {

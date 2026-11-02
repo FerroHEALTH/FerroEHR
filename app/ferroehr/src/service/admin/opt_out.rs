@@ -35,17 +35,16 @@ impl FerroEhrService {
     /// leaves the mark as it was.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed EHR id.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
     /// - `service_overloaded` — the access record was refused under
     ///   `[audit] fail_mode = "closed"`.
     pub async fn record_access_opt_out(
         &self,
-        ehr_id: &str,
+        ehr_id: EhrId,
         note: Option<&str>,
     ) -> Result<(), ServiceError> {
-        let ehr_id = self.opt_out_target(ehr_id).await?;
+        self.check_mark_target(ehr_id, None).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         opt_out::record(&mut tx, ehr_id, note)
@@ -61,8 +60,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// The [`Self::record_access_opt_out`] rejections.
-    pub async fn reverse_access_opt_out(&self, ehr_id: &str) -> Result<(), ServiceError> {
-        let ehr_id = self.opt_out_target(ehr_id).await?;
+    pub async fn reverse_access_opt_out(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
+        self.check_mark_target(ehr_id, None).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         opt_out::reverse(&mut tx, ehr_id)
@@ -76,27 +75,19 @@ impl FerroEhrService {
     /// The opt-out register of one EHR, newest first.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed EHR id.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault.
     /// - `service_overloaded` — the access record was refused under
     ///   `[audit] fail_mode = "closed"`.
     pub async fn access_opt_out_register(
         &self,
-        ehr_id: &str,
+        ehr_id: EhrId,
     ) -> Result<Vec<opt_out::OptOutRow>, ServiceError> {
-        let ehr_id = self.opt_out_target(ehr_id).await?;
+        self.check_mark_target(ehr_id, None).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, REGISTER)?;
         opt_out::register(&self.pool, ehr_id)
             .await
             .map_err(ServiceError::Storage)
-    }
-
-    /// The EHR an opt-out act names, parsed and existence-checked.
-    async fn opt_out_target(&self, ehr_id: &str) -> Result<EhrId, ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
-        self.check_mark_target(ehr_id, None).await?;
-        Ok(ehr_id)
     }
 
     /// Whether the EHR `ehr_id` carries the EHDS Art. 10 opt-out mark; `false`

@@ -165,10 +165,10 @@ async fn the_batch_returns_every_version_after_the_instant_minus_the_marked_ehrs
     commit(&svc, objected, "objected").await;
     let last = commit(&svc, open, "last").await;
 
-    svc.restrict_processing(&restricted.to_string(), None, "gdpr-18-1-d", None)
+    svc.restrict_processing(restricted, None, "gdpr-18-1-d", None)
         .await
         .expect("restrict the EHR");
-    svc.set_research_objection(&objected.to_string(), true, None)
+    svc.set_research_objection(objected, true, None)
         .await
         .expect("record the objection");
 

@@ -218,6 +218,65 @@ async fn the_mark_routes_refuse_a_bad_request_before_recording_anything() {
     );
 }
 
+/// The mark routes refuse a malformed EHR or object id `400` before anything
+/// is recorded.
+#[tokio::test]
+async fn the_mark_routes_refuse_a_malformed_id() {
+    let (_pg, app) = common::app(common::api_config(true)).await;
+    let ehr_id = create_ehr(&app).await;
+    let bad_ehr = "invalid EHR id: not-a-uuid";
+    let bad_vo = "invalid versioned object id: not-a-uuid";
+    let posts = [
+        (
+            "/admin/restriction",
+            r#"{"ehr_id":"not-a-uuid","ground":"national"}"#.to_owned(),
+            bad_ehr,
+        ),
+        (
+            "/admin/restriction",
+            format!(r#"{{"ehr_id":"{ehr_id}","vo_id":"not-a-uuid","ground":"national"}}"#),
+            bad_vo,
+        ),
+        (
+            "/admin/restriction/lift",
+            r#"{"ehr_id":"not-a-uuid"}"#.to_owned(),
+            bad_ehr,
+        ),
+        (
+            "/admin/research-objection",
+            r#"{"ehr_id":"not-a-uuid","objected":true}"#.to_owned(),
+            bad_ehr,
+        ),
+        (
+            "/admin/retention/hold",
+            r#"{"vo_id":"not-a-uuid","held":true}"#.to_owned(),
+            bad_vo,
+        ),
+    ];
+    for (path, body, message) in posts {
+        let (status, answer) = send_body(&app, post_json(path, &body)).await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "{path} with {body}: {answer}"
+        );
+        assert!(answer.contains(message), "{path} with {body}: {answer}");
+    }
+    let (status, answer) = send_body(
+        &app,
+        put_json(
+            "/admin/retention/anchor",
+            r#"{"ehr_id":"not-a-uuid","jurisdiction":"CH"}"#,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "anchor: {answer}");
+    assert!(answer.contains(bad_ehr), "anchor: {answer}");
+    let (status, answer) = send_body(&app, get("/admin/restriction?ehr_id=not-a-uuid")).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "register: {answer}");
+    assert!(answer.contains(bad_ehr), "register: {answer}");
+}
+
 /// The retention register round-trips over the wire, and the due list carries
 /// the per-object hold counts.
 #[tokio::test]

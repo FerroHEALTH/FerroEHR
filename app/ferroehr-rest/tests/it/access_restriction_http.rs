@@ -440,3 +440,50 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
 }
+
+/// A malformed EHR or object id is refused `400` on recording, lifting and
+/// reading an access restriction.
+#[tokio::test]
+async fn a_malformed_id_is_refused_on_every_restriction_route() {
+    let (_db, _pool, app) = app().await;
+    let ehr = ehr(&app).await;
+    let cases = [
+        (
+            json!({ "ehr_id": "not-a-uuid" }),
+            "invalid EHR id: not-a-uuid",
+        ),
+        (
+            json!({ "ehr_id": ehr, "vo_id": "not-a-uuid" }),
+            "invalid versioned object id: not-a-uuid",
+        ),
+    ];
+    for path in [
+        "/admin/access-restriction",
+        "/admin/access-restriction/lift",
+    ] {
+        for (body, message) in &cases {
+            let (status, answer) = send(
+                &app,
+                "POST",
+                &common::full(path),
+                "root",
+                None,
+                Some(("application/json", body.to_string())),
+            )
+            .await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{path} {body}: {answer}");
+            assert!(answer.contains(message), "{path} {body}: {answer}");
+        }
+    }
+    let (status, answer) = send(
+        &app,
+        "GET",
+        &format!("{EXT}/admin/access-restriction?ehr_id=not-a-uuid"),
+        "root",
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "register: {answer}");
+    assert!(answer.contains("invalid EHR id: not-a-uuid"), "{answer}");
+}

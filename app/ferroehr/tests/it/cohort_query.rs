@@ -765,7 +765,7 @@ async fn a_predicate_cohort_leaves_out_a_non_queryable_and_an_objecting_ehr() {
         panic!("the corpus seeds six subjects");
     };
     crate::fixtures::set_not_queryable(&svc, ada.ehr).await;
-    svc.set_research_objection(&bram.ehr.to_string(), true, None)
+    svc.set_research_objection(bram.ehr, true, None)
         .await
         .expect("record the research objection");
 

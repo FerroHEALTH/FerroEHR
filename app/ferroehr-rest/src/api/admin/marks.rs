@@ -45,6 +45,7 @@ use super::body::{optional_str, required_query, required_str};
 use crate::api::refusals::JsonBodyRequired;
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::overview::error::RestError;
+use crate::overview::version_id::{parse_ehr_id, parse_vo_id};
 use crate::state::AppState;
 use crate::{negotiate, params};
 
@@ -577,20 +578,27 @@ async fn run(
     match op {
         "admin_restrict_processing" => {
             let body = negotiate::decode::json_value(h, &parts.body)?;
+            let ehr_id = required_str(&body, "ehr_id")?;
+            let vo_id = optional_str(&body, "vo_id")?;
+            let ground = required_str(&body, "ground")?;
+            let note = optional_str(&body, "note")?;
             state
                 .backend()
                 .restrict_processing(
-                    required_str(&body, "ehr_id")?,
-                    optional_str(&body, "vo_id")?,
-                    required_str(&body, "ground")?,
-                    optional_str(&body, "note")?,
+                    parse_ehr_id(ehr_id)?,
+                    vo_id.map(parse_vo_id).transpose()?,
+                    ground,
+                    note,
                 )
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_restriction_register" => {
             let ehr_id = required_query(&parts, "ehr_id")?;
-            let rows = state.backend().restriction_register(&ehr_id).await?;
+            let rows = state
+                .backend()
+                .restriction_register(parse_ehr_id(&ehr_id)?)
+                .await?;
             let body: Vec<serde_json::Value> = rows
                 .iter()
                 .map(|row| {
@@ -613,12 +621,11 @@ async fn run(
         }
         "admin_lift_restriction" => {
             let body = negotiate::decode::json_value(h, &parts.body)?;
+            let ehr_id = required_str(&body, "ehr_id")?;
+            let vo_id = optional_str(&body, "vo_id")?;
             state
                 .backend()
-                .lift_restriction(
-                    required_str(&body, "ehr_id")?,
-                    optional_str(&body, "vo_id")?,
-                )
+                .lift_restriction(parse_ehr_id(ehr_id)?, vo_id.map(parse_vo_id).transpose()?)
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
@@ -633,13 +640,11 @@ async fn run(
                         .to_owned(),
                 ))
                 })?;
+            let ehr_id = required_str(&body, "ehr_id")?;
+            let ground = optional_str(&body, "ground")?;
             state
                 .backend()
-                .set_research_objection(
-                    required_str(&body, "ehr_id")?,
-                    objected,
-                    optional_str(&body, "ground")?,
-                )
+                .set_research_objection(parse_ehr_id(ehr_id)?, objected, ground)
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
@@ -697,14 +702,12 @@ async fn run(
                     )));
                 }
             };
+            let ehr_id = required_str(&body, "ehr_id")?;
+            let jurisdiction = required_str(&body, "jurisdiction")?;
+            let anchored_at = optional_str(&body, "anchored_at")?;
             state
                 .backend()
-                .put_retention_anchor(
-                    required_str(&body, "ehr_id")?,
-                    required_str(&body, "jurisdiction")?,
-                    optional_str(&body, "anchored_at")?,
-                    hold,
-                )
+                .put_retention_anchor(parse_ehr_id(ehr_id)?, jurisdiction, anchored_at, hold)
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
@@ -721,7 +724,7 @@ async fn run(
                 })?;
             state
                 .backend()
-                .set_retention_hold(required_str(&body, "vo_id")?, held)
+                .set_retention_hold(parse_vo_id(required_str(&body, "vo_id")?)?, held)
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
@@ -759,19 +762,25 @@ async fn run(
         }
         "admin_restrict_access" => {
             let body = negotiate::decode::json_value(h, &parts.body)?;
+            let ehr_id = required_str(&body, "ehr_id")?;
+            let vo_id = optional_str(&body, "vo_id")?;
+            let note = optional_str(&body, "note")?;
             state
                 .backend()
                 .restrict_access(
-                    required_str(&body, "ehr_id")?,
-                    optional_str(&body, "vo_id")?,
-                    optional_str(&body, "note")?,
+                    parse_ehr_id(ehr_id)?,
+                    vo_id.map(parse_vo_id).transpose()?,
+                    note,
                 )
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_access_restriction_register" => {
             let ehr_id = required_query(&parts, "ehr_id")?;
-            let rows = state.backend().access_restriction_register(&ehr_id).await?;
+            let rows = state
+                .backend()
+                .access_restriction_register(parse_ehr_id(&ehr_id)?)
+                .await?;
             let body: Vec<serde_json::Value> = rows
                 .iter()
                 .map(|row| {
@@ -793,12 +802,11 @@ async fn run(
         }
         "admin_lift_access_restriction" => {
             let body = negotiate::decode::json_value(h, &parts.body)?;
+            let ehr_id = required_str(&body, "ehr_id")?;
+            let vo_id = optional_str(&body, "vo_id")?;
             state
                 .backend()
-                .lift_access_restriction(
-                    required_str(&body, "ehr_id")?,
-                    optional_str(&body, "vo_id")?,
-                )
+                .lift_access_restriction(parse_ehr_id(ehr_id)?, vo_id.map(parse_vo_id).transpose()?)
                 .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
