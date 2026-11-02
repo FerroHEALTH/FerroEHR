@@ -446,8 +446,8 @@ tool is the more precise instrument, and the VEX document carries that argument
 for the specific crate it applies to, so you do not have to take our word for it
 in prose.
 
-The published images are additionally re-scanned on a weekly schedule at the
-tag an operator actually pulls. A fixable high-or-critical finding files or
+The published images are additionally re-scanned every day at the tag an
+operator actually pulls. A fixable high-or-critical finding files or
 updates one tracker issue, and the issue is the alert: the scheduled run itself
 stays green, because a red scheduled run nobody looks at is not a control.
 
