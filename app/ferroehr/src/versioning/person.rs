@@ -9,7 +9,7 @@
 //! her representative", and they "shall not be able to directly alter the
 //! electronic health data and related information inserted by health
 //! professionals" (`docs/law/eu/ehds/text.html` Art. 5). The marker is the
-//! committer `PARTY_SELF` ([`crate::service::committer::attributed`]); these are
+//! committer `PARTY_SELF` ([`crate::versioning::committer::attributed`]); these are
 //! the refusals. No openEHR spec governs who may change what: our own design.
 
 use serde_json::Value;
@@ -38,7 +38,7 @@ pub(crate) fn refuse_composing_for_others(
     kind: Kind,
     canonical: &Value,
 ) -> Result<(), ServiceError> {
-    if kind != Kind::Composition || !crate::service::committer::person_commits() {
+    if kind != Kind::Composition || !crate::versioning::committer::person_commits() {
         return Ok(());
     }
     let composer = canonical
@@ -73,7 +73,7 @@ pub(crate) async fn refuse_altering_others(
     vo_id: VoId,
     preceding: TreeId,
 ) -> Result<(), ServiceError> {
-    if !crate::service::committer::person_commits() {
+    if !crate::versioning::committer::person_commits() {
         return Ok(());
     }
     let committer =

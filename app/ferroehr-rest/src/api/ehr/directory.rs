@@ -110,7 +110,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     let body = negotiate::decode::rm_value::<Folder>(h, &parts.body)?;
     let uv = crate::overview::committal::write_request(
         h,
-        super::committer_proxy(),
+        ferroehr::versioning::committer::request_committer(),
         body,
         Some(require_if_match(&p.if_match)?),
     )?;
@@ -183,7 +183,12 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = negotiate::decode::rm_value::<Folder>(h, &parts.body)?;
-    let uv = crate::overview::committal::write_request(h, super::committer_proxy(), body, None)?;
+    let uv = crate::overview::committal::write_request(
+        h,
+        ferroehr::versioning::committer::request_committer(),
+        body,
+        None,
+    )?;
     let pending_tags = item_tags::pending(h)?;
     let meta = state.backend().create_directory(ehr_id, uv).await?;
     let stored_tags = item_tags::persist(
@@ -233,8 +238,11 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     // A DELETE commits a `523|deleted|` version, so the committal headers apply
     // here too (overview §"openehr-version and openehr-audit-details").
-    let mut request =
-        crate::overview::committal::delete_request(h, super::committer_proxy(), None)?;
+    let mut request = crate::overview::committal::delete_request(
+        h,
+        ferroehr::versioning::committer::request_committer(),
+        None,
+    )?;
     request.preceding = Some(require_if_match(&p.if_match)?);
     match state.backend().delete_directory(ehr_id, request).await {
         // The 204 carries the new deleted version's weak `ETag` and

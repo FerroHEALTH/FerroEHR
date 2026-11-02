@@ -363,10 +363,7 @@ mod tests {
             HeaderValue::from_static("application/xml"),
         );
         let from_xml = rm_value::<DvText>(&xml_headers, &Bytes::from(xml)).expect("xml decode");
-        assert_eq!(
-            ferroehr::service::version_update::text_value(&from_xml),
-            "hello"
-        );
+        assert_eq!(ferroehr::versioning::audit::text_value(&from_xml), "hello");
 
         let json = openehr_its::json::to_canonical_json(&dv).into_bytes();
         let mut json_headers = HeaderMap::new();
@@ -375,10 +372,7 @@ mod tests {
             HeaderValue::from_static("application/json"),
         );
         let from_json = rm_value::<DvText>(&json_headers, &Bytes::from(json)).expect("json decode");
-        assert_eq!(
-            ferroehr::service::version_update::text_value(&from_json),
-            "hello"
-        );
+        assert_eq!(ferroehr::versioning::audit::text_value(&from_json), "hello");
     }
 
     /// The OPT 1.4 upload reads its XML body verbatim; the retired
@@ -415,10 +409,7 @@ mod tests {
                 &Bytes::from(xml.clone()),
             )
             .unwrap_or_else(|e| panic!("{declared} must decode: {e:?} ({xml})"));
-            assert_eq!(
-                ferroehr::service::version_update::text_value(&decoded),
-                "hello"
-            );
+            assert_eq!(ferroehr::versioning::audit::text_value(&decoded), "hello");
         }
 
         let xml = openehr_its::xml::runtime::to_xml(&dv, "value", Namespace::V2).expect("to xml");

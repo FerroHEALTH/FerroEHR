@@ -18,6 +18,30 @@ use tokio::task_local;
 
 use crate::error::ServiceError;
 
+/// The `DV_IDENTIFIER.issuer` stamped on a committer whose credential this
+/// deployment holds itself (Basic auth) — there is no external authority to
+/// name, so the product identifies itself.
+///
+/// NOTE: no openEHR spec governs the value — our own design/extension (see
+/// [`default_committer`]).
+const LOCAL_ISSUER: &str = "ferroehr";
+
+/// The `PARTY_IDENTIFIED.name` for a **system-generated** commit.
+///
+/// It is the `AUDIT_DETAILS.committer` (1..1) of a write with no authenticated
+/// principal (auth disabled, or an internal write such as an import or a
+/// synthesized composition).
+///
+/// RM common `master04-generic_package.adoc` §Audit Details makes
+/// `AUDIT_DETAILS.committer` mandatory but says nothing about what a system
+/// calls itself when it is the committer — no openEHR spec governs this value,
+/// it is our own design. It is a single constant so the platform library and
+/// the protocol adapter attribute such commits identically; the deployment's
+/// machine-readable identity is [`crate::service::DEFAULT_SYSTEM_ID`] / `[server] system_id`,
+/// which is a different attribute (`AUDIT_DETAILS.system_id`) and stays
+/// separately configurable.
+pub const SYSTEM_COMMITTER_NAME: &str = "FerroEHR";
+
 /// The authenticated identity a protocol adapter attributes commits to.
 #[derive(Debug, Clone)]
 pub struct CommitterIdentity {
@@ -88,9 +112,7 @@ pub fn person_committer(identity: CommitterIdentity) -> PartyProxy {
             r#type: "PERSON".to_owned(),
             id: ObjectId::GenericId(GenericId {
                 value: identity.subject,
-                scheme: identity
-                    .issuer
-                    .unwrap_or_else(|| crate::service::ehr::meta::LOCAL_ISSUER.to_owned()),
+                scheme: identity.issuer.unwrap_or_else(|| LOCAL_ISSUER.to_owned()),
             }),
         }),
     })
@@ -143,7 +165,7 @@ pub fn refuse_impersonation(committer: &PartyProxy) -> Result<(), ServiceError> 
              §Audit Information; EHDS Art. 5)",
         ));
     }
-    let local = crate::service::ehr::meta::LOCAL_ISSUER;
+    let local = LOCAL_ISSUER;
     let issuer = identity.issuer.as_deref().unwrap_or(local);
     let verifiable = |authority: &str| authority == issuer || authority == local;
     if logins(committer)
@@ -213,11 +235,7 @@ pub fn default_committer(identity: Option<CommitterIdentity>) -> PartyProxy {
             name: Some(identity.subject.clone()),
             identifiers: Some(openehr_base::containers::NonEmptyVec::of(
                 openehr_rm::prelude::DvIdentifier {
-                    issuer: Some(
-                        identity
-                            .issuer
-                            .unwrap_or_else(|| crate::service::ehr::meta::LOCAL_ISSUER.to_owned()),
-                    ),
+                    issuer: Some(identity.issuer.unwrap_or_else(|| LOCAL_ISSUER.to_owned())),
                     assigner: None,
                     id: identity.subject,
                     r#type: Some(identity.id_type.to_owned()),
@@ -226,7 +244,7 @@ pub fn default_committer(identity: Option<CommitterIdentity>) -> PartyProxy {
         },
         None => openehr_rm::prelude::PartyIdentifiedData {
             external_ref: None,
-            name: Some(crate::service::SYSTEM_COMMITTER_NAME.to_owned()),
+            name: Some(SYSTEM_COMMITTER_NAME.to_owned()),
             identifiers: None,
         },
     };
@@ -242,7 +260,7 @@ pub fn request_committer() -> PartyProxy {
 
 #[cfg(test)]
 mod tests {
-    use super::{CommitterIdentity, default_committer};
+    use super::{CommitterIdentity, SYSTEM_COMMITTER_NAME, default_committer};
     use openehr_rm::prelude::{PartyIdentified, PartyProxy};
 
     fn caller(id_type: &'static str, issuer: Option<&str>) -> CommitterIdentity {
@@ -291,10 +309,7 @@ mod tests {
         else {
             panic!("the system committer is a PARTY_IDENTIFIED");
         };
-        assert_eq!(
-            party.name.as_deref(),
-            Some(crate::service::SYSTEM_COMMITTER_NAME)
-        );
+        assert_eq!(party.name.as_deref(), Some(SYSTEM_COMMITTER_NAME));
         assert!(party.identifiers.is_none());
     }
 }

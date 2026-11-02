@@ -247,7 +247,7 @@ impl FerroEhrService {
         // NOTE: EHDS Art. 9(2)(a) (`docs/law/eu/ehds/text.html`), the record names
         // who accessed the data, and the request's authenticated committer is that.
         if event.user_id.is_empty()
-            && let Some(committer) = crate::service::committer::current_committer()
+            && let Some(committer) = crate::versioning::committer::current_committer()
         {
             event.user_id = committer.subject;
         }

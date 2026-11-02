@@ -64,8 +64,9 @@ use crate::versioning::signature::signer::Signer;
 
 pub(crate) mod access_delay;
 pub(crate) mod attestation;
-pub(crate) mod audit;
+pub mod audit;
 pub mod change;
+pub mod committer;
 pub(crate) mod contribution;
 pub(crate) mod import;
 pub(crate) mod integrity;

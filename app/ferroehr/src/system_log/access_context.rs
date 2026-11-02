@@ -8,7 +8,7 @@
 //! builds, but a record the service layer emits by itself — a pseudonymisation
 //! boundary crossing, which no HTTP operation id describes — is built where
 //! the request headers are already gone. This carries that one fact across, by
-//! the same means [`crate::service::committer`] carries the authenticated
+//! the same means [`crate::versioning::committer`] carries the authenticated
 //! committer: a task-local the adapter publishes for the request's scope.
 //!
 //! The value is the code the deployment's own `[audit] purpose_codes`

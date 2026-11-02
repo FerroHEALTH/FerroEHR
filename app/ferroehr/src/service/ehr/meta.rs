@@ -32,14 +32,6 @@ use crate::versioning::object_version_id::{TreeId, VersionIdError, object_versio
 use crate::versioning::read::VersionRead;
 use crate::versioning::wire::version_envelope;
 
-/// The `DV_IDENTIFIER.issuer` stamped on a committer whose credential this
-/// deployment holds itself (Basic auth) — there is no external authority to
-/// name, so the product identifies itself.
-///
-/// NOTE: no openEHR spec governs the value — our own design/extension (see
-/// [`crate::service::committer::default_committer`]).
-pub(in crate::service) const LOCAL_ISSUER: &str = "ferroehr";
-
 impl FerroEhrService {
     /// The current version `(vo_id, VERSION_TREE_ID)` of an EHR's object of a
     /// given [`Kind`], if any — the trunk head the object's head row names.
@@ -268,7 +260,7 @@ impl FerroEhrService {
             system_id: self.effective_system_id(),
             change_type: change_type.to_owned(),
             description: Some(crate::versioning::audit::dv_text(description)),
-            committer: crate::service::committer::request_committer(),
+            committer: crate::versioning::committer::request_committer(),
             attestation: None,
         }
     }

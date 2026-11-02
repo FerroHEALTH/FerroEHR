@@ -61,7 +61,7 @@ pub(super) async fn run(
                     kind,
                     crate::overview::committal::write_request(
                         h,
-                        crate::api::ehr::committer_proxy(),
+                        ferroehr::versioning::committer::request_committer(),
                         body,
                         None,
                     )?,
@@ -90,7 +90,7 @@ pub(super) async fn run(
             let pending_tags = item_tags::pending(h)?;
             let request = crate::overview::committal::write_request(
                 h,
-                crate::api::ehr::committer_proxy(),
+                ferroehr::versioning::committer::request_committer(),
                 body,
                 None,
             )?;
@@ -244,8 +244,11 @@ async fn run_delete(
     let h = &parts.headers;
     // All per-kind delete params are field-identical; reuse one.
     let p = parts.decode(AgentDeleteParams::from_request, AgentDeleteParams::PARAMS)?;
-    let request =
-        crate::overview::committal::delete_request(h, crate::api::ehr::committer_proxy(), None)?;
+    let request = crate::overview::committal::delete_request(
+        h,
+        ferroehr::versioning::committer::request_committer(),
+        None,
+    )?;
     // NOTE: the preceding version comes from the path `uid_based_id`, so
     // `If-Match` is accepted but never required — overview §"If-Match and
     // accidental overwrites" requires it only when the path lacks it.

@@ -141,7 +141,12 @@ fn create_request(
     headers: &http::HeaderMap,
     status: Option<EhrStatus>,
 ) -> Result<ferroehr::service::version_update::WriteRequest<Option<EhrStatus>>, ApiError> {
-    crate::overview::committal::write_request(headers, super::committer_proxy(), status, None)
+    crate::overview::committal::write_request(
+        headers,
+        ferroehr::versioning::committer::request_committer(),
+        status,
+        None,
+    )
 }
 
 /// Render an EHR read (`200_EHR`) with the weak `ETag` carrying

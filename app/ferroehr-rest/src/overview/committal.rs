@@ -47,9 +47,9 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::{DvCodedText, PartyIdentified, PartyIdentifiedData, PartyProxy};
 
 use ferroehr::service::version_update::{
-    WriteRequest, audit_base_mut, change_type_coded, lifecycle_state_coded, plain_text,
-    unstated_code,
+    WriteRequest, change_type_coded, lifecycle_state_coded, plain_text, unstated_code,
 };
+use ferroehr::versioning::audit::audit_base_mut;
 
 /// New-form (Release-1.1.0) header names — the attribute path lives in the
 /// value.
@@ -364,7 +364,7 @@ fn scalar(pairs: &[(String, String)]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ferroehr::service::version_update::{AuditBase, audit_base, text_value};
+    use ferroehr::versioning::audit::{AuditBase, audit_base, text_value};
     use http::{HeaderValue, header};
     use openehr_its::rest::generated::common::UpdateAudit;
 

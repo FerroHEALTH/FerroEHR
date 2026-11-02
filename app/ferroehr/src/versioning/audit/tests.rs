@@ -383,9 +383,5 @@ fn an_untagged_audit_description_is_refused() {
         .expect_err("an untagged description is refused");
     assert!(err.to_string().contains("_type"), "{err}");
     let tagged = wire_audit(&json!({ "description": { "_type": "DV_TEXT", "value": "tagged" } }));
-    assert!(
-        crate::service::version_update::audit_base(&tagged)
-            .description
-            .is_some()
-    );
+    assert!(audit_base(&tagged).description.is_some());
 }

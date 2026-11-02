@@ -87,9 +87,9 @@ impl FerroEhrService {
 /// The protocol adapter's own records get these from the request it still
 /// holds; a record built down here gets them from the task-locals the adapter
 /// published for the request's scope
-/// ([`crate::service::committer`], [`crate::system_log::access_context`]).
+/// ([`crate::versioning::committer`], [`crate::system_log::access_context`]).
 pub(crate) fn stamp_requester(event: &mut AuditEvent) {
-    if let Some(committer) = crate::service::committer::current_committer() {
+    if let Some(committer) = crate::versioning::committer::current_committer() {
         event.user_id = committer.subject;
     }
     event.purpose = crate::system_log::access_context::current_purpose();
