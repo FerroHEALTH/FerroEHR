@@ -26,7 +26,7 @@ a|Identifier used for terminology group in the openEHR Reference Model. The valu
 
 Valid values take the form of an xs:NCName value, i.e. cannot contain:
 
-* symbol characters `:, @, $, %, &, /, +, ,, ;`;
+* symbol characters `:, @, $, %, &, /, {plus}, ,, ;`;
 * whitespace characters or different parentheses. 
 
 An NCName cannot begin with a number, dot or minus character although these can appear later in the value.
