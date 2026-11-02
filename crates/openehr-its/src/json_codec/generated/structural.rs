@@ -3289,7 +3289,7 @@ pub fn declared_fields(ty: &str) -> ::core::option::Option<&'static [&'static st
         "TERMINOLOGY_SERVICE" => ::core::option::Option::Some(&[]),
         "TERM_MAPPING" => ::core::option::Option::Some(&["match", "purpose", "target"]),
         "TRANSLATION_DETAILS" => {
-            ::core::option::Option::Some(&["accreditaton", "author", "language", "other_details"])
+            ::core::option::Option::Some(&["accreditation", "author", "language", "other_details"])
         }
         "TYPE_DEF_BOOLEAN" => ::core::option::Option::Some(&["type_anchor", "type_name"]),
         "TYPE_DEF_DATE" => ::core::option::Option::Some(&["type_anchor", "type_name"]),

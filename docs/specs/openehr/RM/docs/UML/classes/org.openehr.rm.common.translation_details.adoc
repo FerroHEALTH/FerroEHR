@@ -21,7 +21,7 @@ h|*1..1*
 a|Translator name and other demographic details.
 
 h|*0..1*
-|*accreditaton*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+|*accreditation*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
 a|Accreditation of translator, usually a national translator's registration or association membership id.
 
 h|*0..1*

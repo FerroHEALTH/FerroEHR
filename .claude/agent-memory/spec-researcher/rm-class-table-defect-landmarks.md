@@ -24,7 +24,8 @@ metadata:
   flag; `…extract_entity_manifest.adoc` L9 calls it "the send_changes_only value
   for `EXTRACT_UPDATE_SPEC._update_method_`". The RM 1.2.0 BMM carries the same
   four properties + the same three invariants verbatim.
-- **`TRANSLATION_DETAILS.accreditaton`** (typo) survives in RM: class page
+- **`TRANSLATION_DETAILS.accreditaton`** (typo): fixed in the RM 1.2.0 BMM and class page at
+  `specifications-RM` `09e481e9` (2026-11-02); the released RM 1.1.0 BMM keeps it. Before that it survived in RM: class page
   `org.openehr.rm.common.translation_details.adoc` L24 + the RM BMM (all
   serialisations, 1.0.2→1.2.0). BASE fixed it via SPECPUB-6
   (`BASE/docs/resource/master00-amendment_record.adoc` L49) — BASE 1.2.0/1.3.0

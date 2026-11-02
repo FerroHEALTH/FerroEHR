@@ -1,8 +1,12 @@
-// @generated-from-template templates/openehr-rm/common/resource/authored_resource_impl.rs — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
+// @generated-from-template templates/openehr-rm/overrides/v1_1/common/resource/authored_resource_impl.rs (per-generation override) — DO NOT EDIT; edit the source and re-run `openehr-codegen -- emit`.
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 //! Hand-written RM class invariants for `AUTHORED_RESOURCE`.
+//!
+//! NOTE: this is the `v1_1` OVERRIDE: the RM 1.1.0 BMM spells `TRANSLATION_DETAILS.accreditaton`
+//! and the RM 1.2.0 BMM `accreditation` (`…common.translation_details.adoc` §Attributes), so the test
+//! fixtures differ by that one field.
 //!
 //! Spec: RM 1.2.0
 //! `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.common.authored_resource.adoc`
