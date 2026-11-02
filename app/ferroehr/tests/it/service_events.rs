@@ -355,14 +355,14 @@ async fn import_writes_one_phi_free_outbox_row() {
     let ehr = crate::fixtures::create_ehr(&source).await;
     // Give it a second EHR_STATUS version so the import carries real content.
     let mut status = source
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("status");
     let ovid = status["uid"]["value"].as_str().expect("uid").to_owned();
     status.as_object_mut().unwrap().remove("uid");
     status["is_modifiable"] = json!(false);
-    Box::pin(source.replace_ehr_status_meta(ehr, uv(&status, "251", Some(&ovid))))
+    Box::pin(source.replace_ehr_status(ehr, uv(&status, "251", Some(&ovid))))
         .await
         .map(|m| m.uid)
         .expect("status update");

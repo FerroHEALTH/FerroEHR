@@ -83,7 +83,7 @@ async fn ehr_access_settings_round_trip_through_contribution() {
     // :: version) — the modify's preceding_version_uid. The versioned-object id
     // comes from EHR.ehr_access; the first version is `1` and the creating system
     // is the service default (no tenant).
-    let ehr = svc.ehr_object(ehr_id).await.expect("ehr object");
+    let ehr = svc.ehr_read(ehr_id).await.expect("ehr object").body;
     let access_vo = ehr["ehr_access"]["id"]["value"]
         .as_str()
         .expect("EHR.ehr_access.id.value");

@@ -30,6 +30,7 @@ use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id, version_id};
 use crate::versioning::read::VersionRead;
+use crate::versioning::wire::version_envelope;
 
 /// The `DV_IDENTIFIER.issuer` stamped on a committer whose credential this
 /// deployment holds itself (Basic auth) — there is no external authority to
@@ -178,6 +179,34 @@ impl FerroEhrService {
         ))
     }
 
+    /// A [`ServiceResponse`] for the VERSION envelope of a loaded version, an
+    /// `ORIGINAL_VERSION` or an `IMPORTED_VERSION` (RM common master06
+    /// §Version and its Subtypes), with the version's `OBJECT_VERSION_ID` and
+    /// commit instant as its metadata.
+    ///
+    /// # Errors
+    /// The [`version_envelope`] refusals: a failed read-time signature check or
+    /// an uninterpretable stored commit audit.
+    pub(in crate::service) fn envelope_response(
+        &self,
+        ehr_id: EhrId,
+        read: &VersionRead,
+    ) -> Result<ServiceResponse, ServiceError> {
+        let meta = self
+            .version_meta(
+                ehr_id,
+                read.vo_id,
+                &read.creating_system_id,
+                read.tree,
+                read.time_committed,
+            )
+            .with_content(vec![read.content.clone()]);
+        Ok(ServiceResponse::new(
+            version_envelope(read, self.signer())?,
+            meta,
+        ))
+    }
+
     /// The current `EHR_STATUS` version metadata of an EHR, or `None` when the
     /// EHR has no current `EHR_STATUS`.
     ///
@@ -244,13 +273,6 @@ impl FerroEhrService {
         }
     }
 }
-
-// ── ITS-REST version-metadata adapter (adapter-support extension) ─────────────
-//
-// The protocol adapter's `412`/`ETag` pre-reads. No openEHR spec governs this
-// adapter seam — our own extension over the RM version identities.
-
-impl FerroEhrService {}
 
 /// The [`ResourceMeta`] of a version-CONTAINER read (a `VERSIONED_OBJECT` body
 /// or its `REVISION_HISTORY`): the `ETag` identity is the container uid

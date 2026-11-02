@@ -40,7 +40,7 @@ use crate::fixtures::uv;
 async fn seed(svc: &FerroEhrService) -> (EhrId, String) {
     let ehr_id = crate::fixtures::create_ehr(svc).await;
     let status = svc
-        .ehr_status_at_time_response(ehr_id, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -130,7 +130,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
 
     // Before the mark: the EHR_STATUS reads, and the population query sees it.
     let mut update_body = svc
-        .ehr_status_at_time_response(ehr_id, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("an unrestricted status reads");
@@ -157,7 +157,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
     // would deny the record exists, and not a 403 from the access layer, which
     // would send the caller to fix their credentials.
     let refusal = svc
-        .ehr_status_at_time_response(ehr_id, None)
+        .ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect_err("a restricted status is refused");
@@ -170,7 +170,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
 
     // The revision history is the same object's change record, refused alike.
     let history = svc
-        .ehr_status_revision_history_response(ehr_id)
+        .ehr_status_revision_history(ehr_id)
         .await
         .map(|r| r.body)
         .expect_err("a restricted object's revision history is refused");
@@ -180,7 +180,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
     // the one read back before the mark, so the refusal is the restriction's
     // and not a validation failure standing in for it.
     let write =
-        Box::pin(svc.replace_ehr_status_meta(ehr_id, uv(&update_body, "251", Some(&status_ovid))))
+        Box::pin(svc.replace_ehr_status(ehr_id, uv(&update_body, "251", Some(&status_ovid))))
             .await
             .map(|m| m.uid)
             .expect_err("a write to a restricted object is refused");
@@ -199,7 +199,7 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
     svc.lift_restriction(&ehr_id.to_string(), Some(&status_vo))
         .await
         .expect("lift");
-    svc.ehr_status_at_time_response(ehr_id, None)
+    svc.ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("a lifted status reads again");
@@ -234,10 +234,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     .expect("restrict the whole EHR");
 
     assert!(
-        svc.ehr_status_at_time_response(ehr_id, None)
-            .await
-            .map(|r| r.body)
-            .is_err(),
+        svc.ehr_status(ehr_id, None).await.map(|r| r.body).is_err(),
         "the status of a restricted EHR is refused"
     );
     assert!(
@@ -270,7 +267,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     svc.lift_restriction(&ehr_id.to_string(), None)
         .await
         .expect("lift");
-    svc.ehr_status_at_time_response(ehr_id, None)
+    svc.ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("the status reads again");
@@ -302,10 +299,7 @@ async fn an_object_restriction_survives_a_whole_ehr_lift() {
         .await
         .expect("the directory is no longer restricted");
     assert!(
-        svc.ehr_status_at_time_response(ehr_id, None)
-            .await
-            .map(|r| r.body)
-            .is_err(),
+        svc.ehr_status(ehr_id, None).await.map(|r| r.body).is_err(),
         "the object-scoped restriction stands on its own"
     );
 }
@@ -372,7 +366,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         1,
         "a query naming the ehr_id is care, not research, and is untouched"
     );
-    svc.ehr_status_at_time_response(ehr_id, None)
+    svc.ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("the treating clinician's read is untouched");
@@ -476,7 +470,7 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
 
     // Nothing was deleted by the listing: the record is indelible and disposal
     // is the controller's act.
-    svc.ehr_status_at_time_response(ehr_id, None)
+    svc.ehr_status(ehr_id, None)
         .await
         .map(|r| r.body)
         .expect("the due EHR still serves its content");

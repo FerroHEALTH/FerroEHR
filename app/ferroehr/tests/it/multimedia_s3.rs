@@ -333,7 +333,7 @@ async fn commit_offloads_large_multimedia_and_expands() {
     // The stored/served form is externalized: data gone, uri + integrity + size
     // present (RM invariants honoured), and the blob exists in the store.
     let stored = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("read status");
@@ -378,7 +378,7 @@ async fn commit_offloads_large_multimedia_and_expands() {
 
     // Without the flag the default read keeps the externalized form untouched.
     let unexpanded = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("read again");
@@ -399,7 +399,7 @@ async fn small_multimedia_stays_inline() {
         .map(|(id, _)| id)
         .expect("create ehr");
     let stored = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("read status");
@@ -430,7 +430,7 @@ async fn corrupted_blob_fails_integrity_on_expand() {
             .map(|(id, _)| id)
             .expect("create ehr");
     let stored = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("read");
@@ -478,12 +478,12 @@ async fn gc_removes_unreferenced_but_keeps_shared_blobs() {
             .map(|(id, _)| id)
             .expect("ehr2");
     let s1 = svc
-        .ehr_status_at_time_response(ehr1, None)
+        .ehr_status(ehr1, None)
         .await
         .map(|r| r.body)
         .expect("s1");
     let s2 = svc
-        .ehr_status_at_time_response(ehr2, None)
+        .ehr_status(ehr2, None)
         .await
         .map(|r| r.body)
         .expect("s2");
@@ -549,7 +549,7 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
     assert_eq!(
         shared_key,
         blob_key(
-            &svc.ehr_status_at_time_response(ehr, None)
+            &svc.ehr_status(ehr, None)
                 .await
                 .map(|r| r.body)
                 .expect("read the sharing EHR")
@@ -600,7 +600,7 @@ async fn dump_load_carries_blobs() {
     .expect("seed ehr");
     let key = blob_key(
         &source
-            .ehr_status_at_time_response(ehr, None)
+            .ehr_status(ehr, None)
             .await
             .map(|r| r.body)
             .expect("read"),
@@ -625,7 +625,7 @@ async fn dump_load_carries_blobs() {
     assert!(loaded.is_empty(), "clean load, got {loaded:?}");
 
     let stored = target
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("read target");
@@ -655,7 +655,7 @@ async fn disabled_by_default_stores_inline_verbatim() {
         .map(|(id, _)| id)
         .expect("create ehr");
     let stored = svc
-        .ehr_status_at_time_response(ehr, None)
+        .ehr_status(ehr, None)
         .await
         .map(|r| r.body)
         .expect("read");

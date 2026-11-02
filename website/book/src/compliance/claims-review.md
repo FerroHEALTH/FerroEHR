@@ -1136,8 +1136,10 @@ in a stable-profile canonical-JSON party read (#4775); chart 21.0.0-rc8 with
 ### Left open on 2026-11-02, for 5.6.0-rc8
 
 - The development-profile run, shown beside the record and never counted
-  toward it, fails the rows tracked on #4776 and #4777; its badges show the run
-  as it stands, and no text claims it green.
+  toward it, fails the row tracked on #4777; its badges show the run as it
+  stands, and no text claims it green. The two rows #4776 tracked pass: under
+  the development profile an ADL 2 description without an author or a
+  lifecycle state is refused.
 - A stable-profile canonical-XML party read does not carry
   `reverse_relationships` yet (#4778); the demographics page says so.
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
@@ -1145,3 +1147,41 @@ in a stable-profile canonical-JSON party read (#4775); chart 21.0.0-rc8 with
 - The [performance](../performance.md) page keeps the figures the
   Veredictum 0.1 line measured until a `perf-result` record measured on the
   reference host replaces them, as the page says.
+
+## The review of 2026-11-02, for 5.6.0-rc9
+
+Read on the tree after commit `e6100379c`, for the FerroEHR release candidate
+5.6.0-rc9. 5.6.0-rc8 was tagged and not published: its vulnerability record
+refused findings that had no OpenVEX judgement, so every claim of the 5.6.0-rc8
+review above reaches users first with this release. The facts added since
+5.6.0-rc8 and checked in every text in scope: the OpenVEX judgements of the
+gcc-14 and SQLite findings (#4789); the vulnerability record run on a release
+pull request and every day, and the published images re-scanned every day
+(#4795); audit migration 0022 and the three unused horizon reap functions
+removed (#4770); the AOM2 node id of a primitive constraint inside a rule or a
+slot assertion (#4770); chart 21.0.0-rc8 with `appVersion` 5.6.0-rc9.
+
+### Read and kept on 2026-11-02, for 5.6.0-rc9
+
+- **The supply-chain pages**: [verifying releases](../verifying-releases.md),
+  the [supply-chain hardening](../installation/hardening-supply-chain.md) page
+  and the [CRA risk assessment](cra-risk-assessment.md) state the daily
+  re-scan and the vulnerability record each release publishes, as the
+  workflows run them.
+- **The audit and retention pages**: [the audit trail](../audit.md) and the
+  hazard log's H5 describe reaping through each record's own retention end,
+  and no text names a removed reap function; the hazard log gains review 17
+  and the technical documentation its 5.6.0-rc9 row.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc8 and image 5.6.0-rc9 in the book of main.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-02, for 5.6.0-rc9
+
+- Everything the 5.6.0-rc8 review left open: the development-profile run's
+  failed rows (#4776, #4777), the canonical-XML `reverse_relationships`
+  (#4778), the 5.5.0 sandbox and the performance page's earlier figures.

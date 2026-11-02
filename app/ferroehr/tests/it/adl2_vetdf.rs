@@ -51,6 +51,7 @@ language
     original_language = <[ISO_639-1::en]>
 
 description
+    original_author = <[\"name\"] = <\"FerroEHR tests\">>
     lifecycle_state = <\"published\">
     details = <
         [\"en\"] = <

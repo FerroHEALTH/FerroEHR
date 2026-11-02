@@ -159,7 +159,8 @@ async fn stored_committer(
     );
     svc.composition_version_envelope(ehr, ovid.parse().expect("an OBJECT_VERSION_ID"))
         .await
-        .expect("the stored version")["commit_audit"]["committer"]
+        .expect("the stored version")
+        .body["commit_audit"]["committer"]
         .clone()
 }
 
@@ -313,14 +314,14 @@ async fn ehr_status_update_checks_the_committer() {
         let svc = svc.clone();
         async move {
             let mut body = svc
-                .ehr_status_at_time_response(ehr, None)
+                .ehr_status(ehr, None)
                 .await
                 .map(|r| r.body)
                 .expect("the current EHR_STATUS");
             let preceding = body["uid"]["value"].as_str().expect("uid").to_owned();
             body.as_object_mut().expect("an object").remove("uid");
-            let write = svc
-                .replace_ehr_status_meta(ehr, version(&body, "251", Some(&preceding), &committer));
+            let write =
+                svc.replace_ehr_status(ehr, version(&body, "251", Some(&preceding), &committer));
             outcome(with_committer(Some(professional()), Box::pin(write)).await)
         }
     };

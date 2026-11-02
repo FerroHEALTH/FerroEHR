@@ -1122,9 +1122,12 @@ fn bench_read(
                 rt.block_on(async {
                     let start = Instant::now();
                     for _ in 0..iters {
-                        svc.get_composition_at_version(kept.ehr, version_uid.clone())
+                        svc.composition_at_version(kept.ehr, version_uid.clone())
                             .await
-                            .expect("read by version uid");
+                            .expect("read by version uid")
+                            .body
+                            .into_value()
+                            .expect("the stored COMPOSITION decodes");
                     }
                     start.elapsed()
                 })
@@ -1171,7 +1174,7 @@ fn bench_read(
                 rt.block_on(async {
                     let start = Instant::now();
                     for _ in 0..iters {
-                        svc.composition_revision_history_response(kept.ehr, kept.vo)
+                        svc.composition_revision_history(kept.ehr, kept.vo)
                             .await
                             .map(|r| r.body)
                             .expect("read the revision history");
