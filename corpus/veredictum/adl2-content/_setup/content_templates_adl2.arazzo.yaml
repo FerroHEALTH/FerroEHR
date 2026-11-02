@@ -38,7 +38,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=6EE8F2DC-0241-4ECE-A255-9157E6DB6C32; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_count_range.v1.0.0
 
             language
@@ -161,7 +161,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=6B49AC4D-EF21-4AA1-9C19-700F0A5853CB; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_count.v1.0.0
 
             language
@@ -293,7 +293,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=22FBA5FA-6EC0-4CF6-9928-EFD2C3026A36; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_items_cardinality.v1.0.0
 
             language
@@ -414,7 +414,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=53C6EF68-B883-40C2-B574-C849864BE733; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_boolean_open.v1.0.0
 
             language
@@ -535,7 +535,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=E14A9E83-3D4F-4019-A99A-2905A73EA2EF; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_boolean_only_false.v1.0.0
 
             language
@@ -658,7 +658,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=66E5D469-E06E-4522-87D1-49DCA59590EB; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_boolean_only_true.v1.0.0
 
             language
@@ -781,7 +781,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=2B703CAF-9481-46F6-949D-50AA4038EC38; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_coded_text_value_set.v1.0.0
 
             language
@@ -922,7 +922,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=48225100-1E4A-4D4A-9EA9-F6BC6B34C7EE; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_count_list.v1.0.0
 
             language
@@ -1045,7 +1045,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=B538C8B5-6496-49DB-962B-A45A561E9449; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_count_open.v1.0.0
 
             language
@@ -1166,7 +1166,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=BC760617-B9F1-4FCB-A9F2-9D5C3C78761F; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_date_open.v1.0.0
 
             language
@@ -1287,7 +1287,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=A7C4265B-51A7-4C93-BB2A-3F2EF54CABE6; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_date_time_open.v1.0.0
 
             language
@@ -1408,7 +1408,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=BAB04481-13FC-43CB-BE31-7BE7FDF5824A; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_time_open.v1.0.0
 
             language
@@ -1529,7 +1529,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=7343242C-0C1F-4B1F-82E3-E16FE3478A9D; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_duration_pattern.v1.0.0
 
             language
@@ -1652,7 +1652,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=7C5B2B07-BFF0-4B42-ABEA-D50FAF648CF3; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_ehr_uri_list.v1.0.0
 
             language
@@ -1775,7 +1775,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=66C3CE1E-22EA-4CB0-9270-355326E39F78; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_ehr_uri_open.v1.0.0
 
             language
@@ -1896,7 +1896,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=264CADB3-3AA8-4744-87AD-FE2F061476F6; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_ehr_uri_pattern.v1.0.0
 
             language
@@ -2019,7 +2019,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=1A281668-0BFA-4297-9B5E-B24C481A08C7; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_count_list.v1.0.0
 
             language
@@ -2151,7 +2151,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=76E8FA1A-A7F8-4A6D-B8A1-DAA40B76750E; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_count_open.v1.0.0
 
             language
@@ -2272,7 +2272,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=ACEAE38D-88E7-4547-B33D-45D427FDCDA9; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_date_open.v1.0.0
 
             language
@@ -2393,7 +2393,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=A4DE8DA4-FB2F-4DDA-8D17-E8A62A376E84; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_date_time_open.v1.0.0
 
             language
@@ -2514,7 +2514,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=58FC4403-0222-4832-907D-8F9D918B935F; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_duration_open.v1.0.0
 
             language
@@ -2635,7 +2635,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=B1C6C152-E876-43A9-88BE-9BC2AD798E5E; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_time_open.v1.0.0
 
             language
@@ -2756,7 +2756,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=2C9F68DD-761E-494C-B478-12518FA04BD7; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_ordinal_open.v1.0.0
 
             language
@@ -2885,7 +2885,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=17434F57-F29D-4F65-8BBA-0B95B64AB7FB; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_scale_open.v1.0.0
 
             language
@@ -3014,7 +3014,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=63769664-8EC8-41E8-B9B0-3B7664902B31; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_open.v1.0.0
 
             language
@@ -3135,7 +3135,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=29E26EBB-64CC-4177-9B2F-EE5C755A95B2; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_proportion_open.v1.0.0
 
             language
@@ -3256,7 +3256,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=BDDD407C-FB81-4F74-98AE-C33E759DD2E2; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_proportion_fraction.v1.0.0
 
             language
@@ -3388,7 +3388,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=3C0AA330-5021-4E5E-AE8B-B721111E0A54; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_proportion_integer_fraction.v1.0.0
 
             language
@@ -3520,7 +3520,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=2ADE5190-574E-4B65-9382-2E9520B742B0; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_proportion_percent.v1.0.0
 
             language
@@ -3652,7 +3652,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=6D9F6B5A-1C05-4E5B-AAB2-F71DF2A2DF0D; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_proportion_ratio.v1.0.0
 
             language
@@ -3784,7 +3784,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=B59AC951-CDC4-41FF-AE75-C609490C1AD7; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_proportion_unitary.v1.0.0
 
             language
@@ -3916,7 +3916,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=7255D4B3-F0FE-4F62-8007-527281FD5753; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_interval_quantity_celsius.v1.0.0
 
             language
@@ -4052,7 +4052,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=6563D391-0BB1-4FF6-85CD-B147F93DFDCD; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_multimedia_size.v1.0.0
 
             language
@@ -4175,7 +4175,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=9D30A534-3E7B-4F12-A61B-95138D1B6D8E; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_ordinal_list.v1.0.0
 
             language
@@ -4309,7 +4309,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=80E9CE49-C825-4458-8DBA-8CBF16765813; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_ordinal_open.v1.0.0
 
             language
@@ -4438,7 +4438,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=F0857083-68D4-43A2-9685-3292D8953B6F; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_parsable_formalism.v1.0.0
 
             language
@@ -4561,7 +4561,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=0373A7A3-960F-441C-92C6-E2767FDE0109; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_any_fraction.v1.0.0
 
             language
@@ -4684,7 +4684,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=8545C5D2-1774-482D-B40A-703FCF996481; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_fraction.v1.0.0
 
             language
@@ -4807,7 +4807,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=7796E077-72B8-431A-805D-0ECF165A4DE5; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_integer_fraction.v1.0.0
 
             language
@@ -4930,7 +4930,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=3F053F58-AE76-468E-9002-327FAE41DD1D; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_percent.v1.0.0
 
             language
@@ -5053,7 +5053,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=5721C83F-6823-4B1C-8201-1D3E8F85CF95; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_ratio.v1.0.0
 
             language
@@ -5176,7 +5176,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=44B8CABF-76F8-4D63-80E4-6CF13A6EC552; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_unitary.v1.0.0
 
             language
@@ -5299,7 +5299,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=AF06005A-2D26-4157-929F-A0ECB3177296; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_open.v1.0.0
 
             language
@@ -5420,7 +5420,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=97F2E7B1-E745-4645-A6CA-858AF6F1B270; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_proportion_ratio_range.v1.0.0
 
             language
@@ -5545,7 +5545,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=0A746072-5A5B-4DD4-B68B-CAF23474703F; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_quantity_open.v1.0.0
 
             language
@@ -5666,7 +5666,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=D6614BC6-CE1D-4194-9C78-92DADB59A211; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_quantity_units.v1.0.0
 
             language
@@ -5789,7 +5789,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=4006F43B-FBC4-47B8-8F8E-B62FB74A6B53; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_quantity_units_mag.v1.0.0
 
             language
@@ -5914,7 +5914,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=FDD39C8F-A5A9-4E19-9F9D-A7BB30552882; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_scale_list.v1.0.0
 
             language
@@ -6060,7 +6060,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=BC67548D-30B9-417D-8EEB-BAC35E701403; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_scale_open.v1.0.0
 
             language
@@ -6189,7 +6189,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=07953629-99EF-4181-A8C5-7532A19AC9F6; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_text_list.v1.0.0
 
             language
@@ -6312,7 +6312,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=8AC323EB-280C-441E-9D90-BBFDFB248662; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_uri_list.v1.0.0
 
             language
@@ -6435,7 +6435,7 @@ workflows:
         requestBody:
           contentType: text/plain
           payload: |-
-            operational_template (adl_version=2.0.6; rm_release=1.0.2; generated)
+            operational_template (adl_version=2.0.6; rm_release=1.0.2; build_uid=0CC61C1A-09AF-485C-B24C-618D942A123C; generated)
                 openEHR-EHR-COMPOSITION.cnf_adl2_dv_uri_open.v1.0.0
 
             language
@@ -6523,6 +6523,136 @@ workflows:
                             ["id5"] = <
                                 text = <"Value">
                                 description = <"The constrained value">
+                            >
+                        >
+                    >
+                >
+        successCriteria:
+          - context: $statusCode
+            type: regex
+            condition: '^(201|409)$'
+            x-veredictum-cite:
+              source: specs/openehr/ITS-REST/specifications/responses/409_template_already_exists.yaml
+              section: "description"
+              quote: "`409 Conflict` is returned when a template with same `template_id` already exists."
+
+  - workflowId: upload_template-adl2_at_coded
+    summary: The at-coded ADL 2 template openEHR-EHR-COMPOSITION.cnf_adl2_at_coded.v1.0.0 is on the server
+    description: >-
+      Uploads the at-coded ADL 2 operational template
+      openEHR-EHR-COMPOSITION.cnf_adl2_at_coded.v1.0.0, whose root node is
+      at0000 and whose every node and value code is an at-code. A server that
+      already holds a template with that template_id refuses the upload with
+      409, which leaves the same precondition in place. The at-code coding
+      system is development text, so the setup is development-only.
+    x-veredictum-cite:
+      source: specs/openehr-development/specifications-AM/docs/UML/classes/org.openehr.am.aom2.adl_code_definitions.adoc
+      section: ADL_CODE_DEFINITIONS Class
+      quote: "openEHR systems must support at least the at-coded ADL2 archetypes."
+    steps:
+      - stepId: upload
+        description: Upload the template, or find it already there.
+        operationId: $sourceDescriptions.definition.definition_template_adl2_upload
+        x-veredictum-cite:
+          source: specs/openehr/ITS-REST/specifications/operations/definition_template_adl2_upload.yaml
+          section: "description"
+          quote: "Upload a new ADL2 operational template."
+          report: 939
+        parameters:
+          - { name: Content-Type, in: header, value: text/plain }
+        requestBody:
+          contentType: text/plain
+          # NOTE: development ADL2 master04.2-cadl_basics.adoc §Node Identifier and Coding Systems:
+          # an at-coded root object is always at0000; master10-templates.adoc gives the OPT form.
+          payload: |-
+            operational_template (adl_version=2.4.0; rm_release=1.0.2; build_uid=2944D931-F103-451B-887E-9DA01CA60262; generated)
+                openEHR-EHR-COMPOSITION.cnf_adl2_at_coded.v1.0.0
+
+            language
+                original_language = <[ISO_639-1::en]>
+
+            description
+                original_author = <
+                    ["name"] = <"Veredictum contributors">
+                >
+                lifecycle_state = <"unmanaged">
+                details = <
+                    ["en"] = <
+                        language = <[ISO_639-1::en]>
+                        purpose = <"An at-coded operational template for conformance testing">
+                    >
+                >
+
+            definition
+                COMPOSITION[at0000] matches {
+                    category matches {
+                        DV_CODED_TEXT[at0001] matches {
+                            defining_code matches {[at0002]}
+                        }
+                    }
+                    content cardinality matches {0..*; unordered} matches {
+                        OBSERVATION[at0003, openEHR-EHR-OBSERVATION.cnf_minimal_at_coded.v1.0.0] occurrences matches {0..*} matches {
+                            data matches {
+                                HISTORY[at0001] matches {
+                                    events cardinality matches {1..*; unordered} matches {
+                                        EVENT[at0002] occurrences matches {0..*} matches {
+                                            data matches {
+                                                ITEM_TREE[at0003] matches {
+                                                    items cardinality matches {0..*; unordered} matches {
+                                                        ELEMENT[at0004] occurrences matches {0..*} matches {
+                                                            value matches {
+                                                                DV_TEXT[at0005]
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            terminology
+                term_definitions = <
+                    ["en"] = <
+                        ["at0000"] = <
+                            text = <"CNF ADL 2 at-coded">
+                            description = <"An at-coded event composition">
+                        >
+                        ["at0002"] = <
+                            text = <"event">
+                            description = <"The openEHR composition category event">
+                        >
+                        ["at0003"] = <
+                            text = <"Minimal observation">
+                            description = <"The observation the composition holds">
+                        >
+                    >
+                >
+                term_bindings = <
+                    ["openehr"] = <
+                        ["at0002"] = <http://openehr.org/id/433>
+                    >
+                >
+
+            component_terminologies
+                ["openEHR-EHR-OBSERVATION.cnf_minimal_at_coded.v1.0.0"] = <
+                    term_definitions = <
+                        ["en"] = <
+                            ["at0000"] = <
+                                text = <"Minimal observation">
+                                description = <"An at-coded observation with one text element">
+                            >
+                            ["at0002"] = <
+                                text = <"Any event">
+                                description = <"Any event">
+                            >
+                            ["at0004"] = <
+                                text = <"Value">
+                                description = <"A text value">
                             >
                         >
                     >
