@@ -458,7 +458,7 @@ async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
     status.as_object_mut().expect("status obj").remove("uid");
     svc.target_tags_replace(
         ehr,
-        status_vo,
+        crate::fixtures::at(status_vo),
         "EHR_STATUS",
         vec![crate::item_tag_fixture::ehr_tag(
             "priority",
@@ -1296,14 +1296,14 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
     let src_person = source
         .party_get(
             ferroehr::service::demographic::types::PartyKind::Person,
-            person_vo.to_string(),
+            crate::fixtures::at(person_vo.to_string()),
             None,
         )
         .await
         .map(|r| r.body)
         .expect("source party");
     let src_rel = source
-        .party_relationship_get(rel_vo.to_string(), None)
+        .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
         .await
         .map(|r| r.body)
         .expect("source relationship");
@@ -1327,7 +1327,7 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
         target
             .party_get(
                 ferroehr::service::demographic::types::PartyKind::Person,
-                person_vo.to_string(),
+                crate::fixtures::at(person_vo.to_string()),
                 None,
             )
             .await
@@ -1338,7 +1338,7 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
     );
     assert_eq!(
         target
-            .party_relationship_get(rel_vo.to_string(), None)
+            .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
             .await
             .map(|r| r.body)
             .expect("loaded relationship"),
@@ -1379,14 +1379,14 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
     let src_person = source
         .party_get(
             ferroehr::service::demographic::types::PartyKind::Person,
-            person_vo.to_string(),
+            crate::fixtures::at(person_vo.to_string()),
             None,
         )
         .await
         .map(|r| r.body)
         .expect("source party");
     let src_rel = source
-        .party_relationship_get(rel_vo.to_string(), None)
+        .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
         .await
         .map(|r| r.body)
         .expect("source relationship");
@@ -1410,7 +1410,7 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
         target
             .party_get(
                 ferroehr::service::demographic::types::PartyKind::Person,
-                person_vo.to_string(),
+                crate::fixtures::at(person_vo.to_string()),
                 None,
             )
             .await
@@ -1421,7 +1421,7 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
     );
     assert_eq!(
         target
-            .party_relationship_get(rel_vo.to_string(), None)
+            .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
             .await
             .map(|r| r.body)
             .expect("loaded relationship"),
@@ -1454,14 +1454,14 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
     let src_person = source
         .party_get(
             ferroehr::service::demographic::types::PartyKind::Person,
-            person_vo.to_string(),
+            crate::fixtures::at(person_vo.to_string()),
             None,
         )
         .await
         .map(|r| r.body)
         .expect("source party");
     let src_rel = source
-        .party_relationship_get(rel_vo.to_string(), None)
+        .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
         .await
         .map(|r| r.body)
         .expect("source relationship");
@@ -1486,7 +1486,7 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
         target
             .party_get(
                 ferroehr::service::demographic::types::PartyKind::Person,
-                person_vo.to_string(),
+                crate::fixtures::at(person_vo.to_string()),
                 None,
             )
             .await
@@ -1497,7 +1497,7 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
     );
     assert_eq!(
         target
-            .party_relationship_get(rel_vo.to_string(), None)
+            .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
             .await
             .map(|r| r.body)
             .expect("loaded relationship"),

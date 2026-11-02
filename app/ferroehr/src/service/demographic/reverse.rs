@@ -16,10 +16,10 @@
 use openehr_base::prelude::{HierObjectId, LocatableRef, UidBasedId};
 use serde_json::Value;
 
+use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::storage::party_reverse::ReverseRelationship;
-use crate::versioning::object_version_id::{VersionIdError, parse_uid_based_id};
 
 /// One party's `reverse_relationships`: the references, and the source
 /// parties whose current versions the read disclosed, for the access record.
@@ -65,18 +65,16 @@ impl FerroEhrService {
     /// (SPECRM-124), so only a stable-profile read serves it.
     ///
     /// # Errors
-    /// - [`ServiceError`] `precondition_violation` — the id does not parse.
     /// - [`ServiceError`] on a storage/database fault during the read.
     pub async fn party_reverse_relationships(
         &self,
-        uid_based_id: &str,
+        vo_id: VoId,
     ) -> Result<ReverseRelationships, ServiceError> {
         // NOTE: RM 1.1.0 `PARTY_RELATIONSHIP.Target_valid` negates this list (#1576,
         // upstream-confirmed; Veredictum report 1053); the package text and
         // `PARTY.Reverse_relationships_validity` both require it, and they decide.
-        let decoded = parse_uid_based_id(uid_based_id).map_err(VersionIdError::into_argument)?;
         let mut conn = crate::db::acquire::acquire(&self.demographic_pool).await?;
-        let rows = crate::storage::party_reverse::reverse_of(&mut conn, decoded.vo_id).await?;
+        let rows = crate::storage::party_reverse::reverse_of(&mut conn, vo_id).await?;
         let mut out = ReverseRelationships::default();
         for row in &rows {
             out.references

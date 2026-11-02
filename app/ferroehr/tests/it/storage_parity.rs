@@ -1327,7 +1327,7 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
     let served = svc
         .party_get(
             ferroehr::service::demographic::types::PartyKind::Person,
-            vo_id.to_string(),
+            crate::fixtures::at(vo_id.to_string()),
             None,
         )
         .await
@@ -1399,7 +1399,7 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
     assert_eq!(
         svc.party_get(
             ferroehr::service::demographic::types::PartyKind::Person,
-            vo_id.to_string(),
+            crate::fixtures::at(vo_id.to_string()),
             None,
         )
         .await

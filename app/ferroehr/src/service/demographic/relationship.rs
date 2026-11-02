@@ -29,8 +29,8 @@ use serde_json::Value;
 
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
+use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
-use crate::service::demographic::support::Precondition;
 use crate::service::demographic::validate::relationship_check;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;

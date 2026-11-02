@@ -709,7 +709,7 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     assert!(version_rows(pool, &p2).await > 0, "partner p2 survives");
     assert!(version_rows(pool, &r3).await > 0, "unrelated r3 survives");
     assert_eq!(
-        svc.party_get(PartyKind::Person, p2.clone(), None)
+        svc.party_get(PartyKind::Person, crate::fixtures::at(p2.clone()), None)
             .await
             .expect("p2 still readable")
             .body["_type"],
@@ -818,7 +818,7 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
         .expect("status still readable after archive");
     assert_eq!(status["_type"], "EHR_STATUS");
     let party = svc
-        .party_get(PartyKind::Person, person.clone(), None)
+        .party_get(PartyKind::Person, crate::fixtures::at(person.clone()), None)
         .await
         .expect("party still readable after archive");
     assert_eq!(party.body["_type"], "PERSON");
