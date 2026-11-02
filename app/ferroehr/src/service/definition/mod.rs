@@ -9,8 +9,10 @@
 //! One file per interface, each carrying its domain logic **and** its
 //! concrete `FerroEhrService` catalog methods:
 //!
-//! - `adl14` — ADL 1.4 source archetypes (keyed by `ARCHETYPE_ID`) + OPTs
-//!   (keyed by `UUID`).
+//! - `adl14` — ADL 1.4 source archetypes (keyed by `ARCHETYPE_ID`) and their
+//!   conversion to ADL 2.
+//! - `opt14` — OPT 1.4 operational templates (keyed by `template_id`) and the
+//!   cached Web Template the commit path validates against.
 //! - `adl2`  — ADL2 artefacts
 //!   (keyed by `ARCHETYPE_HRID`).
 //! - `lineage` — the archetype specialisation graph over those artefacts (their
@@ -47,6 +49,7 @@ mod adl2_resolution;
 mod adl2_terminology;
 mod binding_uri;
 pub(super) mod lineage;
+mod opt14;
 mod query;
 mod version_selector;
 mod wire;

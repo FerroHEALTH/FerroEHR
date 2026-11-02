@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADL 1.4 definitions: ADL 1.4 source archetypes keyed by `ARCHETYPE_ID` (on
-//! `archetype_store`) and OPTs keyed by `UUID` (on `template_store`).
+//! The ADL 1.4 source archetypes keyed by `ARCHETYPE_ID`, and the conversion of
+//! a stored archetype or operational template to ADL 2. The operational
+//! templates themselves are `opt14`.
 //!
 //! ADL 1.4 archetype validity is the `openehr-adl` engine judged as 1.4: an
 //! upload parses via [`openehr_adl::assemble::parse_artefact`] in
@@ -37,13 +38,12 @@ use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
 use openehr_base::prelude::ArchetypeId;
 use openehr_base::validate::InvariantViolation;
-use sqlx::Connection as _;
 
-use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
 use crate::service::error::{ServiceError, Violation};
 use crate::service::list::Page;
 use crate::service::refusal::{Invalid, Missing};
+use crate::storage::archetype_repo;
 
 use super::page_bounds;
 
@@ -76,7 +76,15 @@ impl FerroEhrService {
         // NOTE: no specification names this status token: our own design for a
         // semantically invalid archetype.
         archetype_validate(&adl).map_err(invalid_archetype)?;
-        self.archetype_upload(&adl).await
+        let id = extract_archetype_id(&adl).ok_or_else(|| ServiceError::Unprocessable {
+            kind: Invalid::Archetype,
+            violation: Violation::new(
+                "ADL 1.4 source is not a valid archetype (missing `archetype` \
+                     header or a well-formed ARCHETYPE_ID)",
+            ),
+        })?;
+        archetype_repo::replace_archetype(&self.pool, &id.value, &adl).await?;
+        Ok(id.value)
     }
 
     /// Converts a stored ADL 1.4 archetype (by `ARCHETYPE_ID`) to ADL 2: the
@@ -173,35 +181,9 @@ impl FerroEhrService {
     }
 }
 
-// ── domain logic (the ServiceError layer under the catalog) ──────────────────
+// ── the archetype store ──────────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// Store a valid ADL 1.4 archetype, replacing any case-variant of the same
-    /// id in the same transaction; invalid source → `invalid_archetype` (`422`).
-    /// Returns the stored `ARCHETYPE_ID`.
-    async fn archetype_upload(&self, adl: &str) -> Result<String, ServiceError> {
-        let id = extract_archetype_id(adl).ok_or_else(|| ServiceError::Unprocessable {
-            kind: Invalid::Archetype,
-            violation: Violation::new(
-                "ADL 1.4 source is not a valid archetype (missing `archetype` \
-                     header or a well-formed ARCHETYPE_ID)",
-            ),
-        })?;
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        sqlx::query("DELETE FROM archetype_store WHERE lower(archetype_id) = lower($1)")
-            .bind(&id.value)
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("INSERT INTO archetype_store (archetype_id, adl) VALUES ($1, $2)")
-            .bind(&id.value)
-            .bind(adl)
-            .execute(&mut *tx)
-            .await?;
-        tx.commit().await?;
-        Ok(id.value)
-    }
-
     /// The ADL 1.4 source of the archetype with id `an_id` (interchange form).
     /// Identity is case-insensitive.
     ///
@@ -210,13 +192,9 @@ impl FerroEhrService {
     /// - No archetype with that id → [`Missing::Artefact`] (`404`).
     /// - A database failure (`500`).
     pub async fn get_archetype(&self, an_id: &str) -> Result<String, ServiceError> {
-        sqlx::query_scalar::<_, String>(
-            "SELECT adl FROM archetype_store WHERE lower(archetype_id) = lower($1)",
-        )
-        .bind(an_id)
-        .fetch_optional(&mut *acquire(&self.pool).await?)
-        .await?
-        .ok_or_else(|| ServiceError::not_found(Missing::Artefact, format!("archetype {an_id}")))
+        archetype_repo::archetype_adl(&self.pool, an_id)
+            .await?
+            .ok_or_else(|| ServiceError::not_found(Missing::Artefact, format!("archetype {an_id}")))
     }
 
     /// The ids of all stored ADL 1.4 archetypes, paged in SQL.
@@ -226,13 +204,7 @@ impl FerroEhrService {
     /// A database failure (`500`).
     pub async fn list_archetypes_adl14(&self, page: Page) -> Result<Vec<String>, ServiceError> {
         let (offset, limit) = page_bounds(page);
-        Ok(sqlx::query_scalar::<_, String>(
-            "SELECT archetype_id FROM archetype_store ORDER BY archetype_id OFFSET $1 LIMIT $2",
-        )
-        .bind(offset)
-        .bind(limit)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?)
+        Ok(archetype_repo::archetype_ids(&self.pool, offset, limit).await?)
     }
 
     /// Delete an archetype by id (case-insensitive).
@@ -242,40 +214,14 @@ impl FerroEhrService {
     /// - No archetype with that id → [`Missing::Artefact`] (`404`).
     /// - A database failure (`500`).
     pub async fn delete_archetype(&self, an_id: &str) -> Result<(), ServiceError> {
-        let deleted =
-            sqlx::query("DELETE FROM archetype_store WHERE lower(archetype_id) = lower($1)")
-                .bind(an_id)
-                .execute(&mut *acquire(&self.pool).await?)
-                .await?
-                .rows_affected();
-        if deleted == 0 {
-            return Err(ServiceError::not_found(
+        if archetype_repo::delete_archetype(&self.pool, an_id).await? {
+            Ok(())
+        } else {
+            Err(ServiceError::not_found(
                 Missing::Artefact,
                 format!("archetype {an_id}"),
-            ));
+            ))
         }
-        Ok(())
-    }
-
-    /// `GET /definition/template/adl1.4/{template_id}`: the OPT 1.4 canonical
-    /// XML addressed by its `template_id` string, the ITS-REST wire address.
-    ///
-    /// # Errors
-    ///
-    /// - No OPT with that `template_id` → [`Missing::Template`] (`404`).
-    /// - A database failure (`500`).
-    pub async fn template_adl14_get(&self, template_id: &str) -> Result<String, ServiceError> {
-        // Identity of the TEMPLATE_ID is case-insensitive (BASE master05
-        // §Composite Identifiers and Case).
-        sqlx::query_scalar::<_, String>(
-            "SELECT content FROM template_store WHERE lower(template_id) = lower($1)",
-        )
-        .bind(template_id)
-        .fetch_optional(&mut *acquire(&self.pool).await?)
-        .await?
-        .ok_or_else(|| {
-            ServiceError::not_found(Missing::Template, format!("OPT template_id {template_id}"))
-        })
     }
 }
 

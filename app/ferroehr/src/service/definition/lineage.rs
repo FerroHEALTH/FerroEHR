@@ -22,9 +22,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::aql::lineage::ArchetypeLineage;
-use crate::db::acquire::acquire;
 use crate::service::FerroEhrService;
-use crate::service::error::ServiceError;
+use crate::storage::adl2_repo;
+use crate::storage::error::StorageError;
 
 /// In-process memo of the resolved [`ArchetypeLineage`]. Single-entry (the
 /// index is store-wide, not per-key) and `Arc`-backed, so every clone of the
@@ -73,12 +73,8 @@ impl FerroEhrService {
     }
 
     /// Read every stored `specialize` edge and resolve it into the index.
-    async fn load_archetype_lineage(&self) -> Result<Arc<ArchetypeLineage>, ServiceError> {
-        let edges: Vec<(String, String)> = sqlx::query_as(
-            "SELECT hrid, parent_hrid FROM adl2_artefact WHERE parent_hrid IS NOT NULL",
-        )
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
+    async fn load_archetype_lineage(&self) -> Result<Arc<ArchetypeLineage>, StorageError> {
+        let edges = adl2_repo::parent_edges(&self.pool).await?;
         Ok(Arc::new(ArchetypeLineage::from_parent_edges(edges)))
     }
 

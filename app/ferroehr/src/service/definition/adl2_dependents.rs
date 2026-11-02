@@ -21,6 +21,7 @@ use sqlx::PgConnection;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
+use crate::storage::adl2_repo::{self, ArtefactRow, OPERATIONAL_TEMPLATE_KIND};
 
 use super::adl2_engine::on_engine_stack;
 use super::adl2_resolution::{parse_stored, repository_of};
@@ -42,10 +43,7 @@ impl FerroEhrService {
         conn: &mut PgConnection,
         hrid: &str,
     ) -> Result<(), ServiceError> {
-        let rows: Vec<(String, String, String)> =
-            sqlx::query_as("SELECT hrid, kind, adl FROM adl2_artefact ORDER BY hrid")
-                .fetch_all(conn)
-                .await?;
+        let rows = adl2_repo::artefacts(conn).await?;
         let target = hrid.to_owned();
         let dependents = on_engine_stack(move || dependents_of(&target, rows)).await?;
         if dependents.is_empty() {
@@ -63,24 +61,24 @@ impl FerroEhrService {
 /// The HRIDs, in the order of `rows`, of every stored artefact that compiles
 /// with `target` stored and does not compile without it.
 ///
-/// `rows` is every stored `(hrid, kind, adl)`. An artefact that does not
+/// `rows` is every stored artefact. An artefact that does not
 /// compile even with `target` stored is not counted: the delete takes nothing
 /// from it. Each artefact compiles against every stored release
 /// ([`repository_of`]), so with another release of `target`'s major version
 /// stored, the delete leaves its users resolving to that one.
-fn dependents_of(target: &str, rows: Vec<(String, String, String)>) -> Vec<String> {
+fn dependents_of(target: &str, rows: Vec<ArtefactRow>) -> Vec<String> {
     let is_target = |hrid: &str| hrid.eq_ignore_ascii_case(target);
     let mut users = Vec::new();
     let mut with = Vec::new();
     let mut without = Vec::new();
-    for (hrid, kind, adl) in rows {
+    for ArtefactRow { hrid, kind, adl } in rows {
         let Some(stored) = parse_stored(&adl) else {
             continue;
         };
         // A stored `operational_template` inlines every constituent and so
         // needs none of them stored (OPT2 `master02-overview.adoc`: a
         // top-level standalone artefact).
-        if kind != "operational_template" && !is_target(&hrid) {
+        if kind != OPERATIONAL_TEMPLATE_KIND && !is_target(&hrid) {
             users.push((hrid.clone(), stored.clone()));
         }
         if !is_target(&hrid) {
@@ -95,25 +93,4 @@ fn dependents_of(target: &str, rows: Vec<(String, String, String)>) -> Vec<Strin
         .filter(|(_, a)| create_opt(a, &without).is_err() && create_opt(a, &with).is_ok())
         .map(|(hrid, _)| hrid)
         .collect()
-}
-
-/// Take the transaction-scoped advisory lock every ADL2 upload and delete
-/// holds from its repository read to its commit.
-///
-/// The delete refuses while a stored artefact depends on its target, and an
-/// upload is refused while a constituent it needs is not stored; each decides
-/// on a read the other's write changes, so they run one after the other, the
-/// second deciding on what the first committed. PostgreSQL releases the lock at
-/// the end of the transaction (`pg_advisory_xact_lock`, PostgreSQL
-/// documentation §13.3.5 Advisory Locks). No openEHR spec governs
-/// storage integrity: our own design.
-///
-/// # Errors
-///
-/// A database failure → `500`.
-pub(super) async fn adl2_write_lock(tx: &mut PgConnection) -> Result<(), ServiceError> {
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended('ferroehr.adl2_artefact', 0))")
-        .execute(tx)
-        .await?;
-    Ok(())
 }

@@ -46,6 +46,12 @@
 //!   and its mark on `vo_head`.
 //! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
 //!   services and its mark on `ehr`.
+//! - [`template_repo`] — the OPT 1.4 `template_store` and the `template_ref`
+//!   registry of every template address a version may name.
+//! - [`archetype_repo`] — the ADL 1.4 `archetype_store`.
+//! - [`adl2_repo`] — the ADL2 `adl2_artefact` store and its specialisation
+//!   edges.
+//! - [`stored_query_repo`] — the registered queries of `stored_query`.
 //!
 //! The seam with the versioning layer is a value contract rather than shared
 //! SQL: versioning owns the semantics (classify, tree placement, lifecycle,
@@ -53,6 +59,8 @@
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
 pub mod access_delay;
+pub mod adl2_repo;
+pub mod archetype_repo;
 pub mod blob_ref;
 pub mod codec;
 pub mod ddl_template;
@@ -66,6 +74,8 @@ pub mod party_reverse;
 pub mod promoted;
 pub mod row;
 pub mod slim;
+pub mod stored_query_repo;
 pub mod structure;
 pub mod tag_repo;
+pub mod template_repo;
 pub mod version_repo;
