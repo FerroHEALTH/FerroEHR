@@ -176,6 +176,11 @@ pub(crate) fn vo_of(ovid: &str) -> &str {
     ovid.split("::").next().expect("vo uuid")
 }
 
+/// The typed id of an EHR a fixture holds as its wire string.
+pub(crate) fn ehr(raw: impl AsRef<str>) -> ferroehr::ids::EhrId {
+    ferroehr::ids::EhrId(raw.as_ref().parse().expect("an EHR uuid"))
+}
+
 /// A minimal valid root FOLDER (RM ehr master04 §Folders).
 pub(crate) fn folder(name: &str) -> Value {
     json!({

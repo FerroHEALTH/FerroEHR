@@ -97,7 +97,7 @@ async fn scoped_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
             "SELECT e/ehr_id/value FROM EHR e",
             None,
             &AqlQueryRequest {
-                ehr_ids: vec![ehr_id.to_string()],
+                ehr_ids: vec![ehr_id],
                 ..AqlQueryRequest::default()
             },
         )

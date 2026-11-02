@@ -386,7 +386,7 @@ async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
             COHORT_AQL,
             None,
             &AqlQueryRequest {
-                ehr_ids: vec![hidden.to_string()],
+                ehr_ids: vec![hidden],
                 ..AqlQueryRequest::default()
             },
         )

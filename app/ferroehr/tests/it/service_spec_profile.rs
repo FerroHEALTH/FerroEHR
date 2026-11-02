@@ -396,7 +396,7 @@ async fn dump_and_load_keep_a_released_surface_body_readable_under_stable() {
 /// the one-element case).
 fn ehr_scope(ehr_id: EhrId) -> AqlQueryRequest {
     AqlQueryRequest {
-        ehr_ids: vec![ehr_id.to_string()],
+        ehr_ids: vec![ehr_id],
         ..AqlQueryRequest::default()
     }
 }

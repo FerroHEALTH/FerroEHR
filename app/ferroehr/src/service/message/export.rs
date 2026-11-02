@@ -384,7 +384,7 @@ impl FerroEhrService {
                 )));
             }
             let request = crate::service::query::request::AqlQueryRequest {
-                ehr_ids: vec![ehr_id.to_string()],
+                ehr_ids: vec![ehr_id],
                 parameters: std::iter::once(("ehr".to_owned(), json!(ehr_id.to_string())))
                     .collect(),
                 ..crate::service::query::request::AqlQueryRequest::default()

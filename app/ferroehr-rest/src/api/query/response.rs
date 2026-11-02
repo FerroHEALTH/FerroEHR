@@ -32,6 +32,7 @@ use crate::negotiate;
 use crate::overview::error::RestError;
 use ferroehr::aql::sql::EhrAccessScope;
 use ferroehr::aql::sql::subject::SubjectScope;
+use ferroehr::ids::EhrId;
 use ferroehr::service::query::request::AqlQueryRequest;
 
 /// The access pre-filter derived from the request: the ABAC patient
@@ -96,7 +97,7 @@ pub(super) const H_EHR_ID: &str = "openehr-ehr-id";
 /// … as a query parameter `ehr_id` or alternatively as a request header"
 /// (`Request.md` §About the `ehr_id` parameter).
 ///
-/// The caller collects the result into [`AqlQueryRequest::ehr_ids`], a single
+/// [`ehr_scope`] parses the result into [`AqlQueryRequest::ehr_ids`], a single
 /// wire `ehr_id` being the one-element case of the `ehr_ids` list scope.
 ///
 /// The released text never says what happens when a request carries both forms,
@@ -132,6 +133,33 @@ pub(super) fn ehr_id_from_request(
         (Some(from_query), _) => Ok(Some(from_query)),
         (None, header) => Ok(header.map(str::to_owned)),
     }
+}
+
+/// The EHR scope of a query request: the one EHR [`ehr_id_from_request`]
+/// resolves, parsed, as the one-element case of [`AqlQueryRequest::ehr_ids`].
+///
+/// # Errors
+///
+/// The [`ehr_id_from_request`] refusals, and [`ApiError::BadRequest`] when the
+/// id is not a UUID.
+#[expect(
+    clippy::map_err_ignore,
+    reason = "the mapped error already echoes the rejected token; the discarded \
+              `uuid::Error` adds only its own wording, which is not part of the \
+              wire contract"
+)]
+pub(super) fn ehr_scope(
+    query_ehr_id: Option<String>,
+    headers: &HeaderMap,
+) -> Result<Vec<EhrId>, RestError> {
+    ehr_id_from_request(query_ehr_id, headers)?
+        .map(|id| {
+            Uuid::parse_str(&id).map(EhrId).map_err(|_| {
+                RestError::from(ApiError::BadRequest(format!("invalid ehr_id `{id}`")))
+            })
+        })
+        .into_iter()
+        .collect()
 }
 
 /// The `400` for a request whose `ehr_id` query parameter and `openehr-ehr-id`
@@ -517,7 +545,7 @@ mod tests {
 
     #[test]
     fn query_scope_apply_stamps_subject_collect_and_ehr_access() {
-        let withheld = ferroehr::ids::EhrId(Uuid::nil());
+        let withheld = EhrId(Uuid::nil());
         let scope = QueryScope {
             subject_scope: Some(SubjectScope {
                 id: "patient-1".to_owned(),

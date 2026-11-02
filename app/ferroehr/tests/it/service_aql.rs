@@ -162,7 +162,7 @@ fn ehr_scope(ehr_id: &str) -> AqlQueryRequest {
     // ITS-REST `docs/query/Request.md`: `ehr_id` is "used to execute the query
     // within a single EHR context"; it is the one-element `ehr_ids` scope.
     AqlQueryRequest {
-        ehr_ids: vec![ehr_id.to_owned()],
+        ehr_ids: vec![crate::fixtures::ehr(ehr_id)],
         ..AqlQueryRequest::default()
     }
 }
@@ -170,7 +170,7 @@ fn ehr_scope(ehr_id: &str) -> AqlQueryRequest {
 /// Scope a query to a set of EHRs (`ehr_ids: List<UUID>`).
 fn ehr_scope_multi(ehr_ids: &[&str]) -> AqlQueryRequest {
     AqlQueryRequest {
-        ehr_ids: ehr_ids.iter().map(|s| (*s).to_owned()).collect(),
+        ehr_ids: ehr_ids.iter().map(crate::fixtures::ehr).collect(),
         ..AqlQueryRequest::default()
     }
 }
@@ -1309,10 +1309,7 @@ async fn multi_ehr_ids_scopes_to_the_set() {
 }
 
 /// A well-formed but non-existent `ehr_id` in the scope set raises
-/// `ehr_id_does_not_exist` (no openEHR spec names this error: our own design);
-/// a malformed id is a `precondition_violation` (`400`), per ITS-REST
-/// `responses/400_Query.yaml`: "at least one of the parameters has an invalid
-/// syntax".
+/// `ehr_id_does_not_exist` (no openEHR spec names this error: our own design).
 #[tokio::test]
 async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     let db = testkit::db().await.expect("testkit database");
@@ -1334,20 +1331,6 @@ async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     assert!(
         matches!(&err, ServiceError::NotFound(r) if r.kind == Missing::Ehr),
         "absent ehr_id is ehr_id_does_not_exist, got {err:?}"
-    );
-
-    // A malformed id → precondition_violation.
-    let err = svc
-        .execute_aql(
-            "SELECT COUNT(*) FROM EHR e",
-            None,
-            &ehr_scope_multi(&["not-a-uuid"]),
-        )
-        .await
-        .expect_err("a malformed ehr_id must be rejected");
-    assert!(
-        matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition),
-        "malformed ehr_id is precondition_violation, got {err:?}"
     );
 }
 
@@ -4190,7 +4173,7 @@ async fn the_patient_scope_confines_every_query_shape() {
     create_comp(&svc, &other, "BP", 120.0).await;
 
     let scoped = |ehr_ids: Vec<String>| AqlQueryRequest {
-        ehr_ids,
+        ehr_ids: ehr_ids.iter().map(crate::fixtures::ehr).collect(),
         subject_scope: Some("PATIENT-A".to_owned()),
         ..AqlQueryRequest::default()
     };
