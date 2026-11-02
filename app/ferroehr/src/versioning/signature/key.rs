@@ -164,26 +164,14 @@ impl PgpKey {
         Self::from_parts(&armored, passphrase, retired)
     }
 
-    /// Load an armored RFC 4880 secret key from an in-memory string (used by
-    /// tests).
+    /// Load an armored RFC 4880 secret key from an in-memory string, with the
+    /// verify-only certificates retired from signing.
     ///
     /// # Errors
     /// [`KeyError::Parse`] if the armor is not a secret key;
     /// [`KeyError::NoSigningComponent`] if no key of the certificate may sign;
     /// [`KeyError::RefusedAlgorithm`] if it signs with ECDSA or Ed448;
     /// [`KeyError::Unusable`] if the boot check signature fails.
-    pub fn from_armored(
-        armored: &str,
-        passphrase: Option<&ferrohealth_secret::secret::Secret>,
-    ) -> Result<Self, KeyError> {
-        Self::from_parts(armored, passphrase, Vec::new())
-    }
-
-    /// [`Self::from_armored`] plus the verify-only certificates retired from
-    /// signing.
-    ///
-    /// # Errors
-    /// As [`Self::from_armored`].
     pub fn from_parts(
         armored: &str,
         passphrase: Option<&ferrohealth_secret::secret::Secret>,

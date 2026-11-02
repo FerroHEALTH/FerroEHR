@@ -38,7 +38,6 @@ use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
 use secrecy::SecretString;
 
 use crate::system_log::AuditError;
-use crate::system_log::codes::AtnaObject;
 use crate::system_log::event::{
     ActingMode, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };

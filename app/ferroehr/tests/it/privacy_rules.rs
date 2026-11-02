@@ -77,12 +77,7 @@ fn the_configuration_default_is_the_minimising_posture_and_scans_strictly() {
     assert_eq!(default.subject_namespaces, Vec::<String>::new());
     let compiled = policy(&default);
     assert!(!compiled.subject_rule_in_force());
-    assert!(!compiled.identified_parties_allowed());
     assert_eq!(compiled.scan_mode(), Some(ScanMode::Strict));
-    assert_eq!(
-        compiled.active_rules().len(),
-        ferroehr::privacy::detect::built_in_rules().len()
-    );
 }
 
 // ── rule 1: the subject reference ─────────────────────────────────────────────
@@ -563,7 +558,6 @@ fn narrowing_the_rule_list_narrows_what_is_caught() {
         },
         ..PrivacyConfig::default()
     });
-    assert_eq!(nl_only.active_rules().len(), 1);
     let norwegian = json!({
         "_type": "COMPOSITION",
         "name": { "_type": "DV_TEXT", "value": "note 15038545660" }
@@ -591,11 +585,6 @@ fn the_default_policy_is_the_refusing_posture() {
     let findings = PrivacyPolicy::default().findings("COMPOSITION", &composition);
     assert_eq!(paths(&findings), ["COMPOSITION/name/value"]);
     assert_eq!(PrivacyPolicy::default().scan_mode(), Some(ScanMode::Strict));
-    assert_eq!(
-        PrivacyPolicy::default().active_rules().len(),
-        policy(&PrivacyConfig::default()).active_rules().len(),
-        "the default carries every shipped rule, as the default configuration does"
-    );
 }
 
 #[test]

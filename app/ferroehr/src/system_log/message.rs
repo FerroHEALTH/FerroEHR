@@ -23,10 +23,10 @@ use secrecy::{SecretSlice, SecretString};
 
 use crate::system_log::AuditError;
 use crate::system_log::codes::{
-    self, AtnaAction, AtnaEventType, AtnaObject, AtnaOutcome, Code, NETWORK_ACCESS_POINT_IP,
-    OBJECT_ROLE_PATIENT, OBJECT_ROLE_QUERY, OBJECT_TYPE_PERSON, OBJECT_TYPE_SYSTEM,
+    self, Code, NETWORK_ACCESS_POINT_IP, OBJECT_ROLE_PATIENT, OBJECT_ROLE_QUERY,
+    OBJECT_TYPE_PERSON, OBJECT_TYPE_SYSTEM,
 };
-use crate::system_log::event::{ActingMode, AuditEvent};
+use crate::system_log::event::{ActingMode, AuditEvent, EventType};
 
 /// The server-side identity shared by every emitted record.
 ///
@@ -88,7 +88,7 @@ pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> A
             type_codes: event
                 .event_type
                 .as_ref()
-                .map(AtnaEventType::coded)
+                .map(EventType::coded)
                 .into_iter()
                 .collect(),
             outcome_description: Some(event.outcome.description().to_owned()),

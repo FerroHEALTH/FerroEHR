@@ -15,10 +15,9 @@
 )]
 
 use serde_json::Value;
-use sqlx::{PgConnection, PgPool, Row};
+use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
-use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -123,29 +122,4 @@ pub async fn attestation_target(
         })
     })
     .transpose()
-}
-
-/// All `ATTESTATION`s of an object keyed by version ordinal, in commit order
-/// (for `REVISION_HISTORY` assembly).
-///
-/// Ordered by `time_committed, id`: attestations committed in the same
-/// transaction share `now()`, so the `uuidv7()` `id` breaks ties in insertion
-/// order.
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn read_attestations_all(
-    pool: &PgPool,
-    vo_id: VoId,
-) -> Result<Vec<(i32, Value)>, StorageError> {
-    let rows = sqlx::query(
-        "SELECT sys_version, data FROM vo_attestation WHERE vo_id = $1 \
-         ORDER BY time_committed, id",
-    )
-    .bind(vo_id)
-    .fetch_all(&mut *acquire(pool).await?)
-    .await?;
-    rows.iter()
-        .map(|row| Ok((row.try_get("sys_version")?, row.try_get("data")?)))
-        .collect()
 }

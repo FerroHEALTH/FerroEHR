@@ -41,7 +41,6 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
@@ -99,13 +98,6 @@ impl AcquireError {
     #[must_use]
     pub fn is_pool_timeout(&self) -> bool {
         matches!(self.0, Cause::Pool(sqlx::Error::PoolTimedOut))
-    }
-
-    /// Returns whether the acquire was answered because the database is
-    /// known to be down, without waiting for the pool.
-    #[must_use]
-    pub fn is_outage(&self) -> bool {
-        matches!(self.0, Cause::Outage(_))
     }
 }
 
@@ -314,22 +306,10 @@ tokio::task_local! {
     static HELD: RefCell<Vec<(usize, PoolConnection<Postgres>)>>;
 }
 
-/// How many connections [`acquire`] has taken from a pool, rather than from a
-/// [`request_scope`], since the process started.
-static POOL_CHECKOUTS: AtomicU64 = AtomicU64::new(0);
-
 /// Runs `body` as one request: the connection each pool hands it is kept
 /// between its checkouts and returns to the pool when `body` ends.
 pub async fn request_scope<F: Future>(body: F) -> F::Output {
     HELD.scope(RefCell::new(Vec::new()), body).await
-}
-
-/// How many connections [`acquire`] has taken from a pool since the process
-/// started; a checkout a [`request_scope`] answered from its kept connection
-/// is not counted.
-#[must_use]
-pub fn pool_checkouts() -> u64 {
-    POOL_CHECKOUTS.load(Ordering::Relaxed)
 }
 
 /// The identity of the shared pool `pool` is a handle to: the address of the
@@ -474,7 +454,6 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
         .db_pool_acquire_duration
         .record(started.elapsed().as_secs_f64(), &[]);
     let conn = result?;
-    POOL_CHECKOUTS.fetch_add(1, Ordering::Relaxed);
     Ok(Checkout::new(conn, key))
 }
 

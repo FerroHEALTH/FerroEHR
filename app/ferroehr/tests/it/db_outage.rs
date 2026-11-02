@@ -20,10 +20,15 @@ use sqlx::PgPool;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tokio::net::{TcpListener, TcpStream};
 
-use ferroehr::db::acquire::acquire;
+use ferroehr::db::acquire::{AcquireError, acquire};
 
 /// The acquire timeout of every pool here, far above any bound asserted.
 const ACQUIRE_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Whether the acquire was answered from a known outage, as its message says.
+fn is_outage(error: &AcquireError) -> bool {
+    error.to_string() == "the database is down; no connection was attempted"
+}
 
 /// A loopback port nothing listens on.
 async fn closed_port() -> u16 {
@@ -68,7 +73,7 @@ async fn a_down_database_answers_at_once_and_a_returning_one_serves_again() {
     let first = acquire(&pool).await.expect_err("nothing listens");
     let first_took = started.elapsed();
     assert!(
-        first.is_outage(),
+        is_outage(&first),
         "the probe found the database down: {first:?}"
     );
     assert!(
@@ -79,7 +84,7 @@ async fn a_down_database_answers_at_once_and_a_returning_one_serves_again() {
     let started = Instant::now();
     let second = acquire(&pool).await.expect_err("still down");
     let second_took = started.elapsed();
-    assert!(second.is_outage(), "{second:?}");
+    assert!(is_outage(&second), "{second:?}");
     assert!(
         second_took < Duration::from_millis(200),
         "a known outage answers at once, took {second_took:?}"
@@ -95,7 +100,7 @@ async fn a_down_database_answers_at_once_and_a_returning_one_serves_again() {
         match acquire(&pool).await {
             Ok(conn) => break conn,
             Err(error) => {
-                assert!(error.is_outage(), "{error:?}");
+                assert!(is_outage(&error), "{error:?}");
                 assert!(
                     started.elapsed() < Duration::from_secs(3),
                     "the database is back but acquires still fail"
@@ -131,7 +136,7 @@ async fn a_busy_pool_with_the_database_up_still_queues() {
         waited.is_pool_timeout(),
         "a full pool times out: {waited:?}"
     );
-    assert!(!waited.is_outage(), "the probe found the database up");
+    assert!(!is_outage(&waited), "the probe found the database up");
     assert!(
         took >= Duration::from_millis(2_900),
         "a busy pool queues to its acquire timeout, answered after {took:?}"

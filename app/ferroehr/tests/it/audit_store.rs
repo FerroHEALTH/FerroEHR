@@ -164,7 +164,10 @@ async fn insert_batch_persists_every_record_with_identical_shape() {
     "bob".clone_into(&mut second.user_id);
     second.object_id = Some("9bb2::ferroehr::1".to_owned());
     let records = vec![record(&first, Some("patient-42")), record(&second, None)];
-    store.insert_batch(&records).await.expect("batch insert");
+    store
+        .insert_batch(&records, &[])
+        .await
+        .expect("batch insert");
 
     let rows = sqlx::query(
         "SELECT principal, patient_id, resource_id \
@@ -204,7 +207,7 @@ async fn insert_batch_persists_every_record_with_identical_shape() {
     );
 
     // An empty batch is a no-op, never an error.
-    store.insert_batch(&[]).await.expect("empty batch");
+    store.insert_batch(&[], &[]).await.expect("empty batch");
 }
 
 /// A token the store already holds draws no new identity value, and the
@@ -219,7 +222,7 @@ async fn repeated_batches_store_each_token_once_and_index_through_the_pending_li
     let event = read_event("2026-07-10T09:00:00Z".parse().expect("timestamp"));
     for _ in 0..3 {
         store
-            .insert_batch(&[record(&event, Some("patient-42"))])
+            .insert_batch(&[record(&event, Some("patient-42"))], &[])
             .await
             .expect("batch insert");
     }
@@ -282,6 +285,8 @@ async fn reap_deletes_only_rows_past_the_horizon() {
 /// verifiable across the reaped span.
 #[tokio::test]
 async fn reap_years_deletes_only_rows_past_the_calendar_horizon() {
+    use ferroehr::system_log::config::Retention;
+
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let store = store_over(&pool);
@@ -295,8 +300,21 @@ async fn reap_years_deletes_only_rows_past_the_calendar_horizon() {
         store.insert(&event, None).await.expect("insert");
     }
 
-    assert_eq!(store.reap_years(0).await.expect("reap 0 years"), 0);
-    assert_eq!(store.reap_years(3).await.expect("reap 3 years"), 1);
+    let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+    assert_eq!(
+        store
+            .reap_due(today, Retention::Forever)
+            .await
+            .expect("reap 0 years"),
+        0
+    );
+    assert_eq!(
+        store
+            .reap_due(today, Retention::Years(3))
+            .await
+            .expect("reap 3 years"),
+        1
+    );
     let remaining: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
         .fetch_one(&pool)
         .await
@@ -334,13 +352,13 @@ async fn reap_due_deletes_each_record_at_its_own_end() {
         RecordEnd::Never,
     ];
     store
-        .insert_batch_ending(&records, &ends)
+        .insert_batch(&records, &ends)
         .await
         .expect("batch insert with ends");
     // A record from before per-record ends states none.
     let legacy = read_event("2020-01-01T00:00:00Z".parse().unwrap());
     store
-        .insert_batch(&[record(&legacy, None)])
+        .insert_batch(&[record(&legacy, None)], &[])
         .await
         .expect("legacy insert");
 
@@ -385,7 +403,10 @@ async fn reap_due_deletes_each_record_at_its_own_end() {
         .expect("count");
     assert_eq!(left, 1, "only the record kept without end remains");
     assert!(
-        store.verify_chain().await.expect("verify").is_empty(),
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
         "the reaped positions are tombstoned, so the chain verifies"
     );
 }
@@ -420,7 +441,7 @@ async fn access_fields_round_trip_on_both_write_paths() {
     batched.result_count = Some(1);
     batched.request_id = Some("req-batch".to_owned());
     store
-        .insert_batch(&[record(&batched, None)])
+        .insert_batch(&[record(&batched, None)], &[])
         .await
         .expect("insert batch");
 
@@ -491,7 +512,7 @@ async fn the_accessing_organisation_round_trips_on_both_write_paths() {
     // than carrying the previous row's value or a placeholder.
     let anonymous = read_event("2026-07-10T08:32:00Z".parse().unwrap());
     store
-        .insert_batch(&[record(&batched, None), record(&anonymous, None)])
+        .insert_batch(&[record(&batched, None), record(&anonymous, None)], &[])
         .await
         .expect("insert batch");
 
@@ -560,11 +581,14 @@ async fn the_actor_roles_round_trip_on_both_write_paths() {
     anonymous.user_id.clear();
     anonymous.roles.clear();
     store
-        .insert_batch(&[
-            record(&batched, None),
-            record(&roleless, None),
-            record(&anonymous, None),
-        ])
+        .insert_batch(
+            &[
+                record(&batched, None),
+                record(&roleless, None),
+                record(&anonymous, None),
+            ],
+            &[],
+        )
         .await
         .expect("insert batch");
 
@@ -710,7 +734,10 @@ async fn both_inserts_persist_the_authentication_columns() {
     };
     let plain = read_event("2026-07-10T10:00:02Z".parse().unwrap());
     let records = vec![record(&person, None), record(&plain, None)];
-    store.insert_batch(&records).await.expect("batch insert");
+    store
+        .insert_batch(&records, &[])
+        .await
+        .expect("batch insert");
 
     let rows = sqlx::query(
         "SELECT acting_mode, assurance_level, assurance_value, professional_id \
@@ -778,7 +805,10 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
     let mut plain = read_event("2026-07-10T11:00:02Z".parse().unwrap());
     plain.purpose = Some("TREAT".to_owned());
     let records = vec![record(&marked, None), record(&plain, None)];
-    store.insert_batch(&records).await.expect("batch insert");
+    store
+        .insert_batch(&records, &[])
+        .await
+        .expect("batch insert");
 
     let marks: Vec<bool> =
         sqlx::query_scalar("SELECT emergency_access FROM audit.audit_event ORDER BY chain_seq")
@@ -946,7 +976,7 @@ async fn a_record_renders_the_document_the_drain_rendered() {
         .iter()
         .map(|(event, subject)| record(event, subject.as_deref()))
         .collect();
-    store.insert_batch(&batch).await.expect("batch insert");
+    store.insert_batch(&batch, &[]).await.expect("batch insert");
 
     let expected: Vec<Vec<u8>> = records
         .iter()
@@ -1064,7 +1094,10 @@ async fn every_search_parameter_matches_what_the_document_says() {
         .iter()
         .map(|(event, subject)| record(event, subject.as_deref()))
         .collect();
-    store.insert_batch(&records).await.expect("batch insert");
+    store
+        .insert_batch(&records, &[])
+        .await
+        .expect("batch insert");
 
     let documents = served(&store).await;
     let mut values = std::collections::BTreeSet::new();
@@ -1248,18 +1281,24 @@ async fn request_ids_and_version_uids_add_no_token_and_stay_searchable() {
     };
 
     store
-        .insert_batch(&[
-            access(EventActionCode::Read, 1),
-            access(EventActionCode::Create, 2),
-        ])
+        .insert_batch(
+            &[
+                access(EventActionCode::Read, 1),
+                access(EventActionCode::Create, 2),
+            ],
+            &[],
+        )
         .await
         .expect("first batch");
     let before = token_ids(&pool).await;
     store
-        .insert_batch(&[
-            access(EventActionCode::Read, 3),
-            access(EventActionCode::Create, 4),
-        ])
+        .insert_batch(
+            &[
+                access(EventActionCode::Read, 3),
+                access(EventActionCode::Create, 4),
+            ],
+            &[],
+        )
         .await
         .expect("second batch");
     store
@@ -1319,7 +1358,12 @@ async fn request_ids_and_version_uids_add_no_token_and_stay_searchable() {
     // Of five records, each request id alone and without a system, each uid
     // alone and in its system; then the system alone and the pair.
     assert_eq!(matched, 5 * 4 + 2, "the searches exercise matches");
-    assert!(store.verify_chain().await.expect("verify").is_empty());
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
 }
 
 /// Retention removes the search tokens no remaining record names, among them
@@ -1366,7 +1410,12 @@ async fn retention_removes_the_tokens_only_its_records_named() {
     .execute(&pool)
     .await
     .expect("the old record");
-    assert!(store.verify_chain().await.expect("verify").is_empty());
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
 
     let mut tx = pool.begin().await.expect("tx");
     let unreaped = sqlx::query("DELETE FROM audit.audit_search_token WHERE id = $1")
@@ -1394,5 +1443,10 @@ async fn retention_removes_the_tokens_only_its_records_named() {
         left.contains(&live),
         "a token a live record names was removed"
     );
-    assert!(store.verify_chain().await.expect("verify").is_empty());
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty()
+    );
 }

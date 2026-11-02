@@ -429,30 +429,12 @@ where
     Ok(read)
 }
 
-/// Reassemble one stored version's canonical JSON from its `node` rows — the
-/// consolidated node-to-canonical reload.
+/// Reassemble one stored version's canonical JSON from its `node` rows on
+/// `tx`, over the primary tier: the consolidated node-to-canonical reload.
 ///
-/// A version with no stored nodes (a logical delete — data Void, RM common
+/// A version with no stored nodes (a logical delete: data Void, RM common
 /// master06 §Logical Deletion) reassembles to [`Value::Null`], so callers need
 /// no separate deleted-version guard before calling.
-///
-/// # Errors
-///
-/// Returns [`StorageError`] on a DB error or if a non-empty row set does not
-/// form one tree rooted at `num = 0`.
-pub async fn read_version_canonical(
-    pool: &PgPool,
-    vo_id: VoId,
-    sys_version: i32,
-) -> Result<Value, StorageError> {
-    let rows = read_rows(&mut *acquire(pool).await?, vo_id, sys_version).await?;
-    if rows.is_empty() {
-        return Ok(Value::Null);
-    }
-    reassemble(&rows)
-}
-
-/// [`read_version_canonical`] inside a transaction, over the primary tier.
 ///
 /// The rebuild writes a version's node rows and then re-derives the version
 /// from them BEFORE committing, so it must read its own uncommitted rows; a
@@ -463,7 +445,7 @@ pub async fn read_version_canonical(
 ///
 /// Returns [`StorageError`] on a DB error or if a non-empty row set does not
 /// form one tree rooted at `num = 0`.
-pub async fn read_version_canonical_tx(
+pub async fn read_version_canonical(
     tx: &mut PgConnection,
     vo_id: VoId,
     sys_version: i32,

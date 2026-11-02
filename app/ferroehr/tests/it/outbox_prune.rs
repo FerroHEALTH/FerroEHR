@@ -16,12 +16,27 @@
 )]
 
 use ferroehr::extensions::outbox::OutboxReader;
-use ferroehr::extensions::outbox::{advance, cursor, prune, reconcile};
+use ferroehr::extensions::outbox::{advance, cursor, prune};
 use ferroehr::service::FerroEhrService;
 use sqlx::PgPool;
 
 /// The cursor reader these tests register.
 const READER: OutboxReader = OutboxReader::new("omop");
+
+/// Record whether `reader` runs, keeping its cursor: the registry row is
+/// created if missing.
+async fn reconcile(pool: &PgPool, reader: OutboxReader, active: bool) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO clinical.event_outbox_reader (reader, active) VALUES ($1, $2) \
+         ON CONFLICT (reader) DO UPDATE \
+            SET active = EXCLUDED.active, updated_at = now()",
+    )
+    .bind(reader.name())
+    .bind(active)
+    .execute(pool)
+    .await
+    .map(drop)
+}
 
 async fn seqs(pool: &PgPool) -> Vec<i64> {
     sqlx::query_scalar("SELECT seq FROM clinical.event_outbox ORDER BY seq")

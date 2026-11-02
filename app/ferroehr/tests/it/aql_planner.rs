@@ -339,7 +339,10 @@ fn version_at_time_standard_predicate() {
         }
         other => panic!("expected a version predicate scope, got {other:?}"),
     }
-    assert!(v.scope.is_at_time(), "time_committed comparison is at-time");
+    assert!(
+        matches!(&v.scope, VersionScope::Predicate(p) if p.field == VersionField::TimeCommitted),
+        "time_committed comparison is at-time"
+    );
     // and it propagates to the contained COMPOSITION.
     assert!(matches!(rm_scope(&ir, 2), VersionScope::Predicate(_)));
 }

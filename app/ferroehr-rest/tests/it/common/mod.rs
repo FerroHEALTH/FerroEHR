@@ -140,13 +140,18 @@ pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>
 /// the baseline most HTTP tests want (auth-specific tests build their own
 /// [`AppConfig`] via [`router_with`]).
 pub(crate) async fn test_router() -> (testkit::TestDb, Router) {
+    let (db, service) = test_service().await;
+    (db, unauthenticated_router(service).await)
+}
+
+/// The assembled router over `service` with authentication disabled.
+pub(crate) async fn unauthenticated_router(service: Arc<FerroEhrService>) -> Router {
     let mut config = AppConfig {
         server: server(),
         ..AppConfig::default()
     };
     config.auth.enabled = false;
-    let (db, service) = test_service().await;
-    (db, router_with(config, service).await)
+    router_with(config, service).await
 }
 
 /// The `[server]` section the wire suites serve under: the family defaults with

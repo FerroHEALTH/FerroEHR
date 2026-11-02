@@ -453,3 +453,29 @@ pub(crate) async fn subject_ehr_ids(
         }
     }
 }
+
+/// Every finding of the full tamper check, `audit.verify_audit_chain()`, run
+/// on `pool` without moving the verification checkpoint.
+pub(crate) async fn verify_chain(
+    pool: &sqlx::PgPool,
+) -> Result<Vec<ferroehr::system_log::store::AuditChainFinding>, sqlx::Error> {
+    use sqlx::Row;
+    sqlx::query(
+        "SELECT chain_seq, record_id, recorded_at, finding \
+         FROM audit.verify_audit_chain() ORDER BY chain_seq NULLS FIRST",
+    )
+    .fetch_all(pool)
+    .await?
+    .iter()
+    .map(|row| {
+        Ok(ferroehr::system_log::store::AuditChainFinding {
+            chain_seq: row.try_get("chain_seq")?,
+            record_id: row.try_get("record_id")?,
+            recorded_at: row
+                .try_get::<Option<jiff_sqlx::Timestamp>, _>("recorded_at")?
+                .map(jiff_sqlx::Timestamp::to_jiff),
+            finding: row.try_get("finding")?,
+        })
+    })
+    .collect()
+}

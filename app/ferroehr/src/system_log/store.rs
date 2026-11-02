@@ -41,7 +41,6 @@ use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
 use crate::system_log::categories::{ClassifiedContent, MapDigest};
-use crate::system_log::codes::AtnaAction;
 #[cfg(feature = "fhir")]
 use crate::system_log::event::{AccessDomain, EventActionCode};
 use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
@@ -467,42 +466,25 @@ impl AuditStore {
     /// loaded write path. No row ids are returned: the batch path is used
     /// only when no per-row delivery stamping is needed.
     ///
-    /// # Errors
-    /// [`AuditError::Store`] when the INSERT fails (the whole batch fails
-    /// together; the caller retries).
-    pub async fn insert_batch(&self, records: &[AuditRecord]) -> Result<(), AuditError> {
-        self.write_batch(records, &[]).await
-    }
-
-    /// Persist a drained batch as [`Self::insert_batch`] does, each record with
-    /// the first date it may be deleted on (`ends`, one per record), which the
-    /// reaper honours ([`Self::reap_due`]).
+    /// Each record carries the first date it may be deleted on (`ends`, one
+    /// per record), which the reaper honours ([`Self::reap_due`]). With `ends`
+    /// empty no record states an end, and each keeps the store horizon.
     ///
     /// # Errors
-    /// [`AuditError::Store`] when the INSERT fails, and [`AuditError::RetentionEnds`]
-    /// when `ends` does not hold one end per record.
-    pub async fn insert_batch_ending(
+    /// [`AuditError::Store`] when the INSERT fails (the whole batch fails
+    /// together; the caller retries), and [`AuditError::RetentionEnds`] when
+    /// `ends` is neither empty nor one end per record.
+    pub async fn insert_batch(
         &self,
         records: &[AuditRecord],
         ends: &[RecordEnd],
     ) -> Result<(), AuditError> {
-        if ends.len() != records.len() {
+        if !ends.is_empty() && ends.len() != records.len() {
             return Err(AuditError::RetentionEnds {
                 ends: ends.len(),
                 records: records.len(),
             });
         }
-        self.write_batch(records, ends).await
-    }
-
-    /// The multi-row `INSERT` behind [`Self::insert_batch`] and
-    /// [`Self::insert_batch_ending`]; a record past the end of `ends` states no
-    /// end and keeps the store horizon.
-    async fn write_batch(
-        &self,
-        records: &[AuditRecord],
-        ends: &[RecordEnd],
-    ) -> Result<(), AuditError> {
         if records.is_empty() {
             return Ok(());
         }
@@ -518,7 +500,7 @@ impl AuditStore {
         Ok(())
     }
 
-    /// The multi-row `INSERT` of [`Self::write_batch`] on `conn`, each record
+    /// The multi-row `INSERT` of [`Self::insert_batch`] on `conn`, each record
     /// with its `search_tokens` text in `tokens`.
     ///
     /// # Errors
@@ -796,27 +778,6 @@ impl AuditStore {
         Ok(u64::try_from(removed).unwrap_or(0))
     }
 
-    /// Delete records older than the same calendar date `retention_years`
-    /// years ago (`[audit.store] retention_years`; 0 = keep forever). Returns
-    /// the number of reaped rows.
-    ///
-    /// The calendar arithmetic and the chain tombstones are
-    /// `audit.reap_audit_events_years`, the year-keyed twin of the day-keyed
-    /// path [`Self::reap`] takes; both reap through one body.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the reap fails.
-    pub async fn reap_years(&self, retention_years: u32) -> Result<u64, AuditError> {
-        if retention_years == 0 {
-            return Ok(0);
-        }
-        let removed: i64 = sqlx::query_scalar("SELECT audit.reap_audit_events_years($1)")
-            .bind(i32::try_from(retention_years).unwrap_or(i32::MAX))
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
-        u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
-    }
-
     /// Delete every record whose own retention end is on or before `today`,
     /// and every record that states no end (written before per-record ends)
     /// once it is older than `horizon`; returns the number of reaped rows.
@@ -850,33 +811,6 @@ impl AuditStore {
         u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
     }
 
-    /// Check the repository's tamper evidence: recompute every record's digest,
-    /// re-walk every link in the hash chain, and check both ends against the
-    /// recorded chain state.
-    ///
-    /// An empty result means the trail is intact. Any returned
-    /// [`AuditChainFinding`] names one damaged record or chain boundary and what
-    /// is wrong with it, the same answer
-    /// `SELECT * FROM audit.verify_audit_chain()` gives from `psql`.
-    ///
-    /// NOTE: no openEHR spec governs audit tamper detection — our own
-    /// design/extension; the chain is unkeyed, so it detects modification and
-    /// deletion but cannot stop a party with unrestricted write access from
-    /// recomputing it wholesale.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the verification query cannot run — which is
-    /// itself a finding, never a pass.
-    pub async fn verify_chain(&self) -> Result<Vec<AuditChainFinding>, AuditError> {
-        let rows = sqlx::query(
-            "SELECT chain_seq, record_id, recorded_at, finding \
-             FROM audit.verify_audit_chain() ORDER BY chain_seq NULLS FIRST",
-        )
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        findings(rows)
-    }
-
     /// Check the repository's tamper evidence over `scope`, and move the
     /// verification checkpoint to the newest record when the run finds nothing.
     ///
@@ -884,8 +818,15 @@ impl AuditStore {
     /// after the newest link an earlier run found intact, so its cost follows
     /// the records written since rather than the size of the trail; a change to
     /// a record before that link needs [`VerifyScope::Full`], the pass
-    /// [`Self::verify_chain`] makes. Both check the chain head. The run is
-    /// `audit.verify_audit_chain_incremental`.
+    /// `SELECT * FROM audit.verify_audit_chain()` makes from `psql`. Both check
+    /// the chain head. The run is `audit.verify_audit_chain_incremental`.
+    ///
+    /// An empty result means the trail is intact. Any returned
+    /// [`AuditChainFinding`] names one damaged record or chain boundary and what
+    /// is wrong with it. No openEHR spec governs audit tamper detection: our
+    /// own design. The chain is unkeyed, so it detects modification and
+    /// deletion but cannot stop a party with unrestricted write access from
+    /// recomputing it wholesale.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the verification query cannot run, which is
@@ -1032,7 +973,7 @@ pub enum VerifyScope {
 }
 
 /// One damaged record — or one damaged chain boundary — reported by
-/// [`AuditStore::verify_chain`].
+/// [`AuditStore::verify_chain_advancing`].
 #[derive(Debug, Clone)]
 pub struct AuditChainFinding {
     /// The chain position the finding is about; `None` when the chain state
@@ -1287,7 +1228,6 @@ fn outcome_smallint(event: &AuditEvent) -> i16 {
 }
 
 fn event_code(event: &AuditEvent) -> &'static str {
-    use crate::system_log::codes::AtnaObject;
     event.object.event_id(event.action).0
 }
 

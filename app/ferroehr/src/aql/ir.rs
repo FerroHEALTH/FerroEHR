@@ -13,8 +13,8 @@
 //!
 //! AQL expresses version-at-time only as a standard predicate on version
 //! metadata, so every version-selection predicate lowers uniformly to
-//! [`VersionScope::Predicate`] and the common at-time case is recognised via
-//! [`VersionScope::is_at_time`]. `Coercion::Magnitude` covers both `DV_ORDERED`
+//! [`VersionScope::Predicate`], the at-time case being a predicate on
+//! `commit_audit/time_committed`. `Coercion::Magnitude` covers both `DV_ORDERED`
 //! value objects (extracted via `ext.openehr_magnitude`) and numeric primitives
 //! (a direct numeric cast); the analyzer records the candidate leaf [`TypeSet`]
 //! on the [`LeafPath`] and the SQL package picks the exact extraction from it.
@@ -192,19 +192,6 @@ pub enum VersionScope {
     /// A standard predicate on version metadata, e.g.
     /// `commit_audit/time_committed <= $t` (version-at-time) or `uid/value=$v`.
     Predicate(VersionMetaPredicate),
-}
-
-impl VersionScope {
-    /// Whether this scope is an at-a-point-in-time selection (a comparison on
-    /// `commit_audit/time_committed`). This is the design's `AtTime` case,
-    /// recognised rather than represented as its own variant.
-    #[must_use]
-    pub fn is_at_time(&self) -> bool {
-        matches!(
-            self,
-            VersionScope::Predicate(p) if p.field == VersionField::TimeCommitted
-        )
-    }
 }
 
 /// A resolved standard predicate on version metadata.

@@ -8,23 +8,55 @@
 //! checks and the read share it and the request queues for the pool once.
 //! No openEHR spec governs connection handling: our own design.
 
+use std::str::FromStr;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use axum::Router;
 use axum::body::Body;
-use ferroehr::db::acquire::pool_checkouts;
+use ferroehr::db::domain::{Domain, DomainPools};
+use ferroehr::service::FerroEhrService;
 use http::{Request, StatusCode};
+use sqlx::PgPool;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
 use crate::common;
 use crate::common::BASE;
 
+/// A lazy pool serving `domain` that counts in `checkouts` every connection it
+/// hands out, from the idle queue (`before_acquire`) or freshly opened
+/// (`after_connect`).
+fn counted(options: &PgConnectOptions, domain: Domain, checkouts: &Arc<AtomicU64>) -> PgPool {
+    let opened = Arc::clone(checkouts);
+    let reused = Arc::clone(checkouts);
+    PgPoolOptions::new()
+        .min_connections(0)
+        .test_before_acquire(false)
+        .after_connect(move |conn, _meta| {
+            opened.fetch_add(1, Ordering::Relaxed);
+            Box::pin(async move {
+                sqlx::query(domain.search_path())
+                    .execute(conn)
+                    .await
+                    .map(drop)
+            })
+        })
+        .before_acquire(move |_conn, _meta| {
+            reused.fetch_add(1, Ordering::Relaxed);
+            Box::pin(async { Ok(true) })
+        })
+        .connect_lazy_with(options.clone())
+}
+
 /// The fewest pool checkouts one of three identical `GET`s of `uri`, the read
 /// `read` names, took: a background task of the process can check out beside
 /// a request, never in all three windows at once.
-async fn checkouts_of(app: &Router, read: &str, uri: &str) -> u64 {
+async fn checkouts_of(app: &Router, checkouts: &AtomicU64, read: &str, uri: &str) -> u64 {
     let mut fewest = u64::MAX;
     for _ in 0..3 {
-        let before = pool_checkouts();
+        let before = checkouts.load(Ordering::Relaxed);
         let (status, body) = common::send_body(app, common::get(uri)).await;
-        let after = pool_checkouts();
+        let after = checkouts.load(Ordering::Relaxed);
         assert_eq!(status, StatusCode::OK, "{read}: {body}");
         fewest = fewest.min(after - before);
     }
@@ -33,7 +65,15 @@ async fn checkouts_of(app: &Router, read: &str, uri: &str) -> u64 {
 
 #[tokio::test]
 async fn the_common_reads_check_out_one_connection() {
-    let (_db, app) = common::test_router().await;
+    let db = common::test_db().await;
+    let options = PgConnectOptions::from_str(db.url()).expect("the test DSN parses");
+    let checkouts = Arc::new(AtomicU64::new(0));
+    let pools = DomainPools {
+        clinical: counted(&options, Domain::Clinical, &checkouts),
+        party: counted(&options, Domain::Party, &checkouts),
+        audit: counted(&options, Domain::Audit, &checkouts),
+    };
+    let app = common::unauthenticated_router(Arc::new(FerroEhrService::new(&pools))).await;
     let upload = Request::builder()
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl1.4"))
@@ -63,7 +103,7 @@ async fn the_common_reads_check_out_one_connection() {
         ),
     ] {
         assert_eq!(
-            checkouts_of(&app, read, &uri).await,
+            checkouts_of(&app, &checkouts, read, &uri).await,
             1,
             "pool checkouts of a read of the {read}"
         );
