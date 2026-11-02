@@ -449,6 +449,54 @@ async fn import_ehr_into_fixed_fresh_id() {
     assert_eq!(target_status["is_modifiable"], json!(false));
 }
 
+/// An extract whose `EHR_ACCESS` carries settings of the access-control scheme
+/// that do not parse is refused with `400` naming the setting, and the same
+/// extract with settings that parse imports: a stored copy would hold the EHR
+/// closed.
+#[tokio::test]
+async fn import_ehr_refuses_access_settings_that_do_not_parse() {
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, svc) = crate::fixtures::service().await;
+    let ehr = seed_ehr(&source).await;
+    let exported = openehr_its::json::to_canonical_value(&export_one(&source, ehr).await);
+    let with_settings = |default_access: &str| -> Extract {
+        let mut raw = exported.clone();
+        for item in raw["chapters"][0]["items"]
+            .as_array_mut()
+            .expect("chapter items")
+        {
+            if item["item"]["_type"] == json!("X_VERSIONED_EHR_ACCESS") {
+                for version in item["item"]["versions"].as_array_mut().expect("versions") {
+                    version["data"]["settings"] = json!({
+                        "_type": "FERROEHR_ACCESS_CONTROL_V1",
+                        "default_access": default_access
+                    });
+                }
+            }
+        }
+        openehr_its::json::from_canonical_value(&raw).expect("EXTRACT with settings")
+    };
+
+    let refused = svc
+        .import_ehr(
+            Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
+            with_settings("bogus"),
+        )
+        .await
+        .expect_err("settings that do not parse are refused");
+    assert!(
+        matches!(&refused, ServiceError::BadRequest(r)
+            if r.message.contains("EHR_ACCESS.settings.default_access")),
+        "a 400 naming the setting: {refused:?}"
+    );
+    svc.import_ehr(
+        Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
+        with_settings("restricted"),
+    )
+    .await
+    .expect("settings that parse import");
+}
+
 #[tokio::test]
 async fn import_ehr_duplicate_target_is_rejected() {
     let (_db, svc) = crate::fixtures::service().await;

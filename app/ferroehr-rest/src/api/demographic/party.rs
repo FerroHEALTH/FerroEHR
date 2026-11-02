@@ -28,6 +28,7 @@ use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::error::ServiceError;
 use ferroehr::service::demographic::types::PartyKind;
@@ -120,9 +121,10 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(super::error_with_meta(
+                    Ok(negotiate::resource::error_with_meta(
                         crate::overview::service_error::api_error(e),
                         meta.as_ref(),
+                        Tree::Demographic,
                     ))
                 }
                 Err(e) => Err(RestError::from(e)),
@@ -136,8 +138,8 @@ pub(super) async fn run(
 }
 
 /// Reads a party (`person_get.yaml`): a deleted current version is `204`, and
-/// a stable-profile canonical-JSON read carries `reverse_relationships`
-/// ([`serves_reverse_relationships`]).
+/// a stable-profile read carries `reverse_relationships` in canonical JSON and
+/// XML alike ([`serves_reverse_relationships`]).
 async fn run_get(
     state: &AppState,
     kind: PartyKind,
@@ -155,8 +157,9 @@ async fn run_get(
     if resp.is_empty() {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
+    let profile = state.config().spec_profile;
     let mut served_sources = Vec::new();
-    if serves_reverse_relationships(state.config().spec_profile, h) {
+    if serves_reverse_relationships(profile, h) {
         let reverse = state.backend().party_reverse_relationships(vo_id).await?;
         if !reverse.references.is_empty()
             && let serde_json::Value::Object(map) = &mut resp.body
@@ -168,7 +171,7 @@ async fn run_get(
             served_sources = reverse.sources;
         }
     }
-    let mut out = read_party(kind, h, &resp);
+    let mut out = read_party(kind, h, &resp, profile);
     // The references disclose each source party's container and relationship,
     // so each source gets its own access record beside the target's.
     if !served_sources.is_empty() {
@@ -258,7 +261,9 @@ async fn run_delete(
     {
         Ok(resp) => {
             let mut out = negotiate::body::empty(StatusCode::NO_CONTENT);
-            super::set_versioning_headers(&mut out, resp.meta.as_ref());
+            if let Some(meta) = resp.meta.as_ref() {
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+            }
             Ok(out)
         }
         // 409_PERSON_with_uid_based_id: the supplied uid is not the latest.
@@ -269,9 +274,10 @@ async fn run_delete(
                 .await
                 .ok()
                 .flatten();
-            Ok(super::error_with_meta(
+            Ok(negotiate::resource::error_with_meta(
                 ApiError::Conflict(e.message()),
                 meta.as_ref(),
+                Tree::Demographic,
             ))
         }
         Err(e) => Err(RestError::from(e)),
@@ -360,13 +366,10 @@ where
 
 /// Whether a party read carries `PARTY.reverse_relationships`: under the
 /// stable profile, whose RM 1.1.0 declares the attribute (`…demographic.party.adoc`
-/// 1.1.0 §Attributes), and in canonical JSON, the one representation served
-/// through that generation's shape.
+/// 1.1.0 §Attributes), in either canonical representation.
 ///
 /// RM 1.2.0 turns the attribute into a function (SPECRM-124), so a
-/// development-profile read leaves it out. The canonical-XML response re-types
-/// the body through the development generation, which declares no such element.
-// TODO(#4778): serve `reverse_relationships` in a stable-profile canonical-XML party read.
+/// development-profile read leaves it out.
 fn serves_reverse_relationships(
     profile: ferroehr::config::profile::SpecProfile,
     h: &HeaderMap,
@@ -376,35 +379,44 @@ fn serves_reverse_relationships(
             h,
             negotiate::CANONICAL,
             negotiate::WireFormat::CanonicalJson,
-        ) == Some(negotiate::WireFormat::CanonicalJson)
+        )
+        .is_some()
 }
 
-/// Renders a party body as JSON or canonical XML, monomorphized per kind.
+/// Renders a party body in the negotiated representation, re-typed for XML
+/// through the development RM generation.
 fn respond_party(
     kind: PartyKind,
     h: &HeaderMap,
     status: StatusCode,
     body: &serde_json::Value,
 ) -> Response {
+    let root = openehr_its::xml::LOCATABLE_ROOT;
     match kind {
-        PartyKind::Agent => {
-            negotiate::body::respond_rm::<Agent>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+        PartyKind::Agent => negotiate::body::respond_rm::<Agent>(h, status, body, root),
+        PartyKind::Group => negotiate::body::respond_rm::<Group>(h, status, body, root),
+        PartyKind::Organisation => {
+            negotiate::body::respond_rm::<Organisation>(h, status, body, root)
         }
-        PartyKind::Group => {
-            negotiate::body::respond_rm::<Group>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
+        PartyKind::Person => negotiate::body::respond_rm::<Person>(h, status, body, root),
+        PartyKind::Role => negotiate::body::respond_rm::<Role>(h, status, body, root),
+    }
+}
+
+/// Renders a stable-profile party read, re-typed for XML through the RM 1.1.0
+/// generation, whose `PARTY` declares the `reverse_relationships` element the
+/// ITS-XML RM Release-1.1.0 `Demographic.xsd` carries.
+fn respond_released_party(kind: PartyKind, h: &HeaderMap, body: &serde_json::Value) -> Response {
+    use openehr_rm::v1_1::demographic::{agent, group, organisation, person, role};
+    let (root, ok) = (openehr_its::xml::LOCATABLE_ROOT, StatusCode::OK);
+    match kind {
+        PartyKind::Agent => negotiate::body::respond_rm::<agent::Agent>(h, ok, body, root),
+        PartyKind::Group => negotiate::body::respond_rm::<group::Group>(h, ok, body, root),
+        PartyKind::Organisation => {
+            negotiate::body::respond_rm::<organisation::Organisation>(h, ok, body, root)
         }
-        PartyKind::Organisation => negotiate::body::respond_rm::<Organisation>(
-            h,
-            status,
-            body,
-            openehr_its::xml::LOCATABLE_ROOT,
-        ),
-        PartyKind::Person => {
-            negotiate::body::respond_rm::<Person>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
-        }
-        PartyKind::Role => {
-            negotiate::body::respond_rm::<Role>(h, status, body, openehr_its::xml::LOCATABLE_ROOT)
-        }
+        PartyKind::Person => negotiate::body::respond_rm::<person::Person>(h, ok, body, root),
+        PartyKind::Role => negotiate::body::respond_rm::<role::Role>(h, ok, body, root),
     }
 }
 
@@ -430,18 +442,38 @@ fn write_party(
         resp.meta.as_ref().map(|m| m.uid.as_str()),
         |status| respond_party(kind, h, status, &resp.body),
     );
-    super::set_write_headers(&mut out, base, kind.segment(), resp.meta.as_ref());
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_resource_headers(
+            &mut out,
+            base,
+            Tree::Demographic,
+            Some(kind.segment()),
+            meta,
+        );
+    }
     out
 }
 
 /// Serves a `200 OK` read of a party with the demographic `ETag`/`Last-Modified`
-/// and `ITEM_TAG` response headers (`person_get.yaml`).
+/// and `ITEM_TAG` response headers (`person_get.yaml`), in the RM generation
+/// the active profile serves.
 ///
 /// No `Location`: it "MUST NOT be used to indicate an alternate representation
 /// of an existing resource" (overview §Location).
-fn read_party(kind: PartyKind, h: &HeaderMap, resp: &ServiceResponse) -> Response {
-    let mut out = respond_party(kind, h, StatusCode::OK, &resp.body);
-    super::set_versioning_headers(&mut out, resp.meta.as_ref());
+fn read_party(
+    kind: PartyKind,
+    h: &HeaderMap,
+    resp: &ServiceResponse,
+    profile: ferroehr::config::profile::SpecProfile,
+) -> Response {
+    let mut out = if profile == ferroehr::config::profile::SpecProfile::Stable {
+        respond_released_party(kind, h, &resp.body)
+    } else {
+        respond_party(kind, h, StatusCode::OK, &resp.body)
+    };
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+    }
     super::set_item_tag_headers(&mut out, resp);
     out
 }

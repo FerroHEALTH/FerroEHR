@@ -42,6 +42,7 @@ use crate::api::item_tags;
 use crate::negotiate::WireFormat;
 use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::overview::version_id::{
     object_id_uuid, parse_ehr_id, parse_version_uid, require_if_match,
 };
@@ -202,7 +203,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
         ReadBody::RawJson(text) if !expand && accept == Some(WireFormat::CanonicalJson) => {
             let mut out = negotiate::body::body(ok, negotiate::APPLICATION_JSON, text);
             if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta);
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
             }
             return Ok(out);
         }
@@ -222,7 +223,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
             let mut out =
                 crate::formats::dispatch::composition_flat_response(&state, ok, &body).await?;
             if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta);
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
             }
             return Ok(out);
         }
@@ -231,7 +232,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
                 crate::formats::dispatch::composition_structured_response(&state, ok, &body)
                     .await?;
             if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta);
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
             }
             return Ok(out);
         }
@@ -328,6 +329,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
                 meta.as_ref(),
+                Tree::Ehr,
             ))
         }
         Err(e) => Err(RestError::from(e)),
@@ -418,6 +420,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
                 meta.as_ref(),
+                Tree::Ehr,
             ))
         }
         Err(e) => Err(RestError::from(e)),
@@ -458,7 +461,7 @@ async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, Rest
 ///
 /// # Errors
 /// The parameter rejections the operation declares, plus the body rejections
-/// [`crate::api::item_tags::write_body`] states.
+/// [`crate::overview::negotiate::decode::typed_json`] states.
 async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let ok = StatusCode::OK;
@@ -468,7 +471,7 @@ async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, R
         CompositionTagsUpdateParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = item_tags::write_body(h, &parts.body)?;
+    let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
     let tags = state
         .backend()
         .target_tags_replace(
@@ -562,7 +565,13 @@ async fn composition_write_response(
         // `Location` is required on a `201` regardless of body form
         // (RFC 7231 §6.3.2), so the simplified representations get the same
         // version-identity headers.
-        negotiate::resource::set_resource_headers(&mut out, base, Some("composition"), &meta);
+        negotiate::resource::set_resource_headers(
+            &mut out,
+            base,
+            Tree::Ehr,
+            Some("composition"),
+            &meta,
+        );
         // NOTE: a Simplified-Formats commit returns the body in the negotiated
         // form (`Accept` decides, not `Prefer`), so the applied preference is
         // representation (§Representation details negotiation).

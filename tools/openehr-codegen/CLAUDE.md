@@ -60,7 +60,9 @@ output, never the raw files:
   the Rust shape each class emits as (+ the XML-shape classification), and
   `overrides.rs` holds the declarative decision maps (`type_override`,
   `class_binding`, `back_reference`, `field_default`, `primitive`,
-  `is_mapped_class`, `xml_bmm_only_allowed`), each carrying its spec citation.
+  `is_mapped_class`), and `xml_overrides.rs` the `emit-xml` ones
+  (`xml_bmm_only_allowed`, `xml_wire_rename`, `xml_ancestor_shape`, the tool
+  extensions and value wrappers), each carrying its spec citation.
 - `src/render/` — the only stage that produces text: `emit`, `emit_json`,
   `emit_xml`, `emit_rest`, `emit_rm_model` (its API body in
   `emit_rm_model_api`), `emit_opt`, `emit_validate`, and the

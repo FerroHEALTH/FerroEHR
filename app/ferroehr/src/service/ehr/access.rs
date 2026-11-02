@@ -104,6 +104,11 @@ impl FerroEhrService {
     /// storage (the cache-miss path). `None` when the EHR has no `EHR_ACCESS`,
     /// its settings are absent, or they belong to another scheme — all
     /// default-open.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the storage read fails, and an internal fault
+    /// naming the EHR when its settings carry this server's scheme but do not
+    /// parse: a privacy control that cannot be read refuses the EHR.
     async fn load_ehr_access_settings(
         &self,
         ehr_id: EhrId,
@@ -117,7 +122,14 @@ impl FerroEhrService {
         else {
             return Ok(None);
         };
-        Ok(EhrAccessSettings::from_ehr_access(&read.canonical))
+        EhrAccessSettings::from_ehr_access(&read.canonical).map_err(|error| {
+            let cause: &(dyn std::error::Error + 'static) = &error;
+            tracing::error!(%ehr_id, error = cause, "EHR_ACCESS settings do not parse; the EHR is refused");
+            ServiceError::internal(
+                format!("the EHR_ACCESS settings of EHR {ehr_id} do not parse, so the EHR is refused"),
+                error,
+            )
+        })
     }
 
     /// The EHR's current `EHR_ACCESS` scheme settings, cached per EHR and
@@ -187,8 +199,18 @@ impl FerroEhrService {
         for (ehr_id, body) in bodies {
             let value: Value = serde_json::from_str(&body)
                 .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
-            if let Some(settings) = EhrAccessSettings::from_ehr_access(&value) {
-                index.push((ehr_id, settings));
+            match EhrAccessSettings::from_ehr_access(&value) {
+                Ok(Some(settings)) => index.push((ehr_id, settings)),
+                Ok(None) => {}
+                Err(error) => {
+                    let cause: &(dyn std::error::Error + 'static) = &error;
+                    tracing::error!(
+                        %ehr_id,
+                        error = cause,
+                        "EHR_ACCESS settings do not parse; no query reaches the EHR"
+                    );
+                    index.push((ehr_id, EhrAccessSettings::held_closed()));
+                }
             }
         }
         Ok(index)

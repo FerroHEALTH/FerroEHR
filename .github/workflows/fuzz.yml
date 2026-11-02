@@ -54,7 +54,7 @@ permissions: {}
 # and toolchain-watcher.yml moves both to the newest nightly that builds every
 # harness. A `with:` input reads it as `env.FUZZ_NIGHTLY`.
 env:
-  FUZZ_NIGHTLY: nightly-2026-10-31
+  FUZZ_NIGHTLY: nightly-2026-11-02
 
 jobs:
   # Do the harnesses still COMPILE? That is the whole question on a PR, and it

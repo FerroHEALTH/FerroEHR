@@ -80,8 +80,8 @@ Wrong `_type`/serialization behaviour → fix the **emitter** (`emit.rs` /
 
 ## Canonical XML (ITS-XML) — GENERATED
 
-`ToXml`/`FromXml` impls are emitted by `emit-xml` into
-`openehr-its/src/xml/generated/` from the vendored XSDs (wire shape: element
+`ToXml`/`FromXml` impls are emitted by `emit-xml`, for every RM/BASE
+generation, into `openehr-its/src/xml/generated/` from the vendored XSDs (wire shape: element
 order, attribute/element split, `xsi:type` slots) + the BMM model (Rust
 fields). Hand-written parts: the runtime (`xml/runtime.rs`, `quick-xml`) and
 entry points.

@@ -69,6 +69,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
+use crate::service::ehr::access_types::check_written_settings;
 use crate::storage::ehr_repo;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::EventActionCode;
@@ -597,6 +598,11 @@ fn collect_content_versions(
 ) -> Result<(), ServiceError> {
     for (position, ov) in wrapper_versions(xver, position) {
         let (vo_id, version) = parse_imported_version(ov).map_err(|e| at_position(&position, e))?;
+        if kind == Kind::EhrAccess
+            && let Some(settings) = version.data.get("settings").filter(|s| !s.is_null())
+        {
+            check_written_settings(settings).map_err(|e| at_position(&position, e))?;
+        }
         if let Some(existing) = by_container.get(&vo_id)
             && existing.kind != kind
         {

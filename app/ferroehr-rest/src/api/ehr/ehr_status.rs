@@ -34,6 +34,7 @@ use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid, require_if_match};
 use crate::state::AppState;
 
@@ -168,6 +169,7 @@ pub(super) async fn run(
                     Ok(negotiate::resource::error_with_meta(
                         crate::overview::service_error::api_error(e),
                         meta.as_ref(),
+                        Tree::Ehr,
                     ))
                 }
                 Err(e) => Err(RestError::from(e)),
@@ -195,7 +197,7 @@ pub(super) async fn run(
                 EhrStatusTagsUpdateParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let body = item_tags::write_body(h, &parts.body)?;
+            let body = negotiate::decode::typed_json(h, &parts.body, "JSON array body")?;
             let tags = state
                 .backend()
                 .target_tags_replace(
