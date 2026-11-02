@@ -19,17 +19,11 @@
 # outside the RFC 9068 profile the CDR expects by default, hence
 # `token_profile = "jwt"`.
 #
-# The CDR block turns two opt-in extensions on for the run, both of which
-# answer `404` as if unmounted while they are off — so the viewer's journeys
-# over them would otherwise have nothing but a disabled empty state to drive:
-# the terminology surface (`[terminology] api_enabled`) and the
-# event-subscription admin API (`[events] admin_api`). The mechanical `__` env
-# mapping addresses the same TOML keys (app/ferroehr/assets/ferroehr.default.toml).
-#
-# `[events] admin_api` is deliberately alone: the subscription CRUD is a
-# database store, so it needs no broker and no `[events] enabled` — turning the
-# publisher on without a reachable AMQP broker would only add a retry loop to
-# the run.
+# The CDR block turns the terminology surface (`[terminology] api_enabled`) on
+# for the run; it answers `404` as if unmounted while it is off, so the
+# viewer's journeys over it would otherwise have nothing but a disabled empty
+# state to drive. The mechanical `__` env mapping addresses the same TOML key
+# (app/ferroehr/assets/ferroehr.default.toml).
 services:
   ferroehr:
     depends_on:
@@ -37,7 +31,6 @@ services:
         condition: service_healthy
     environment:
       FERROEHR__TERMINOLOGY__API_ENABLED: "true"
-      FERROEHR__EVENTS__ADMIN_API: "true"
       FERROEHR__AUTH__ISSUER: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__AUDIENCE: ferroehr
       FERROEHR__AUTH__TOKEN_PROFILE: jwt

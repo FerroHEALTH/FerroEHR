@@ -29,7 +29,6 @@ const KEY_MATERIAL: &str = "SIGNING_KEY_MATERIAL_SENTINEL_1c9e";
 const LICENCE_MATERIAL: &str = "LICENCE_MATERIAL_SENTINEL_6d4a";
 const IDENTIFIER_KEY: &str = "IDENTIFIER_KEY_SENTINEL_4e8b";
 const S3_SECRET: &str = "S3_SECRET_SENTINEL_0b5c";
-const EVENTS_PW: &str = "EVENTS_PW_SENTINEL_5a2f";
 const ISSUER_PW: &str = "ISSUER_PW_SENTINEL_9c1d";
 
 /// A configuration carrying a secret in every slot the tree has, with the
@@ -76,7 +75,6 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
     config.licence.file = Some(token.path().to_path_buf());
     config.demographic.identifier_protection.key = Some(Secret::new(IDENTIFIER_KEY));
     config.multimedia.secret_access_key = Some(Secret::new(S3_SECRET));
-    config.events.url = SecretUrl::new(format!("amqp://mq:{EVENTS_PW}@broker:5672/vh"));
     config
 }
 
@@ -109,7 +107,6 @@ async fn no_credential_reaches_the_report() {
         LICENCE_MATERIAL,
         IDENTIFIER_KEY,
         S3_SECRET,
-        EVENTS_PW,
         ISSUER_PW,
     ] {
         assert!(

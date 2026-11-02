@@ -23,7 +23,9 @@
 //!   the EHR's data and is held to every template.
 //! - The DEMOGRAPHIC API has no family: a client listed in
 //!   `[smart] demographic_clients`, or a caller holding the product scope,
-//!   reaches it. The ADMIN API needs the product scope.
+//!   reaches it. The ADMIN API needs the product scope, except the outbox
+//!   feed, which needs [`OUTBOX_SCOPE`] alone, so a feed reader reaches no
+//!   other admin route and no admin caller reads the feed by default.
 //! - A `patient/` grant reaches only the EHR of the token's launch context
 //!   (`master07 §Context Selection`): an EHR route's `{ehr_id}`, a query's
 //!   single-EHR `ehr_id`; an operation that names no EHR is refused to it.
@@ -40,6 +42,11 @@ use openehr_its::rest::decode::query_component_octets;
 
 use crate::api::operation::{CompositionGate, Operation, operation};
 use crate::extensions::access::authn::Principal;
+
+/// The scope the outbox feed needs: SMART App Launch 2.2.0, Scopes and Launch
+/// Context, §Extensibility gives an extension scope the form "any string
+/// starting with `__`", as the product scope `__ferroehr.platform` has it.
+pub(crate) const OUTBOX_SCOPE: &str = "__ferroehr.outbox";
 
 /// When a route's requirement is checked.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,6 +187,9 @@ impl SmartRoutes {
                 .strip_prefix(root)
                 .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
         };
+        if under("/admin/outbox") {
+            return Requirement::Scope(OUTBOX_SCOPE.to_owned());
+        }
         if under("/admin") {
             return self.product();
         }
@@ -622,6 +632,36 @@ mod tests {
                 None
             )
             .is_err()
+        );
+    }
+
+    /// The outbox feed needs its own scope: the product scope does not reach it,
+    /// and the outbox scope reaches no other admin route.
+    #[test]
+    fn the_outbox_feed_needs_the_outbox_scope_alone() {
+        let table = routes();
+        let ext = "/ferroehr/rest/extensions/v1";
+        let none = Honoured::default();
+        let reader = principal(OUTBOX_SCOPE, Some("ferrobridge"), none);
+        let platform = principal("__ferroehr.platform", None, none);
+        for (method, template) in [
+            (Method::GET, format!("{ext}/admin/outbox/{{reader}}")),
+            (Method::POST, format!("{ext}/admin/outbox/{{reader}}/ack")),
+        ] {
+            let Need::Now(requirement) = table.need(&method, Some(&template), &template) else {
+                panic!("the feed is checked at once");
+            };
+            assert_eq!(requirement, Requirement::Scope(OUTBOX_SCOPE.to_owned()));
+            assert!(check(&requirement, &reader, None).is_ok());
+            assert!(check(&requirement, &platform, None).is_err());
+        }
+        let report = format!("{ext}/admin/report/statistics");
+        let Need::Now(requirement) = table.need(&Method::GET, Some(&report), &report) else {
+            panic!("an admin route is checked at once");
+        };
+        assert!(
+            check(&requirement, &reader, None).is_err(),
+            "the outbox scope reaches no other admin route"
         );
     }
 

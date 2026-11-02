@@ -14,7 +14,7 @@
 //! unchanged. No openEHR spec governs either set: our own design/extension.
 
 /// Every deployment gap code the server reports, in declaration order.
-pub const DEPLOYMENT_GAPS: [&str; 14] = [
+pub const DEPLOYMENT_GAPS: [&str; 13] = [
     "shared_credential",
     "shared_cluster",
     "open_subject_namespace",
@@ -26,14 +26,13 @@ pub const DEPLOYMENT_GAPS: [&str; 14] = [
     "auth_off",
     "rbac_off",
     "plaintext_listener",
-    "plaintext_broker",
     "plaintext_audit_feed",
     "plaintext_object_store",
 ];
 
 /// Every API family served as its own OpenAPI document, as
 /// `(url slug, selector name)`, in the server's selector order.
-pub const OPENAPI_FAMILIES: [(&str, &str); 16] = [
+pub const OPENAPI_FAMILIES: [(&str, &str); 15] = [
     ("ehr", "openEHR: EHR"),
     ("query", "openEHR: Query"),
     ("definition", "openEHR: Definition"),
@@ -47,7 +46,6 @@ pub const OPENAPI_FAMILIES: [(&str, &str); 16] = [
     ("terminology", "FerroEHR: Terminology"),
     ("relationships", "FerroEHR: Party Relationships"),
     ("messaging", "FerroEHR: Messaging"),
-    ("events", "FerroEHR: Event Subscriptions"),
     ("audit", "FerroEHR: Audit"),
     ("smart", "FerroEHR: SMART Discovery"),
 ];

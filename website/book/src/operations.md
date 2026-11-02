@@ -933,7 +933,7 @@ why they are written as your checklist rather than as our claim.
 - **Stay available.** Keep at least two replicas (or autoscaling) and a pod
   disruption budget so node drains and upgrades never fully interrupt the
   API. The default 30-second termination grace period covers the server's
-  short shutdown drain of the audit and event outboxes.
+  short shutdown drain of the audit outbox.
 
 ### How long the version you pinned is supported
 
@@ -1171,10 +1171,9 @@ Not every indicator blocks readiness, and the distinction is deliberate:
 | `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component); `UP` with `fail_mode`, the local store and its retention in the detail, and a stated caution under `fail_mode = "open"` | no: reports `DEGRADED`, never `503` |
 | `audit_delivery` | each forwarder to an external Audit Record Repository (present when `[audit.syslog]` or `[audit.fhir_feed]` is on): the records waiting, those the repository refused, those delivered, and whether the last attempt reached it; `DEGRADED` when the repository is unreachable or a record was refused | no: records wait in their spool or the store, so delivery problems never take the instance out of rotation |
 | `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval_seconds` is not `0`): `UP` while intact or before the first run, `DOWN` naming the finding count and the first damaged position, `DEGRADED` when the verification could not run | no: a damaged chain reports `DOWN` in the body, never `503`, because the trail keeps recording while the damage is investigated |
-| `events` | the event publisher's broker delivery (present only when eventing is enabled) | no: reports `DEGRADED`, never `503`, since the outbox buffers while the broker is down |
 
-An instance whose event broker is unreachable therefore keeps taking traffic
-and says so in the body; an instance that cannot reach its database, or whose
+An instance whose audit repository is unreachable therefore keeps taking
+traffic and says so in the body; an instance that cannot reach its database, or whose
 database lost the schema, leaves rotation. The `detail` strings are written to
 carry no connection information (no DSN host, database name or role) because
 this surface is unauthenticated by design.

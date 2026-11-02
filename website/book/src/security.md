@@ -179,7 +179,7 @@ professional; see [Audit trail](audit.md#the-ehds-logging-elements-mapped).
 What counts as **patient data**: every API route except the definition family
 (`/definition/...`: templates, archetypes, stored-query texts), terminology,
 the aggregate counts under `/admin/report`, and the admin routes that manage
-configuration, event subscriptions, the retention policy, templates and
+configuration, the retention policy, templates and
 stored queries. The list of exceptions is closed, so a route
 added later is judged patient data until it is listed. The health family,
 `/rest/status`, discovery and `/management` are outside the API and never
@@ -828,7 +828,6 @@ error naming the pair:
 | the PGP signing-key passphrase | `signing.key_passphrase_file` |
 | a terminology OAuth2 client secret | `terminology.server.oauth.client_secret_file` |
 | the object-store secret key | `multimedia.secret_access_key_file` |
-| the AMQP URL of the change events | `events.url_file` |
 | the national-identifier root key | `demographic.identifier_protection.key_file` |
 
 (The TLS `certificate_file` / `client_ca_file` settings and a static key

@@ -384,9 +384,6 @@
         "signingKeyPassphrase": {
           "type": "string"
         },
-        "eventsUrl": {
-          "type": "string"
-        },
         "basicUserPasswordHashes": {
           "description": "Keyed by username; each username also needs an entry under config.auth.basic.users, or rendering fails.",
           "type": "object",
@@ -645,20 +642,6 @@
                   }
                 }
               }
-            }
-          }
-        },
-        "events": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "enabled": {
-              "type": [
-                "boolean",
-                "null"
-              ]
             }
           }
         },

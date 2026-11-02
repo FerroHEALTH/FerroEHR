@@ -607,13 +607,6 @@ pub(crate) async fn db_now(pool: &sqlx::PgPool) -> jiff::Timestamp {
         .to_jiff()
 }
 
-pub(crate) async fn pending_count(pool: &sqlx::PgPool) -> i64 {
-    sqlx::query_scalar("SELECT count(*) FROM clinical.event_outbox WHERE published_at IS NULL")
-        .fetch_one(pool)
-        .await
-        .expect("pending count")
-}
-
 /// The `OBJECT_VERSION_ID` of the first version listed in a served CONTRIBUTION.
 pub(crate) fn first_version_uid(contribution: &Value) -> String {
     contribution["versions"][0]["id"]["value"]

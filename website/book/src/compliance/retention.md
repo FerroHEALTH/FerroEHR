@@ -169,8 +169,8 @@ process it stops:
   content answerable;
 - an [EHR Extract](../beyond-core/messaging.md#exporting-an-ehr) omits a
   restricted object, and refuses outright for a restricted EHR;
-- the [change-event stream](../beyond-core/amqp.md) neither emits nor delivers
-  an event about it;
+- the [change-event feed](../beyond-core/outbox-feed.md) neither records nor
+  serves an event about it;
 - a write to it is refused, and nothing already stored changes.
 
 The restriction refusal is the last gate on a write. The checks that need no

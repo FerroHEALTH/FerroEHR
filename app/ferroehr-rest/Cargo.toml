@@ -108,7 +108,6 @@ sqlx.workspace = true
 # back through the official wrapper.
 jiff-sqlx.workspace = true
 testcontainers.workspace = true
-testcontainers-modules.workspace = true
 tokio = { workspace = true }
 tower = { workspace = true }
 axum = { workspace = true }
@@ -135,10 +134,9 @@ wiremock = { workspace = true }
 
 [features]
 # Forward the optional-integration gates (#1890); default mirrors ferroehr's.
-default = ["fhir", "events", "multimedia"]
+default = ["fhir", "multimedia"]
 admin-api = []
 fhir = ["ferroehr/fhir", "dep:ihe-atna"]
-events = ["ferroehr/events"]
 multimedia = ["ferroehr/multimedia"]
 
 [lints]

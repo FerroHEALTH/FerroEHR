@@ -79,14 +79,9 @@ pub(crate) fn typed_json_vec<T: DeserializeOwned>(
 /// sibling of [`typed_json_vec`], with the same path-named refusal (`400`)
 /// so a client learns which member it must fix.
 ///
-/// Only the event-subscription routes decode a scalar body today, so the
-/// helper carries their feature gate: a slim build without `events` has no
-/// caller and would otherwise fail the dead-code lane.
-///
 /// # Errors
 /// [`ApiError::UnsupportedMediaType`] if the `Content-Type` is not JSON;
 /// [`ApiError::BadRequest`] if the bytes do not decode as `T`.
-#[cfg(feature = "events")]
 pub(crate) fn typed_json<T: DeserializeOwned>(
     headers: &HeaderMap,
     body: &Bytes,

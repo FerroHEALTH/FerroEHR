@@ -34,7 +34,7 @@ use super::Principal;
 ///
 /// Definitions (templates, archetypes, stored-query texts), terminology, the
 /// aggregate counts of `/admin/report`, and the admin surfaces that manage
-/// configuration, subscriptions, the retention policy, templates and
+/// configuration, the retention policy, templates and
 /// stored queries hold no record of a person. The list is closed on purpose: an
 /// unlisted route, including any route added later, is judged patient data.
 const NO_PATIENT_DATA: &[&str] = &[
@@ -42,7 +42,6 @@ const NO_PATIENT_DATA: &[&str] = &[
     "/terminology",
     "/admin/report",
     "/admin/config",
-    "/admin/event_subscription",
     "/admin/retention/policy",
     "/admin/template",
     "/admin/query",

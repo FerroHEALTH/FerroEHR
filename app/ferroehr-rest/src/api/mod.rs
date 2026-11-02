@@ -84,8 +84,6 @@ use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::extensions::access::{delay, ehr_access, opt_out, pep, restriction};
-#[cfg(feature = "events")]
-use crate::extensions::event_subscription;
 #[cfg(feature = "fhir")]
 use crate::extensions::fhir;
 use crate::extensions::terminology;
@@ -299,7 +297,7 @@ pub(crate) fn its_openapi_router() -> OpenApiRouter<AppState> {
 /// extensions root): the ADMIN extensions, the archetype and artefact library
 /// with its ADL 1.4 to ADL 2 conversion,
 /// `PARTY_RELATIONSHIP`, the EHR Extract messages, the cohort query,
-/// terminology and event subscriptions. They are mounted under
+/// terminology and the outbox feed. They are mounted under
 /// `{rest_root}/extensions/v1`, beside the openEHR base path, on their own
 /// version line.
 ///
@@ -324,18 +322,9 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::access_delay::access_delay_routes())
         .merge(admin::opt_out::opt_out_routes())
         .merge(admin::identifiers::identifier_routes())
+        .merge(admin::outbox::outbox_routes())
         .merge(message::extract::extract_routes())
         .merge(terminology::routes())
-        .merge({
-            #[cfg(feature = "events")]
-            {
-                event_subscription::routes()
-            }
-            #[cfg(not(feature = "events"))]
-            {
-                OpenApiRouter::new()
-            }
-        })
 }
 
 /// The standard FHIR and IHE interfaces: the `RESTful` ATNA ITI-81 retrieval,

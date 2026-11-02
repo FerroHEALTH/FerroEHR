@@ -430,7 +430,6 @@ inferno = { version = "0.12", features = ["nameattr"] }
 # ── Caching, rate limiting, resilience ───────────────────────────────────────
 moka = { version = "0.12", features = ["future"] }   # Caffeine equivalent (template/WebTemplate cache)
 backon = "1"                      # retry/backoff (backoff crate is deprecated)
-lapin = "4"                       # AMQP 0.9.1 client (RabbitMQ) — contribution-outbox eventing
 
 # ── Errors & utilities ───────────────────────────────────────────────────────
 thiserror = "2"                    # v2 current
@@ -458,7 +457,7 @@ assert_fs = "1"
 # line, so 0.27 + 0.28 cannot coexist in one lock. Bump both together once a
 # testcontainers-modules release targets 0.28.
 testcontainers = "0.27.3"
-testcontainers-modules = { version = "0.15.0", features = ["postgres", "rabbitmq"] }   # verify latest
+testcontainers-modules = { version = "0.15.0", features = ["postgres"] }   # verify latest
 criterion = { version = "0.8.2", features = ["html_reports"] }
 
 # Cargo plugins used in CI (installed, not dependencies):

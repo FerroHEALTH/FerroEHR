@@ -178,10 +178,6 @@ spec:
             - name: FERROEHR__SIGNING__KEY_PASSPHRASE_FILE
               value: {{ printf "%s/signing.key_passphrase" (include "ferroehr.secretMountPath" .) | quote }}
             {{- end }}
-            {{- if .Values.secrets.eventsUrl }}
-            - name: FERROEHR__EVENTS__URL_FILE
-              value: {{ printf "%s/events.url" (include "ferroehr.secretMountPath" .) | quote }}
-            {{- end }}
             {{- if .Values.secrets.auditFhirFeedUrl }}
             - name: FERROEHR__AUDIT__FHIR_FEED__URL
               valueFrom:
@@ -399,10 +395,6 @@ spec:
               {{- if and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl }}
                     - key: db.migrate_url
                       path: db.migrate_url
-              {{- end }}
-              {{- if .Values.secrets.eventsUrl }}
-                    - key: events.url
-                      path: events.url
               {{- end }}
               {{- if .Values.secrets.signingKeyPassphrase }}
                     - key: signing.key_passphrase

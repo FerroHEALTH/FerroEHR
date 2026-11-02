@@ -56,5 +56,3 @@ Every screen is drawn in both themes:
 ![Server in dark](img/server/overview-dark.png)
 
 ![The audit log in dark](img/audit/audit-dark.png)
-
-![Subscriptions in dark](img/subscriptions/subscriptions-dark.png)

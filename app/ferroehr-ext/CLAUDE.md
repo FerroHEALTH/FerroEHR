@@ -1,8 +1,8 @@
 # `ferroehr-ext` — the optional-integration crate (feature-gated)
 
 The carve-out target for the platform's OPTIONAL integrations (#1890):
-`events` (subscriptions + publisher transports) and `multimedia` (blob
-store/offload). The ATNA `AuditEvent` is written by the shared FerroAUDIT
+`multimedia` (blob store/offload). Broker delivery of the commit events is
+FerroBRIDGE's; FerroEHR keeps the outbox and its cursor feed (#4786). The ATNA `AuditEvent` is written by the shared FerroAUDIT
 crates `ihe-atna` and `ehds-logging`, which `ferroehr` uses directly, and the
 FHIR terminology client is the published `ferrobridge-term`, which `ferroehr`
 also uses directly; FHIR resource mapping is FerroBRIDGE's, not this crate's.
@@ -17,22 +17,21 @@ slim deployments compile integrations out.
   `ferroehr` behind `cfg(feature)`.
 - **No openEHR spec governs these surfaces** — flag every behaviour decision
   as our own design; vendor implementations are prior art only.
-- Heavy external dependencies (brokers, codecs) land HERE, never in
+- Heavy external dependencies (object stores, codecs) land HERE, never in
   `ferroehr`; the platform seams get plain JSON / plain views back.
 - Zero re-exports. The serde CONFIG sections stay in the `ferroehr` config
   tree (they carry `Secret`/`SecretUrl` and the tree's redaction semantics);
   this crate takes plain runtime parameter structs at construction
-  (`BlobStoreParams`, the events/AMQP url) — the platform's
+  (`BlobStoreParams`) — the platform's
   gated glue maps config → params.
 - Features are additive — no `compile_error!` pairs; the `--all-features`
   workspace lanes stay valid.
 - **One integration-test binary, one module per integration**
-  (`tests/it/main.rs` + `events_contract` / `multimedia_engine`), each
+  (`tests/it/main.rs` + `multimedia_engine`), each
   `#[cfg(feature)]`-gated so `--all-features` runs everything and the slim
   build compiles none of it. They drive this crate's PUBLIC seams with no
-  broker and no network: the `EventPublisher` contract (a recording double
-  plus the AMQP publisher's pre-broker behaviour), the multimedia engine over
-  the in-memory `object_store`. The broker-backed journeys stay in
+  network: the multimedia engine over the in-memory `object_store`. The
+  store-backed journeys stay in
   `app/ferroehr/tests/it` where the platform wires the integrations in —
   never duplicated here.
 - Gates: `cargo clippy -p ferroehr-ext --all-targets --all-features` +

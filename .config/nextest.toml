@@ -2,25 +2,25 @@
 #
 # PostgreSQL is NOT a per-test container anymore: every DB-backed test takes
 # a template-database clone from the shared server via `tools/testkit`, so
-# the bulk of the suite parallelizes freely. Only the broker/blob suites
-# (RabbitMQ, SeaweedFS testcontainers per test) stay serialized: under a
-# full-workspace run several brokers otherwise start concurrently and
-# broker-delivery / gateway-readiness deadlines flake on host contention
+# the bulk of the suite parallelizes freely. Only the container suites
+# (SeaweedFS and FerroTERM testcontainers per test) stay serialized: under a
+# full-workspace run several containers otherwise start concurrently and
+# gateway-readiness deadlines flake on host contention
 # (observed 2026-07-13/14 before the harness rewrite). Assertions are
 # unchanged — only scheduling is constrained, plus ONE retry so a single
 # container-startup hiccup on a loaded runner doesn't fail the suite. A
 # genuine regression still fails: it fails both attempts, deterministically.
 #
-# The three container suites used to be their own integration-test BINARIES, so
+# The container suites used to be their own integration-test BINARIES, so
 # the override matched `binary(...)`. They are now topic MODULES of the single
 # `ferroehr` integration binary (`app/ferroehr/tests/it/`), so the override
 # matches the module prefix of the test name instead: nextest test names are the
-# Rust path inside the binary (`events_amqp::publishes_...`), the `test()`
+# Rust path inside the binary (`multimedia_s3::offloads_...`), the `test()`
 # predicate matches that whole string, and `/…/` is a regex matcher
 # (https://nexte.st/docs/filtersets/reference/). Scoping with
 # `package(ferroehr) & binary(it)` keeps a same-named module in another crate's
 # `it` binary out of the group. Group membership is therefore exactly the tests
-# of those three suites plus `adl2_vetdf_ferroterm` (a FerroTERM container per
+# of `multimedia_s3` and `adl2_vetdf_ferroterm` (a FerroTERM container per
 # test, #3311), serialized, with one retry.
 [test-groups.containers]
 max-threads = 1
@@ -31,12 +31,12 @@ max-threads = 1
 # the store switched off, and
 # `unreachable_store_refuses_expansion_instead_of_answering_silently` asserts the
 # refusal when there is no store to reach. Both take only a testkit database, so
-# serializing them against the broker suites bought nothing and the retry they
+# serializing them against the container suites bought nothing and the retry they
 # inherited was meaningless. The filter stays an EXCLUSION rather than a list of
 # the container tests, so a new test in these modules is serialized by default:
 # the safe direction is a container test that waits, never one that does not.
 [[profile.default.overrides]]
-filter = 'package(ferroehr) & binary(it) & test(/^(events_amqp|multimedia_s3|adl2_vetdf_ferroterm)::/) - test(/^multimedia_s3::(disabled_by_default_stores_inline_verbatim|unreachable_store_refuses_expansion_instead_of_answering_silently)$/)'
+filter = 'package(ferroehr) & binary(it) & test(/^(multimedia_s3|adl2_vetdf_ferroterm)::/) - test(/^multimedia_s3::(disabled_by_default_stores_inline_verbatim|unreachable_store_refuses_expansion_instead_of_answering_silently)$/)'
 test-group = 'containers'
 retries = 1
 
@@ -52,6 +52,6 @@ fail-fast = false
 slow-timeout = { period = "60s" }
 
 [[profile.ci.overrides]]
-filter = 'package(ferroehr) & binary(it) & test(/^(events_amqp|multimedia_s3|adl2_vetdf_ferroterm)::/)'
+filter = 'package(ferroehr) & binary(it) & test(/^(multimedia_s3|adl2_vetdf_ferroterm)::/)'
 test-group = 'containers'
 retries = 1

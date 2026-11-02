@@ -43,8 +43,8 @@ the Art. 30 fields, in
    resolution of a party or a subject to the EHRs whose `EHR_STATUS` names it.
 5. **Access logging**: one record per access, in DICOM PS3.15 and FHIR
    `AuditEvent` renderings.
-6. **Change-event publication**: a PHI-free envelope per commit, drained to a
-   broker when `[events]` is enabled.
+6. **Change-event feed**: a PHI-free envelope per commit, served to the
+   readers `[outbox] readers` names.
 
 Everything else the server does (templates, terminology lookup, conformance
 reporting) operates on definitions rather than on people.
@@ -111,7 +111,7 @@ the controller's judgement rather than a default.
 | Clinical content and its versions | Kept until an administrator deletes it. Archiving moves a record to the cold tier without expiring it | the admin API |
 | Demographic parties | The same | the admin API |
 | Access records | Kept forever by default; reaped hourly when a retention is set | `[audit.store] retention_days` |
-| Change-event envelopes | Published rows pruned after seven days by default | `[events] retention_days` |
+| Change-event envelopes | Pruned seven days after their commit by default, once every active reader has acknowledged them | `[outbox] retention_days` |
 
 **The access log carries a jurisdictional floor.** Where one of the active
 identifier-scan rules names a jurisdiction with a registered retention floor, a

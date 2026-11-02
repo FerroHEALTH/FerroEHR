@@ -183,15 +183,6 @@ pub enum DeploymentGap {
     /// … by encrypting relevant data … in transit". Accepting the gap by name
     /// records that a TLS-terminating ingress fronts the port.
     PlaintextListener,
-    /// The enabled events outbox publishes to a plaintext `amqp://` broker
-    /// (`events.url`), after the `tls` upgrade to `amqps://` is applied.
-    ///
-    /// `docs/law/eu/cra/text.html Annex I Part I(2)(e)`: products shall "protect
-    /// the confidentiality of stored, transmitted or otherwise processed data
-    /// … by encrypting relevant data … in transit". Accepting the gap by name
-    /// records that the path to the broker stays on a segment the deploying
-    /// organisation trusts.
-    PlaintextBroker,
     /// The enabled RESTful-ATNA feed (`[audit.fhir_feed] url`) posts the access
     /// records to a plain `http://` Audit Record Repository.
     ///
@@ -220,7 +211,6 @@ impl DeploymentGap {
             Self::AuthOff => "auth_off",
             Self::RbacOff => "rbac_off",
             Self::PlaintextListener => "plaintext_listener",
-            Self::PlaintextBroker => "plaintext_broker",
             Self::PlaintextAuditFeed => "plaintext_audit_feed",
             Self::PlaintextObjectStore => "plaintext_object_store",
         }
@@ -287,12 +277,6 @@ impl DeploymentGap {
                  [server.tls] or listen on loopback, unset [management] port so the surface shares \
                  the main listener, or accept plaintext_listener by name when a TLS-terminating \
                  ingress fronts the port or the management port is unreachable off the host"
-            }
-            Self::PlaintextBroker => {
-                "the enabled events outbox ([events] url) publishes to a plain amqp:// broker, so \
-                 change events cross the network unencrypted; use an amqps:// URL or set \
-                 tls = true in [events], or accept plaintext_broker by name where the broker \
-                 path stays on a trusted segment"
             }
             Self::PlaintextAuditFeed => {
                 "the enabled audit FHIR feed ([audit.fhir_feed] url) posts the access records to a \
@@ -435,9 +419,6 @@ impl DeploymentPosture {
         if plaintext_main || plaintext_management {
             gaps.push(DeploymentGap::PlaintextListener);
         }
-        if config.events.enabled && is_plaintext_amqp(&config.events.effective_url()) {
-            gaps.push(DeploymentGap::PlaintextBroker);
-        }
         if config.audit.enabled
             && config.audit.fhir_feed.enabled
             && is_plaintext_http(config.audit.fhir_feed.url.expose())
@@ -492,15 +473,6 @@ impl DeploymentPosture {
         }
         out
     }
-}
-
-/// Whether a broker URL names the plaintext `amqp` scheme.
-///
-/// The scheme is compared case-insensitively (RFC 3986 §3.1); a URL without a
-/// scheme names no transport and is not read as a gap.
-fn is_plaintext_amqp(url: &str) -> bool {
-    url.split_once("://")
-        .is_some_and(|(scheme, _)| scheme.eq_ignore_ascii_case("amqp"))
 }
 
 /// Whether a URL names the plaintext `http` scheme, compared case-insensitively
@@ -730,7 +702,6 @@ mod tests {
             DeploymentGap::AuthOff,
             DeploymentGap::RbacOff,
             DeploymentGap::PlaintextListener,
-            DeploymentGap::PlaintextBroker,
             DeploymentGap::PlaintextAuditFeed,
             DeploymentGap::PlaintextObjectStore,
         ] {
@@ -758,9 +729,8 @@ mod tests {
             DeploymentGap::AuthOff => 8,
             DeploymentGap::RbacOff => 9,
             DeploymentGap::PlaintextListener => 10,
-            DeploymentGap::PlaintextBroker => 11,
-            DeploymentGap::PlaintextAuditFeed => 12,
-            DeploymentGap::PlaintextObjectStore => 13,
+            DeploymentGap::PlaintextAuditFeed => 11,
+            DeploymentGap::PlaintextObjectStore => 12,
         };
         for (i, token) in DEPLOYMENT_GAPS.iter().enumerate() {
             let gap: DeploymentGap =
@@ -1043,78 +1013,6 @@ mod tests {
         let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
-    }
-
-    /// A separated `production` configuration with the events outbox set.
-    fn with_broker(enabled: bool, url: &str, tls: bool) -> FerroEhrConfig {
-        let mut config = production(separated());
-        config.events.enabled = enabled;
-        config.events.url = SecretUrl::new(url);
-        config.events.tls = tls;
-        config
-    }
-
-    /// `production` refuses an enabled events outbox on a plaintext `amqp://`
-    /// broker, passes `amqps://`, the `tls` upgrade and a disabled outbox, and
-    /// boots once `plaintext_broker` is accepted by name (CRA Annex I Part
-    /// I(2)(e)).
-    #[test]
-    fn production_refuses_a_plaintext_amqp_broker_unless_accepted_by_name() {
-        const PLAIN: &str = "amqp://u:p@broker.internal:5672/%2f";
-        const SHOUTED: &str = "AMQP://u:p@broker.internal:5672/%2f";
-        const ENCRYPTED: &str = "amqps://u:p@broker.internal:5671/%2f";
-        for url in [PLAIN, SHOUTED] {
-            let posture =
-                DeploymentPosture::evaluate(&with_broker(true, url, false), &distinct_clusters());
-            assert_eq!(posture.gaps, [DeploymentGap::PlaintextBroker], "{url}");
-            assert!(!posture.permits_boot(), "{url}");
-            let message = posture.refusal_message();
-            assert!(message.contains("plaintext_broker"), "{message}");
-            assert!(
-                message.contains(DeploymentGap::PlaintextBroker.describe()),
-                "{message}"
-            );
-        }
-
-        let encrypted =
-            DeploymentPosture::evaluate(&with_broker(true, ENCRYPTED, false), &distinct_clusters());
-        assert!(encrypted.gaps.is_empty(), "amqps is no gap: {encrypted:?}");
-
-        let upgraded =
-            DeploymentPosture::evaluate(&with_broker(true, PLAIN, true), &distinct_clusters());
-        assert!(
-            upgraded.gaps.is_empty(),
-            "tls = true publishes over amqps: {upgraded:?}"
-        );
-
-        let off =
-            DeploymentPosture::evaluate(&with_broker(false, PLAIN, false), &distinct_clusters());
-        assert!(
-            off.gaps.is_empty(),
-            "a disabled outbox publishes nothing: {off:?}"
-        );
-
-        let config = FerroEhrConfig {
-            deployment_accepts: vec![DeploymentGap::PlaintextBroker],
-            ..with_broker(true, PLAIN, false)
-        };
-        let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
-        assert!(accepted.permits_boot());
-        assert_eq!(accepted.accepted, [DeploymentGap::PlaintextBroker]);
-        assert_eq!(
-            accepted.gaps,
-            [DeploymentGap::PlaintextBroker],
-            "accepting hides nothing"
-        );
-
-        let config = FerroEhrConfig {
-            deployment_accepts: vec![DeploymentGap::PlaintextListener],
-            ..with_broker(true, PLAIN, false)
-        };
-        assert!(
-            !DeploymentPosture::evaluate(&config, &distinct_clusters()).permits_boot(),
-            "accepting the listener gap does not accept the broker one"
-        );
     }
 
     /// `production` refuses an enabled audit FHIR feed on a plain `http://` URL and

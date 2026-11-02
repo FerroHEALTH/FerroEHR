@@ -55,8 +55,6 @@ PROBE_OUT="${PROBE_OUT:-docs/conformance/deployment/compose.json}"
 . scripts/deploy-probes/signing.sh
 # shellcheck source=scripts/deploy-probes/observability.sh
 . scripts/deploy-probes/observability.sh
-# shellcheck source=scripts/deploy-probes/events.sh
-. scripts/deploy-probes/events.sh
 # shellcheck source=scripts/deploy-probes/terminology.sh
 . scripts/deploy-probes/terminology.sh
 # shellcheck source=scripts/deploy-probes/signing_pgp.sh
@@ -133,7 +131,6 @@ run_family oidc_roles && probes_oidc_roles
 run_family domain_roles && probes_domain_roles
 run_family backup_restore && probes_backup_restore
 run_family observability && probes_observability
-run_family events && probes_events
 run_family terminology_ferroterm && probes_terminology_ferroterm
 run_family terminology && probes_terminology
 # Last: it deletes the stack's volumes, which is the procedure under test.

@@ -34,7 +34,7 @@
           {
             "name": "family",
             "in": "path",
-            "description": "The API family slug — one of the fixed set `ehr`, `query`, `definition`, `demographic`, `admin`, `admin-extensions`, `archetypes`, `cohort`, `contributions`, `management`, `terminology`, `relationships`, `messaging`, `events`, `audit`, `smart`. Not a free parameter: each value is its own static route.",
+            "description": "The API family slug — one of the fixed set `ehr`, `query`, `definition`, `demographic`, `admin`, `admin-extensions`, `archetypes`, `cohort`, `contributions`, `management`, `terminology`, `relationships`, `messaging`, `audit`, `smart`. Not a free parameter: each value is its own static route.",
             "required": true,
             "schema": {
               "type": "string"
@@ -1388,266 +1388,6 @@
         }
       }
     },
-    "/ferroehr/rest/extensions/v1/admin/event_subscription": {
-      "get": {
-        "tags": [
-          "event-subscription"
-        ],
-        "summary": "List every event subscription (`GET /admin/event_subscription`).",
-        "description": "Config-gated: `404` when `events_admin_api` is off (the route stays mounted\nbut the backend is never consulted).\n\nOUR OWN EXTENSION — no openEHR spec governs this: ITS-REST\ndefines neither eventing nor a subscription resource, so the whole group\n(paths, payloads, status codes) is our own design.",
-        "operationId": "event_subscription_list",
-        "responses": {
-          "200": {
-            "description": "The subscription records.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "404": {
-            "description": "The event-subscription extension is disabled (`events_admin_api` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "event-subscription"
-        ],
-        "summary": "Create a subscription (`POST /admin/event_subscription`).",
-        "description": "Body: `{name, kind?, change_type?, template_id?, enabled?}`\n(`enabled` defaults to `true`).\n\nOUR OWN EXTENSION — no openEHR spec governs this: ITS-REST\ndefines neither eventing nor a subscription resource, so the whole group\n(paths, payloads, status codes) is our own design.",
-        "operationId": "event_subscription_create",
-        "requestBody": {
-          "description": "The subscription definition (canonical JSON).",
-          "content": {
-            "application/json": {
-              "schema": {}
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Created; the stored subscription record is returned.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "`name` is missing/empty or not matching `[A-Za-z0-9_.-]`, or the body is not valid JSON.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The event-subscription extension is disabled (`events_admin_api` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "A subscription with that name already exists.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "The request `Content-Type` is not `application/json`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ferroehr/rest/extensions/v1/admin/event_subscription/{subscription_id}": {
-      "get": {
-        "tags": [
-          "event-subscription"
-        ],
-        "summary": "Read one subscription by id\n(`GET /admin/event_subscription/{subscription_id}`).",
-        "description": "OUR OWN EXTENSION — no openEHR spec governs this: ITS-REST\ndefines neither eventing nor a subscription resource, so the whole group\n(paths, payloads, status codes) is our own design.",
-        "operationId": "event_subscription_get",
-        "parameters": [
-          {
-            "name": "subscription_id",
-            "in": "path",
-            "description": "The subscription UUID.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The subscription record.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "`subscription_id` is not a valid UUID.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No subscription with that id, or the event-subscription extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "event-subscription"
-        ],
-        "summary": "Replace one subscription's predicates + enabled flag\n(`PUT /admin/event_subscription/{subscription_id}`).",
-        "description": "The `name` is immutable (it is the queue key); only the predicates and the\n`enabled` flag are replaced.\n\nOUR OWN EXTENSION — no openEHR spec governs this: ITS-REST\ndefines neither eventing nor a subscription resource, so the whole group\n(paths, payloads, status codes) is our own design.",
-        "operationId": "event_subscription_update",
-        "parameters": [
-          {
-            "name": "subscription_id",
-            "in": "path",
-            "description": "The subscription UUID.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "The replacement subscription definition (canonical JSON). The update is a FULL REPLACE: `enabled` is required (omitting it is a 400 — a defaulted value could silently re-enable a disabled subscription), an omitted predicate becomes the wildcard, the `name` is immutable (an echoed one is ignored), and any unknown key is refused.",
-          "content": {
-            "application/json": {
-              "schema": {}
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Updated; the stored subscription record is returned.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "`subscription_id` is not a valid UUID, or the body is not valid JSON.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No subscription with that id, or the event-subscription extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "The request `Content-Type` is not `application/json`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "event-subscription"
-        ],
-        "summary": "Delete one subscription\n(`DELETE /admin/event_subscription/{subscription_id}`).",
-        "description": "OUR OWN EXTENSION — no openEHR spec governs this: ITS-REST\ndefines neither eventing nor a subscription resource, so the whole group\n(paths, payloads, status codes) is our own design.",
-        "operationId": "event_subscription_delete",
-        "parameters": [
-          {
-            "name": "subscription_id",
-            "in": "path",
-            "description": "The subscription UUID.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Deleted."
-          },
-          "400": {
-            "description": "`subscription_id` is not a valid UUID.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No subscription with that id, or the event-subscription extension is disabled. With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/ferroehr/rest/extensions/v1/admin/integrity/rebuild-nodes": {
       "post": {
         "tags": [
@@ -1969,6 +1709,224 @@
           },
           "500": {
             "description": "The location holds no archive container, an entry could not be read, the manifest / a segment is CORRUPT (mangled or truncated, so it does not parse as part of this archive format), or the manifest names no known `logical_format`. All are the same fact — `file_sys_loc` does not hold a readable archive — and answer the same `500`. A corrupt per-version payload entry is NOT here: it belongs to exactly one EHR, so it is a per-entity `200` report.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/outbox/{reader}": {
+      "get": {
+        "tags": [
+          "admin-outbox"
+        ],
+        "summary": "Read the events after a reader's cursor\n(`GET /admin/outbox/{reader}`).",
+        "description": "**Our own extension — no openEHR spec governs this** (module docs).",
+        "operationId": "admin_outbox_read",
+        "parameters": [
+          {
+            "name": "reader",
+            "in": "path",
+            "description": "A reader `[outbox] readers` names.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "The most events to return, 1 to 1000; 100 when absent.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "description": "The outbox to read: `clinical` (the default) or `party`. Each has its own `seq` and its own cursor.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"reader\": …, \"events\": [...] }`: the events after the reader's cursor in `seq` order, empty when there are none. Each event is the stored PHI-free envelope with its `seq` beside it. A read moves no cursor.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "reader": "ferrobridge",
+                  "events": [
+                    {
+                      "seq": 42,
+                      "contribution_id": "0196f1f4-8c3a-7d2e-9b1a-3c5d7e9f1a2b",
+                      "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                      "committed_at": "2026-11-02T09:15:00.123456Z",
+                      "versions": [
+                        {
+                          "vo_id": "0196f1f4-8c3b-7a10-8f2e-4d6c8b0a2e4f",
+                          "kind": "COMPOSITION",
+                          "sys_version": 3,
+                          "version_tree_id": "3",
+                          "change_type": "251",
+                          "template_id": "vital_signs.v1"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`limit` is not an integer from 1 to 1000, or `domain` is neither `clinical` nor `party`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class, or the token lacks the `__ferroehr.outbox` scope.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The reader is unknown or inactive: `[outbox] readers` does not name it.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/outbox/{reader}/ack": {
+      "post": {
+        "tags": [
+          "admin-outbox"
+        ],
+        "summary": "Acknowledge the events up to a `seq`, moving the reader's cursor\n(`POST /admin/outbox/{reader}/ack`).",
+        "description": "**Our own extension — no openEHR spec governs this** (module docs).",
+        "operationId": "admin_outbox_ack",
+        "parameters": [
+          {
+            "name": "reader",
+            "in": "path",
+            "description": "A reader `[outbox] readers` names.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "description": "The outbox whose cursor moves: `clinical` (the default) or `party`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "`{ \"last_seq\": … }`: the highest `seq` the reader has delivered.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "last_seq": 42
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The cursor is at `last_seq`. Acknowledging the current cursor again is a `204` too."
+          },
+          "400": {
+            "description": "The body is not `{ \"last_seq\": <integer> }`, or `domain` is neither `clinical` nor `party`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class, or the token lacks the `__ferroehr.outbox` scope.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The reader is unknown or inactive.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`last_seq` lies below the cursor, which never moves back, or above the highest row of the outbox.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -25715,8 +25673,8 @@
       "description": "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."
     },
     {
-      "name": "event-subscription",
-      "description": "Event-subscription CRUD extension (config-gated: FERROEHR_REST_EVENT_SUBSCRIPTION__ENABLED)."
+      "name": "admin-outbox",
+      "description": "The commit-event outbox feed: the PHI-free events after a configured reader's cursor, in `seq` order, and the acknowledgement that moves the cursor. OUR OWN EXTENSION: no openEHR spec governs eventing. It needs the `__ferroehr.outbox` scope, and every read is an access record."
     }
   ],
   "externalDocs": {
