@@ -36,9 +36,8 @@ use crate::validation::category::code;
 ///
 /// A violating modification is a `422` naming the invariant; the first-version
 /// root read goes through `crate::storage::node_repo`. Both write flows run
-/// this, the direct update path ([`crate::service::ehr::composition`]) inline and
-/// the CONTRIBUTION path from [`crate::versioning::contribution`], each in its
-/// own commit transaction.
+/// this, the direct composition update inline and the CONTRIBUTION path from
+/// [`crate::versioning::contribution`], each in its own commit transaction.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the violated invariant (→ 422);
