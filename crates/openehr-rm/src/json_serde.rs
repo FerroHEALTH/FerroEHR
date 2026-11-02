@@ -56357,7 +56357,7 @@ impl ::serde::Serialize for crate::v1_2::common::resource::translation_details::
         __serializer: __S,
     ) -> ::core::result::Result<__S::Ok, __S::Error> {
         let mut __n = 3usize;
-        if self.accreditaton.is_some() {
+        if self.accreditation.is_some() {
             __n += 1;
         }
         if self.other_details.is_some() {
@@ -56368,8 +56368,8 @@ impl ::serde::Serialize for crate::v1_2::common::resource::translation_details::
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "TRANSLATION_DETAILS")?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "language", &self.language)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "author", &self.author)?;
-        if let Some(__v) = &self.accreditaton {
-            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "accreditaton", __v)?;
+        if let Some(__v) = &self.accreditation {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "accreditation", __v)?;
         }
         if let Some(__v) = &self.other_details {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "other_details", __v)?;
@@ -56384,7 +56384,7 @@ impl<'de> ::serde::Deserialize<'de>
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
     ) -> ::core::result::Result<Self, __D::Error> {
-        const __FIELDS: &[&str] = &["accreditaton", "author", "language", "other_details"];
+        const __FIELDS: &[&str] = &["accreditation", "author", "language", "other_details"];
         enum __Field {
             __Type,
             __F0,
@@ -56413,7 +56413,7 @@ impl<'de> ::serde::Deserialize<'de>
                             "_type" => ::core::result::Result::Ok(__Field::__Type),
                             "language" => ::core::result::Result::Ok(__Field::__F0),
                             "author" => ::core::result::Result::Ok(__Field::__F1),
-                            "accreditaton" => ::core::result::Result::Ok(__Field::__F2),
+                            "accreditation" => ::core::result::Result::Ok(__Field::__F2),
                             "other_details" => ::core::result::Result::Ok(__Field::__F3),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
@@ -56476,7 +56476,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F2 => {
                             if __s2.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("accreditaton"),
+                                    ::serde::de::Error::duplicate_field("accreditation"),
                                 );
                             }
                             __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -56499,7 +56499,7 @@ impl<'de> ::serde::Deserialize<'de>
                         author: __s1
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("author"))?,
-                        accreditaton: __s2.flatten(),
+                        accreditation: __s2.flatten(),
                         other_details: __s3.flatten(),
                     },
                 )

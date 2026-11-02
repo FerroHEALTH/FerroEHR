@@ -1390,12 +1390,6 @@ pub(crate) const XML_BMM_ONLY_ALLOWLIST: &[XmlBmmOnlyField] = &[
         citation: "BASE 1.3.0 TRANSLATION_DETAILS.other_contributors; ITS-XML 1.0.2 Resource.xsd lacks it.",
         reason: "BASE 1.3.0 resource-class growth vs ITS-XML 1.0.2.",
     },
-    XmlBmmOnlyField {
-        spec: "TRANSLATION_DETAILS",
-        wire_name: "accreditaton",
-        citation: "BASE 1.3.0 BMM spells this field `accreditaton` (sic); ITS-XML 1.0.2 Resource.xsd uses `accreditation`. Canonical JSON derives from the BMM, so the BMM spelling is emitted for JSON/XML consistency.",
-        reason: "BASE 1.3.0 BMM field spelling vs ITS-XML 1.0.2.",
-    },
     // ── BASE 1.3.0 CODE_PHRASE.preferred_term ──
     XmlBmmOnlyField {
         spec: "CODE_PHRASE",
