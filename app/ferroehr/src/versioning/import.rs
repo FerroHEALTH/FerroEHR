@@ -44,7 +44,6 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
-use crate::service::demographic::identifier::store::StoreError;
 use crate::service::error::{ServiceError, Violation};
 use crate::storage::codec::{decompose, reassemble};
 use crate::versioning::audit::AuditInput;
@@ -488,7 +487,7 @@ async fn land_first_receipt(
 /// through its own party API, which seals under its own key.
 ///
 /// # Errors
-/// [`crate::versioning::change::protection_refusal`] of the engine's refusal:
+/// The [`ServiceError`] the engine's refusal maps to:
 /// `422` for a plaintext protected value or a reference this party does not
 /// hold.
 async fn refuse_unsealed_identifiers(
@@ -506,16 +505,18 @@ async fn refuse_unsealed_identifiers(
     engine
         .refuse_unsealed(tx, cursor.vo_id.0, data)
         .await
-        .map_err(|error| match error {
-            StoreError::ForeignReference => ServiceError::content_invalid(Violation::new(
+        .map_err(|error| {
+            if !error.is_foreign_reference() {
+                return ServiceError::from(error);
+            }
+            ServiceError::content_invalid(Violation::new(
                 "the party references a protected identifier this deployment does not hold for \
                  it; a sealed identifier from another deployment does not travel in an EHR \
                  extract, so import the extract without this party and register the person \
                  through this deployment's party API, which seals the identifier under its own \
                  key"
                 .to_owned(),
-            )),
-            other => crate::versioning::change::protection_refusal(other),
+            ))
         })
 }
 

@@ -77,6 +77,7 @@ pub mod erasure;
 pub mod error;
 pub mod extract_repo;
 pub mod header;
+pub mod identifier_repo;
 pub mod integrity;
 pub mod marks;
 pub mod node_repo;

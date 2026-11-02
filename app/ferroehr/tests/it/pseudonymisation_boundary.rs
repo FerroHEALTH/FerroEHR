@@ -649,6 +649,7 @@ async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
 #[tokio::test]
 async fn an_unregistered_scheme_is_refused() {
     use ferroehr::service::demographic::identifier::store::{IdentifierStore, StoreError};
+    use ferroehr::storage::identifier_repo::IdentifierRepoError;
 
     let db = testkit::db().await.expect("testkit database");
     let mut conn = ferroehr::db::domain_pool_from(&db.pool(), ferroehr::db::domain::Domain::Party)
@@ -664,7 +665,7 @@ async fn an_unregistered_scheme_is_refused() {
     )
     .await;
     assert!(
-        matches!(refused, Err(StoreError::UnknownScheme { ref scheme }) if scheme == "zz-invented"),
+        matches!(refused, Err(StoreError::Repo(IdentifierRepoError::UnknownScheme { ref scheme })) if scheme == "zz-invented"),
         "an identifier kind nobody registered is refused, naming the scheme: {refused:?}"
     );
 }
@@ -1332,7 +1333,7 @@ async fn two_values_in_one_scheme_are_refused() {
 async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
     use ferroehr::service::demographic::identifier::config::IdentifierProtectionConfig;
     use ferroehr::service::demographic::identifier::engine::IdentifierProtection;
-    use ferroehr::service::demographic::identifier::store::StoreError;
+    use ferroehr::storage::identifier_repo::IdentifierRepoError;
 
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -1356,7 +1357,7 @@ async fn an_unregistered_configured_scheme_is_a_configuration_fault() {
     .expect("protection is enabled");
     let checked = engine.verify_registered().await;
     assert!(
-        matches!(checked, Err(StoreError::UnknownScheme { ref scheme }) if scheme == "zz-invented"),
+        matches!(checked, Err(IdentifierRepoError::UnknownScheme { ref scheme }) if scheme == "zz-invented"),
         "the boot check names the unregistered scheme: {checked:?}"
     );
 
