@@ -40,7 +40,7 @@ use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{create, delete, update};
+use crate::versioning::change::{Change, Write, commit, record_commit};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components};
 use crate::versioning::read::{read_version, version_at};
 
@@ -102,19 +102,18 @@ impl FerroEhrService {
 
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let committed = create(
+        let committed = commit(
             &mut tx,
-            Some(ehr_id),
-            Kind::Folder,
-            folder,
-            None,
-            &audit,
-            envelope,
+            Write::new(
+                Some(ehr_id),
+                Change::create(Kind::Folder, folder, None, envelope),
+                &audit,
+            ),
             &self.signing_ctx(),
-            None,
         )
         .await?;
         tx.commit().await?;
+        record_commit(&committed);
 
         // The write response is metadata-only: `Committed` already carries the
         // version identity and commit instant (RM common master06 §Committal and
@@ -269,20 +268,18 @@ impl FerroEhrService {
 
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let committed = update(
+        let committed = commit(
             &mut tx,
-            Some(ehr_id),
-            vo_id,
-            Kind::Folder,
-            folder,
-            expected,
-            None,
-            &audit,
-            envelope,
+            Write::new(
+                Some(ehr_id),
+                Change::modify(vo_id, Kind::Folder, folder, expected, None, envelope),
+                &audit,
+            ),
             &self.signing_ctx(),
         )
         .await?;
         tx.commit().await?;
+        record_commit(&committed);
 
         Ok(self.committed_response(ehr_id, &committed))
     }
@@ -324,18 +321,18 @@ impl FerroEhrService {
             )?,
             None => self.audit(change_type::DELETED, "DIRECTORY delete"),
         };
-        let committed = delete(
+        let committed = commit(
             &mut tx,
-            Some(ehr_id),
-            vo_id,
-            Kind::Folder,
-            expected,
-            &audit,
-            None,
+            Write::new(
+                Some(ehr_id),
+                Change::delete(vo_id, Kind::Folder, expected),
+                &audit,
+            ),
             &self.signing_ctx(),
         )
         .await?;
         tx.commit().await?;
+        record_commit(&committed);
         // The 204's identity: the NEW 523|deleted| version the delete
         // committed (RM common master06 §Logical Deletion) — the resource's
         // current state, carried so the wire serves the weak ETag +

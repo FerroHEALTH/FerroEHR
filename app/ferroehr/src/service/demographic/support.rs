@@ -182,15 +182,6 @@ pub(super) fn committed_response(
     ))
 }
 
-/// Count one committed write transaction — the `db_transactions` outcome
-/// metric every service write path records (no openEHR spec governs this —
-/// our own telemetry).
-pub(super) fn record_commit() {
-    crate::telemetry::metrics::metrics()
-        .db_transactions
-        .add(1, &[opentelemetry::KeyValue::new("outcome", "commit")]);
-}
-
 /// One `REVISION_HISTORY_ITEM` for a stored version row: its
 /// `OBJECT_VERSION_ID` and the change's `AUDIT_DETAILS` (RM common master04
 /// §Revision History). Built as the generated RM type so the serialized item
