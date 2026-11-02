@@ -347,7 +347,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .ok()
                 .flatten();
             Ok(negotiate::error_with_meta(
-                ApiError::from(e),
+                crate::overview::service_error::api_error(e),
                 &base,
                 Some("composition"),
                 meta.as_ref(),
@@ -446,7 +446,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .ok()
                 .flatten();
             Ok(negotiate::error_with_meta(
-                ApiError::from(e),
+                crate::overview::service_error::api_error(e),
                 &base,
                 Some("composition"),
                 meta.as_ref(),

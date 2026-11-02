@@ -476,13 +476,12 @@ async fn the_boot_self_check_refuses_a_cross_domain_grant() {
             "GRANT SELECT ON",
             "REVOKE SELECT ON",
         ),
-        // A function is the fourth breach shape: the identifier resolution
-        // runs as its owner and reads rows the caller cannot, so a clinical
-        // role holding EXECUTE reaches into the party domain without holding
-        // a single grant on its table.
+        // A function is the fourth breach shape: a trigger function runs as its
+        // owner, so a role holding EXECUTE across the boundary reaches the
+        // other domain without a single grant on its tables.
         (
-            "ferroehr_clinical",
-            "party.resolve_national_identifier(text, bytea)",
+            "ferroehr_party",
+            "clinical.subject_pseudonym_guard()",
             "function",
             "GRANT EXECUTE ON FUNCTION",
             "REVOKE EXECUTE ON FUNCTION",

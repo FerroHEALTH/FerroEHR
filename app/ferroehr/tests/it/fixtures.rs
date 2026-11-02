@@ -325,7 +325,7 @@ pub(crate) fn written_vo(
 pub(crate) async fn create_party(
     svc: &ferroehr::service::FerroEhrService,
     version: UpdateVersion<openehr_rm::prelude::Party>,
-) -> Result<ferroehr::ids::VoId, ferroehr::service::status::StatusError> {
+) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
     use ferroehr::service::demographic::types::PartyKind;
     use openehr_rm::prelude::Party;
     let committal = envelope_committal(&version);
@@ -347,7 +347,7 @@ pub(crate) async fn create_party(
 pub(crate) async fn create_relationship(
     svc: &ferroehr::service::FerroEhrService,
     version: UpdateVersion<openehr_rm::prelude::PartyRelationship>,
-) -> Result<ferroehr::ids::VoId, ferroehr::service::status::StatusError> {
+) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
     let committal = envelope_committal(&version);
     let body = version.data.expect("a create carries a PARTY_RELATIONSHIP");
     let created = svc.party_relationship_create(body, Some(committal)).await?;
@@ -478,4 +478,27 @@ pub(crate) async fn verify_chain(
         })
     })
     .collect()
+}
+
+/// Whether an ADL 1.4 archetype with `id` is stored, read off the store; identity
+/// is case-insensitive (BASE master05 §Composite Identifiers and Case).
+pub(crate) async fn archetype_stored(pool: &sqlx::PgPool, id: &str) -> bool {
+    sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM archetype_store WHERE lower(archetype_id) = lower($1))",
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .expect("the archetype store answers")
+}
+
+/// Whether an ADL2 artefact with `ARCHETYPE_HRID` `hrid` is stored, read off the
+/// store; HRID identity is case-insensitive (BASE master05 §Composite
+/// Identifiers and Case).
+pub(crate) async fn artefact_stored(pool: &sqlx::PgPool, hrid: &str) -> bool {
+    sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM adl2_artefact WHERE lower(hrid) = lower($1))")
+        .bind(hrid)
+        .fetch_one(pool)
+        .await
+        .expect("the artefact store answers")
 }

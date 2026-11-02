@@ -357,9 +357,8 @@ async fn strict_verify_on_read_rejects_a_tampered_row() {
     let tampered = svc
         .composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
         .await;
-    // NOTE: a signing/integrity failure surfaces at the service boundary
-    // as `StatusError { status: Exception }` (the adapter maps it to the same wire 5xx
-    // the old `ApiError::Internal` produced).
+    // A signing/integrity failure surfaces at the service boundary as
+    // `ServiceError::Signing`, which the adapter maps to a 5xx.
     assert!(
         matches!(tampered, Err(ServiceError::Signing(_))),
         "strict verify_on_read must 5xx a tampered signature, got {tampered:?}"

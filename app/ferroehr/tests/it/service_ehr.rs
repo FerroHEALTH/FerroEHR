@@ -448,9 +448,8 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     .map(|m| m.uid)
     .expect("deactivating EHR_STATUS is allowed");
 
-    // A blocked EHR-content write is 409 Conflict (the generic `conflict`
-    // → `ServiceError::Conflict` on the composition write path; the directory
-    // write path still surfaces the raw `StatusError`).
+    // A blocked EHR-content write is 409 Conflict (`ServiceError::Conflict` on
+    // both the composition and the directory write path).
     let comp_blocked =
         |r: &Result<Committed, ServiceError>| matches!(r, Err(ServiceError::Conflict(_)));
     let dir_blocked = |r: &Result<ferroehr::service::response::ResourceMeta, ServiceError>| {

@@ -76,8 +76,8 @@ async fn a_template_upload_racing_the_delete_of_its_archetype_never_both_succeed
         let deleted = delete.await.expect("the delete task");
         let uploaded = upload.await.expect("the upload task");
 
-        let template_stored = svc.has_artefact(&template).await.expect("has");
-        let observation_stored = svc.has_artefact(&observation).await.expect("has");
+        let template_stored = crate::fixtures::artefact_stored(&db.pool(), &template).await;
+        let observation_stored = crate::fixtures::artefact_stored(&db.pool(), &observation).await;
         match (deleted, uploaded) {
             (Ok(()), Err(ServiceError::ValidationFailed(violations))) => {
                 assert!(

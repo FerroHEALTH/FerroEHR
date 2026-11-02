@@ -664,15 +664,14 @@ impl From<AqlError> for ServiceError {
 
 #[cfg(test)]
 mod tests {
-    use openehr_its::rest::runtime::ApiError;
-
     use super::{AqlError, ExecError, map_exec_error};
     use crate::service::error::ServiceError;
     use crate::service::refusal::Malformed;
 
-    /// Whether `error` answers the wire's `503` (plus `Retry-After`).
-    fn sheds(error: ServiceError) -> bool {
-        matches!(ApiError::from(error), ApiError::ServiceUnavailable(_))
+    /// Whether `error` is the overload the wire answers `503` (plus
+    /// `Retry-After`).
+    fn sheds(error: &ServiceError) -> bool {
+        matches!(error, ServiceError::Overloaded(_))
     }
 
     /// The query path's database leg is classified, not blanket-500: a
@@ -686,17 +685,18 @@ mod tests {
             sqlx::Error::PoolTimedOut,
         )));
         assert!(
-            matches!(&shed, ServiceError::Overloaded(_)) && sheds(shed),
+            sheds(&shed),
             "a pool-acquire timeout on the query path sheds"
         );
 
         let fault = map_exec_error(AqlError::Exec(ExecError::Database(
             sqlx::Error::RowNotFound,
         )));
-        match ApiError::from(fault) {
-            ApiError::Internal(message) => assert!(
-                !message.contains("RowNotFound"),
-                "the driver diagnostic never reaches the wire body, got {message}"
+        match fault {
+            ServiceError::Fault(curated) => assert!(
+                !curated.message.contains("RowNotFound"),
+                "the driver diagnostic never reaches the wire body, got {}",
+                curated.message
             ),
             other => {
                 panic!("an unclassified driver failure is still a server fault, got {other:?}")
@@ -790,7 +790,7 @@ mod tests {
             matches!(failure, AqlError::Exec(ExecError::Acquire(_))),
             "the failure carries the acquire phase, got {failure:?}"
         );
-        assert!(sheds(map_exec_error(failure)));
+        assert!(sheds(&map_exec_error(failure)));
         let collected = crate::aql::exec::collect_scope(&pool, &ir, &params, &ctx)
             .await
             .expect_err("the scope collection acquires too");
@@ -809,6 +809,6 @@ mod tests {
         let err = map_exec_error(AqlError::Exec(ExecError::Assembly(
             crate::storage::error::StorageError::Acquire(failure),
         )));
-        assert!(matches!(&err, ServiceError::Overloaded(_)) && sheds(err));
+        assert!(sheds(&err));
     }
 }

@@ -30,7 +30,6 @@
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
-use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::version_update::lifecycle_state_coded;
 use serde_json::{Value, json};
@@ -1734,15 +1733,15 @@ async fn data_carrying_deleted_lifecycle_is_refused_on_both_routes() {
         .update_composition(ehr_uuid, vo_uuid, direct)
         .await
         .expect_err("a data-carrying 523 header is refused");
-    let err = StatusError::from(err);
+    let err = err.flattened();
     assert!(
         matches!(
             err,
-            StatusError {
-                status: ServiceStatus::ContentInvalid,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
                 ..
             }
-        ) && err.message.contains("Logical Deletion"),
+        ) && err.message().contains("Logical Deletion"),
         "expected the 422 naming §Logical Deletion, got {err:?}"
     );
 

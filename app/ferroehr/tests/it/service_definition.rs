@@ -53,7 +53,7 @@ async fn archetype_upload_get_list_replace_delete() {
     let adl = fixture(ARCHETYPE_REL);
 
     // Precondition: not present yet.
-    assert!(!svc.has_archetype(ARCHETYPE_ID).await.unwrap());
+    assert!(!crate::fixtures::archetype_stored(&db.pool(), ARCHETYPE_ID).await);
     assert_eq!(
         svc.list_archetypes_adl14(Page::all()).await.unwrap(),
         Vec::<String>::new()
@@ -68,7 +68,7 @@ async fn archetype_upload_get_list_replace_delete() {
 
     // upload → the archetype is present.
     svc.upload_archetype(adl.clone()).await.expect("upload");
-    assert!(svc.has_archetype(ARCHETYPE_ID).await.unwrap());
+    assert!(crate::fixtures::archetype_stored(&db.pool(), ARCHETYPE_ID).await);
     assert_eq!(
         svc.list_archetypes_adl14(Page::all()).await.unwrap().len(),
         1
@@ -100,7 +100,7 @@ async fn archetype_upload_get_list_replace_delete() {
 
     // delete → the archetype is gone.
     svc.delete_archetype(ARCHETYPE_ID).await.expect("delete");
-    assert!(!svc.has_archetype(ARCHETYPE_ID).await.unwrap());
+    assert!(!crate::fixtures::archetype_stored(&db.pool(), ARCHETYPE_ID).await);
     assert_eq!(
         svc.list_archetypes_adl14(Page::all()).await.unwrap(),
         Vec::<String>::new()
@@ -126,11 +126,7 @@ async fn archetype_with_revision_history_section_uploads() {
     svc.upload_archetype(adl.clone())
         .await
         .expect("a 1.4 archetype with a revision_history section is valid and uploads");
-    assert!(
-        svc.has_archetype(REVISION_HISTORY_ARCHETYPE_ID)
-            .await
-            .unwrap()
-    );
+    assert!(crate::fixtures::archetype_stored(&db.pool(), REVISION_HISTORY_ARCHETYPE_ID).await);
     assert_eq!(
         svc.get_archetype(REVISION_HISTORY_ARCHETYPE_ID)
             .await
@@ -788,11 +784,11 @@ async fn adl2_upload_get_list_by_kind_delete() {
     assert_eq!(svc.artefacts_count().await.unwrap(), 0);
 
     // upload (OPT) → the artefact is present (keyed by ARCHETYPE_HRID).
-    assert!(!svc.has_artefact(ADL2_OPT_HRID).await.unwrap());
+    assert!(!crate::fixtures::artefact_stored(&db.pool(), ADL2_OPT_HRID).await);
     svc.template_adl2_upload(&adl2_opt)
         .await
         .expect("upload opt");
-    assert!(svc.has_artefact(ADL2_OPT_HRID).await.unwrap());
+    assert!(crate::fixtures::artefact_stored(&db.pool(), ADL2_OPT_HRID).await);
 
     // get returns the source verbatim.
     assert_eq!(
@@ -857,7 +853,7 @@ async fn adl2_upload_get_list_by_kind_delete() {
 
     // delete_artefact → Post: gone.
     svc.delete_artefact(ADL2_OPT_HRID).await.expect("delete");
-    assert!(!svc.has_artefact(ADL2_OPT_HRID).await.unwrap());
+    assert!(!crate::fixtures::artefact_stored(&db.pool(), ADL2_OPT_HRID).await);
     assert_eq!(svc.artefacts_count().await.unwrap(), 2);
 }
 

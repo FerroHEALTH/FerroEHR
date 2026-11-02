@@ -396,7 +396,7 @@ impl FerroEhrService {
                 .map_err(|e| {
                     ServiceError::precondition(format!(
                         "EXTRACT_SPEC.criteria[{idx}] did not evaluate as AQL: {}",
-                        crate::service::status::StatusError::from(e).message
+                        e.message()
                     ))
                 })?;
             let empty = Vec::new();

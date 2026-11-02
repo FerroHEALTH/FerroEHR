@@ -25,7 +25,8 @@
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::committer::{CommitterIdentity, with_committer};
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::Invalid;
 use ferroehr::service::version_update::Committal;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
 use serde_json::{Value, json};
@@ -128,9 +129,27 @@ async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId) {
     (db, svc, ehr_id)
 }
 
-/// The status a write reports, `None` when it committed.
-fn outcome<T>(result: Result<T, impl Into<StatusError>>) -> Option<ServiceStatus> {
-    result.err().map(|e| e.into().status)
+/// The refusal class a write reports.
+#[derive(Debug, PartialEq)]
+enum Refused {
+    /// A `403`: the committer is not the caller.
+    Forbidden,
+    /// A `422` of the generic content kind.
+    ContentInvalid,
+    /// Any other refusal.
+    Other,
+}
+
+/// The refusal a write reports, `None` when it committed.
+fn outcome<T>(result: Result<T, impl Into<ServiceError>>) -> Option<Refused> {
+    result.err().map(|e| match e.into().flattened() {
+        ServiceError::Forbidden(_) => Refused::Forbidden,
+        ServiceError::Unprocessable {
+            kind: Invalid::Content,
+            ..
+        } => Refused::ContentInvalid,
+        _ => Refused::Other,
+    })
 }
 
 /// A composition create by `identity` naming `committer`.
@@ -139,7 +158,7 @@ async fn composition_create(
     ehr: EhrId,
     identity: Option<CommitterIdentity>,
     committer: &Value,
-) -> Option<ServiceStatus> {
+) -> Option<Refused> {
     let write = svc.create_composition(ehr, version(&composition("c"), "249", None, committer));
     outcome(with_committer(identity, Box::pin(write)).await)
 }
@@ -170,7 +189,7 @@ async fn composition_create_checks_the_committer() {
     );
     assert_eq!(
         composition_create(&svc, ehr, Some(professional()), &mismatching()).await,
-        Some(ServiceStatus::AuthFailure),
+        Some(Refused::Forbidden),
         "another login of the caller's issuer is refused"
     );
     assert_eq!(
@@ -181,7 +200,7 @@ async fn composition_create_checks_the_committer() {
             &identified("dr.bakker", "ferroehr")
         )
         .await,
-        Some(ServiceStatus::AuthFailure),
+        Some(Refused::Forbidden),
         "another login this server holds is refused"
     );
     assert_eq!(
@@ -224,7 +243,7 @@ async fn a_basic_login_is_checked_against_this_server() {
     );
     assert_eq!(
         composition_create(&svc, ehr, Some(basic), &identified("bob", "ferroehr")).await,
-        Some(ServiceStatus::AuthFailure)
+        Some(Refused::Forbidden)
     );
 }
 
@@ -248,7 +267,7 @@ async fn party_self_is_the_persons_committer_only() {
     let party_self = json!({ "_type": "PARTY_SELF" });
     assert_eq!(
         composition_create(&svc, ehr, Some(professional()), &party_self).await,
-        Some(ServiceStatus::AuthFailure),
+        Some(Refused::Forbidden),
         "a professional may not state that the record subject committed"
     );
 
@@ -276,7 +295,7 @@ async fn a_direct_write_runs_the_committer_invariants() {
     let empty_name = json!({ "_type": "PARTY_IDENTIFIED", "name": "" });
     assert_eq!(
         composition_create(&svc, ehr, None, &empty_name).await,
-        Some(ServiceStatus::ContentInvalid),
+        Some(Refused::ContentInvalid),
         "PARTY_IDENTIFIED.Name_valid, as on the CONTRIBUTION path"
     );
 }
@@ -300,10 +319,7 @@ async fn ehr_create_checks_the_committer() {
         }
     };
     assert_eq!(create(matching()).await, None);
-    assert_eq!(
-        create(mismatching()).await,
-        Some(ServiceStatus::AuthFailure)
-    );
+    assert_eq!(create(mismatching()).await, Some(Refused::Forbidden));
 }
 
 #[tokio::test]
@@ -324,10 +340,7 @@ async fn ehr_status_update_checks_the_committer() {
             outcome(with_committer(Some(professional()), Box::pin(write)).await)
         }
     };
-    assert_eq!(
-        replace(mismatching()).await,
-        Some(ServiceStatus::AuthFailure)
-    );
+    assert_eq!(replace(mismatching()).await, Some(Refused::Forbidden));
     assert_eq!(replace(matching()).await, None);
 }
 
@@ -338,10 +351,7 @@ async fn directory_create_checks_the_committer() {
         let write = svc.create_directory(ehr, version(&folder("root"), "249", None, &committer));
         async move { outcome(with_committer(Some(professional()), Box::pin(write)).await) }
     };
-    assert_eq!(
-        create(mismatching()).await,
-        Some(ServiceStatus::AuthFailure)
-    );
+    assert_eq!(create(mismatching()).await, Some(Refused::Forbidden));
     assert_eq!(create(matching()).await, None);
 }
 
@@ -356,10 +366,7 @@ async fn demographic_create_checks_the_committer() {
         async move { outcome(with_committer(Some(professional()), write).await) }
     };
     assert_eq!(create(matching()).await, None);
-    assert_eq!(
-        create(mismatching()).await,
-        Some(ServiceStatus::AuthFailure)
-    );
+    assert_eq!(create(mismatching()).await, Some(Refused::Forbidden));
 }
 
 #[tokio::test]
@@ -380,12 +387,12 @@ async fn contribution_checks_every_committer() {
     assert_eq!(commit(matching(), matching()).await, None);
     assert_eq!(
         commit(mismatching(), matching()).await,
-        Some(ServiceStatus::AuthFailure),
+        Some(Refused::Forbidden),
         "the CONTRIBUTION audit's committer"
     );
     assert_eq!(
         commit(matching(), mismatching()).await,
-        Some(ServiceStatus::AuthFailure),
+        Some(Refused::Forbidden),
         "a member's commit_audit committer"
     );
 }

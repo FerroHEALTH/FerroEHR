@@ -34,7 +34,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::Invalid;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use testcontainers::core::{ContainerPort, Mount};
@@ -174,9 +175,11 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     .await
     .expect("a code system the server does not serve leaves the binding unverified");
     assert!(
-        svc.has_artefact("openEHR-EHR-OBSERVATION.snomed_unserved.v1.0.0")
-            .await
-            .expect("has_artefact answers"),
+        crate::fixtures::artefact_stored(
+            &db.pool(),
+            "openEHR-EHR-OBSERVATION.snomed_unserved.v1.0.0"
+        )
+        .await,
         "the unverified archetype is stored"
     );
 
@@ -190,25 +193,33 @@ async fn ferroterm_decides_vetdf_for_the_three_binding_outcomes() {
     .expect("a concept the served system defines resolves");
 
     // 3. A concept the served shaped system does not define: VETDF.
-    let err = StatusError::from(
-        svc.template_adl2_upload(&archetype(
+    let err = (svc
+        .template_adl2_upload(&archetype(
             "shaped_absent",
             "CNF-SHAPED",
             &format!("{SHAPED_SYSTEM}/id/{SHAPED_ABSENT}"),
         ))
         .await
-        .expect_err("a concept absent from a served system is refused"),
-    );
-    assert_eq!(err.status, ServiceStatus::ContentInvalid);
+        .expect_err("a concept absent from a served system is refused"))
+    .flattened();
+    assert!(matches!(
+        &err,
+        ServiceError::Unprocessable {
+            kind: Invalid::Content,
+            ..
+        }
+    ));
     assert!(
-        err.message.contains("VETDF") && err.message.contains(SHAPED_ABSENT),
+        err.message().contains("VETDF") && err.message().contains(SHAPED_ABSENT),
         "the rejection names the rule and the code: {}",
-        err.message
+        err.message()
     );
     assert!(
-        !svc.has_artefact("openEHR-EHR-OBSERVATION.shaped_absent.v1.0.0")
-            .await
-            .expect("has_artefact answers"),
+        !crate::fixtures::artefact_stored(
+            &db.pool(),
+            "openEHR-EHR-OBSERVATION.shaped_absent.v1.0.0"
+        )
+        .await,
         "a refused archetype is not stored"
     );
 }
@@ -235,9 +246,8 @@ async fn a_ckm_archetype_with_snomed_bindings_uploads_when_snomed_is_not_served(
         .await
         .expect("SNOMED CT bindings on a server without SNOMED CT are unverifiable, not invalid");
     assert!(
-        svc.has_artefact("openEHR-EHR-OBSERVATION.refraction.v1.0.0")
-            .await
-            .expect("has_artefact answers"),
+        crate::fixtures::artefact_stored(&db.pool(), "openEHR-EHR-OBSERVATION.refraction.v1.0.0")
+            .await,
         "the CKM archetype is stored"
     );
 }

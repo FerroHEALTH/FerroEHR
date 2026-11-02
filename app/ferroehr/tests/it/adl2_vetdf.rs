@@ -30,7 +30,8 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::Invalid;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
@@ -144,34 +145,39 @@ async fn service_at(server: &MockServer) -> (testkit::TestDb, FerroEhrService) {
     (db, svc)
 }
 
-async fn assert_vetdf_refusal(svc: &FerroEhrService) {
-    let err = StatusError::from(
-        svc.template_adl2_upload(&archetype_with_external_binding())
-            .await
-            .expect_err("a term the served code system does not contain must be refused"),
-    );
-    assert_eq!(
-        err.status,
-        ServiceStatus::ContentInvalid,
+async fn assert_vetdf_refusal(db: &testkit::TestDb, svc: &FerroEhrService) {
+    let err = (svc
+        .template_adl2_upload(&archetype_with_external_binding())
+        .await
+        .expect_err("a term the served code system does not contain must be refused"))
+    .flattened();
+    assert!(
+        matches!(
+            &err,
+            ServiceError::Unprocessable {
+                kind: Invalid::Content,
+                ..
+            }
+        ),
         "VETDF is a content-invalid (422) failure"
     );
     assert!(
-        err.message.contains("VETDF"),
+        err.message().contains("VETDF"),
         "the rejection carries the VETDF rule code: {}",
-        err.message
+        err.message()
     );
     assert!(
-        !svc.has_artefact(HRID).await.expect("has_artefact answers"),
+        !crate::fixtures::artefact_stored(&db.pool(), HRID).await,
         "a rejected artefact is not stored"
     );
 }
 
-async fn assert_accepted(svc: &FerroEhrService) {
+async fn assert_accepted(db: &testkit::TestDb, svc: &FerroEhrService) {
     svc.template_adl2_upload(&archetype_with_external_binding())
         .await
         .expect("the archetype is accepted");
     assert!(
-        svc.has_artefact(HRID).await.expect("has_artefact answers"),
+        crate::fixtures::artefact_stored(&db.pool(), HRID).await,
         "the accepted artefact is stored"
     );
 }
@@ -188,8 +194,8 @@ async fn a_code_absent_from_a_served_system_is_rejected_with_vetdf() {
         )),
     )
     .await;
-    let (_db, svc) = service_at(&server).await;
-    assert_vetdf_refusal(&svc).await;
+    let (db, svc) = service_at(&server).await;
+    assert_vetdf_refusal(&db, &svc).await;
 }
 
 #[tokio::test]
@@ -205,8 +211,8 @@ async fn a_code_system_the_server_does_not_serve_leaves_the_binding_unverified()
         )),
     )
     .await;
-    let (_db, svc) = service_at(&server).await;
-    assert_accepted(&svc).await;
+    let (db, svc) = service_at(&server).await;
+    assert_accepted(&db, &svc).await;
 }
 
 #[tokio::test]
@@ -225,8 +231,8 @@ async fn a_resolving_lookup_is_accepted() {
         })),
     )
     .await;
-    let (_db, svc) = service_at(&server).await;
-    assert_accepted(&svc).await;
+    let (db, svc) = service_at(&server).await;
+    assert_accepted(&db, &svc).await;
 }
 
 #[tokio::test]
@@ -236,8 +242,8 @@ async fn a_bare_404_on_a_served_system_is_rejected_after_the_probe() {
     // code system served, so the miss means the code is absent.
     mount_lookup(&server, ResponseTemplate::new(404)).await;
     mount_system_probe(&server, 1).await;
-    let (_db, svc) = service_at(&server).await;
-    assert_vetdf_refusal(&svc).await;
+    let (db, svc) = service_at(&server).await;
+    assert_vetdf_refusal(&db, &svc).await;
 }
 
 #[tokio::test]
@@ -245,8 +251,8 @@ async fn a_bare_404_on_an_unserved_system_leaves_the_binding_unverified() {
     let server = MockServer::start().await;
     mount_lookup(&server, ResponseTemplate::new(404)).await;
     mount_system_probe(&server, 0).await;
-    let (_db, svc) = service_at(&server).await;
-    assert_accepted(&svc).await;
+    let (db, svc) = service_at(&server).await;
+    assert_accepted(&db, &svc).await;
 }
 
 #[tokio::test]
@@ -255,6 +261,6 @@ async fn a_bare_404_the_probe_cannot_resolve_leaves_the_binding_unverified() {
     // No `CodeSystem` search at all: the server cannot say whether it serves
     // the system, so nothing was verified and nothing is refused.
     mount_lookup(&server, ResponseTemplate::new(404)).await;
-    let (_db, svc) = service_at(&server).await;
-    assert_accepted(&svc).await;
+    let (db, svc) = service_at(&server).await;
+    assert_accepted(&db, &svc).await;
 }

@@ -176,22 +176,6 @@ impl FerroEhrService {
 // ── domain logic (the ServiceError layer under the catalog) ──────────────────
 
 impl FerroEhrService {
-    /// True if an ADL 1.4 archetype with id `an_id` is stored. Identity is
-    /// compared case-insensitively (BASE master05 §Composite Identifiers and
-    /// Case).
-    ///
-    /// # Errors
-    ///
-    /// A database failure (`500`).
-    pub async fn has_archetype(&self, an_id: &str) -> Result<bool, ServiceError> {
-        Ok(sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM archetype_store WHERE lower(archetype_id) = lower($1))",
-        )
-        .bind(an_id)
-        .fetch_one(&mut *acquire(&self.pool).await?)
-        .await?)
-    }
-
     /// Store a valid ADL 1.4 archetype, replacing any case-variant of the same
     /// id in the same transaction; invalid source → `invalid_archetype` (`422`).
     /// Returns the stored `ARCHETYPE_ID`.

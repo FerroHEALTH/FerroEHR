@@ -66,22 +66,6 @@ const ADL2_CACHE_NS: &str = "adl2\u{1f}";
 // ── domain logic (the ServiceError layer under the catalog) ──────────────────
 
 impl FerroEhrService {
-    /// True if an ADL2 artefact with `ARCHETYPE_HRID` `an_id` is stored. HRID
-    /// identity is case-insensitive (BASE master05 §Composite Identifiers and
-    /// Case).
-    ///
-    /// # Errors
-    ///
-    /// A database failure (`500`).
-    pub async fn has_artefact(&self, an_id: &str) -> Result<bool, ServiceError> {
-        Ok(sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM adl2_artefact WHERE lower(hrid) = lower($1))",
-        )
-        .bind(an_id)
-        .fetch_one(&mut *acquire(&self.pool).await?)
-        .await?)
-    }
-
     /// Build the [`ArchetypeRepository`] of every stored ADL2 artefact, so the
     /// `openehr-adl` engine can resolve specialisation parents +
     /// `use_archetype` fillers when validating an upload or projecting an OPT:
