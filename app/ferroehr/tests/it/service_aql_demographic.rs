@@ -24,6 +24,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
@@ -144,7 +145,7 @@ fn role(name: &str, id: &str, system: &str) -> Value {
 /// Creates a party and returns its `OBJECT_VERSION_ID`.
 async fn create(svc: &FerroEhrService, kind: PartyKind, body: &Value) -> String {
     let created = svc
-        .party_create(kind, typed(body), None)
+        .party_create(kind, WriteRequest::new(typed(body)))
         .await
         .unwrap_or_else(|e| panic!("create {kind:?}: {e:?}"));
     created.body["uid"]["value"]
@@ -322,8 +323,7 @@ async fn latest_version_and_deleted_parties() {
             PartyKind::Person,
             vo.clone(),
             v1.clone(),
-            typed(&person("Jane Roe", "P-9", "urn:bsn")),
-            None,
+            WriteRequest::new(typed(&person("Jane Roe", "P-9", "urn:bsn"))),
         )
         .await
         .expect("update");
@@ -346,9 +346,14 @@ async fn latest_version_and_deleted_parties() {
     );
 
     let doomed = create(&svc, PartyKind::Person, &person("Gone", "P-5", "urn:bsn")).await;
-    svc.party_delete(PartyKind::Person, doomed.clone(), Some(doomed), None)
-        .await
-        .expect("delete");
+    svc.party_delete(
+        PartyKind::Person,
+        doomed.clone(),
+        Some(doomed),
+        WriteRequest::new(()),
+    )
+    .await
+    .expect("delete");
     for aql in [
         by_id,
         // The non-streaming shape (ordered) and the streaming one (limited).
@@ -471,9 +476,14 @@ async fn a_party_joins_to_the_content_of_its_ehr() {
     let ada = linked(&svc, "Ada", "P-1", &["visit b", "visit a"]).await;
     let bram = linked(&svc, "Bram", "P-2", &["visit c"]).await;
     let gone = linked(&svc, "Gone", "P-3", &["visit d"]).await;
-    svc.party_delete(PartyKind::Person, gone.clone(), Some(gone), None)
-        .await
-        .expect("delete");
+    svc.party_delete(
+        PartyKind::Person,
+        gone.clone(),
+        Some(gone),
+        WriteRequest::new(()),
+    )
+    .await
+    .expect("delete");
     // An EHR with content and no party.
     let orphan = crate::fixtures::create_ehr(&svc).await;
     svc.create_composition(
@@ -631,10 +641,11 @@ async fn subject_ehr(
     class: &str,
     composition: &str,
 ) -> ferroehr::ids::EhrId {
-    let ehr = Box::pin(svc.create_ehr_meta(Some(status_naming(id, namespace, class)), None))
-        .await
-        .unwrap_or_else(|e| panic!("create_ehr naming {class} {id}: {e:?}"))
-        .0;
+    let ehr =
+        Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_naming(id, namespace, class)))))
+            .await
+            .unwrap_or_else(|e| panic!("create_ehr naming {class} {id}: {e:?}"))
+            .0;
     svc.create_composition(
         ehr,
         crate::fixtures::uv(&crate::fixtures::composition(composition), "249", None),
@@ -689,9 +700,14 @@ async fn an_ehr_whose_subject_names_the_party_joins() {
     // The party is deleted after its EHR was created.
     let gone = create(&svc, PartyKind::Person, &person("Gone", "P-5", "urn:bsn")).await;
     subject_ehr(&svc, party_id(&gone), "local", "PERSON", "visit g").await;
-    svc.party_delete(PartyKind::Person, gone.clone(), Some(gone), None)
-        .await
-        .expect("delete");
+    svc.party_delete(
+        PartyKind::Person,
+        gone.clone(),
+        Some(gone),
+        WriteRequest::new(()),
+    )
+    .await
+    .expect("delete");
 
     let rows = run(
         &svc,

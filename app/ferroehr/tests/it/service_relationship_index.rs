@@ -13,6 +13,7 @@
               intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -95,16 +96,11 @@ async fn relationship_typed_calls_round_trip() {
     assert_eq!(by_ver["_type"], "ORIGINAL_VERSION");
 
     // The update under `If-Match` = the current version → the new version uid.
-    let update: openehr_its::rest::generated::common::UpdateVersion<
-        openehr_rm::prelude::PartyRelationship,
-    > = uv(&relationship("guardian-of", src, tgt), "251", Some(&v1));
-    let committal = crate::fixtures::envelope_committal(&update);
     let v2 = svc
         .party_relationship_update(
             vo_id.to_string(),
             v1.clone(),
-            update.data.expect("a PARTY_RELATIONSHIP"),
-            Some(committal),
+            uv(&relationship("guardian-of", src, tgt), "251", Some(&v1)),
         )
         .await
         .expect("update_party_relationship")
@@ -121,7 +117,7 @@ async fn relationship_typed_calls_round_trip() {
 
     // The delete of the latest version → the relationship is no longer present.
     let del = svc
-        .party_relationship_delete(v2.clone(), None, None)
+        .party_relationship_delete(v2.clone(), None, WriteRequest::new(()))
         .await
         .expect("delete_party_relationship")
         .meta
@@ -154,7 +150,11 @@ async fn relationship_lifecycle_end_to_end() {
 
     // create → v1
     let created = svc
-        .party_relationship_create(typed(&relationship("parent-of", src, tgt)), None)
+        .party_relationship_create(WriteRequest::new(typed(&relationship(
+            "parent-of",
+            src,
+            tgt,
+        ))))
         .await
         .expect("create relationship");
     assert_eq!(created.body["_type"], "PARTY_RELATIONSHIP");
@@ -198,8 +198,7 @@ async fn relationship_lifecycle_end_to_end() {
         .party_relationship_update(
             vo.clone(),
             ovid_v1.clone(),
-            typed(&relationship("guardian-of", src, tgt)),
-            None,
+            WriteRequest::new(typed(&relationship("guardian-of", src, tgt))),
         )
         .await
         .expect("update relationship");
@@ -219,8 +218,7 @@ async fn relationship_lifecycle_end_to_end() {
         .party_relationship_update(
             vo.clone(),
             ovid_v1.clone(),
-            typed(&relationship("stale", src, tgt)),
-            None,
+            WriteRequest::new(typed(&relationship("stale", src, tgt))),
         )
         .await;
     assert!(
@@ -255,7 +253,7 @@ async fn relationship_lifecycle_end_to_end() {
 
     // delete (mandatory OBJECT_VERSION_ID) → 204; subsequent get → 204 (Null)
     let deleted = svc
-        .party_relationship_delete(ovid_v2.clone(), None, None)
+        .party_relationship_delete(ovid_v2.clone(), None, WriteRequest::new(()))
         .await
         .expect("delete");
     assert!(deleted.is_empty());
@@ -306,7 +304,7 @@ async fn relationship_error_cases() {
 
     // a PERSON is not a relationship → wrong-kind get is 404
     let created = svc
-        .party_relationship_create(typed(&relationship("r", "a", "b")), None)
+        .party_relationship_create(WriteRequest::new(typed(&relationship("r", "a", "b"))))
         .await
         .expect("create");
     let vo = vo_uuid(&created.body);

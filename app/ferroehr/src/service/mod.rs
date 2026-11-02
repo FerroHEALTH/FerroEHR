@@ -52,6 +52,7 @@ pub mod platform_service;
 pub mod refusal;
 pub mod response;
 pub mod version_update;
+mod write;
 
 use crate::service::definition::lineage::{ArchetypeLineageCache, archetype_lineage_cache};
 use crate::service::ehr::access::EhrAccessCache;

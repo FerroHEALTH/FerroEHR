@@ -37,6 +37,7 @@
 // `float_cmp`: the magnitudes are exact whole numbers seeded by the test and
 // round-tripped losslessly, so exact comparison is intended.
 
+use ferroehr::service::version_update::WriteRequest;
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
@@ -62,33 +63,35 @@ const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
 const MAG_PATH: &str = "data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
 
 /// The `UPDATE_VERSION` commit envelope for a bare-RM write, mirroring the
-/// adapter's `mk_update_version` (the RM object is the `data`, `If-Match` is the
+/// adapter's `committal::write_request` (the RM object is the `data`, `If-Match` is the
 /// `preceding_version_uid`, and the audit carries the change type + committer).
-fn uv<T: serde::de::DeserializeOwned>(
+fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
     data: &Value,
     change_code: &str,
     preceding: Option<&str>,
-) -> UpdateVersion<T> {
-    UpdateVersion {
-        preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the fixture commit body decodes as its RM type"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded(change_code),
-            description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-            )
-            .expect("committer"),
+) -> R {
+    R::from_version({
+        UpdateVersion {
+            preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
+            lifecycle_state: lifecycle_state_coded("532"),
+            attestations: None,
+            data: openehr_its::json::from_canonical_value(data)
+                .expect("the fixture commit body decodes as its RM type"),
+            commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+                _type: None,
+                system_id: None,
+                change_type: change_type_coded(change_code),
+                description: None,
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
+                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
+                )
+                .expect("committer"),
+                additional_properties: BTreeMap::new(),
+            }),
+            signature: None,
             additional_properties: BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: BTreeMap::new(),
-    }
+        }
+    })
 }
 
 /// A composition variant with the given display name and leaf magnitude.
@@ -3308,8 +3311,7 @@ async fn deleted_compositions_stay_out_of_unscoped_streaming_queries() {
     svc.delete_composition(
         ferroehr::ids::EhrId(ehr_id.parse().expect("ehr_id uuid")),
         &doomed.parse().expect("ovid"),
-        None,
-        None,
+        WriteRequest::new(()),
     )
     .await
     .expect("delete_composition");
@@ -4058,9 +4060,13 @@ async fn or_branch_compositions_are_projected() {
         .await
         .expect("update_composition")
         .version_uid();
-    svc.delete_composition(ehr_uuid, &referral.parse().expect("ovid"), None, None)
-        .await
-        .expect("delete_composition");
+    svc.delete_composition(
+        ehr_uuid,
+        &referral.parse().expect("ovid"),
+        WriteRequest::new(()),
+    )
+    .await
+    .expect("delete_composition");
     let current = run_aql(&svc, &aql, ehr_scope(&ehr_id)).await;
     assert_eq!(
         rows(&current),
@@ -4175,18 +4181,22 @@ async fn the_patient_scope_confines_every_query_shape() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let own = Box::pin(svc.create_ehr_meta(
-        Some(status_with_subject("test.patients", "PATIENT-A")),
-        None,
-    ))
+    let own = Box::pin(
+        svc.create_ehr_meta(WriteRequest::new(Some(status_with_subject(
+            "test.patients",
+            "PATIENT-A",
+        )))),
+    )
     .await
     .map(|(id, _)| id)
     .expect("create the in-scope EHR")
     .to_string();
-    let other = Box::pin(svc.create_ehr_meta(
-        Some(status_with_subject("test.patients", "PATIENT-B")),
-        None,
-    ))
+    let other = Box::pin(
+        svc.create_ehr_meta(WriteRequest::new(Some(status_with_subject(
+            "test.patients",
+            "PATIENT-B",
+        )))),
+    )
     .await
     .map(|(id, _)| id)
     .expect("create the out-of-scope EHR")
@@ -4273,19 +4283,25 @@ async fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
 
     let mut shared = Vec::new();
     for namespace in ["test.patients", "other.patients"] {
-        let ehr =
-            Box::pin(svc.create_ehr_meta(Some(status_with_subject(namespace, "PATIENT-X")), None))
-                .await
-                .map(|(id, _)| id)
-                .expect("create an EHR under the shared id")
-                .to_string();
+        let ehr = Box::pin(
+            svc.create_ehr_meta(WriteRequest::new(Some(status_with_subject(
+                namespace,
+                "PATIENT-X",
+            )))),
+        )
+        .await
+        .map(|(id, _)| id)
+        .expect("create an EHR under the shared id")
+        .to_string();
         create_comp(&svc, &ehr, "BP", 80.0).await;
         shared.push(ehr);
     }
-    let unique = Box::pin(svc.create_ehr_meta(
-        Some(status_with_subject("test.patients", "PATIENT-U")),
-        None,
-    ))
+    let unique = Box::pin(
+        svc.create_ehr_meta(WriteRequest::new(Some(status_with_subject(
+            "test.patients",
+            "PATIENT-U",
+        )))),
+    )
     .await
     .map(|(id, _)| id)
     .expect("create the EHR under a unique id")
@@ -4354,12 +4370,16 @@ async fn a_configured_patient_namespace_admits_the_pair_exactly() {
 
     let mut by_namespace = Vec::new();
     for namespace in ["test.patients", "other.patients"] {
-        let ehr =
-            Box::pin(svc.create_ehr_meta(Some(status_with_subject(namespace, "PATIENT-X")), None))
-                .await
-                .map(|(id, _)| id)
-                .expect("create an EHR under the shared id")
-                .to_string();
+        let ehr = Box::pin(
+            svc.create_ehr_meta(WriteRequest::new(Some(status_with_subject(
+                namespace,
+                "PATIENT-X",
+            )))),
+        )
+        .await
+        .map(|(id, _)| id)
+        .expect("create an EHR under the shared id")
+        .to_string();
         create_comp(&svc, &ehr, "BP", 80.0).await;
         by_namespace.push(ehr);
     }

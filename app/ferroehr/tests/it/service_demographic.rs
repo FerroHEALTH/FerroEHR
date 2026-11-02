@@ -17,6 +17,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 
 use crate::fixtures::db_now;
@@ -25,7 +26,6 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Invalid, Malformed, Missing, Refusal};
-use openehr_its::rest::generated::common::UpdateVersion;
 
 /// The `uid.value` (`OBJECT_VERSION_ID`) of a versioned-object body.
 fn ovid(v: &Value) -> &str {
@@ -129,30 +129,35 @@ fn role(name: &str) -> Value {
 /// (RM common master06 §Contributions; a client-supplied contradicting code
 /// is rejected per ITS-REST overview §"openehr-version and
 /// openehr-audit-details" + `AUDIT_DETAILS.Change_type_valid`).
-fn uv<T: serde::de::DeserializeOwned>(data: &Value, preceding: Option<&str>) -> UpdateVersion<T> {
-    let change = if preceding.is_some() { "251" } else { "249" };
-    // `lifecycle_state` and `commit_audit.change_type` are `DV_CODED_TEXT` on
-    // the released wire (ITS-REST `schemas/common/UpdateVersion.yaml` /
-    // `UpdateAudit.yaml` both `$ref` `DvCodedText`), not the flat
-    // `Terminology_code` spelling.
-    let mut v = json!({
-        "lifecycle_state": {
-            "value": "complete",
-            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" }
-        },
-        "data": data,
-        "commit_audit": {
-            "change_type": {
-                "value": "commit",
-                "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": change }
+fn uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(
+    data: &Value,
+    preceding: Option<&str>,
+) -> R {
+    R::from_version({
+        let change = if preceding.is_some() { "251" } else { "249" };
+        // `lifecycle_state` and `commit_audit.change_type` are `DV_CODED_TEXT` on
+        // the released wire (ITS-REST `schemas/common/UpdateVersion.yaml` /
+        // `UpdateAudit.yaml` both `$ref` `DvCodedText`), not the flat
+        // `Terminology_code` spelling.
+        let mut v = json!({
+            "lifecycle_state": {
+                "value": "complete",
+                "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" }
             },
-            "committer": { "_type": "PARTY_IDENTIFIED", "name": "sm tester" }
+            "data": data,
+            "commit_audit": {
+                "change_type": {
+                    "value": "commit",
+                    "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": change }
+                },
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "sm tester" }
+            }
+        });
+        if let Some(p) = preceding {
+            v["preceding_version_uid"] = json!({ "value": p });
         }
-    });
-    if let Some(p) = preceding {
-        v["preceding_version_uid"] = json!({ "value": p });
-    }
-    openehr_its::json::from_canonical_value(&v).expect("UpdateVersion")
+        openehr_its::json::from_canonical_value(&v).expect("UpdateVersion")
+    })
 }
 
 /// Whether a live PERSON is served under `vo_id`: the read answers a body,
@@ -233,14 +238,11 @@ async fn party_typed_calls_round_trip() {
     );
 
     // The update under `If-Match` = the current version → the new version uid.
-    let update = uv(&person("Jane Roe"), Some(&v1));
-    let committal = crate::fixtures::envelope_committal(&update);
     let v2 = Box::pin(svc.party_update(
         PartyKind::Person,
         vo_id.to_string(),
         v1.clone(),
-        update.data.expect("a PERSON"),
-        Some(committal),
+        uv(&person("Jane Roe"), Some(&v1)),
     ))
     .await
     .expect("update_party")
@@ -257,7 +259,7 @@ async fn party_typed_calls_round_trip() {
 
     // The delete of the latest version → the party is no longer present.
     let del = svc
-        .party_delete(PartyKind::Person, v2.clone(), None, None)
+        .party_delete(PartyKind::Person, v2.clone(), None, WriteRequest::new(()))
         .await
         .expect("delete_party")
         .meta
@@ -297,7 +299,7 @@ async fn person_lifecycle_end_to_end() {
 
     // create → v1
     let created = svc
-        .party_create(PartyKind::Person, typed(&person("Jane")), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&person("Jane"))))
         .await
         .expect("create person");
     assert_eq!(created.body["_type"], "PERSON");
@@ -340,8 +342,7 @@ async fn person_lifecycle_end_to_end() {
             PartyKind::Person,
             vo.clone(),
             ovid_v1.clone(),
-            typed(&person("Jane Roe")),
-            None,
+            WriteRequest::new(typed(&person("Jane Roe"))),
         )
         .await
         .expect("update person");
@@ -361,8 +362,7 @@ async fn person_lifecycle_end_to_end() {
             PartyKind::Person,
             vo.clone(),
             ovid_v1.clone(),
-            typed(&person("stale")),
-            None,
+            WriteRequest::new(typed(&person("stale"))),
         )
         .await;
     assert!(
@@ -403,7 +403,12 @@ async fn person_lifecycle_end_to_end() {
     // delete (OBJECT_VERSION_ID on the path, no If-Match) → deleted;
     // subsequent get → 204 (Null)
     let deleted = svc
-        .party_delete(PartyKind::Person, ovid_v2.clone(), None, None)
+        .party_delete(
+            PartyKind::Person,
+            ovid_v2.clone(),
+            None,
+            WriteRequest::new(()),
+        )
         .await
         .expect("delete");
     assert!(deleted.is_empty());
@@ -428,7 +433,7 @@ async fn party_write_responses_match_a_fresh_read() {
 
     // create → the built-from-commit body equals a fresh read.
     let created = svc
-        .party_create(PartyKind::Person, typed(&person("Jane")), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&person("Jane"))))
         .await
         .expect("create person");
     let ovid_v1 = ovid(&created.body).to_owned();
@@ -453,8 +458,7 @@ async fn party_write_responses_match_a_fresh_read() {
             PartyKind::Person,
             vo.clone(),
             ovid_v1,
-            typed(&person("Jane Roe")),
-            None,
+            WriteRequest::new(typed(&person("Jane Roe"))),
         )
         .await
         .expect("update person");
@@ -473,7 +477,10 @@ async fn party_write_responses_match_a_fresh_read() {
 
     // ORGANISATION sibling — the same create path keyed by PartyKind.
     let created_org = svc
-        .party_create(PartyKind::Organisation, typed(&organisation("Acme")), None)
+        .party_create(
+            PartyKind::Organisation,
+            WriteRequest::new(typed(&organisation("Acme"))),
+        )
         .await
         .expect("create organisation");
     let vo_org = vo_uuid(&created_org.body);
@@ -497,14 +504,19 @@ async fn person_delete_by_versioned_uid_is_refused() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
-        .party_create(PartyKind::Person, typed(&person("Jane")), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&person("Jane"))))
         .await
         .expect("create person");
     let latest = ovid(&created.body).to_owned();
     let vo = vo_uuid(&created.body);
 
     let refused = svc
-        .party_delete(PartyKind::Person, vo.clone(), Some(latest.clone()), None)
+        .party_delete(
+            PartyKind::Person,
+            vo.clone(),
+            Some(latest.clone()),
+            WriteRequest::new(()),
+        )
         .await;
     assert!(
         matches!(
@@ -533,11 +545,17 @@ async fn update_without_uid_refuses_a_foreign_relationship_source() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let first = svc
-        .party_create(PartyKind::Person, typed(&person("First")), None)
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("First"))),
+        )
         .await
         .expect("create the first person");
     let second = svc
-        .party_create(PartyKind::Person, typed(&person("Second")), None)
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Second"))),
+        )
         .await
         .expect("create the second person");
     let v1 = ovid(&first.body).to_owned();
@@ -560,8 +578,7 @@ async fn update_without_uid_refuses_a_foreign_relationship_source() {
             PartyKind::Person,
             vo.clone(),
             v1.clone(),
-            typed(&body),
-            None,
+            WriteRequest::new(typed(&body)),
         )
         .await;
     assert!(
@@ -587,7 +604,10 @@ async fn role_create_and_get() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
-        .party_create(PartyKind::Role, typed(&role("Clinician")), None)
+        .party_create(
+            PartyKind::Role,
+            WriteRequest::new(typed(&role("Clinician"))),
+        )
         .await
         .expect("create role");
     assert_eq!(created.body["_type"], "ROLE");
@@ -721,7 +741,10 @@ async fn party_tags_crud() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
-        .party_create(PartyKind::Person, typed(&person("Tagged")), None)
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Tagged"))),
+        )
         .await
         .expect("create person");
     let vo = vo_uuid(&created.body);
@@ -779,7 +802,7 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
-        .party_create(PartyKind::Person, typed(&person("Jane")), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&person("Jane"))))
         .await
         .expect("create person");
     let ovid_v1 = ovid(&created.body).to_owned();
@@ -793,8 +816,7 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
             PartyKind::Person,
             vo.clone(),
             upper,
-            typed(&person("Jane Roe")),
-            None,
+            WriteRequest::new(typed(&person("Jane Roe"))),
         )
         .await
         .expect("BASE master05 §Composite Identifiers and Case: case-variant If-Match matches");
@@ -807,8 +829,7 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
             PartyKind::Person,
             vo.clone(),
             format!("\"{ovid_v2}\""),
-            typed(&person("Jane Doe")),
-            None,
+            WriteRequest::new(typed(&person("Jane Doe"))),
         )
         .await
         .expect("quoted If-Match accepted");
@@ -820,8 +841,7 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
             PartyKind::Person,
             vo,
             ovid_v1,
-            typed(&person("stale")),
-            None,
+            WriteRequest::new(typed(&person("stale"))),
         )
         .await;
     assert!(
@@ -871,7 +891,7 @@ async fn inline_relationships_are_stored_and_served_verbatim() {
     // ACCEPTED: a by-value relationships list is ordinary PARTY content
     // (PARTY.Relationships_validity only forbids a PRESENT-EMPTY list).
     let created = svc
-        .party_create(PartyKind::Person, typed(&body), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&body)))
         .await
         .expect("a party carrying an inline relationships list is accepted");
     let vo = vo_uuid(&created.body);
@@ -924,7 +944,10 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
     let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
-        .party_create(PartyKind::Person, typed(&person("Jane Container")), None)
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Jane Container"))),
+        )
         .await
         .expect("create person");
     let vo = vo_uuid(&created.body);
@@ -961,8 +984,7 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
             PartyKind::Person,
             vo.clone(),
             ovid_v1.clone(),
-            typed(&body),
-            None,
+            WriteRequest::new(typed(&body)),
         )
         .await
         .expect(
@@ -984,8 +1006,7 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
             PartyKind::Person,
             vo.clone(),
             ovid_v2,
-            typed(&foreign),
-            None,
+            WriteRequest::new(typed(&foreign)),
         )
         .await;
     assert!(
@@ -1023,7 +1044,7 @@ async fn versioned_party_owner_id_names_the_serving_system() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let created = svc
-        .party_create(PartyKind::Person, typed(&person("Jane")), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&person("Jane"))))
         .await
         .expect("create person");
     let vo = vo_uuid(&created.body);

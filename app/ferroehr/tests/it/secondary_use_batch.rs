@@ -24,6 +24,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
@@ -74,7 +75,7 @@ async fn ehr(svc: &FerroEhrService, n: u8) -> EhrId {
         "is_modifiable": true
     }))
     .expect("the subject-bearing EHR_STATUS decodes");
-    Box::pin(svc.create_ehr_meta(Some(status), None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status))))
         .await
         .map(|(id, _)| id)
         .expect("create the EHR")

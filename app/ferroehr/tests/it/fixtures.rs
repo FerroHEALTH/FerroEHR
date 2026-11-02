@@ -25,7 +25,7 @@
 
 use serde_json::{Value, json};
 
-use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
+use ferroehr::service::version_update::{WriteRequest, change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 use openehr_rm::prelude::PartyProxy;
 
@@ -113,34 +113,64 @@ pub(crate) fn composition(name: &str) -> Value {
     composition_by(name, TESTER)
 }
 
+/// A commit envelope a fixture builds as a wire `UPDATE_VERSION`: the
+/// envelope itself for a CONTRIBUTION member, or the [`WriteRequest`] a direct
+/// write takes.
+pub(crate) trait Envelope<T> {
+    /// The envelope of `version`.
+    fn from_version(version: UpdateVersion<T>) -> Self;
+}
+
+impl<T> Envelope<T> for UpdateVersion<T> {
+    fn from_version(version: UpdateVersion<T>) -> Self {
+        version
+    }
+}
+
+impl<T> Envelope<T> for WriteRequest<T> {
+    fn from_version(version: UpdateVersion<T>) -> Self {
+        WriteRequest {
+            data: version.data.expect("a direct write carries content"),
+            audit: Some(version.commit_audit),
+            lifecycle_state: Some(version.lifecycle_state.defining_code.code_string)
+                .filter(|code| !code.is_empty()),
+            signature: version.signature,
+            attestations: version.attestations.unwrap_or_default(),
+            preceding: version.preceding_version_uid,
+        }
+    }
+}
+
 /// Returns the `UPDATE_VERSION` commit envelope for a bare-RM write.
 ///
 /// `change_code` is the `openehr` `audit_change_type` code the version's audit
 /// records (`249` creation, `251` modification, `523` deleted); `preceding`
 /// names the version this one supersedes (RM common
 /// `master06-change_control_package.adoc` §Contributions).
-pub(crate) fn uv<T: serde::de::DeserializeOwned>(
+pub(crate) fn uv<T: serde::de::DeserializeOwned, R: Envelope<T>>(
     data: &Value,
     change_code: &str,
     preceding: Option<&str>,
-) -> UpdateVersion<T> {
-    UpdateVersion {
-        preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the fixture commit body decodes as its RM type"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded(change_code),
-            description: None,
-            committer: committer_proxy(TESTER),
+) -> R {
+    R::from_version({
+        UpdateVersion {
+            preceding_version_uid: preceding.map(|p| p.parse().expect("OBJECT_VERSION_ID")),
+            lifecycle_state: lifecycle_state_coded("532"),
+            attestations: None,
+            data: openehr_its::json::from_canonical_value(data)
+                .expect("the fixture commit body decodes as its RM type"),
+            commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+                _type: None,
+                system_id: None,
+                change_type: change_type_coded(change_code),
+                description: None,
+                committer: committer_proxy(TESTER),
+                additional_properties: std::collections::BTreeMap::new(),
+            }),
+            signature: None,
             additional_properties: std::collections::BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: std::collections::BTreeMap::new(),
-    }
+        }
+    })
 }
 
 /// The committed version's `uid/value` string off a served body.
@@ -293,20 +323,6 @@ pub(crate) async fn ehr_exists(
     }
 }
 
-/// The [`Committal`](ferroehr::service::version_update::Committal) an
-/// `UPDATE_VERSION` envelope carries, as the wire's `openehr-version` and
-/// `openehr-audit-details` headers carry it: the audit plus a stated
-/// `lifecycle_state` code.
-pub(crate) fn envelope_committal<T>(
-    version: &UpdateVersion<T>,
-) -> ferroehr::service::version_update::Committal {
-    ferroehr::service::version_update::Committal {
-        audit: version.commit_audit.clone(),
-        lifecycle_state: Some(version.lifecycle_state.defining_code.code_string.clone())
-            .filter(|code| !code.is_empty()),
-    }
-}
-
 /// The versioned object a write response names, read off its
 /// `OBJECT_VERSION_ID`.
 pub(crate) fn written_vo(
@@ -325,20 +341,18 @@ pub(crate) fn written_vo(
 /// returning the new versioned object.
 pub(crate) async fn create_party(
     svc: &ferroehr::service::FerroEhrService,
-    version: UpdateVersion<openehr_rm::prelude::Party>,
+    version: WriteRequest<openehr_rm::prelude::Party>,
 ) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
     use ferroehr::service::demographic::types::PartyKind;
     use openehr_rm::prelude::Party;
-    let committal = envelope_committal(&version);
-    let body = version.data.expect("a create carries a PARTY");
-    let kind = match &body {
+    let kind = match &version.data {
         Party::Agent(_) => PartyKind::Agent,
         Party::Group(_) => PartyKind::Group,
         Party::Organisation(_) => PartyKind::Organisation,
         Party::Person(_) => PartyKind::Person,
         Party::Role(_) => PartyKind::Role,
     };
-    let created = Box::pin(svc.party_create(kind, body, Some(committal))).await?;
+    let created = Box::pin(svc.party_create(kind, version)).await?;
     Ok(written_vo(&created))
 }
 
@@ -347,11 +361,9 @@ pub(crate) async fn create_party(
 /// new versioned object.
 pub(crate) async fn create_relationship(
     svc: &ferroehr::service::FerroEhrService,
-    version: UpdateVersion<openehr_rm::prelude::PartyRelationship>,
+    version: WriteRequest<openehr_rm::prelude::PartyRelationship>,
 ) -> Result<ferroehr::ids::VoId, ferroehr::service::error::ServiceError> {
-    let committal = envelope_committal(&version);
-    let body = version.data.expect("a create carries a PARTY_RELATIONSHIP");
-    let created = svc.party_relationship_create(body, Some(committal)).await?;
+    let created = svc.party_relationship_create(version).await?;
     Ok(written_vo(&created))
 }
 
@@ -396,14 +408,11 @@ pub(crate) async fn create_ehr_subject(
     svc: &ferroehr::service::FerroEhrService,
     subject: &ferroehr::service::ehr_index::types::SubjectRef,
 ) -> ferroehr::ids::EhrId {
-    Box::pin(svc.create_ehr_meta(
-        Some(status_naming(
-            &subject.id,
-            &subject.namespace,
-            &subject.r#type,
-        )),
-        None,
-    ))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(status_naming(
+        &subject.id,
+        &subject.namespace,
+        &subject.r#type,
+    )))))
     .await
     .expect("the EHR naming its subject is created")
     .0
@@ -516,7 +525,7 @@ pub(crate) async fn service() -> (testkit::TestDb, ferroehr::service::FerroEhrSe
 
 /// Create an EHR with no subject and no supplied id; return its id.
 pub(crate) async fn create_ehr(svc: &ferroehr::service::FerroEhrService) -> ferroehr::ids::EhrId {
-    Box::pin(svc.create_ehr_meta(None, None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(None)))
         .await
         .map(|(id, _)| id)
         .expect("create_ehr")
@@ -621,4 +630,12 @@ pub(crate) fn first_version_uid(contribution: &Value) -> String {
         .as_str()
         .expect("versions[0].id.value")
         .to_owned()
+}
+
+/// The request of a delete that names `preceding` as the current version
+/// (`If-Match`), committed under the server's own audit.
+pub(crate) fn deleting(preceding: Option<openehr_base::prelude::ObjectVersionId>) -> WriteRequest {
+    let mut request = WriteRequest::new(());
+    request.preceding = preceding;
+    request
 }

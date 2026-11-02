@@ -27,6 +27,7 @@
               failing fixture must panic at the fixture (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -157,7 +158,7 @@ async fn the_outbox_envelope_carries_no_subject_identifier() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = enforcing_service(&db);
-    let ehr_id = Box::pin(svc.create_ehr_meta(Some(pseudonymised_status()), None))
+    let ehr_id = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(pseudonymised_status()))))
         .await
         .map(|(id, _)| id)
         .expect("create_ehr");
@@ -195,7 +196,7 @@ async fn the_atna_records_carry_the_opaque_pseudonym_and_nothing_else() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = enforcing_service(&db);
-    let ehr_id = Box::pin(svc.create_ehr_meta(Some(pseudonymised_status()), None))
+    let ehr_id = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(pseudonymised_status()))))
         .await
         .map(|(id, _)| id)
         .expect("create_ehr");
@@ -294,7 +295,7 @@ async fn the_commit_traces_carry_no_subject_identifier() {
     );
     let guard = tracing::subscriber::set_default(subscriber);
 
-    let ehr_id = Box::pin(svc.create_ehr_meta(Some(pseudonymised_status()), None))
+    let ehr_id = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(pseudonymised_status()))))
         .await
         .map(|(id, _)| id)
         .expect("create_ehr");
@@ -356,7 +357,7 @@ async fn an_identifying_subject_never_reaches_any_sink_because_the_write_is_refu
         }))
         .expect("the fixture decodes");
 
-    Box::pin(svc.create_ehr_meta(Some(identifying), None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(identifying))))
         .await
         .map(|(id, _)| id)
         .expect_err("the write path refuses a national identifier as the subject");

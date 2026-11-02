@@ -31,21 +31,20 @@ use crate::service::refusal::Missing;
 use crate::service::response::ResourceMeta;
 use crate::service::response::ServiceResponse;
 use openehr_base::prelude::ObjectVersionId;
-use openehr_its::rest::generated::common::UpdateVersion;
 use openehr_rm::prelude::Folder;
 use serde_json::Value;
-use sqlx::Connection as _;
 
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
+use crate::service::version_update::WriteRequest;
+use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{Change, Write, commit, record_commit};
+use crate::versioning::change::{Change, Write, ensure_preceding, lock_current, tip_uid};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components};
 use crate::versioning::read::{read_version, version_at};
 
 use super::validation::check_folder_item_refs;
-use super::{ensure_if_match, resolve_envelope};
 use crate::service::datetime::parse_at_time;
 
 impl FerroEhrService {
@@ -59,22 +58,17 @@ impl FerroEhrService {
     pub(in crate::service) async fn commit_new_directory(
         &self,
         ehr_id: EhrId,
-        version: UpdateVersion<Folder>,
+        request: WriteRequest<Folder>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let version = super::canonicalize(version);
         // 553|incomplete| relaxes the existence/cardinality lower bounds (RM
         // common master06 §Incomplete Content).
-        let super::CommitParts {
+        let Resolved {
             audit,
             envelope,
             incomplete,
-            canonical: folder,
-        } = resolve_envelope(
-            version,
-            change_type::CREATION,
-            "FOLDER directory creation",
-            &self.effective_system_id(),
-        )?;
+        } = self.resolve_write(&request, change_type::CREATION, "DIRECTORY creation")?;
+        let folder = openehr_its::json::to_canonical_value(&request.data);
+        drop(request);
         crate::storage::ehr_repo::require_ehr(&mut *acquire(&self.pool).await?, ehr_id).await?;
         self.validate_for_commit(Kind::Folder, &folder, incomplete)
             .await?;
@@ -99,22 +93,15 @@ impl FerroEhrService {
                 "EHR {ehr_id} already has a directory"
             )));
         }
-
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = commit(
-            &mut tx,
-            Write::new(
-                Some(ehr_id),
-                Change::create(Kind::Folder, folder, None, envelope),
-                &audit,
-            ),
-            &self.signing_ctx(),
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
-
+        let committed = self
+            .commit_one(&self.pool, Mode::Transaction, async move |_| {
+                Ok(Write::new(
+                    Some(ehr_id),
+                    Change::create(Kind::Folder, folder, None, envelope),
+                    audit,
+                ))
+            })
+            .await?;
         // The write response is metadata-only: `Committed` already carries the
         // version identity and commit instant (RM common master06 §Committal and
         // Audits), so a representation response re-reads at the protocol layer instead.
@@ -220,119 +207,112 @@ impl FerroEhrService {
     }
 
     /// Update the EHR's directory. `vo_id` is the directory-slot versioned
-    /// object (resolved once by the caller's `If-Match` meta pre-read, so the
-    /// JOIN is not re-run here); `is_modifiable` is the EHR's content-write
-    /// flag from that same merged pre-read (so the writability probe is not
-    /// re-run either); `expected` (from `If-Match`) enforces optimistic
-    /// concurrency.
+    /// object and `is_modifiable` the EHR's content-write flag, both from the
+    /// caller's merged pre-read; the request's `preceding` (`If-Match`) is
+    /// checked against the tip the write locks.
     ///
     /// # Errors
-    /// [`ServiceError::Unprocessable`] when the FOLDER tree is invalid;
-    /// [`ServiceError::Conflict`] when the EHR is not modifiable or the
-    /// optimistic lock fails; [`ServiceError::Database`] on a storage
-    /// failure.
+    /// [`ServiceError::VersionConflict`] when `If-Match` names another
+    /// version; [`ServiceError::Unprocessable`] when the FOLDER tree is
+    /// invalid; [`ServiceError::Conflict`] when the EHR is not modifiable;
+    /// [`ServiceError::Database`] on a storage failure.
     pub(in crate::service) async fn commit_directory_update(
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
-        version: UpdateVersion<Folder>,
-        expected: Option<TreeId>,
+        request: WriteRequest<Folder>,
         is_modifiable: bool,
     ) -> Result<ServiceResponse, ServiceError> {
-        let version = super::canonicalize(version);
-        let super::CommitParts {
-            audit,
-            envelope,
-            incomplete,
-            canonical: folder,
-        } = resolve_envelope(
-            version,
-            change_type::MODIFICATION,
-            "FOLDER directory update",
-            &self.effective_system_id(),
-        )?;
-        self.validate_for_commit(Kind::Folder, &folder, incomplete)
+        let preceding = request.preceding.clone();
+        // Every content check runs before the transaction, and its refusal
+        // surfaces after the `If-Match` check, in pre-check order.
+        let checked = async {
+            let resolved =
+                self.resolve_write(&request, change_type::MODIFICATION, "DIRECTORY update")?;
+            let folder = openehr_its::json::to_canonical_value(&request.data);
+            self.validate_for_commit(Kind::Folder, &folder, resolved.incomplete)
+                .await?;
+            check_folder_item_refs(
+                &mut *acquire(&self.pool).await?,
+                ehr_id,
+                &self.effective_system_id(),
+                &folder,
+            )
             .await?;
-        check_folder_item_refs(
-            &mut *acquire(&self.pool).await?,
-            ehr_id,
-            &self.effective_system_id(),
-            &folder,
-        )
-        .await?;
-        // is_modifiable = False forbids content writes to the directory (RM ehr
-        // master04 §EHR Active Status), after validate_folder's 422.
-        if !is_modifiable {
-            return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+            // is_modifiable = False forbids content writes to the directory (RM
+            // ehr master04 §EHR Active Status), after validate_folder's 422.
+            if !is_modifiable {
+                return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+            }
+            Ok((resolved, folder))
         }
-
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = commit(
-            &mut tx,
-            Write::new(
-                Some(ehr_id),
-                Change::modify(vo_id, Kind::Folder, folder, expected, None, envelope),
-                &audit,
-            ),
-            &self.signing_ctx(),
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
-
+        .await;
+        drop(request);
+        let committed = self
+            .commit_one(&self.pool, Mode::Transaction, async move |tx| {
+                let placement = lock_current(tx, Some(ehr_id), vo_id, Kind::Folder).await?;
+                if let Some(tip) = placement.tip.as_ref() {
+                    ensure_preceding(&tip_uid(vo_id, tip), preceding.as_ref())?;
+                }
+                let (
+                    Resolved {
+                        audit, envelope, ..
+                    },
+                    folder,
+                ) = checked?;
+                Ok(Write::new(
+                    Some(ehr_id),
+                    Change::modify(vo_id, Kind::Folder, folder, None, None, envelope),
+                    audit,
+                )
+                .placed(placement))
+            })
+            .await?;
         Ok(self.committed_response(ehr_id, &committed))
     }
 
-    /// Logically delete the EHR's directory. `204_because_deleted` declares no
-    /// `ETag`/`Location`, so the response carries no metadata. `is_modifiable`
-    /// is the EHR's content-write flag from the caller's merged pre-read (so
-    /// the writability probe is not re-run here).
+    /// Logically delete the EHR's directory. `is_modifiable` is the EHR's
+    /// content-write flag from the caller's merged pre-read; the request's
+    /// `preceding` (`If-Match`) is checked against the tip the write locks.
     ///
     /// # Errors
-    /// [`ServiceError::Conflict`] when the EHR is not modifiable or the
-    /// optimistic lock fails; [`ServiceError::Database`] on a storage
-    /// failure.
+    /// [`ServiceError::VersionConflict`] when `If-Match` names another
+    /// version; [`ServiceError::Conflict`] when the EHR is not modifiable;
+    /// [`ServiceError::Database`] on a storage failure.
     pub(in crate::service) async fn delete_directory_at(
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
-        expected: Option<TreeId>,
         is_modifiable: bool,
-        update_audit: Option<&openehr_its::rest::generated::common::UpdateAudit>,
+        request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        // is_modifiable = False forbids content writes (RM ehr master04 §EHR
-        // Active Status).
-        if !is_modifiable {
-            return Err(crate::versioning::change::not_modifiable_error(ehr_id));
-        }
-
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        // The committal request headers merge into the delete audit too
-        // (ITS-REST overview §"openehr-version and openehr-audit-details":
-        // accepted on PUT, POST and DELETE).
-        let audit = match update_audit {
-            Some(u) => crate::versioning::audit::AuditInput::from_update(
-                u,
-                change_type::DELETED,
-                "DIRECTORY delete",
-                &self.effective_system_id(),
-            )?,
-            None => self.audit(change_type::DELETED, "DIRECTORY delete"),
-        };
-        let committed = commit(
-            &mut tx,
-            Write::new(
-                Some(ehr_id),
-                Change::delete(vo_id, Kind::Folder, expected),
-                &audit,
-            ),
-            &self.signing_ctx(),
-        )
-        .await?;
-        tx.commit().await?;
-        record_commit(&committed);
+        let committed = self
+            .commit_one(&self.pool, Mode::Transaction, async move |tx| {
+                let placement = lock_current(tx, Some(ehr_id), vo_id, Kind::Folder).await?;
+                if let Some(tip) = placement.tip.as_ref() {
+                    ensure_preceding(&tip_uid(vo_id, tip), request.preceding.as_ref())?;
+                }
+                // is_modifiable = False forbids content writes (RM ehr master04
+                // §EHR Active Status).
+                if !is_modifiable {
+                    return Err(crate::versioning::change::not_modifiable_error(ehr_id));
+                }
+                // The committal request headers merge into the delete audit too
+                // (ITS-REST overview §"openehr-version and openehr-audit-details":
+                // accepted on PUT, POST and DELETE).
+                let audit = self.commit_audit(
+                    request.audit.as_ref(),
+                    change_type::DELETED,
+                    "DIRECTORY delete",
+                )?;
+                Ok(Write::new(
+                    Some(ehr_id),
+                    Change::delete(vo_id, Kind::Folder, None),
+                    audit,
+                )
+                .placed(placement))
+            })
+            .await?;
         // The 204's identity: the NEW 523|deleted| version the delete
         // committed (RM common master06 §Logical Deletion) — the resource's
         // current state, carried so the wire serves the weak ETag +
@@ -450,10 +430,10 @@ impl FerroEhrService {
     pub async fn create_directory(
         &self,
         an_ehr_id: EhrId,
-        a_dir_struct: UpdateVersion<Folder>,
+        request: WriteRequest<Folder>,
     ) -> Result<ResourceMeta, ServiceError> {
         super::committed_meta(
-            self.commit_new_directory(an_ehr_id, a_dir_struct)
+            self.commit_new_directory(an_ehr_id, request)
                 .await
                 .map_err(ServiceError::flattened)?,
         )
@@ -491,27 +471,19 @@ impl FerroEhrService {
     pub async fn update_directory(
         &self,
         an_ehr_id: EhrId,
-        a_dir_struct: UpdateVersion<Folder>,
+        request: WriteRequest<Folder>,
     ) -> Result<ResourceMeta, ServiceError> {
-        // The slot vo_id, its current version metadata and the EHR's
-        // is_modifiable flag resolve ONCE here and are threaded into the write,
-        // so neither the slot JOIN nor the writability probe runs twice.
-        let Some((vo_id, is_modifiable, latest)) = self.directory_meta_with_vo(an_ehr_id).await?
-        else {
+        // The slot vo_id and the EHR's is_modifiable flag resolve ONCE here and
+        // are threaded into the write, so neither the slot JOIN nor the
+        // writability probe runs twice.
+        let Some((vo_id, is_modifiable, _)) = self.directory_meta_with_vo(an_ehr_id).await? else {
             return Err(ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("directory for EHR {an_ehr_id}"),
             ));
         };
-        ensure_if_match(a_dir_struct.preceding_version_uid.as_ref(), Some(&latest))?;
-        let expected = a_dir_struct
-            .preceding_version_uid
-            .as_ref()
-            .map(|o| components(o).map(|(_, v)| v))
-            .transpose()
-            .map_err(VersionIdError::into_argument)?;
         super::committed_meta(
-            self.commit_directory_update(an_ehr_id, vo_id, a_dir_struct, expected, is_modifiable)
+            self.commit_directory_update(an_ehr_id, vo_id, request, is_modifiable)
                 .await
                 .map_err(ServiceError::flattened)?,
         )
@@ -531,26 +503,16 @@ impl FerroEhrService {
     pub async fn delete_directory(
         &self,
         an_ehr_id: EhrId,
-        preceding_version_uid: Option<ObjectVersionId>,
-        update_audit: Option<&openehr_its::rest::generated::common::UpdateAudit>,
+        request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        let Some((vo_id, is_modifiable, latest)) = self.directory_meta_with_vo(an_ehr_id).await?
-        else {
+        let Some((vo_id, is_modifiable, _)) = self.directory_meta_with_vo(an_ehr_id).await? else {
             return Err(ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("directory for EHR {an_ehr_id}"),
             ));
         };
-        ensure_if_match(preceding_version_uid.as_ref(), Some(&latest))?;
-        let expected = preceding_version_uid
-            .as_ref()
-            .map(|o| components(o).map(|(_, v)| v))
-            .transpose()
-            .map_err(VersionIdError::into_argument)?;
-        let resp = self
-            .delete_directory_at(an_ehr_id, vo_id, expected, is_modifiable, update_audit)
-            .await?;
-        Ok(resp)
+        self.delete_directory_at(an_ehr_id, vo_id, is_modifiable, request)
+            .await
     }
 
     /// The directory FOLDER at the named version

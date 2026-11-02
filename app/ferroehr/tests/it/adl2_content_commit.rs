@@ -122,27 +122,29 @@ fn cases() -> Vec<Case> {
 }
 
 /// The SM `UPDATE_VERSION` envelope for a creation commit of `data`.
-fn creation(data: &Value) -> UpdateVersion<openehr_rm::prelude::Composition> {
-    UpdateVersion {
-        preceding_version_uid: None,
-        lifecycle_state: lifecycle_state_coded("532"),
-        attestations: None,
-        data: openehr_its::json::from_canonical_value(data)
-            .expect("the catalogue body decodes as a COMPOSITION"),
-        commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
-            _type: None,
-            system_id: None,
-            change_type: change_type_coded("249"),
-            description: None,
-            committer: openehr_its::json::from_canonical_value::<PartyProxy>(
-                &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
-            )
-            .expect("committer"),
+fn creation<R: crate::fixtures::Envelope<openehr_rm::prelude::Composition>>(data: &Value) -> R {
+    R::from_version({
+        UpdateVersion {
+            preceding_version_uid: None,
+            lifecycle_state: lifecycle_state_coded("532"),
+            attestations: None,
+            data: openehr_its::json::from_canonical_value(data)
+                .expect("the catalogue body decodes as a COMPOSITION"),
+            commit_audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+                _type: None,
+                system_id: None,
+                change_type: change_type_coded("249"),
+                description: None,
+                committer: openehr_its::json::from_canonical_value::<PartyProxy>(
+                    &json!({ "_type": "PARTY_IDENTIFIED", "name": "conformance tester" }),
+                )
+                .expect("committer"),
+                additional_properties: BTreeMap::new(),
+            }),
+            signature: None,
             additional_properties: BTreeMap::new(),
-        }),
-        signature: None,
-        additional_properties: BTreeMap::new(),
-    }
+        }
+    })
 }
 
 async fn new_ehr(svc: &FerroEhrService) -> EhrId {

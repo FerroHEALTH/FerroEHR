@@ -22,6 +22,7 @@
               Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -326,9 +327,12 @@ async fn a_logically_deleted_version_sweeps_clean() {
         .create_directory(ehr_id, uv(&folder("root"), "249", None))
         .await
         .expect("directory create");
-    svc.delete_directory(ehr_id, Some(dir.uid.parse().expect("ovid")), None)
-        .await
-        .expect("directory delete");
+    svc.delete_directory(
+        ehr_id,
+        crate::fixtures::deleting(Some(dir.uid.parse().expect("ovid"))),
+    )
+    .await
+    .expect("directory delete");
 
     // The delete committed a version with data Void (RM common master06
     // §Logical Deletion): no body, and no node rows to disagree with it.
@@ -360,9 +364,12 @@ async fn node_rows_under_a_bodiless_version_are_reported_as_unexpected_nodes() {
         .create_directory(ehr_id, uv(&folder("root"), "249", None))
         .await
         .expect("directory create");
-    svc.delete_directory(ehr_id, Some(dir.uid.parse().expect("ovid")), None)
-        .await
-        .expect("directory delete");
+    svc.delete_directory(
+        ehr_id,
+        crate::fixtures::deleting(Some(dir.uid.parse().expect("ovid"))),
+    )
+    .await
+    .expect("directory delete");
     let (vo_id, sys_version) = one_version(&pool, ehr_id, "FOLDER").await;
 
     // Give the bodiless version the previous version's rows: content in the
@@ -1013,8 +1020,9 @@ async fn a_scoped_rebuild_repairs_only_its_own_ehr() {
 async fn seed_party(svc: &FerroEhrService, pool: &PgPool) -> (Uuid, i32) {
     svc.party_create(
         ferroehr::service::demographic::types::PartyKind::Person,
-        crate::typed_body::typed(&crate::pseudonymisation_boundary::a_person()),
-        None,
+        WriteRequest::new(crate::typed_body::typed(
+            &crate::pseudonymisation_boundary::a_person(),
+        )),
     )
     .await
     .expect("create a person through the service seam");

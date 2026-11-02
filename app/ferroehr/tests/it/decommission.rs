@@ -21,6 +21,7 @@ use ferroehr::db::domain::{DomainPools, StorageConfig};
 use ferroehr::decommission::{Decommission, DecommissionError, Erasure};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::version_update::WriteRequest;
 use ferrohealth_secret::secret_url::SecretUrl;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -53,7 +54,7 @@ async fn seed_every_domain(pool: &PgPool) {
         .await
         .expect("commit a composition");
     service
-        .party_create(PartyKind::Person, typed(&a_person()), None)
+        .party_create(PartyKind::Person, WriteRequest::new(typed(&a_person())))
         .await
         .expect("create a party");
     sqlx::query(
@@ -111,7 +112,7 @@ async fn remaining(pool: &PgPool) -> (i64, i64) {
 async fn erase_removes_every_domain_behind_the_instance_id() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    seed_every_domain(&pool).await;
+    Box::pin(seed_every_domain(&pool)).await;
     let instance = ferroehr::usage_report::store::ensure_instance(&pool)
         .await
         .expect("store an instance id")
@@ -223,7 +224,7 @@ mod blobs {
     async fn erase_deletes_every_blob_before_the_schemas() {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
-        seed_every_domain(&pool).await;
+        Box::pin(seed_every_domain(&pool)).await;
         let store = BlobStore::from_parts(Arc::new(InMemory::new()), "media".to_owned());
         for key in ["a".repeat(64), "b".repeat(64), "c".repeat(64)] {
             store
@@ -255,7 +256,7 @@ mod blobs {
     async fn an_unreachable_store_refuses_before_the_database_is_touched() {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
-        seed_every_domain(&pool).await;
+        Box::pin(seed_every_domain(&pool)).await;
         let before = rows_per_domain(&pool).await;
         let store = BlobStore::from_parts(Arc::new(unreachable::Unreachable), "media".to_owned());
 

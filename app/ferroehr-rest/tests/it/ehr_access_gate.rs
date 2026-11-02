@@ -31,6 +31,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
 use axum::Router;
@@ -132,7 +133,7 @@ async fn app(auth_enabled: bool, scheme: Option<Value>) -> (testkit::TestDb, Rou
     let (pg, pool) = common::migrated_pool().await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
-    svc.create_ehr_with_id_meta(ehr_id, None, None)
+    Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
         .await
         .expect("create ehr");
     if let Some(scheme) = scheme {
@@ -408,10 +409,10 @@ async fn query_app() -> (testkit::TestDb, Router) {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
     let open_id: ferroehr::ids::EhrId = OPEN_EHR_ID.parse().expect("valid ehr uuid");
-    svc.create_ehr_with_id_meta(ehr_id, None, None)
+    Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
         .await
         .expect("create ehr");
-    svc.create_ehr_with_id_meta(open_id, None, None)
+    Box::pin(svc.create_ehr_with_id_meta(open_id, WriteRequest::new(None)))
         .await
         .expect("create open ehr");
     seed_scheme(
@@ -561,7 +562,7 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
     let (_pg, pool) = common::migrated_pool().await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
-    svc.create_ehr_with_id_meta(ehr_id, None, None)
+    Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
         .await
         .expect("create ehr");
 

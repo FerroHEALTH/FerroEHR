@@ -15,7 +15,6 @@
               fragment the seam produced once; stored-content serving"
 )]
 
-use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use openehr_rm::prelude::ItemTag;
 use serde_json::Value;
 use uuid::Uuid;
@@ -23,57 +22,15 @@ use uuid::Uuid;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
-use crate::service::demographic::party::CurrentParty;
-use crate::service::demographic::relationship::CurrentRelationship;
+use crate::service::demographic::support::Precondition;
 use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::tag_target_tail;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
-use crate::service::version_update::Committal;
-use crate::versioning::object_version_id::{
-    VersionIdError, expected_from_if_match, if_match_token, parse_uid_based_id, parse_version_uid,
-};
-use openehr_its::rest::generated::common::UpdateAudit;
+use crate::service::version_update::WriteRequest;
+use crate::versioning::object_version_id::{VersionIdError, parse_uid_based_id, parse_version_uid};
 use openehr_rm::prelude::{Party, PartyRelationship};
-
-/// Verifies a full-`OBJECT_VERSION_ID` `If-Match` precondition, which must
-/// answer `412 Precondition Failed` when it evaluates false (ITS-REST overview
-/// `Requests_and_responses.md` §"If-Match and accidental overwrites").
-///
-/// The precondition names the current latest version in full, the
-/// `object_id :: creating_system_id :: version_tree_id` triple, and a mismatch
-/// in any segment is a `412`. The comparison is case-insensitive, an
-/// `OBJECT_VERSION_ID` being a composite identifier whose case-differing forms
-/// "identify the same thing" (BASE `base_types`
-/// `master05-identification_package.adoc` §"Composite Identifiers and Case").
-/// This mirrors the EHR path's `ensure_if_match`.
-///
-/// The wire `ETag` syntax is decoded by the ITS-REST adapter before the value
-/// reaches here; [`if_match_token`] applies the remaining quote tolerance so
-/// this compare and [`expected_from_if_match`] judge the same token. Tokens that
-/// are not a full `OBJECT_VERSION_ID` are not silently skipped: the RFC 9110 `*`
-/// wildcard and the bare `VERSION_TREE_ID` trunk number carry no full identity
-/// to compare, and every other shape is rejected as malformed by
-/// [`expected_from_if_match`], which every caller invokes on the same value.
-fn ensure_full_ovid_if_match(
-    if_match: Option<&str>,
-    current: Option<&ResourceMeta>,
-) -> Result<(), ServiceError> {
-    let Some(raw) = if_match else { return Ok(()) };
-    let token = if_match_token(raw);
-    if <openehr_base::prelude::ObjectVersionId as std::str::FromStr>::from_str(token).is_err() {
-        return Ok(());
-    }
-    match current {
-        Some(meta) if composite_ids_equal(&meta.uid, token) => Ok(()),
-        Some(meta) => Err(ServiceError::version_conflict(format!(
-            "If-Match {token:?} does not match the current latest version {:?}",
-            meta.uid
-        ))),
-        None => Ok(()),
-    }
-}
 
 impl FerroEhrService {
     /// Attach the party's stored `ITEM_TAG`s (RM `common.item_tag`) to a response's
@@ -154,17 +111,18 @@ impl FerroEhrService {
     pub async fn party_create(
         &self,
         kind: PartyKind,
-        body: Party,
-        committal: Option<Committal>,
+        request: WriteRequest<Party>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let body = openehr_its::json::to_canonical_value(&body);
         // A freshly created party has no stored ITEM_TAGs by construction, so
         // the response seam needs no tag read here; when the request carried
         // `openehr-item-tag` header tags, the wire adapter persists them after
         // the create and re-populates the seam itself (person_create.yaml).
-        self.commit_new_party(kind, body, committal.as_ref())
-            .await
-            .map_err(ServiceError::flattened)
+        self.commit_new_party(
+            kind,
+            request.map(|data| openehr_its::json::to_canonical_value(&data)),
+        )
+        .await
+        .map_err(ServiceError::flattened)
     }
 
     /// Read a party of the routed [`PartyKind`] by uid-based id (bare
@@ -215,27 +173,23 @@ impl FerroEhrService {
         kind: PartyKind,
         uid_based_id: String,
         if_match: String,
-        body: Party,
-        committal: Option<Committal>,
+        request: WriteRequest<Party>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let body = openehr_its::json::to_canonical_value(&body);
         let vo_id = argument_vo(&uid_based_id)?;
-        // Resolve the current version ONCE (lean, kind-checked): the same handle
-        // serves the `If-Match` `ETag` compare here and the service write gate —
-        // the dispatcher never resolves and the service again.
-        let current = self.party_current(kind, vo_id).await?;
-        let meta = current.as_ref().map(CurrentParty::resource_meta);
-        ensure_full_ovid_if_match(Some(&if_match), meta.as_ref())?;
-        let expected = expected_from_if_match(&if_match).map_err(VersionIdError::into_argument)?;
-        let current = current.ok_or_else(|| {
+        let precondition = Precondition::parse(Some(&if_match), None)?;
+        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
             ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("{} {vo_id}", kind.rm_type()),
             )
         })?;
-        self.commit_party_update(current, body, expected, committal.as_ref())
-            .await
-            .map_err(ServiceError::flattened)
+        self.commit_party_update(
+            current,
+            precondition,
+            request.map(|data| openehr_its::json::to_canonical_value(&data)),
+        )
+        .await
+        .map_err(ServiceError::flattened)
     }
 
     /// Logically delete a party of the routed [`PartyKind`]
@@ -261,7 +215,7 @@ impl FerroEhrService {
         kind: PartyKind,
         uid_based_id: String,
         if_match: Option<String>,
-        update_audit: Option<UpdateAudit>,
+        request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
         let decoded = parse_uid_based_id(&uid_based_id).map_err(VersionIdError::into_argument)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
@@ -274,25 +228,16 @@ impl FerroEhrService {
                 kind.rm_type()
             )));
         }
-        // One lean resolve shared by the `If-Match` compare and the delete gate.
-        let current = self.party_current(kind, vo_id).await?;
-        let meta = current.as_ref().map(CurrentParty::resource_meta);
-        ensure_full_ovid_if_match(if_match.as_deref(), meta.as_ref())?;
-        // A malformed `If-Match` is rejected, not silently ignored;
-        // an absent header falls back to the path OVID's version.
-        let expected = match if_match.as_deref() {
-            Some(raw) => expected_from_if_match(raw)
-                .map_err(VersionIdError::into_argument)?
-                .or(path_version),
-            None => path_version,
-        };
-        let current = current.ok_or_else(|| {
+        // A malformed `If-Match` is rejected, not silently ignored; an absent
+        // header falls back to the path OVID's version.
+        let precondition = Precondition::parse(if_match.as_deref(), path_version)?;
+        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
             ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("{} {vo_id}", kind.rm_type()),
             )
         })?;
-        self.commit_party_delete(current, expected, update_audit.as_ref())
+        self.commit_party_delete(current, precondition, request)
             .await
             .map_err(ServiceError::flattened)
     }
@@ -522,11 +467,9 @@ impl FerroEhrService {
     /// - [`ServiceError`] on a storage/database fault during the create transaction.
     pub async fn party_relationship_create(
         &self,
-        body: PartyRelationship,
-        committal: Option<Committal>,
+        request: WriteRequest<PartyRelationship>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let body = openehr_its::json::to_canonical_value(&body);
-        self.create_relationship(body, committal.as_ref())
+        self.create_relationship(request.map(|data| openehr_its::json::to_canonical_value(&data)))
             .await
             .map_err(ServiceError::flattened)
     }
@@ -569,24 +512,23 @@ impl FerroEhrService {
         &self,
         uid_based_id: String,
         if_match: String,
-        body: PartyRelationship,
-        committal: Option<Committal>,
+        request: WriteRequest<PartyRelationship>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let body = openehr_its::json::to_canonical_value(&body);
         let vo_id = argument_vo(&uid_based_id)?;
-        let current = self.relationship_current(vo_id).await?;
-        let meta = current.as_ref().map(CurrentRelationship::resource_meta);
-        ensure_full_ovid_if_match(Some(&if_match), meta.as_ref())?;
-        let expected = expected_from_if_match(&if_match).map_err(VersionIdError::into_argument)?;
-        let current = current.ok_or_else(|| {
+        let precondition = Precondition::parse(Some(&if_match), None)?;
+        let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
             ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         })?;
-        self.commit_relationship_update(current, body, expected, committal.as_ref())
-            .await
-            .map_err(ServiceError::flattened)
+        self.commit_relationship_update(
+            current,
+            precondition,
+            request.map(|data| openehr_its::json::to_canonical_value(&data)),
+        )
+        .await
+        .map_err(ServiceError::flattened)
     }
 
     /// Logically delete a relationship. Mirrors `party_delete`: the path
@@ -607,7 +549,7 @@ impl FerroEhrService {
         &self,
         uid_based_id: String,
         if_match: Option<String>,
-        update_audit: Option<UpdateAudit>,
+        request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
         let decoded = parse_uid_based_id(&uid_based_id).map_err(VersionIdError::into_argument)?;
         let (vo_id, path_version) = (decoded.vo_id, decoded.tree());
@@ -619,25 +561,16 @@ impl FerroEhrService {
                  PARTY_RELATIONSHIP version, not its versioned object id"
             )));
         }
-        // One lean resolve shared by the `If-Match` compare and the delete gate.
-        let current = self.relationship_current(vo_id).await?;
-        let meta = current.as_ref().map(CurrentRelationship::resource_meta);
-        ensure_full_ovid_if_match(if_match.as_deref(), meta.as_ref())?;
-        // A malformed `If-Match` is rejected, not silently ignored;
-        // an absent header falls back to the path OVID's version.
-        let expected = match if_match.as_deref() {
-            Some(raw) => expected_from_if_match(raw)
-                .map_err(VersionIdError::into_argument)?
-                .or(path_version),
-            None => path_version,
-        };
-        let current = current.ok_or_else(|| {
+        // A malformed `If-Match` is rejected, not silently ignored; an absent
+        // header falls back to the path OVID's version.
+        let precondition = Precondition::parse(if_match.as_deref(), path_version)?;
+        let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
             ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         })?;
-        self.commit_relationship_delete(current, expected, update_audit.as_ref())
+        self.commit_relationship_delete(current, precondition, request)
             .await
             .map_err(ServiceError::flattened)
     }
@@ -736,90 +669,4 @@ fn argument_vo(uid_based_id: &str) -> Result<VoId, ServiceError> {
     Ok(parse_uid_based_id(uid_based_id)
         .map_err(VersionIdError::into_argument)?
         .vo_id)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const VO: &str = "8849182c-82ad-4088-a07f-48ead4180515";
-
-    fn latest(uid: &str) -> ResourceMeta {
-        ResourceMeta::new(String::new(), uid.to_owned())
-    }
-
-    /// An `If-Match` naming the current latest version in full satisfies the
-    /// precondition (ITS-REST overview §"If-Match and accidental overwrites").
-    #[test]
-    fn matching_full_ovid_passes() {
-        let uid = format!("{VO}::openEHRSys.example.com::2");
-        assert!(ensure_full_ovid_if_match(Some(&uid), Some(&latest(&uid))).is_ok());
-        // The quote tolerance of the library boundary.
-        let quoted = format!("\"{uid}\"");
-        assert!(ensure_full_ovid_if_match(Some(&quoted), Some(&latest(&uid))).is_ok());
-    }
-
-    /// `creating_system_id` is a composite identifier, so a case variant names
-    /// the SAME version and must NOT raise a spurious `412` (BASE `base_types`
-    /// master05 §"Composite Identifiers and Case").
-    #[test]
-    fn case_variant_creating_system_id_matches() {
-        let stored = format!("{VO}::openEHRSys.example.com::2");
-        for variant in [
-            format!("{VO}::OPENEHRSYS.EXAMPLE.COM::2"),
-            format!("{VO}::openehrsys.example.com::2"),
-            format!("{}::openEHRSys.example.com::2", VO.to_uppercase()),
-        ] {
-            assert!(
-                ensure_full_ovid_if_match(Some(&variant), Some(&latest(&stored))).is_ok(),
-                "BASE master05 §Composite Identifiers and Case: {variant:?} names the \
-                 same version as {stored:?}"
-            );
-        }
-    }
-
-    /// A stale full `OBJECT_VERSION_ID` — a mismatch in ANY segment — is the
-    /// `412` branch.
-    #[test]
-    fn stale_or_foreign_ovid_is_a_version_mismatch() {
-        let stored = format!("{VO}::openEHRSys.example.com::2");
-        for stale in [
-            // wrong version_tree_id
-            format!("{VO}::openEHRSys.example.com::1"),
-            // wrong creating_system_id (not a mere case variant)
-            format!("{VO}::other.system::2"),
-            // wrong object_id
-            "00000000-0000-4000-8000-0000000000ff::openEHRSys.example.com::2".to_owned(),
-        ] {
-            let err = ensure_full_ovid_if_match(Some(&stale), Some(&latest(&stored)))
-                .expect_err("stale precondition");
-            assert!(
-                matches!(err, ServiceError::VersionConflict(_)),
-                "{stale:?} must fail the precondition, got {err:?}"
-            );
-        }
-    }
-
-    /// An absent header, and an object with no current version, defer to the
-    /// versioning path (nothing to compare against).
-    #[test]
-    fn absent_header_or_no_current_version_defers() {
-        let uid = format!("{VO}::openEHRSys.example.com::2");
-        assert!(ensure_full_ovid_if_match(None, Some(&latest(&uid))).is_ok());
-        assert!(ensure_full_ovid_if_match(Some(&uid), None).is_ok());
-    }
-
-    /// A non-OVID token carries no full identity to compare here — the RFC 9110
-    /// `*` wildcard and the lenient trunk number pass through to
-    /// `expected_from_if_match`, which enforces the tree precondition or rejects
-    /// the value as malformed (`400`); nothing is silently skipped.
-    #[test]
-    fn non_ovid_tokens_defer_to_the_tree_precondition() {
-        let uid = format!("{VO}::openEHRSys.example.com::2");
-        assert!(ensure_full_ovid_if_match(Some("*"), Some(&latest(&uid))).is_ok());
-        assert!(ensure_full_ovid_if_match(Some("2"), Some(&latest(&uid))).is_ok());
-        // …and the malformed shapes the same call chain rejects downstream.
-        assert!(ensure_full_ovid_if_match(Some("garbage"), Some(&latest(&uid))).is_ok());
-        assert!(expected_from_if_match("garbage").is_err());
-    }
 }

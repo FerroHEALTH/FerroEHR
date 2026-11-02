@@ -20,6 +20,7 @@ use crate::db::acquire::acquire;
 use crate::ids::EhrId;
 use crate::service::refusal::{Clash, Missing, Refusal};
 use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::service::version_update::WriteRequest;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -42,12 +43,11 @@ impl FerroEhrService {
     /// object, and an EHR Access object … created and committed in a
     /// Contribution". Shared by `POST /ehr` and `PUT /ehr/{ehr_id}`.
     ///
-    /// `committal` carries the client's `openehr-version` and
-    /// `openehr-audit-details` request-header metadata when the request supplied
-    /// any: EHR creation commits change-controlled content, so the ITS-REST
-    /// merge MUST applies exactly as it does to a COMPOSITION write (overview
-    /// `Requests_and_responses.md` §"openehr-version and openehr-audit-details").
-    /// `None` keeps the server-default attribution.
+    /// `request` carries the client's `openehr-version` and
+    /// `openehr-audit-details` request-header metadata: EHR creation commits
+    /// change-controlled content, so the ITS-REST merge MUST applies exactly as
+    /// it does to a COMPOSITION write (overview `Requests_and_responses.md`
+    /// §"openehr-version and openehr-audit-details").
     ///
     /// # Errors
     /// [`ServiceError::Unprocessable`] when the supplied `EHR_STATUS` is
@@ -63,29 +63,25 @@ impl FerroEhrService {
     pub(in crate::service) async fn commit_new_ehr(
         &self,
         ehr_id: EhrId,
-        status: Value,
-        committal: Option<&crate::service::version_update::Committal>,
+        request: WriteRequest<Value>,
     ) -> Result<ServiceResponse, ServiceError> {
         // The supplied EHR_STATUS must be a structurally valid RM instance
         // before the EHR is created (CNF master06 §Test Data Sets INVALID
         // class 2). The EHR-create wire carries no lifecycle channel, so the
         // first status version is complete — full strictness.
-        self.validate_for_commit(Kind::EhrStatus, &status, false)
+        let status = &request.data;
+        self.validate_for_commit(Kind::EhrStatus, status, false)
             .await?;
 
         // The creation commit's AUDIT_DETAILS, built BEFORE the transaction so
         // an illegal client `change_type` refuses without a storage round trip.
         // `from_update` constrains the code to `249|creation|`: a create commits
         // a first version (RM common master06 §Contributions).
-        let audit = match committal {
-            Some(c) => crate::versioning::audit::AuditInput::from_update(
-                &c.audit,
-                change_type::CREATION,
-                "EHR creation",
-                &self.effective_system_id(),
-            )?,
-            None => self.audit(change_type::CREATION, "EHR creation"),
-        };
+        let audit = self.commit_audit(
+            request.audit.as_ref(),
+            change_type::CREATION,
+            "EHR creation",
+        )?;
 
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
@@ -96,7 +92,7 @@ impl FerroEhrService {
         // separate `sync_ehr_subject` UPDATE runs. A subject already owned by
         // another EHR is a distinct 409 (RM ehr master04 §EHR Status).
         let (subject_id, subject_namespace, is_queryable, is_modifiable) =
-            super::status::ehr_promoted_columns(&status);
+            super::status::ehr_promoted_columns(status);
         let time_created = match crate::storage::ehr_repo::insert_ehr(
             &mut tx,
             ehr_id,
@@ -147,7 +143,7 @@ impl FerroEhrService {
                         // NOTE: no released text governs a create committing
                         // two versions — our own design: the generated
                         // EHR_ACCESS keeps the default `532|complete|`.
-                        lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
+                        lifecycle_state: request.lifecycle_state.clone(),
                         attestations: Vec::new(),
                         other_input_version_uids: Vec::new(),
                     },
@@ -519,8 +515,9 @@ impl FerroEhrService {
     /// the created EHR's [`ResourceMeta`] (the `ETag`/`Location` id + the
     /// creation instant).
     ///
-    /// `committal` is the `POST /ehr` request's `openehr-version` /
-    /// `openehr-audit-details` metadata (see `Self::commit_new_ehr`).
+    /// `request` carries the optional `EHR_STATUS` and the `POST /ehr`
+    /// request's `openehr-version` / `openehr-audit-details` metadata (see
+    /// `Self::commit_new_ehr`).
     ///
     /// # Errors
     /// [`ServiceError`] when the status is structurally invalid (422-equivalent),
@@ -529,13 +526,10 @@ impl FerroEhrService {
     /// (409-equivalent), or storage fails.
     pub async fn create_ehr_meta(
         &self,
-        an_ehr_status: Option<EhrStatus>,
-        committal: Option<&crate::service::version_update::Committal>,
+        request: WriteRequest<Option<EhrStatus>>,
     ) -> Result<(EhrId, ResourceMeta), ServiceError> {
         let ehr_id = EhrId::minted(self.stamp());
-        let meta = self
-            .create_ehr_with_id_meta(ehr_id, an_ehr_status, committal)
-            .await?;
+        let meta = Box::pin(self.create_ehr_with_id_meta(ehr_id, request)).await?;
         Ok((ehr_id, meta))
     }
 
@@ -543,8 +537,9 @@ impl FerroEhrService {
     /// the given (or default) `EHR_STATUS`, returning the created EHR's
     /// [`ResourceMeta`].
     ///
-    /// `committal` is the `PUT /ehr/{ehr_id}` request's `openehr-version` /
-    /// `openehr-audit-details` metadata (see `Self::commit_new_ehr`).
+    /// `request` carries the optional `EHR_STATUS` and the `PUT /ehr/{ehr_id}`
+    /// request's `openehr-version` / `openehr-audit-details` metadata (see
+    /// `Self::commit_new_ehr`).
     ///
     /// # Errors
     /// [`ServiceError`] when the EHR already exists (409-equivalent), the status is
@@ -554,16 +549,17 @@ impl FerroEhrService {
     pub async fn create_ehr_with_id_meta(
         &self,
         an_ehr_id: EhrId,
-        an_ehr_status: Option<EhrStatus>,
-        committal: Option<&crate::service::version_update::Committal>,
+        request: WriteRequest<Option<EhrStatus>>,
     ) -> Result<ResourceMeta, ServiceError> {
         // NOTE: ITS-REST EHR API `POST /ehr` accepts an optional EHR_STATUS
         // body, so a subject-bearing status is accepted here.
-        let status = an_ehr_status.map_or_else(initial_ehr_status, |s| {
-            openehr_its::json::to_canonical_value(&s)
+        let request = request.map(|status| {
+            status.map_or_else(initial_ehr_status, |s| {
+                openehr_its::json::to_canonical_value(&s)
+            })
         });
         let created = self
-            .commit_new_ehr(an_ehr_id, status, committal)
+            .commit_new_ehr(an_ehr_id, request)
             .await
             .map_err(ServiceError::flattened)?;
         created

@@ -35,7 +35,7 @@ use crate::fixtures::{change_type, composition, folder, uid, uv};
 use crate::item_tag_fixture::ehr_tag;
 
 use crate::typed_body::typed;
-use ferroehr::service::version_update::{Committal, change_type_coded};
+use ferroehr::service::version_update::{WriteRequest, change_type_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData};
 
 /// The `uid.value` (`OBJECT_VERSION_ID`) of a versioned-object body.
@@ -244,7 +244,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // A stale preceding_version_uid (v1, but latest is v2) → 409 Conflict.
     let comp_ovid_v1_id: ObjectVersionId = comp_ovid_v1.parse().expect("ovid");
     let stale_delete = svc
-        .delete_composition(ehr_uuid, &comp_ovid_v1_id, None, None)
+        .delete_composition(ehr_uuid, &comp_ovid_v1_id, WriteRequest::new(()))
         .await;
     assert!(
         matches!(stale_delete, Err(ServiceError::Conflict(_))),
@@ -261,7 +261,11 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // nothing: the composition still reads live afterwards.
     let comp_ovid_v2_path: ObjectVersionId = comp_ovid_v2.parse().expect("ovid");
     let volunteered_stale = svc
-        .delete_composition(ehr_uuid, &comp_ovid_v2_path, Some(&comp_ovid_v1_id), None)
+        .delete_composition(
+            ehr_uuid,
+            &comp_ovid_v2_path,
+            crate::fixtures::deleting(Some(&comp_ovid_v1_id).cloned()),
+        )
         .await;
     assert!(
         matches!(volunteered_stale, Err(ServiceError::VersionConflict(_))),
@@ -289,7 +293,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let fabricated_id: ObjectVersionId = fabricated.parse().expect("ovid");
     assert!(
         matches!(
-            svc.delete_composition(ehr_uuid, &fabricated_id, None, None)
+            svc.delete_composition(ehr_uuid, &fabricated_id, WriteRequest::new(()))
                 .await,
             Err(ServiceError::Conflict(_))
         ),
@@ -314,7 +318,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     };
     let comp_ovid_v2_id: ObjectVersionId = case_variant.parse().expect("ovid");
     let deleted = svc
-        .delete_composition(ehr_uuid, &comp_ovid_v2_id, None, None)
+        .delete_composition(ehr_uuid, &comp_ovid_v2_id, WriteRequest::new(()))
         .await
         .expect("composition_delete (case-variant creating_system_id)")
         .version_uid();
@@ -335,7 +339,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // Re-deleting an already-deleted composition → 400 (400_already_deleted).
     assert!(
         matches!(
-            svc.delete_composition(ehr_uuid, &comp_ovid_v2_id, None, None)
+            svc.delete_composition(ehr_uuid, &comp_ovid_v2_id, WriteRequest::new(()))
                 .await,
             Err(ServiceError::BadRequest(_))
         ),
@@ -385,9 +389,12 @@ async fn ehr_composition_lifecycle_end_to_end() {
         .uid;
     assert!(dir_ovid_v2.ends_with("::2"));
 
-    svc.delete_directory(ehr_uuid, Some(dir_ovid_v2.parse().expect("ovid")), None)
-        .await
-        .expect("directory_delete");
+    svc.delete_directory(
+        ehr_uuid,
+        crate::fixtures::deleting(Some(dir_ovid_v2.parse().expect("ovid"))),
+    )
+    .await
+    .expect("directory_delete");
 }
 
 #[tokio::test]
@@ -477,7 +484,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
 
     let comp_ovid_id: ObjectVersionId = comp_ovid.parse().expect("ovid");
     let delete = svc
-        .delete_composition(ehr_uuid, &comp_ovid_id, None, None)
+        .delete_composition(ehr_uuid, &comp_ovid_id, WriteRequest::new(()))
         .await;
     assert!(
         comp_blocked(&delete),
@@ -546,10 +553,12 @@ async fn creating_an_ehr_with_an_existing_id_conflicts() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let id = ferroehr::ids::EhrId(uuid::Uuid::now_v7());
-    svc.create_ehr_with_id_meta(id, None, None)
+    svc.create_ehr_with_id_meta(id, WriteRequest::new(None))
         .await
         .expect("first create");
-    let again = svc.create_ehr_with_id_meta(id, None, None).await;
+    let again = svc
+        .create_ehr_with_id_meta(id, WriteRequest::new(None))
+        .await;
     assert!(again.is_err(), "duplicate EHR id must conflict");
 }
 
@@ -567,8 +576,8 @@ async fn creating_an_ehr_with_an_existing_id_conflicts() {
 async fn ehr_creation_merges_the_committal_metadata() {
     let (_db, svc) = crate::fixtures::service().await;
 
-    let committal = Committal {
-        audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+    let committal = WriteRequest {
+        audit: Some(UpdateAudit::UpdateAudit(UpdateAuditData {
             _type: None,
             // Empty = the client supplied no change_type (what the header
             // layer produces), so the operation default applies.
@@ -582,13 +591,14 @@ async fn ehr_creation_merges_the_committal_metadata() {
             .expect("committer"),
             system_id: Some("example.openehr.systemid".to_owned()),
             additional_properties: std::collections::BTreeMap::new(),
-        }),
+        })),
         // `553|incomplete|` — a legal first-version lifecycle state (master06
         // §Incomplete Content), so the merge is visible against the
         // `532|complete|` default.
         lifecycle_state: Some("553".to_owned()),
+        ..WriteRequest::new(None)
     };
-    let (ehr_id, _meta) = Box::pin(svc.create_ehr_meta(None, Some(&committal)))
+    let (ehr_id, _meta) = Box::pin(svc.create_ehr_meta(committal))
         .await
         .expect("create_ehr with committal metadata");
 
@@ -644,8 +654,8 @@ async fn ehr_creation_merges_the_committal_metadata() {
 async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
     let (_db, svc) = crate::fixtures::service().await;
 
-    let committal = |code: &str| Committal {
-        audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+    let committal = |code: &str| WriteRequest {
+        audit: Some(UpdateAudit::UpdateAudit(UpdateAuditData {
             _type: None,
             system_id: None,
             change_type: change_type_coded(code),
@@ -655,18 +665,18 @@ async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
             )
             .expect("committer"),
             additional_properties: std::collections::BTreeMap::new(),
-        }),
-        lifecycle_state: None,
+        })),
+        ..WriteRequest::new(None)
     };
 
     for code in ["250", "523", "999"] {
-        let rejected = Box::pin(svc.create_ehr_meta(None, Some(&committal(code)))).await;
+        let rejected = Box::pin(svc.create_ehr_meta(committal(code))).await;
         assert!(
             rejected.is_err(),
             "change_type {code} on an EHR create must be rejected, got {rejected:?}"
         );
     }
-    Box::pin(svc.create_ehr_meta(None, Some(&committal("249"))))
+    Box::pin(svc.create_ehr_meta(committal("249")))
         .await
         .expect("a restated creation change_type is accepted");
 }
@@ -679,8 +689,8 @@ async fn ehr_creation_rejects_a_change_type_that_is_not_a_creation() {
 #[tokio::test]
 async fn ehr_creation_refuses_a_stated_empty_system_id() {
     let (_db, svc) = crate::fixtures::service().await;
-    let committal = Committal {
-        audit: UpdateAudit::UpdateAudit(UpdateAuditData {
+    let committal = WriteRequest {
+        audit: Some(UpdateAudit::UpdateAudit(UpdateAuditData {
             _type: None,
             system_id: Some(String::new()),
             change_type: ferroehr::service::version_update::unstated_code(),
@@ -690,10 +700,10 @@ async fn ehr_creation_refuses_a_stated_empty_system_id() {
             )
             .expect("committer"),
             additional_properties: std::collections::BTreeMap::new(),
-        }),
-        lifecycle_state: None,
+        })),
+        ..WriteRequest::new(None)
     };
-    let err = Box::pin(svc.create_ehr_meta(None, Some(&committal)))
+    let err = Box::pin(svc.create_ehr_meta(committal))
         .await
         .expect_err("an empty system_id is refused");
     assert!(
@@ -802,7 +812,7 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    Box::pin(svc.create_ehr_meta(Some(typed(&anonymous)), None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&anonymous)))))
         .await
         .map(|(id, _)| id)
         .expect("an anonymous PARTY_SELF EHR_STATUS is accepted");
@@ -1095,7 +1105,7 @@ async fn ehr_get_by_subject_finds_the_ehr() {
         "is_queryable": true,
         "is_modifiable": true
     });
-    let ehr_id = Box::pin(svc.create_ehr_meta(Some(typed(&status)), None))
+    let ehr_id = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status)))))
         .await
         .map(|(id, _)| id)
         .expect("ehr")
@@ -1734,11 +1744,11 @@ async fn duplicate_subject_ehr_creation_conflicts() {
         })
     };
 
-    Box::pin(svc.create_ehr_meta(Some(typed(&status("patient-1"))), None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status("patient-1"))))))
         .await
         .map(|(id, _)| id)
         .expect("first EHR for the subject");
-    let dup = Box::pin(svc.create_ehr_meta(Some(typed(&status("patient-1"))), None))
+    let dup = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status("patient-1"))))))
         .await
         .map(|(id, _)| id);
     assert!(
@@ -1753,7 +1763,7 @@ async fn duplicate_subject_ehr_creation_conflicts() {
     );
 
     // A different subject — and the subject-less default — still create fine.
-    Box::pin(svc.create_ehr_meta(Some(typed(&status("patient-2"))), None))
+    Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status("patient-2"))))))
         .await
         .map(|(id, _)| id)
         .expect("different subject creates");
@@ -1966,9 +1976,12 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
 
     // Delete the directory (rank 1) → the directory slot resolves to the next
     // LIVE hierarchy (rank 2); `/directory` now serves hierarchy 2.
-    svc.delete_directory(ehr_uuid, Some(dir1_ovid.parse().expect("ovid")), None)
-        .await
-        .expect("delete directory (hierarchy 1)");
+    svc.delete_directory(
+        ehr_uuid,
+        crate::fixtures::deleting(Some(dir1_ovid.parse().expect("ovid"))),
+    )
+    .await
+    .expect("delete directory (hierarchy 1)");
     let dir_after = svc
         .get_directory_at_time(ehr_uuid, None, None)
         .await
@@ -2562,26 +2575,32 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
         })
     };
 
-    let lower =
-        Box::pin(svc.create_ehr_meta(Some(typed(&status("case-subject-a", "patients"))), None))
-            .await
-            .map(|(id, _)| id)
-            .expect("lower-case subject");
+    let lower = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status(
+        "case-subject-a",
+        "patients",
+    ))))))
+    .await
+    .map(|(id, _)| id)
+    .expect("lower-case subject");
     // A case VARIANT of the same string is a DIFFERENT subject: it creates a
     // second EHR instead of colliding with the first.
-    let upper =
-        Box::pin(svc.create_ehr_meta(Some(typed(&status("Case-Subject-A", "patients"))), None))
-            .await
-            .map(|(id, _)| id)
-            .expect("case-variant subject is a distinct subject, not a duplicate");
+    let upper = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status(
+        "Case-Subject-A",
+        "patients",
+    ))))))
+    .await
+    .map(|(id, _)| id)
+    .expect("case-variant subject is a distinct subject, not a duplicate");
     assert_ne!(lower, upper);
 
     // The namespace half of the key is exact too.
-    let other_ns =
-        Box::pin(svc.create_ehr_meta(Some(typed(&status("case-subject-a", "Patients"))), None))
-            .await
-            .map(|(id, _)| id)
-            .expect("case-variant namespace is a distinct key");
+    let other_ns = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status(
+        "case-subject-a",
+        "Patients",
+    ))))))
+    .await
+    .map(|(id, _)| id)
+    .expect("case-variant namespace is a distinct key");
     assert_ne!(lower, other_ns);
 
     // Each spelling resolves to its OWN EHR on the read side — the lookup key
@@ -2602,10 +2621,12 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
 
     // And re-using an EXACT spelling still conflicts — the exactness narrows
     // the key, it does not disable the uniqueness rule.
-    let dup =
-        Box::pin(svc.create_ehr_meta(Some(typed(&status("case-subject-a", "patients"))), None))
-            .await
-            .map(|(id, _)| id);
+    let dup = Box::pin(svc.create_ehr_meta(WriteRequest::new(Some(typed(&status(
+        "case-subject-a",
+        "patients",
+    ))))))
+    .await
+    .map(|(id, _)| id);
     assert!(
         matches!(
             dup,

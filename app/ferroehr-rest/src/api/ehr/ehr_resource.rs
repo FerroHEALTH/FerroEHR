@@ -71,11 +71,8 @@ pub(super) async fn run(
             // The service returns the created EHR's own resource metadata
             // (ehr_id + creation instant) — the write path never rebuilds a
             // metadata-less envelope, so `Last-Modified` survives to the wire.
-            let committal = create_committal(h)?;
-            let (ehr_id, meta) = state
-                .backend()
-                .create_ehr_meta(status, committal.as_ref())
-                .await?;
+            let request = create_request(h, status)?;
+            let (ehr_id, meta) = Box::pin(state.backend().create_ehr_meta(request)).await?;
             ehr_write_response(&state, h, &base, ehr_id, meta).await
         }
         "ehr_create_with_id" => {
@@ -85,11 +82,8 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let status = negotiate::optional_rm_value::<EhrStatus>(h, &parts.body)?;
-            let committal = create_committal(h)?;
-            let meta = state
-                .backend()
-                .create_ehr_with_id_meta(ehr_id, status, committal.as_ref())
-                .await?;
+            let request = create_request(h, status)?;
+            let meta = Box::pin(state.backend().create_ehr_with_id_meta(ehr_id, request)).await?;
             ehr_write_response(&state, h, &base, ehr_id, meta).await
         }
         "ehr_get_by_id" => {
@@ -143,10 +137,11 @@ pub(super) async fn run(
 /// # Errors
 /// [`ApiError::BadRequest`] when a committal header carries a malformed
 /// identifier.
-fn create_committal(
+fn create_request(
     headers: &http::HeaderMap,
-) -> Result<Option<ferroehr::service::version_update::Committal>, ApiError> {
-    crate::overview::committal::committal_commit(headers, super::committer_proxy())
+    status: Option<EhrStatus>,
+) -> Result<ferroehr::service::version_update::WriteRequest<Option<EhrStatus>>, ApiError> {
+    crate::overview::committal::write_request(headers, super::committer_proxy(), status, None)
 }
 
 /// Render an EHR read (`200_EHR`) with the weak `ETag` carrying

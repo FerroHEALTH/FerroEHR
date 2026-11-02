@@ -43,6 +43,7 @@
 
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Malformed;
+use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -59,7 +60,6 @@ use crate::typed_body::typed;
 use ferroehr::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
-use openehr_its::rest::generated::common::UpdateVersion;
 
 /// An `EXPORT_SPEC` in `logical_format`/`compression_format` whose
 /// `segment_split_size` of one kilobyte forces several segment entries — the
@@ -239,11 +239,12 @@ async fn load_promotes_the_subject_from_the_loaded_status() {
     let (_src_db, src_pool, source) = repository().await;
     let (_dst_db, _dst_pool, target) = repository().await;
 
-    let ehr =
-        Box::pin(source.create_ehr_meta(Some(typed(&status_for_subject("patient-dump-1"))), None))
-            .await
-            .map(|(id, _)| id)
-            .expect("source EHR for the subject");
+    let ehr = Box::pin(source.create_ehr_meta(WriteRequest::new(Some(typed(
+        &status_for_subject("patient-dump-1"),
+    )))))
+    .await
+    .map(|(id, _)| id)
+    .expect("source EHR for the subject");
 
     // Fixture: clear the promoted projection, leaving the subject only in the
     // EHR_STATUS content — what an EHR landed without promotion looks like.
@@ -289,19 +290,21 @@ async fn load_reports_an_ehr_whose_subject_the_repository_already_holds() {
     let (_src_db, _src_pool, source) = repository().await;
     let (_dst_db, _dst_pool, target) = repository().await;
 
-    let clashing =
-        Box::pin(source.create_ehr_meta(Some(typed(&status_for_subject("patient-dump-2"))), None))
-            .await
-            .map(|(id, _)| id)
-            .expect("source EHR for the subject");
+    let clashing = Box::pin(source.create_ehr_meta(WriteRequest::new(Some(typed(
+        &status_for_subject("patient-dump-2"),
+    )))))
+    .await
+    .map(|(id, _)| id)
+    .expect("source EHR for the subject");
     let innocent = seed_full_ehr(&source).await;
 
     // The target already holds that subject under a DIFFERENT EHR.
-    let owner =
-        Box::pin(target.create_ehr_meta(Some(typed(&status_for_subject("patient-dump-2"))), None))
-            .await
-            .map(|(id, _)| id)
-            .expect("target EHR for the same subject");
+    let owner = Box::pin(target.create_ehr_meta(WriteRequest::new(Some(typed(
+        &status_for_subject("patient-dump-2"),
+    )))))
+    .await
+    .map(|(id, _)| id)
+    .expect("target EHR for the same subject");
 
     let dir = archive_dir();
     source
@@ -512,7 +515,7 @@ async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
         .expect("create_composition")
         .version_uid();
     let deleted = svc
-        .delete_composition(ehr, &doomed.parse().expect("ovid"), None, None)
+        .delete_composition(ehr, &doomed.parse().expect("ovid"), WriteRequest::new(()))
         .await
         .expect("delete_composition")
         .version_uid();
@@ -1254,22 +1257,24 @@ fn wave_relationship(name: &str, source: &str, target: &str) -> Value {
 }
 
 /// The wire-shaped commit envelope for a demographic create.
-fn wave_uv<T: serde::de::DeserializeOwned>(data: &Value) -> UpdateVersion<T> {
-    let v = json!({
-        "lifecycle_state": {
-            "value": "complete",
-            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" }
-        },
-        "data": data,
-        "commit_audit": {
-            "change_type": {
-                "value": "creation",
-                "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" }
+fn wave_uv<T: serde::de::DeserializeOwned, R: crate::fixtures::Envelope<T>>(data: &Value) -> R {
+    R::from_version({
+        let v = json!({
+            "lifecycle_state": {
+                "value": "complete",
+                "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" }
             },
-            "committer": { "_type": "PARTY_IDENTIFIED", "name": "wave tester" }
-        }
-    });
-    openehr_its::json::from_canonical_value(&v).expect("UpdateVersion")
+            "data": data,
+            "commit_audit": {
+                "change_type": {
+                    "value": "creation",
+                    "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "249" }
+                },
+                "committer": { "_type": "PARTY_IDENTIFIED", "name": "wave tester" }
+            }
+        });
+        openehr_its::json::from_canonical_value(&v).expect("UpdateVersion")
+    })
 }
 
 #[tokio::test]
