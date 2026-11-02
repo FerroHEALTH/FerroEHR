@@ -21,6 +21,7 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::service::response::ServiceResponse;
 
@@ -83,7 +84,7 @@ pub(super) async fn run(
                 meta = meta.with_last_modified(at);
             }
             let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
-            super::set_versioning_headers(&mut out, Some(&meta));
+            negotiate::resource::set_versioning_headers(&mut out, &meta, Tree::Demographic);
             Ok(out)
         }
         other => Err(RestError::from(ApiError::Internal(format!(
@@ -116,6 +117,14 @@ fn write_shared(
         resp.meta.as_ref().map(|m| m.uid.as_str()),
         |status| negotiate::body::respond(h, status, &resp.body),
     );
-    super::set_write_headers(&mut out, base, segment, resp.meta.as_ref());
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_resource_headers(
+            &mut out,
+            base,
+            Tree::Demographic,
+            Some(segment),
+            meta,
+        );
+    }
     out
 }

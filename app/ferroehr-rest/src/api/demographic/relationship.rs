@@ -42,6 +42,7 @@ use crate::api::{RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::negotiate::body::respond_rm;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::service::response::ServiceResponse;
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
@@ -797,9 +798,10 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(super::error_with_meta(
+                    Ok(negotiate::resource::error_with_meta(
                         crate::overview::service_error::api_error(e),
                         meta.as_ref(),
+                        Tree::Demographic,
                     ))
                 }
                 Err(e) => Err(RestError::from(e)),
@@ -829,7 +831,13 @@ pub(super) async fn run(
             {
                 Ok(resp) => {
                     let mut out = negotiate::body::empty(StatusCode::NO_CONTENT);
-                    super::set_versioning_headers(&mut out, resp.meta.as_ref());
+                    if let Some(meta) = resp.meta.as_ref() {
+                        negotiate::resource::set_versioning_headers(
+                            &mut out,
+                            meta,
+                            Tree::Demographic,
+                        );
+                    }
                     Ok(out)
                 }
                 Err(e) if super::is_precondition(&e) => {
@@ -839,9 +847,10 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(super::error_with_meta(
+                    Ok(negotiate::resource::error_with_meta(
                         ApiError::Conflict(e.message()),
                         meta.as_ref(),
+                        Tree::Demographic,
                     ))
                 }
                 Err(e) => Err(RestError::from(e)),
@@ -874,7 +883,15 @@ fn write_relationship(
         resp.meta.as_ref().map(|m| m.uid.as_str()),
         |status| respond_rm::<PartyRelationship>(h, status, &resp.body, LOCATABLE_ROOT),
     );
-    super::set_write_headers(&mut out, base, segment, resp.meta.as_ref());
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_resource_headers(
+            &mut out,
+            base,
+            Tree::Demographic,
+            Some(segment),
+            meta,
+        );
+    }
     out
 }
 
@@ -884,6 +901,8 @@ fn write_relationship(
 /// (e.g. via `GET` method)".
 fn read_relationship(h: &http::HeaderMap, resp: &ServiceResponse) -> Response {
     let mut out = respond_rm::<PartyRelationship>(h, StatusCode::OK, &resp.body, LOCATABLE_ROOT);
-    super::set_versioning_headers(&mut out, resp.meta.as_ref());
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+    }
     out
 }

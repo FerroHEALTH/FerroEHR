@@ -36,6 +36,7 @@ use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid, require_if_match};
 use crate::state::AppState;
 
@@ -87,7 +88,7 @@ async fn get_at_time(state: AppState, parts: RequestParts) -> Result<Response, R
     let mut out =
         negotiate::body::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
     if let Some(meta) = &resp.meta {
-        negotiate::resource::set_versioning_headers(&mut out, meta);
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
     }
     Ok(out)
 }
@@ -161,6 +162,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
                 meta.as_ref(),
+                Tree::Ehr,
             ))
         }
         Err(e) => Err(RestError::from(e)),
@@ -248,6 +250,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
                 meta.as_ref(),
+                Tree::Ehr,
             ))
         }
         Err(e) => Err(RestError::from(e)),
@@ -281,7 +284,7 @@ async fn get_by_version_id(state: AppState, parts: RequestParts) -> Result<Respo
     let mut out =
         negotiate::body::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
     if let Some(meta) = &resp.meta {
-        negotiate::resource::set_versioning_headers(&mut out, meta);
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
     }
     Ok(out)
 }

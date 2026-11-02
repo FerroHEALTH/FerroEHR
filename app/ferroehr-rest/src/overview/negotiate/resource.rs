@@ -22,11 +22,30 @@ pub(crate) fn http_date(at: jiff::Timestamp) -> String {
     at.strftime("%a, %d %b %Y %H:%M:%S GMT").to_string()
 }
 
-/// Build the (path-absolute) `Location` URL for an EHR sub-resource.
-pub(crate) fn location(base_path: &str, ehr_id: &str, segment: Option<&str>, uid: &str) -> String {
-    match segment {
-        Some(seg) => format!("{base_path}/ehr/{ehr_id}/{seg}/{uid}"),
-        None => format!("{base_path}/ehr/{ehr_id}"),
+/// The tree of the REST surface a versioned resource lives under, which
+/// decides its `Location` and the domain of its access record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Tree {
+    /// An EHR or a resource under `/ehr/{ehr_id}`.
+    Ehr,
+    /// A party, a party relationship or a demographic contribution under
+    /// `/demographic`, which no EHR scopes.
+    Demographic,
+}
+
+/// Build the (path-absolute) `Location` URL for a resource of `tree`.
+pub(crate) fn location(
+    base_path: &str,
+    tree: Tree,
+    ehr_id: &str,
+    segment: Option<&str>,
+    uid: &str,
+) -> String {
+    match (tree, segment) {
+        (Tree::Ehr, Some(seg)) => format!("{base_path}/ehr/{ehr_id}/{seg}/{uid}"),
+        (Tree::Ehr, None) => format!("{base_path}/ehr/{ehr_id}"),
+        (Tree::Demographic, Some(seg)) => format!("{base_path}/demographic/{seg}/{uid}"),
+        (Tree::Demographic, None) => format!("{base_path}/demographic/{uid}"),
     }
 }
 
@@ -54,18 +73,29 @@ pub(crate) fn set_last_modified(resp: &mut Response, at: jiff::Timestamp) {
 }
 
 /// Set the versioning headers on a response: the weak `ETag` and — when the
-/// metadata carries a commit time — `Last-Modified`. No `Location`.
-pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta) {
+/// metadata carries a commit time — `Last-Modified` (overview §"`ETag` and
+/// Last-Modified": both SHOULD accompany `VERSION`/`VERSIONED_OBJECT`
+/// responses). No `Location`: overview §Location scopes it to creation and
+/// redirect responses, and §"Deprecated headers" deprecates it on `GET` and
+/// `DELETE`. Also stamps the access record's object, in the domain of `tree`.
+pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta, tree: Tree) {
     set_etag(resp, &meta.uid);
     if let Some(at) = meta.last_modified {
         set_last_modified(resp, at);
     }
+    let (ehr_id, domain) = match tree {
+        Tree::Ehr => (Some(meta.ehr_id.clone()), None),
+        Tree::Demographic => (
+            None,
+            Some(ferroehr::system_log::event::AccessDomain::Demographic),
+        ),
+    };
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditObject {
-            ehr_id: Some(meta.ehr_id.clone()),
+            ehr_id,
             uid: Some(meta.uid.clone()),
             result_count: None,
-            domain: None,
+            domain,
             origins: meta.origins.clone(),
             origin_count: (!meta.origins.is_empty())
                 .then(|| u64::try_from(meta.origins.len()).unwrap_or(u64::MAX)),
@@ -75,29 +105,22 @@ pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta) {
         });
 }
 
-/// Set the `Location` header for a newly created/updated resource
-/// (overview §Location — creation/redirect only).
-pub(crate) fn set_location(
-    resp: &mut Response,
-    base_path: &str,
-    segment: Option<&str>,
-    meta: &ResourceMeta,
-) {
-    if let Ok(loc) = HeaderValue::from_str(&location(base_path, &meta.ehr_id, segment, &meta.uid)) {
-        resp.headers_mut().insert(header::LOCATION, loc);
-    }
-}
-
 /// Set the full create/update response headers: the versioning headers plus
-/// `Location`.
+/// the `Location` of the version this request created (overview §Location:
+/// "resource creation … or redirect responses"; an openEHR update commits a
+/// new VERSION, which is a newly created resource at that URL).
 pub(crate) fn set_resource_headers(
     resp: &mut Response,
     base_path: &str,
+    tree: Tree,
     segment: Option<&str>,
     meta: &ResourceMeta,
 ) {
-    set_versioning_headers(resp, meta);
-    set_location(resp, base_path, segment, meta);
+    set_versioning_headers(resp, meta, tree);
+    let url = location(base_path, tree, &meta.ehr_id, segment, &meta.uid);
+    if let Ok(loc) = HeaderValue::from_str(&url) {
+        resp.headers_mut().insert(header::LOCATION, loc);
+    }
 }
 
 /// Render a create/update response honouring `Prefer` and setting the
@@ -122,7 +145,7 @@ where
         |status| respond_rm::<T>(headers, status, &resp.body, root_tag),
     );
     if let Some(meta) = &resp.meta {
-        set_resource_headers(&mut out, base_path, segment, meta);
+        set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
     }
     out
 }
@@ -145,7 +168,7 @@ pub(crate) fn write_json(
         |status| respond(headers, status, &resp.body),
     );
     if let Some(meta) = &resp.meta {
-        set_resource_headers(&mut out, base_path, segment, meta);
+        set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
     }
     out
 }
@@ -158,7 +181,7 @@ where
 {
     let mut out = respond_rm::<T>(headers, StatusCode::OK, &resp.body, root_tag);
     if let Some(meta) = &resp.meta {
-        set_versioning_headers(&mut out, meta);
+        set_versioning_headers(&mut out, meta, Tree::Ehr);
     }
     out
 }
@@ -168,17 +191,23 @@ where
 pub(crate) fn deleted_with_headers(resp: &ServiceResponse) -> Response {
     let mut out = empty(StatusCode::NO_CONTENT);
     if let Some(meta) = &resp.meta {
-        set_versioning_headers(&mut out, meta);
+        set_versioning_headers(&mut out, meta, Tree::Ehr);
     }
     out
 }
 
 /// Render an error response, additionally setting the latest-version `ETag` the
-/// spec requires on a `409`/`412`. No `Location` on the error path.
-pub(crate) fn error_with_meta(error: ApiError, meta: Option<&ResourceMeta>) -> Response {
+/// spec requires on a `409`/`412` (overview §"If-Match and accidental
+/// overwrites": the service "SHOULD return also latest `version_uid` in the
+/// `ETag` response headers"). No `Location` on the error path.
+pub(crate) fn error_with_meta(
+    error: ApiError,
+    meta: Option<&ResourceMeta>,
+    tree: Tree,
+) -> Response {
     let mut out = crate::overview::error::RestError::from(error).into_response();
     if let Some(meta) = meta {
-        set_versioning_headers(&mut out, meta);
+        set_versioning_headers(&mut out, meta, tree);
     }
     out
 }
@@ -236,9 +265,12 @@ mod tests {
 
     #[test]
     fn location_builds_per_segment() {
-        assert_eq!(location(BASE, "e1", None, "e1"), format!("{BASE}/ehr/e1"));
         assert_eq!(
-            location(BASE, "e1", Some("composition"), "v::s::1"),
+            location(BASE, Tree::Ehr, "e1", None, "e1"),
+            format!("{BASE}/ehr/e1")
+        );
+        assert_eq!(
+            location(BASE, Tree::Ehr, "e1", Some("composition"), "v::s::1"),
             format!("{BASE}/ehr/e1/composition/v::s::1")
         );
     }
@@ -309,6 +341,7 @@ mod tests {
         let out = error_with_meta(
             ApiError::PreconditionFailed("stale".to_owned()),
             Some(&meta("e1", "v::s::5")),
+            Tree::Ehr,
         );
         assert_eq!(out.status(), StatusCode::PRECONDITION_FAILED);
         assert_eq!(etag(&out).as_deref(), Some("W/\"v::s::5\""));
@@ -471,7 +504,7 @@ mod tests {
         let ts: jiff::Timestamp = "2024-03-04T05:06:07Z".parse().unwrap();
         let m = ResourceMeta::new("e1".to_owned(), "v::s::1".to_owned()).with_last_modified(ts);
         let mut resp = empty(StatusCode::OK);
-        set_resource_headers(&mut resp, BASE, Some("composition"), &m);
+        set_resource_headers(&mut resp, BASE, Tree::Ehr, Some("composition"), &m);
         let lm = resp
             .headers()
             .get(header::LAST_MODIFIED)
@@ -483,7 +516,7 @@ mod tests {
     fn set_resource_headers_omits_last_modified_when_absent() {
         let m = ResourceMeta::new("e1".to_owned(), "v::s::1".to_owned());
         let mut resp = empty(StatusCode::OK);
-        set_resource_headers(&mut resp, BASE, Some("composition"), &m);
+        set_resource_headers(&mut resp, BASE, Tree::Ehr, Some("composition"), &m);
         assert!(resp.headers().get(header::LAST_MODIFIED).is_none());
     }
 }

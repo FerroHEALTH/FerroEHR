@@ -28,6 +28,7 @@ use crate::api::RequestParts;
 use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::error::ServiceError;
@@ -120,9 +121,10 @@ pub(super) async fn run(
                         .await
                         .ok()
                         .flatten();
-                    Ok(super::error_with_meta(
+                    Ok(negotiate::resource::error_with_meta(
                         crate::overview::service_error::api_error(e),
                         meta.as_ref(),
+                        Tree::Demographic,
                     ))
                 }
                 Err(e) => Err(RestError::from(e)),
@@ -258,7 +260,9 @@ async fn run_delete(
     {
         Ok(resp) => {
             let mut out = negotiate::body::empty(StatusCode::NO_CONTENT);
-            super::set_versioning_headers(&mut out, resp.meta.as_ref());
+            if let Some(meta) = resp.meta.as_ref() {
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+            }
             Ok(out)
         }
         // 409_PERSON_with_uid_based_id: the supplied uid is not the latest.
@@ -269,9 +273,10 @@ async fn run_delete(
                 .await
                 .ok()
                 .flatten();
-            Ok(super::error_with_meta(
+            Ok(negotiate::resource::error_with_meta(
                 ApiError::Conflict(e.message()),
                 meta.as_ref(),
+                Tree::Demographic,
             ))
         }
         Err(e) => Err(RestError::from(e)),
@@ -430,7 +435,15 @@ fn write_party(
         resp.meta.as_ref().map(|m| m.uid.as_str()),
         |status| respond_party(kind, h, status, &resp.body),
     );
-    super::set_write_headers(&mut out, base, kind.segment(), resp.meta.as_ref());
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_resource_headers(
+            &mut out,
+            base,
+            Tree::Demographic,
+            Some(kind.segment()),
+            meta,
+        );
+    }
     out
 }
 
@@ -441,7 +454,9 @@ fn write_party(
 /// of an existing resource" (overview §Location).
 fn read_party(kind: PartyKind, h: &HeaderMap, resp: &ServiceResponse) -> Response {
     let mut out = respond_party(kind, h, StatusCode::OK, &resp.body);
-    super::set_versioning_headers(&mut out, resp.meta.as_ref());
+    if let Some(meta) = resp.meta.as_ref() {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+    }
     super::set_item_tag_headers(&mut out, resp);
     out
 }

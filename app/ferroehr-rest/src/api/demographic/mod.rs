@@ -30,12 +30,13 @@
               negotiate seam produced once (stored-content serving / commit interior)"
 )]
 
-use axum::response::{IntoResponse, Response};
-use http::{HeaderMap, HeaderValue, header};
+use axum::response::Response;
+use http::HeaderMap;
 
 use openehr_its::rest::runtime::ApiError;
 
 use crate::overview::error::RestError;
+use crate::overview::negotiate::resource::{Tree, set_versioning_headers};
 use ferroehr::ids::VoId;
 use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::demographic::types::PartyKind;
@@ -129,59 +130,6 @@ fn is_precondition(e: &ServiceError) -> bool {
     matches!(e, ServiceError::VersionConflict(_))
 }
 
-/// Set the versioning response headers from a demographic [`ResourceMeta`]
-/// (whose `ehr_id` is empty — parties are not EHR-scoped): the weak `ETag`
-/// (`W/"{uid}"` — the ITS-REST overview §"`ETag` and Last-Modified" makes
-/// resource-identifier `ETag`s weak-type; the bare quoted form is deprecated)
-/// and, when the metadata carries a commit time, `Last-Modified` (same section:
-/// "derived from `VERSION.commit_audit.time_committed.value`"; both SHOULD
-/// accompany `VERSION`/`VERSIONED_OBJECT` responses). Also stamps the ATNA
-/// audit object.
-///
-/// **No `Location`** — overview §Location: it "MUST NOT be used to indicate an
-/// alternate representation of an existing resource (e.g. via `GET` method)"
-/// and "MUST ONLY be used for resource creation (e.g., `201 Created`) or
-/// redirect responses"; §"Deprecated headers" deprecates it on `GET` and
-/// `DELETE` responses alike. Writes add it through [`set_write_headers`].
-fn set_versioning_headers(resp: &mut Response, meta: Option<&ResourceMeta>) {
-    let Some(meta) = meta else { return };
-    // The weak-form construction is shared with the EHR/definition surfaces so
-    // there is one implementation of the `W/"…"` shape in the adapter.
-    crate::overview::negotiate::resource::set_etag(resp, &meta.uid);
-    if let Some(at) = meta.last_modified {
-        crate::overview::negotiate::resource::set_last_modified(resp, at);
-    }
-    resp.extensions_mut()
-        .insert(crate::system_log::middleware::AuditObject {
-            ehr_id: None,
-            uid: Some(meta.uid.clone()),
-            result_count: None,
-            domain: Some(ferroehr::system_log::event::AccessDomain::Demographic),
-            origins: Vec::new(),
-            origin_count: None,
-            content: None,
-        });
-}
-
-/// The write-response headers: the versioning headers plus the
-/// `/demographic/{segment}/{uid}` `Location` of the version this request
-/// created.
-///
-/// `Location` rides ONLY the create/update writes: overview §Location scopes
-/// the header to "resource creation … or redirect responses", and §"Prefer
-/// minimal, identifier or full representation response" names the target as
-/// "the newly created or updated resource" — an openEHR update commits a new
-/// VERSION, which IS a newly created resource at the emitted URL. Reads,
-/// deletes, and error responses use [`set_versioning_headers`] instead.
-fn set_write_headers(resp: &mut Response, base: &str, segment: &str, meta: Option<&ResourceMeta>) {
-    set_versioning_headers(resp, meta);
-    let Some(meta) = meta else { return };
-    let location = format!("{base}/demographic/{segment}/{}", meta.uid);
-    if let Ok(loc) = HeaderValue::from_str(&location) {
-        resp.headers_mut().insert(header::LOCATION, loc);
-    }
-}
-
 /// The versioning metadata of a demographic versioned-object read whose service
 /// response carries none (the `VERSIONED_PARTY` container, its
 /// `REVISION_HISTORY`, and a version-addressed `ORIGINAL_VERSION`), derived from
@@ -254,7 +202,11 @@ fn commit_time(body: &serde_json::Value) -> Option<jiff::Timestamp> {
 /// the versioning headers derived from the served body ([`read_meta`]).
 fn read_versioned(h: &HeaderMap, versioned_object_uid: &str, body: &serde_json::Value) -> Response {
     let mut out = crate::overview::negotiate::body::respond(h, http::StatusCode::OK, body);
-    set_versioning_headers(&mut out, Some(&read_meta(versioned_object_uid, body)));
+    set_versioning_headers(
+        &mut out,
+        &read_meta(versioned_object_uid, body),
+        Tree::Demographic,
+    );
     out
 }
 
@@ -278,22 +230,11 @@ fn set_item_tag_headers(resp_out: &mut Response, resp: &ServiceResponse) {
     );
 }
 
-/// Render an error, additionally echoing the latest version in the `ETag` the
-/// `412` (update) / `409` (delete) responses require — overview §"If-Match and
-/// accidental overwrites": on a false precondition the service "SHOULD return
-/// also latest `version_uid` in the `ETag` response headers".
-///
-/// No `Location`: an error response creates nothing, and overview §Location
-/// scopes the header to creation/redirect responses only.
-fn error_with_meta(error: ApiError, meta: Option<&ResourceMeta>) -> Response {
-    let mut out = RestError::from(error).into_response();
-    set_versioning_headers(&mut out, meta);
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::overview::negotiate::resource::{error_with_meta, set_resource_headers};
+    use http::{HeaderValue, header};
 
     const BASE: &str = "/ferroehr/rest/openehr/v1";
     const VO: &str = "8849182c-82ad-4088-a07f-48ead4180515";
@@ -335,7 +276,7 @@ mod tests {
     #[test]
     fn versioning_headers_carry_no_location() {
         let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::OK);
-        set_versioning_headers(&mut resp, Some(&meta()));
+        set_versioning_headers(&mut resp, &meta(), Tree::Demographic);
         assert_eq!(etag(&resp), Some(format!("W/\"{UID}\"").as_str()));
         assert!(
             location(&resp).is_none(),
@@ -350,11 +291,11 @@ mod tests {
     fn versioning_headers_emit_last_modified_when_known() {
         let at: jiff::Timestamp = "2009-07-22T19:15:56Z".parse().unwrap();
         let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::OK);
-        set_versioning_headers(&mut resp, Some(&meta().with_last_modified(at)));
+        set_versioning_headers(&mut resp, &meta().with_last_modified(at), Tree::Demographic);
         assert_eq!(last_modified(&resp), Some("Wed, 22 Jul 2009 19:15:56 GMT"));
 
         let mut bare = crate::overview::negotiate::body::empty(http::StatusCode::OK);
-        set_versioning_headers(&mut bare, Some(&meta()));
+        set_versioning_headers(&mut bare, &meta(), Tree::Demographic);
         assert!(last_modified(&bare).is_none());
     }
 
@@ -364,7 +305,7 @@ mod tests {
     #[test]
     fn write_headers_add_the_creation_location() {
         let mut resp = crate::overview::negotiate::body::empty(http::StatusCode::CREATED);
-        set_write_headers(&mut resp, BASE, "person", Some(&meta()));
+        set_resource_headers(&mut resp, BASE, Tree::Demographic, Some("person"), &meta());
         assert_eq!(etag(&resp), Some(format!("W/\"{UID}\"").as_str()));
         assert_eq!(
             location(&resp),
@@ -380,6 +321,7 @@ mod tests {
         let resp = error_with_meta(
             ApiError::PreconditionFailed("stale".to_owned()),
             Some(&meta()),
+            Tree::Demographic,
         );
         assert_eq!(resp.status(), http::StatusCode::PRECONDITION_FAILED);
         assert_eq!(etag(&resp), Some(format!("W/\"{UID}\"").as_str()));
