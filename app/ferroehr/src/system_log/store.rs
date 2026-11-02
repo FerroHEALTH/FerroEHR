@@ -513,93 +513,49 @@ impl AuditStore {
         policy: Vec<u8>,
         tokens: Vec<String>,
     ) -> Result<(), AuditError> {
-        let mut recorded_at: Vec<Timestamp> = Vec::with_capacity(records.len());
-        let mut actions: Vec<String> = Vec::with_capacity(records.len());
-        let mut outcomes: Vec<i16> = Vec::with_capacity(records.len());
-        let mut event_codes: Vec<&str> = Vec::with_capacity(records.len());
-        let mut operations: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut principals: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut organisations: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut patient_ids: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut resource_classes: Vec<&str> = Vec::with_capacity(records.len());
-        let mut resource_ids: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut client_ips: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut token_ids: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut domains: Vec<&str> = Vec::with_capacity(records.len());
-        let mut declared = DeclaredColumns::with_capacity(records.len());
-        let mut result_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
-        let mut request_ids: Vec<Option<&str>> = Vec::with_capacity(records.len());
-        let mut roles: Vec<Option<serde_json::Value>> = Vec::with_capacity(records.len());
-        let mut origins: Vec<Option<serde_json::Value>> = Vec::with_capacity(records.len());
-        let mut origin_counts: Vec<Option<i64>> = Vec::with_capacity(records.len());
-        let mut classified = CategoryColumns::with_capacity(records.len());
-        let mut actors = ActorColumns::with_capacity(records.len());
-        let mut retention = RetentionColumns::with_capacity(records.len());
-        let mut subjects = SubjectColumns::with_capacity(records.len());
-        for (index, AuditRecord { event, subject }) in records.iter().enumerate() {
-            retention.push(ends.get(index));
-            recorded_at.push(Timestamp::from(event.timestamp));
-            actions.push(action_str(event));
-            outcomes.push(outcome_smallint(event));
-            event_codes.push(event_code(event));
-            operations.push(operation(event));
-            principals.push(nonempty_opt(&event.user_id));
-            organisations.push(event.organisation.as_deref());
-            patient_ids.push(subject.as_deref());
-            resource_classes.push(resource_class(event.object));
-            resource_ids.push(event.object_id.as_deref());
-            client_ips.push(event.client_ip.as_deref());
-            token_ids.push(event.token_id.as_deref());
-            domains.push(event.domain.as_str());
-            declared.push(event);
-            result_counts.push(result_count(event));
-            request_ids.push(event.request_id.as_deref());
-            roles.push(roles_json(event));
-            origins.push(origins_json(event));
-            origin_counts.push(origin_count(event));
-            classified.push(event)?;
-            actors.push(event);
-            subjects.push(event);
+        let mut c = BatchColumns::with_capacity(records.len());
+        for (index, record) in records.iter().enumerate() {
+            c.push(record, ends.get(index))?;
         }
         sqlx::query(self.owed(INSERT_BATCH, &INSERT_BATCH_OWED))
-            .bind(recorded_at)
-            .bind(actions)
-            .bind(outcomes)
-            .bind(event_codes)
-            .bind(operations)
-            .bind(principals)
-            .bind(organisations)
-            .bind(patient_ids)
-            .bind(resource_classes)
-            .bind(resource_ids)
-            .bind(client_ips)
-            .bind(token_ids)
-            .bind(domains)
-            .bind(declared.purposes)
-            .bind(declared.legal_bases)
-            .bind(result_counts)
-            .bind(request_ids)
-            .bind(roles)
-            .bind(origins)
-            .bind(origin_counts)
-            .bind(classified.categories)
-            .bind(classified.bases)
-            .bind(classified.evidence)
-            .bind(classified.digests)
-            .bind(actors.modes)
-            .bind(actors.levels)
-            .bind(actors.values)
-            .bind(actors.professionals)
-            .bind(declared.emergency)
-            .bind(retention.ends)
-            .bind(retention.stated)
-            .bind(declared.permits)
-            .bind(subjects.issuers)
-            .bind(subjects.clients)
-            .bind(subjects.ehr_ids)
-            .bind(subjects.namespaces)
-            .bind(subjects.lookups_failed)
-            .bind(classified.contents)
+            .bind(c.recorded_at)
+            .bind(c.actions)
+            .bind(c.outcomes)
+            .bind(c.event_codes)
+            .bind(c.operations)
+            .bind(c.principals)
+            .bind(c.organisations)
+            .bind(c.patient_ids)
+            .bind(c.resource_classes)
+            .bind(c.resource_ids)
+            .bind(c.client_ips)
+            .bind(c.token_ids)
+            .bind(c.domains)
+            .bind(c.purposes)
+            .bind(c.legal_bases)
+            .bind(c.result_counts)
+            .bind(c.request_ids)
+            .bind(c.roles)
+            .bind(c.origins)
+            .bind(c.origin_counts)
+            .bind(c.categories)
+            .bind(c.bases)
+            .bind(c.evidence)
+            .bind(c.digests)
+            .bind(c.modes)
+            .bind(c.levels)
+            .bind(c.values)
+            .bind(c.professionals)
+            .bind(c.emergency)
+            .bind(c.ends)
+            .bind(c.stated)
+            .bind(c.permits)
+            .bind(c.issuers)
+            .bind(c.clients)
+            .bind(c.ehr_ids)
+            .bind(c.namespaces)
+            .bind(c.lookups_failed)
+            .bind(c.contents)
             .bind(policy)
             .bind(tokens)
             .execute(&mut *conn)
@@ -1291,144 +1247,120 @@ fn origin_count(event: &AuditEvent) -> Option<i64> {
         .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
 }
 
-/// The four authentication columns of a batched insert, one entry per record.
-struct ActorColumns<'a> {
-    modes: Vec<Option<&'static str>>,
-    levels: Vec<Option<&'static str>>,
-    values: Vec<Option<&'a str>>,
-    professionals: Vec<Option<&'a str>>,
+/// Declares [`BatchColumns`] with one `Vec` per column and its
+/// `with_capacity`, so a column is named once.
+macro_rules! batch_columns {
+    ($($column:ident: $ty:ty),+ $(,)?) => {
+        /// The parallel column arrays of a batched insert, one entry per
+        /// record, which the `unnest` of the statement reads.
+        struct BatchColumns<'a> {
+            $($column: Vec<$ty>,)+
+        }
+
+        impl BatchColumns<'_> {
+            fn with_capacity(n: usize) -> Self {
+                Self {
+                    $($column: Vec::with_capacity(n),)+
+                }
+            }
+        }
+    };
 }
 
-impl<'a> ActorColumns<'a> {
-    fn with_capacity(capacity: usize) -> Self {
-        Self {
-            modes: Vec::with_capacity(capacity),
-            levels: Vec::with_capacity(capacity),
-            values: Vec::with_capacity(capacity),
-            professionals: Vec::with_capacity(capacity),
-        }
-    }
+batch_columns! {
+    recorded_at: Timestamp,
+    actions: String,
+    outcomes: i16,
+    event_codes: &'a str,
+    operations: Option<&'a str>,
+    principals: Option<&'a str>,
+    organisations: Option<&'a str>,
+    patient_ids: Option<&'a str>,
+    resource_classes: &'a str,
+    resource_ids: Option<&'a str>,
+    client_ips: Option<&'a str>,
+    token_ids: Option<&'a str>,
+    domains: &'a str,
+    purposes: Option<&'a str>,
+    legal_bases: Option<&'a str>,
+    result_counts: Option<i64>,
+    request_ids: Option<&'a str>,
+    roles: Option<serde_json::Value>,
+    origins: Option<serde_json::Value>,
+    origin_counts: Option<i64>,
+    categories: Option<serde_json::Value>,
+    bases: Option<&'static str>,
+    evidence: Option<serde_json::Value>,
+    digests: Option<String>,
+    modes: Option<&'static str>,
+    levels: Option<&'static str>,
+    values: Option<&'a str>,
+    professionals: Option<&'a str>,
+    emergency: bool,
+    ends: Option<String>,
+    stated: bool,
+    permits: Option<&'a str>,
+    issuers: Option<&'a str>,
+    clients: Option<&'a str>,
+    ehr_ids: Option<&'a str>,
+    namespaces: Option<&'a str>,
+    lookups_failed: bool,
+    contents: Option<serde_json::Value>,
+}
 
-    fn push(&mut self, event: &'a AuditEvent) {
+impl<'a> BatchColumns<'a> {
+    /// Append one record, with the retention end it states (`None` when it
+    /// states none), to every column.
+    ///
+    /// # Errors
+    /// [`AuditError::Render`] when the classified content cannot be written as
+    /// JSON.
+    fn push(&mut self, record: &'a AuditRecord, end: Option<&RecordEnd>) -> Result<(), AuditError> {
+        let AuditRecord { event, subject } = record;
+        self.recorded_at.push(Timestamp::from(event.timestamp));
+        self.actions.push(action_str(event));
+        self.outcomes.push(outcome_smallint(event));
+        self.event_codes.push(event_code(event));
+        self.operations.push(operation(event));
+        self.principals.push(nonempty_opt(&event.user_id));
+        self.organisations.push(event.organisation.as_deref());
+        self.patient_ids.push(subject.as_deref());
+        self.resource_classes.push(resource_class(event.object));
+        self.resource_ids.push(event.object_id.as_deref());
+        self.client_ips.push(event.client_ip.as_deref());
+        self.token_ids.push(event.token_id.as_deref());
+        self.domains.push(event.domain.as_str());
+        self.purposes.push(event.purpose.as_deref());
+        self.legal_bases.push(event.legal_basis.as_deref());
+        self.result_counts.push(result_count(event));
+        self.request_ids.push(event.request_id.as_deref());
+        self.roles.push(roles_json(event));
+        self.origins.push(origins_json(event));
+        self.origin_counts.push(origin_count(event));
+        self.categories.push(categories_json(event));
+        self.bases.push(category_basis(event));
+        self.evidence.push(category_evidence_json(event));
+        self.digests.push(category_map_digest(event));
         self.modes.push(event.actor.mode.map(ActingMode::as_str));
         self.levels
             .push(event.actor.assurance_level.map(AssuranceLevel::as_str));
         self.values.push(event.actor.assurance_value.as_deref());
         self.professionals
             .push(event.actor.professional_id.as_deref());
-    }
-}
-
-/// The columns of a batch that say on whose authority and why: the declared
-/// purpose, the deployment's legal basis, the declared data permit and the
-/// emergency mark.
-struct DeclaredColumns<'a> {
-    purposes: Vec<Option<&'a str>>,
-    legal_bases: Vec<Option<&'a str>>,
-    permits: Vec<Option<&'a str>>,
-    emergency: Vec<bool>,
-}
-
-impl<'a> DeclaredColumns<'a> {
-    fn with_capacity(n: usize) -> Self {
-        Self {
-            purposes: Vec::with_capacity(n),
-            legal_bases: Vec::with_capacity(n),
-            permits: Vec::with_capacity(n),
-            emergency: Vec::with_capacity(n),
-        }
-    }
-
-    fn push(&mut self, event: &'a AuditEvent) {
-        self.purposes.push(event.purpose.as_deref());
-        self.legal_bases.push(event.legal_basis.as_deref());
-        self.permits.push(event.permit.as_deref());
         self.emergency.push(event.emergency_access);
-    }
-}
-
-/// The retention columns of a batch: each record's end as a `YYYY-MM-DD` text
-/// the statement casts to `date`, and whether the record states one.
-struct RetentionColumns {
-    ends: Vec<Option<String>>,
-    stated: Vec<bool>,
-}
-
-impl RetentionColumns {
-    fn with_capacity(n: usize) -> Self {
-        Self {
-            ends: Vec::with_capacity(n),
-            stated: Vec::with_capacity(n),
-        }
-    }
-
-    fn push(&mut self, end: Option<&RecordEnd>) {
         self.ends.push(match end {
             Some(RecordEnd::On(date)) => Some(date.to_string()),
             Some(RecordEnd::Never) | None => None,
         });
         self.stated.push(end.is_some());
-    }
-}
-
-/// The four classification columns of a batched insert, one entry per record.
-struct CategoryColumns {
-    categories: Vec<Option<serde_json::Value>>,
-    bases: Vec<Option<&'static str>>,
-    evidence: Vec<Option<serde_json::Value>>,
-    digests: Vec<Option<String>>,
-    contents: Vec<Option<serde_json::Value>>,
-}
-
-impl CategoryColumns {
-    fn with_capacity(capacity: usize) -> Self {
-        Self {
-            categories: Vec::with_capacity(capacity),
-            bases: Vec::with_capacity(capacity),
-            evidence: Vec::with_capacity(capacity),
-            digests: Vec::with_capacity(capacity),
-            contents: Vec::with_capacity(capacity),
-        }
-    }
-
-    fn push(&mut self, event: &AuditEvent) -> Result<(), AuditError> {
-        self.categories.push(categories_json(event));
-        self.bases.push(category_basis(event));
-        self.evidence.push(category_evidence_json(event));
-        self.digests.push(category_map_digest(event));
-        self.contents.push(category_content_json(event)?);
-        Ok(())
-    }
-}
-
-/// The columns of a batch that name who the caller and the subject are beyond
-/// the principal and the patient: the token's issuer and client, the EHR, the
-/// subject's namespace and whether its lookup failed.
-struct SubjectColumns<'a> {
-    issuers: Vec<Option<&'a str>>,
-    clients: Vec<Option<&'a str>>,
-    ehr_ids: Vec<Option<&'a str>>,
-    namespaces: Vec<Option<&'a str>>,
-    lookups_failed: Vec<bool>,
-}
-
-impl<'a> SubjectColumns<'a> {
-    fn with_capacity(n: usize) -> Self {
-        Self {
-            issuers: Vec::with_capacity(n),
-            clients: Vec::with_capacity(n),
-            ehr_ids: Vec::with_capacity(n),
-            namespaces: Vec::with_capacity(n),
-            lookups_failed: Vec::with_capacity(n),
-        }
-    }
-
-    fn push(&mut self, event: &'a AuditEvent) {
+        self.permits.push(event.permit.as_deref());
         self.issuers.push(event.issuer.as_deref());
         self.clients.push(event.client_id.as_deref());
         self.ehr_ids.push(access_ehr_id(event));
         self.namespaces.push(event.subject_namespace.as_deref());
         self.lookups_failed.push(event.subject_lookup_failed);
+        self.contents.push(category_content_json(event)?);
+        Ok(())
     }
 }
 
