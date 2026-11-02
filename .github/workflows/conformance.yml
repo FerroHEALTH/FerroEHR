@@ -294,11 +294,17 @@ jobs:
           file: docker/postgres/Dockerfile
           load: true
           tags: ferroehr-postgres:conformance
+      # The released run judges the frozen release, whose RM is 1.1.0, so the
+      # server it judges runs the stable profile, the generation set that
+      # release defines (RM 1.1.0 keeps PARTY.reverse_relationships, which RM
+      # 1.2.0 turns into a function). The development run below judges the
+      # pinned master and keeps the development profile.
       - id: compose
         name: Compose FerroEHR and FerroTERM on fresh volumes
         env:
           FERROEHR_IMAGE: ferroehr:conformance
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
+          FERROEHR__SPEC_PROFILE: stable
           SKIP_BUILD: "1"
         run: bash scripts/conformance.sh up
       # The Basic users of docker/ferroehr.dev.toml and the SMART test issuer
@@ -313,7 +319,7 @@ jobs:
           printf '## Released profile: the record of record\n\nThe catalogue read against the frozen openEHR release. This run is the verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: released
         if: ${{ !cancelled() && steps.compose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@bfcb62d0514eb065396f3786a8476de306fd13b3 # v0.3.3
+        uses: Vernum-Projecten/Veredictum@6a043b4612875939e9f30f7e23515866546d13df # v0.4.0
         # The verdict step below fails the job on this run's exit-code output,
         # after the views of both runs are uploaded.
         continue-on-error: true
@@ -334,7 +340,7 @@ jobs:
           profile: released
           out-dir: conformance-results/released
           badge-branch: veredictum-badges
-          image: ghcr.io/vernum-projecten/veredictum@sha256:50e0138ca23014f71c2b8b0fcdb587893026cc59aeb46488b7d5c2c9022606eb
+          image: ghcr.io/vernum-projecten/veredictum@sha256:b97feaa201820f717c67771c9880fb9d9ad8b3ec17cc078edba6e3d6275daf19
       # Fresh volumes again, so the development run starts on the ground the
       # released run had.
       - id: recompose
@@ -343,6 +349,7 @@ jobs:
         env:
           FERROEHR_IMAGE: ferroehr:conformance
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
+          FERROEHR__SPEC_PROFILE: development
           SKIP_BUILD: "1"
         run: bash scripts/conformance.sh up
       - name: Head the development run's job summary
@@ -351,7 +358,7 @@ jobs:
           printf '## Development profile: published beside the record\n\nThe same catalogue read against the pinned master of each openEHR repository. It is never counted toward the released record and is no verdict of this job.\n\n' >> "$GITHUB_STEP_SUMMARY"
       - id: development
         if: ${{ !cancelled() && steps.recompose.outcome == 'success' }}
-        uses: Vernum-Projecten/Veredictum@bfcb62d0514eb065396f3786a8476de306fd13b3 # v0.3.3
+        uses: Vernum-Projecten/Veredictum@6a043b4612875939e9f30f7e23515866546d13df # v0.4.0
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -370,7 +377,7 @@ jobs:
           profile: development
           out-dir: conformance-results/development
           badge-branch: veredictum-badges-development
-          image: ghcr.io/vernum-projecten/veredictum@sha256:50e0138ca23014f71c2b8b0fcdb587893026cc59aeb46488b7d5c2c9022606eb
+          image: ghcr.io/vernum-projecten/veredictum@sha256:b97feaa201820f717c67771c9880fb9d9ad8b3ec17cc078edba6e3d6275daf19
       # The views each run's outputs name, one directory per profile, so the
       # two are never mixed. recording.har is never among them.
       - name: Collect the views the Action wrote

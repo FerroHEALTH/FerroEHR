@@ -638,6 +638,13 @@ origin, and the operation id. So a rule can be written about one caller, a role,
 a scope, or a single operation; the [shipped example policy](https://github.com/FerroHEALTH/FerroEHR/tree/main/app/ferroehr-rest/examples/policies)
 shows a role-keyed break-glass permit and a scope-keyed write restriction.
 
+An item tag is checked as the object it tags: a tag read where the read of its
+EHR, `EHR_STATUS` or composition is checked, and a tag write or delete where
+its target's write is, with the same patient and the tagged composition's
+template, category and origin. The action is the tag request's own, so a tag
+put on a composition asks for `composition.update` and a tag delete for
+`composition.delete`.
+
 **Category and origin** (EHDS Annex II 3.4 asks for access rights that take
 the origins and categories of the data into account). On a composition read,
 write or delete, a contribution and a query, `resource.category` holds each

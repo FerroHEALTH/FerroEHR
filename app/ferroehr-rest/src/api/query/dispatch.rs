@@ -121,7 +121,7 @@ async fn run(
         });
     if !outcome.served_ehrs.is_empty() {
         resp.extensions_mut()
-            .insert(crate::system_log::middleware::AuditServedEhrs {
+            .insert(crate::system_log::served::AuditServedEhrs {
                 served: outcome.served_ehrs,
                 content: outcome.served_ehr_content,
             });

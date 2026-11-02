@@ -766,6 +766,9 @@ async fn commit_import_scoped(
         // The head row is a pure function of the version rows, so a whole
         // container recomputes it once at the end rather than per version.
         crate::storage::version_repo::import::sync_heads(tx, &[container.vo_id]).await?;
+        if container.kind.is_party() {
+            crate::storage::party_reverse::reindex(tx, container.vo_id).await?;
+        }
     }
     if ctx.outbox_enabled && !outbox_versions.is_empty() {
         crate::storage::version_repo::commit::write_outbox(

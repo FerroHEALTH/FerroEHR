@@ -3,16 +3,16 @@
 | | |
 | --- | --- |
 | **Server** | http://127.0.0.1:8080/ferroehr/rest/openehr/v1 |
-| **Instrument** | veredictum 0.3.3, pre-approval: not yet approved by the openEHR SEC |
+| **Instrument** | veredictum 0.4.0, pre-approval: not yet approved by the openEHR SEC |
 | **Document** | `catalogue` |
 
 ## Summary
 
 | Part | Passed | Failed | Warning | Errored | Skipped | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| BASE | 2610 | 0 | 0 | 0 | 0 | 2610 |
-| OPTIONS | 256 | 0 | 0 | 0 | 116 | 372 |
-| **Every row** | **2866** | **0** | **0** | **0** | **116** | **2982** |
+| BASE | 2616 | 0 | 0 | 0 | 81 | 2697 |
+| OPTIONS | 256 | 0 | 0 | 0 | 118 | 374 |
+| **Every row** | **2872** | **0** | **0** | **0** | **199** | **3071** |
 
 > [!NOTE]
 > A **failed** row counts against the server. A **warning** row is a SHOULD the server did not follow, and it never counts against the server. An **errored** row is inconclusive when its record names the instrument, which could not judge it, and counts against the server when its record names the server or no one. A **skipped** row was not run.
@@ -26,11 +26,11 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 | Band | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | EHR | 75 | 0 | 0 | 0 | 0 |
-| EHR\_STATUS | 57 | 0 | 0 | 0 | 0 |
-| COMPOSITION | 154 | 0 | 0 | 0 | 0 |
+| EHR\_STATUS | 57 | 0 | 0 | 0 | 3 |
+| COMPOSITION | 156 | 0 | 0 | 0 | 14 |
 | DIRECTORY | 75 | 0 | 0 | 0 | 0 |
-| CONTRIBUTION | 64 | 0 | 0 | 0 | 0 |
-| Item tags | 71 | 0 | 0 | 0 | 0 |
+| CONTRIBUTION | 64 | 0 | 0 | 0 | 2 |
+| Item tags | 71 | 0 | 0 | 0 | 7 |
 
 #### EHR
 
@@ -45,7 +45,7 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Read | 14 | 0 | 0 | 0 | 0 |
-| Update | 21 | 0 | 0 | 0 | 0 |
+| Update | 21 | 0 | 0 | 0 | 3 |
 | Versioning and history | 18 | 0 | 0 | 0 | 0 |
 | Flags | 4 | 0 | 0 | 0 | 0 |
 
@@ -53,12 +53,13 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Create | 25 | 0 | 0 | 0 | 0 |
+| Create | 27 | 0 | 0 | 0 | 0 |
 | Read | 21 | 0 | 0 | 0 | 0 |
-| Update | 25 | 0 | 0 | 0 | 0 |
+| Update | 25 | 0 | 0 | 0 | 7 |
 | Delete | 19 | 0 | 0 | 0 | 0 |
+| Committal headers | 0 | 0 | 0 | 0 | 6 |
 | Versioning and history | 20 | 0 | 0 | 0 | 0 |
-| Refusals | 44 | 0 | 0 | 0 | 0 |
+| Refusals | 44 | 0 | 0 | 0 | 1 |
 
 #### DIRECTORY
 
@@ -74,7 +75,7 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Create | 29 | 0 | 0 | 0 | 0 |
+| Create | 29 | 0 | 0 | 0 | 2 |
 | Read | 11 | 0 | 0 | 0 | 0 |
 | Refusals | 24 | 0 | 0 | 0 | 0 |
 
@@ -84,33 +85,33 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | EHR tags | 10 | 0 | 0 | 0 | 0 |
 | EHR\_STATUS tags | 22 | 0 | 0 | 0 | 0 |
-| COMPOSITION tags | 39 | 0 | 0 | 0 | 0 |
+| COMPOSITION tags | 39 | 0 | 0 | 0 | 7 |
 
 ### Definitions
 
 | Band | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Templates | 61 | 0 | 0 | 0 | 0 |
+| Templates | 61 | 0 | 0 | 0 | 6 |
 
 #### Templates
 
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | ADL 1.4 templates | 31 | 0 | 0 | 0 | 0 |
-| ADL 2 templates | 30 | 0 | 0 | 0 | 0 |
+| ADL 2 templates | 30 | 0 | 0 | 0 | 6 |
 
 ### Query
 
 | Band | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| AQL and stored queries | 189 | 0 | 0 | 0 | 0 |
+| AQL and stored queries | 189 | 0 | 0 | 0 | 7 |
 
 #### AQL and stored queries
 
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Ad-hoc AQL execution | 12 | 0 | 0 | 0 | 0 |
-| AQL semantics | 82 | 0 | 0 | 0 | 0 |
+| AQL semantics | 82 | 0 | 0 | 0 | 7 |
 | AQL conformance corpus | 48 | 0 | 0 | 0 | 0 |
 | Stored queries | 25 | 0 | 0 | 0 | 0 |
 | Refusals | 22 | 0 | 0 | 0 | 0 |
@@ -119,30 +120,30 @@ What every claimant of a capability must do. A case no option arm names is BASE.
 
 | Band | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Demographic | 306 | 0 | 0 | 0 | 0 |
+| Demographic | 310 | 0 | 0 | 0 | 40 |
 
 #### Demographic
 
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Parties | 140 | 0 | 0 | 0 | 0 |
+| Parties | 141 | 0 | 0 | 0 | 40 |
 | Versioned party | 12 | 0 | 0 | 0 | 0 |
 | Demographic CONTRIBUTION | 13 | 0 | 0 | 0 | 0 |
 | Item tags | 83 | 0 | 0 | 0 | 0 |
-| Refusals | 58 | 0 | 0 | 0 | 0 |
+| Refusals | 61 | 0 | 0 | 0 | 0 |
 
 ### Content validation
 
 | Band | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Content validation | 1548 | 0 | 0 | 0 | 0 |
+| Content validation | 1548 | 0 | 0 | 0 | 2 |
 
 #### Content validation
 
 | Section | Passed | Failed | Warning | Errored | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Structure and cardinality (ADL 1.4) | 367 | 0 | 0 | 0 | 0 |
-| Structure and cardinality (ADL 2) | 2 | 0 | 0 | 0 | 0 |
+| Structure and cardinality (ADL 2) | 2 | 0 | 0 | 0 | 2 |
 | Data types (ADL 1.4) | 822 | 0 | 0 | 0 | 0 |
 | Data types (ADL 2) | 58 | 0 | 0 | 0 | 0 |
 | Interval data types (ADL 1.4) | 274 | 0 | 0 | 0 | 0 |
@@ -314,6 +315,7 @@ What the statement selected. Each option is labelled with its kind: **Recommende
 | `template-example-structured-read` | Recommended (SHOULD) | not selected |  | | | |  |
 | `template-web-template` | Recommended (SHOULD) | `template-web-template-supported` | 2 | 0 | 0 | 0 | 3 |
 | `template-example-xml-read` | Optional (MAY) | not selected |  | | | |  |
+| `xml-namespace` | `@SpecDiverge` | `xml-namespace-v2` | 0 | 0 | 0 | 0 | 2 |
 
 <details>
 <summary>What these options decide</summary>
@@ -322,6 +324,7 @@ What the statement selected. Each option is labelled with its kind: **Recommende
 - **`template-example-structured-read`** (Simplified Formats and Web Template): Whether the service serves the example data instance of a stored ADL 1.4 or ADL 2 operational template in the Simplified Structured JSON format when a client asks for it with Accept. The release recommends the Simplified Formats, so a service that does not serve this one answers 406.
 - **`template-web-template`** (Simplified Formats and Web Template): Whether the service serves an ADL 1.4 operational template in the Web Template format when a client asks for it with Accept, on the template read and as the representation of an upload. The release recommends the Simplified Formats, so a service that does not serve this one answers 406.
 - **`template-example-xml-read`** (Canonical XML): Whether the service serves the example data instance of a stored ADL 1.4 or ADL 2 operational template in canonical XML when a client asks for it with Accept application/xml.
+- **`xml-namespace`** (Canonical XML): Whether the service also accepts canonical XML request payloads in the TRIAL Release-2.0.0 lineage, namespace http://schemas.openehr.org/v2. The release requires conformance to "the published XSDs" and names no lineage, while ITS-XML marks Release-1.0.2 (namespace http://schemas.openehr.org/v1) STABLE and Release-2.0.0 TRIAL, and the operation examples are v1. Acceptance of v1 is therefore BASE, and this option asks only about v2. The xml-namespace-v1 arm is the service that accepts v1 alone and has no document, since no sentence requires a refusal of v2. The xml-namespace-v2 arm's documents are development-only, because they rest on the development AM 1.4 schemas. Upstream report [#759](https://github.com/Vernum-Projecten/Veredictum/issues/759): ITS-REST: the Simplified Formats and canonical XML chapters require what they leave undefined (open).
 
 </details>
 
@@ -459,14 +462,12 @@ What the statement selected. Each option is labelled with its kind: **Recommende
 
 | Option | Kind | Selected arm | Passed | Failed | Warning | Errored | Skipped |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `xml-namespace` | `@SpecDiverge` | `xml-namespace-v2`, nothing to run | 0 | 0 | 0 | 0 | 0 |
 | `aql-nonnumeric-aggregate` | `@SpecDiverge` | `aql-nonnumeric-aggregate-refused`, nothing to run | 0 | 0 | 0 | 0 | 0 |
 | `aql-undefined-containment` | `@SpecDiverge` | `aql-undefined-containment-refused`, nothing to run | 0 | 0 | 0 | 0 | 0 |
 
 <details>
 <summary>What these options decide</summary>
 
-- **`xml-namespace`** (Canonical XML): Which published canonical XML lineage the service serves: the Release-1.0.2 schemas in namespace http://schemas.openehr.org/v1, or the Release-2.0.0 schemas in http://schemas.openehr.org/v2. The release requires conformance to "the published XSDs" and names neither, so neither arm has a document yet. Upstream report [#759](https://github.com/Vernum-Projecten/Veredictum/issues/759): ITS-REST: the Simplified Formats and canonical XML chapters require what they leave undefined (open).
 - **`aql-nonnumeric-aggregate`** (Behaviour the release leaves open): Whether the service refuses a SUM or AVG over an input type outside the function's declared types, or executes it. AQL names the types and assigns no outcome to another, so both arms are open until upstream report \#229 is settled, and neither arm has a document yet. Upstream report [#229](https://github.com/Vernum-Projecten/Veredictum/issues/229): AQL leaves SUM and AVG over an input type outside their declared set unassigned (closed, standing record).
 - **`aql-undefined-containment`** (Behaviour the release leaves open): Whether the service refuses a query whose CONTAINS names a pair of classes the RM defines no containment for, or executes it to an empty result. AQL assigns neither, so both arms are open until upstream report \#161 is settled, and neither arm has a document yet. Upstream report [#161](https://github.com/Vernum-Projecten/Veredictum/issues/161): AQL never assigns a behaviour to a containment pair the RM defines no relationship for (confirmed).
 
@@ -478,6 +479,16 @@ A skipped row was not run, for the reason given. It never counts for or against 
 
 | Reason | Citation | Rows |
 | --- | --- | ---: |
+| development-only | specs/openehr-development/specifications-AM/docs/UML/classes/org.openehr.am.aom2.adl\_code\_definitions.adoc, ADL\_CODE\_DEFINITIONS Class | 6 |
+| development-only | specs/openehr-development/specifications-BASE/docs/UML/classes/org.openehr.base.resource.resource\_description.adoc, RESOURCE\_DESCRIPTION Class | 2 |
+| development-only | specs/openehr-development/specifications-ITS-REST/specifications/docs/overview/Requests\_and\_responses.md, openehr-version and openehr-audit-details | 49 |
+| development-only | specs/openehr-development/specifications-ITS-XML/components/AM/Release-1.4/OpenehrProfile.xsd, complexType C\_DV\_ORDINAL | 1 |
+| development-only | specs/openehr-development/specifications-ITS-XML/components/AM/Release-1.4/README.adoc, Ordinal and scale constraints | 1 |
+| development-only | specs/openehr-development/specifications-QUERY/docs/AQL/master03-syntax.adoc, Version predicate | 7 |
+| development-only | specs/openehr-development/specifications-RM/docs/UML/classes/org.openehr.rm.common.item\_tag.adoc, ITEM\_TAG Class | 5 |
+| development-only | specs/openehr-development/specifications-RM/docs/UML/classes/org.openehr.rm.data\_types.dv\_text.adoc, DV\_TEXT Class | 1 |
+| development-only | specs/openehr-development/specifications-RM/docs/common/master06-change\_control\_package.adoc, Abandoned and Inactive States | 9 |
+| development-only | specs/openehr-development/specifications-RM/docs/ehr/master04-ehr\_package.adoc, Tags | 2 |
 | option-not-selected | specs/openehr/AM/docs/ADL1.4/master05-cadl.adoc, Single-valued Attributes | 1 |
 | option-not-selected | specs/openehr/ITS-REST/specifications/docs/overview/Requests\_and\_responses.md, Authentication and authorization | 1 |
 | option-not-selected | specs/openehr/ITS-REST/specifications/docs/overview/Resources.md, Data representation | 80 |
@@ -487,13 +498,26 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | option-not-selected | specs/openehr/ITS-REST/specifications/operations/admin\_ehr\_delete\_all.yaml, description | 1 |
 
 <details>
-<summary>Every skipped row (116)</summary>
+<summary>Every skipped row (199)</summary>
 
 | Row | Reason |
 | --- | --- |
 | `admin_ehr_delete_all_async/delete_all-accepted row 0` | option-not-selected |
 | `admin_ehr_delete_all_disabled/delete_all-disabled row 0` | option-not-selected |
 | `admin_ehr_delete_async/delete_ehr-accepted row 0` | option-not-selected |
+| `composition_direct_commit/create_composition-lifecycle_complete_default row 0` | development-only |
+| `composition_direct_commit/update_composition-lifecycle_complete_default row 0` | development-only |
+| `composition_direct_commit/update_composition-change_type_creation_refused row 0` | development-only |
+| `composition_direct_commit/create_composition-change_type_creation_supplied row 0` | development-only |
+| `composition_direct_commit/create_composition-change_type_deleted_refused row 0` | development-only |
+| `composition_direct_commit/delete_composition-change_type_creation_refused row 0` | development-only |
+| `composition_lifecycle/update_composition-lifecycle_deactivate row 0` | development-only |
+| `composition_lifecycle/update_composition-lifecycle_abandon row 0` | development-only |
+| `composition_lifecycle/update_composition-lifecycle_reactivate row 0` | development-only |
+| `composition_lifecycle/update_composition-lifecycle_retrieve_inactive row 0` | development-only |
+| `composition_lifecycle/update_composition-lifecycle_retrieve_abandoned row 0` | development-only |
+| `composition_lifecycle/delete_composition-lifecycle_inactive row 0` | development-only |
+| `composition_lifecycle/delete_composition-lifecycle_abandoned row 0` | development-only |
 | `composition_read_flat_not_acceptable/get_composition-flat_not_acceptable row 0` | option-not-selected |
 | `composition_read_flat_not_acceptable/get_composition-latest-flat_not_acceptable row 0` | option-not-selected |
 | `composition_read_flat_not_acceptable/get_composition-at_time-flat_not_acceptable row 0` | option-not-selected |
@@ -505,6 +529,7 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `composition_read_xml_not_acceptable/get_composition-xml_not_acceptable row 0` | option-not-selected |
 | `composition_read_xml_not_acceptable/get_composition-latest-xml_not_acceptable row 0` | option-not-selected |
 | `composition_read_xml_not_acceptable/get_composition-at_time-xml_not_acceptable row 0` | option-not-selected |
+| `composition_text_value_refused/create_composition-text_value_empty row 0` | development-only |
 | `composition_update_xml_write_refused/update_composition-xml_unsupported_media row 0` | option-not-selected |
 | `composition_versioned_read_xml_not_acceptable/get_versioned_composition-xml_not_acceptable row 0` | option-not-selected |
 | `composition_versioned_read_xml_not_acceptable/get_versioned_composition_version-xml_not_acceptable row 0` | option-not-selected |
@@ -523,26 +548,62 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `composition_write_xml_not_acceptable/create_composition-accept_xml row 0` | option-not-selected |
 | `composition_write_xml_not_acceptable/update_composition-accept_xml row 0` | option-not-selected |
 | `composition_xml_write_refused/create_composition-xml_unsupported_media row 0` | option-not-selected |
+| `adl2_at_coded/adl2-at_coded-accepted row 0` | development-only |
+| `adl2_at_coded/adl2-at_coded-read_back row 0` | development-only |
 | `content_item_unmatched_accepted/item-unmatched_member_accepted-accepted row 0` | option-not-selected |
+| `contribution_lifecycle/commit_contribution-lifecycle_deactivate row 0` | development-only |
+| `contribution_lifecycle/commit_contribution-lifecycle_abandon row 0` | development-only |
 | `contribution_read_xml/get_contribution-xml row 0` | option-not-selected |
 | `contribution_write_xml_accept/commit_contribution-accept_xml row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/upload_template-web_template_not_acceptable row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/get_template-web_template_not_acceptable row 0` | option-not-selected |
 | `template_adl14_web_template_not_acceptable/get_template-web_template_warning row 0` | option-not-selected |
+| `template_adl14_xml_v2/upload_template-v2_ordinal row 0` | development-only |
+| `template_adl14_xml_v2/upload_template-v2_ordinal_old_shape row 0` | development-only |
+| `template_adl2_at_coded/upload_template_adl2-at_coded row 0` | development-only |
+| `template_adl2_at_coded/get_template_adl2-at_coded row 0` | development-only |
+| `template_adl2_at_coded/upload_template_adl2-at_coded-empty_body row 0` | development-only |
+| `template_adl2_at_coded/upload_template_adl2-at_coded-unparseable row 0` | development-only |
+| `template_adl2_at_coded/upload_template_adl2-at_coded-original_author_empty row 0` | development-only |
+| `template_adl2_at_coded/upload_template_adl2-at_coded-lifecycle_state_empty row 0` | development-only |
 | `template_example_flat/get_template_adl14_example-flat row 0` | option-not-selected |
-| `template_example_flat/get_template_adl2_example-flat row 0` | option-not-selected |
+| `template_example_flat_adl2/get_template_adl2_example-flat row 0` | option-not-selected |
 | `template_example_flat_not_acceptable/get_template_adl14_example-flat_not_acceptable row 0` | option-not-selected |
-| `template_example_flat_not_acceptable/get_template_adl2_example-flat_not_acceptable row 0` | option-not-selected |
+| `template_example_flat_not_acceptable_adl2/get_template_adl2_example-flat_not_acceptable row 0` | option-not-selected |
 | `template_example_structured/get_template_adl14_example-structured row 0` | option-not-selected |
-| `template_example_structured/get_template_adl2_example-structured row 0` | option-not-selected |
+| `template_example_structured_adl2/get_template_adl2_example-structured row 0` | option-not-selected |
 | `template_example_structured_not_acceptable/get_template_adl14_example-structured_not_acceptable row 0` | option-not-selected |
-| `template_example_structured_not_acceptable/get_template_adl2_example-structured_not_acceptable row 0` | option-not-selected |
+| `template_example_structured_not_acceptable_adl2/get_template_adl2_example-structured_not_acceptable row 0` | option-not-selected |
 | `template_example_xml/get_template_adl14_example-xml row 0` | option-not-selected |
-| `template_example_xml/get_template_adl2_example-xml row 0` | option-not-selected |
+| `template_example_xml_adl2/get_template_adl2_example-xml row 0` | option-not-selected |
 | `template_example_xml_not_acceptable/get_template_adl14_example-xml_not_acceptable row 0` | option-not-selected |
-| `template_example_xml_not_acceptable/get_template_adl2_example-xml_not_acceptable row 0` | option-not-selected |
+| `template_example_xml_not_acceptable_adl2/get_template_adl2_example-xml_not_acceptable row 0` | option-not-selected |
+| `agent_direct_commit/create_agent-lifecycle_complete_default row 0` | development-only |
+| `agent_direct_commit/update_agent-lifecycle_complete_default row 0` | development-only |
+| `agent_direct_commit/update_agent-change_type_amendment row 0` | development-only |
+| `agent_direct_commit/update_agent-change_type_creation_refused row 0` | development-only |
+| `agent_direct_commit/create_agent-change_type_creation_supplied row 0` | development-only |
+| `agent_direct_commit/create_agent-change_type_deleted_refused row 0` | development-only |
+| `agent_direct_commit/delete_agent-change_type_deleted_default row 0` | development-only |
+| `agent_direct_commit/delete_agent-change_type_creation_refused row 0` | development-only |
 | `demographic_contribution_read_xml/commit_demographic_contribution-accept_xml row 0` | option-not-selected |
 | `demographic_contribution_read_xml/get_demographic_contribution-accept_xml row 0` | option-not-selected |
+| `group_direct_commit/create_group-lifecycle_complete_default row 0` | development-only |
+| `group_direct_commit/update_group-lifecycle_complete_default row 0` | development-only |
+| `group_direct_commit/update_group-change_type_amendment row 0` | development-only |
+| `group_direct_commit/update_group-change_type_creation_refused row 0` | development-only |
+| `group_direct_commit/create_group-change_type_creation_supplied row 0` | development-only |
+| `group_direct_commit/create_group-change_type_deleted_refused row 0` | development-only |
+| `group_direct_commit/delete_group-change_type_deleted_default row 0` | development-only |
+| `group_direct_commit/delete_group-change_type_creation_refused row 0` | development-only |
+| `organisation_direct_commit/create_organisation-lifecycle_complete_default row 0` | development-only |
+| `organisation_direct_commit/update_organisation-lifecycle_complete_default row 0` | development-only |
+| `organisation_direct_commit/update_organisation-change_type_amendment row 0` | development-only |
+| `organisation_direct_commit/update_organisation-change_type_creation_refused row 0` | development-only |
+| `organisation_direct_commit/create_organisation-change_type_creation_supplied row 0` | development-only |
+| `organisation_direct_commit/create_organisation-change_type_deleted_refused row 0` | development-only |
+| `organisation_direct_commit/delete_organisation-change_type_deleted_default row 0` | development-only |
+| `organisation_direct_commit/delete_organisation-change_type_creation_refused row 0` | development-only |
 | `party_read_xml_not_acceptable/get_person-xml_not_acceptable row 0` | option-not-selected |
 | `party_read_xml_not_acceptable/get_agent-xml_not_acceptable row 0` | option-not-selected |
 | `party_read_xml_not_acceptable/get_group-xml_not_acceptable row 0` | option-not-selected |
@@ -568,6 +629,22 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `party_xml_write_refused/update_organisation-xml_refused row 0` | option-not-selected |
 | `party_xml_write_refused/create_role-xml_refused row 0` | option-not-selected |
 | `party_xml_write_refused/update_role-xml_refused row 0` | option-not-selected |
+| `person_direct_commit/create_person-lifecycle_complete_default row 0` | development-only |
+| `person_direct_commit/update_person-lifecycle_complete_default row 0` | development-only |
+| `person_direct_commit/update_person-change_type_amendment row 0` | development-only |
+| `person_direct_commit/update_person-change_type_creation_refused row 0` | development-only |
+| `person_direct_commit/create_person-change_type_creation_supplied row 0` | development-only |
+| `person_direct_commit/create_person-change_type_deleted_refused row 0` | development-only |
+| `person_direct_commit/delete_person-change_type_deleted_default row 0` | development-only |
+| `person_direct_commit/delete_person-change_type_creation_refused row 0` | development-only |
+| `role_direct_commit/create_role-lifecycle_complete_default row 0` | development-only |
+| `role_direct_commit/update_role-lifecycle_complete_default row 0` | development-only |
+| `role_direct_commit/update_role-change_type_amendment row 0` | development-only |
+| `role_direct_commit/update_role-change_type_creation_refused row 0` | development-only |
+| `role_direct_commit/create_role-change_type_creation_supplied row 0` | development-only |
+| `role_direct_commit/create_role-change_type_deleted_refused row 0` | development-only |
+| `role_direct_commit/delete_role-change_type_deleted_default row 0` | development-only |
+| `role_direct_commit/delete_role-change_type_creation_refused row 0` | development-only |
 | `versioned_party_read_xml/get_versioned_party-xml row 0` | option-not-selected |
 | `versioned_party_read_xml/get_versioned_party_version-xml row 0` | option-not-selected |
 | `versioned_party_read_xml/get_versioned_party_version_by_id-xml row 0` | option-not-selected |
@@ -583,6 +660,9 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `ehr_xml_not_acceptable/create_ehr-xml_not_acceptable-with_id row 0` | option-not-selected |
 | `ehr_xml_not_acceptable_json_setup/get_ehr-by_subject-xml_not_acceptable row 0` | option-not-selected |
 | `ehr_xml_write_refused/create_ehr-xml_unsupported_media row 0` | option-not-selected |
+| `ehr_status_direct_commit/update-lifecycle_complete_default row 0` | development-only |
+| `ehr_status_direct_commit/update-change_type_amendment row 0` | development-only |
+| `ehr_status_direct_commit/update-change_type_creation_refused row 0` | development-only |
 | `ehr_status_xml_not_acceptable/get_ehr_status-xml_not_acceptable row 0` | option-not-selected |
 | `ehr_status_xml_not_acceptable/get_versioned_ehr_status-xml_not_acceptable row 0` | option-not-selected |
 | `ehr_status_xml_not_acceptable/get_versioned_ehr_status_version-xml_not_acceptable row 0` | option-not-selected |
@@ -591,6 +671,20 @@ A skipped row was not run, for the reason given. It never counts for or against 
 | `ehr_status_xml_not_acceptable_json_setup/get_versioned_ehr_status_version-by_id-xml_not_acceptable row 0` | option-not-selected |
 | `ehr_status_xml_not_acceptable_json_setup/update-xml_not_acceptable row 0` | option-not-selected |
 | `ehr_status_xml_write_refused/update-xml_unsupported_media row 0` | option-not-selected |
+| `composition_tags_semantics/composition_tags_update-key_value_valid row 0` | development-only |
+| `composition_tags_semantics/composition_tags_update-key_leading_space row 0` | development-only |
+| `composition_tags_semantics/composition_tags_update-key_trailing_space row 0` | development-only |
+| `composition_tags_semantics/composition_tags_update-key_empty row 0` | development-only |
+| `composition_tags_semantics/composition_tags_update-value_empty row 0` | development-only |
+| `composition_tags_semantics/composition_tags_update-no_reversioning row 0` | development-only |
+| `composition_tags_semantics/composition_tags_delete-other_target_kept row 0` | development-only |
+| `aql_version_predicate/version-no_version_class row 0` | development-only |
+| `aql_version_predicate/version-without_predicate row 0` | development-only |
+| `aql_version_predicate/version-latest_version row 0` | development-only |
+| `aql_version_predicate/version-all_versions row 0` | development-only |
+| `aql_version_predicate/version-predicate_on_composition_refused row 0` | development-only |
+| `aql_version_predicate/version-standard_predicate-uid row 0` | development-only |
+| `aql_version_predicate/version-standard_predicate-change_type row 0` | development-only |
 | `authentication_not_required/ehr_create-invalid_credentials_warning row 0` | option-not-selected |
 | `contribution_read_flat_not_acceptable/get_contribution-flat_not_acceptable row 0` | option-not-selected |
 | `contribution_read_flat_not_acceptable/get_contribution-flat_warning row 0` | option-not-selected |
@@ -612,4 +706,4 @@ A skipped row was not run, for the reason given. It never counts for or against 
 
 ---
 
-Spec divergence: 147 case(s) rest on released text that is unclear or contradictory, and are tagged @SpecDiverge. Until the specification resolves it, Veredictum judges them as the linked upstream reports describe: [#307](https://github.com/Vernum-Projecten/Veredictum/issues/307), [#352](https://github.com/Vernum-Projecten/Veredictum/issues/352), [#353](https://github.com/Vernum-Projecten/Veredictum/issues/353), [#661](https://github.com/Vernum-Projecten/Veredictum/issues/661), [#673](https://github.com/Vernum-Projecten/Veredictum/issues/673), [#721](https://github.com/Vernum-Projecten/Veredictum/issues/721), [#724](https://github.com/Vernum-Projecten/Veredictum/issues/724), [#735](https://github.com/Vernum-Projecten/Veredictum/issues/735), [#750](https://github.com/Vernum-Projecten/Veredictum/issues/750), [#752](https://github.com/Vernum-Projecten/Veredictum/issues/752), [#758](https://github.com/Vernum-Projecten/Veredictum/issues/758), [#759](https://github.com/Vernum-Projecten/Veredictum/issues/759), [#771](https://github.com/Vernum-Projecten/Veredictum/issues/771), [#939](https://github.com/Vernum-Projecten/Veredictum/issues/939), [#945](https://github.com/Vernum-Projecten/Veredictum/issues/945), [#946](https://github.com/Vernum-Projecten/Veredictum/issues/946), [#984](https://github.com/Vernum-Projecten/Veredictum/issues/984).
+Spec divergence: 156 case(s) rest on released text that is unclear or contradictory, and are tagged @SpecDiverge. Until the specification resolves it, Veredictum judges them as the linked upstream reports describe: [#240](https://github.com/Vernum-Projecten/Veredictum/issues/240), [#307](https://github.com/Vernum-Projecten/Veredictum/issues/307), [#352](https://github.com/Vernum-Projecten/Veredictum/issues/352), [#353](https://github.com/Vernum-Projecten/Veredictum/issues/353), [#673](https://github.com/Vernum-Projecten/Veredictum/issues/673), [#721](https://github.com/Vernum-Projecten/Veredictum/issues/721), [#724](https://github.com/Vernum-Projecten/Veredictum/issues/724), [#735](https://github.com/Vernum-Projecten/Veredictum/issues/735), [#750](https://github.com/Vernum-Projecten/Veredictum/issues/750), [#752](https://github.com/Vernum-Projecten/Veredictum/issues/752), [#758](https://github.com/Vernum-Projecten/Veredictum/issues/758), [#759](https://github.com/Vernum-Projecten/Veredictum/issues/759), [#771](https://github.com/Vernum-Projecten/Veredictum/issues/771), [#939](https://github.com/Vernum-Projecten/Veredictum/issues/939), [#945](https://github.com/Vernum-Projecten/Veredictum/issues/945), [#946](https://github.com/Vernum-Projecten/Veredictum/issues/946), [#984](https://github.com/Vernum-Projecten/Veredictum/issues/984), [#1053](https://github.com/Vernum-Projecten/Veredictum/issues/1053).

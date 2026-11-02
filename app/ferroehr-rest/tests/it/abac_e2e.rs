@@ -1343,3 +1343,173 @@ async fn a_configured_patient_namespace_names_the_pair_exactly() {
     let served = query_first_column(&app, "SELECT e/ehr_id/value FROM EHR e", "PATIENT-X").await;
     assert_eq!(served, vec![json!(EHR_SHARED_A)]);
 }
+
+// ── an item tag is checked as its target ──────────────────────────────────────
+
+/// One request as a caller whose token carries `patient`, with a one-tag list
+/// as its body (the body a tag write takes; a read ignores it).
+async fn tag_probe(app: &Router, method: &str, path: &str, patient: &str) -> StatusCode {
+    let req = Request::builder()
+        .method(method)
+        .uri(common::full(path))
+        .header("authorization", bearer(Some(patient)))
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!([{ "key": "reviewed", "value": "true" }]).to_string(),
+        ))
+        .expect("request");
+    status(app, req).await
+}
+
+/// The `EHR_STATUS` `VERSIONED_OBJECT` id of `ehr_id`, read through `seed`.
+async fn status_vo(seed: &Router, ehr_id: &str) -> String {
+    let req = Request::builder()
+        .uri(format!("{BASE}/ehr/{ehr_id}/ehr_status"))
+        .body(Body::empty())
+        .expect("request");
+    let (status, headers, body) = common::send(seed, req).await;
+    assert_eq!(status, StatusCode::OK, "seed EHR_STATUS read: {body}");
+    let uid = common::etag_uid(&headers);
+    uid.split("::").next().expect("object id").to_owned()
+}
+
+#[tokio::test]
+async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OTHER).await;
+    let uid = seed_composition(&seed, EHR_OTHER).await;
+    let vo = uid.split("::").next().expect("object id").to_owned();
+    let status_id = status_vo(&seed, EHR_OTHER).await;
+    let app = abac_app(svc, true).await;
+
+    // Each tag operation beside the target operation whose ABAC mode it takes.
+    let pairs = [
+        (
+            "composition tag read",
+            ("GET", format!("/ehr/{EHR_OTHER}/composition/{uid}")),
+            ("GET", format!("/ehr/{EHR_OTHER}/composition/{vo}/tags")),
+        ),
+        (
+            "composition tag put",
+            ("PUT", format!("/ehr/{EHR_OTHER}/composition/{vo}")),
+            ("PUT", format!("/ehr/{EHR_OTHER}/composition/{vo}/tags")),
+        ),
+        (
+            "composition tag delete",
+            ("PUT", format!("/ehr/{EHR_OTHER}/composition/{vo}")),
+            (
+                "DELETE",
+                format!("/ehr/{EHR_OTHER}/composition/{vo}/tags/reviewed"),
+            ),
+        ),
+        (
+            "EHR tag read",
+            ("GET", format!("/ehr/{EHR_OTHER}")),
+            ("GET", format!("/ehr/{EHR_OTHER}/tags")),
+        ),
+        (
+            "EHR_STATUS tag read",
+            ("GET", format!("/ehr/{EHR_OTHER}/ehr_status")),
+            (
+                "GET",
+                format!("/ehr/{EHR_OTHER}/ehr_status/{status_id}/tags"),
+            ),
+        ),
+        (
+            "EHR_STATUS tag put",
+            ("PUT", format!("/ehr/{EHR_OTHER}/ehr_status")),
+            (
+                "PUT",
+                format!("/ehr/{EHR_OTHER}/ehr_status/{status_id}/tags"),
+            ),
+        ),
+        (
+            "EHR_STATUS tag delete",
+            ("PUT", format!("/ehr/{EHR_OTHER}/ehr_status")),
+            (
+                "DELETE",
+                format!("/ehr/{EHR_OTHER}/ehr_status/{status_id}/tags/reviewed"),
+            ),
+        ),
+    ];
+    for (label, (target_method, target), (tag_method, tag)) in pairs {
+        assert_eq!(
+            tag_probe(&app, target_method, &target, PATIENT_OWN).await,
+            StatusCode::FORBIDDEN,
+            "the target of the {label} is refused for another patient's EHR"
+        );
+        assert_eq!(
+            tag_probe(&app, tag_method, &tag, PATIENT_OWN).await,
+            StatusCode::FORBIDDEN,
+            "the {label} is refused as its target is"
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_item_tag_of_the_callers_patient_is_served() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OWN).await;
+    let uid = seed_composition(&seed, EHR_OWN).await;
+    let vo = uid.split("::").next().expect("object id").to_owned();
+    let status_id = status_vo(&seed, EHR_OWN).await;
+    let app = abac_app(svc, true).await;
+
+    let served = [
+        ("PUT", format!("/ehr/{EHR_OWN}/composition/{vo}/tags")),
+        ("GET", format!("/ehr/{EHR_OWN}/composition/{vo}/tags")),
+        (
+            "DELETE",
+            format!("/ehr/{EHR_OWN}/composition/{vo}/tags/reviewed"),
+        ),
+        ("GET", format!("/ehr/{EHR_OWN}/tags")),
+        ("PUT", format!("/ehr/{EHR_OWN}/ehr_status/{status_id}/tags")),
+        ("GET", format!("/ehr/{EHR_OWN}/ehr_status/{status_id}/tags")),
+        (
+            "DELETE",
+            format!("/ehr/{EHR_OWN}/ehr_status/{status_id}/tags/reviewed"),
+        ),
+    ];
+    for (method, path) in served {
+        let s = tag_probe(&app, method, &path, PATIENT_OWN).await;
+        assert!(
+            s.is_success(),
+            "a {method} of an own tag is served, got {s}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_template_scoped_rule_binds_on_a_composition_tag_as_on_the_composition() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OWN).await;
+    let ips = seed_templated_composition(&seed, EHR_OWN).await;
+    let ips_vo = ips.split("::").next().expect("object id").to_owned();
+    let bare = seed_composition(&seed, EHR_OWN).await;
+    let bare_vo = bare.split("::").next().expect("object id").to_owned();
+    let app = template_scoped_app(svc).await;
+
+    // The rule permits the IPS composition's read and refuses the
+    // templateless one's; each tag operation follows its target.
+    for (vo, uid, want) in [
+        (&ips_vo, &ips, StatusCode::OK),
+        (&bare_vo, &bare, StatusCode::FORBIDDEN),
+    ] {
+        let target = format!("/ehr/{EHR_OWN}/composition/{uid}");
+        assert_eq!(tag_probe(&app, "GET", &target, PATIENT_OWN).await, want);
+        let tags = format!("/ehr/{EHR_OWN}/composition/{vo}/tags");
+        let refused = want == StatusCode::FORBIDDEN;
+        for (method, path) in [
+            ("PUT", tags.clone()),
+            ("GET", tags.clone()),
+            ("DELETE", format!("{tags}/reviewed")),
+        ] {
+            let s = tag_probe(&app, method, &path, PATIENT_OWN).await;
+            assert_eq!(
+                s == StatusCode::FORBIDDEN,
+                refused,
+                "a {method} of a composition tag follows the target read ({want}), got {s}"
+            );
+        }
+    }
+}

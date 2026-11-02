@@ -47,7 +47,10 @@ Each row ends in one of five outcomes. A **failed** row counts against the
 server. A **warning** row is a SHOULD the server did not follow and never
 counts against it. An **errored** row could not be judged: it counts against
 the server unless its record names the instrument as the cause. A **skipped**
-row was not run.
+row was not run, and names its reason. A released run also skips every case
+that rests on development text alone (`development-only`), and a development
+run skips every case whose cited text the development snapshot drops or
+contradicts (`cited-text-absent`, `contested-in-development`).
 
 > [!NOTE]
 > The runner publishes a JSON Schema for every artefact family it writes, so a
@@ -66,7 +69,7 @@ The released profile reads every citation against the frozen openEHR release
 and is the record:
 
 [![openEHR BASE · released][base-rel]][runs]
-[![openEHR options · released][options-rel]][runs]
+[![openEHR OPTIONS · released][options-rel]][runs]
 [![specification · released][profile-rel]][runs]
 [![veredictum · released][instrument-rel]][runs]
 
@@ -75,7 +78,7 @@ of each openEHR repository, the text FerroEHR builds on. It is shown beside the
 record and never counted toward it:
 
 [![openEHR BASE · development][base-dev]][runs]
-[![openEHR options · development][options-dev]][runs]
+[![openEHR OPTIONS · development][options-dev]][runs]
 [![specification · development][profile-dev]][runs]
 [![veredictum · development][instrument-dev]][runs]
 

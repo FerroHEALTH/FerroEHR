@@ -173,10 +173,12 @@ macro_rules! operations {
 ///
 /// The CONTRIBUTION ids are shared by the EHR and DEMOGRAPHIC groups, and one
 /// row is right for both: RM common master06 change control governs every
-/// `VERSIONED_OBJECT`. Auditing an `ITEM_TAG` operation under its parent's
-/// class is our own design, since RM ehr `master04-ehr_package.adoc` §Tags puts
-/// tags outside change control. `options` is RBAC-classified for totality only:
-/// the router mounts the manifest above the authentication layer.
+/// `VERSIONED_OBJECT`. An `ITEM_TAG` operation is audited under its parent's
+/// class and ABAC-checked in the mode of its parent's read (`GET`) or write
+/// (`PUT`, `DELETE`): our own design, since RM ehr `master04-ehr_package.adoc`
+/// §Tags puts tags outside change control. `options` is RBAC-classified for
+/// totality only: the router mounts the manifest above the authentication
+/// layer.
 static OPERATIONS: &[Operation] = operations! {
     "admin_ehr_delete" => Delete, Admin, None, Skip, Ehr, None;
     "admin_ehr_delete_all" => Delete, Admin, None, Skip, Ehr, None;
@@ -193,9 +195,9 @@ static OPERATIONS: &[Operation] = operations! {
     "composition_create" => Create, Clinical, Composition, Pre, Composition, Write;
     "composition_delete" => Delete, Clinical, Composition, Pre, Composition, Write;
     "composition_get" => Read, Clinical, Composition, Post, Composition, Read;
-    "composition_tags_delete" => Delete, Clinical, Composition, Skip, Composition, None;
-    "composition_tags_get" => Read, Clinical, Composition, Skip, Composition, None;
-    "composition_tags_update" => Update, Clinical, Composition, Skip, Composition, None;
+    "composition_tags_delete" => Delete, Clinical, Composition, Pre, Composition, None;
+    "composition_tags_get" => Read, Clinical, Composition, Post, Composition, None;
+    "composition_tags_update" => Update, Clinical, Composition, Pre, Composition, None;
     "composition_update" => Update, Clinical, Composition, Pre, Composition, Write;
     "contribution_create" => Create, Clinical, Contribution, Pre, Contribution, None;
     "contribution_get" => Read, Clinical, Contribution, Post, Contribution, None;
@@ -230,7 +232,7 @@ static OPERATIONS: &[Operation] = operations! {
     "ehr_status_tags_get" => Read, Clinical, EhrStatus, Pre, Ehr, None;
     "ehr_status_tags_update" => Update, Clinical, EhrStatus, Pre, Ehr, None;
     "ehr_status_update" => Update, Clinical, EhrStatus, Pre, Ehr, None;
-    "ehr_tags_get" => Read, Clinical, Ehr, Skip, Ehr, None;
+    "ehr_tags_get" => Read, Clinical, Ehr, Pre, Ehr, None;
     "group_create" => Create, Clinical, None, Skip, Demographic, None;
     "group_delete" => Delete, Clinical, None, Skip, Demographic, None;
     "group_get" => Read, Clinical, None, Skip, Demographic, None;
@@ -442,6 +444,55 @@ mod tests {
             ids(Operation::commits_contribution),
             ["contribution_create"]
         );
+    }
+
+    /// Every item-tag operation takes the ABAC mode and resource kind of its
+    /// target's read (`GET`) or write (`PUT`, `DELETE`).
+    #[test]
+    fn an_item_tag_operation_is_checked_as_its_target() {
+        let targets = [
+            ("agent_tags_delete", "agent_update"),
+            ("agent_tags_get", "agent_get"),
+            ("agent_tags_update", "agent_update"),
+            ("composition_tags_delete", "composition_update"),
+            ("composition_tags_get", "composition_get"),
+            ("composition_tags_update", "composition_update"),
+            ("demographic_tags_get", "versioned_party_get"),
+            ("ehr_status_tags_delete", "ehr_status_update"),
+            ("ehr_status_tags_get", "ehr_status_get_at_time"),
+            ("ehr_status_tags_update", "ehr_status_update"),
+            ("ehr_tags_get", "ehr_get_by_id"),
+            ("group_tags_delete", "group_update"),
+            ("group_tags_get", "group_get"),
+            ("group_tags_update", "group_update"),
+            ("organisation_tags_delete", "organisation_update"),
+            ("organisation_tags_get", "organisation_get"),
+            ("organisation_tags_update", "organisation_update"),
+            ("person_tags_delete", "person_update"),
+            ("person_tags_get", "person_get"),
+            ("person_tags_update", "person_update"),
+            ("role_tags_delete", "role_update"),
+            ("role_tags_get", "role_get"),
+            ("role_tags_update", "role_update"),
+        ];
+        let tag_ops: Vec<&str> = OPERATIONS
+            .iter()
+            .map(|row| row.id)
+            .filter(|id| id.contains("_tags_"))
+            .collect();
+        assert_eq!(
+            tag_ops,
+            targets.map(|(tag, _target)| tag),
+            "every item-tag operation names its target"
+        );
+        for (tag, target) in targets {
+            let (tag_row, target_row) = (operation(tag), operation(target));
+            assert_eq!(
+                tag_row.map(|row| (row.pep, row.kind)),
+                target_row.map(|row| (row.pep, row.kind)),
+                "{tag} is checked as {target}"
+            );
+        }
     }
 
     /// Rewrites the committed classification from the current code.

@@ -40,6 +40,16 @@ are evidence to adjudicate, never authority.
 | **Veredictum is wrong** | The server answered as the specification requires, and the catalogue expects otherwise (a workflow under `catalogue/cases/`, its criteria or its `x-veredictum-cite`, an option in `catalogue/capabilities.yaml`), or the engine under `app/veredictum/src/` misdrove the exchange or misjudged it | An issue on Vernum-Projecten/Veredictum with the row, the cited sentence, what the catalogue expects and why the specification says otherwise; the fix reaches this repository as a pin bump |
 | **The specification is silent or contradicts itself** | No released text decides the behaviour | An `upstream-report` issue here (§Upstream reports), with the row recorded as such in the triage log; a catalogue that asserts the behaviour anyway is also a Veredictum attribution (it should carry an option or a `report:`) |
 
+A skipped row is no red row, and its reason says why it did not run. Three
+reasons belong to one profile: `development-only` (the case rests on
+development text alone, so a released run never judges it), `cited-text-absent`
+and `contested-in-development` (the development snapshot drops or contradicts
+the released text the case cites). A development-only row that fails in a
+development run is triaged like any other, against the development text it
+cites, and never blocks a merge. `extension-not-offered` means the statement
+declares no route for an extension the case's setup calls (its `extensions`);
+it is a party-set question, never a server failure.
+
 The triage log is a comment on the tracking issue: one row per red row, its
 outcome and the specification section that decides it. A row attributed
 away from FerroEHR never becomes a reason to leave it red: the FerroEHR

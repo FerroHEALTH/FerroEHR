@@ -79,6 +79,7 @@ mod local_ehr_index_posture;
 mod management;
 mod message_extension_http;
 mod overload_http;
+mod party_reverse_relationships_http;
 mod patient_data_assurance;
 mod protocol_tail;
 mod query_ehr_id_header;
