@@ -32,7 +32,7 @@ use crate::state::AppState;
 
 /// Execute the four stored operations (latest + explicit version, `GET` +
 /// `POST`). The single wire `ehr_id` (query parameter or `openehr-ehr-id`
-/// header — resolved for all four by [`response::ehr_id_from_request`],
+/// header — resolved for all four by [`response::ehr_scope`],
 /// `Request.md` §About the `ehr_id` parameter) is collected into the
 /// one-element [`AqlQueryRequest::ehr_ids`] scope.
 pub(super) async fn execute(
@@ -56,9 +56,7 @@ pub(super) async fn execute(
             // an accepted superset.
             let parameters = params::aql_binds(p.query_parameters)?;
             let request = scope.apply(AqlQueryRequest {
-                ehr_ids: response::ehr_id_from_request(p.ehr_id, h)?
-                    .into_iter()
-                    .collect(),
+                ehr_ids: response::ehr_scope(p.ehr_id, h)?,
                 offset: p.offset,
                 fetch: p.fetch,
                 parameters,
@@ -86,9 +84,7 @@ pub(super) async fn execute(
             )?;
             let parameters = params::aql_binds(p.query_parameters)?;
             let request = scope.apply(AqlQueryRequest {
-                ehr_ids: response::ehr_id_from_request(p.ehr_id, h)?
-                    .into_iter()
-                    .collect(),
+                ehr_ids: response::ehr_scope(p.ehr_id, h)?,
                 offset: p.offset,
                 fetch: p.fetch,
                 parameters,
@@ -137,9 +133,7 @@ fn stored_body_request(
     let parameters =
         response::merge_body_and_url_parameters(parsed.query_parameters.unwrap_or_default(), q)?;
     Ok(AqlQueryRequest {
-        ehr_ids: response::ehr_id_from_request(params::query_param(q, "ehr_id"), h)?
-            .into_iter()
-            .collect(),
+        ehr_ids: response::ehr_scope(params::query_param(q, "ehr_id"), h)?,
         offset,
         fetch,
         parameters,

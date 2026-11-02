@@ -46,3 +46,25 @@ async fn an_unknown_stored_query_is_404() {
     let (status, body) = status_of(&app, &format!("{BASE}/query/org.example::nothing")).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
 }
+
+/// A malformed `ehr_id` is a `400` (ITS-REST `400_Query`: "at least one of the
+/// parameters has an invalid syntax") whether it arrives as the query
+/// parameter, the `openehr-ehr-id` header, or beside a query sent by `POST`.
+#[tokio::test]
+async fn a_malformed_ehr_id_is_400_in_every_carrier() {
+    let (_db, app) = common::app(common::api_config(false)).await;
+    let refusals = [
+        common::get(&format!("{BASE}/query/aql?q={EHR_IDS}&ehr_id=not-a-uuid")),
+        common::req("GET", format!("{BASE}/query/aql?q={EHR_IDS}"))
+            .header("openehr-ehr-id", "not-a-uuid")
+            .build(),
+        common::req("POST", format!("{BASE}/query/aql?ehr_id=not-a-uuid"))
+            .json(r#"{"q":"SELECT e/ehr_id/value FROM EHR e"}"#)
+            .build(),
+    ];
+    for request in refusals {
+        let (status, body) = common::send_body(&app, request).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert!(body.contains("invalid ehr_id `not-a-uuid`"), "{body}");
+    }
+}

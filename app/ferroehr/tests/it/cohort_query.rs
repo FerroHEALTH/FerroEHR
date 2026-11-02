@@ -477,7 +477,7 @@ async fn an_unknown_predicate_and_an_unbound_deployment_are_refused() {
         other => panic!("a malformed age band must be refused, got {other:?}"),
     }
     let mut prescoped = request(&[("city", "Assen")]);
-    prescoped.query.ehr_ids = vec![Uuid::now_v7().to_string()];
+    prescoped.query.ehr_ids = vec![EhrId(Uuid::now_v7())];
     assert!(
         matches!(
             svc.execute_cohort_query(prescoped).await,

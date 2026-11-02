@@ -518,7 +518,7 @@ async fn all_versions_returns_the_branch_row_beside_the_trunk() {
     .expect("branch-forking modification");
 
     let request = AqlQueryRequest {
-        ehr_ids: vec![target.0.to_string()],
+        ehr_ids: vec![target],
         ..AqlQueryRequest::default()
     };
     let result = svc
@@ -552,7 +552,7 @@ async fn all_versions_returns_the_branch_row_beside_the_trunk() {
             "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
             None,
             &AqlQueryRequest {
-                ehr_ids: vec![target.0.to_string()],
+                ehr_ids: vec![target],
                 ..AqlQueryRequest::default()
             },
         )

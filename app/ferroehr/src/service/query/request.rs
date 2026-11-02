@@ -16,6 +16,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use crate::aql::subject::EhrSubject;
+use crate::ids::EhrId;
 
 /// A normalized AQL query request: the paging window, the EHR scope, and the
 /// `$parameter` bindings.
@@ -30,7 +31,7 @@ pub struct AqlQueryRequest {
     /// over every EHR whose status has `is_queryable` set. The ITS-REST
     /// single `ehr_id` parameter is the one-element case. Error
     /// `ehr_id_does_not_exist` when a listed EHR does not exist.
-    pub ehr_ids: Vec<String>,
+    pub ehr_ids: Vec<EhrId>,
     /// Whether a non-empty [`Self::ehr_ids`] names the EHRs the caller targets
     /// or a subset of the population the population gate still applies to.
     pub ehr_scope_kind: crate::aql::sql::EhrScopeKind,
@@ -65,9 +66,9 @@ impl AqlQueryRequest {
     /// The single-EHR scope of the ITS-REST wire (`ehr_id` query parameter /
     /// `openehr-ehr-id` header), if exactly one EHR is scoped.
     #[must_use]
-    pub fn single_ehr_id(&self) -> Option<&str> {
+    pub fn single_ehr_id(&self) -> Option<EhrId> {
         match self.ehr_ids.as_slice() {
-            [one] => Some(one),
+            [one] => Some(*one),
             _ => None,
         }
     }
