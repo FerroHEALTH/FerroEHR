@@ -165,7 +165,7 @@ const RETRYABLE_CONFLICT_MESSAGE: &str =
 /// server-side invariant, or an unclassified driver error). Opaque by design:
 /// the client cannot act on it, and the diagnosis belongs in the server's own
 /// logs.
-const INTERNAL_MESSAGE: &str = "the server encountered an internal database error";
+pub(crate) const INTERNAL_MESSAGE: &str = "the server encountered an internal database error";
 
 /// The client-visible message of a database the server could not connect to.
 /// Nothing ran, so the request can be repeated once the database answers.
@@ -185,7 +185,7 @@ const CANCELLED_MESSAGE: &str = "the database cancelled the request's statement;
 /// the error text names RM attribute names and the internal nested-set row
 /// shape, which is server-internal detail with no client action attached. The
 /// full detail goes to `tracing` at the bridge below.
-const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec error";
+pub(crate) const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec error";
 
 /// Classify a raw [`sqlx::Error`] at the storage boundary into the call status
 /// it should surface, emitting **one** structured trace record so the SQLSTATE

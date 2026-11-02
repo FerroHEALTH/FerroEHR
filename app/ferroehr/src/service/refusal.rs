@@ -209,9 +209,9 @@ impl super::error::ServiceError {
             | E::Signing(_)
             | E::SigningFailed(_)
             | E::SigningCanonical(_)
-            | E::Storage(_)
             | E::Database(_)
             | E::Acquire(_) => super::error::INTERNAL_MESSAGE.to_owned(),
+            E::Storage(e) => storage_message(e),
             E::Unprocessable { violation, .. } => violation.to_string(),
             E::ValidationFailed(v) => v
                 .iter()
@@ -220,5 +220,23 @@ impl super::error::ServiceError {
                 .join("; "),
             other => other.to_string(),
         }
+    }
+}
+
+/// The client-visible text of a storage failure, as `classify_storage` words
+/// it: a typed conflict names itself, a codec fault and a driver failure read
+/// as curated text.
+fn storage_message(e: &crate::storage::error::StorageError) -> String {
+    use crate::storage::error::{CODEC_MESSAGE, INTERNAL_MESSAGE, StorageError as S};
+    match e {
+        S::ContributionUidInUse(_) | S::TrunkPositionInUse { .. } | S::SubjectInUse(_, _) => {
+            e.to_string()
+        }
+        S::NotAStructureRoot(_)
+        | S::MixedArray { .. }
+        | S::InvalidRows(_)
+        | S::TrunklessContainer { .. }
+        | S::BodyDecode(_) => CODEC_MESSAGE.to_owned(),
+        S::Database(_) | S::Acquire(_) => INTERNAL_MESSAGE.to_owned(),
     }
 }
