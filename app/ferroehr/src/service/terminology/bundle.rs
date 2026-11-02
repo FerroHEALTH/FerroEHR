@@ -8,7 +8,7 @@
 //! master12-terminology.adoc` grounds the "openehr" id and the group/value-set
 //! split. The extract types live in [`super::types`]; this module is the
 //! DB-free mapping onto [`openehr_term::bundle::openehr`], the enumerable local
-//! default the routing layer ([`super::routing`]) selects between alongside the
+//! default the routing layer (`super::routing`) selects between alongside the
 //! remote FHIR TS ([`super::fhir`]).
 //!
 //! # Bundle mapping
@@ -161,6 +161,7 @@ fn bundle_version() -> Option<String> {
 // ─── the calls, as DB-free functions: enumeration, and what routing delegates ─
 
 /// `get_terminology_ids` — `"openehr"` plus every external code set's id.
+#[must_use]
 pub fn terminology_ids() -> Vec<String> {
     let mut ids = vec![OPENEHR.to_owned()];
     ids.extend(openehr().external_code_sets().iter().map(|cs| {
@@ -176,7 +177,10 @@ pub(super) fn has_terminology(terminology_id: &str) -> bool {
     terminology_id == OPENEHR || external_terminology(terminology_id).is_some()
 }
 
-/// `get_terminology_description`; an unknown terminology → `NotFound`.
+/// `get_terminology_description`: the descriptor of one terminology.
+///
+/// # Errors
+/// [`ServiceError::NotFound`] when the bundle does not know `terminology_id`.
 pub fn terminology_description(
     terminology_id: &str,
 ) -> Result<TerminologyDescription, ServiceError> {
