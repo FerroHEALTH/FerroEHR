@@ -22,10 +22,10 @@
 //! member, which is when this module needs a new constant.
 
 /// The `composition_category` group members this chapter names.
-pub(in crate::service) mod code {
+pub(crate) mod code {
     /// `431|persistent|` — content that persists across the life of the EHR
     /// (RM composition `COMPOSITION.is_persistent`).
-    pub(in crate::service) const PERSISTENT: &str = "431";
+    pub(crate) const PERSISTENT: &str = "431";
 }
 
 #[cfg(test)]

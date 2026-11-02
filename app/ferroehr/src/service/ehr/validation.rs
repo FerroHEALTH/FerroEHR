@@ -32,12 +32,12 @@
 use crate::error::refusal::{Clash, Refusal};
 use openehr_base::validate::InvariantViolation;
 use serde_json::Value;
-use sqlx::PgConnection;
 
 use crate::error::{ServiceError, Violation};
-use crate::ids::{EhrId, VoId};
+use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::ehr::category::code;
+use crate::validation::category::code;
+use crate::validation::versioned::composition_template_id;
 use crate::versioning::{Kind, lifecycle};
 
 /// The instance size, in JSON nodes, above which the COMPOSITION validation
@@ -268,35 +268,6 @@ impl FerroEhrService {
         Err(ServiceError::ValidationFailed(errors))
     }
 
-    /// The clinical-side data-minimisation pass ([`crate::privacy`]).
-    ///
-    /// Refusals — the subject-reference rule and the identified-party rule —
-    /// are unconditional whenever their rule is in force. Identifier-shape
-    /// findings follow the configured scan mode: `strict` joins them to the
-    /// refusal, `warn` records each one and lets the write through.
-    ///
-    /// **No openEHR spec governs this — our own design/extension.** The wire
-    /// status is `422`: the request is well-formed and the refusal is
-    /// semantic, which is what ITS-REST `overview/Requests_and_responses.md`
-    /// §HTTP status codes assigns to `422` ("The request was well-formed but
-    /// was unable to be followed due to semantic errors"), against `400`'s
-    /// "malformed request syntax, syntactically invalid content". The EHR API
-    /// operations enumerate no `422` of their own
-    /// (`operations/ehr_create.yaml`, `operations/ehr_status_update.yaml`),
-    /// and the same section permits it: "Additional status codes MAY be used
-    /// as long as they do not conflict with the predefined codes" — which is
-    /// also how every existing `EHR_STATUS` content refusal here answers.
-    ///
-    /// A finding never carries the offending value, so nothing identifying
-    /// reaches the response body, the access log or the trace.
-    ///
-    /// # Errors
-    /// [`ServiceError::ValidationFailed`] carrying one entry per refused
-    /// finding, each keyed by its own RM path (→ 422).
-    fn check_privacy(&self, kind: Kind, data: &Value) -> Result<(), ServiceError> {
-        enforce_privacy(&self.privacy, kind.as_str(), data)
-    }
-
     /// Validate a versioned object about to be committed (direct or via a
     /// CONTRIBUTION). COMPOSITIONs get full RM + terminology +
     /// template validation; the EHR-owned kinds (`EHR_STATUS` / `EHR_ACCESS`
@@ -325,19 +296,19 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         match kind {
             Kind::Composition => {
-                self.check_privacy(kind, data)?;
+                self.privacy.enforce(kind.as_str(), data)?;
                 self.validate_composition_for_commit(data, incomplete).await
             }
             Kind::EhrStatus => {
-                self.check_privacy(kind, data)?;
+                self.privacy.enforce(kind.as_str(), data)?;
                 validate_ehr_status(data, incomplete)
             }
             Kind::EhrAccess => {
-                self.check_privacy(kind, data)?;
+                self.privacy.enforce(kind.as_str(), data)?;
                 validate_ehr_access(data, incomplete)
             }
             Kind::Folder => {
-                self.check_privacy(kind, data)?;
+                self.privacy.enforce(kind.as_str(), data)?;
                 validate_folder(data, incomplete)
             }
             // The demographic kinds reach here from the raw-body CONTRIBUTION
@@ -400,94 +371,6 @@ pub(in crate::service) fn validate_rm_invariants_for_commit(
             .map(|m| InvariantViolation::at(m.path, m.message))
             .collect(),
     ))
-}
-
-/// `VERSIONED_COMPOSITION` cross-version invariants, enforced against the
-/// FIRST stored version's root (RM ehr `versioned_composition.adoc`):
-///
-/// - `Archetype_node_id_valid`: every version's `data.archetype_node_id`
-///   equals the first version's — a versioned composition cannot switch
-///   archetype;
-/// - `Persistent_validity`: every version's `is_persistent` equals the first
-///   version's — the persistence category (`431|persistent|`) is fixed for
-///   the container's life.
-///
-/// A violating modification is a `422` naming the invariant; the first-version
-/// root read goes through `crate::storage::node_repo`. Both write flows run
-/// this, the direct update path ([`composition`](super::composition)) inline and
-/// the CONTRIBUTION path from [`crate::versioning::contribution`], each in its
-/// own commit transaction.
-///
-/// # Errors
-/// [`ServiceError::Unprocessable`] naming the violated invariant (→ 422);
-/// [`ServiceError::Database`] if the first-version root read fails.
-pub(crate) async fn check_versioned_composition_invariants(
-    tx: &mut PgConnection,
-    vo_id: VoId,
-    canonical: &Value,
-) -> Result<(), ServiceError> {
-    // NOTE: no openEHR spec governs the `spec_profile` gate — our own
-    // design/extension: this write-path read compares two root fields and
-    // serves nothing, so it stays ungated.
-    let first_root = crate::storage::node_repo::first_version_root(tx, vo_id).await?;
-    check_versioned_composition_first_root(first_root, canonical)
-}
-
-/// The pure half of [`check_versioned_composition_invariants`]: compare the
-/// incoming root against the first stored version's `(archetype_node_id,
-/// category code)` pair, already read — the direct update path threads it off
-/// its merged pre-read instead of paying a second statement.
-///
-/// # Errors
-/// [`ServiceError::Unprocessable`] naming the violated invariant (→ 422).
-pub(in crate::service) fn check_versioned_composition_first_root(
-    first_root: Option<(Option<String>, Option<String>)>,
-    canonical: &Value,
-) -> Result<(), ServiceError> {
-    let Some((first_ani, first_category)) = first_root else {
-        // No stored content version (e.g. every prior version deleted) — no
-        // first-version root to compare against.
-        return Ok(());
-    };
-    let incoming_ani = canonical.get("archetype_node_id").and_then(Value::as_str);
-    if let (Some(stored), Some(incoming)) = (first_ani.as_deref(), incoming_ani)
-        && stored != incoming
-    {
-        return Err(ServiceError::content_invalid(
-            Violation::new(format!(
-                "{incoming:?} differs from the versioned object's first version {stored:?}"
-            ))
-            .with_path("COMPOSITION.archetype_node_id")
-            .with_invariant("VERSIONED_COMPOSITION.Archetype_node_id_valid"),
-        ));
-    }
-    let incoming_category = canonical
-        .pointer("/category/defining_code/code_string")
-        .and_then(Value::as_str);
-    if let (Some(stored), Some(incoming)) = (first_category.as_deref(), incoming_category)
-        && (stored == code::PERSISTENT) != (incoming == code::PERSISTENT)
-    {
-        return Err(ServiceError::content_invalid(
-            Violation::new(format!(
-                "{incoming} changes the persistence of the versioned object \
-                 (first version: {stored}) — is_persistent is fixed across versions"
-            ))
-            .with_path("COMPOSITION.category")
-            .with_invariant("VERSIONED_COMPOSITION.Persistent_validity"),
-        ));
-    }
-    Ok(())
-}
-
-/// The OPT `template_id` a COMPOSITION declares
-/// (`archetype_details.template_id.value`), if any. `pub(crate)` because the
-/// CONTRIBUTION commit path stamps `version.template_id` with the same
-/// derivation as the direct composition path (the template-delete 409 guard
-/// counts that column — physical deletes never orphan committed data).
-pub(crate) fn composition_template_id(composition: &Value) -> Option<&str> {
-    composition
-        .pointer("/archetype_details/template_id/value")
-        .and_then(Value::as_str)
 }
 
 /// Whether a COMPOSITION is `431|persistent|` (RM composition,
@@ -712,181 +595,13 @@ pub(in crate::service) fn validate_folder(
     validate_rm_invariants_for_commit(folder, "FOLDER", incomplete)
 }
 
-/// A `FOLDER.items` `OBJECT_REF` whose `namespace` claims THIS system,
-/// collected by [`collect_local_item_refs`] for target resolution.
-struct LocalItemRef {
-    path: String,
-    namespace: String,
-    id_value: String,
-}
-
-/// Collect every `items` reference in the FOLDER tree whose `namespace` is
-/// `local` or this server's own system id, with its RM instance path.
-fn collect_local_item_refs(folder: &Value, system_id: &str, at: &str, out: &mut Vec<LocalItemRef>) {
-    if let Some(items) = folder.get("items").and_then(Value::as_array) {
-        for (i, item) in items.iter().enumerate() {
-            let namespace = item
-                .get("namespace")
-                .and_then(Value::as_str)
-                .unwrap_or_default();
-            if namespace != "local" && namespace != system_id {
-                continue;
-            }
-            out.push(LocalItemRef {
-                path: format!("{at}/items[{i}]"),
-                namespace: namespace.to_owned(),
-                id_value: item
-                    .get("id")
-                    .and_then(|id| id.get("value"))
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_owned(),
-            });
-        }
-    }
-    if let Some(folders) = folder.get("folders").and_then(Value::as_array) {
-        for (i, sub) in folders.iter().enumerate() {
-            collect_local_item_refs(sub, system_id, &format!("{at}/folders[{i}]"), out);
-        }
-    }
-}
-
-/// The versioned-object root of an `OBJECT_REF.id` value — the uid before any
-/// `::` qualification — when it is a uid this store can hold.
-fn item_ref_root(id_value: &str) -> Option<uuid::Uuid> {
-    let root = id_value.split("::").next().unwrap_or(id_value);
-    // NOTE: `Result → Option` is the decision here (reliability.md class): a
-    // non-UUID root is a legitimately unresolvable id, reported by the caller
-    // as an unresolvable reference — not a swallowed defect.
-    uuid::Uuid::parse_str(root).ok()
-}
-
-/// Refuse a FOLDER commit whose `items` contain a reference that CLAIMS this
-/// system but does not resolve to a versioned object in `ehr_id`.
-///
-/// Applies to every lifecycle state — an unresolvable local reference is
-/// *wrong* data, not *missing* data, so the `553|incomplete|` relaxation (RM
-/// common master06 §Incomplete Content: "data may be missing, but it may not
-/// be wrong") never reaches it. The reference's `type` facet is deliberately
-/// not judged: BASE admits any ancestor name and `ANY` there.
-///
-/// # Errors
-/// [`ServiceError::ValidationFailed`] naming every unresolvable local
-/// reference at its tree path (→ 422).
-pub(crate) async fn check_folder_item_refs<'e>(
-    executor: impl sqlx::PgExecutor<'e>,
-    ehr_id: EhrId,
-    system_id: &str,
-    folder: &Value,
-) -> Result<(), ServiceError> {
-    // NOTE: no released openEHR text constrains FOLDER.items resolvability
-    // (BASE object_ref.adoc; no ITS-REST directory 422) — own-design safety
-    // net, register AMB-211: refs claiming this system must resolve.
-    let mut refs = Vec::new();
-    collect_local_item_refs(folder, system_id, "", &mut refs);
-    if refs.is_empty() {
-        return Ok(());
-    }
-    let roots: Vec<uuid::Uuid> = refs
-        .iter()
-        .filter_map(|item| item_ref_root(&item.id_value))
-        .collect();
-    let known: std::collections::HashSet<uuid::Uuid> =
-        crate::storage::ehr_repo::existing_vo_roots(executor, ehr_id, &roots)
-            .await?
-            .into_iter()
-            .collect();
-    let violations: Vec<InvariantViolation> = refs
-        .iter()
-        .filter(|item| !item_ref_root(&item.id_value).is_some_and(|root| known.contains(&root)))
-        .map(|item| {
-            InvariantViolation::at(
-                &item.path,
-                format!(
-                    "is an OBJECT_REF claiming this system (namespace {:?}) whose target \
-                     {:?} does not resolve to a versioned object in EHR {ehr_id}; a \
-                     reference into this system must resolve — foreign-namespace \
-                     references are accepted unchecked",
-                    item.namespace, item.id_value
-                ),
-            )
-        })
-        .collect();
-    if violations.is_empty() {
-        return Ok(());
-    }
-    Err(ServiceError::ValidationFailed(violations))
-}
-
-/// The clinical-side data-minimisation pass over one decoded body: the
-/// subject-reference rule, the identified-party rule and the identifier
-/// scanner ([`crate::privacy`]), rendered the one way every write path
-/// answers it.
-///
-/// Shared by the commit path ([`FerroEhrService::validate_for_commit`]) and
-/// the verbatim-replay paths (EHR-Extract import, admin load), which store a
-/// body exactly as received and can therefore only REFUSE it: a record that
-/// carries an identifier into the clinical side is refused whichever door it
-/// arrives through, never rewritten (#3237).
-///
-/// # Errors
-/// [`ServiceError::ValidationFailed`] carrying one entry per refused finding,
-/// each keyed by its own RM path (→ 422). Under `identifier_scan.mode =
-/// "warn"` an identifier-shaped finding is logged and metered instead.
-pub(crate) fn enforce_privacy(
-    policy: &crate::privacy::PrivacyPolicy,
-    rm_type: &str,
-    data: &Value,
-) -> Result<(), ServiceError> {
-    let findings = policy.findings(rm_type, data);
-    if findings.is_empty() {
-        return Ok(());
-    }
-    let warn_only = policy.scan_mode() == Some(crate::privacy::config::ScanMode::Warn);
-    let (warned, refused): (Vec<_>, Vec<_>) = findings.into_iter().partition(|finding| {
-        warn_only && finding.class == crate::privacy::FindingClass::IdentifierShape
-    });
-    for finding in &warned {
-        tracing::warn!(
-            rm_type = rm_type,
-            path = %finding.path,
-            detail = %finding.message,
-            "privacy.identifier_scan is in `warn` mode: a clinical write carried an \
-             identifier-shaped value and was accepted"
-        );
-    }
-    if !warned.is_empty() {
-        crate::telemetry::metrics::metrics()
-            .validation_failures
-            .add(
-                u64::try_from(warned.len()).unwrap_or(u64::MAX),
-                &[opentelemetry::KeyValue::new("pass", "privacy_warn")],
-            );
-    }
-    if refused.is_empty() {
-        return Ok(());
-    }
-    crate::telemetry::metrics::metrics()
-        .validation_failures
-        .add(
-            u64::try_from(refused.len()).unwrap_or(u64::MAX),
-            &[opentelemetry::KeyValue::new("pass", "privacy")],
-        );
-    Err(ServiceError::ValidationFailed(
-        refused
-            .into_iter()
-            .map(|finding| InvariantViolation::at(finding.path, finding.message))
-            .collect(),
-    ))
-}
-
 #[cfg(test)]
 mod tests {
     use serde_json::{Value, json};
 
     use super::{
-        collect_local_item_refs, exceeds_node_count, item_ref_root, run_validation_pass,
-        validate_ehr_access, validate_ehr_status, validate_folder,
+        exceeds_node_count, run_validation_pass, validate_ehr_access, validate_ehr_status,
+        validate_folder,
     };
     use crate::error::ServiceError;
     use crate::service::ehr::access::initial_ehr_access;
@@ -1484,70 +1199,6 @@ mod tests {
         );
         validate_folder(&with_feeder("legacy-lab-1"), false)
             .expect("a populated feeder-audit system_id is accepted");
-    }
-
-    /// The `items` walker collects exactly the THIS-system namespaces
-    /// (`local` + the configured system id), skips foreign and `unknown`
-    /// ones, and recurses with `/folders[i]/items[j]` paths.
-    #[test]
-    fn local_item_ref_walker_classifies_namespaces_and_paths() {
-        let item = |namespace: &str, id: &str| {
-            json!({
-                "_type": "OBJECT_REF",
-                "namespace": namespace,
-                "type": "VERSIONED_COMPOSITION",
-                "id": { "_type": "HIER_OBJECT_ID", "value": id }
-            })
-        };
-        let folder = json!({
-            "_type": "FOLDER",
-            "name": { "_type": "DV_TEXT", "value": "root" },
-            "items": [
-                item("local", "a"),
-                item("my.system.id", "b"),
-                item("unknown", "c"),
-                item("this.system", "d"),
-            ],
-            "folders": [{
-                "_type": "FOLDER",
-                "name": { "_type": "DV_TEXT", "value": "sub" },
-                "items": [ item("local", "e") ]
-            }]
-        });
-        let mut out = Vec::new();
-        collect_local_item_refs(&folder, "this.system", "", &mut out);
-        let collected: Vec<(&str, &str)> = out
-            .iter()
-            .map(|r| (r.path.as_str(), r.id_value.as_str()))
-            .collect();
-        assert_eq!(
-            collected,
-            [
-                ("/items[0]", "a"),
-                ("/items[3]", "d"),
-                ("/folders[0]/items[0]", "e"),
-            ]
-        );
-    }
-
-    /// `item_ref_root` takes the uid before any `::` qualification and only
-    /// accepts a uid this store can hold.
-    #[test]
-    fn item_ref_root_extracts_the_versioned_object_root() {
-        let root = "0192b1c2-aaaa-7bbb-8ccc-0123456789ab";
-        let versioned = format!("{root}::some.system::2");
-        assert_eq!(
-            item_ref_root(&versioned)
-                .expect("qualified uid resolves")
-                .to_string(),
-            root
-        );
-        assert_eq!(
-            item_ref_root(root).expect("bare uid resolves").to_string(),
-            root
-        );
-        assert_eq!(item_ref_root("not-a-uuid"), None);
-        assert_eq!(item_ref_root(""), None);
     }
 
     #[test]

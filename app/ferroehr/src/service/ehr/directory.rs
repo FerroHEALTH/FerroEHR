@@ -44,8 +44,8 @@ use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, Write, ensure_preceding, lock_current, tip_uid};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components};
 
-use super::validation::check_folder_item_refs;
 use crate::service::datetime::parse_at_time;
+use crate::validation::versioned::check_folder_item_refs;
 
 impl FerroEhrService {
     /// Create the EHR's directory (its root FOLDER).

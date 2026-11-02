@@ -63,8 +63,10 @@ pub mod config;
 pub mod detect;
 mod identifier_kind;
 
+use openehr_base::validate::InvariantViolation;
 use serde_json::Value;
 
+use crate::error::ServiceError;
 use crate::privacy::config::{PrivacyConfig, ScanMode};
 use crate::privacy::detect::{CustomPattern, IdentifierRule};
 use crate::privacy::identifier_kind::{DeclaredKind, declared_kind};
@@ -261,6 +263,75 @@ impl PrivacyPolicy {
         }
         self.walk(root, body, Slot::Content, &mut findings);
         findings
+    }
+
+    /// The clinical-side data-minimisation pass over one decoded body of RM
+    /// type `rm_type`, rendered the one way every write path answers it.
+    ///
+    /// Refusals (the subject-reference rule and the identified-party rule)
+    /// are unconditional whenever their rule is in force. Identifier-shape
+    /// findings follow the configured scan mode: `strict` joins them to the
+    /// refusal, `warn` records each one and lets the write through. A finding
+    /// never carries the offending value, so nothing identifying reaches the
+    /// response body, the access log or the trace.
+    ///
+    /// The commit path runs it, and so do the verbatim-replay paths
+    /// (EHR-Extract import, admin load), which store a body exactly as received
+    /// and can therefore only REFUSE it: a record that carries an identifier
+    /// into the clinical side is refused whichever door it arrives through,
+    /// never rewritten (#3237).
+    ///
+    /// **No openEHR spec governs this — our own design/extension.** The wire
+    /// status is `422`: the request is well-formed and the refusal is
+    /// semantic, which is what ITS-REST `overview/Requests_and_responses.md`
+    /// §HTTP status codes assigns to `422` ("The request was well-formed but
+    /// was unable to be followed due to semantic errors").
+    ///
+    /// # Errors
+    /// [`ServiceError::ValidationFailed`] carrying one entry per refused finding,
+    /// each keyed by its own RM path (→ 422). Under `identifier_scan.mode =
+    /// "warn"` an identifier-shaped finding is logged and metered instead.
+    pub(crate) fn enforce(&self, rm_type: &str, data: &Value) -> Result<(), ServiceError> {
+        let findings = self.findings(rm_type, data);
+        if findings.is_empty() {
+            return Ok(());
+        }
+        let warn_only = self.scan_mode() == Some(ScanMode::Warn);
+        let (warned, refused): (Vec<_>, Vec<_>) = findings
+            .into_iter()
+            .partition(|finding| warn_only && finding.class == FindingClass::IdentifierShape);
+        for finding in &warned {
+            tracing::warn!(
+                rm_type = rm_type,
+                path = %finding.path,
+                detail = %finding.message,
+                "privacy.identifier_scan is in `warn` mode: a clinical write carried an \
+                 identifier-shaped value and was accepted"
+            );
+        }
+        if !warned.is_empty() {
+            crate::telemetry::metrics::metrics()
+                .validation_failures
+                .add(
+                    u64::try_from(warned.len()).unwrap_or(u64::MAX),
+                    &[opentelemetry::KeyValue::new("pass", "privacy_warn")],
+                );
+        }
+        if refused.is_empty() {
+            return Ok(());
+        }
+        crate::telemetry::metrics::metrics()
+            .validation_failures
+            .add(
+                u64::try_from(refused.len()).unwrap_or(u64::MAX),
+                &[opentelemetry::KeyValue::new("pass", "privacy")],
+            );
+        Err(ServiceError::ValidationFailed(
+            refused
+                .into_iter()
+                .map(|finding| InvariantViolation::at(finding.path, finding.message))
+                .collect(),
+        ))
     }
 
     /// The subject-reference rule over an `EHR_STATUS` body.

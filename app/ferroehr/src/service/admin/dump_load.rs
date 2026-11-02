@@ -1683,7 +1683,7 @@ fn restore_refusal(refusal: StoreError) -> Result<Option<String>, ServiceError> 
 /// a per-version clone. A deleted version (null body) stores no node rows.
 ///
 /// Every clinical body takes the data-minimisation pass first
-/// ([`crate::service::ehr::validation::enforce_privacy`]): a loaded record is
+/// ([`crate::privacy::PrivacyPolicy::enforce`]): a loaded record is
 /// re-persisted verbatim, so refusing the load is the only way an identifier
 /// in an archive stays out of the clinical side (#3237). The refusal covers the
 /// whole record, which the caller reports and rolls back.
@@ -1697,7 +1697,7 @@ async fn load_versions(
         let clinical =
             crate::versioning::Kind::from_type(&v.kind).is_some_and(|kind| !kind.is_demographic());
         if clinical && !v.body.is_null() {
-            crate::service::ehr::validation::enforce_privacy(privacy, &v.kind, &v.body)?;
+            privacy.enforce(&v.kind, &v.body)?;
         }
     }
     let rows: Vec<version_repo::import::VerbatimVersionRow<'_>> = versions

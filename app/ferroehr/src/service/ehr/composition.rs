@@ -41,7 +41,7 @@ use crate::versioning::read::VersionRead;
 use crate::versioning::wire::{revision_history, versioned_object};
 use openehr_rm::prelude::Composition;
 
-use super::validation::composition_template_id;
+use crate::validation::versioned::composition_template_id;
 
 impl FerroEhrService {
     /// `create_composition`: commit the first version of a COMPOSITION in
@@ -513,7 +513,7 @@ impl FerroEhrService {
             }
             // VERSIONED_COMPOSITION cross-version invariants (RM ehr
             // `versioned_composition.adoc`), checked off the same merged read.
-            super::validation::check_versioned_composition_first_root(
+            crate::validation::versioned::check_versioned_composition_first_root(
                 pre.first_root,
                 &composition,
             )?;
