@@ -52,7 +52,7 @@ COMPONENTS=(
   "AM|specifications-AM|master (AM 2.4.0 + ADL/AOM/OPT 1.4)|15d7a3589d52e33aebd5efb97c321b2498407d6b"
   "TERM|specifications-TERM|master (TERM 3.1.0)|fa5f6e7bd29dc125cb91a3e4734e030ef291f890"
   "LANG|specifications-LANG|master (LANG 1.1.0)|46406fe57c606aba7c0c7a9fd60a31bc7749c175"
-  "QUERY|specifications-QUERY|Release-1.1.0|a87bb51fa1c515b863c9610a9444a2d5570dc05a"
+  "QUERY|specifications-QUERY|Release-1.1.0|b03c48000d17eeae1e4f8868bfba3dfb59df8b3f"
   "SM|specifications-SM|master|23ffc4711c10bae2ae43724b1948fe3b24a0964e"
   "CNF|specifications-CNF|master|239dfb4ed2c634ca713aee95df074604a6f5ab56"
   "ITS-REST|specifications-ITS-REST|Release-1.1.0 (released 19-Jul-2026; matches the vendored OAS identity)|24058992d5fa96e8dfbd855d9c133f328387fc09"

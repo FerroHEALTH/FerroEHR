@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-QUERY
 - Ref: Release-1.1.0
-- Commit: `a87bb51fa1c515b863c9610a9444a2d5570dc05a`
+- Commit: `b03c48000d17eeae1e4f8868bfba3dfb59df8b3f`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.
