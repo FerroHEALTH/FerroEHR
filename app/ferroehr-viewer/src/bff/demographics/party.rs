@@ -14,7 +14,7 @@
 //!   (`history`).
 //! - **Relationships** — the party's own `relationships` list
 //!   ([`relationship`](super::relationship)).
-//! - **Tags** — its `ITEM_TAG`s ([`tags`](super::tags)).
+//! - **Tags** — its `ITEM_TAG`s ([`PartyKind::tags_path`](super::PartyKind::tags_path)).
 //!
 //! One reader per claim: the Party tab is the viewer's ONE reader of the
 //! current party document (and the edit form's merge base); the History tab

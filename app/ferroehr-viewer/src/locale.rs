@@ -216,24 +216,16 @@ messages! {
         LoggersJson3 = "loggers-json-3",
         /// the composition changed since this page loaded — reload and retry. `$detail`
         CompositionChangedSincePageLoadedReload = "composition-changed-since-page-loaded-reload",
-        /// versioned composition JSON: `$e`
-        VersionedCompositionJson = "versioned-composition-json",
+        /// versioned object JSON: `$e`
+        VersionedObjectJson = "versioned-object-json",
         /// version JSON: `$e`
         VersionJson = "version-json",
         /// revision history JSON: `$e`
         RevisionHistoryJson = "revision-history-json",
-        /// versioned demographic object JSON: `$e`
-        VersionedDemographicObjectJson = "versioned-demographic-object-json",
-        /// demographic version JSON: `$e`
-        DemographicVersionJson = "demographic-version-json",
         /// EHR JSON: `$e`
         EhrJson = "ehr-json",
         /// `ehr_status JSON: '$e'`
         EhrStatusJson = "ehr-status-json",
-        /// `versioned ehr_status JSON: '$e'`
-        VersionedEhrStatusJson = "versioned-ehr-status-json",
-        /// version JSON: `$e`
-        VersionJson3 = "version-json-3",
         /// EHR JSON: `$e`
         EhrJson2 = "ehr-json-2",
         /// AQL result JSON: `$e`

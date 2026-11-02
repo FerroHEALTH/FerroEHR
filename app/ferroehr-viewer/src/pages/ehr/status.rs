@@ -22,9 +22,7 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::form::keyed_check_field;
 use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked};
 use ferrohealth_ui::view::surface::{Crumb, Header, Mode, definitions, editor_heading};
-use ferrohealth_ui::view::versions::{
-    Standing, Version, VersionHistory, older_version, version_history,
-};
+use ferrohealth_ui::view::versions::older_version;
 
 use crate::bff::ehr_detail::status::{
     EhrStatusState, fetch_ehr_status, fetch_ehr_status_version, fetch_status_revision_history,
@@ -38,12 +36,13 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, ago, at_time_row, card_panel, dock_editor, document_section, drawn, panel,
-    plain_section, section, short, shortened, version_number,
+    EditorDock, Refused, card_panel, dock_editor, document_section, drawn, panel, plain_section,
+    section, short, shortened, version_number,
 };
 use crate::pages::common::{is_status, version_uid_at};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
+use crate::pages::versions::History;
 use crate::routes::Drawn;
 
 #[expect(
@@ -69,42 +68,20 @@ fn masked_document(body: &str) -> String {
 
 /// The version history (E2) of the status, the version in view marked.
 fn history(ehr_id: &str, versions: &[VersionEntry], reading: Option<&str>) -> Html {
-    let latest = versions.first().map(|version| version.version_id.clone());
-    let rows = versions
-        .iter()
-        .map(|version| {
-            let number = version_number(&version.version_id);
-            let current = Some(&version.version_id) == latest.as_ref();
-            Version {
-                href: Some(if current {
-                    tab_href(ehr_id, EhrTab::Status)
-                } else {
-                    format!("{}?version={number}", tab_href(ehr_id, EhrTab::Status))
-                }),
-                standing: if current {
-                    Standing::Current
-                } else {
-                    Standing::Older
-                },
-                read: reading == Some(number.as_str()),
-                number,
-                change: version.change_type.clone(),
-                committer: version.committer.clone(),
-                when: ago(&version.committed),
-                contribution: t(tr(RecordsMsg::NoneShown)),
-            }
-        })
-        .collect();
-    version_history(
-        &current(),
-        VersionHistory {
+    let tab = tab_href(ehr_id, EhrTab::Status);
+    crate::pages::versions::history(
+        History {
+            versions,
+            reading,
+            deleted: false,
+            contribution: t(tr(RecordsMsg::NoneShown)),
             caption: tr(RecordsMsg::StatusVersions),
-            versions: rows,
-            at_time: Some(at_time_row(
-                tab_href(ehr_id, EhrTab::Status),
-                &crate::request::query("at").unwrap_or_default(),
-                tr(RecordsMsg::StatusAtTimeOpens),
-            )),
+            at_action: tab.clone(),
+            at_opens: tr(RecordsMsg::StatusAtTimeOpens),
+        },
+        |number| match number {
+            None => tab.clone(),
+            Some(number) => format!("{tab}?version={number}"),
         },
     )
 }

@@ -216,9 +216,6 @@ pub async fn update_ehr_status(
 /// The `VERSIONED_EHR_STATUS`'s revision history, newest-first
 /// (`GET /ehr/{ehr_id}/versioned_ehr_status/revision_history`).
 ///
-/// The rows are the shared [`VersionEntry`] every History tab renders, parsed by
-/// the same `crate::bff::composition::parse_versions`.
-///
 /// # Errors
 /// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
 /// (the `404` for an unknown `ehr_id` included) normalizes via
@@ -233,14 +230,7 @@ pub async fn fetch_status_revision_history(
         "ehr/{}/versioned_ehr_status/revision_history",
         urlencoding::encode(&ehr_id)
     ));
-    let response = cdr.get(&url).ok().await?;
-    // NOTE: REVISION_HISTORY.items arrives most-recent-LAST on the wire (RM
-    // common, generic package — the `items` attribute documentation); the table
-    // presents newest-first, so reverse here.
-    crate::bff::composition::parse_versions(&response.body).map(|mut entries| {
-        entries.reverse();
-        entries
-    })
+    crate::bff::wire::revision_history(&cdr, &url).await
 }
 
 /// Read the `VERSIONED_EHR_STATUS` container and one of its VERSIONS.
@@ -265,21 +255,11 @@ pub async fn fetch_versioned_status(
     version_uid: String,
 ) -> Result<VersionedObjectFacts, ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let ehr = urlencoding::encode(&ehr_id);
-    let object_url = cdr.rest_v1(&format!("ehr/{ehr}/versioned_ehr_status"));
-    let object_body = cdr.get(&object_url).ok().await?.body;
-
-    let version_uid = version_uid.trim();
-    let version_url = if version_uid.is_empty() {
-        cdr.rest_v1(&format!("ehr/{ehr}/versioned_ehr_status/version"))
-    } else {
-        cdr.rest_v1(&format!(
-            "ehr/{ehr}/versioned_ehr_status/version/{}",
-            urlencoding::encode(version_uid)
-        ))
-    };
-    let version_body = cdr.get(&version_url).ok().await?.body;
-    parse_versioned_status(&object_body, &version_body)
+    let object_url = cdr.rest_v1(&format!(
+        "ehr/{}/versioned_ehr_status",
+        urlencoding::encode(&ehr_id)
+    ));
+    crate::bff::wire::read_versioned_facts(&cdr, &object_url, &version_uid).await
 }
 
 /// Resolve the `OBJECT_VERSION_ID` of the `EHR_STATUS` VERSION extant at `at_time`.
@@ -366,40 +346,6 @@ pub(crate) fn parse_status_state(
     })
 }
 
-/// Flatten a `VERSIONED_EHR_STATUS` body plus a VERSION body into
-/// [`VersionedObjectFacts`]. Defensive throughout — an absent attribute reads
-/// as empty rather than failing the card.
-///
-/// # Errors
-/// [`ViewerError::Internal`] when either body is not valid JSON.
-fn parse_versioned_status(
-    object_body: &str,
-    version_body: &str,
-) -> Result<VersionedObjectFacts, ViewerError> {
-    let object: Value = serde_json::from_str(object_body).map_err(|e| {
-        ViewerError::Internal(tr_with(
-            Msg::VersionedEhrStatusJson,
-            &[("e", (e).to_string().into())],
-        ))
-    })?;
-    let version: Value = serde_json::from_str(version_body).map_err(|e| {
-        ViewerError::Internal(tr_with(Msg::VersionJson3, &[("e", (e).to_string().into())]))
-    })?;
-    Ok(VersionedObjectFacts {
-        object_uid: crate::uid::uid_value_of_document(&object),
-        owner_id: json_str(&object, &["owner_id", "id", "value"]),
-        time_created: json_str(&object, &["time_created", "value"]),
-        version_id: crate::uid::uid_value_of_document(&version),
-        lifecycle_state: json_str(&version, &["lifecycle_state", "value"]),
-        preceding_version_uid: json_str(&version, &["preceding_version_uid", "value"]),
-        contribution_uid: json_str(&version, &["contribution", "id", "value"]),
-        signed: version
-            .get("signature")
-            .and_then(Value::as_str)
-            .is_some_and(|signature| !signature.is_empty()),
-    })
-}
-
 /// Follow a chain of object keys to a string leaf, or an empty string when any
 /// hop is absent or not a string.
 fn json_str(value: &Value, path: &[&str]) -> String {
@@ -415,7 +361,7 @@ fn json_str(value: &Value, path: &[&str]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_status_state, parse_versioned_status};
+    use super::parse_status_state;
 
     /// A canonical `EHR_STATUS` as the wire carries it — the shape of the
     /// example shape of RM `docs/specs/openehr/RM/docs/ehr/master04-ehr_package.adoc` §`EHR_STATUS`.
@@ -491,54 +437,5 @@ mod tests {
         // Without an ETag the document's own uid is all there is.
         let fallback = parse_status_state(STATUS, None).expect("valid EHR_STATUS");
         assert_eq!(fallback.version_uid, "8849182c::example.org::1");
-    }
-
-    #[test]
-    fn parses_the_versioned_container_and_its_version_envelope() {
-        let object = r#"{
-            "_type": "VERSIONED_EHR_STATUS",
-            "uid": {"_type": "HIER_OBJECT_ID", "value": "8849182c"},
-            "owner_id": {
-                "_type": "OBJECT_REF",
-                "namespace": "local",
-                "type": "EHR",
-                "id": {"_type": "HIER_OBJECT_ID", "value": "e1"}
-            },
-            "time_created": {"_type": "DV_DATE_TIME", "value": "2026-07-12T10:00:00Z"}
-        }"#;
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"_type": "OBJECT_VERSION_ID", "value": "8849182c::example.org::2"},
-            "contribution": {"_type": "OBJECT_REF", "id": {"value": "c9"}},
-            "lifecycle_state": {"_type": "DV_CODED_TEXT", "value": "complete"},
-            "preceding_version_uid": {"value": "8849182c::example.org::1"},
-            "signature": "-----BEGIN PGP SIGNATURE-----"
-        }"#;
-        let details = parse_versioned_status(object, version).expect("valid bodies");
-        assert_eq!(details.object_uid, "8849182c");
-        assert_eq!(details.owner_id, "e1");
-        assert_eq!(details.time_created, "2026-07-12T10:00:00Z");
-        assert_eq!(details.version_id, "8849182c::example.org::2");
-        assert_eq!(details.lifecycle_state, "complete");
-        assert_eq!(details.preceding_version_uid, "8849182c::example.org::1");
-        assert_eq!(details.contribution_uid, "c9");
-        assert!(details.signed);
-    }
-
-    #[test]
-    fn a_first_version_envelope_has_no_preceding_version_and_no_signature() {
-        // RM common `org.openehr.rm.common.version.adoc` invariant
-        // `Preceding_version_uid_validity`: absent exactly for a first version.
-        let version = r#"{
-            "_type": "ORIGINAL_VERSION",
-            "uid": {"value": "8849182c::example.org::1"},
-            "lifecycle_state": {"value": "complete"}
-        }"#;
-        let details = parse_versioned_status("{}", version).expect("valid bodies");
-        assert_eq!(details.preceding_version_uid, "");
-        assert!(!details.signed);
-        assert_eq!(details.object_uid, "");
-        assert!(parse_versioned_status("not json", "{}").is_err());
-        assert!(parse_versioned_status("{}", "not json").is_err());
     }
 }

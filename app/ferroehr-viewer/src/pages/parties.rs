@@ -32,9 +32,7 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
-use ferrohealth_ui::view::versions::{
-    Standing, Version, VersionHistory, older_version, version_history,
-};
+use ferrohealth_ui::view::versions::older_version;
 
 use crate::bff::demographics::contribution::ContributionState;
 use crate::bff::demographics::contribution::fetch_demographic_contribution;
@@ -44,14 +42,12 @@ use crate::bff::demographics::relationship::{PartyRefView, RelationshipState};
 use crate::bff::demographics::relationship::{
     create_relationship, delete_relationship, fetch_relationship, update_relationship,
 };
-use crate::bff::demographics::tags::{
-    delete_party_tag, fetch_party_tags, list_demographic_tags, set_party_tag,
-};
 use crate::bff::demographics::{PartyKind, contribution_href, party_href, relationship_href};
 use crate::bff::demographics::{
     VersionedFamily, fetch_demographic_revision_history, fetch_demographic_version_document,
     fetch_versioned_object, resolve_demographic_version_at_time, resolve_party_kind,
 };
+use crate::bff::item_tags::{delete_tag, read_tags, set_tag};
 use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::clinical::RenderedSection;
 use crate::components::{EditorField, EditorLanguage, EditorSetup, code_editor};
@@ -61,13 +57,14 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, ago, at_time_row, card_panel, count, dock_editor, document_section, drawn,
-    findings_of, info_note, marks_of, panel, plain_section, section, short, shortened, state_mark,
+    EditorDock, Refused, card_panel, count, dock_editor, document_section, drawn, findings_of,
+    info_note, marks_of, panel, plain_section, section, short, shortened, state_mark,
     version_number, when,
 };
 use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::item_tags::{TagAct, tag_act, tag_done};
 use crate::pages::item_tags::{TagPanel, tag_panel};
+use crate::pages::versions::{History, history};
 use crate::routes::Drawn;
 
 /// The id of Delete party's confirmation dialog.
@@ -196,7 +193,7 @@ struct Indexed {
 /// The demographic tag index, each target named by asking the CDR which
 /// party holds it.
 async fn tag_index() -> Result<Vec<Indexed>, ViewerError> {
-    let tags = list_demographic_tags(String::new(), String::new(), String::new()).await?;
+    let tags = read_tags("demographic/tags").await?;
     let mut named: Vec<(String, Option<PartyKind>, String)> = Vec::new();
     let mut rows = Vec::new();
     for tag in tags {
@@ -859,93 +856,34 @@ fn demographic_history(
     versions: &[VersionEntry],
     reading: Option<&str>,
     deleted: bool,
-    href: &dyn Fn(Option<&str>) -> String,
     at_action: String,
+    href: impl Fn(Option<&str>) -> String,
 ) -> Html {
-    let latest = versions.first().map(|version| version.version_id.clone());
-    let rows = versions
-        .iter()
-        .map(|version| {
-            let number = version_number(&version.version_id);
-            let current = Some(&version.version_id) == latest.as_ref();
-            Version {
-                href: (!(current && deleted)).then(|| href((!current).then_some(number.as_str()))),
-                standing: match (current, deleted) {
-                    (true, true) => Standing::Deleted,
-                    (true, false) => Standing::Current,
-                    _ => Standing::Older,
-                },
-                read: reading == Some(number.as_str()),
-                number,
-                change: version.change_type.clone(),
-                committer: version.committer.clone(),
-                when: ago(&version.committed),
-                contribution: Html::empty(),
-            }
-        })
-        .collect();
-    version_history(
-        &current(),
-        VersionHistory {
+    history(
+        History {
+            versions,
+            reading,
+            deleted,
+            contribution: Html::empty(),
             caption: tr(Msg::CompositionVersions),
-            versions: rows,
-            at_time: Some(at_time_row(
-                at_action,
-                &crate::request::query("at").unwrap_or_default(),
-                tr(RecordsMsg::PartyAtTimeOpens),
-            )),
+            at_action,
+            at_opens: tr(RecordsMsg::PartyAtTimeOpens),
         },
+        href,
     )
-}
-
-/// The revision history of the versioned object `uid` of `family`, newest
-/// first.
-async fn history_of(family: VersionedFamily, uid: &str) -> Result<Vec<VersionEntry>, ViewerError> {
-    let mut versions =
-        fetch_demographic_revision_history(family.segment().to_owned(), uid.to_owned()).await?;
-    versions.sort_by_key(|version| {
-        std::cmp::Reverse(
-            version_number(&version.version_id)
-                .parse::<u64>()
-                .unwrap_or(0),
-        )
-    });
-    Ok(versions)
 }
 
 /// The envelope facts of one version of a demographic object.
 fn envelope(facts: Result<VersionedObjectFacts, Refused>) -> Html {
     match facts {
-        Ok(facts) => section(
-            Some(tr_with(
-                RecordsMsg::CompositionVersionN,
-                &[("version", version_number(&facts.version_id).into())],
+        Ok(facts) => crate::pages::versions::envelope(
+            &facts,
+            h(format!(
+                r#"<a href="{}">{}</a>"#,
+                t(contribution_href(&facts.contribution_uid)),
+                short(&facts.contribution_uid)
             )),
-            None,
-            None,
-            definitions(vec![
-                (tr(RecordsMsg::FactLifecycle), t(&facts.lifecycle_state)),
-                (
-                    tr(RecordsMsg::CompositionPreceding),
-                    if facts.preceding_version_uid.is_empty() {
-                        t(tr(RecordsMsg::CompositionFirstVersion))
-                    } else {
-                        short(&facts.preceding_version_uid)
-                    },
-                ),
-                (
-                    tr(RecordsMsg::FactContribution),
-                    h(format!(
-                        r#"<a href="{}">{}</a>"#,
-                        t(contribution_href(&facts.contribution_uid)),
-                        short(&facts.contribution_uid)
-                    )),
-                ),
-                (
-                    tr(RecordsMsg::FactSigned),
-                    t(tr(if facts.signed { Msg::Yes } else { Msg::No })),
-                ),
-            ]),
+            Vec::new(),
         ),
         Err(refusal) => plain_section(refusal.view()),
     }
@@ -978,19 +916,10 @@ async fn party_act(
     let Some(act) = tag_act() else {
         return (None, None);
     };
-    let segment = kind.segment().to_owned();
+    let tags = kind.tags_path(uid);
     let done = match &act {
-        TagAct::Set { key, value, path } => {
-            set_party_tag(
-                segment,
-                uid.to_owned(),
-                key.clone(),
-                value.clone(),
-                path.clone(),
-            )
-            .await
-        }
-        TagAct::Remove(key) => delete_party_tag(segment, uid.to_owned(), key.clone()).await,
+        TagAct::Set { key, value, path } => set_tag(&tags, key, value, path).await,
+        TagAct::Remove(key) => delete_tag(&tags, key).await,
     };
     match done {
         Ok(()) => {
@@ -1103,7 +1032,7 @@ async fn read_party(kind: &str, uid: String) -> PartyModel {
             return PartyModel::Missing(Refused::new(tr(RecordsMsg::PartyRefused), error));
         }
     };
-    let versions = history_of(VersionedFamily::Party, &uid).await;
+    let versions = fetch_demographic_revision_history(VersionedFamily::Party, &uid).await;
     let latest_entry = versions
         .as_ref()
         .ok()
@@ -1161,7 +1090,7 @@ async fn read_party(kind: &str, uid: String) -> PartyModel {
         (PartyTab::Relationships, Some(_)) => PartyBody::Relationships,
         (PartyTab::Tags, Some(_)) => PartyBody::Tags(TagPanel {
             collection: tr(RecordsMsg::TagCollectionParty),
-            tags: fetch_party_tags(kind.segment().to_owned(), uid.clone()).await,
+            tags: read_tags(&kind.tags_path(&uid)).await,
             action: party_tab_href(kind, &uid, PartyTab::Tags, None),
             refused: tag_refusal,
         }),
@@ -1320,8 +1249,8 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
                     versions,
                     reading,
                     deleted.is_some(),
-                    &|version| party_tab_href(kind, uid, PartyTab::Versions, version),
                     party_href(kind, uid),
+                    |version| party_tab_href(kind, uid, PartyTab::Versions, version),
                 ),
                 Err(refusal) => refusal.view(),
             };
@@ -1918,7 +1847,7 @@ async fn read_relationship(uid: String) -> RelationshipModel {
             )),
         };
     }
-    let versions = history_of(VersionedFamily::PartyRelationship, &uid)
+    let versions = fetch_demographic_revision_history(VersionedFamily::PartyRelationship, &uid)
         .await
         .map_err(|error| Refused::new(tr(RecordsMsg::CompositionHistoryRefused), error));
     RelationshipModel::Shown(Box::new(state), versions)
@@ -1937,13 +1866,9 @@ fn relationship_view(
     let source_href = ref_href(&state.source);
     let total = versions.as_ref().map_or(0, Vec::len);
     let history = match versions {
-        Ok(versions) => demographic_history(
-            versions,
-            None,
-            false,
-            &|_| relationship_href(uid),
-            relationship_href(uid),
-        ),
+        Ok(versions) => demographic_history(versions, None, false, relationship_href(uid), |_| {
+            relationship_href(uid)
+        }),
         Err(refusal) => refusal.view(),
     };
     let mut facts = ends(state);

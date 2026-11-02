@@ -30,3 +30,4 @@ pub mod subscriptions;
 pub mod template_releases;
 pub mod templates;
 pub mod terminology;
+pub mod versions;
