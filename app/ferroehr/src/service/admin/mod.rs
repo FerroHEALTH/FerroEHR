@@ -48,8 +48,6 @@ pub mod marks;
 pub mod opt_out;
 pub mod types;
 
-use uuid::Uuid;
-
 use crate::service::error::ServiceError;
 
 /// Whether a `version.kind` string names a demographic PARTY root (the five
@@ -58,25 +56,6 @@ use crate::service::error::ServiceError;
 /// delete ([`delete`]) and archive ([`archive`]) party guards.
 pub(super) fn is_party_kind(kind: &str) -> bool {
     matches!(kind, "AGENT" | "GROUP" | "ORGANISATION" | "PERSON" | "ROLE")
-}
-
-/// Parse a `UUID` id, mapping a malformed value to a `precondition_violation`
-/// (`400`). `label` names the resource for the error text (`EHR` / `party`).
-#[expect(
-    clippy::map_err_ignore,
-    reason = "the mapped error already names the resource and echoes the \
-              rejected token; the discarded `uuid::Error` adds only its own \
-              wording, which is not part of the wire contract"
-)]
-fn parse_uuid(raw: &str, label: &str) -> Result<Uuid, ServiceError> {
-    Uuid::parse_str(raw)
-        .map_err(|_| ServiceError::precondition(format!("invalid {label} id: {raw}")))
-}
-
-/// Parse a whole id list, rejecting the entire request on the first malformed
-/// id (a bulk call is validated before any work runs).
-fn parse_uuid_list(raw: &[String], label: &str) -> Result<Vec<Uuid>, ServiceError> {
-    raw.iter().map(|s| parse_uuid(s, label)).collect()
 }
 
 /// Parse the optional `(lower, upper)` ISO 8601 date-time bounds of a

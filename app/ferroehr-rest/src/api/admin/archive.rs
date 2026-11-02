@@ -45,6 +45,7 @@ use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use ferroehr::ids::{EhrId, VoId};
 use openehr_its::rest::runtime::ApiError;
 
 use super::body::{AdminDisabled, NotAdminClass};
@@ -52,6 +53,7 @@ use crate::api::refusals::JsonBodyRequired;
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::version_id::{parse_ehr_id, parse_party_id};
 use crate::state::AppState;
 
 /// The archive extension routes as a native `utoipa-axum` router — **no
@@ -296,22 +298,28 @@ async fn run(
     match op {
         "admin_archive_ehrs" => {
             let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
-            state.backend().archive_ehrs(ids).await?;
+            state.backend().archive_ehrs(&ehr_ids(&ids)?).await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_archive_parties" => {
             let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
-            state.backend().archive_parties(ids).await?;
+            state.backend().archive_parties(&party_ids(&ids)?).await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_restore_archived_ehrs" => {
             let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "ehr_ids")?;
-            state.backend().restore_archived_ehrs(ids).await?;
+            state
+                .backend()
+                .restore_archived_ehrs(&ehr_ids(&ids)?)
+                .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_restore_archived_parties" => {
             let ids = id_list(&negotiate::decode::json_value(h, &parts.body)?, "party_ids")?;
-            state.backend().restore_archived_parties(ids).await?;
+            state
+                .backend()
+                .restore_archived_parties(&party_ids(&ids)?)
+                .await?;
             Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
@@ -323,8 +331,8 @@ async fn run(
 /// Read the `{ "<field>": [ … ] }` id list out of the request body. A missing
 /// or non-array member, or a non-string element, is a `400` — the parameter
 /// is a list of strings, and guessing a shape would archive the wrong set. The
-/// id VALUES are validated by the service (`precondition_violation` on a
-/// malformed UUID), which rejects the whole request before writing anything.
+/// id values are parsed by [`ehr_ids`] or [`party_ids`], which refuse the whole
+/// request on the first malformed one before anything is written.
 fn id_list(body: &serde_json::Value, field: &str) -> Result<Vec<String>, RestError> {
     let items = body
         .get(field)
@@ -344,4 +352,16 @@ fn id_list(body: &serde_json::Value, field: &str) -> Result<Vec<String>, RestErr
             })
         })
         .collect()
+}
+
+/// The EHR ids of an archive request, the whole list refused (`400`) on the
+/// first malformed one.
+fn ehr_ids(raw: &[String]) -> Result<Vec<EhrId>, ApiError> {
+    raw.iter().map(|id| parse_ehr_id(id)).collect()
+}
+
+/// The party ids of an archive request, the whole list refused (`400`) on the
+/// first malformed one.
+fn party_ids(raw: &[String]) -> Result<Vec<VoId>, ApiError> {
+    raw.iter().map(|id| parse_party_id(id)).collect()
 }

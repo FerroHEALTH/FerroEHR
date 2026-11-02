@@ -218,9 +218,7 @@ async fn archive_and_restore_preserve_the_stamp() {
     let (ehr_id, vo_id) = commit(&svc, &development_only_composition()).await;
     assert_eq!(stamp(&db.pool(), vo_id).await, Some(false));
 
-    svc.archive_ehrs(vec![ehr_id.to_string()])
-        .await
-        .expect("archive the EHR");
+    svc.archive_ehrs(&[ehr_id]).await.expect("archive the EHR");
     let cold: Option<bool> = sqlx::query_scalar::<_, Option<bool>>(
         "SELECT stable_compatible FROM version_cold WHERE vo_id = $1",
     )
@@ -246,7 +244,7 @@ async fn archive_and_restore_preserve_the_stamp() {
         "the cold-tier read is gated exactly like the primary one, got {refused:?}"
     );
 
-    svc.restore_archived_ehrs(vec![ehr_id.to_string()])
+    svc.restore_archived_ehrs(&[ehr_id])
         .await
         .expect("restore the EHR");
     assert_eq!(

@@ -36,6 +36,7 @@ use super::body::{AdminRefusal, RegisterReadRefusal, optional_str, required_quer
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::version_id::parse_ehr_id;
 use crate::state::AppState;
 
 /// The access opt-out extension routes — **no ITS-REST contract** (module
@@ -164,7 +165,7 @@ impl super::body::RegisterRoutes for OptOutRoutes {
         if op == "admin_access_opt_out_register" {
             let rows = state
                 .backend()
-                .access_opt_out_register(&required_query(parts, "ehr_id")?)
+                .access_opt_out_register(parse_ehr_id(&required_query(parts, "ehr_id")?)?)
                 .await?;
             let register = serde_json::json!({ "access_opt_outs": rows });
             return Ok(negotiate::body::respond(
@@ -187,9 +188,13 @@ impl super::body::RegisterRoutes for OptOutRoutes {
                 )));
             }
             let note = optional_str(&body, "note")?;
-            backend.record_access_opt_out(ehr_id, note).await?;
+            backend
+                .record_access_opt_out(parse_ehr_id(ehr_id)?, note)
+                .await?;
         } else {
-            backend.reverse_access_opt_out(ehr_id).await?;
+            backend
+                .reverse_access_opt_out(parse_ehr_id(ehr_id)?)
+                .await?;
         }
         Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
     }

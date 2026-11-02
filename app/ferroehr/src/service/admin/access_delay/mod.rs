@@ -65,8 +65,8 @@ impl FerroEhrService {
     ///   when the access record is refused under `[audit] fail_mode = "closed"`.
     pub async fn delay_person_access(
         &self,
-        ehr_id: &str,
-        vo_id: &str,
+        ehr_id: EhrId,
+        vo_id: VoId,
         until: Option<&str>,
         note: Option<&str>,
     ) -> Result<(), ServiceError> {
@@ -78,8 +78,6 @@ impl FerroEhrService {
                  person's access only where a Member State rule provides for it",
             ));
         };
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
-        let vo_id = VoId(super::parse_uuid(vo_id, "versioned object")?);
         let until = until
             .map(|raw| {
                 raw.parse::<jiff::Timestamp>().map_err(|e| {
@@ -116,11 +114,9 @@ impl FerroEhrService {
     /// database and access-record faults.
     pub async fn release_person_access(
         &self,
-        ehr_id: &str,
-        vo_id: &str,
+        ehr_id: EhrId,
+        vo_id: VoId,
     ) -> Result<(), ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
-        let vo_id = VoId(super::parse_uuid(vo_id, "versioned object")?);
         self.check_mark_target(ehr_id, Some(vo_id)).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -135,14 +131,12 @@ impl FerroEhrService {
     /// The access-delay register of one EHR, newest hold first.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — a malformed id.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault.
     pub async fn access_delay_register(
         &self,
-        ehr_id: &str,
+        ehr_id: EhrId,
     ) -> Result<Vec<access_delay::AccessDelayRow>, ServiceError> {
-        let ehr_id = EhrId(super::parse_uuid(ehr_id, "EHR")?);
         self.check_mark_target(ehr_id, None).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, REGISTER)?;
         access_delay::register(&self.pool, ehr_id)

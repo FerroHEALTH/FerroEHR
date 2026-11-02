@@ -24,7 +24,7 @@
 
 use std::str::FromStr;
 
-use ferroehr::ids::EhrId;
+use ferroehr::ids::{EhrId, VoId};
 use http::{HeaderMap, header};
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::runtime::ApiError;
@@ -59,6 +59,22 @@ pub(crate) fn parse_ehr_id(raw: &str) -> Result<EhrId, ApiError> {
 )]
 pub(crate) fn parse_uuid(raw: &str, what: &str) -> Result<Uuid, ApiError> {
     Uuid::parse_str(raw).map_err(|_| ApiError::BadRequest(format!("invalid {what}: {raw}")))
+}
+
+/// Parse the id of a versioned object an admin request names.
+///
+/// # Errors
+/// [`ApiError::BadRequest`] if `raw` is not a UUID.
+pub(crate) fn parse_vo_id(raw: &str) -> Result<VoId, ApiError> {
+    parse_uuid(raw, "versioned object id").map(VoId)
+}
+
+/// Parse the id of a demographic PARTY an admin request names.
+///
+/// # Errors
+/// [`ApiError::BadRequest`] if `raw` is not a UUID.
+pub(crate) fn parse_party_id(raw: &str) -> Result<VoId, ApiError> {
+    parse_uuid(raw, "party id").map(VoId)
 }
 
 /// Parse a full `{version_uid}` path parameter into a BASE

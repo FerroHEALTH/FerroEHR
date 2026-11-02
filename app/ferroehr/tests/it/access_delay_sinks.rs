@@ -96,11 +96,10 @@ async fn held(svc: &FerroEhrService) -> (String, String) {
         .create_composition(ehr, uv(&composition("held"), "249", None))
         .await
         .expect("commit the composition");
-    let (ehr, vo) = (ehr.to_string(), committed.vo_id.to_string());
-    svc.delay_person_access(&ehr, &vo, None, None)
+    svc.delay_person_access(ehr, committed.vo_id, None, None)
         .await
         .expect("hold the composition");
-    (ehr, vo)
+    (ehr.to_string(), committed.vo_id.to_string())
 }
 
 /// Asserts the hold on `vo` is still in force.
