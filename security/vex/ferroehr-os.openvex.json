@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/distroless-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-10-31T00:00:00Z",
-  "version": 3,
+  "timestamp": "2026-11-02T00:00:00Z",
+  "version": 4,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -1261,6 +1261,221 @@
           "dlopen",
           "strncasecmp",
           "strncasecmp_l"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-114690"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-114690: an out-of-bounds access in the libstdc++ parallel search implementation, reached by crafted search data in an application compiled with parallel mode (trixie: no DSA, minor issue). The GCC fix, commit c1f32b67510f, changes only include/parallel/search.h, a header template compiled into a program built with _GLIBCXX_PARALLEL and OpenMP. libstdc++.so.6 does not contain it: its only __gnu_parallel exports are _Settings::get and _Settings::set (nm -D on the rc8 images). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program, /usr/local/bin/ferroehr in ferroehr and /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image. That program is Rust: on amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH; it imports no C++ symbol (no _Z name, no GLIBCXX or CXXABI version) and no dlopen, so it contains no libstdc++ template code and can never map libstdc++.so.6. The program also imports no OpenMP symbol (no GOMP_ or omp_ name), so it is not built in parallel mode. No copy of the defective code exists in either image. gcc-14-base, libgcc-s1 and libgomp1 are reported only because they come from the same gcc-14 source package; libgcc_s.so.1, the one of them the program loads, holds the unwinder.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ],
+        "forbidden_import_prefixes": [
+          "_Z",
+          "GOMP_",
+          "omp_"
+        ],
+        "forbidden_version_prefixes": [
+          "CXXABI_",
+          "GLIBCXX_"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-114691"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-114691: an integer wrap in the std::vector<bool> constructors when a caller passes an excessively large element count, leaving the container inconsistent and leading to out-of-bounds access (trixie: no DSA, minor issue). The GCC fix, commit 2fd8866591b5, changes only include/bits/stl_bvector.h, adding a check that the count does not exceed max_size(); the constructors are header templates compiled into the program that calls them. libstdc++.so.6 does not contain them: it exports no std::vector<bool> symbol (nm -D on the rc8 images). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program, /usr/local/bin/ferroehr in ferroehr and /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image. That program is Rust: on amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH; it imports no C++ symbol (no _Z name, no GLIBCXX or CXXABI version) and no dlopen, so it contains no libstdc++ template code and can never map libstdc++.so.6. No copy of the defective code exists in either image. gcc-14-base, libgcc-s1 and libgomp1 are reported only because they come from the same gcc-14 source package; libgcc_s.so.1, the one of them the program loads, holds the unwinder.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ],
+        "forbidden_import_prefixes": [
+          "_Z"
+        ],
+        "forbidden_version_prefixes": [
+          "CXXABI_",
+          "GLIBCXX_"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-115455"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115455: a stack buffer overflow when an application extracts data into a std::bitset from a wide-character stream, because the temporary buffer is sized in bytes, not in characters (trixie: no DSA, minor issue). The GCC fix, commit 5d419c69ce2e (PR libstdc++/124370), changes only include/std/bitset: operator>> for bitset is a header template compiled into the program that uses it. libstdc++.so.6 does not contain it: it exports no bitset symbol (nm -D on the rc8 images). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program, /usr/local/bin/ferroehr in ferroehr and /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image. That program is Rust: on amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH; it imports no C++ symbol (no _Z name, no GLIBCXX or CXXABI version) and no dlopen, so it contains no libstdc++ template code and can never map libstdc++.so.6. No copy of the defective code exists in either image. gcc-14-base, libgcc-s1 and libgomp1 are reported only because they come from the same gcc-14 source package; libgcc_s.so.1, the one of them the program loads, holds the unwinder.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ],
+        "forbidden_import_prefixes": [
+          "_Z"
+        ],
+        "forbidden_version_prefixes": [
+          "CXXABI_",
+          "GLIBCXX_"
         ]
       }
     }
