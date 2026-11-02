@@ -3,7 +3,7 @@
 
 //! Admin dump/load (`export_ehrs` / `load_ehrs`): every EHR to a file-system
 //! archive and back, a filesystem fault answering `file_not_writable` and a
-//! malformed archive a `400` naming the entry ([`ArchiveRefusal`]).
+//! malformed archive a `400` naming the entry ([`ArchiveDefect`]).
 //!
 //! No openEHR spec defines an on-disk archive format, a
 //! container set, or a container-detection rule; the layout below is our own
@@ -83,7 +83,7 @@ use crate::service::admin::types::{
 };
 use crate::service::demographic::identifier::store::StoreError;
 use crate::service::error::ServiceError;
-use crate::service::refusal::{Clash, Refusal};
+use crate::service::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
 use crate::storage::codec::decompose;
 use crate::storage::dump_repo::write::StoredAudit;
 use crate::storage::dump_repo::{
@@ -256,76 +256,38 @@ fn file_not_writable(path: &Path, err: &std::io::Error) -> ServiceError {
     ServiceError::fault(LOCATION_MESSAGE)
 }
 
-/// Why the caller's archive cannot be loaded, the typed cause of the `400`
-/// [`ServiceError::BadRequest`] a malformed archive answers.
-///
-/// NOTE: no specification governs dump/load: our own design; the archive is the
-/// caller's input, so its defect is a refusal naming the entry, never a fault.
-#[derive(Debug, thiserror::Error)]
-pub enum ArchiveRefusal {
-    /// An entry the archive names, or the container itself, cannot be read
-    /// as part of this export archive.
-    #[error("archive entry {entry} is not readable as part of this export archive")]
-    Entry {
-        /// The entry name inside the archive (`manifest.json`, a segment, or
-        /// the container file `archive.zip` / `archive.7z`), never a server
-        /// path.
-        entry: String,
-        /// What the read or the parse met.
-        #[source]
-        cause: EntryFault,
-    },
-    /// The manifest declares a logical format that names no `EXPORT_FORMAT`
-    /// member.
-    #[error(
-        "the archive manifest declares the logical format {declared:?}, which names no export \
-         format this server reads"
-    )]
-    Format {
-        /// The `format` member as the manifest declares it.
-        declared: String,
-    },
-}
-
-/// The failure an [`ArchiveRefusal::Entry`] met.
-#[derive(Debug, thiserror::Error)]
-pub enum EntryFault {
-    /// The entry is absent or its bytes are not what the container promised.
-    #[error("the entry could not be read")]
-    Io(#[source] std::io::Error),
-    /// The ZIP container or one of its members is malformed or missing.
-    #[error("the ZIP container refused the read")]
-    Zip(#[source] zip::result::ZipError),
-    /// The 7z container or one of its members is malformed or missing.
-    #[error("the 7z container refused the read")]
-    SevenZip(#[source] sevenz_rust2::Error),
-    /// The entry's bytes do not parse as this archive format.
-    #[error("the entry does not parse as this archive format")]
-    Json(#[source] serde_json::Error),
-}
-
-/// The `400` refusing the caller's archive for `refusal`, the server-side
-/// `path` traced beside it.
-fn archive_refusal(path: &Path, refusal: ArchiveRefusal) -> ServiceError {
+/// The `400` refusing the caller's archive because `entry` cannot be read,
+/// with `cause` as its source and the server-side `path` traced beside it.
+fn archive_refusal(
+    path: &Path,
+    entry: &str,
+    cause: impl std::error::Error + Send + Sync + 'static,
+) -> ServiceError {
     tracing::warn!(
         path = %path.display(),
-        error = %refusal,
-        "dump/load: the archive is malformed → bad request"
+        entry,
+        error = %cause,
+        "dump/load: an archive entry is malformed → bad request"
     );
-    ServiceError::bad_request(refusal.to_string(), refusal)
+    ServiceError::BadRequest(
+        Refusal::new(
+            Malformed::Archive(ArchiveDefect::Entry(entry.to_owned())),
+            format!("archive entry {entry} is not readable as part of this export archive"),
+        )
+        .with_source(cause),
+    )
 }
 
-/// The `400` refusing an archive entry that was read but does not parse as
-/// part of this archive format (a mangled manifest, a truncated or
-/// hand-edited segment).
-fn unreadable_archive_entry(path: &Path, entry: &str, err: serde_json::Error) -> ServiceError {
-    archive_refusal(
-        path,
-        ArchiveRefusal::Entry {
-            entry: entry.to_owned(),
-            cause: EntryFault::Json(err),
-        },
-    )
+/// The `400` refusing a manifest whose `format` member names no export format.
+fn unknown_format(path: &Path, declared: &str) -> ServiceError {
+    tracing::warn!(path = %path.display(), declared, "dump/load: unknown archive format → bad request");
+    ServiceError::BadRequest(Refusal::new(
+        Malformed::Archive(ArchiveDefect::Format(declared.to_owned())),
+        format!(
+            "the archive manifest declares the logical format {declared:?}, which names no \
+             export format this server reads"
+        ),
+    ))
 }
 
 /// Whether an I/O failure reading an entry is the archive's defect (absent,
@@ -343,13 +305,7 @@ fn io_is_archive_defect(err: &std::io::Error) -> bool {
 /// entry is absent or undecodable, else the location's `file_not_writable`.
 fn entry_io_fault(path: &Path, entry: &str, err: std::io::Error) -> ServiceError {
     if io_is_archive_defect(&err) {
-        archive_refusal(
-            path,
-            ArchiveRefusal::Entry {
-                entry: entry.to_owned(),
-                cause: EntryFault::Io(err),
-            },
-        )
+        archive_refusal(path, entry, err)
     } else {
         file_not_writable(path, &err)
     }
@@ -582,13 +538,7 @@ fn zip_fault(path: &Path, what: &str, err: &zip::result::ZipError) -> ServiceErr
 fn zip_read_fault(path: &Path, entry: &str, err: zip::result::ZipError) -> ServiceError {
     match err {
         zip::result::ZipError::Io(io) => entry_io_fault(path, entry, io),
-        other => archive_refusal(
-            path,
-            ArchiveRefusal::Entry {
-                entry: entry.to_owned(),
-                cause: EntryFault::Zip(other),
-            },
-        ),
+        other => archive_refusal(path, entry, other),
     }
 }
 
@@ -601,13 +551,7 @@ fn sevenz_read_fault(path: &Path, entry: &str, err: sevenz_rust2::Error) -> Serv
         {
             file_not_writable(path, &io)
         }
-        other => archive_refusal(
-            path,
-            ArchiveRefusal::Entry {
-                entry: entry.to_owned(),
-                cause: EntryFault::SevenZip(other),
-            },
-        ),
+        other => archive_refusal(path, entry, other),
     }
 }
 
@@ -1146,7 +1090,7 @@ impl FerroEhrService {
     /// # Errors
     /// - `file_not_writable` — `file_sys_loc` holds no archive container, or
     ///   the server's filesystem refuses a read of it.
-    /// - [`ServiceError::BadRequest`] carrying an [`ArchiveRefusal`] (`400`) —
+    /// - [`ServiceError::BadRequest`] of [`Malformed::Archive`] (`400`) —
     ///   the caller's archive is malformed: the container, the manifest, a
     ///   segment or a blob entry is absent, truncated or does not parse as this
     ///   archive format, or the manifest declares a logical format that names
@@ -1170,7 +1114,7 @@ impl FerroEhrService {
         let mut archive = ArchiveReader::open(dir)?;
         let manifest_bytes = archive.read(MANIFEST_ENTRY)?;
         let manifest: Manifest = serde_json::from_slice(&manifest_bytes)
-            .map_err(|e| unreadable_archive_entry(dir, MANIFEST_ENTRY, e))?;
+            .map_err(|e| archive_refusal(dir, MANIFEST_ENTRY, e))?;
         if manifest.archive_version < ARCHIVE_VERSION_FLOOR {
             return Err(ServiceError::precondition(format!(
                 "archive declares archive_version {}, which predates the storage rewrite (this \
@@ -1183,14 +1127,10 @@ impl FerroEhrService {
         }
 
         // The manifest's format member says which payload form the segments carry.
-        let format: ExportFormat = manifest.format.parse().map_err(|()| {
-            archive_refusal(
-                dir,
-                ArchiveRefusal::Format {
-                    declared: manifest.format.clone(),
-                },
-            )
-        })?;
+        let format: ExportFormat = manifest
+            .format
+            .parse()
+            .map_err(|()| unknown_format(dir, &manifest.format))?;
 
         // Our own extension: re-populate the object store from the archive's
         // `blobs/` entries before loading versions that reference them.
@@ -1209,8 +1149,8 @@ impl FerroEhrService {
         let mut reports = Vec::new();
         for segment in &manifest.segments {
             let bytes = archive.read(segment)?;
-            let records: Vec<EhrRecord> = serde_json::from_slice(&bytes)
-                .map_err(|e| unreadable_archive_entry(dir, segment, e))?;
+            let records: Vec<EhrRecord> =
+                serde_json::from_slice(&bytes).map_err(|e| archive_refusal(dir, segment, e))?;
             for record in records {
                 if let Some(report) = self.load_ehr_record(&mut archive, record, format).await? {
                     reports.push(report);
@@ -1225,13 +1165,13 @@ impl FerroEhrService {
         if let Some(commons_entry) = &manifest.demographic_commons {
             let bytes = archive.read(commons_entry)?;
             let commons: DemographicCommons = serde_json::from_slice(&bytes)
-                .map_err(|e| unreadable_archive_entry(dir, commons_entry, e))?;
+                .map_err(|e| archive_refusal(dir, commons_entry, e))?;
             self.load_demographic_commons(&commons).await?;
         }
         for segment in &manifest.demographic_segments {
             let bytes = archive.read(segment)?;
-            let records: Vec<DemographicRecord> = serde_json::from_slice(&bytes)
-                .map_err(|e| unreadable_archive_entry(dir, segment, e))?;
+            let records: Vec<DemographicRecord> =
+                serde_json::from_slice(&bytes).map_err(|e| archive_refusal(dir, segment, e))?;
             for record in records {
                 if let Some(report) = self
                     .load_demographic_record(&mut archive, record, format)

@@ -48,18 +48,15 @@ use utoipa_axum::routes;
 
 use openehr_its::rest::runtime::ApiError;
 
-use ferroehr::service::admin::dump_load::ArchiveRefusal;
 use ferroehr::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
-use ferroehr::service::error::ServiceError;
 
 use super::body::{AdminDisabled, NotAdminClass};
 use crate::api::refusals::JsonBodyRequired;
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};
 use crate::negotiate;
 use crate::overview::error::RestError;
-use crate::overview::problem::{ArchiveFault, Detail, Kind};
 use crate::state::AppState;
 
 /// The dump/load extension routes as a native `utoipa-axum` router — **no
@@ -241,11 +238,7 @@ async fn run(
             ))
         }
         "admin_load" => {
-            let reports = state
-                .backend()
-                .load_ehrs(file_sys_loc)
-                .await
-                .map_err(load_refusal)?;
+            let reports = state.backend().load_ehrs(file_sys_loc).await?;
             Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
@@ -255,34 +248,6 @@ async fn run(
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin dump/load operation: {other}"
         )))),
-    }
-}
-
-/// The wire refusal of a failed load: a malformed archive is `archive-invalid`
-/// with the entry or the declared format as its `archive` member, everything
-/// else the service failure's own answer.
-fn load_refusal(e: ServiceError) -> RestError {
-    let fault = match &e {
-        ServiceError::BadRequest(refusal) => std::error::Error::source(refusal)
-            .and_then(|cause| cause.downcast_ref::<ArchiveRefusal>())
-            .map(|archive| match archive {
-                ArchiveRefusal::Entry { entry, .. } => ArchiveFault {
-                    entry: Some(entry.clone()),
-                    format: None,
-                },
-                ArchiveRefusal::Format { declared } => ArchiveFault {
-                    entry: None,
-                    format: Some(declared.clone()),
-                },
-            }),
-        _ => None,
-    };
-    let refused = RestError::from(e);
-    match fault {
-        Some(fault) => refused
-            .of_kind(Kind::ArchiveInvalid)
-            .with_detail(Detail::Archive(fault)),
-        None => refused,
     }
 }
 

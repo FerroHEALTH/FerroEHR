@@ -220,13 +220,15 @@ impl From<VersionIdError> for RestError {
 impl From<ServiceError> for RestError {
     /// Maps a service failure onto the wire error
     /// (`crate::overview::service_error::api_error`), with the problem type a
-    /// restriction, a query timeout and an AQL refusal carry.
+    /// restriction, a query timeout, an AQL refusal and a malformed dump/load
+    /// archive carry.
     fn from(e: ServiceError) -> Self {
         let kind = match &e {
             ServiceError::Restricted(_) => Some(Kind::ProcessingRestricted),
             ServiceError::Timeout(_) => Some(Kind::QueryTimeout),
             _ => None,
         };
+        let archive = crate::overview::service_error::archive_fault(&e);
         let aql = match &e {
             ServiceError::BadRequest(err) => Some(err.clone()),
             _ => None,
@@ -234,6 +236,12 @@ impl From<ServiceError> for RestError {
         let refused = Self::from(crate::overview::service_error::api_error(e));
         let refused = match aql {
             Some(cause) => refused.with_aql_cause(&cause),
+            None => refused,
+        };
+        let refused = match archive {
+            Some(fault) => refused
+                .of_kind(Kind::ArchiveInvalid)
+                .with_detail(Detail::Archive(fault)),
             None => refused,
         };
         match kind {

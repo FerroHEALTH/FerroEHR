@@ -30,9 +30,8 @@
 //!    storage-JSON → RM → canonical XML → RM → storage-JSON is byte-equal at
 //!    the served-version level, in all three containers.
 
-use ferroehr::service::admin::dump_load::{ArchiveRefusal, EntryFault};
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::refusal::Malformed;
+use ferroehr::service::refusal::{ArchiveDefect, Malformed};
 use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -790,22 +789,38 @@ async fn ehr_row_exists(pool: &PgPool, ehr_id: Uuid) -> bool {
         .expect("ehr probe")
 }
 
-/// The [`ArchiveRefusal`] a malformed-archive `400` carries as its cause.
-fn archive_refusal(err: &ServiceError) -> &ArchiveRefusal {
-    let ServiceError::BadRequest(refusal) = err else {
-        panic!("a malformed archive is a 400 refusal, got {err:?}");
-    };
-    std::error::Error::source(refusal)
-        .and_then(|cause| cause.downcast_ref::<ArchiveRefusal>())
-        .unwrap_or_else(|| panic!("the refusal carries its ArchiveRefusal, got {err:?}"))
+/// The [`ArchiveDefect`] a malformed-archive `400` names.
+fn archive_defect(err: &ServiceError) -> &ArchiveDefect {
+    match err {
+        ServiceError::BadRequest(refusal) => match &refusal.kind {
+            Malformed::Archive(defect) => defect,
+            Malformed::Precondition => panic!("an archive refusal, got {err:?}"),
+        },
+        other => panic!("a malformed archive is a 400 refusal, got {other:?}"),
+    }
 }
 
-/// The entry an [`ArchiveRefusal::Entry`] names.
+/// The entry an [`ArchiveDefect::Entry`] names.
 fn refused_entry(err: &ServiceError) -> &str {
-    match archive_refusal(err) {
-        ArchiveRefusal::Entry { entry, .. } => entry,
-        other @ ArchiveRefusal::Format { .. } => panic!("an entry refusal, got {other:?}"),
+    match archive_defect(err) {
+        ArchiveDefect::Entry(entry) => entry,
+        other @ ArchiveDefect::Format(_) => panic!("an entry refusal, got {other:?}"),
     }
+}
+
+/// Whether the source chain of `err`'s refusal carries a `T`.
+fn caused_by<T: std::error::Error + 'static>(err: &ServiceError) -> bool {
+    let ServiceError::BadRequest(refusal) = err else {
+        return false;
+    };
+    let mut current = std::error::Error::source(refusal);
+    while let Some(cause) = current {
+        if cause.downcast_ref::<T>().is_some() {
+            return true;
+        }
+        current = cause.source();
+    }
+    false
 }
 
 /// A canonical-JSON export of one EHR under a fresh location, returning the
@@ -850,13 +865,7 @@ async fn load_from_an_archive_with_a_mangled_manifest_is_a_bad_request() {
         .expect_err("a mangled manifest is refused");
     assert_eq!(refused_entry(&err), "manifest.json");
     assert!(
-        matches!(
-            archive_refusal(&err),
-            ArchiveRefusal::Entry {
-                cause: EntryFault::Json(_),
-                ..
-            }
-        ),
+        caused_by::<serde_json::Error>(&err),
         "the parse failure rides the chain as its typed cause, got {err:?}"
     );
     // The body names the entry and nothing else: no server path, no serde
@@ -924,10 +933,11 @@ async fn load_from_an_archive_declaring_an_unknown_format_is_a_bad_request() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("an unknown format is refused");
-    match archive_refusal(&err) {
-        ArchiveRefusal::Format { declared } => assert_eq!(declared, "openehr_flat_json"),
-        other @ ArchiveRefusal::Entry { .. } => panic!("a format refusal, got {other:?}"),
-    }
+    assert_eq!(
+        archive_defect(&err),
+        &ArchiveDefect::Format("openehr_flat_json".to_owned()),
+        "the refusal carries the declared format"
+    );
     assert!(err.message().contains("openehr_flat_json"), "got {err:?}");
     assert!(
         !ehr_row_exists(&dst_pool, ehr.into()).await,
