@@ -16,7 +16,6 @@ use crate::service::FerroEhrService;
 use crate::service::admin::types::StatTimeRange;
 use crate::service::error::ServiceError;
 use crate::service::platform_service::PlatformService;
-use crate::service::status::StatusError;
 
 /// The distinct versioned COMPOSITIONs, unbounded.
 const VO_COUNT: &str = "SELECT count(DISTINCT vo_id) FROM version WHERE kind = 'COMPOSITION'";
@@ -71,7 +70,7 @@ impl FerroEhrService {
         &self,
         a_service: PlatformService,
         time_range: StatTimeRange,
-    ) -> Result<Vec<String>, StatusError> {
+    ) -> Result<Vec<String>, ServiceError> {
         let (lo, hi) = super::parse_range(time_range)?;
         let Some(ehr_scoped) = contribution_ehr_scoped(a_service) else {
             return Ok(Vec::new());
@@ -114,7 +113,7 @@ impl FerroEhrService {
         &self,
         a_service: PlatformService,
         time_range: StatTimeRange,
-    ) -> Result<i64, StatusError> {
+    ) -> Result<i64, ServiceError> {
         let (lo, hi) = super::parse_range(time_range)?;
         let Some(ehr_scoped) = contribution_ehr_scoped(a_service) else {
             return Ok(0);
@@ -188,7 +187,7 @@ impl FerroEhrService {
         &self,
         a_service: PlatformService,
         time_range: StatTimeRange,
-    ) -> Result<i64, StatusError> {
+    ) -> Result<i64, ServiceError> {
         let (lo, hi) = super::parse_range(time_range)?;
         if a_service != PlatformService::Ehr {
             return Ok(0);
@@ -227,7 +226,7 @@ impl FerroEhrService {
         &self,
         a_service: PlatformService,
         time_range: StatTimeRange,
-    ) -> Result<i64, StatusError> {
+    ) -> Result<i64, ServiceError> {
         let (lo, hi) = super::parse_range(time_range)?;
         if a_service != PlatformService::Ehr {
             return Ok(0);

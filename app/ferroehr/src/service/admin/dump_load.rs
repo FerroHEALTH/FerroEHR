@@ -82,7 +82,7 @@ use crate::service::admin::types::{
 };
 use crate::service::demographic::identifier::store::{IdentifierStore, SealedRow, StoreError};
 use crate::service::error::ServiceError;
-use crate::service::status::{ServiceStatus, StatusError};
+use crate::service::refusal::{Clash, Refusal};
 use crate::storage::codec::decompose;
 use crate::storage::{node_repo, version_repo};
 use crate::versioning::audit::AuditInput;
@@ -554,20 +554,20 @@ fn plan_segments(sizes: &[usize], limit_bytes: usize) -> Vec<std::ops::Range<usi
 const LOCATION_MESSAGE: &str =
     "the configured archive location could not be read or written; see the server log";
 
-/// Build a `file_not_writable` [`StatusError`] for a failed filesystem access to
+/// Build a `file_not_writable` [`ServiceError`] for a failed filesystem access to
 /// `path`.
 ///
 /// The body carries [`LOCATION_MESSAGE`]; `path` + `err` are traced.
-fn file_not_writable(path: &Path, err: &std::io::Error) -> StatusError {
+fn file_not_writable(path: &Path, err: &std::io::Error) -> ServiceError {
     tracing::error!(
         path = %path.display(),
         error = %err,
         "dump/load: archive location access failed → file_not_writable"
     );
-    StatusError::new(ServiceStatus::FileNotWritable, LOCATION_MESSAGE.to_owned())
+    ServiceError::fault(LOCATION_MESSAGE)
 }
 
-/// Build a `file_not_writable` [`StatusError`] for an archive entry that was read
+/// Build a `file_not_writable` [`ServiceError`] for an archive entry that was read
 /// but is not parseable as part of this archive format (a mangled manifest, a
 /// truncated or hand-edited segment).
 ///
@@ -575,20 +575,28 @@ fn file_not_writable(path: &Path, err: &std::io::Error) -> StatusError {
 /// says the same thing an unreadable one does, that `file_sys_loc` holds no
 /// readable archive, so both are `file_not_writable`.
 ///
-/// The body names the entry, the caller-actionable fact about the caller's own
-/// archive, and carries neither the server path nor the serde diagnostic; both
-/// are traced.
-fn unreadable_archive_entry(path: &Path, entry: &str, err: &serde_json::Error) -> StatusError {
+/// The body names a fixed entry, the caller-actionable fact about the caller's
+/// own archive, and carries neither the server path nor the serde diagnostic;
+/// both, and a data segment's name, are traced.
+fn unreadable_archive_entry(path: &Path, entry: &str, err: &serde_json::Error) -> ServiceError {
     tracing::warn!(
         path = %path.display(),
         entry,
         error = %err,
         "dump/load: archive entry is not parseable → file_not_writable"
     );
-    StatusError::new(
-        ServiceStatus::FileNotWritable,
-        format!("archive entry {entry} is not readable as part of this export archive"),
-    )
+    ServiceError::fault(match entry {
+        MANIFEST_ENTRY => {
+            "archive entry manifest.json is not readable as part of this export archive"
+        }
+        DEMOGRAPHIC_COMMONS_ENTRY => {
+            "archive entry demographic-commons.json is not readable as part of this export archive"
+        }
+        _ => {
+            "an archive data segment the manifest lists is not readable as part of this export \
+              archive"
+        }
+    })
 }
 
 /// The archive manifest entry name (both containers).
@@ -634,7 +642,7 @@ enum ArchiveWriter {
 
 impl ArchiveWriter {
     /// Create the container for `compression`, making `dir` if needed.
-    fn create(dir: &Path, compression: Option<CompressionFormat>) -> Result<Self, StatusError> {
+    fn create(dir: &Path, compression: Option<CompressionFormat>) -> Result<Self, ServiceError> {
         std::fs::create_dir_all(dir).map_err(|e| file_not_writable(dir, &e))?;
         match compression {
             None => Ok(Self::Directory {
@@ -662,7 +670,7 @@ impl ArchiveWriter {
     }
 
     /// Write one archive entry.
-    fn write(&mut self, name: &str, bytes: &[u8]) -> Result<(), StatusError> {
+    fn write(&mut self, name: &str, bytes: &[u8]) -> Result<(), ServiceError> {
         match self {
             Self::Directory { dir } => {
                 let path = dir.join(name);
@@ -690,7 +698,7 @@ impl ArchiveWriter {
     }
 
     /// Close the container (a no-op for the loose form).
-    fn finish(self) -> Result<(), StatusError> {
+    fn finish(self) -> Result<(), ServiceError> {
         match self {
             Self::Directory { .. } => Ok(()),
             Self::Zip { path, zip } => zip
@@ -726,7 +734,7 @@ impl ArchiveReader {
     /// `manifest.json`, else the packed `archive.zip`. When neither exists the
     /// manifest read failure is reported against the loose path, so the error
     /// names the entry a caller expects.
-    fn open(dir: &Path) -> Result<Self, StatusError> {
+    fn open(dir: &Path) -> Result<Self, ServiceError> {
         if dir.join(MANIFEST_ENTRY).is_file() {
             return Ok(Self::Directory {
                 dir: dir.to_path_buf(),
@@ -765,7 +773,7 @@ impl ArchiveReader {
     }
 
     /// Read one archive entry.
-    fn read(&mut self, name: &str) -> Result<Vec<u8>, StatusError> {
+    fn read(&mut self, name: &str) -> Result<Vec<u8>, ServiceError> {
         match self {
             Self::Directory { dir } => {
                 let path = dir.join(name);
@@ -788,28 +796,28 @@ impl ArchiveReader {
     }
 }
 
-/// Builds a `file_not_writable` [`StatusError`] for a 7z container fault, the same
+/// Builds a `file_not_writable` [`ServiceError`] for a 7z container fault, the same
 /// error the loose form raises.
-fn sevenz_fault(path: &Path, what: &str, err: &sevenz_rust2::Error) -> StatusError {
+fn sevenz_fault(path: &Path, what: &str, err: &sevenz_rust2::Error) -> ServiceError {
     tracing::error!(
         path = %path.display(),
         operation = what,
         error = %err,
         "dump/load: 7z container fault → file_not_writable"
     );
-    StatusError::new(ServiceStatus::FileNotWritable, LOCATION_MESSAGE.to_owned())
+    ServiceError::fault(LOCATION_MESSAGE)
 }
 
-/// Builds a `file_not_writable` [`StatusError`] for a ZIP container fault, the same
+/// Builds a `file_not_writable` [`ServiceError`] for a ZIP container fault, the same
 /// error the loose form raises.
-fn zip_fault(path: &Path, what: &str, err: &zip::result::ZipError) -> StatusError {
+fn zip_fault(path: &Path, what: &str, err: &zip::result::ZipError) -> ServiceError {
     tracing::error!(
         path = %path.display(),
         operation = what,
         error = %err,
         "dump/load: zip container fault → file_not_writable"
     );
-    StatusError::new(ServiceStatus::FileNotWritable, LOCATION_MESSAGE.to_owned())
+    ServiceError::fault(LOCATION_MESSAGE)
 }
 
 // ── the openehr_canonical_xml payload form ───────────────────────────────────
@@ -822,18 +830,22 @@ fn zip_fault(path: &Path, what: &str, err: &zip::result::ZipError) -> StatusErro
 /// archive layout — our own design/extension.
 ///
 /// # Errors
-/// [`StatusError`] `exception` when the composed name would escape the flat
+/// [`ServiceError`] `exception` when the composed name would escape the flat
 /// `versions/` entry space. Only a deployment whose configured
 /// `server.system_id` carries a path separator can reach this (the id is
 /// server configuration, never client input, and is already validated
 /// non-empty and `::`-free), and it would scatter the archive across
 /// directories instead of writing the declared entry set.
-fn version_entry_name(version_uid: &str) -> Result<String, StatusError> {
+fn version_entry_name(version_uid: &str) -> Result<String, ServiceError> {
     if version_uid.contains('/') || version_uid.contains('\\') {
-        return Err(StatusError::exception(format!(
-            "version {version_uid} cannot be externalized: its creating system id carries a \
-             path separator, which no archive entry name may contain"
-        )));
+        tracing::error!(
+            version_uid,
+            "dump/load: a version id carries a path separator"
+        );
+        return Err(ServiceError::fault(
+            "a version cannot be externalized: its creating system id carries a path separator, \
+             which no archive entry name may contain",
+        ));
     }
     Ok(format!("{VERSIONS_PREFIX}{version_uid}.xml"))
 }
@@ -1063,13 +1075,13 @@ fn version_payload(kind: &str, xml: &str) -> Result<Value, VersionPayloadError> 
 /// `None`).
 ///
 /// # Errors
-/// [`StatusError`] `exception` on a codec failure or a version whose commit audit
+/// [`ServiceError`] `exception` on a codec failure or a version whose commit audit
 /// the record does not carry (a self-inconsistent collection); the container's
 /// own `file_not_writable` when an entry cannot be written.
 fn externalize_version_documents(
     archive: &mut ArchiveWriter,
     records: &mut [EhrRecord],
-) -> Result<(), StatusError> {
+) -> Result<(), ServiceError> {
     for record in records {
         // Disjoint field borrows: the audit index reads `record.audits` while
         // the loop below rewrites `record.versions`.
@@ -1085,11 +1097,8 @@ fn externalize_version_documents(
                 .filter(|a| a.vo_id == v.vo_id && a.sys_version == v.sys_version)
                 .collect();
             let audit = audits.get(&v.commit_audit_id).ok_or_else(|| {
-                StatusError::exception(format!(
-                    "version {} of {} names commit audit {}, which the exported record does not \
-                     carry",
-                    v.sys_version, v.vo_id, v.commit_audit_id
-                ))
+                tracing::error!(vo_id = %v.vo_id, sys_version = v.sys_version, "dump/load: commit audit missing");
+                ServiceError::fault("a version names a commit audit the exported record does not carry")
             })?;
             let envelope = original_version_envelope(v, audit, &attestation_rows)?;
             let document = version_document(&v.kind, &envelope)?;
@@ -1115,7 +1124,7 @@ fn externalize_version_documents(
 fn externalize_demographic_documents(
     archive: &mut ArchiveWriter,
     records: &mut [DemographicRecord],
-) -> Result<(), StatusError> {
+) -> Result<(), ServiceError> {
     for record in records {
         let audits: std::collections::HashMap<Uuid, &AuditRow> =
             record.audits.iter().map(|a| (a.id, a)).collect();
@@ -1129,11 +1138,8 @@ fn externalize_demographic_documents(
                 .filter(|a| a.vo_id == v.vo_id && a.sys_version == v.sys_version)
                 .collect();
             let audit = audits.get(&v.commit_audit_id).ok_or_else(|| {
-                StatusError::exception(format!(
-                    "version {} of {} names commit audit {}, which the exported record does not \
-                     carry",
-                    v.sys_version, v.vo_id, v.commit_audit_id
-                ))
+                tracing::error!(vo_id = %v.vo_id, sys_version = v.sys_version, "dump/load: commit audit missing");
+                ServiceError::fault("a version names a commit audit the exported record does not carry")
             })?;
             let envelope = original_version_envelope(v, audit, &attestation_rows)?;
             let document = version_document(&v.kind, &envelope)?;
@@ -1224,7 +1230,7 @@ impl FerroEhrService {
         &self,
         file_sys_loc: String,
         spec: ExportSpec,
-    ) -> Result<Vec<DumpLoadFailReport>, StatusError> {
+    ) -> Result<Vec<DumpLoadFailReport>, ServiceError> {
         let dir = Path::new(&file_sys_loc);
         // `EXPORT_SPEC.logical_format` is `[0..1]`; an absent one takes the
         // translation-free member.
@@ -1232,7 +1238,7 @@ impl FerroEhrService {
             .logical_format
             .unwrap_or(ExportFormat::OpenehrCanonicalJson);
         if spec.segment_split_size <= 0 {
-            return Err(StatusError::precondition(
+            return Err(ServiceError::precondition(
                 "segment_split_size must be a positive number of kb",
             ));
         }
@@ -1365,7 +1371,7 @@ impl FerroEhrService {
     pub async fn load_ehrs(
         &self,
         file_sys_loc: String,
-    ) -> Result<Vec<DumpLoadFailReport>, StatusError> {
+    ) -> Result<Vec<DumpLoadFailReport>, ServiceError> {
         let dir = Path::new(&file_sys_loc);
         // `load_ehrs` is passed no format, so the container is detected from
         // what the location holds (module docs).
@@ -1374,7 +1380,7 @@ impl FerroEhrService {
         let manifest: Manifest = serde_json::from_slice(&manifest_bytes)
             .map_err(|e| unreadable_archive_entry(dir, MANIFEST_ENTRY, &e))?;
         if manifest.archive_version < ARCHIVE_VERSION_FLOOR {
-            return Err(StatusError::precondition(format!(
+            return Err(ServiceError::precondition(format!(
                 "archive declares archive_version {}, which predates the storage rewrite (this \
                  server reads {ARCHIVE_VERSION_FLOOR} and above): its version records carry a \
                  validity interval where this server expects the commit instant validity is now \
@@ -1384,18 +1390,11 @@ impl FerroEhrService {
             )));
         }
 
-        // The manifest's own EXPORT_FORMAT member is what tells the format-less
-        // operation which payload form the segments carry.
+        // The manifest's format member says which payload form the segments carry.
         let format: ExportFormat = manifest.format.parse().map_err(|()| {
-            // The manifest's declared value IS the caller's archive content, so
-            // the body names it; the server path stays out of the body.
-            StatusError::new(
-                ServiceStatus::FileNotWritable,
-                format!(
-                    "archive entry {MANIFEST_ENTRY} declares logical format {:?}, which names \
-                     no EXPORT_FORMAT member",
-                    manifest.format
-                ),
+            tracing::warn!(format = %manifest.format, "dump/load: unknown archive format");
+            ServiceError::fault(
+                "the archive manifest declares a logical format this server does not support",
             )
         })?;
 
@@ -1407,7 +1406,7 @@ impl FerroEhrService {
         // the feature: refuse loudly rather than drop the content silently.
         #[cfg(not(feature = "multimedia"))]
         if !manifest.blobs.is_empty() {
-            return Err(StatusError::precondition(
+            return Err(ServiceError::precondition(
                 "archive carries externalized multimedia blobs but this binary \
                  was built without the `multimedia` cargo feature",
             ));
@@ -1478,7 +1477,7 @@ impl FerroEhrService {
         archive: &mut ArchiveReader,
         mut record: EhrRecord,
         format: ExportFormat,
-    ) -> Result<Option<DumpLoadFailReport>, StatusError> {
+    ) -> Result<Option<DumpLoadFailReport>, ServiceError> {
         let ehr_id = record.ehr.id;
         let report = |error: String| {
             Ok(Some(DumpLoadFailReport {
@@ -1516,7 +1515,7 @@ impl FerroEhrService {
                     .collect::<Vec<_>>()
                     .join("; "),
             ),
-            Err(e) => Err(e.into()),
+            Err(e) => Err(e),
         }
     }
 
@@ -1533,7 +1532,7 @@ impl FerroEhrService {
         archive: &mut ArchiveReader,
         mut record: DemographicRecord,
         format: ExportFormat,
-    ) -> Result<Option<DumpLoadFailReport>, StatusError> {
+    ) -> Result<Option<DumpLoadFailReport>, ServiceError> {
         if self.demographic_container_exists(record.vo_id).await? {
             return Ok(Some(DumpLoadFailReport {
                 entity_type: record.kind.clone(),
@@ -1557,7 +1556,8 @@ impl FerroEhrService {
         let (entity_type, entity_id) = (record.kind.clone(), record.vo_id.to_string());
         Ok(self
             .load_one_demographic(record)
-            .await?
+            .await
+            .map_err(ServiceError::flattened)?
             .map(|refusal| DumpLoadFailReport {
                 entity_type,
                 entity_id,
@@ -1579,7 +1579,7 @@ impl FerroEhrService {
     /// it, so both tiers answer from the same relation.
     ///
     /// # Errors
-    /// [`StatusError`] when a reference read, a blob fetch or an archive write
+    /// [`ServiceError`] when a reference read, a blob fetch or an archive write
     /// fails.
     #[cfg(feature = "multimedia")]
     async fn export_referenced_blobs(
@@ -1587,7 +1587,7 @@ impl FerroEhrService {
         archive: &mut ArchiveWriter,
         records: &[EhrRecord],
         demographic: &[DemographicRecord],
-    ) -> Result<Vec<String>, StatusError> {
+    ) -> Result<Vec<String>, ServiceError> {
         let Some(engine) = &self.multimedia else {
             return Ok(Vec::new());
         };
@@ -1657,13 +1657,13 @@ impl FerroEhrService {
         &self,
         archive: &mut ArchiveReader,
         blobs: &[String],
-    ) -> Result<(), StatusError> {
+    ) -> Result<(), ServiceError> {
         if blobs.is_empty() {
             return Ok(());
         }
         let Some(engine) = &self.multimedia else {
             // The archive carries blobs but this target has no store configured.
-            return Err(StatusError::precondition(
+            return Err(ServiceError::precondition(
                 "archive carries externalized multimedia blobs but multimedia \
                  externalization is not enabled on this server",
             ));
@@ -2261,8 +2261,8 @@ async fn insert_ehr_row(tx: &mut PgConnection, ehr: &EhrRow) -> Result<(), Servi
         {
             // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
             // id and namespace pair; the status token is our own.
-            return ServiceError::new(
-                ServiceStatus::EhrForSubjectAlreadyExists,
+            return ServiceError::Conflict(Refusal::new(
+                Clash::EhrForSubject,
                 format!(
                     "EHR {} names subject {}@{}, which another EHR in this repository \
                      already holds (one EHR per subject)",
@@ -2270,7 +2270,7 @@ async fn insert_ehr_row(tx: &mut PgConnection, ehr: &EhrRow) -> Result<(), Servi
                     ehr.subject_id.as_deref().unwrap_or("?"),
                     ehr.subject_namespace.as_deref().unwrap_or("?"),
                 ),
-            );
+            ));
         }
         ServiceError::Database(e)
     })?;

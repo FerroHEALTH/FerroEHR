@@ -203,7 +203,7 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
                 });
             resp
         }
-        Err(e) => status_error_outcome(e),
+        Err(e) => status_error_outcome(StatusError::from(e)),
     }
 }
 
@@ -218,13 +218,17 @@ async fn searched(
     state: &AppState,
     subject_scoped: bool,
     filter: &ferroehr::system_log::store::AuditSearchFilter,
-) -> Result<(i64, Vec<serde_json::Value>), StatusError> {
+) -> Result<(i64, Vec<serde_json::Value>), ferroehr::service::error::ServiceError> {
     // NOTE: EHDS Art. 9 and Art. 3(3), the subject-scoped read is the person's own trail, which
     // leaves out the records about data held from them until it is released or expires.
     if subject_scoped {
         state.backend().person_audit_event_search(filter).await
     } else {
-        state.backend().audit_event_search(filter).await
+        state
+            .backend()
+            .audit_event_search(filter)
+            .await
+            .map_err(ferroehr::service::error::ServiceError::from)
     }
 }
 

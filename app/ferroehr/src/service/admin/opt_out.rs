@@ -21,7 +21,6 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::StatusError;
 use crate::storage::opt_out;
 use crate::system_log::event::EventActionCode;
 
@@ -45,7 +44,7 @@ impl FerroEhrService {
         &self,
         ehr_id: &str,
         note: Option<&str>,
-    ) -> Result<(), StatusError> {
+    ) -> Result<(), ServiceError> {
         let ehr_id = self.opt_out_target(ehr_id).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -62,7 +61,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// The [`Self::record_access_opt_out`] rejections.
-    pub async fn reverse_access_opt_out(&self, ehr_id: &str) -> Result<(), StatusError> {
+    pub async fn reverse_access_opt_out(&self, ehr_id: &str) -> Result<(), ServiceError> {
         let ehr_id = self.opt_out_target(ehr_id).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -85,12 +84,12 @@ impl FerroEhrService {
     pub async fn access_opt_out_register(
         &self,
         ehr_id: &str,
-    ) -> Result<Vec<opt_out::OptOutRow>, StatusError> {
+    ) -> Result<Vec<opt_out::OptOutRow>, ServiceError> {
         let ehr_id = self.opt_out_target(ehr_id).await?;
         self.emit_mark_access(EventActionCode::Read, ehr_id, None, REGISTER)?;
-        Ok(opt_out::register(&self.pool, ehr_id)
+        opt_out::register(&self.pool, ehr_id)
             .await
-            .map_err(ServiceError::Storage)?)
+            .map_err(ServiceError::Storage)
     }
 
     /// The EHR an opt-out act names, parsed and existence-checked.
@@ -105,10 +104,10 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `exception` — a database fault.
-    pub async fn is_ehr_opted_out(&self, ehr_id: EhrId) -> Result<bool, StatusError> {
-        Ok(opt_out::is_opted_out(&self.pool, ehr_id)
+    pub async fn is_ehr_opted_out(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        opt_out::is_opted_out(&self.pool, ehr_id)
             .await
-            .map_err(ServiceError::Storage)?)
+            .map_err(ServiceError::Storage)
     }
 
     /// The EHR that owns `vo_id` when that EHR carries the EHDS Art. 10
@@ -117,7 +116,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `exception` — a database fault.
-    pub async fn opted_out_owner(&self, vo_id: VoId) -> Result<Option<EhrId>, StatusError> {
+    pub async fn opted_out_owner(&self, vo_id: VoId) -> Result<Option<EhrId>, ServiceError> {
         let owner = crate::storage::version_repo::meta::vo_owner(&self.pool, vo_id)
             .await
             .map_err(ServiceError::Storage)?
@@ -158,9 +157,9 @@ impl FerroEhrService {
     /// # Errors
     /// `service_overloaded` — the access record was refused under
     /// `[audit] fail_mode = "closed"`.
-    pub fn record_access_opt_out_override(&self, ehr_id: EhrId) -> Result<(), StatusError> {
+    pub fn record_access_opt_out_override(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
         let register = format!("{REGISTER}-override");
-        Ok(self.emit_mark_access(EventActionCode::Execute, ehr_id, None, &register)?)
+        self.emit_mark_access(EventActionCode::Execute, ehr_id, None, &register)
     }
 }
 

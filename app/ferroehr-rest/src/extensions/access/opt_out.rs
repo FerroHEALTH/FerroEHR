@@ -27,6 +27,7 @@
 
 use axum::response::{IntoResponse, Response};
 use ferroehr::ids::EhrId;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::status::ServiceStatus;
 use uuid::Uuid;
 
@@ -101,7 +102,7 @@ pub(crate) async fn refuse_opted_out(
     if opt_out == OptOut::Untouched {
         return Ok(None);
     }
-    let fault = |error| Box::new(RestError::from(error).into_response());
+    let fault = |error: ServiceError| Box::new(RestError::from(error).into_response());
     if let Some(ehr_id) = parts
         .path
         .get("ehr_id")
@@ -142,10 +143,7 @@ pub(crate) async fn refuse_opted_out(
 
 /// Record the Art. 10(2) override of the opt-out of `ehr_id` and let the
 /// request proceed.
-fn override_recorded(
-    state: &AppState,
-    ehr_id: EhrId,
-) -> Result<Option<Response>, ferroehr::service::status::StatusError> {
+fn override_recorded(state: &AppState, ehr_id: EhrId) -> Result<Option<Response>, ServiceError> {
     state.backend().record_access_opt_out_override(ehr_id)?;
     Ok(None)
 }

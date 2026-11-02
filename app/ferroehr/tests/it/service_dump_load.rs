@@ -41,6 +41,8 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::error::ServiceError;
+use ferroehr::service::refusal::Malformed;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -56,7 +58,6 @@ use crate::typed_body::typed;
 use ferroehr::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
-use ferroehr::service::status::ServiceStatus;
 use openehr_its::rest::generated::common::UpdateVersion;
 
 /// An `EXPORT_SPEC` in `logical_format`/`compression_format` whose
@@ -785,7 +786,7 @@ async fn non_positive_segment_split_size_is_a_precondition_violation() {
         )
         .await
         .expect_err("a non-positive split size is refused");
-    assert_eq!(err.status, ServiceStatus::PreconditionViolation);
+    assert!(matches!(&err, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -800,16 +801,16 @@ async fn load_from_a_location_with_no_archive_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("no archive at the location");
-    assert_eq!(err.status, ServiceStatus::FileNotWritable);
+    assert!(matches!(&err, ServiceError::Fault(_)));
     // The SERVER FILESYSTEM PATH never reaches the body: it is deployment
     // layout, and the caller supplied only the configured location name. The
     // path + the OS diagnostic ride the trace record instead.
     assert!(
-        !err.message.contains(&dir),
+        !err.message().contains(&dir),
         "the configured server path must not reach the wire body, got {err:?}"
     );
     assert!(
-        !err.message.contains('/'),
+        !err.message().contains('/'),
         "no filesystem path fragment reaches the wire body, got {err:?}"
     );
 }
@@ -850,19 +851,19 @@ async fn load_from_an_archive_with_a_mangled_manifest_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("a mangled manifest is refused");
-    assert_eq!(err.status, ServiceStatus::FileNotWritable);
+    assert!(matches!(&err, ServiceError::Fault(_)));
     // The caller's-archive defect NAMES THE ENTRY (that is what the caller can
     // act on) and nothing else: no server path, no serde offsets/field names.
     assert!(
-        err.message.contains("manifest.json"),
+        err.message().contains("manifest.json"),
         "the refusal names the offending archive entry, got {err:?}"
     );
     assert!(
-        !err.message.contains(&dir),
+        !err.message().contains(&dir),
         "the server path must not reach the wire body, got {err:?}"
     );
     assert!(
-        !err.message.contains("column") && !err.message.contains("line "),
+        !err.message().contains("column") && !err.message().contains("line "),
         "the serde diagnostic must not reach the wire body, got {err:?}"
     );
     assert!(
@@ -903,9 +904,9 @@ async fn load_from_a_truncated_container_is_file_not_writable() {
         .load_ehrs(dir.clone())
         .await
         .expect_err("a truncated container is refused");
-    assert_eq!(err.status, ServiceStatus::FileNotWritable);
+    assert!(matches!(&err, ServiceError::Fault(_)));
     assert!(
-        !err.message.contains(&dir) && !err.message.contains("archive.zip"),
+        !err.message().contains(&dir) && !err.message().contains("archive.zip"),
         "the container path must not reach the wire body, got {err:?}"
     );
     assert!(
