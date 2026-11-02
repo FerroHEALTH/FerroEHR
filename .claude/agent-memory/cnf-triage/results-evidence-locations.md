@@ -17,15 +17,15 @@ standing, TRIAL mark). `summary.md` beside it opens every red row up to the
 step, expected against received, and the cited sentence. The exchanges
 themselves are in `recording.har`, which is never committed.
 
-- Case cores: Veredictum's `artifacts/schedule/<family>/<CASE>.yaml`
-  (SM operation + outcome kinds + spec_refs + often a self-documenting TODO
-  naming the real defect).
-- Operation bindings (wire realization): Veredictum's `artifacts/bindings/its-rest/<SM.op>.yaml`.
+- Cases: the Arazzo workflows under Veredictum's
+  `catalogue/cases/<folder>/<document>.arazzo.yaml` at the pinned tag, each
+  with its `x-veredictum-cite` (source, section, quote, `report:`); setups
+  under `catalogue/cases/_setup/`; option arms in `catalogue/capabilities.yaml`.
 - Corpus: `corpus/MANIFEST.yaml` maps data-set
   aliases (`cnf.*`) → fixture files + `template_id`; fixtures under
   `corpus/fixtures/**`, templates under `corpus/templates/**`.
 - Party/statement: `docs/conformance/party/ferroehr/{statement.json,ixit.json}`
-  — `statement.options` holds the selected `option_select` branches.
+  — `statement.options` holds the selected option arms.
 - Spec oracle: `docs/specs/openehr/` (index in its README). SF cases →
   `ITS-REST/docs/simplified_formats/master0{2,4,5,6}-*.adoc`. ADL14 →
   `CNF/docs/platform_test_schedule/master04-func_tc_definition_adl.adoc` +

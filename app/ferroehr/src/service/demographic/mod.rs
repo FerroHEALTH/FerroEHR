@@ -44,8 +44,10 @@
 //!   there being no demographic archetype or OPT store; only RM validity →
 //!   `422` is enforced.
 //! - `PARTY.reverse_relationships` (`party.adoc`
-//!   §`Reverse_relationships_validity`) is a derived `0..1` attribute the server
-//!   leaves unpopulated.
+//!   §`Reverse_relationships_validity`) is derived from the inline
+//!   `relationships` of other parties through the `party_relationship_target`
+//!   index, and a stable-profile read serves it (RM 1.1.0 only; RM 1.2.0 makes
+//!   it a function).
 //!
 //! Spec oracles for the RM-level rules enforced here:
 //! - `docs/specs/openehr/RM/docs/UML/classes/org.openehr.rm.demographic.party.adoc`
@@ -58,6 +60,7 @@
 //!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`).
 
 pub mod identifier;
+pub mod reverse;
 pub mod types;
 
 mod api;
