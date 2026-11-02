@@ -28,7 +28,7 @@ use openehr_base::prelude::{Interval, ProperInterval, ProperIntervalData};
 use openehr_lang::v1_1::odin::OdinValue;
 
 use crate::aom::build::{
-    PrimitiveNode, cattr_empty, cattr_single, complex_object, point_int, point_real,
+    ObjectNode, cattr_empty, cattr_single, complex_object, point_int, point_real,
     primitive_to_cobject,
 };
 use crate::aom::interval::{
@@ -381,7 +381,7 @@ pub(crate) fn lower_adl14_domain(
         attributes.push(cattr_single(
             "property",
             CObject::CTerminologyCode(
-                PrimitiveNode::inline("Terminology_code", NodeCoding::At)
+                ObjectNode::inline("Terminology_code", NodeCoding::At)
                     .c_terminology_code(constraint, None, None),
             ),
         ));
@@ -694,23 +694,23 @@ fn domain_list_rows(list: &OdinValue) -> Vec<Vec<(String, OdinValue)>> {
 fn domain_value_to_primitive(attr: &str, v: &OdinValue) -> Option<CPrimitiveObject> {
     match untyped(v) {
         OdinValue::String(s) => Some(CPrimitiveObject::CString(
-            PrimitiveNode::inline("String", NodeCoding::At).c_string(vec![s.clone()], None),
+            ObjectNode::inline("String", NodeCoding::At).c_string(vec![s.clone()], None),
         )),
         OdinValue::Integer(i) => Some(CPrimitiveObject::CInteger(
-            PrimitiveNode::inline("Integer", NodeCoding::At).c_integer(vec![point_int(*i)], None),
+            ObjectNode::inline("Integer", NodeCoding::At).c_integer(vec![point_int(*i)], None),
         )),
         OdinValue::Real(r) => Some(CPrimitiveObject::CReal(
-            PrimitiveNode::inline("Real", NodeCoding::At).c_real(vec![point_real(*r)], None),
+            ObjectNode::inline("Real", NodeCoding::At).c_real(vec![point_real(*r)], None),
         )),
         OdinValue::Interval(iv) => {
             if attr == "precision" {
                 Some(CPrimitiveObject::CInteger(
-                    PrimitiveNode::inline("Integer", NodeCoding::At)
+                    ObjectNode::inline("Integer", NodeCoding::At)
                         .c_integer(vec![odin_interval_to_int(iv)], None),
                 ))
             } else {
                 Some(CPrimitiveObject::CReal(
-                    PrimitiveNode::inline("Real", NodeCoding::At)
+                    ObjectNode::inline("Real", NodeCoding::At)
                         .c_real(vec![odin_interval_to_real(iv)], None),
                 ))
             }
@@ -760,13 +760,13 @@ fn merge_primitives(mut items: Vec<CPrimitiveObject>) -> Option<CPrimitiveObject
     }
     Some(match kind {
         1 => CPrimitiveObject::CString(
-            PrimitiveNode::inline("String", NodeCoding::At).c_string(strings, None),
+            ObjectNode::inline("String", NodeCoding::At).c_string(strings, None),
         ),
-        2 => CPrimitiveObject::CReal(
-            PrimitiveNode::inline("Real", NodeCoding::At).c_real(reals, None),
-        ),
+        2 => {
+            CPrimitiveObject::CReal(ObjectNode::inline("Real", NodeCoding::At).c_real(reals, None))
+        }
         _ => CPrimitiveObject::CInteger(
-            PrimitiveNode::inline("Integer", NodeCoding::At).c_integer(ints, None),
+            ObjectNode::inline("Integer", NodeCoding::At).c_integer(ints, None),
         ),
     })
 }

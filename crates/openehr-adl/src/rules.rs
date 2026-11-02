@@ -23,9 +23,7 @@
 //! [`openehr_lang::v1_1::bel::parse_statements_with`] with the AOM builder.
 
 use openehr_am::v2_4::aom2::constraint_model::archetype_constraint::ArchetypeConstraint;
-use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
-    CComplexObject, CComplexObjectData,
-};
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
 use openehr_am::v2_4::aom2::rules::expr_archetype_id_constraint::ExprArchetypeIdConstraint;
@@ -50,6 +48,7 @@ use openehr_lang::v1_1::beom::core::variable_declaration::VariableDeclaration;
 use openehr_lang::v1_1::beom::types::expr_type_def::ExprTypeDef;
 use openehr_lang::v1_1::beom::types::type_def_object_ref::TypeDefObjectRef;
 
+use crate::aom::build::ObjectNode;
 use crate::error::{SyntaxError, SyntaxErrorCode};
 use crate::parse::{parse_contained_regexp_text, parse_inline_primitive_text};
 use crate::source::SourceArtefact;
@@ -113,20 +112,13 @@ impl AmBuilder {
 /// and surfaces as a VRRLP validation finding). No openEHR spec governs this
 /// parse-time placeholder shape — our own design/extension.
 fn unresolved_ref_target() -> ArchetypeConstraint {
+    let node = ObjectNode {
+        rm_type_name: String::new(),
+        node_id: String::new(),
+        occurrences: None,
+    };
     ArchetypeConstraint::CComplexObject(Box::new(CComplexObject::CComplexObject(
-        CComplexObjectData {
-            parent: None,
-            soc_parent: None,
-            rm_type_name: String::new(),
-            occurrences: None,
-            node_id: String::new(),
-            alternative_ids: openehr_base::containers::present(Vec::new()),
-            is_deprecated: None,
-            sibling_order: None,
-            default_value: None,
-            attributes: openehr_base::containers::present(Vec::new()),
-            attribute_tuples: openehr_base::containers::present(Vec::new()),
-        },
+        node.c_complex_object(Vec::new(), Vec::new(), None),
     )))
 }
 

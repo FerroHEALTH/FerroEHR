@@ -5,9 +5,7 @@
 //! code-reference constraint mappings.
 
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
-use openehr_am::v2_4::aom2::constraint_model::c_complex_object::{
-    CComplexObject, CComplexObjectData,
-};
+use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 use openehr_base::prelude::{
     Interval, Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso8601Time, PointInterval,
@@ -17,7 +15,7 @@ use openehr_its::opt14;
 
 use super::RootCx;
 use super::value::{enumerated_and_range, int_interval, map_mult, real_interval};
-use crate::aom::build::PrimitiveNode;
+use crate::aom::build::ObjectNode;
 
 pub(super) fn complex(
     rm_type_name: &str,
@@ -25,29 +23,23 @@ pub(super) fn complex(
     occurrences: &opt14::types::Intervalofinteger,
     attributes: Vec<CAttribute>,
 ) -> CObject {
-    CObject::CComplexObject(CComplexObject::CComplexObject(CComplexObjectData {
-        parent: None,
-        soc_parent: None,
-        rm_type_name: rm_type_name.to_owned(),
-        occurrences: Some(map_mult(occurrences)),
-        node_id: node_id.to_owned(),
-        alternative_ids: openehr_base::containers::present(Vec::new()),
-        is_deprecated: None,
-        sibling_order: None,
-        default_value: None,
-        attributes: openehr_base::containers::present(attributes),
-        attribute_tuples: openehr_base::containers::present(Vec::new()),
-    }))
+    CObject::CComplexObject(CComplexObject::CComplexObject(
+        object_node(rm_type_name, node_id, occurrences).c_complex_object(
+            attributes,
+            Vec::new(),
+            None,
+        ),
+    ))
 }
 
-/// The `v2_4` primitive node of a 1.4 object: its RM type, its node id and
-/// its occurrences, which every 1.4 `C_OBJECT` carries.
-fn primitive_node(
+/// The `v2_4` node of a 1.4 object: its RM type, its node id and its
+/// occurrences, which every 1.4 `C_OBJECT` carries.
+pub(super) fn object_node(
     rm_type_name: &str,
     node_id: &str,
     occurrences: &opt14::types::Intervalofinteger,
-) -> PrimitiveNode {
-    PrimitiveNode {
+) -> ObjectNode {
+    ObjectNode {
         rm_type_name: rm_type_name.to_owned(),
         node_id: node_id.to_owned(),
         occurrences: Some(map_mult(occurrences)),
@@ -61,8 +53,7 @@ pub(super) fn terminology_code(
     constraint: String,
 ) -> CObject {
     CObject::CTerminologyCode(
-        primitive_node(rm_type_name, node_id, occurrences)
-            .c_terminology_code(constraint, None, None),
+        object_node(rm_type_name, node_id, occurrences).c_terminology_code(constraint, None, None),
     )
 }
 
@@ -113,7 +104,7 @@ pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut 
         );
         return complex(rm, node_id, occ, Vec::new());
     };
-    let node = primitive_node(rm, node_id, occ);
+    let node = object_node(rm, node_id, occ);
     match item {
         opt14::types::CPrimitive::CBoolean(p) => {
             let mut constraint = Vec::new();
@@ -318,6 +309,6 @@ pub(super) fn c_string(
     assumed_value: Option<String>,
 ) -> CObject {
     CObject::CString(
-        primitive_node(rm_type_name, node_id, occurrences).c_string(constraint, assumed_value),
+        object_node(rm_type_name, node_id, occurrences).c_string(constraint, assumed_value),
     )
 }

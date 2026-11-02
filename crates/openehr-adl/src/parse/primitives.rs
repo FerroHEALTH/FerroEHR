@@ -17,7 +17,7 @@ use openehr_am::v2_4::aom2::constraint_model::primitive::c_string::CString;
 use openehr_am::v2_4::aom2::constraint_model::primitive::constraint_status::ConstraintStatus;
 use openehr_base::prelude::{Iso8601Date, Iso8601DateTime, Iso8601Duration, Iso8601Time};
 
-use crate::aom::build::{PrimitiveNode, local_term_code};
+use crate::aom::build::{ObjectNode, local_term_code};
 use crate::error::SyntaxErrorCode;
 use crate::odin::{decode_string, escape_regex_delimiter, regex_inner};
 use crate::parse::values::PrimKind;
@@ -168,7 +168,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Boolean".to_owned(),
             node_id,
             occurrences: None,
@@ -220,7 +220,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Character".to_owned(),
             node_id,
             occurrences: None,
@@ -257,7 +257,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "String".to_owned(),
             node_id,
             occurrences: None,
@@ -337,7 +337,7 @@ impl Parser<'_> {
             SyntaxErrorCode::Stccp,
             "expecting ']' closing a terminology code",
         )?;
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Terminology_code".to_owned(),
             node_id,
             occurrences: None,
@@ -356,7 +356,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Integer".to_owned(),
             node_id,
             occurrences: None,
@@ -371,7 +371,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Real".to_owned(),
             node_id,
             occurrences: None,
@@ -405,7 +405,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Iso8601_date".to_owned(),
             node_id,
             occurrences: None,
@@ -443,7 +443,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Iso8601_time".to_owned(),
             node_id,
             occurrences: None,
@@ -481,7 +481,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Iso8601_date_time".to_owned(),
             node_id,
             occurrences: None,
@@ -525,7 +525,7 @@ impl Parser<'_> {
         } else {
             None
         };
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: "Iso8601_duration".to_owned(),
             node_id,
             occurrences: None,
@@ -566,7 +566,7 @@ impl Parser<'_> {
             return Err(());
         }
         let regex = format!("/{}/", escape_regex_delimiter(inner));
-        Ok(PrimitiveNode::inline("String", self.node_coding).c_string(vec![regex], assumed))
+        Ok(ObjectNode::inline("String", self.node_coding).c_string(vec![regex], assumed))
     }
 
     /// A body-less type-headed primitive object (`String[id2]`): recognise the
@@ -574,7 +574,7 @@ impl Parser<'_> {
     /// unconstrained primitive; non-primitive names fall through to a complex
     /// object.
     pub(crate) fn primitive_any(rm_type: &str, node_id: &str) -> Option<CObject> {
-        let node = PrimitiveNode {
+        let node = ObjectNode {
             rm_type_name: rm_type.to_owned(),
             node_id: node_id.to_owned(),
             occurrences: None,
