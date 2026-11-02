@@ -169,7 +169,7 @@ fn rm_translation_details_accreditation_round_trips() {
     .expect("serialize");
     assert!(
         xml.contains("<accreditation>NL-TR-0042</accreditation>"),
-        "the emitted XML must carry the accreditation element: {xml}"
+        "the emitted XML must carry the accreditation element"
     );
     let parsed: TranslationDetails = from_xml(&xml).expect("parse back");
     assert_eq!(parsed, details, "accreditation must survive the round trip");
