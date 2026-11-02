@@ -699,6 +699,48 @@ async fn dump_refuses_every_unrepresentable_request_shape() {
     let _cleanup = std::fs::remove_dir_all(&dir);
 }
 
+/// A load whose location holds no readable archive is a `500` naming no
+/// server path, and a mangled manifest is a `500` naming that entry.
+#[tokio::test]
+async fn load_refusals_name_no_server_path() {
+    let (_pg, app) = app(true).await;
+    let empty = archive_dir();
+    std::fs::create_dir_all(&empty).expect("create the empty location");
+    let (status, body) = send(
+        &app,
+        post_json("/admin/load", &format!(r#"{{"file_sys_loc":{empty:?}}}"#)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+    assert!(!body.contains(&empty), "no server path in the body: {body}");
+
+    let _ehr = create_ehr(&app).await;
+    let dir = archive_dir();
+    let spec = serde_json::json!({ "file_sys_loc": dir, "segment_split_size": 1024 });
+    let (status, body) = send(&app, post_json("/admin/dump", &spec.to_string())).await;
+    assert_eq!(status, StatusCode::OK, "dump: {body}");
+    std::fs::write(
+        std::path::Path::new(&dir).join("manifest.json"),
+        b"{\"trunc",
+    )
+    .expect("mangle the manifest");
+    let (status, body) = send(
+        &app,
+        post_json("/admin/load", &format!(r#"{{"file_sys_loc":{dir:?}}}"#)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+    assert!(
+        body.contains("manifest.json"),
+        "the refusal names the entry: {body}"
+    );
+    assert!(!body.contains(&dir), "no server path in the body: {body}");
+    let _cleanup = (
+        std::fs::remove_dir_all(&empty),
+        std::fs::remove_dir_all(&dir),
+    );
+}
+
 /// EVERY declared enumeration member is served: both export formats
 /// (`openehr_canonical_xml`, `openehr_canonical_json`) crossed with every
 /// compression shape (absent, `zip`, `7z`). No member is refused, downgraded, or answered
