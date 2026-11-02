@@ -11,38 +11,17 @@
 //! `_reverse_relationships_` list, if at the target end." RM 1.2.0 turns the
 //! attribute into a function (SPECRM-124), so the development profile serves
 //! no such member.
-use std::sync::Arc;
 
 use axum::Router;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 
 use ferroehr::config::profile::SpecProfile;
-use ferroehr::service::FerroEhrService;
-use ferroehr_rest::config::AppConfig;
 
 use crate::common;
 use crate::common::send_body;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
-
-/// A router over the given profile, on an existing pool.
-async fn router_for(profile: SpecProfile, pool: &sqlx::PgPool) -> Router {
-    let mut config = AppConfig {
-        server: common::server(),
-        ..AppConfig::default()
-    };
-    config.auth.enabled = false;
-    config.spec_profile = profile;
-    common::router_with(
-        config,
-        Arc::new(
-            FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
-                .with_spec_profile(profile),
-        ),
-    )
-    .await
-}
 
 /// A spec-valid PERSON named `name`, optionally carrying one relationship
 /// from `source` to `target`.
@@ -156,7 +135,7 @@ async fn read(app: &Router, vo: &str) -> Value {
 #[tokio::test]
 async fn the_stable_profile_lists_the_relationship_at_its_target() {
     let db = common::test_db().await;
-    let app = router_for(SpecProfile::Stable, &db.pool()).await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
     let (source, target) = related_pair(&app).await;
 
     let body = read(&app, &target).await;
@@ -183,7 +162,7 @@ async fn the_stable_profile_lists_the_relationship_at_its_target() {
 #[tokio::test]
 async fn the_stable_profile_drops_the_reference_once_the_source_lets_go() {
     let db = common::test_db().await;
-    let app = router_for(SpecProfile::Stable, &db.pool()).await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
     let (source, target) = related_pair(&app).await;
 
     // A new source version without the relationship.
@@ -207,7 +186,7 @@ async fn the_stable_profile_drops_the_reference_once_the_source_lets_go() {
 #[tokio::test]
 async fn the_stable_profile_drops_the_reference_of_a_deleted_source() {
     let db = common::test_db().await;
-    let app = router_for(SpecProfile::Stable, &db.pool()).await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
     let (source, target) = related_pair(&app).await;
 
     let (status, text) = send_body(
@@ -223,7 +202,7 @@ async fn the_stable_profile_drops_the_reference_of_a_deleted_source() {
 #[tokio::test]
 async fn the_development_profile_serves_no_reverse_relationships() {
     let db = common::test_db().await;
-    let app = router_for(SpecProfile::Development, &db.pool()).await;
+    let app = common::router_for_profile(SpecProfile::Development, &db.pool()).await;
     let (_source, target) = related_pair(&app).await;
 
     let body = read(&app, &target).await;
@@ -233,7 +212,7 @@ async fn the_development_profile_serves_no_reverse_relationships() {
 #[tokio::test]
 async fn a_stable_profile_xml_read_of_a_target_still_serves() {
     let db = common::test_db().await;
-    let app = router_for(SpecProfile::Stable, &db.pool()).await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
     let (_source, target) = related_pair(&app).await;
 
     let (status, text) = send_body(

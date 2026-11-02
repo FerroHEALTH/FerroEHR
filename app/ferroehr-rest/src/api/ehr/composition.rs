@@ -186,19 +186,11 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     // (Requests_and_responses.md §"ETag and Last-Modified") comes from the
     // version row the service reads alongside the body.
     let read = if let Some(ovid) = uid.version {
-        state
-            .backend()
-            .composition_at_version_response(ehr_id, ovid)
-            .await?
-    } else if p.version_at_time.is_some() {
-        state
-            .backend()
-            .composition_at_time_response(ehr_id, uid.vo_id, p.version_at_time)
-            .await?
+        state.backend().composition_at_version(ehr_id, ovid).await?
     } else {
         state
             .backend()
-            .read_composition_raw(ehr_id, uid.vo_id, None)
+            .composition_at_time(ehr_id, uid.vo_id, p.version_at_time)
             .await?
     };
     let RawServiceResponse { body, meta } = read;
@@ -214,12 +206,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
             }
             return Ok(out);
         }
-        other => other.into_value().map_err(|e| {
-            RestError::from(crate::overview::error::internal_fault(
-                "re-parse the stored composition body",
-                &e,
-            ))
-        })?,
+        other => stored_body(other)?,
     };
     // A deleted version resolves to a null body → 204 No Content
     // (composition_get.yaml `204_because_deleted*`).
@@ -523,6 +510,17 @@ fn commit_meta(ehr_id: EhrId, uid: String, committed: &Committed) -> ResourceMet
         .with_content(committed.content_ids().into_iter().collect())
 }
 
+/// The typed value of a read COMPOSITION body; the stored text is our own jsonb
+/// rendering, so a body that does not parse is an internal fault.
+fn stored_body(body: ReadBody) -> Result<Value, RestError> {
+    body.into_value().map_err(|e| {
+        RestError::from(crate::overview::error::internal_fault(
+            "re-parse the stored composition body",
+            &e,
+        ))
+    })
+}
+
 /// Render a COMPOSITION create/update response: FLAT/STRUCTURED interop bodies
 /// when requested (always the representation), else the canonical
 /// `ETag`/`Last-Modified`/`Location` + `Prefer` write response.
@@ -539,10 +537,13 @@ async fn composition_write_response(
         negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson)
     {
         let ovid = parse_version_uid(&meta.uid)?;
-        let body = state
-            .backend()
-            .get_composition_at_version(ehr_id, ovid)
-            .await?;
+        let body = stored_body(
+            state
+                .backend()
+                .composition_at_version(ehr_id, ovid)
+                .await?
+                .body,
+        )?;
         let mut out = if fmt == WireFormat::Structured {
             crate::formats::dispatch::composition_structured_response(state, repr, &body).await?
         } else {
@@ -560,10 +561,13 @@ async fn composition_write_response(
     }
     let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
         let ovid = parse_version_uid(&meta.uid)?;
-        state
-            .backend()
-            .get_composition_at_version(ehr_id, ovid)
-            .await?
+        stored_body(
+            state
+                .backend()
+                .composition_at_version(ehr_id, ovid)
+                .await?
+                .body,
+        )?
     } else {
         Value::Null
     };

@@ -1136,8 +1136,10 @@ in a stable-profile canonical-JSON party read (#4775); chart 21.0.0-rc8 with
 ### Left open on 2026-11-02, for 5.6.0-rc8
 
 - The development-profile run, shown beside the record and never counted
-  toward it, fails the rows tracked on #4776 and #4777; its badges show the run
-  as it stands, and no text claims it green.
+  toward it, fails the row tracked on #4777; its badges show the run as it
+  stands, and no text claims it green. The two rows #4776 tracked pass: under
+  the development profile an ADL 2 description without an author or a
+  lifecycle state is refused.
 - A stable-profile canonical-XML party read does not carry
   `reverse_relationships` yet (#4778); the demographics page says so.
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it

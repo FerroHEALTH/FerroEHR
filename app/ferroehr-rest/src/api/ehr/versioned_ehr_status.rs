@@ -46,10 +46,7 @@ pub(super) async fn run(
                 VersionedEhrStatusGetParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let resp = state
-                .backend()
-                .versioned_ehr_status_response(ehr_id)
-                .await?;
+            let resp = state.backend().versioned_ehr_status(ehr_id).await?;
             Ok(negotiate::resource::read_rm::<VersionedEhrStatus>(
                 h,
                 &resp,
@@ -62,10 +59,7 @@ pub(super) async fn run(
                 VersionedEhrStatusRevisionHistoryParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let resp = state
-                .backend()
-                .ehr_status_revision_history_response(ehr_id)
-                .await?;
+            let resp = state.backend().ehr_status_revision_history(ehr_id).await?;
             Ok(negotiate::resource::read_rm::<RevisionHistory>(
                 h,
                 &resp,
@@ -78,14 +72,13 @@ pub(super) async fn run(
                 VersionedEhrStatusVersionGetAtTimeParams::PARAMS,
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
-            let body = state
+            let mut resp = state
                 .backend()
                 .ehr_status_version_at_time(ehr_id, p.version_at_time)
                 .await?;
             // The envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
-            let body = super::expand_multimedia_if_requested(&state, q, body).await?;
-            let resp = super::read_resp(&p.ehr_id, body);
+            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
             Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
                 h,
                 &resp,
@@ -99,17 +92,16 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let (vo_id, version) = super::version_components(&parse_version_uid(&p.version_uid)?)?;
-            let body = state
+            let mut resp = state
                 .backend()
                 .ehr_status_version_envelope(ehr_id, ferroehr::ids::VoId(vo_id), &version)
                 .await?;
             // Full-identity check as on the ehr_status by-version read
             // (`Resources.md` §Identifier types; BASE master05 case rule).
-            super::ensure_served_version(&p.version_uid, &body)?;
+            super::ensure_served_version(&p.version_uid, &resp.body)?;
             // The VERSION envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
-            let body = super::expand_multimedia_if_requested(&state, q, body).await?;
-            let resp = super::read_resp(&p.ehr_id, body);
+            resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
             Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
                 h,
                 &resp,

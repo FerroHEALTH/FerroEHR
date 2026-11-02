@@ -12,12 +12,20 @@
 //! `…resource_description.adoc`, `…resource_description_item.adoc`
 //! §Invariants), the terminology-backed language rows included (the openEHR
 //! `languages` code set, via the `openehr-term` bundle).
+//!
+//! BASE 1.3.0 moves `RESOURCE_DESCRIPTION` into BASE and states two of those
+//! invariants there (`docs/specs/openehr/BASE/docs/UML/classes/
+//! org.openehr.base.resource.resource_description.adoc` §Invariants), so
+//! [`check_base_description`] applies them to an ADL 2 artefact under that
+//! generation.
 
+use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::resource::resource_description::ResourceDescription;
+use openehr_base::Generation;
 
 use super::ValidationIssue;
 use super::catalogue::ValidationCode;
-use crate::artefact::ArchetypeView;
+use crate::artefact::{ArchetypeView, view};
 
 /// Appends the RM resource-meta violations of a 1.4 artefact to `issues`.
 pub(super) fn check(v: &ArchetypeView<'_>, issues: &mut Vec<ValidationIssue>) {
@@ -63,13 +71,25 @@ pub(super) fn check(v: &ArchetypeView<'_>, issues: &mut Vec<ValidationIssue>) {
     }
 }
 
-/// The description's own rows plus each detail item's.
-fn check_description(
-    v: &ArchetypeView<'_>,
-    description: &ResourceDescription,
-    original: Option<&str>,
-    issues: &mut Vec<ValidationIssue>,
-) {
+/// The `RESOURCE_DESCRIPTION` invariants of BASE `base` over `archetype`.
+///
+/// They are `Original_author_valid` and `Lifecycle_state_valid` under BASE
+/// 1.3.0, which states them, and none under BASE 1.2.0, which does not.
+#[must_use]
+pub fn check_base_description(archetype: &Archetype, base: Generation) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let states_them = match base {
+        Generation::V1_2 => false,
+        Generation::V1_3 => true,
+    };
+    if let (true, Some(description)) = (states_them, view(archetype).description) {
+        author_and_lifecycle(description, &mut issues);
+    }
+    issues
+}
+
+/// `Original_author_valid` and `Lifecycle_state_valid` over `description`.
+fn author_and_lifecycle(description: &ResourceDescription, issues: &mut Vec<ValidationIssue>) {
     if description.original_author.is_empty() {
         issues.push(ValidationIssue::new(
             ValidationCode::RmRdOriginalAuthor,
@@ -82,6 +102,16 @@ fn check_description(
             "the description's lifecycle_state is empty".to_owned(),
         ));
     }
+}
+
+/// The description's own rows plus each detail item's.
+fn check_description(
+    v: &ArchetypeView<'_>,
+    description: &ResourceDescription,
+    original: Option<&str>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    author_and_lifecycle(description, issues);
     let details = description.details.as_ref();
     if details.is_none_or(std::collections::BTreeMap::is_empty) {
         issues.push(ValidationIssue::new(

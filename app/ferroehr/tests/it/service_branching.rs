@@ -200,7 +200,8 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
     let ov = svc
         .composition_version_envelope(target, branch_uid.parse().unwrap())
         .await
-        .expect("branch ORIGINAL_VERSION");
+        .expect("branch ORIGINAL_VERSION")
+        .body;
     assert_eq!(ov["uid"]["value"], json!(branch_uid));
     assert_eq!(
         ov["preceding_version_uid"]["value"],
@@ -223,7 +224,8 @@ async fn modifying_an_imported_foreign_version_forks_a_branch() {
     let ov2 = svc
         .composition_version_envelope(target, branch_uid2.parse().unwrap())
         .await
-        .expect("branch tip ORIGINAL_VERSION");
+        .expect("branch tip ORIGINAL_VERSION")
+        .body;
     assert_eq!(ov2["preceding_version_uid"]["value"], json!(branch_uid));
     svc.composition_version_envelope(target, branch_uid.parse().unwrap())
         .await
@@ -285,7 +287,8 @@ async fn the_served_imported_version_is_the_wrapper_shape_without_data() {
     let iv = svc
         .composition_version_envelope(target, format!("{vo_id}::{FOREIGN}::2").parse().unwrap())
         .await
-        .expect("imported version");
+        .expect("imported version")
+        .body;
 
     assert_eq!(iv["_type"], json!("IMPORTED_VERSION"));
     let keys: Vec<&str> = iv
@@ -353,7 +356,8 @@ async fn merge_provenance_is_preserved_by_the_route_that_carries_it() {
     let iv = svc
         .composition_version_envelope(target, format!("{vo_id}::{FOREIGN}::2").parse().unwrap())
         .await
-        .expect("imported merged version");
+        .expect("imported merged version")
+        .body;
     assert_eq!(
         iv["item"]["other_input_version_uids"][0]["value"],
         json!(merged_in),
@@ -371,7 +375,8 @@ async fn merge_provenance_is_preserved_by_the_route_that_carries_it() {
             format!("{plain_vo_id}::{FOREIGN}::2").parse().unwrap(),
         )
         .await
-        .expect("imported unmerged version");
+        .expect("imported unmerged version")
+        .body;
     assert!(
         plain["item"].get("other_input_version_uids").is_none(),
         "a non-merged version carries no merge provenance (Is_merged_validity)"
@@ -469,7 +474,8 @@ async fn a_version_tree_with_branches_reexports_and_reimports_whole() {
     let ov = third_svc
         .composition_version_envelope(third, branch_uid.parse().unwrap())
         .await
-        .expect("re-imported branch version");
+        .expect("re-imported branch version")
+        .body;
     // In the THIRD repository the version is a copy, so it is served as an
     // IMPORTED_VERSION wrapping the received original (master06 §Copying). An
     // IMPORTED_VERSION carries NO `uid` attribute of its own: `uid` is an

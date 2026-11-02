@@ -70,7 +70,7 @@ impl FerroEhrService {
             .await
     }
 
-    /// `execute_ad_hoc_query` — parse, plan, execute and assemble an AQL query
+    /// Parse, plan, execute and assemble an AQL query
     /// into an ITS-REST `RESULT_SET`; `name` is the stored-query name for the
     /// result metadata (`None` for an ad-hoc query).
     ///
@@ -95,7 +95,30 @@ impl FerroEhrService {
         name: Option<&str>,
         request: &AqlQueryRequest,
     ) -> Result<QueryOutcome, ServiceError> {
-        let outcome = self.execute_aql_inner(aql, name, request).await;
+        let plan_start = Instant::now();
+        let params = build_params(request);
+        // The IR is a pure function of the query text — parameter values,
+        // paging and scope all bind downstream — so a cached plan serves every
+        // caller of the same text correctly.
+        let planned = self.plan_query(aql, &params).await.inspect(|_| {
+            record_phase("plan", plan_start);
+        });
+        let outcome = match planned {
+            Ok(Planned::Single(ir)) => self.execute_single(&ir, aql, name, request, &params).await,
+            Ok(Planned::Joined(plan)) => {
+                let exec_start = Instant::now();
+                let joined = super::join::JoinRequest {
+                    aql,
+                    name,
+                    request,
+                    plan: &plan,
+                    params: &params,
+                };
+                let outcome = self.execute_joined(&joined).await;
+                outcome.inspect(|_| record_phase("execute", exec_start))
+            }
+            Err(failure) => Err(failure),
+        };
         let label = match &outcome {
             Ok(_) => "ok",
             Err(failure) => failure.outcome,
@@ -104,40 +127,16 @@ impl FerroEhrService {
         outcome.map_err(|failure| *failure.error)
     }
 
-    /// The fallible body of [`FerroEhrService::execute_aql`]: every failure
-    /// carries its `aql_queries_total{outcome}` label so the caller counts
-    /// uniformly.
-    async fn execute_aql_inner(
+    /// Execute a planned single-domain query and assemble its `RESULT_SET`,
+    /// every failure carrying its `aql_queries_total{outcome}` label.
+    async fn execute_single(
         &self,
+        ir: &QueryIr,
         aql: &str,
         name: Option<&str>,
         request: &AqlQueryRequest,
+        params: &Params,
     ) -> Result<QueryOutcome, Failure> {
-        let plan_start = Instant::now();
-        let params = build_params(request);
-        // The IR is a pure function of the query text — parameter values,
-        // paging and scope all bind downstream — so a cached plan serves every
-        // caller of the same text correctly.
-        let ir = match self.plan_query(aql, &params).await? {
-            Planned::Single(ir) => ir,
-            Planned::Joined(plan) => {
-                record_phase("plan", plan_start);
-                let exec_start = Instant::now();
-                let outcome = self
-                    .execute_joined(&super::join::JoinRequest {
-                        aql,
-                        name,
-                        request,
-                        plan: &plan,
-                        params: &params,
-                    })
-                    .await?;
-                record_phase("execute", exec_start);
-                return Ok(outcome);
-            }
-        };
-        record_phase("plan", plan_start);
-
         // A demographic query reads no EHR, so an EHR scope cannot apply to it;
         // ignoring the scope would answer rows the caller asked to exclude.
         // No openEHR spec governs AQL over a demographic repository: our own
@@ -188,10 +187,10 @@ impl FerroEhrService {
             QueryDomain::Demographic => &self.demographic_pool,
         };
         let run = async {
-            let exec = aql::exec::execute(pool, &ir, &params, &ctx, self.spec_profile);
+            let exec = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
             if request.collect_attributes {
                 let (result, scope) =
-                    tokio::try_join!(exec, aql::exec::collect_scope(pool, &ir, &params, &ctx))?;
+                    tokio::try_join!(exec, aql::exec::collect_scope(pool, ir, params, &ctx))?;
                 Ok((result, Some(scope)))
             } else {
                 Ok((exec.await?, None))
@@ -208,7 +207,7 @@ impl FerroEhrService {
 
         // `_executed_aql` carries the parameter-SUBSTITUTED text; `q` keeps
         // the original query as submitted.
-        let executed = substitute_params(aql, &params);
+        let executed = substitute_params(aql, params);
         let served_rows = u64::try_from(result.rows.len()).unwrap_or(u64::MAX);
         let served_ehrs = result
             .served_ehrs

@@ -114,6 +114,28 @@ pub(crate) async fn test_service() -> (testkit::TestDb, Arc<FerroEhrService>) {
     )
 }
 
+/// An auth-off router whose server and service run `profile`, on an existing
+/// pool.
+pub(crate) async fn router_for_profile(
+    profile: ferroehr::config::profile::SpecProfile,
+    pool: &PgPool,
+) -> Router {
+    let mut config = AppConfig {
+        server: server(),
+        ..AppConfig::default()
+    };
+    config.auth.enabled = false;
+    config.spec_profile = profile;
+    router_with(
+        config,
+        Arc::new(
+            FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
+                .with_spec_profile(profile),
+        ),
+    )
+    .await
+}
+
 /// The assembled router over a real service with the given configuration —
 /// the same wiring as [`ferroehr_rest::build_with`], split open so tests can
 /// hand-tune `AppConfig` (auth modes, admin/extension toggles).
