@@ -19,7 +19,7 @@ use ferrohealth_smart::config::AuthSection;
 ///
 /// Not a serde root — it is built in code, so extension-group toggles are
 /// plain `bool`s lifted from their owning sections
-/// (`[terminology].api_enabled`, `[events].admin_api`).
+/// (`[terminology].api_enabled`).
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     /// `[server]` — the listener and the stack around the routes: the
@@ -36,8 +36,6 @@ pub struct AppConfig {
     pub smart: SmartConfig,
     /// `[terminology].api_enabled` — mount the terminology extension API.
     pub terminology_api_enabled: bool,
-    /// `[events].admin_api` — mount the `/admin/event_subscription` CRUD.
-    pub events_admin_api: bool,
     /// `[authz.abac] organization_claim` — the access-token claim naming the
     /// organisation a caller acts for, lifted here because the access log
     /// records it whether or not the ABAC gate that shares the setting is
@@ -64,7 +62,6 @@ impl Default for AppConfig {
             admin: AdminConfig::default(),
             smart: SmartConfig::default(),
             terminology_api_enabled: false,
-            events_admin_api: false,
             audit_organization_claim: None,
             rbac: RbacConfig::default(),
             assurance: AssuranceSection::default(),
@@ -108,7 +105,6 @@ mod tests {
         assert!(!c.admin.enabled);
         assert!(!c.smart.enabled);
         assert!(!c.terminology_api_enabled);
-        assert!(!c.events_admin_api);
         assert_eq!(
             c.auth.role_claims,
             ferrohealth_smart::roles::default_claims()

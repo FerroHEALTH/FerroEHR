@@ -101,7 +101,7 @@ on three levels (high, medium, low).
 |---|---|---|---|---|---|
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
 | C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, ABAC, per-EHR `EHR_ACCESS`; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
-| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address, a separate plain-HTTP management listener, and an AMQP integration on a plaintext `amqp://` broker, unless `plaintext_listener` or `plaintext_broker` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
+| C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address and a separate plain-HTTP management listener unless `plaintext_listener` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
 | C5 | An access happens and the log does not show it, or the log is altered | high | low with `fail_mode = "closed"` and an off-box sink; medium with the shipped `fail_mode = "open"` | refusals always recorded; `production` refuses audit off and audit failing open unless accepted; the hash chain | (f), (l) |
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the identifier scanner in `strict` mode; log sanitising; reports with no identifiers | (e), (g) |
@@ -224,9 +224,8 @@ reset the product to its original state"
   empty `privacy.subject_namespaces`, one database credential for every
   domain, and `db.migrate = "apply"` on the runtime credential. Three may be
   accepted by name when the deployment closes them outside the server:
-  `plaintext_listener`, when a TLS-terminating ingress fronts the port,
-  `plaintext_broker`, when the path to the AMQP broker stays on a trusted
-  segment, and `shared_cluster`, when one PostgreSQL cluster holds the domains
+  `plaintext_listener`, when a TLS-terminating ingress fronts the port, and
+  `shared_cluster`, when one PostgreSQL cluster holds the domains
   in separate schemas under separate roles. The usage report is on by
   default; it carries no health data ([outbound data flows](#outbound-data-flows-annex-i-part-i2g)).
 - **Reset:** the book documents returning an instance to its original state,
@@ -337,7 +336,7 @@ transit by state of the art mechanisms, and by using other technical means"
   encryption at rest of the clinical payload is not used, with
   [the justification](#application-level-encryption-at-rest-annex-i-part-i2e).
 - **How:** in transit, rustls with TLS 1.3 by default and mutual TLS, or a
-  TLS-terminating ingress; integrations offer TLS (`amqps`, syslog over TLS,
+  TLS-terminating ingress; integrations offer TLS (syslog over TLS,
   HTTPS-only S3 by default); a renewed server certificate is served without a
   restart, on `SIGHUP` and every `[server.tls] reload_interval_s`. At rest, protected
   national identifiers sealed under AES-256-GCM with a keyed lookup digest,
@@ -352,8 +351,7 @@ transit by state of the art mechanisms, and by using other technical means"
   [B6](../threat-model.md#b6--the-database),
   [the sealed identifier](../threat-model.md#the-sealed-identifier-and-its-lookup-digest),
   [TLS and database security](../operations.md#tls-and-database-security).
-- **Status:** partial. The shipped transport default is plaintext, the AMQP
-  and syslog integrations default to plaintext when switched on, and
+- **Status:** partial. The shipped transport default is plaintext, and
   identifier sealing is off by default. `production` refuses a plaintext main
   listener on a routable address unless `plaintext_listener` is accepted by
   name, and a loopback bind is exempt; a deployment behind a TLS-terminating
@@ -365,10 +363,8 @@ transit by state of the art mechanisms, and by using other technical means"
   (`production_refuses_a_plain_management_listener_on_its_own_port`). The
   syslog audit feed sends over RFC 5425 TLS only, through `ihe-atna`
   (`app/ferroehr/tests/it/system_log_tls_roundtrip.rs`,
-  `tls_octet_counted_frame_round_trips`). An
-  enabled change-event outbox publishing to a plain `amqp://` broker opens
-  `plaintext_broker` (#3676,
-  `production_refuses_a_plaintext_amqp_broker_unless_accepted_by_name`).
+  `tls_octet_counted_frame_round_trips`). The change-event outbox sends
+  nothing: its readers pull it over the main listener (#4786).
   An enabled audit FHIR feed on an `http://` URL opens `plaintext_audit_feed`,
   and an enabled multimedia store with `allow_http` opens
   `plaintext_object_store` (#3689,
@@ -633,7 +629,6 @@ listed.
 | Client-credentials token requests (`[audit.fhir_feed.oauth]`, `[authz.abac.remote.oauth]`, `[terminology.server.oauth]`) | off | the product's own client credential and the requested scope; no request data | authenticating the product to the deployment's audit feed, policy service and terminology server |
 | Remote policy decision point (`[authz.abac.remote]`) | off | the attributes of the request being decided | the authorisation decision the deployment delegates to its own policy service |
 | Terminology server (`[terminology.server]`) | off | codes and value-set references to validate, expand or subsume | validating terminology bindings on write and expanding `TERMINOLOGY()` in AQL |
-| Change events over AMQP (`[events]`) | off | commit notifications, free of PHI by default | telling the provider's other systems that a record changed |
 | Multimedia to S3 (`[multimedia]`) | off | `DV_MULTIMEDIA` bytes above a size threshold, keyed by content hash | storing large attachments of the record outside the database |
 | Access log to syslog (`[audit.syslog]`) and to a FHIR feed (`[audit.fhir_feed]`) | off | access records | an off-box copy of the access log, which the threat model asks for |
 | Traces and metrics over OTLP (`telemetry.otlp.endpoint`) | off | spans and metrics, with identified data sanitised out | operating the instance |

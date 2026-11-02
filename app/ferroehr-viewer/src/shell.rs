@@ -11,7 +11,6 @@
 //! (family rule 5). The navigation follows the approved information
 //! architecture of the viewer's mockup (FerroUI `design/consoles/ferroehr/`):
 //! Overview, Records, Definitions, Queries and the Console group.
-//! Subscriptions is left out when the CDR does not serve its API.
 //!
 //! Every page handler draws the shell around its page, with the page at the
 //! request's path marked (FerroUI `docs/consoles.md`, "How a console
@@ -117,27 +116,19 @@ fn entry(href: &'static str, label: Msg, glyph: Glyph, exact: bool) -> Entry {
     }
 }
 
-/// The navigation groups, Subscriptions among them when the CDR serves it.
-fn groups(subscriptions: bool) -> Vec<Group> {
-    let mut console = vec![
+/// The navigation groups.
+fn groups() -> Vec<Group> {
+    let console = vec![
         entry(SERVER_ROUTE, Msg::NavServer, Glyph::SERVER, false),
         entry("/audit", Msg::NavAudit, Glyph::SHIELD_CHECK, false),
-    ];
-    if subscriptions {
-        console.push(entry(
-            "/subscriptions",
-            Msg::NavSubscriptions,
-            Glyph::RADIO_TOWER,
+        entry(
+            "/configuration",
+            Msg::NavConfiguration,
+            Glyph::FILE_TEXT,
             false,
-        ));
-    }
-    console.push(entry(
-        "/configuration",
-        Msg::NavConfiguration,
-        Glyph::FILE_TEXT,
-        false,
-    ));
-    console.push(entry("/about", Msg::NavAbout, Glyph::INFO, true));
+        ),
+        entry("/about", Msg::NavAbout, Glyph::INFO, true),
+    ];
     vec![
         Group {
             id: "nav-overview",
@@ -182,13 +173,13 @@ fn groups(subscriptions: bool) -> Vec<Group> {
 }
 
 /// The navigation, with the page at `current` marked.
-fn navigation(current: &str, subscriptions: bool) -> Html {
+fn navigation(current: &str) -> Html {
     sidebar(
         &crate::locale::current(),
         Sidebar {
             id: SIDEBAR_ID,
             label: tr(Msg::NavLabel),
-            groups: groups(subscriptions),
+            groups: groups(),
             current: current.to_owned(),
             rail: Some(Rail {
                 collapsed: crate::prefs::rail(),
@@ -213,8 +204,8 @@ pub enum PillReach {
     Unknown,
 }
 
-/// What the shell draws of the CDR's status document and of its
-/// subscriptions surface, read by the server as it draws the shell.
+/// What the shell draws of the CDR's status document, read by the server as it
+/// draws the shell.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ShellReading {
     /// How the pill says the CDR answered.
@@ -225,14 +216,11 @@ pub struct ShellReading {
     pub detail: Option<String>,
     /// The sandbox band's line, when the CDR declares the sandbox profile.
     pub sandbox: Option<String>,
-    /// Whether the CDR serves the subscriptions API.
-    pub subscriptions: bool,
 }
 
 impl ShellReading {
-    /// The shell's reading of the status read `status`, with `subscriptions`
-    /// saying whether the CDR serves that API.
-    fn of(status: &Result<String, crate::error::ViewerError>, subscriptions: bool) -> Self {
+    /// The shell's reading of the status read `status`.
+    fn of(status: &Result<String, crate::error::ViewerError>) -> Self {
         let address = crate::request::settings().cdr_address;
         let document = status
             .as_ref()
@@ -297,19 +285,14 @@ impl ShellReading {
             words,
             detail,
             sandbox,
-            subscriptions,
         }
     }
 }
 
 /// What the shell draws of the CDR: the status read once for the page
-/// ([`status`]) and whether the CDR serves the subscriptions API.
+/// ([`status`]).
 async fn shell_reading() -> ShellReading {
-    let status = status().await;
-    let subscriptions = crate::subscriptions::renders_event_subscriptions(
-        &crate::subscriptions::probe_event_subscriptions().await,
-    );
-    ShellReading::of(&status, subscriptions)
+    ShellReading::of(&status().await)
 }
 
 /// The top bar's pill for the shell's reading `status`.
@@ -439,7 +422,7 @@ pub async fn framed(content: Html) -> Html {
                 },
             ),
             banner: sandbox_band(reading.sandbox.as_ref(), &current),
-            sidebar: navigation(&current, reading.subscriptions),
+            sidebar: navigation(&current),
             content,
             dock,
             toasts: toasts(),

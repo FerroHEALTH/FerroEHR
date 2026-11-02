@@ -1379,8 +1379,8 @@ jobs:
   # is how a wrong feature gate stayed latent until #2358, where
   # `--features events` without `fhir` did not compile.
   #
-  # Four feature sets, each a real deployment shape: the slim CDR, and the
-  # `events`, `fhir` and `multimedia` integrations each enabled on top of it.
+  # Three feature sets, each a real deployment shape: the slim CDR, and the
+  # `fhir` and `multimedia` integrations each enabled on top of it.
   # None implies another, so each lane proves the gates are not silently coupled.
   # clippy, not check: the deny-tier lints must cover the gated code too. No
   # tests — the feature graphs are compile properties, and the test job owns
@@ -1407,13 +1407,11 @@ jobs:
           components: clippy
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo clippy --locked -p ferroehr-server --no-default-features --all-targets -- -D warnings
-      - run: cargo clippy --locked -p ferroehr-server --no-default-features --features events --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-server --no-default-features --features fhir --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-server --no-default-features --features multimedia --all-targets -- -D warnings
       # ferroehr-ext alone, per integration: its tests carry feature-scoped
       # expectations the server lanes never compile (#3703).
       - run: cargo clippy --locked -p ferroehr-ext --no-default-features --all-targets -- -D warnings
-      - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features events --all-targets -- -D warnings
       - run: cargo clippy --locked -p ferroehr-ext --no-default-features --features multimedia --all-targets -- -D warnings
 
   # ── openehr-its + openehr-sdt on wasm32: the browser-consumer selection ────

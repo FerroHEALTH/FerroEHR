@@ -1837,9 +1837,9 @@ fn bench_lifecycle(
                 })
             });
         }),
-        // NOTE: the seed stamps no `published_at`, so the prune deletes nothing —
-        // which is what makes it repeatable across iterations: the measurement is
-        // the retention statement's scan over the seeded outbox.
+        // NOTE: the seeded rows are younger than the window, so the prune deletes
+        // nothing, which keeps it repeatable: the measurement is the retention
+        // statement's scan over the seeded outbox.
         measured(rt, pool, &mut group, GROUP, "retention_prune", |b| {
             b.iter_custom(|iters| {
                 rt.block_on(async {

@@ -20,9 +20,8 @@ publish = false
 # local store, the ATX:FHIR Feed, the ITI-81 retrieval) and the FHIR R4B
 # terminology client. FHIR R4 resource mapping is FerroBRIDGE's, outside this
 # workspace.
-default = ["fhir", "events", "multimedia"]
+default = ["fhir", "multimedia"]
 fhir = ["dep:ferrobridge-term", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/smart"]
-events = ["dep:ferroehr-ext", "ferroehr-ext/events"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
 [dependencies]
@@ -61,10 +60,7 @@ jiff-sqlx.workspace = true
 # FHIR reverse-mapping: `openehr_sdt::flat` FLAT conversion returns an
 # `IndexMap` FLAT map the reverse transform reads leaf-by-leaf.
 indexmap.workspace = true
-# `events` module (contribution-outbox eventing — no openEHR spec governs
-# eventing; our own extension): AMQP 0.9.1 publisher (RabbitMQ) draining the
-# transactional outbox at-least-once, with `backon` retry/backoff.
-lapin.workspace = true
+# The audit forwarder's retry/backoff (`system_log::sender`).
 backon.workspace = true
 sea-query.workspace = true
 sea-query-sqlx.workspace = true
@@ -142,12 +138,12 @@ openehr-query = { path = "../../crates/openehr-query" }
 
 [dev-dependencies]
 # Every feature the integration modules USE, named here rather than left to
-# unification (#3207). The `multimedia` and `events` modules reach
-# `ferroehr_ext` directly. The modules that import the library's `fhir`-gated
+# unification (#3207). The `multimedia` modules reach `ferroehr_ext`
+# directly. The modules that import the library's `fhir`-gated
 # `system_log::fhir` and `service::terminology::fhir` take that feature from
 # the library's defaults; there is deliberately NO lane building these
 # targets with it off.
-ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia", "events"] }
+ferroehr-ext = { path = "../ferroehr-ext", features = ["multimedia"] }
 testkit = { path = "../../tools/testkit" }
 # The access-record tests read what `ehds-logging` writes by its names.
 ehds-logging = { workspace = true, features = ["balp"] }
@@ -162,10 +158,8 @@ wiremock.workspace = true
 # report v2 JSON Schema (`corpus/ferropulse/`).
 jsonschema.workspace = true
 testcontainers.workspace = true
-# testcontainers-modules `rabbitmq` feature (workspace) drives the end-to-end
-# eventing tests against a real broker. `futures` gives the lapin Consumer its
-# `StreamExt::next` in those tests.
-testcontainers-modules.workspace = true
+# `futures` drives the bounded-concurrency seeding streams of the benches and
+# the stream doubles of the decommission tests.
 futures.workspace = true
 tokio.workspace = true
 axum.workspace = true

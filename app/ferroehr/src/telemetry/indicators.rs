@@ -14,9 +14,6 @@
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use crate::db::acquire::acquire;
 use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
@@ -288,52 +285,12 @@ impl HealthIndicator for AuditChainHealth {
     }
 }
 
-/// `events` — reports the contribution-outbox publisher's broker-delivery
-/// health.
-///
-/// Degraded-tolerable (the outbox buffers while the broker is down, so
-/// delivery lag must not block readiness): a broker outage flips only the
-/// aggregate to `DEGRADED`, never readiness. Registered only when eventing is
-/// enabled.
-#[derive(Debug)]
-pub struct EventsHealth {
-    healthy: Arc<AtomicBool>,
-}
-
-impl EventsHealth {
-    /// Construct over the publisher's shared health flag
-    /// (`EventsHandle::healthy` — a feature-gated path an intra-doc link
-    /// would break on under `--no-default-features`).
-    #[must_use]
-    pub fn new(healthy: Arc<AtomicBool>) -> Self {
-        Self { healthy }
-    }
-}
-
-impl HealthIndicator for EventsHealth {
-    fn name(&self) -> &'static str {
-        "events"
-    }
-
-    fn check(&self) -> Check<'_> {
-        Box::pin(async move {
-            if self.healthy.load(Ordering::Relaxed) {
-                Outcome::up()
-            } else {
-                Outcome::degraded("event broker unavailable; outbox buffering")
-            }
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{AuditHealth, DbHealth, EventsHealth, MigrationsHealth};
+    use super::{AuditHealth, DbHealth, MigrationsHealth};
     use crate::system_log::config::{AuditConfig, AuditPosture, FailMode};
     use ferrohealth_health::document::State;
     use ferrohealth_health::registry::HealthIndicator;
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, Ordering};
 
     /// A deployment with auditing off still carries the indicator, and it
     /// reads DEGRADED with the consequence stated, never a missing row (#3238).
@@ -388,29 +345,6 @@ mod tests {
             off.cautions().len(),
             1,
             "a disabled trail makes the fail mode moot"
-        );
-    }
-
-    /// The publisher's shared flag IS the indicator's answer: healthy reads UP,
-    /// a broker failure reads DEGRADED with a detail, and the indicator never
-    /// blocks readiness (the outbox buffers the rows).
-    #[tokio::test]
-    async fn events_health_follows_the_shared_flag() {
-        let healthy = Arc::new(AtomicBool::new(true));
-        let indicator = EventsHealth::new(Arc::clone(&healthy));
-        assert_eq!(indicator.name(), "events");
-        assert_eq!(indicator.check().await.state(), State::Up);
-
-        healthy.store(false, Ordering::Relaxed);
-        let degraded = indicator.check().await;
-        assert_eq!(
-            degraded.state(),
-            State::Degraded,
-            "delivery lag must never take the instance out of rotation"
-        );
-        assert!(
-            degraded.detail().is_some_and(|d| d.contains("outbox")),
-            "the degraded detail must say the outbox buffers"
         );
     }
 

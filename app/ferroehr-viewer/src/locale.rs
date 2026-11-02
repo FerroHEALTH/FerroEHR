@@ -190,12 +190,6 @@ messages! {
         VersionPrefixLatestMatch = "version-prefix-latest-match",
         /// `Latest version (no version sent)`
         LatestVersionNoVersionSent = "latest-version-no-version-sent",
-        /// `no subscription id to delete`
-        NoSubscriptionIdDelete = "no-subscription-id-delete",
-        /// `no subscription id to update`
-        NoSubscriptionIdUpdate = "no-subscription-id-update",
-        /// a subscription name is required and may hold only letters, digits, `_`, `.` and `-`
-        SubscriptionNameRequiredMayHoldOnly = "subscription-name-required-may-hold-only",
         /// `ITEM_TAG list JSON: '$e'`
         ItemTagListJson = "item-tag-list-json",
         /// `$with_secondsZ`
@@ -240,10 +234,6 @@ messages! {
         TemplateListJson = "template-list-json",
         /// ADL2 template list JSON: `$e`
         Adl2TemplateListJson = "adl2-template-list-json",
-        /// event subscription list JSON: `$e`
-        EventSubscriptionListJson = "event-subscription-list-json",
-        /// event subscription record JSON: `$e`
-        EventSubscriptionRecordJson = "event-subscription-record-json",
         /// `the latest version's full OBJECT_VERSION_ID is required to delete a composition:...`
         LatestVersionSFullObjectVersion = "latest-version-s-full-object-version",
         /// `the current EHR_STATUS version uid is required to update it: reload this tab and retry`
@@ -306,8 +296,6 @@ messages! {
         NavServer = "nav-server",
         /// `Stored queries`
         NavStoredQueries = "nav-stored-queries",
-        /// `Subscriptions`
-        NavSubscriptions = "nav-subscriptions",
         /// `Templates`
         NavTemplates = "nav-templates",
         /// `Terminology`
@@ -460,16 +448,6 @@ messages! {
         ChipTemplate = "chip-template",
         /// `Composer: { $value }`
         ChipComposer = "chip-composer",
-        /// `Any change`
-        SubAnyChange = "sub-any-change",
-        /// `Any kind`
-        SubAnyKind = "sub-any-kind",
-        /// `Composition`
-        SubComposition = "sub-composition",
-        /// `EHR status`
-        SubEhrStatus = "sub-ehr-status",
-        /// `Folder`
-        SubFolder = "sub-folder",
     }
 }
 

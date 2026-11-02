@@ -60,7 +60,7 @@ What an attacker wants, in the order the loss hurts:
 | **Database** | everything stored | trusted for confidentiality, but assumed to be a place where a mistake is permanent |
 | **Terminology server (FHIR R4B)** | called out to at validation and commit time | operator-configured; semi-trusted: it answers our questions and can lie |
 | **Object store (S3)** | called out to for multimedia | operator-configured; semi-trusted, and its responses are parsed |
-| **Message broker (AMQP)** | receives change events | operator-configured; a sink for data, so a confidentiality boundary |
+| **Outbox reader** | pulls change events over the feed | operator-configured, holding the `__ferroehr.outbox` scope; a sink for data, so a confidentiality boundary |
 | **Identity provider** | issues the tokens everything else believes | fully trusted by construction; if it is compromised, no control below it holds |
 | **Cluster / host operator** | the process, its memory, its filesystem, its secrets | fully trusted; outside the software's reach |
 
@@ -88,7 +88,7 @@ flowchart LR
     IDP[Identity provider]
     TS[Terminology server]
     S3[Object store]
-    MQ[Message broker]
+    MQ[Outbox reader]
   end
   U --> B1
   C --> B1
@@ -102,7 +102,7 @@ flowchart LR
   B2 -.verifies tokens from.-> IDP
   B4 -.asks.-> TS
   B4 -.stores blobs.-> S3
-  B5 -.publishes.-> MQ
+  MQ -.pulls the feed.-> B1
 ```
 
 Each boundary below names the control that holds and the risk that remains.
@@ -218,7 +218,7 @@ never consent, and a broken control never looks like a policy outcome.
 (the WebTemplate walker), the Reference Model's own invariants (machine-derived
 from the specification's meta-model rather than hand-written) and terminology
 bindings. Canonical JSON is read by a **strict** reader that refuses undeclared
-and duplicate keys. Outbound terminology, object-store and broker calls go only
+and duplicate keys. Outbound terminology and object-store calls go only
 to operator-configured endpoints: terminology goes to the one configured FHIR
 terminology server (`[terminology.server]`, FerroTERM in every shipped
 deployment), authenticated with an OAuth 2.0 client-credentials token when it
@@ -234,7 +234,7 @@ and reads nothing from the answer beyond its status code.
   misconfigured one can permit a code that should have been refused. It is a
   correctness boundary, and a clinical-safety one.
 - **A response parsed from a semi-trusted peer is still parsed.** A terminology
-  answer, an object-store response and a broker message are all parsed by the
+  answer and an object-store response are both parsed by the
   server, so a compromised endpoint reaches a parser rather than only a
   validator. The object-store path once carried an XML parser version with
   denial-of-service advisories the client-facing canonical-XML codec did not

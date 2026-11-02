@@ -21,8 +21,6 @@ crate::locale::messages! {
         MultimediaFilesStoredOverConnectionWithout = "multimedia-files-stored-over-connection-without",
         /// `access records are sent to the audit repository without encryption`
         AccessRecordsSentAuditRepositoryWithout = "access-records-sent-audit-repository-without",
-        /// `change events are published to a message broker without encryption`
-        ChangeEventsPublishedMessageBrokerWithout = "change-events-published-message-broker-without",
         /// `a listener serves plain HTTP on an address reachable from the network`
         ListenerServesPlainHttpAddressReachable = "listener-serves-plain-http-address-reachable",
         /// `requests are served without authentication`

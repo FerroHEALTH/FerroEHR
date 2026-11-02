@@ -101,7 +101,6 @@ pub fn gap_text(code: &str) -> String {
         "auth_off" => tr(ServerMsg::RequestsServedWithoutAuthentication),
         "rbac_off" => tr(ServerMsg::RoleChecksOffSoEverySigned),
         "plaintext_listener" => tr(ServerMsg::ListenerServesPlainHttpAddressReachable),
-        "plaintext_broker" => tr(ServerMsg::ChangeEventsPublishedMessageBrokerWithout),
         "plaintext_audit_feed" => tr(ServerMsg::AccessRecordsSentAuditRepositoryWithout),
         "plaintext_object_store" => tr(ServerMsg::MultimediaFilesStoredOverConnectionWithout),
         other => return other.to_owned(),

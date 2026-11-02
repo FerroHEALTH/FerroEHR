@@ -473,11 +473,11 @@ hold is in force:
 | `[audit.store]`, read without the `patient` scope | every record, the hold's own included | The unscoped ITI-81 read is the controller's, under the admin role |
 | `[audit.syslog]` | every record, sent as it is written: the commit, each read and the hold's own record name the composition, the last as `access-delay:<vo>` beside the patient | An ITI-20 feed goes to an Audit Record Repository, which "receives event audit reports and stores them" ([IHE ITI TF-1 §9.1.1.3](https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html)) |
 | `[audit.fhir_feed]` | the same records as FHIR `AuditEvent` resources, `POST`ed as they are written, the hold's own record naming the same `access-delay:<vo>` | The same ITI-20 repository, over ATX: FHIR Feed; the reader of a BALP `AuditEvent` is an Audit Consumer ([BALP §1:52.1](https://profiles.ihe.net/ITI/BALP/volume-1.html)) |
-| [Change events](beyond-core/amqp.md) (`[events]`) | the commit of the held composition: its `vo_id`, kind, change type and template | The broker serves the deployment's own services; the stream withholds what binds them, a restriction or objection (GDPR Art. 18 and 21, EHDS Art. 8), and the Art. 3(3) hold binds only the person's access |
+| [Change events](beyond-core/outbox-feed.md) (`[outbox]`) | the commit of the held composition: its `vo_id`, kind, change type and template | The feed serves the deployment's own readers; it withholds what binds them, a restriction or objection (GDPR Art. 18 and 21, EHDS Art. 8), and the Art. 3(3) hold binds only the person's access |
 
 EHDS Art. 9(2) gives the person the access information "through electronic
-health data access services", which are yours to run. A repository, a broker
-or anything built on them never reaches the person from FerroEHR, so none of
+health data access services", which are yours to run. A repository, a feed
+reader or anything built on them never reaches the person from FerroEHR, so none of
 them filters the hold: a filter there would also hide the record from the
 controller who answers for it. What you must not do, while a hold is in force:
 

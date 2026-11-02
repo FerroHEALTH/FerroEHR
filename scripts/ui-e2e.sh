@@ -165,7 +165,7 @@ if [[ -z "${UI_E2E_NO_COMPOSE:-}" ]]; then
   BUILD_ARGS=(--build)
   [[ -n "${UI_E2E_NO_BUILD:-}" ]] && BUILD_ARGS=(--no-build)
   # The e2e overlay rides BOTH lanes: without it here, its `ferroehr:` env
-  # block (terminology on, subscriptions on) never reached the host-mode CDR — the
+  # block (terminology on) never reached the host-mode CDR — the
   # lane CI actually runs.
   FERROEHR_DB_PORT="$DB_PORT" docker compose "${COMPOSE_FILES[@]}" \
     up -d "${BUILD_ARGS[@]}" ferroehr-postgres ferroehr keycloak

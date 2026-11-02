@@ -41,7 +41,7 @@ applies to every crate — generated and hand-written alike.
   fingerprint, one `CREATE DATABASE … TEMPLATE` clone per call. **Never
   start a per-test PostgreSQL container or run migrations in a test** — it
   costs ~5–10 s + Docker contention per test.
-  Broker/blob tests (RabbitMQ, SeaweedFS) still run real testcontainers,
+  Blob and terminology-server tests (SeaweedFS, FerroTERM) still run real testcontainers,
   serialized via the nextest `containers` group.
 - **HTTP mocking:** `wiremock` for the terminology/FHIR client and any
   external integration test.

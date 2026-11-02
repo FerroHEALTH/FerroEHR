@@ -208,11 +208,11 @@ and its passphrase, the national-identifier key, the multimedia secret key),
 the licence token, and any `.env` file. Remove the `FERROEHR__…` variables from your service definitions
 and your secret store. Revoke the credentials themselves where they live: the
 database passwords, the object-store access key, the OIDC client and the
-broker accounts.
+outbox readers' clients.
 
 ### Systems FerroEHR sent data to
 
-Change events on the message broker, records sent to an external Audit Record
+Change events an outbox reader took (and a broker it delivered them to), records sent to an external Audit Record
 Repository or a syslog collector, and the logs and traces your telemetry
 backend received are held by those systems. Remove them there, under the same
 retention duties.

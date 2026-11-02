@@ -59,8 +59,6 @@ pub const VALIDATION_FAILURES: &str = "validation_failures";
 pub const VERSION_SIGNATURE_INVALID: &str = "version_signature_invalid";
 /// `WebTemplate` cache events (`event`).
 pub const WEBTEMPLATE_CACHE_EVENTS: &str = "webtemplate_cache_events";
-/// Contribution-outbox events published to the broker.
-pub const EVENTS_PUBLISHED: &str = "events_published";
 /// ATNA audit records emitted.
 pub const ATNA_AUDIT_EMITTED: &str = "atna_audit_emitted";
 /// ATNA audit records dropped because the queue was full.
@@ -147,8 +145,6 @@ pub struct Metrics {
     pub version_signature_invalid: Counter<u64>,
     /// `WebTemplate` cache events.
     pub webtemplate_cache_events: Counter<u64>,
-    /// Events published to the broker.
-    pub events_published: Counter<u64>,
     /// ATNA audit records emitted.
     pub atna_audit_emitted: Counter<u64>,
     /// ATNA audit records dropped because the queue was full.
@@ -227,10 +223,6 @@ impl Metrics {
             webtemplate_cache_events: meter
                 .u64_counter(WEBTEMPLATE_CACHE_EVENTS)
                 .with_description("WebTemplate cache events")
-                .build(),
-            events_published: meter
-                .u64_counter(EVENTS_PUBLISHED)
-                .with_description("Contribution-outbox events confirmed by the broker")
                 .build(),
             atna_audit_emitted: meter
                 .u64_counter(ATNA_AUDIT_EMITTED)
@@ -355,7 +347,6 @@ mod tests {
             VALIDATION_FAILURES,
             VERSION_SIGNATURE_INVALID,
             WEBTEMPLATE_CACHE_EVENTS,
-            EVENTS_PUBLISHED,
             ATNA_AUDIT_EMITTED,
             ATNA_AUDIT_SENT,
             PROCESS_START_TIME,

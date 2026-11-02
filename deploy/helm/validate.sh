@@ -282,7 +282,6 @@ secret_leak_gate() {
   # value is the SENTINEL_PROBE literal, which no release can carry.
   local -a routed_paths=(
     "db.url"
-    "events.url"
     "audit.fhir_feed.url"
     "signing.key_passphrase"
     "multimedia.secret_access_key"
@@ -1055,7 +1054,6 @@ authz.rbac|enabled|true
 auth|enabled|true
 server.tls|certificate_file|
 management|port|
-events|enabled|false
 CLAIMS
   grep -qE '^ *subject_namespaces = \[".+"' <<<"$toml" \
     || { red "  privacy.subject_namespaces is empty: open_subject_namespace would refuse the boot"; missing=1; }

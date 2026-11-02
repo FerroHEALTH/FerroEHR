@@ -1270,7 +1270,7 @@ async fn every_error_route_answers_problem_details() {
         ),
         (get(&format!("{BASE}/ehr/{EHR}")), StatusCode::UNAUTHORIZED),
         (
-            get(&format!("{ext}/admin/event_subscription")),
+            get(&format!("{ext}/admin/outbox/ferrobridge")),
             StatusCode::UNAUTHORIZED,
         ),
     ];

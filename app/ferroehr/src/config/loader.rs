@@ -15,7 +15,6 @@ use std::path::Path;
 
 use crate::db::DbConfig;
 use crate::db::domain::Domain;
-use crate::extensions::events::config::EventsConfig;
 use ferrohealth_config::libpq;
 use ferrohealth_config::loader::{Loaded, Loader};
 use ferrohealth_secret::file::{SecretError, read_secret, read_secret_file};
@@ -280,15 +279,6 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
         "db.migrate_url",
         &mut config.db.migrate_url,
         config.db.migrate_url_file.take().as_deref(),
-        errors,
-    );
-    let default_broker = EventsConfig::default().url;
-    let file = config.events.url_file.take();
-    resolve_defaulted(
-        "events.url",
-        &mut config.events.url,
-        &default_broker,
-        file.as_deref(),
         errors,
     );
 }

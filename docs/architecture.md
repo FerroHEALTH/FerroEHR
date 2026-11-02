@@ -162,7 +162,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `ehr_folder` and `item_tag`, which stand outside change control; the
   definition stores `template_ref`, `template_store`, `archetype_store`,
   `adl2_artefact` and `stored_query`; the change-event `event_outbox` with its
-  `event_outbox_reader` cursors and `event_subscription` filters; and
+  `event_outbox_reader` cursors, which the readers `[outbox] readers` names
+  move over the outbox feed (`extensions::outbox`); and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
   Every write emits contribution + commit audit in the same transaction
@@ -489,7 +490,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC/ABAC authz; calls the concrete `FerroEhrService` | application |
 | `ferroehr` | The platform library: storage, service layer (one module per domain area), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (FerroEHR's status, route groups and PostgreSQL state store for the `start` and `daily` installation reports that `ferrohealth-usage-report` sends to FerroPULSE, on by default, envelope v2 in FerroHEALTH/FerroPULSE `docs/report-v2.md`, vendored schema in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
-| `ferroehr-ext` | Optional integrations behind additive features (`events`, `multimedia`): the AMQP events transport, the content-addressed multimedia store | application |
+| `ferroehr-ext` | Optional integrations behind additive features (`multimedia`): the content-addressed multimedia store | application |
 | `ferroehr-viewer` | The server-rendered viewer on FerroUI: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
 | `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
 

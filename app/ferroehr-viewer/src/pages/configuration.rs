@@ -89,7 +89,7 @@ const SECTIONS: [(&str, ConsoleMsg, &[&str]); 7] = [
     (
         "integrations",
         ConsoleMsg::ConfigIntegrations,
-        &["events", "terminology"],
+        &["outbox", "terminology"],
     ),
     (
         "operations",

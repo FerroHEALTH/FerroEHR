@@ -241,7 +241,7 @@ and Copy buttons); nothing on a page waits for them. There is no
 hand-written JavaScript.
 
 An editor (a new EHR, a composition, the EHR status, the directory, a party, a
-subscription, a template upload) ends in a bar docked at the foot of the page:
+template upload) ends in a bar docked at the foot of the page:
 what has changed, **Discard**, and the save. A save that the CDR refuses
 keeps what you typed on the page beside the CDR's own words.
 
@@ -262,8 +262,6 @@ behind the menu button.
   export the rows, save it to the CDR. See [Queries](queries.md).
 - **Server:** what the CDR is, how it runs and what it serves, and the **Audit
   log**. See [Server and audit log](server.md).
-- **Subscriptions:** the CDR's event subscriptions. See
-  [Event subscriptions](subscriptions.md).
 - **Configuration:** the CDR's redacted running configuration, by section.
 - **About:** the viewer, the CDR and their versions, the manufacturer and
   the CDR's conformance manifest.

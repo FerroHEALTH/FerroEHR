@@ -72,7 +72,7 @@ in deployment_accepts (which is then stated on every boot and on /management/sta
 The gaps are `shared_credential`, `shared_cluster`, `open_subject_namespace`,
 `audit_off`, `audit_fails_open`, `no_category_map`, `open_ehr_access_default`,
 `migrate_on_runtime_credential`, `auth_off`, `rbac_off`, `plaintext_listener`,
-`plaintext_broker`, `plaintext_audit_feed` and `plaintext_object_store`. `shared_cluster` is read from
+`plaintext_audit_feed` and `plaintext_object_store`. `shared_cluster` is read from
 `pg_control_system().system_identifier` on each pool, the audit pool included,
 rather than from the DSN text, so two names for one cluster do not pass it.
 
@@ -92,11 +92,6 @@ off any network clinical clients or the internet reach.
 
 The syslog feed has no gap of its own: it sends over RFC 5425 TLS only.
 
-`plaintext_broker` opens when the change-event outbox (`[events]`) is on with an
-`amqp://` URL and `tls = false`, which publishes change events to the broker
-unencrypted. Use
-an `amqps://` URL or set `tls = true`, or accept the gap by name where the path
-to the broker stays on a trusted segment.
 
 `plaintext_audit_feed` opens when the audit FHIR feed (`[audit.fhir_feed]`) is on
 with an `http://` URL, and `plaintext_object_store` when the multimedia store is

@@ -47,8 +47,6 @@
 #                                The management surface shares the main listener
 #                                (no management.port), so it adds no second
 #                                plaintext port.
-#   plaintext_broker             made: no AMQP integration is on. Enabling one
-#                                uses an amqps:// URL or tls = true.
 #
 # No openEHR spec governs deployment posture; the reasoning per gap is in the
 # book's CRA risk assessment and the instructions for use.

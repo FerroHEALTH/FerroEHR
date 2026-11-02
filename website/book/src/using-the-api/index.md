@@ -29,7 +29,7 @@ interfaces sit beside it, under the same REST root:
 | Namespace | Default path | Holds |
 |---|---|---|
 | openEHR REST API | `/ferroehr/rest/openehr/v1` | the ITS-REST 1.1.0 routes: EHR, composition, directory, contribution, demographic parties, definition, query, the admin EHR deletes |
-| FerroEHR extensions | `/ferroehr/rest/extensions/v1` | FerroEHR's own routes, on their own version line: terminology, event subscriptions, party relationships, the archetype library, EHR Extract messages, the cohort query and the admin extensions |
+| FerroEHR extensions | `/ferroehr/rest/extensions/v1` | FerroEHR's own routes, on their own version line: terminology, party relationships, the archetype library, EHR Extract messages, the cohort query and the admin extensions |
 | FHIR and IHE | `/ferroehr/rest/fhir/r4` | the IHE ITI-81 `AuditEvent` retrieval |
 
 Every path in these chapters is relative to the openEHR base unless the page

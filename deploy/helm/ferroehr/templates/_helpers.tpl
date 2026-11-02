@@ -154,7 +154,7 @@ when there is at least one secret value to carry).
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url }}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . }}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl }}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret -}}
 true
 {{- end -}}
 {{- end }}
@@ -181,7 +181,7 @@ names a Secret nothing created makes the pod fail to mount.
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url -}}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . -}}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl -}}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret .Values.secrets.basicUserPasswordHashes .Values.secrets.eventsUrl .Values.secrets.fhirOutboundUrl -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret .Values.secrets.basicUserPasswordHashes -}}
 true
 {{- end -}}
 {{- end }}
@@ -257,7 +257,7 @@ The SecretUrl leaves are matched by PATH because their name (`url`) carries
 no shape a classifier can see — a URL's userinfo component is the credential.
 */}}
 {{- define "ferroehr.secretScan" -}}
-{{- $urlPaths := list "db.url" "storage.clinical.url" "storage.party.url" "storage.audit.url" "events.url" "audit.fhir_feed.url" -}}
+{{- $urlPaths := list "db.url" "storage.clinical.url" "storage.party.url" "storage.audit.url" "audit.fhir_feed.url" -}}
 {{- $node := .node -}}
 {{- $path := .path -}}
 {{- $kind := kindOf $node -}}
@@ -295,7 +295,7 @@ The `secrets:` key that carries a routed secret, keyed on its leaf name.
 */}}
 {{- define "ferroehr.secretRemedy" -}}
 {{- $routes := dict
-  "url" "route it through the matching `secrets:` key — `eventsUrl` (mounted as a file via events.url_file), `auditFhirFeedUrl` (env; that key still has no `*_file` sibling), or `database.existingSecret` for the shared DSN (mounted via db.url_file) and `database.<domain>.existingSecret` for one storage domain's own (mounted via storage.<domain>.url_file)"
+  "url" "route it through the matching `secrets:` key — `auditFhirFeedUrl` (env; that key still has no `*_file` sibling), or `database.existingSecret` for the shared DSN (mounted via db.url_file) and `database.<domain>.existingSecret` for one storage domain's own (mounted via storage.<domain>.url_file)"
   "key_passphrase" "set `secrets.signingKeyPassphrase` instead"
   "secret_access_key" "set `secrets.multimediaSecretAccessKey` instead"
   "client_secret" "set `secrets.terminologyClientSecret` (for [terminology.server.oauth]) or `secrets.ehrIndexClientSecret` (for [ehr_index.oauth]) instead"
