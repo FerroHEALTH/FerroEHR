@@ -61,7 +61,7 @@ fn artefact(keyword: &str, hrid: &str, parent: Option<&str>, root: &str) -> Stri
     format!(
         "{keyword} (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n\n{specialise}\
          language\n    original_language = <[ISO_639-1::en]>\n\n\
-         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    lifecycle_state = <\"published\">\n    details = <\n        \
          [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
          definition\n    {root} matches {{ *}}\n\n\
          terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
@@ -79,7 +79,7 @@ fn template_using(hrid: &str, rm_type: &str, filler: &str) -> String {
     format!(
         "template (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n\n\
          language\n    original_language = <[ISO_639-1::en]>\n\n\
-         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    lifecycle_state = <\"published\">\n    details = <\n        \
          [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
          definition\n    COMPOSITION[id1] matches {{\n        \
          content cardinality matches {{0..*; unordered}} matches {{\n            \

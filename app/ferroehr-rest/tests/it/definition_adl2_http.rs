@@ -16,6 +16,7 @@
 //! through the wire and stored verbatim, so the text/plain GET echoes it
 //! exactly.
 use axum::body::Body;
+use ferroehr::config::profile::SpecProfile;
 use http::{Request, StatusCode, header};
 use serde_json::Value;
 use std::fmt::Write;
@@ -40,7 +41,7 @@ fn adl2_source(keyword: &str, hrid: &str) -> String {
     format!(
         "{keyword} (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n\n\
          language\n    original_language = <[ISO_639-1::en]>\n\n\
-         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    lifecycle_state = <\"published\">\n    details = <\n        \
          [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
          definition\n    {rm_type}[id1] matches {{ *}}\n\n\
          terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
@@ -606,7 +607,7 @@ async fn upload_with_absent_parent_is_400_with_vasid() {
          openEHR-EHR-CLUSTER.orphan-child.v1.0.0\n\n\
          specialise\n    openEHR-EHR-CLUSTER.orphan.v1.0.0\n\n\
          language\n    original_language = <[ISO_639-1::en]>\n\n\
-         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    lifecycle_state = <\"published\">\n    details = <\n        \
          [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
          definition\n    CLUSTER[id1.1] matches { *}\n\n\
          terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
@@ -643,7 +644,7 @@ async fn upload_nested_past_the_engine_bound_is_a_400_naming_the_bound() {
     let body = format!(
         "archetype (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n\n\
          language\n    original_language = <[ISO_639-1::en]>\n\n\
-         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    lifecycle_state = <\"published\">\n    details = <\n        \
          [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
          definition\n    {definition}\n\n\
          terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
@@ -690,7 +691,7 @@ fn template_using(hrid: &str, fillers: &[&str]) -> String {
     format!(
         "template (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n\n\
          language\n    original_language = <[ISO_639-1::en]>\n\n\
-         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    lifecycle_state = <\"published\">\n    details = <\n        \
          [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
          definition\n    COMPOSITION[id1] matches {{\n        \
          content cardinality matches {{0..*; unordered}} matches {{{content}\n        }}\n    }}\n\n\
@@ -824,4 +825,83 @@ async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read
         .build();
     let (status, _h, _b) = send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "the source stays readable");
+}
+
+/// The `original_author` line every fixture description carries.
+const AUTHOR_LINE: &str = "    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n";
+
+/// The three description shapes of one template concept: complete, with no
+/// `original_author`, and with an empty `lifecycle_state`, each under its own
+/// HRID so all three can be stored side by side.
+fn description_cases(concept: &str) -> [(String, &'static str, Option<&'static str>); 3] {
+    let hrid = |suffix: &str| format!("openEHR-EHR-COMPOSITION.{concept}_{suffix}.v1.0.0");
+    let source = |suffix: &str| adl2_source("operational_template", &hrid(suffix));
+    [
+        (source("complete"), "complete", None),
+        (
+            source("no_author").replace(AUTHOR_LINE, ""),
+            "no original_author",
+            Some("RESOURCE_DESCRIPTION.Original_author_valid"),
+        ),
+        (
+            source("no_state").replace(
+                "lifecycle_state = <\"published\">",
+                "lifecycle_state = <\"\">",
+            ),
+            "empty lifecycle_state",
+            Some("RESOURCE_DESCRIPTION.Lifecycle_state_valid"),
+        ),
+    ]
+}
+
+/// The status and body text of uploading `source` through `app`, preferring
+/// the representation so a refusal lists each violation.
+async fn upload(app: &axum::Router, source: String) -> (StatusCode, String) {
+    let req = common::req("POST", format!("{BASE}/definition/template/adl2"))
+        .header(header::CONTENT_TYPE, "text/plain")
+        .prefer_representation()
+        .body(source)
+        .build();
+    let (status, _headers, body) = send(app, req).await;
+    (status, body)
+}
+
+/// BASE 1.3.0, the development profile's BASE, states `Original_author_valid:
+/// not original_author.is_empty` and `Lifecycle_state_valid: not
+/// lifecycle_state.is_empty` on `RESOURCE_DESCRIPTION`
+/// (`org.openehr.base.resource.resource_description.adoc` §Invariants), so a
+/// template breaking either is invalid content, a `400` (`responses/400.yaml`),
+/// while the complete description beside it is created.
+#[tokio::test]
+async fn an_empty_original_author_or_lifecycle_state_is_refused_on_the_development_profile() {
+    let db = testkit::db().await.expect("testkit database");
+    let app = common::router_for_profile(SpecProfile::Development, &db.pool()).await;
+    for (source, case, rule) in description_cases("t_description_development") {
+        let (status, body) = upload(&app, source).await;
+        match rule {
+            None => assert_eq!(status, StatusCode::CREATED, "{case}: {body}"),
+            Some(rule) => {
+                assert_eq!(status, StatusCode::BAD_REQUEST, "{case}: {body}");
+                let problem: Value = serde_json::from_str(&body).expect("a problem body");
+                let errors = problem["errors"].as_array().cloned().unwrap_or_default();
+                assert!(
+                    errors.iter().any(|e| e["path"].as_str() == Some(rule)
+                        || e["detail"].as_str().is_some_and(|d| d.contains(rule))),
+                    "{case}: the 400 names {rule}: {problem}"
+                );
+            }
+        }
+    }
+}
+
+/// BASE 1.2.0, the stable profile's BASE, states neither invariant, so the
+/// same three templates are all created there.
+#[tokio::test]
+async fn the_stable_profile_creates_a_template_with_an_empty_author_or_lifecycle_state() {
+    let db = testkit::db().await.expect("testkit database");
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+    for (source, case, _rule) in description_cases("t_description_stable") {
+        let (status, body) = upload(&app, source).await;
+        assert_eq!(status, StatusCode::CREATED, "{case}: {body}");
+    }
 }

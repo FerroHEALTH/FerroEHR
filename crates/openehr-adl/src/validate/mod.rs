@@ -60,7 +60,7 @@ pub mod catalogue;
 pub mod conformance;
 mod flat;
 mod identification;
-mod resource_meta;
+pub mod resource_meta;
 pub mod rm;
 mod scope;
 pub mod slots;
