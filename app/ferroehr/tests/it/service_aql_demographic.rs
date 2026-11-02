@@ -413,11 +413,7 @@ async fn unserved_demographic_constructs_are_refused() {
     }
 
     // An EHR scope cannot apply to a party query.
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string();
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let err = refuse(
         &svc,
         "SELECT p/uid/value FROM PERSON p",
@@ -479,10 +475,7 @@ async fn a_party_joins_to_the_content_of_its_ehr() {
         .await
         .expect("delete");
     // An EHR with content and no party.
-    let orphan = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let orphan = crate::fixtures::create_ehr(&svc).await;
     svc.create_composition(
         orphan,
         crate::fixtures::uv(&crate::fixtures::composition("visit e"), "249", None),

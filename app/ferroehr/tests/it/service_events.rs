@@ -30,6 +30,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use sqlx::{PgPool, Row};
 
+use crate::fixtures::pending_count;
 use crate::fixtures::{committer, composition_by, uv};
 use crate::typed_body::typed;
 use ferroehr::extensions::events::config::EventsConfig;
@@ -49,13 +50,6 @@ fn composition(name: &str) -> Value {
 }
 
 // ── outbox helpers ───────────────────────────────────────────────────────────
-
-async fn pending_count(pool: &PgPool) -> i64 {
-    sqlx::query_scalar("SELECT count(*) FROM clinical.event_outbox WHERE published_at IS NULL")
-        .fetch_one(pool)
-        .await
-        .expect("pending count")
-}
 
 async fn total_count(pool: &PgPool) -> i64 {
     sqlx::query_scalar("SELECT count(*) FROM clinical.event_outbox")
@@ -138,13 +132,6 @@ fn assert_phi_free(envelope: &Value) {
     }
 }
 
-async fn create_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
-    Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-}
-
 // ── (1) atomic writes on every commit path ───────────────────────────────────
 
 #[tokio::test]
@@ -154,7 +141,7 @@ async fn composition_and_contribution_commits_each_write_one_phi_free_outbox_row
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
     // EHR creation is itself a CONTRIBUTION → its own outbox row (baseline).
-    let ehr = create_ehr(&svc).await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let after_ehr = total_count(&pool).await;
     assert_eq!(after_ehr, 1, "EHR creation writes one outbox row");
 
@@ -223,7 +210,7 @@ async fn outbox_disabled_writes_no_rows() {
 
     // EHR creation, a direct composition commit, and a CONTRIBUTION commit —
     // none writes an outbox row.
-    let ehr = create_ehr(&svc).await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     assert_eq!(total_count(&pool).await, 0, "EHR creation writes none");
 
     svc.create_composition(ehr, uv(&composition("v1"), "249", None))
@@ -371,7 +358,7 @@ async fn drainer_holds_pending_while_broker_down_then_drains_without_loss() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
     // Commit some work: an EHR + two compositions ⇒ three outbox rows.
-    let ehr = create_ehr(&svc).await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     svc.create_composition(ehr, uv(&composition("v1"), "249", None))
         .await
         .expect("comp 1");
@@ -480,10 +467,7 @@ async fn import_writes_one_phi_free_outbox_row() {
     ));
 
     // Seed a source EHR with an EHR_STATUS (EHR creation + the auto EHR_ACCESS).
-    let ehr = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("source ehr");
+    let ehr = crate::fixtures::create_ehr(&source).await;
     // Give it a second EHR_STATUS version so the import carries real content.
     let mut status = source
         .ehr_status_at_time_response(ehr, None)

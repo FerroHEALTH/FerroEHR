@@ -103,10 +103,7 @@ fn stable_service(pool: &sqlx::PgPool) -> FerroEhrService {
 
 /// Commit one COMPOSITION into a fresh EHR under the DEVELOPMENT profile.
 async fn commit(svc: &FerroEhrService, body: &Value) -> (EhrId, VoId) {
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr_create");
+    let ehr_id = crate::fixtures::create_ehr(svc).await;
     let committed = svc
         .create_composition(ehr_id, uv(body, "249", None))
         .await
@@ -118,8 +115,7 @@ async fn commit(svc: &FerroEhrService, body: &Value) -> (EhrId, VoId) {
 /// served under BOTH profiles.
 #[tokio::test]
 async fn a_released_surface_composition_stamps_true_and_reads_under_both_profiles() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (ehr_id, vo_id) = commit(&svc, &stable_clean_composition()).await;
 
     assert_eq!(
@@ -148,8 +144,7 @@ async fn a_released_surface_composition_stamps_true_and_reads_under_both_profile
 /// `stable` — naming the profile, the version and the remedy.
 #[tokio::test]
 async fn a_development_only_composition_stamps_false_and_is_refused_under_stable() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (ehr_id, vo_id) = commit(&svc, &development_only_composition()).await;
 
     assert_eq!(
@@ -190,8 +185,7 @@ async fn a_development_only_composition_stamps_false_and_is_refused_under_stable
 /// directions, and the read never writes the answer back.
 #[tokio::test]
 async fn an_unstamped_row_is_assessed_on_the_fly() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (clean_ehr, clean_vo) = commit(&svc, &stable_clean_composition()).await;
     let (dirty_ehr, dirty_vo) = commit(&svc, &development_only_composition()).await;
 
@@ -233,8 +227,7 @@ async fn an_unstamped_row_is_assessed_on_the_fly() {
 /// and restoring an EHR must not change a version's profile compatibility.
 #[tokio::test]
 async fn archive_and_restore_preserve_the_stamp() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (ehr_id, vo_id) = commit(&svc, &development_only_composition()).await;
     assert_eq!(stamp(&db.pool(), vo_id).await, Some(false));
 
@@ -457,8 +450,7 @@ const WHOLE_OBJECT_AQL: &str = "SELECT c FROM EHR e CONTAINS COMPOSITION c";
 /// profile that accepted it still serves the row.
 #[tokio::test]
 async fn an_aql_whole_object_projection_is_gated_by_the_spec_profile() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (ehr_id, vo_id) = commit(&svc, &development_only_composition()).await;
 
     let served = query_rows(&svc, WHOLE_OBJECT_AQL, ehr_id).await;
@@ -479,8 +471,7 @@ async fn an_aql_whole_object_projection_is_gated_by_the_spec_profile() {
 /// profiles.
 #[tokio::test]
 async fn an_aql_whole_object_projection_over_clean_rows_serves_under_both_profiles() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (ehr_id, _) = commit(&svc, &stable_clean_composition()).await;
 
     let under_development = query_rows(&svc, WHOLE_OBJECT_AQL, ehr_id).await;
@@ -495,8 +486,7 @@ async fn an_aql_whole_object_projection_over_clean_rows_serves_under_both_profil
 /// stamp does not apply to it.
 #[tokio::test]
 async fn an_aql_leaf_projection_is_not_gated_by_the_spec_profile() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (ehr_id, _) = commit(&svc, &development_only_composition()).await;
 
     let stable = stable_service(&db.pool());
@@ -526,8 +516,7 @@ async fn an_aql_leaf_projection_is_not_gated_by_the_spec_profile() {
 /// resource read assesses it, and the read still writes nothing back.
 #[tokio::test]
 async fn the_query_gate_assesses_unstamped_rows_on_the_fly() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (clean_ehr, clean_vo) = commit(&svc, &stable_clean_composition()).await;
     let (dirty_ehr, dirty_vo) = commit(&svc, &development_only_composition()).await;
 

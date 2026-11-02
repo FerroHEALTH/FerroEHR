@@ -14,9 +14,9 @@
 )]
 
 use serde_json::{Value, json};
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::fixtures::db_now;
 use crate::fixtures::uv;
 use crate::fixtures::{uid, vo_of};
 use crate::typed_body::typed;
@@ -27,19 +27,6 @@ use ferroehr::service::refusal::{Missing, Refusal};
 /// The bare versioned-object UUID of a versioned-object body.
 fn vo_uuid(v: &Value) -> String {
     vo_of(uid(v)).to_owned()
-}
-
-/// The DB's current instant (`SELECT now()`) as a `jiff::Timestamp`. Time-travel
-/// probes MUST anchor their reference instant on this server clock — the same
-/// clock that stamps `version.committed_at` — never on the test-process wall
-/// clock: a client/DB clock skew under parallel test load would race
-/// the at-time read against the version validity intervals.
-async fn db_now(pool: &PgPool) -> jiff::Timestamp {
-    sqlx::query_scalar::<_, jiff_sqlx::Timestamp>("SELECT now()")
-        .fetch_one(pool)
-        .await
-        .expect("db now()")
-        .to_jiff()
 }
 
 fn party_ref(id: &str) -> Value {
@@ -77,8 +64,7 @@ async fn relationship_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId)
 /// that a deleted relationship is no longer present.
 #[tokio::test]
 async fn relationship_typed_calls_round_trip() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let src = "11111111-1111-4111-8111-111111111111";
     let tgt = "22222222-2222-4222-8222-222222222222";
@@ -282,8 +268,7 @@ async fn relationship_lifecycle_end_to_end() {
 
 #[tokio::test]
 async fn relationship_error_cases() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // unknown id → 404
     let unknown = svc
@@ -342,8 +327,7 @@ async fn relationship_error_cases() {
 
 #[tokio::test]
 async fn relationship_via_demographic_contribution() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // A demographic CONTRIBUTION accepts a PARTY_RELATIONSHIP version (the
     // ehr-less scope now covers relationships as well as party roots).

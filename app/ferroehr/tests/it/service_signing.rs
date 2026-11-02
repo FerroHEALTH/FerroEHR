@@ -121,19 +121,10 @@ async fn commit_contribution(
         .uid
 }
 
-async fn create_ehr(svc: &FerroEhrService) -> String {
-    Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string()
-}
-
 #[tokio::test]
 async fn composition_version_is_signed_and_digest_recomputes_from_served_version() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // Create a composition, then commit a second version.
@@ -168,7 +159,7 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // Update EHR_STATUS → v2, then read the ORIGINAL_VERSION of v1.
@@ -233,9 +224,8 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
 
 #[tokio::test]
 async fn contribution_versions_are_signed() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let contribution_uid = commit_contribution(
@@ -278,9 +268,8 @@ async fn client_supplied_signature_is_stored_verbatim() {
     // reject legitimately-stored client signatures.
     const CLIENT_SIG: &str =
         "-----BEGIN PGP SIGNATURE-----\nauthored-elsewhere\n-----END PGP SIGNATURE-----";
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let mut version = uv(&composition("Client signed"), "249", None);
@@ -334,7 +323,7 @@ async fn strict_verify_on_read_rejects_a_tampered_row() {
     let signer = Signer::from_config(&config).expect("strict signer");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_signer(Arc::new(signer));
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let ovid = svc
@@ -374,7 +363,7 @@ async fn default_verify_on_read_is_strict_and_rejects_a_tampered_row() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let ovid = svc
@@ -429,7 +418,7 @@ async fn warn_and_off_verify_on_read_serve_a_tampered_row() {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
         let svc = service_with_verify(&pool, policy);
-        let ehr_id = create_ehr(&svc).await;
+        let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
         let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
         let ovid = svc
@@ -564,7 +553,7 @@ async fn signing_disabled_folds_commit_and_preserves_master06_semantics() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = signing_disabled(&pool);
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     // CREATE → the folded path: audit + contribution + version in one CTE.
@@ -677,7 +666,7 @@ async fn creating_system_id_and_signature_survive_a_system_id_change() {
     // Commit a composition under system id "sys-origin".
     let svc_a = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_system_id("sys-origin");
-    let ehr_id = create_ehr(&svc_a).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc_a).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
     let ovid = svc_a
         .create_composition(ehr_uuid, uv(&composition("v1"), "249", None))
@@ -736,7 +725,7 @@ async fn at_committal_attestation_is_signed_and_a_tamper_is_caught() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = service_with_verify(&pool, VerifyOnRead::Strict);
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let mut version = uv(&composition("attested"), "249", None);
@@ -797,7 +786,7 @@ async fn after_committal_attestation_is_outside_the_signed_form() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = service_with_verify(&pool, VerifyOnRead::Strict);
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let ovid = svc

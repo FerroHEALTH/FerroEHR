@@ -18,7 +18,6 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded};
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
@@ -95,12 +94,8 @@ const REPORT: &str = "openEHR-EHR-COMPOSITION.report.v1";
 /// archetype updates fine.
 #[tokio::test]
 async fn versioned_composition_cannot_switch_archetype() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let v1 = svc
         .create_composition(
             ehr,
@@ -145,12 +140,8 @@ async fn versioned_composition_cannot_switch_archetype() {
 /// persistent (431) and event (433) across versions is a 422.
 #[tokio::test]
 async fn versioned_composition_cannot_flip_persistence() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let v1 = svc
         .create_composition(
             ehr,
@@ -190,16 +181,9 @@ async fn versioned_composition_cannot_flip_persistence() {
 /// tagging one's own composition succeeds.
 #[tokio::test]
 async fn tag_targets_must_be_within_the_same_ehr() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_a = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr A");
-    let ehr_b = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr B");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_a = crate::fixtures::create_ehr(&svc).await;
+    let ehr_b = crate::fixtures::create_ehr(&svc).await;
     let v1 = svc
         .create_composition(
             ehr_a,
@@ -250,12 +234,8 @@ async fn tag_targets_must_be_within_the_same_ehr() {
 /// replace, and a tag delete alike, so no change set was opened at all.
 #[tokio::test]
 async fn tagging_does_not_re_version_or_contribute() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
     let v1 = svc
         .create_composition(
             ehr,

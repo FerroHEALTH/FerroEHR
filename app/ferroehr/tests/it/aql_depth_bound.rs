@@ -84,11 +84,7 @@ fn chains_at_the_depth_bound_run_through_every_pass_and_postgresql() {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
         let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-        let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-            .await
-            .map(|(id, _)| id)
-            .expect("create_ehr")
-            .to_string();
+        let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
         let even_bound = MAX_EXPRESSION_DEPTH - MAX_EXPRESSION_DEPTH % 2;
         for aql in [
             not_chain(even_bound, &ehr_id),
@@ -113,11 +109,7 @@ fn chains_beyond_the_depth_bound_are_refused_as_invalid_queries() {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
         let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-        let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-            .await
-            .map(|(id, _)| id)
-            .expect("create_ehr")
-            .to_string();
+        let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
         for aql in [
             not_chain(MAX_EXPRESSION_DEPTH + 2, &ehr_id),
             or_chain(MAX_EXPRESSION_DEPTH + 1, &ehr_id),

@@ -70,10 +70,7 @@ fn strict(pool: &PgPool) -> FerroEhrService {
 /// An EHR whose directory FOLDER is named with the synthetic identifier,
 /// seeded through a repository that scans nothing.
 async fn seed_ehr_with_identifier_in_folder(source: &FerroEhrService) -> EhrId {
-    let ehr = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr = crate::fixtures::create_ehr(source).await;
     source
         .create_directory(
             ehr,

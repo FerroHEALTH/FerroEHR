@@ -31,6 +31,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 use wiremock::{MockServer, ResponseTemplate};
 
+use crate::fixtures::base_composition;
 use crate::terminology_wire::{operation, parameter};
 
 use openehr_rm::prelude::PartyProxy;
@@ -75,16 +76,6 @@ fn uv<T: serde::de::DeserializeOwned>(data: &Value) -> UpdateVersion<T> {
     }
 }
 
-/// The base composition, template stripped, uid dropped.
-fn base_composition() -> Value {
-    let path = format!(
-        "{}/../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json/minimal_observation.json",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    serde_json::from_str(&std::fs::read_to_string(&path).expect("read fixture"))
-        .expect("parse fixture")
-}
-
 /// A composition whose OBSERVATION leaf is a `DV_CODED_TEXT` with the given
 /// defining code, so `.../value/defining_code/code_string` is queryable.
 ///
@@ -119,14 +110,6 @@ fn composition_coded(name: &str, terminology_id: &str, code: &str) -> Value {
         }
     });
     c
-}
-
-async fn create_ehr(svc: &FerroEhrService) -> String {
-    Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string()
 }
 
 async fn create_coded(
@@ -171,9 +154,8 @@ fn names(result: &Value) -> Vec<String> {
 
 #[tokio::test]
 async fn terminology_expand_bundle_merges_group_codes() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await.to_string();
 
     // `249` (creation) is in the `audit_change_type` group; `433` (event) is a
     // valid openEHR code outside it.
@@ -205,9 +187,8 @@ async fn terminology_expand_bundle_merges_group_codes() {
 
 #[tokio::test]
 async fn terminology_expand_unknown_service_is_bad_request() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await.to_string();
     create_coded(&svc, &ehr, "x", "openehr", "249").await;
 
     // An unrecognised service_api (no FHIR provider configured either) → a typed
@@ -229,9 +210,8 @@ async fn terminology_expand_unknown_service_is_bad_request() {
 
 #[tokio::test]
 async fn terminology_expand_unknown_value_set_is_bad_request() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await.to_string();
     create_coded(&svc, &ehr, "x", "openehr", "249").await;
 
     // A value set the bundle does not know → a typed 400.
@@ -292,7 +272,7 @@ async fn terminology_expand_fhir_merges_expansion_codes() {
     let db = testkit::db().await.expect("testkit database");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_terminology_server(Arc::new(fhir_provider(&server.uri())));
-    let ehr = create_ehr(&svc).await;
+    let ehr = crate::fixtures::create_ehr(&svc).await.to_string();
 
     // SNOMED-coded leaves (non-openEHR terminology → not RM-terminology-checked).
     // The terminology is spelled the way BASE `base_types` master05 spells it,
@@ -322,9 +302,8 @@ async fn terminology_expand_fhir_merges_expansion_codes() {
 /// governs the cache; this asserts the semantics-preserving bypass.
 #[tokio::test]
 async fn terminology_query_is_never_cached() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await.to_string();
     create_coded(&svc, &ehr, "in-group", "openehr", "249").await;
 
     let aql = format!(

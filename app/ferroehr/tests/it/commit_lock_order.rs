@@ -86,10 +86,7 @@ async fn a_contribution_takes_its_object_locks_in_vo_id_order() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&DomainPools::from_shared(&pool));
-    let ehr = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr = crate::fixtures::create_ehr(&svc).await;
 
     let creation = |name: &str| {
         json!({
@@ -165,10 +162,7 @@ async fn an_import_takes_the_ehr_row_lock_before_its_object_locks() {
     let pool = target_db.pool();
     let target = FerroEhrService::new(&DomainPools::from_shared(&pool));
 
-    let source_ehr = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("source ehr");
+    let source_ehr = crate::fixtures::create_ehr(&source).await;
     source
         .create_directory(
             source_ehr,
@@ -206,10 +200,7 @@ async fn an_import_takes_the_ehr_row_lock_before_its_object_locks() {
     .expect("folder vo uuid");
     let extract = openehr_its::json::from_canonical_value(&extract).expect("folder EXTRACT");
 
-    let ehr = Box::pin(target.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("target ehr");
+    let ehr = crate::fixtures::create_ehr(&target).await;
     let mut blocker = pool.begin().await.expect("blocker transaction");
     sqlx::query("SELECT 1 FROM ehr WHERE id = $1 FOR NO KEY UPDATE")
         .bind(ehr)

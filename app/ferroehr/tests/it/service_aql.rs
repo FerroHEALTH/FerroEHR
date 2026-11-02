@@ -54,6 +54,7 @@ use ferroehr::service::version_update::{change_type_coded, lifecycle_state_coded
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
 
 use crate::adl2_fixture::adl2_source;
+use crate::fixtures::base_composition;
 use crate::fixtures::set_not_queryable;
 
 const OBS_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.minimal.v1";
@@ -90,16 +91,6 @@ fn uv<T: serde::de::DeserializeOwned>(
     }
 }
 
-/// The base composition with its template stripped and a `DV_QUANTITY` leaf.
-fn base_composition() -> Value {
-    let path = format!(
-        "{}/../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json/minimal_observation.json",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    serde_json::from_str(&std::fs::read_to_string(&path).expect("read fixture"))
-        .expect("parse fixture")
-}
-
 /// A composition variant with the given display name and leaf magnitude.
 fn composition(name: &str, magnitude: f64) -> Value {
     let mut c = base_composition();
@@ -126,16 +117,6 @@ fn composition(name: &str, magnitude: f64) -> Value {
     c["content"][0]["data"]["events"][0]["data"]["items"][0]["value"] =
         json!({ "_type": "DV_QUANTITY", "magnitude": magnitude, "units": "mm[Hg]" });
     c
-}
-
-async fn create_ehr(svc: &FerroEhrService) -> String {
-    // NOTE: `create_ehr` returns the new EHR's `UUID`; `ehr_id.value`
-    // IS that uuid, so its string form is the id every assertion here uses.
-    Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr")
-        .to_string()
 }
 
 /// Create a composition in `ehr_id`, returning its `OBJECT_VERSION_ID`.
@@ -212,13 +193,13 @@ async fn aql_acceptance_set() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     // Magnitudes 80, 100, 120; two share the name "BP", one is "HR".
     create_comp(&svc, &ehr_id, "BP", 80.0).await;
     create_comp(&svc, &ehr_id, "BP", 120.0).await;
     create_comp(&svc, &ehr_id, "HR", 100.0).await;
     // A second EHR with one composition, to prove ehr_id scoping.
-    let other = create_ehr(&svc).await;
+    let other = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &other, "BP", 999.0).await;
 
     // ── COUNT + ehr_id scope ────────────────────────────────────────────────
@@ -412,7 +393,7 @@ async fn aql_acceptance_set() {
     }
 
     // ── whole-COMPOSITION select reassembles equal to composition_get ──────────
-    let single = create_ehr(&svc).await;
+    let single = crate::fixtures::create_ehr(&svc).await.to_string();
     let ovid = create_comp(&svc, &single, "solo", 55.0).await;
     let vo_id = ovid.split("::").next().unwrap();
     let r = run_aql(
@@ -459,7 +440,7 @@ async fn whole_object_projection_batches_over_a_multi_row_page() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
 
     // A page of distinct compositions in one EHR — each its own versioned
     // object, so the page projects N distinct subtree anchors in one batch.
@@ -542,7 +523,7 @@ async fn archetype_specialisation_subsumption() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     // One composition with the PARENT archetype, one with a SPECIALISATION child
     // (the master10 worked example: laboratory → laboratory-glucose).
     create_comp_arch(
@@ -643,7 +624,7 @@ async fn archetype_lineage_from_the_stored_adl2_family() {
     .await
     .expect("upload the specialised ADL2 child archetype");
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     // Data under the CHILD archetype. The `archetype_details.archetype_id` in
     // committed data is an RM `ARCHETYPE_ID`, whose lexical form is major-only
     // (BASE `base_types` master05 §Syntaxes: `version_id = '0' | non-zero-digit,
@@ -731,7 +712,7 @@ async fn archetype_predicate_namespace_is_exact() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     for (name, archetype) in [
         ("a", "org.a::openEHR-EHR-OBSERVATION.ns_case.v1.0.0"),
         ("b", "org.b::openEHR-EHR-OBSERVATION.ns_case.v1.0.0"),
@@ -771,7 +752,7 @@ async fn archetype_predicate_version_bounds_the_release() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     for version in ["v1", "v1.0.0", "v1.2.0", "v1.2.3", "v1.3.1-rc.1", "v2.0.0"] {
         create_comp_arch(
             &svc,
@@ -840,7 +821,7 @@ async fn archetype_predicate_specialised_child_by_parent_version() {
     ))
     .await
     .expect("upload the specialised ADL2 child archetype");
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_arch(
         &svc,
         &ehr_id,
@@ -911,7 +892,7 @@ async fn archetype_predicate_child_releases_follow_their_own_parent_release() {
             .await
             .unwrap_or_else(|e| panic!("upload {hrid}: {e:?}"));
     }
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     for version in ["v1.0.0", "v1.1.0"] {
         create_comp_arch(
             &svc,
@@ -953,7 +934,7 @@ async fn all_versions_includes_a_branch_row() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ovid = create_comp(&svc, &ehr_id, "v", 10.0).await;
     let vo_id = ovid.split("::").next().unwrap().to_owned();
     let vo: Uuid = vo_id.parse().expect("vo_id uuid");
@@ -1056,7 +1037,7 @@ async fn latest_versus_all_versions() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ovid = create_comp(&svc, &ehr_id, "v", 10.0).await;
     let vo_id = ovid.split("::").next().unwrap().to_owned();
 
@@ -1173,8 +1154,8 @@ async fn population_query_excludes_not_queryable_ehrs() {
 
     // Two EHRs; both start queryable (the default EHR_STATUS). Flip one off
     // through the canonical EHR_STATUS update path.
-    let queryable = create_ehr(&svc).await;
-    let hidden = create_ehr(&svc).await;
+    let queryable = crate::fixtures::create_ehr(&svc).await.to_string();
+    let hidden = crate::fixtures::create_ehr(&svc).await.to_string();
     set_not_queryable(
         &svc,
         ferroehr::ids::EhrId(hidden.parse().expect("ehr_id uuid")),
@@ -1216,7 +1197,7 @@ async fn scoped_query_bypasses_the_population_gate() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let hidden = create_ehr(&svc).await;
+    let hidden = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &hidden, "BP", 80.0).await;
     set_not_queryable(
         &svc,
@@ -1262,9 +1243,9 @@ async fn a_population_subset_is_gated_and_a_named_scope_is_not() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let queryable = create_ehr(&svc).await;
+    let queryable = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &queryable, "BP", 80.0).await;
-    let hidden = create_ehr(&svc).await;
+    let hidden = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &hidden, "BP", 90.0).await;
     set_not_queryable(
         &svc,
@@ -1318,9 +1299,9 @@ async fn multi_ehr_ids_scopes_to_the_set() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let a = create_ehr(&svc).await;
-    let b = create_ehr(&svc).await;
-    let c = create_ehr(&svc).await;
+    let a = crate::fixtures::create_ehr(&svc).await.to_string();
+    let b = crate::fixtures::create_ehr(&svc).await.to_string();
+    let c = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &a, "BP", 80.0).await;
     create_comp(&svc, &b, "BP", 90.0).await;
     create_comp(&svc, &c, "BP", 100.0).await;
@@ -1350,7 +1331,7 @@ async fn absent_ehr_id_raises_ehr_id_does_not_exist() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let real = create_ehr(&svc).await;
+    let real = crate::fixtures::create_ehr(&svc).await.to_string();
     let ghost = Uuid::now_v7().to_string();
 
     // A well-formed, absent id in the set → ehr_id_does_not_exist.
@@ -1392,7 +1373,7 @@ async fn executed_aql_substitutes_bound_parameters() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "BP", 120.0).await;
 
     let aql = format!(
@@ -1432,7 +1413,7 @@ async fn result_set_carries_the_its_rest_shape() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "BP", 120.0).await;
 
     // A two-column projection over the seeded composition (deterministic via the
@@ -1488,7 +1469,7 @@ async fn ehr_status_on_ehr_variable() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
 
     // (1) Whole EHR_STATUS reassembled through the engine-level join.
     let r = run_aql(&svc, "SELECT e/ehr_status FROM EHR e", ehr_scope(&ehr_id)).await;
@@ -1588,7 +1569,7 @@ async fn scalar_functions_execute() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "BP", 81.5).await;
 
     // String functions over c/name/value = "BP".
@@ -1643,7 +1624,7 @@ async fn scalar_functions_execute() {
             "ROUND(0.125, 2) = 0.13 at a decimal place",
         ),
     ] {
-        let ehr = create_ehr(&svc).await;
+        let ehr = crate::fixtures::create_ehr(&svc).await.to_string();
         create_comp(&svc, &ehr, "ties", magnitude).await;
         let call = match decimals {
             None => format!("round(o/{MAG_PATH})"),
@@ -1711,9 +1692,8 @@ fn composition_spanning(name: &str, temporal: &str) -> Value {
 /// (`end_time`).
 #[tokio::test]
 async fn partial_precision_temporals_compare_and_order() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     for (name, temporal) in [
         ("year-only", "2019"),
         ("year-month", "1985-06"),
@@ -1845,7 +1825,7 @@ async fn dashboard_context_start_ordering_and_uid() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
 
     // Distinct start times, seeded out of chronological order so ORDER BY (not
     // insertion order) drives the result.
@@ -1958,10 +1938,9 @@ async fn dashboard_context_start_ordering_and_uid() {
 /// design — so this asserts behaviour equivalence, not a spec clause.
 #[tokio::test]
 async fn plan_cache_reuses_plan_and_binds_per_request() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "BP", 80.0).await;
     create_comp(&svc, &ehr_id, "BP", 100.0).await;
     create_comp(&svc, &ehr_id, "BP", 120.0).await;
@@ -2058,11 +2037,10 @@ async fn plan_cache_reuses_plan_and_binds_per_request() {
 /// execute the query within a single EHR context").
 #[tokio::test]
 async fn ehr_scope_binds_the_bare_ehr_source() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
-    let a = create_ehr(&svc).await;
-    let _b = create_ehr(&svc).await; // a second EHR the scope must exclude
+    let a = crate::fixtures::create_ehr(&svc).await.to_string();
+    let _b = crate::fixtures::create_ehr(&svc).await.to_string(); // a second EHR the scope must exclude
 
     let r = run_aql(
         &svc,
@@ -2089,7 +2067,7 @@ async fn distinct_order_by_limit_and_now_comparison() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "BP", 80.0).await;
     create_comp(&svc, &ehr_id, "BP", 120.0).await;
     create_comp(&svc, &ehr_id, "HR", 100.0).await;
@@ -2145,9 +2123,8 @@ async fn distinct_order_by_limit_and_now_comparison() {
 /// test hold when some binding of the repeated step satisfies it.)
 #[tokio::test]
 async fn like_and_matches_are_any_match_on_multi_valued_paths() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
 
     let mut c = composition("multi-item", 1.0);
     // A second ELEMENT on the SAME items[at0004] path: first carries a
@@ -2211,9 +2188,8 @@ async fn like_and_matches_are_any_match_on_multi_valued_paths() {
 /// and let `\?` keep matching as the single-character wildcard).
 #[tokio::test]
 async fn like_escaped_wildcards_match_the_literal_character() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
 
     let mut c = composition("escape-target", 1.0);
     c["content"][0]["data"]["events"][0]["data"]["items"][0]["value"] =
@@ -2297,9 +2273,8 @@ fn multi_fragment_composition() -> Value {
 /// tested on any element, as the `condition` module records.)
 #[tokio::test]
 async fn multi_valued_fragment_predicates_are_any_match() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     svc.create_composition(
         ehr_id.parse().expect("ehr_id uuid"),
         uv(&multi_fragment_composition(), "249", None),
@@ -2389,9 +2364,8 @@ async fn multi_valued_fragment_predicates_are_any_match() {
 /// two).
 #[tokio::test]
 async fn multi_valued_fragment_projection_serves_every_match() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     svc.create_composition(
         ehr_id.parse().expect("ehr_id uuid"),
         uv(&multi_fragment_composition(), "249", None),
@@ -2418,7 +2392,7 @@ async fn multi_valued_fragment_projection_serves_every_match() {
     );
 
     // The plain composition has no links: the cell is null, never [].
-    let ehr2 = create_ehr(&svc).await;
+    let ehr2 = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr2, "plain", 1.0).await;
     let empty = run_aql(
         &svc,
@@ -2471,9 +2445,8 @@ fn list_tail_composition() -> Value {
 /// design, QUERY master03 §Identified Paths being silent.
 #[tokio::test]
 async fn a_projection_ending_on_a_fragment_list_answers_the_list() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let body = list_tail_composition();
     let uid = create_comp_body(&svc, &ehr_id, body.clone(), "list tails").await;
 
@@ -2545,7 +2518,7 @@ async fn a_projection_ending_on_a_fragment_list_answers_the_list() {
     );
 
     // A composition without these lists (its one participation aside): null cells.
-    let plain = create_ehr(&svc).await;
+    let plain = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &plain, "plain", 1.0).await;
     let r = run_aql(
         &svc,
@@ -2568,9 +2541,8 @@ async fn a_projection_ending_on_a_fragment_list_answers_the_list() {
 /// filter values bind as jsonpath vars, never spliced).
 #[tokio::test]
 async fn fragment_step_predicates_filter_the_matching_elements() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     svc.create_composition(
         ehr_id.parse().expect("ehr_id uuid"),
         uv(&multi_fragment_composition(), "249", None),
@@ -2619,9 +2591,8 @@ async fn fragment_step_predicates_filter_the_matching_elements() {
 /// the guarded leaf reads).
 #[tokio::test]
 async fn whole_object_root_predicate_serves_null_for_non_matches() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "minimal-root", 1.0).await;
 
     let r = run_aql(
@@ -2657,9 +2628,8 @@ async fn whole_object_root_predicate_serves_null_for_non_matches() {
 /// driver as sqlstate 22007 and answered the opaque internal error.
 #[tokio::test]
 async fn an_uncoercible_temporal_binding_is_the_callers_400() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "BP", 120.0).await;
 
     let aql = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
@@ -2710,9 +2680,8 @@ fn uid_root(ovid: &str) -> String {
 /// CONTAINS is the parent/child relationship, not co-residence in one EHR).
 #[tokio::test]
 async fn folder_containment_resolves_references() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<Uuid>().expect("ehr uuid"));
 
     // cB is multiply-classified (course-1 AND course-2 — RM common master05
@@ -2877,9 +2846,8 @@ async fn folder_containment_resolves_references() {
 /// reached by explicit chaining, as the second query pins.
 #[tokio::test]
 async fn folder_contains_folder_reaches_items_referenced_versioned_folders() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<Uuid>().expect("ehr uuid"));
 
     // cX is referenced from the SECOND versioned folder, so it is reachable
@@ -3070,7 +3038,7 @@ async fn an_explicit_page_above_the_result_ceiling_is_refused() {
             max_result_rows: 2,
             ..QueryConfig::default()
         });
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     for magnitude in [80.0, 90.0, 100.0, 110.0] {
         create_comp(&svc, &ehr_id, "BP", magnitude).await;
     }
@@ -3170,9 +3138,8 @@ fn two_event_composition() -> Value {
 /// specification is silent on it).
 #[tokio::test]
 async fn sibling_leaves_under_a_repeated_event_share_its_binding() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
 
     let r = run_aql(
@@ -3271,9 +3238,8 @@ fn nested_cluster_composition() -> Value {
 /// (BASE `architecture_overview` §Paths: a step follows one attribute).
 #[tokio::test]
 async fn containment_and_path_steps_exclude_the_node_itself() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &ehr_id, nested_cluster_composition(), "nested").await;
 
     let codes = |r: &Value| -> Vec<Value> {
@@ -3335,9 +3301,8 @@ async fn containment_and_path_steps_exclude_the_node_itself() {
 /// reads.
 #[tokio::test]
 async fn deleted_compositions_stay_out_of_unscoped_streaming_queries() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let doomed = create_comp(&svc, &ehr_id, "doomed", 1.0).await;
     let kept = create_comp(&svc, &ehr_id, "kept", 2.0).await;
     svc.delete_composition(
@@ -3384,9 +3349,8 @@ async fn deleted_compositions_stay_out_of_unscoped_streaming_queries() {
 /// reads NULL there.
 #[tokio::test]
 async fn or_branch_variables_are_projected() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "observed", 1.0).await;
 
     let r = run_aql(
@@ -3428,9 +3392,8 @@ fn two_reading_composition(first: f64, second: f64) -> Value {
 /// and two aggregates over repeated paths never inflate each other.
 #[tokio::test]
 async fn aggregates_read_every_item_without_adding_rows() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(
         &svc,
         &ehr_id,
@@ -3473,9 +3436,8 @@ async fn aggregates_read_every_item_without_adding_rows() {
 /// selected.
 #[tokio::test]
 async fn a_conjunction_tests_one_node_whatever_the_select() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
     let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
     let sys = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
@@ -3519,9 +3481,8 @@ fn three_observation_composition() -> Value {
 /// its row with a NULL cell.
 #[tokio::test]
 async fn independent_bindings_cross_and_absent_paths_read_null() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &ehr_id, three_observation_composition(), "three").await;
     let pair = json!([OBS_ARCHETYPE, "openEHR-EHR-OBSERVATION.other.v1"]);
 
@@ -3582,9 +3543,8 @@ async fn independent_bindings_cross_and_absent_paths_read_null() {
 /// nested in a SECTION is not there, while `CONTAINS` still finds it.
 #[tokio::test]
 async fn a_content_step_does_not_reach_into_a_section() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let mut c = composition("sectioned", 1.0);
     let observation = c["content"][0].clone();
     c["content"] = json!([{
@@ -3630,9 +3590,8 @@ async fn a_content_step_does_not_reach_into_a_section() {
 /// on a path the aggregate does not share keeps both items.
 #[tokio::test]
 async fn aggregates_read_only_items_the_where_keeps() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(
         &svc,
         &ehr_id,
@@ -3675,9 +3634,8 @@ async fn aggregates_read_only_items_the_where_keeps() {
 /// §WHERE is silent on paths that reach several nodes).
 #[tokio::test]
 async fn or_and_not_are_evaluated_per_event() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
     let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
     let event = "o/data[at0001]/events[at0002]";
@@ -3764,12 +3722,11 @@ async fn or_and_not_are_evaluated_per_event() {
 /// §COUNT); a list-valued fragment tail counts its elements.
 #[tokio::test]
 async fn aggregate_edge_cases() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let sys = "o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude";
     let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
 
-    let empty = create_ehr(&svc).await;
+    let empty = crate::fixtures::create_ehr(&svc).await.to_string();
     let none = run_aql(
         &svc,
         &format!(
@@ -3784,7 +3741,7 @@ async fn aggregate_edge_cases() {
         "{none}"
     );
 
-    let same = create_ehr(&svc).await;
+    let same = crate::fixtures::create_ehr(&svc).await.to_string();
     let mut c = two_reading_composition(120.0, 120.0);
     // One reading written as the integer 120, the other as 120.0.
     c["content"][0]["data"]["events"][0]["data"]["items"][0]["value"]["magnitude"] = json!(120);
@@ -3797,7 +3754,7 @@ async fn aggregate_edge_cases() {
     .await;
     assert_eq!(rows(&distinct), &vec![json!([2, 1])], "{distinct}");
 
-    let listed = create_ehr(&svc).await;
+    let listed = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &listed, multi_fragment_composition(), "links").await;
     let links = run_aql(
         &svc,
@@ -3827,9 +3784,8 @@ async fn aggregate_edge_cases() {
 ///   readings and on an observation without the events.
 #[tokio::test]
 async fn where_keeps_the_boolean_laws() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let readings = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let readings = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(
         &svc,
         &readings,
@@ -3837,7 +3793,7 @@ async fn where_keeps_the_boolean_laws() {
         "two readings",
     )
     .await;
-    let bare = create_ehr(&svc).await;
+    let bare = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &bare, "no readings", 1.0).await;
     let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
     let event = "o/data[at0001]/events[at0002]";
@@ -3908,9 +3864,8 @@ async fn where_keeps_the_boolean_laws() {
 /// aggregates.
 #[tokio::test]
 async fn aggregates_follow_a_negated_where() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(
         &svc,
         &ehr_id,
@@ -3946,9 +3901,8 @@ async fn aggregates_follow_a_negated_where() {
 /// event only.
 #[tokio::test]
 async fn exists_is_path_level() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &ehr_id, two_event_composition(), "two events").await;
     let from = format!("FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[{OBS_ARCHETYPE}]");
     let event = "o/data[at0001]/events[at0002]";
@@ -4008,17 +3962,16 @@ async fn exists_is_path_level() {
 /// differ from `'x'`.
 #[tokio::test]
 async fn a_list_test_over_no_elements_is_unknown() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let aql = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
                WHERE NOT (c/links/target/value = 'ehr://x/none')";
 
-    let bare = create_ehr(&svc).await;
+    let bare = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &bare, "no links", 1.0).await;
     let none = run_aql(&svc, aql, ehr_scope(&bare)).await;
     assert!(rows(&none).is_empty(), "no links, unknown, dropped: {none}");
 
-    let linked = create_ehr(&svc).await;
+    let linked = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_body(&svc, &linked, multi_fragment_composition(), "links").await;
     let some = run_aql(&svc, aql, ehr_scope(&linked)).await;
     assert_eq!(rows(&some).len(), 1, "no link equals the value: {some}");
@@ -4050,14 +4003,13 @@ async fn create_comp_of(
 /// the current version's, and a deleted composition binds nothing.
 #[tokio::test]
 async fn or_branch_compositions_are_projected() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let aql = format!(
         "SELECT c1/uid/value, c2/uid/value FROM EHR e CONTAINS \
          (COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] \
           OR COMPOSITION c2[{REFERRAL_ARCHETYPE}])"
     );
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse().expect("ehr_id uuid"));
 
     let neither = run_aql(&svc, &aql, ehr_scope(&ehr_id)).await;
@@ -4121,20 +4073,19 @@ async fn or_branch_compositions_are_projected() {
 /// composition's binding, and NULL on a row where the other branch matched.
 #[tokio::test]
 async fn a_variable_under_an_or_branch_composition_is_projected() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let aql = format!(
         "SELECT c1/uid/value, o/archetype_node_id FROM EHR e CONTAINS \
          ((COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] CONTAINS OBSERVATION o) \
           OR COMPOSITION c2[{REFERRAL_ARCHETYPE}])"
     );
 
-    let other = create_ehr(&svc).await;
+    let other = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp_of(&svc, &other, "beta", REFERRAL_ARCHETYPE).await;
     let r = run_aql(&svc, &aql, ehr_scope(&other)).await;
     assert_eq!(rows(&r), &vec![json!([null, null])], "{r}");
 
-    let minimal = create_ehr(&svc).await;
+    let minimal = crate::fixtures::create_ehr(&svc).await.to_string();
     let uid = create_comp(&svc, &minimal, "alpha", 1.0).await;
     let r = run_aql(&svc, &aql, ehr_scope(&minimal)).await;
     assert_eq!(rows(&r), &vec![json!([uid, OBS_ARCHETYPE])], "{r}");
@@ -4145,9 +4096,8 @@ async fn a_variable_under_an_or_branch_composition_is_projected() {
 /// folder references binds nothing.
 #[tokio::test]
 async fn folder_referenced_or_branch_compositions_are_projected() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<Uuid>().expect("ehr uuid"));
     let filed = create_comp(&svc, &ehr_id, "filed", 1.0).await;
     create_comp_of(&svc, &ehr_id, "unfiled", REFERRAL_ARCHETYPE).await;
@@ -4449,10 +4399,10 @@ async fn an_ehr_id_predicate_and_its_where_spelling_answer_alike() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let ehr_id = create_ehr(&svc).await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &ehr_id, "BP", 80.0).await;
     create_comp(&svc, &ehr_id, "BP", 120.0).await;
-    let other = create_ehr(&svc).await;
+    let other = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &other, "BP", 999.0).await;
 
     let upper = ehr_id.to_uppercase();
@@ -4507,10 +4457,9 @@ async fn an_ehr_id_predicate_and_its_where_spelling_answer_alike() {
 /// containment relationship between a parent and potential child items").
 #[tokio::test]
 async fn not_contains_at_the_ehr_root_excludes_an_ehr_holding_the_archetype() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let holding = create_ehr(&svc).await;
-    let empty = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let holding = crate::fixtures::create_ehr(&svc).await.to_string();
+    let empty = crate::fixtures::create_ehr(&svc).await.to_string();
     create_comp(&svc, &holding, "held", 1.0).await;
     let archetype = base_composition()["archetype_node_id"]
         .as_str()
@@ -4541,9 +4490,8 @@ async fn not_contains_at_the_ehr_root_excludes_an_ehr_holding_the_archetype() {
 /// earlier.
 #[tokio::test]
 async fn a_date_time_with_another_offset_compares_as_an_instant() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = create_ehr(&svc).await;
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
     for (name, start) in [
         ("later", "2026-10-06T13:48:50Z"),
         ("earlier", "2026-10-06T12:48:50Z"),

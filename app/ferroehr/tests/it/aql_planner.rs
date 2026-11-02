@@ -19,6 +19,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use crate::fixtures::plan_ok;
 use std::sync::Arc;
 
 use openehr_query::ast::{BuiltinFunction, StringFunction};
@@ -37,16 +38,6 @@ use ferroehr::aql::sql::SqlCtx;
 use ferroehr::aql::sql::subject::SubjectScope;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-fn plan_ok(q: &str) -> QueryIr {
-    let ast = parse_str(q).unwrap_or_else(|e| panic!("parse failed for {q:?}: {e}"));
-    plan(
-        &ast,
-        &Params::default(),
-        ferroehr::config::profile::SpecProfile::default(),
-    )
-    .unwrap_or_else(|e| panic!("plan failed for {q:?}: {e}"))
-}
 
 /// Plan `q` (parameterless) and lower it to SQL, returning the generated SQL
 /// text. Literals bind as `$n` placeholders; structural SQL (EXISTS, OR, CASE …)

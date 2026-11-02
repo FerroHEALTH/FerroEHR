@@ -10,7 +10,6 @@
 //! racing writes: our own design. Whichever write comes second gets the
 //! refusal it gets alone, so no stored template is left without its archetype.
 
-use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Clash, Refusal};
 
@@ -53,8 +52,7 @@ fn template_using(hrid: &str, filler: &str) -> String {
 /// both succeed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_template_upload_racing_the_delete_of_its_archetype_never_both_succeed() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     let (mut deletes_won, mut uploads_won) = (0, 0);
     for round in 0..ROUNDS {
         let observation = format!("openEHR-EHR-OBSERVATION.race_obs_{round}.v1.0.0");

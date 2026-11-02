@@ -29,6 +29,7 @@
               intended shape here (the Rust Book ch11)"
 )]
 
+use crate::fixtures::provider;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,8 +37,6 @@ use std::time::Duration;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Invalid;
-use ferroehr::service::terminology::config::TerminologyServerConfig;
-use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use testcontainers::core::{ContainerPort, Mount};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt};
@@ -107,17 +106,6 @@ impl FerroTerm {
             base: format!("{root}/r4b"),
         }
     }
-}
-
-/// A client at `FerroTERM`'s R4B base; every test asks the server.
-fn provider(base: &str) -> FhirTerminologyProvider {
-    let cfg = TerminologyServerConfig {
-        enabled: true,
-        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        request_timeout_ms: 5000,
-        ..TerminologyServerConfig::default()
-    };
-    FhirTerminologyProvider::new(&cfg).expect("build provider")
 }
 
 /// A minimal spec-valid ADL2 archetype named `concept` whose root node binds

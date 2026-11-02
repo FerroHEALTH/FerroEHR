@@ -643,8 +643,7 @@ async fn dump_load_carries_blobs() {
 /// store is contacted, so this needs only Postgres.
 #[tokio::test]
 async fn disabled_by_default_stores_inline_verbatim() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     let media = multimedia(4096); // well above any threshold
     let inline_data = media.get("data").cloned();
@@ -680,8 +679,7 @@ async fn disabled_by_default_stores_inline_verbatim() {
 /// offloads; it may not quietly change what clinical content a read returns.
 #[tokio::test]
 async fn unreachable_store_refuses_expansion_instead_of_answering_silently() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
 
     // A body shaped like a stored, already-externalized record. Built by hand
     // because reaching this state through the service would require the very

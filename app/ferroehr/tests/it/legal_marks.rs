@@ -46,10 +46,7 @@ use crate::fixtures::uv;
 /// A fresh repository plus one EHR carrying an `EHR_STATUS` and a directory
 /// `FOLDER`, and the `EHR_STATUS` version-container id.
 async fn seed(svc: &FerroEhrService) -> (EhrId, String) {
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_id = crate::fixtures::create_ehr(svc).await;
     let status = svc
         .ehr_status_at_time_response(ehr_id, None)
         .await
@@ -293,8 +290,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
 
 #[tokio::test]
 async fn an_object_restriction_survives_a_whole_ehr_lift() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr_id, status_vo) = seed(&svc).await;
 
     svc.restrict_processing(&ehr_id.to_string(), None, "gdpr-18-1-c", None)
@@ -323,8 +319,7 @@ async fn an_object_restriction_survives_a_whole_ehr_lift() {
 
 #[tokio::test]
 async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let (ehr_id, status_vo) = seed(&svc).await;
 
     let bad_ground = svc
@@ -343,11 +338,7 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
 
     let foreign = svc
         .restrict_processing(
-            &Box::pin(svc.create_ehr_meta(None, None))
-                .await
-                .map(|(id, _)| id)
-                .expect("second ehr")
-                .to_string(),
+            &crate::fixtures::create_ehr(&svc).await.to_string(),
             Some(&status_vo),
             "national",
             None,

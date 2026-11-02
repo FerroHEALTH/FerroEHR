@@ -11,35 +11,15 @@
 //! operation contracts of `ferrobridge-term`, so a body that does not fit them
 //! is a fault, never a partial read.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::time::Duration;
 
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Missing;
-use ferroehr::service::terminology::config::TerminologyServerConfig;
-use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use serde_json::json;
 use wiremock::{MockServer, ResponseTemplate};
 
+use crate::fixtures::provider;
 use crate::terminology_wire::{Absent, operation, parameter};
-
-/// Build a client pointing at `base` with a short, test-friendly timeout.
-fn provider(base: &str) -> FhirTerminologyProvider {
-    let cfg = TerminologyServerConfig {
-        enabled: true,
-        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        request_timeout_ms: 800,
-        ..TerminologyServerConfig::default()
-    };
-    FhirTerminologyProvider::new(&cfg).expect("build provider")
-}
 
 /// The reference golden case: `ValueSet/surface`, code `B` = "Buccal".
 const SURFACE_VS: &str = "http://hl7.org/fhir/ValueSet/surface";

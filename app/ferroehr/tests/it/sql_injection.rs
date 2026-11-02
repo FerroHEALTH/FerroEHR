@@ -78,6 +78,7 @@
               shape here (the Rust Book ch11)"
 )]
 
+use crate::fixtures::plan_ok;
 use std::sync::Arc;
 
 use sea_query::Value;
@@ -85,7 +86,7 @@ use sea_query_sqlx::SqlxValues;
 use sqlx::{AssertSqlSafe, Connection, PgConnection, Row};
 
 use ferroehr::aql::error::{AnalysisError, AqlError, AqlFeatureError};
-use ferroehr::aql::ir::{ParamValue, Params, QueryIr};
+use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::plan;
 use ferroehr::aql::sql::subject::SubjectScope;
@@ -139,16 +140,6 @@ fn ctx() -> SqlCtx {
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     }
-}
-
-fn plan_ok(q: &str) -> QueryIr {
-    let ast = parse_str(q).unwrap_or_else(|e| panic!("parse failed for {q:?}: {e}"));
-    plan(
-        &ast,
-        &Params::default(),
-        ferroehr::config::profile::SpecProfile::default(),
-    )
-    .unwrap_or_else(|e| panic!("plan failed for {q:?}: {e}"))
 }
 
 /// Plan `q` and lower it to SQL with `params` bound and `ctx` as the execution

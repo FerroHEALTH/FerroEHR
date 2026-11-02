@@ -42,10 +42,7 @@ use crate::fixtures::{composition, folder, uv};
 /// (`EHR_STATUS`, `EHR_ACCESS`, the COMPOSITION), every one of which the sweep
 /// reads.
 async fn seed_ehr_with_composition(svc: &FerroEhrService) -> EhrId {
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_id = crate::fixtures::create_ehr(svc).await;
     svc.create_composition(ehr_id, uv(&composition("Encounter"), "249", None))
         .await
         .expect("composition commit");
@@ -83,8 +80,7 @@ async fn tamper(pool: &PgPool, sql: &'static str, vo_id: Uuid, sys_version: i32)
 
 #[tokio::test]
 async fn a_committed_composition_sweeps_clean() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     seed_ehr_with_composition(&svc).await;
 
     let report = svc
@@ -123,10 +119,7 @@ const TYPED_VALUE_TEMPLATES: [&str; 4] = [
 /// Commits the `medium` example of every [`TYPED_VALUE_TEMPLATES`] entry into
 /// one new EHR.
 pub(crate) async fn seed_typed_value_compositions(svc: &FerroEhrService) {
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_id = crate::fixtures::create_ehr(svc).await;
     for template in TYPED_VALUE_TEMPLATES {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join(format!("../../corpus/templates/ckm/{template}.opt"));
@@ -328,10 +321,7 @@ async fn a_logically_deleted_version_sweeps_clean() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let dir = svc
         .create_directory(ehr_id, uv(&folder("root"), "249", None))
         .await
@@ -365,10 +355,7 @@ async fn node_rows_under_a_bodiless_version_are_reported_as_unexpected_nodes() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let dir = svc
         .create_directory(ehr_id, uv(&folder("root"), "249", None))
         .await
@@ -577,8 +564,7 @@ async fn the_streamed_sweep_reports_the_same_findings_as_the_aggregated_one() {
 
 #[tokio::test]
 async fn a_dropped_stream_stops_the_sweep_where_it_stood() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     seed_ehr_with_composition(&svc).await;
 
     // One batch, then drop. Nothing may panic and nothing may run on: the

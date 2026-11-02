@@ -23,7 +23,6 @@
 
 use std::sync::OnceLock;
 
-use ferroehr::service::FerroEhrService;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::metrics;
 use ferrohealth_telemetry::section::TelemetrySection;
@@ -69,12 +68,8 @@ fn committed(telemetry: &Telemetry, change_type: &str) -> u64 {
 #[tokio::test]
 async fn compositions_committed_total_counts_every_committed_composition_version() {
     let handle = recorder();
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let (creations, modifications, deletions) = (
         committed(handle, "249"),

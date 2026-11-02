@@ -56,38 +56,18 @@ use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 
+use crate::fixtures::db_now;
+use crate::fixtures::status_for_subject;
 use crate::fixtures::{composition, uv};
 use crate::typed_body::typed;
 use ferroehr::versioning::signature::config::{Mode, SigningConfig, VerifyOnRead};
 use ferroehr::versioning::signature::signer::Signer;
 
-/// The database's own current instant, for a probe an assertion compares
-/// against a stored one.
-///
-/// Committal instants are stamped by PostgreSQL, not by this process:
-/// `audit.time_committed` defaults to `now()`, because RM common
-/// `master06-change_control_package.adoc` §Committal and Audits requires the
-/// committal instant to be computed on the server. Taking the probe from
-/// `jiff::Timestamp::now()` would therefore compare a host clock against a
-/// container clock, and the two are free to disagree (#3138). Every database
-/// here comes from the one testkit server, so a probe read from any pool shares
-/// its clock with every instant under test.
-async fn db_now(pool: &sqlx::PgPool) -> jiff::Timestamp {
-    let now: jiff_sqlx::Timestamp = sqlx::query_scalar("SELECT now()")
-        .fetch_one(pool)
-        .await
-        .expect("the database's current instant");
-    now.to_jiff()
-}
-
 /// Seed an EHR with an `EHR_STATUS` (create → update = two versions), a directory
 /// `FOLDER`, and the auto-created `EHR_ACCESS` — the same shape the export tests
 /// seed. Returns the EHR id.
 async fn seed_ehr(svc: &FerroEhrService) -> ferroehr::ids::EhrId {
-    let ehr_uuid = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_uuid = crate::fixtures::create_ehr(svc).await;
 
     let mut status = svc
         .ehr_status_at_time_response(ehr_uuid, None)
@@ -178,33 +158,6 @@ fn status_for_subject_in(subject_id: &str, namespace: &str) -> Value {
     let mut status = status_for_subject(subject_id);
     status["subject"]["external_ref"]["namespace"] = json!(namespace);
     status
-}
-
-/// An `EHR_STATUS` whose `PARTY_SELF` subject carries an `external_ref` —
-/// RM ehr master04 §EHR Status (the subject 0..1 identifies the EHR).
-fn status_for_subject(subject_id: &str) -> Value {
-    json!({
-        "_type": "EHR_STATUS",
-        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
-        "archetype_details": {
-            "_type": "ARCHETYPED",
-            "archetype_id": { "_type": "ARCHETYPE_ID",
-                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
-            "rm_version": "1.2.0"
-        },
-        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
-        "subject": {
-            "_type": "PARTY_SELF",
-            "external_ref": {
-                "_type": "PARTY_REF",
-                "namespace": "patients",
-                "type": "PERSON",
-                "id": { "_type": "HIER_OBJECT_ID", "value": subject_id }
-            }
-        },
-        "is_queryable": true,
-        "is_modifiable": true
-    })
 }
 
 #[tokio::test]
@@ -508,8 +461,7 @@ async fn import_ehr_into_fixed_fresh_id() {
 
 #[tokio::test]
 async fn import_ehr_duplicate_target_is_rejected() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (_db, svc) = crate::fixtures::service().await;
     let ehr = seed_ehr(&svc).await;
 
     // import_ehr imports into an *empty* target; a fixed id that already exists
@@ -590,10 +542,7 @@ async fn import_ehr_extract_adds_a_versioned_object_and_rejects_re_import() {
             .expect("folder EXTRACT");
 
     // A fresh target EHR (its own EHR_STATUS/EHR_ACCESS, no directory yet).
-    let tgt_ehr = Box::pin(target.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("target ehr");
+    let tgt_ehr = crate::fixtures::create_ehr(&target).await;
     target
         .import_ehr_extract(tgt_ehr, folder_extract.clone())
         .await
@@ -1013,10 +962,7 @@ async fn an_as_of_read_before_the_import_does_not_see_the_imported_version() {
     ));
 
     // A plain modifiable source EHR (the seeded fixture ends non-modifiable).
-    let ehr = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("source ehr");
+    let ehr = crate::fixtures::create_ehr(&source).await;
     let composition_uid = source
         .create_composition(ehr, uv(&composition("as-of"), "249", None))
         .await
@@ -1530,10 +1476,7 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
 
     // An EHR whose EHR_STATUS names that party as its subject, in the
     // `demographic` namespace the extract builder follows.
-    let ehr = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr = crate::fixtures::create_ehr(&source).await;
     let mut status = source
         .ehr_status_at_time_response(ehr, None)
         .await

@@ -1464,10 +1464,7 @@ async fn an_imported_party_with_a_plaintext_identifier_is_refused() {
         .expect("an unprotected source stores the person as written");
     let (party, _) = committed_ids(&created.body);
 
-    let ehr = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr = crate::fixtures::create_ehr(&source).await;
     let mut status = source
         .ehr_status_at_time_response(ehr, None)
         .await
@@ -1543,10 +1540,7 @@ async fn an_imported_party_with_another_deployments_sealed_identifier_is_refused
         .expect("the source seals the identifier");
     let (party, _) = committed_ids(&created.body);
 
-    let ehr = Box::pin(source.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr = crate::fixtures::create_ehr(&source).await;
     let mut status = source
         .ehr_status_at_time_response(ehr, None)
         .await

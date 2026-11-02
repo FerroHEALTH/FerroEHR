@@ -55,10 +55,7 @@ pub(crate) async fn repository() -> (testkit::TestDb, PgPool, FerroEhrService) {
 /// whose `EHR_STATUS.is_modifiable` is `false` are refused (RM ehr master04
 /// §"EHR Active Status").
 pub(crate) async fn seed_full_ehr(svc: &FerroEhrService) -> EhrId {
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr");
+    let ehr_id = crate::fixtures::create_ehr(svc).await;
 
     let mut updated = svc
         .ehr_status_at_time_response(ehr_id, None)

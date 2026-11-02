@@ -58,8 +58,7 @@ fn template_using(hrid: &str, reference: &str) -> String {
 /// A service over a fresh database holding `versions` of `FAMILY`, uploaded
 /// in that order.
 async fn store(versions: &[&str]) -> (testkit::TestDb, FerroEhrService) {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()));
+    let (db, svc) = crate::fixtures::service().await;
     for version in versions {
         svc.template_adl2_upload(&release(version))
             .await

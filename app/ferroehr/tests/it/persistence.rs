@@ -1227,10 +1227,7 @@ async fn materialized_body_matches_node_reassembly_on_a_real_commit() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let service = FerroEhrService::new(&db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = Box::pin(service.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("ehr create");
+    let ehr_id = crate::fixtures::create_ehr(&service).await;
 
     // The EHR create commits an EHR_STATUS through the full commit path.
     let (vo, body): (Uuid, Option<String>) =
@@ -1357,10 +1354,7 @@ async fn a_wiped_clinical_schema_is_rebuilt_and_serves_writes_again() {
         .expect("the clinical set rebuilds its schema on a database whose party set is complete");
 
     let svc = ferroehr::service::FerroEhrService::new(&db::domain::DomainPools::from_shared(&pool));
-    let ehr_id = Box::pin(svc.create_ehr_meta(None, None))
-        .await
-        .map(|(id, _)| id)
-        .expect("create_ehr");
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let body = crate::fixtures::composition("after the wipe");
     let created = svc
         .create_composition(ehr_id, crate::fixtures::uv(&body, "249", None))
