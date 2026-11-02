@@ -96,19 +96,20 @@ impl Printer {
         Ok(())
     }
 
-    /// Prints a primitive object: inline where it carries the placeholder node
-    /// id (only reached inside an attribute body), else as a node-identified
-    /// object with its `matches` value.
+    /// Prints a primitive object: inline where it carries the `Primitive_node_id`
+    /// and a value (only reached inside an attribute body), else as a
+    /// node-identified object with its `matches` value, if any. A body-less
+    /// `Type[id9999]` has no short form, so it keeps the regular one.
     fn primitive_object(&mut self, head: &str, obj: &CObject, depth: usize) {
         let Some(prim) = cobject_to_primitive(obj) else {
             return;
         };
         let (ty, node_id) = prim_type_and_node(obj);
-        if NodeCoding::is_primitive_node_id(&node_id) {
-            self.line(depth, &format!("{head}{}", primitive_inline(&prim)));
+        let value = primitive_inline(&prim);
+        if NodeCoding::is_primitive_node_id(&node_id) && !value.is_empty() {
+            self.line(depth, &format!("{head}{value}"));
             return;
         }
-        let value = primitive_inline(&prim);
         if value.is_empty() {
             self.line(depth, &format!("{head}{ty}{}", node_bracket(&node_id)));
         } else {
@@ -147,15 +148,15 @@ impl Printer {
             self.line(depth, &format!("{head} matches {{{body}}}"));
             return Ok(());
         }
-        // A single inline primitive child prints inline; regular objects nest.
+        // A single inline primitive child with a value prints inline; regular
+        // objects nest.
         if let [child] = a.children.as_deref().unwrap_or_default()
             && let Some(prim) = cobject_to_primitive(child)
             && NodeCoding::is_primitive_node_id(&prim_type_and_node(child).1)
+            && let value = primitive_inline(&prim)
+            && !value.is_empty()
         {
-            self.line(
-                depth,
-                &format!("{head} matches {{{}}}", primitive_inline(&prim)),
-            );
+            self.line(depth, &format!("{head} matches {{{value}}}"));
             return Ok(());
         }
         self.line(depth, &format!("{head} matches {{"));
