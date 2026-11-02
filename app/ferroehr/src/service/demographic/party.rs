@@ -317,7 +317,10 @@ impl FerroEhrService {
     /// The current party version metadata (the latest `version_uid` a `412`
     /// echoes in `ETag`/`Location`), or `None` if unknown/wrong-kind — the lean
     /// resolve, no node reassembly.
-    pub(super) async fn party_current_meta(
+    ///
+    /// # Errors
+    /// [`ServiceError`] on a storage/database fault during the lean read.
+    pub async fn demographic_latest_meta(
         &self,
         kind: PartyKind,
         vo_id: VoId,

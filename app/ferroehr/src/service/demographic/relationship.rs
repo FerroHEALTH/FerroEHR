@@ -152,7 +152,10 @@ impl FerroEhrService {
     /// The current relationship version metadata (the latest `version_uid` a
     /// `412` echoes in `ETag`/`Location`), or `None` if unknown/wrong-kind —
     /// the lean resolve, no node reassembly.
-    pub(super) async fn relationship_current_meta(
+    ///
+    /// # Errors
+    /// [`ServiceError`] on a storage/database fault during the lean read.
+    pub async fn party_relationship_latest_meta(
         &self,
         vo_id: VoId,
     ) -> Result<Option<ResourceMeta>, ServiceError> {

@@ -366,20 +366,6 @@ impl FerroEhrService {
             .await?;
         Ok(ServiceResponse::plain(Value::Null))
     }
-
-    /// The current party version metadata (the latest `version_uid` for
-    /// `ETag`/`Location`/`412` echoes), or `None` if unknown/wrong-kind — the
-    /// lean resolve, no node reassembly.
-    ///
-    /// # Errors
-    /// - [`ServiceError`] on a storage/database fault during the lean read.
-    pub async fn demographic_latest_meta(
-        &self,
-        kind: PartyKind,
-        vo_id: VoId,
-    ) -> Result<Option<ResourceMeta>, ServiceError> {
-        self.party_current_meta(kind, vo_id).await
-    }
 }
 
 impl FerroEhrService {
@@ -544,18 +530,5 @@ impl FerroEhrService {
         Ok(ServiceResponse::plain(
             self.relationship_version(vo_id, version).await?,
         ))
-    }
-
-    /// The current relationship version metadata (the latest `version_uid` for
-    /// `ETag`/`Location`/`412` echoes), or `None` if unknown/wrong-kind — the
-    /// lean resolve, no node reassembly.
-    ///
-    /// # Errors
-    /// - [`ServiceError`] on a storage/database fault during the lean read.
-    pub async fn party_relationship_latest_meta(
-        &self,
-        vo_id: VoId,
-    ) -> Result<Option<ResourceMeta>, ServiceError> {
-        self.relationship_current_meta(vo_id).await
     }
 }
