@@ -405,14 +405,15 @@ jobs:
           # Handle first-push / shallow edge cases.
           git rev-parse "${base:-HEAD~1}" >/dev/null 2>&1 || range="HEAD"
           echo "Scanning range: $range"
-          # `[bot]` catches an automation co-author, with one exception:
-          # GitHub's squash merge of a Dependabot pull request writes
-          # `Co-authored-by: dependabot[bot] <…>`, which names a dependency
-          # updater, not an AI author. The hook in .githooks/commit-msg keeps
-          # that same line, so the two guards agree.
+          # `[bot]` catches an automation co-author, with two exceptions:
+          # GitHub's squash merge writes `Co-authored-by: dependabot[bot] <…>`
+          # or `github-actions[bot] <…>` for a commit Dependabot or a workflow
+          # made, which names GitHub's own automation, not an AI author (owner
+          # ruling 2026-11-02). The hook in .githooks/commit-msg keeps the same
+          # lines, so the two guards agree.
           if git log --format='%B' "$range" 2>/dev/null | grep -iEn \
              'co-authored-by:.*(claude|anthropic|\[bot\])|generated[[:space:]]+(with|by)[[:space:]]+.*claude|claude[[:space:]]+code|🤖|assisted-by:.*claude' \
-             | grep -viE '^[0-9]+:[[:space:]]*co-authored-by: dependabot\[bot\] <[0-9]+\+dependabot\[bot\]@users\.noreply\.github\.com>[[:space:]]*$'; then
+             | grep -viE '^[0-9]+:[[:space:]]*co-authored-by: (dependabot|github-actions)\[bot\] <[0-9]+\+(dependabot|github-actions)\[bot\]@users\.noreply\.github\.com>[[:space:]]*$'; then
             echo "::error::Commit message contains AI/Claude attribution. Remove it (see project hard rules)."
             exit 1
           fi
