@@ -16,7 +16,8 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
+use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding};
+use ferroehr::storage::cohort_predicate::PredicateKind;
 use http::StatusCode;
 use serde_json::{Value, json};
 

@@ -108,7 +108,7 @@ pub struct CohortPredicate {
     /// The `[cohort.predicates]` key.
     pub name: String,
     /// The value to match, interpreted by the binding's
-    /// [`config::PredicateKind`].
+    /// [`crate::storage::cohort_predicate::PredicateKind`].
     pub value: String,
 }
 
@@ -207,10 +207,8 @@ pub enum CohortError {
     /// The inner AQL execution failed.
     #[error("the cohort query failed")]
     Query(#[source] ServiceError),
-    /// A demographic read failed.
-    #[error("the cohort store is unavailable")]
-    Database(#[source] sqlx::Error),
-    /// The read of the EHRs whose subject a selected party is failed.
+    /// A demographic predicate read, or the read of the EHRs whose subject a
+    /// selected party is, failed.
     #[error("the cohort store is unavailable")]
     Storage(#[source] crate::storage::error::StorageError),
     /// No connection to the demographic or clinical store could be obtained,
@@ -237,9 +235,7 @@ impl From<CohortError> for ServiceError {
             CohortError::CohortTooLarge { .. } => {
                 ServiceError::content_invalid(Violation::new(error.to_string()).with_source(error))
             }
-            CohortError::Database(_) | CohortError::Storage(_) => {
-                ServiceError::internal("execute a cohort query", error)
-            }
+            CohortError::Storage(_) => ServiceError::internal("execute a cohort query", error),
             CohortError::Acquire(e) => ServiceError::Acquire(e),
         }
     }
@@ -268,8 +264,7 @@ impl FerroEhrService {
     /// [`CohortError::UnknownPredicate`] / [`CohortError::InvalidValue`] for a
     /// malformed request, [`CohortError::CohortTooLarge`] above the configured
     /// ceiling, [`CohortError::Acquire`] when no domain connection can be
-    /// obtained, [`CohortError::Database`] when a domain read fails,
-    /// [`CohortError::Storage`] when the subject read fails,
+    /// obtained, [`CohortError::Storage`] when a domain read fails,
     /// [`CohortError::Subject`] when a named subject cannot be resolved,
     /// [`CohortError::Query`] when the AQL execution fails, and
     /// [`CohortError::Unrecorded`] when the access record could not be taken

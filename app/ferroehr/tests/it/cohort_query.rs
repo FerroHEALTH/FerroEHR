@@ -20,8 +20,9 @@ use uuid::Uuid;
 
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
+use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding};
 use ferroehr::service::linkage::cohort::{CohortError, CohortPredicate, CohortQueryRequest};
+use ferroehr::storage::cohort_predicate::PredicateKind;
 
 use crate::fixtures::{composition, uv};
 
@@ -590,7 +591,7 @@ fn the_two_statements_never_cross_the_boundary() {
         PredicateKind::Coded,
         PredicateKind::BirthDate,
     ] {
-        let sql = ferroehr::service::linkage::cohort::predicate::predicate_sql(kind);
+        let sql = ferroehr::storage::cohort_predicate::predicate_sql(kind);
         for forbidden in [
             "openehr-ehr-",
             "/",

@@ -26,10 +26,11 @@ use ferroehr::service::ehr_index::IndexError;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::error::ServiceError;
-use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding, PredicateKind};
+use ferroehr::service::linkage::cohort::config::{CohortConfig, PredicateBinding};
 use ferroehr::service::linkage::cohort::{CohortError, CohortPredicate, CohortQueryRequest};
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::refusal::Malformed;
+use ferroehr::storage::cohort_predicate::PredicateKind;
 
 use crate::ehr_index_ihe::{
     CLINICAL, OPERATION, RED_ID, answer, red_subject, red_to_blue, service,
