@@ -228,7 +228,7 @@ impl CdrClient {
 
     /// A URL under the CDR's extensions root (`{rest_root}/extensions/v1`),
     /// where the CDR serves its own API extensions beside the openEHR API:
-    /// terminology, event subscriptions, party relationships, the archetype
+    /// terminology, party relationships, the archetype
     /// library and the admin extensions.
     #[must_use]
     pub fn extensions_v1(&self, path: &str) -> String {

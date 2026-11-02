@@ -96,8 +96,8 @@ pub struct FerroEhrConfig {
     pub licence: crate::licence::config::LicenceConfig,
     /// `[query]` — AQL execution knobs.
     pub query: crate::service::query::config::QueryConfig,
-    /// `[events]` — contribution-outbox eventing (+ its admin API).
-    pub events: crate::extensions::events::config::EventsConfig,
+    /// `[outbox]` — the commit-event outbox readers and its retention.
+    pub outbox: crate::extensions::outbox::config::OutboxConfig,
     /// `[terminology]` — terminology API + the terminology server.
     pub terminology: crate::service::terminology::config::TerminologyConfig,
     /// `[multimedia]` — `DV_MULTIMEDIA` externalization.
@@ -153,7 +153,7 @@ impl Default for FerroEhrConfig {
             signing: crate::versioning::signature::config::SigningConfig::default(),
             licence: crate::licence::config::LicenceConfig::default(),
             query: crate::service::query::config::QueryConfig::default(),
-            events: crate::extensions::events::config::EventsConfig::default(),
+            outbox: crate::extensions::outbox::config::OutboxConfig::default(),
             terminology: crate::service::terminology::config::TerminologyConfig::default(),
             multimedia: crate::extensions::multimedia::config::MultimediaConfig::default(),
             audit: crate::system_log::config::AuditConfig::default(),
@@ -209,6 +209,7 @@ impl FerroEhrConfig {
             ));
         }
         errors.extend(multimedia_endpoint_errors(&self.multimedia));
+        errors.extend(self.outbox.errors().into_iter().map(ConfigError::semantic));
         // management.port must differ from the server.listen port.
         if let Some(port) = self.management.port
             && self.server.listen.port() == port
@@ -1426,6 +1427,7 @@ mod tests {
                 ("FERROEHR__SMART__BACKEND_CLIENTS", "etl"),
                 ("FERROEHR__SMART__PATIENT_ISSUERS", "https://as.example"),
                 ("FERROEHR__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
+                ("FERROEHR__OUTBOX__READERS", "ferrobridge"),
             ]),
             &[],
         );
@@ -1444,6 +1446,7 @@ mod tests {
             vec!["https://as.example".to_owned()]
         );
         assert_eq!(c.smart.demographic_clients, vec!["mpi".to_owned()]);
+        assert_eq!(c.outbox.readers, vec!["ferrobridge".to_owned()]);
     }
 
     /// A list nested under a MAP key is addressable from the environment too,
@@ -1755,7 +1758,7 @@ mod tests {
     /// Every credential-bearing key reaches the same configuration through its
     /// `*_file` sibling as it does inline.
     ///
-    /// These four had no file route at all, so the most valuable secret in the
+    /// These had no file route at all, so the most valuable secret in the
     /// deployment — the database DSN — could only travel as an environment value,
     /// readable through `/proc/<pid>/environ` and inherited by every child
     /// process. The assertion is equivalence: the file route is an additional
@@ -1763,7 +1766,6 @@ mod tests {
     #[test]
     fn the_credential_keys_resolve_identically_from_a_file_and_inline() {
         const DSN: &str = "postgres://u:p@db.internal:5432/ferroehr";
-        const BROKER: &str = "amqps://u:p@broker.internal:5671/%2f";
         const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2g";
 
         let secret_file = |name: &str, contents: &str| {
@@ -1775,29 +1777,24 @@ mod tests {
         };
 
         let dsn = secret_file("dsn", DSN);
-        let broker = secret_file("broker", BROKER);
         let hash = secret_file("hash", HASH);
 
         let from_files = toml_file(&format!(
             "[db]\nurl_file = \"{}\"\n\
-             [events]\nurl_file = \"{}\"\n\
              [[auth.basic.users]]\nuser = \"alice\"\npassword_hash_file = \"{}\"\n",
             dsn.path().display(),
-            broker.path().display(),
             hash.path().display(),
         ));
         let via_file = assemble_ok(Some(from_files.path()), &env(&[]), &[]);
 
         let inline = toml_file(&format!(
             "[db]\nurl = \"{DSN}\"\n\
-             [events]\nurl = \"{BROKER}\"\n\
              [[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"{HASH}\"\n"
         ));
         let via_inline = assemble_ok(Some(inline.path()), &env(&[]), &[]);
 
         assert_eq!(via_file.db.url.expose(), DSN);
         assert_eq!(via_file.db.url.expose(), via_inline.db.url.expose());
-        assert_eq!(via_file.events.url.expose(), BROKER);
         let user = &via_file.auth.basic.as_ref().expect("basic").users[0];
         assert_eq!(
             user.password_hash
@@ -1840,7 +1837,6 @@ mod tests {
              url_file = \"/dev/null\"\n",
             "[storage.migrate.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
-            "[events]\nurl = \"amqp://u:p@h:5672/%2f\"\nurl_file = \"/dev/null\"\n",
             "[[auth.basic.users]]\nuser = \"a\"\npassword_hash = \"x\"\n\
              password_hash_file = \"/dev/null\"\n",
         ];
@@ -1863,8 +1859,6 @@ mod tests {
     fn the_url_file_keys_are_reachable_through_the_env_grammar() {
         let dsn = assert_fs::NamedTempFile::new("dsn").expect("temp");
         dsn.write_str("postgres://u:p@h:5432/d\n").expect("write");
-        let broker = assert_fs::NamedTempFile::new("broker").expect("temp");
-        broker.write_str("amqps://u:p@b:5671/%2f\n").expect("write");
         // A DIFFERENT DSN, so the assertion below cannot pass by falling back
         // to `db.url` — which is what an unwired `migrate_url_file` would do.
         let migrate = assert_fs::NamedTempFile::new("migrate-dsn").expect("temp");
@@ -1879,10 +1873,6 @@ mod tests {
                 (
                     "FERROEHR__DB__MIGRATE_URL_FILE",
                     &migrate.path().display().to_string(),
-                ),
-                (
-                    "FERROEHR__EVENTS__URL_FILE",
-                    &broker.path().display().to_string(),
                 ),
                 (
                     "FERROEHR__STORAGE__PARTY__URL_FILE",
@@ -1908,7 +1898,6 @@ mod tests {
             Some("postgres://m:p@h:5432/d"),
             "a relocated domain's migration credential arrives through the env grammar"
         );
-        assert_eq!(c.events.url.expose(), "amqps://u:p@b:5671/%2f");
     }
 
     /// The dev default is not a setting, so a `*_file` alone works without the
@@ -1944,7 +1933,6 @@ mod tests {
         c.storage.migrate.clinical.url = Some(leaky(5));
         c.storage.audit.url = Some(leaky(6));
         c.storage.migrate.party.url = Some(leaky(15));
-        c.events.url = leaky(7);
         c.audit.fhir_feed.url = leaky(8);
         c.terminology.server.url = leaky(9);
         c.terminology.server.oauth = Some(OauthSection {
@@ -1958,7 +1946,7 @@ mod tests {
         });
         c.multimedia.endpoint = Some(leaky(14));
         // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
-        // can hold no sentinel.
+        // can hold no sentinel; URL 7 was the removed event broker.
         assert!(
             ferrohealth_usage_report::section::Endpoint::new(
                 "https://u11:URL_PW_SENTINEL_11@h11:1/p11"
@@ -1981,7 +1969,7 @@ mod tests {
                 !rendered.contains("URL_PW_SENTINEL"),
                 "URL userinfo leaked into the {surface} rendering: {rendered}"
             );
-            for n in (1..=15).filter(|n| *n != 11) {
+            for n in (1..=15).filter(|n| *n != 7 && *n != 11) {
                 assert!(
                     rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                     "URL {n} lost its host and path in the {surface} rendering: {rendered}"
@@ -2024,7 +2012,6 @@ mod tests {
         const BASIC_HASH: &str = "$argon2id$BASIC_HASH_SENTINEL_7b2d";
         const PASSPHRASE: &str = "PASSPHRASE_SENTINEL_1d5a";
         const S3_KEY: &str = "S3_SECRET_SENTINEL_8c6b";
-        const EVENTS_PW: &str = "EVENTS_PW_SENTINEL_2f7e";
 
         let mut c = standalone();
         c.db.url = SecretUrl::new(format!(
@@ -2045,12 +2032,11 @@ mod tests {
         c.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
         c.multimedia.secret_access_key = Some(Secret::new(S3_KEY));
         c.multimedia.access_key_id = Some("AKIA_PUBLIC_ID".to_owned());
-        c.events.url = SecretUrl::new(format!("amqp://mq:{EVENTS_PW}@broker:5672/vh"));
 
         let value = c.to_redacted_json().expect("render redacted json");
         let rendered = serde_json::to_string(&value).expect("stringify");
 
-        for sentinel in [DB_PW, BASIC_HASH, PASSPHRASE, S3_KEY, EVENTS_PW] {
+        for sentinel in [DB_PW, BASIC_HASH, PASSPHRASE, S3_KEY] {
             assert!(
                 !rendered.contains(sentinel),
                 "secret leaked into GET /admin/config body: {sentinel} in {rendered}"
@@ -2065,7 +2051,6 @@ mod tests {
             value["db"]["url"],
             "postgres://***@db.internal:5432/ferroehr"
         );
-        assert_eq!(value["events"]["url"], "amqp://***@broker:5672/vh");
 
         // Non-secret identifiers stay visible (they are not credentials).
         assert_eq!(value["auth"]["basic"]["users"][0]["user"], "alice");

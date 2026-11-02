@@ -32,7 +32,6 @@ mod e2e_directory;
 mod e2e_docs_shots;
 mod e2e_ehr_ops;
 mod e2e_ehr_status;
-mod e2e_event_subscriptions;
 mod e2e_export;
 mod e2e_keyboard;
 mod e2e_login;

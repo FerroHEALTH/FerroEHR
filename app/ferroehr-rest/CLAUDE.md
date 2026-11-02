@@ -14,7 +14,7 @@ gate), `router`, `state`, `formats`
 (content negotiation), `overview`, `limits` (the clinical body tier), `config`, `system_log`
 (ATNA audit middleware), `smart` (SMART App Launch resource-server role), and
 `extensions` (`access` = the RBAC/ABAC authn+authz PEP, plus health / fhir /
-terminology / management / event-subscription surfaces). Entry point:
+terminology / management surfaces). Entry point:
 `serve_full`. The HTTP stack (request id, panic catch, timeout, body limit,
 overload bound, caller rate, compression, request log, health routes), the
 listener with its TLS and the bounded drain are `ferrohealth-server`'s

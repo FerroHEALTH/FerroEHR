@@ -204,7 +204,7 @@ SECURITY POSTURE
 {{ end }}
 Optional integrations currently ON:
   admin API:        {{ .Values.config.admin.enabled }}
-  eventing (AMQP):  {{ .Values.config.events.enabled }}
+  outbox readers:   {{ dig "outbox" "readers" list .Values.config | join ", " | default "none" }}
   S3 multimedia:    {{ .Values.config.multimedia.enabled }}
   ATNA audit:       {{ .Values.config.audit.enabled }}
   {{- /* The INJECTED state, not the values one: terminology.enabled writes

@@ -24,6 +24,7 @@ use ferroehr::service::refusal::{Malformed, Missing};
 use serde_json::json;
 use sqlx::PgPool;
 
+use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
@@ -103,20 +104,21 @@ async fn scoped_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
     result["rows"].as_array().map_or(0, Vec::len)
 }
 
-/// The pending (unpublished) outbox rows of one EHR the drainer would take.
-async fn drainable_rows(pool: &PgPool, ehr_id: EhrId) -> i64 {
-    sqlx::query_scalar(
-        "SELECT count(*) FROM event_outbox o \
-         WHERE o.ehr_id = $1 AND o.published_at IS NULL \
-           AND NOT EXISTS (SELECT 1 FROM ehr e WHERE e.id = o.ehr_id \
-               AND (e.restricted_at IS NOT NULL \
-                    OR (e.research_objected_at IS NOT NULL \
-                        AND e.research_objection_ground IS NULL)))",
-    )
-    .bind(ehr_id)
-    .fetch_one(pool)
-    .await
-    .expect("drainable count")
+/// The outbox feed's events of one EHR, for a reader that has acknowledged
+/// nothing.
+async fn feed_rows(svc: &FerroEhrService, pool: &PgPool, ehr_id: EhrId) -> usize {
+    reconcile(pool, &["legal-marks".to_owned()])
+        .await
+        .expect("register the reader");
+    let ehr = ehr_id.to_string();
+    svc.outbox_events(OutboxDomain::Clinical, "legal-marks", 1000)
+        .await
+        .expect("read the feed")
+        .iter()
+        .filter(|event| {
+            event.envelope.get("ehr_id").and_then(|id| id.as_str()) == Some(ehr.as_str())
+        })
+        .count()
 }
 
 #[tokio::test]
@@ -256,9 +258,9 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .expect_err("an Extract of a restricted EHR is refused");
     assert!(matches!(&extract, ServiceError::Restricted(_)));
     assert_eq!(
-        drainable_rows(&pool, ehr_id).await,
+        feed_rows(&svc, &pool, ehr_id).await,
         0,
-        "no event of a restricted EHR is drainable"
+        "no event of a restricted EHR is in the feed"
     );
 
     // Lifting the whole-EHR restriction restores every path.
@@ -271,8 +273,8 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .expect("the status reads again");
     assert_eq!(population_rows(&svc).await, 1);
     assert!(
-        drainable_rows(&pool, ehr_id).await > 0,
-        "the withheld events publish once the restriction is lifted"
+        feed_rows(&svc, &pool, ehr_id).await > 0,
+        "the withheld events are served once the restriction is lifted"
     );
 }
 
@@ -379,9 +381,9 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         extract.message()
     );
     assert_eq!(
-        drainable_rows(&pool, ehr_id).await,
+        feed_rows(&svc, &pool, ehr_id).await,
         0,
-        "no event of an objected EHR is drainable"
+        "no event of an objected EHR is in the feed"
     );
 
     // The controller's Art. 21(6) public-interest override puts it back, and
@@ -397,7 +399,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
     svc.extract_ehrs(ehr_id)
         .await
         .expect("an overridden objection exports again");
-    assert!(drainable_rows(&pool, ehr_id).await > 0);
+    assert!(feed_rows(&svc, &pool, ehr_id).await > 0);
 
     // Withdrawing carries no ground: there is nothing left to override.
     let bad = svc

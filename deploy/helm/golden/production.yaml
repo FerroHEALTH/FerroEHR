@@ -50,7 +50,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), and only from the networkPolicy.ingressFrom peers.
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -103,7 +103,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -138,7 +138,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -211,7 +211,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -273,11 +273,6 @@ data:
         client_id = "ferroehr"
         scope = "system/Patient.rs"
         token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
-    
-    [events]
-      enabled = false
-      exchange = "ferroehr.events"
-      tls = false
     
     [management]
       base_path = "/management"
@@ -358,7 +353,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -511,7 +506,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -536,7 +531,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 3b76430f50e61a6a0e2d5484a5b46c3b92deec38182eefce35c8794e0c31846b
+        checksum/config: d2e37e3ae02073a52cf10a9db14f34d90f9eaffe1691527593673119bcd8d453
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -762,7 +757,7 @@ kind: Ingress
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -821,7 +816,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -840,7 +835,7 @@ kind: Job
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc8
+    helm.sh/chart: ferroehr-21.0.0-rc9
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc9"
@@ -865,7 +860,7 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: ferroehr-21.0.0-rc8
+        helm.sh/chart: ferroehr-21.0.0-rc9
         app.kubernetes.io/name: ferroehr-migration
         app.kubernetes.io/instance: ferroehr
         app.kubernetes.io/version: "5.6.0-rc9"

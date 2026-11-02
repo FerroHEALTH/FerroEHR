@@ -107,7 +107,7 @@ the databases and writes nothing to them.
 | `build` | version, commit, build date, `rustc`, the active `spec_profile` and the specification versions it selects, the PostgreSQL target, the audit posture, and the manufacturer |
 | `image` | named in the manifest only: a running binary cannot read the digest of the image it was started from, so attach `docker inspect --format '{{index .RepoDigests 0}}' <image>` or the pod's `status.containerStatuses[].imageID` |
 | `target` | the CPU architecture and operating system the binary was built for, and whether it is a debug build |
-| `features` | the optional integrations compiled in (`events`, `fhir`, `multimedia`) |
+| `features` | the optional integrations compiled in (`fhir`, `multimedia`) |
 | `openehr_crates` | each `openehr-*` crate the binary links, with its version |
 | `openehr_crates_origin` | `published` in a release build, whose `openehr_crates` versions are the ones that release published to crates.io; `source_tree` in any other build, a pre-release included, whose versions are the source tree's manifests |
 | `licence` | the licence summary `GET /management/status` serves (state, use, licensee, last valid day, what the configured token contributed); never the token |
@@ -178,7 +178,7 @@ For production, set at least:
   so the introspection surface is never reachable on the clinical listener, and
   every endpoint stays `off` until you name a level for it.
 - **TLS everywhere a transport supports it:** `server.tls` (or a
-  TLS-terminating ingress), `events.tls`, HTTPS for the object store; the
+  TLS-terminating ingress), HTTPS for the object store; the
   audit syslog feed always speaks TLS.
 - **real secrets via the environment or a `*_file` sibling**, never inline.
 

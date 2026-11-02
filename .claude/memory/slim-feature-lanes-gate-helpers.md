@@ -1,11 +1,11 @@
 ---
 name: slim-feature-lanes-gate-helpers
-description: A pub(crate) helper consumed only from a feature-gated module (ferroehr-rest's `fhir`, `events`, `multimedia`) must carry the same `#[cfg(feature)]`, or the CI slim-server clippy lane fails on dead code; run the three `--no-default-features` combos locally before pushing rest/server changes
+description: A pub(crate) helper consumed only from a feature-gated module (ferroehr-rest's `fhir`, `multimedia`) must carry the same `#[cfg(feature)]`, or the CI slim-server clippy lane fails on dead code; run the three `--no-default-features` combos locally before pushing rest/server changes
 metadata:
   type: feedback
 ---
 
-`ferroehr-rest` gates `extensions::fhir` (and `events`, `multimedia`) behind
+`ferroehr-rest` gates `extensions::fhir` (and `multimedia`) behind
 cargo features, and CI's "clippy (slim server feature combos)" lane builds
 `ferroehr-server` with `--no-default-features` (plus each feature alone) under
 `-D warnings`. A `pub(crate)` helper added for a feature-gated consumer is
@@ -23,7 +23,7 @@ shape, so the failure only surfaces in CI, one cycle later.
 
 **How to apply:** when a change in `ferroehr-rest`/`ferroehr-server` adds an
 item consumed from a gated module, put `#[cfg(feature = "…")]` on it (or use it
-from an ungated path), and before pushing run the three slim combos:
+from an ungated path), and before pushing run the slim combos:
 `cargo clippy --locked -p ferroehr-server --no-default-features --all-targets -- -D warnings`
-and the same with `--features events` and `--features fhir`. Related:
+and the same with `--features fhir` and `--features multimedia`. Related:
 [[gate-parity-and-caller-sweeps]].

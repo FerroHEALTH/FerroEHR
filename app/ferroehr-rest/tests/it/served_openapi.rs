@@ -1412,10 +1412,10 @@ const NON_SPEC_FAMILIES: &[NonSpecFamily] = &[
         operations: 6,
     },
     NonSpecFamily {
-        label: "the event-subscription extension",
-        prefixes: &["/ferroehr/rest/extensions/v1/admin/event_subscription"],
+        label: "the outbox feed extension",
+        prefixes: &["/ferroehr/rest/extensions/v1/admin/outbox/"],
         flag: "no openehr spec governs this",
-        operations: 5,
+        operations: 2,
     },
     NonSpecFamily {
         // IHE ITI-81 is its own (non-openEHR) basis; the flag still has to say

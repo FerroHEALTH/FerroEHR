@@ -49,9 +49,6 @@ const ADL2_STEM: &str = "openEHR-EHR-COMPOSITION.cnf_adl2_versioned";
 /// The stored query the capture seeds.
 const QUERY_NAME: &str = "org.example.vitals::latest-weights";
 
-/// The subscription the capture seeds.
-const SUBSCRIPTION: &str = "vitals-feed";
-
 /// The REST root of the CDR.
 fn v1(cdr: &str) -> String {
     format!("{cdr}/ferroehr/rest/openehr/v1")
@@ -147,13 +144,9 @@ fn directory(composition: &str) -> serde_json::Value {
 }
 
 /// Seed the fixtures the captures show: the OPT and the ADL2 releases, a
-/// stored query, a subscription, a directory and a tag on the seeded EHR, and
+/// stored query, a directory and a tag on the seeded EHR, and
 /// a party. Every seed is idempotent for a capture pass, and its status is
 /// printed rather than asserted: a missing fixture shows as an empty screen.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one seed per fixture, in the order the captures read them"
-)]
 async fn seed(cdr: &str, user: &str, pass: &str, ehr: String, composition: String) -> Seeded {
     let http = reqwest::Client::new();
     let root = v1(cdr);
@@ -202,22 +195,6 @@ async fn seed(cdr: &str, user: &str, pass: &str, ehr: String, composition: Strin
     )
     .await;
     println!("stored query seed -> {status}");
-    let (status, _) = send(
-        http.post(format!(
-            "{cdr}/ferroehr/rest/extensions/v1/admin/event_subscription"
-        ))
-        .json(&serde_json::json!({
-            "name": SUBSCRIPTION,
-            "kind": "COMPOSITION",
-            "change_type": "249",
-            "template_id": TEMPLATE_ID,
-            "enabled": true
-        })),
-        user,
-        pass,
-    )
-    .await;
-    println!("subscription seed -> {status}");
     let (status, _) = send(
         http.post(format!("{root}/ehr/{ehr}/directory"))
             .json(&directory(&composition)),
@@ -422,12 +399,6 @@ fn routes(seeded: &Seeded) -> Vec<Route> {
         review("/server/smart", "server/smart"),
         both("/audit", "audit/audit"),
         review("/audit?patient=no-such-patient", "audit/audit-empty"),
-        both("/subscriptions", "subscriptions/subscriptions"),
-        light("/subscriptions/new", "subscriptions/new"),
-        review(
-            format!("/subscriptions/{SUBSCRIPTION}/edit"),
-            "subscriptions/edit",
-        ),
         review("/configuration", "configuration/configuration"),
         light("/preferences", "preferences/preferences"),
         review("/preferences/reading", "preferences/reading"),

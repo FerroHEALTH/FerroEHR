@@ -473,8 +473,10 @@ pub async fn insert_ehr_folder_rank(
 /// No openEHR spec governs eventing (our own extension). The PHI-free
 /// per-version entries are built by the versioning layer
 /// (`Committed::envelope_entry`); this function wraps them in the fixed
-/// envelope shape the events-extension drainer consumes (`{contribution_id,
-/// ehr_id, committed_at, versions[]}`).
+/// envelope shape the outbox feed serves (`{contribution_id, ehr_id,
+/// committed_at, versions[]}`). The insert takes the outbox lock shared and
+/// holds it to the commit's end, so a feed read never passes a `seq` this
+/// commit drew ([`crate::extensions::outbox`]).
 ///
 /// An EHR carrying a legal mark emits no event. The `INSERT ... SELECT` writes
 /// nothing when the EHR is restricted (GDPR Art. 18(2) leaves only storage) or
@@ -503,15 +505,19 @@ pub async fn write_outbox(
     // no EHR to mark, so the marked-EHR filter is on the clinical statement
     // alone: naming `ehr` in the party domain would fail at parse time.
     let sql = if ehr_id.is_some() {
-        "INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
-         SELECT $1, $2, $3, $4::timestamptz \
+        "WITH gate AS (SELECT pg_advisory_xact_lock_shared( \
+             hashtext(current_schema() || '.event_outbox'), 0)) \
+         INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
+         SELECT $1, $2, $3, $4::timestamptz FROM gate \
          WHERE NOT EXISTS (SELECT 1 FROM ehr e WHERE e.id = $2 \
              AND (e.restricted_at IS NOT NULL \
                   OR (e.research_objected_at IS NOT NULL \
                       AND e.research_objection_ground IS NULL)))"
     } else {
-        "INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
-         VALUES ($1, $2, $3, $4::timestamptz)"
+        "WITH gate AS (SELECT pg_advisory_xact_lock_shared( \
+             hashtext(current_schema() || '.event_outbox'), 0)) \
+         INSERT INTO event_outbox (contribution_id, ehr_id, envelope, committed_at) \
+         SELECT $1, $2, $3, $4::timestamptz FROM gate"
     };
     sqlx::query(sql)
         .bind(contribution_id)

@@ -209,7 +209,7 @@ pub(crate) struct SigningCtx<'a> {
     pub(crate) identifiers:
         Option<&'a crate::service::demographic::identifier::engine::IdentifierProtection>,
     /// Whether to write the transactional event outbox on this commit. `false`
-    /// when no eventing consumer is configured, so the per-commit `event_outbox`
+    /// when no outbox reader is configured, so the per-commit `event_outbox`
     /// INSERT + envelope serialization is skipped entirely. No openEHR spec
     /// governs eventing — our own extension.
     pub(crate) outbox_enabled: bool,

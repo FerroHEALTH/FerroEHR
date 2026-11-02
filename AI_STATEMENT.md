@@ -33,7 +33,7 @@ and this document itself.
 It does not cover an AI system in the product, because there is none:
 **FerroEHR ships no AI.** No model is trained, embedded, or called at
 request time; no inference happens anywhere in the served software. The
-optional external integrations (FHIR, AMQP, terminology servers) connect to
+optional external integrations (FHIR, object stores, terminology servers) connect to
 conventional services. AI is used to *build* the software, in the same
 sense compilers and linters are used to build it.
 

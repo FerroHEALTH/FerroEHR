@@ -161,7 +161,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "admin-marks", description = "The legal marks storage carries beside the clinical content: the GDPR Art. 18 restriction register, the Art. 21(6) research objection, and the Art. 5(1)(e) / Art. 30(1)(f) retention register with its due list. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and nothing here deletes anything (same admin gate + RBAC Admin class)."),
         (name = "admin-dump-load", description = "Export every EHR to a file-system archive, and populate the repository from one. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "message", description = "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."),
-        (name = "event-subscription", description = "Event-subscription CRUD extension (config-gated: FERROEHR_REST_EVENT_SUBSCRIPTION__ENABLED)."),
+        (name = "admin-outbox", description = "The commit-event outbox feed: the PHI-free events after a configured reader's cursor, in `seq` order, and the acknowledgement that moves the cursor. OUR OWN EXTENSION: no openEHR spec governs eventing. It needs the `__ferroehr.outbox` scope, and every read is an access record."),
     )
 )]
 #[derive(Debug)]
@@ -446,7 +446,7 @@ fn redirect_to_index(ui_path: &str) -> Response {
         description = "The API family slug — one of the fixed set `ehr`, `query`, `definition`, \
                        `demographic`, `admin`, `admin-extensions`, `archetypes`, `cohort`, `contributions`, \
                        `management`, `terminology`, `relationships`, \
-                       `messaging`, `events`, `audit`, `smart`. Not a free parameter: each value is \
+                       `messaging`, `audit`, `smart`. Not a free parameter: each value is \
                        its own static route.")),
     responses(
         (status = 200, description = "The composed server document filtered to that API family (JSON).", body = serde_json::Value),
@@ -588,8 +588,7 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         "admin-extensions",
         Members::Extension {
             include: "/admin",
-            // The event subscriptions are their own family (below).
-            exclude: &["/admin/event_subscription"],
+            exclude: &[],
         },
     ),
     (
@@ -640,11 +639,6 @@ const FAMILIES: &[(&str, &str, Members)] = &[
         // EHR-Extract export and import on our own `/message/` routes; the release
         // publishes no message API, so the whole family is an extension.
         Members::Tags(&["message"]),
-    ),
-    (
-        "FerroEHR: Event Subscriptions",
-        "events",
-        Members::Tags(&["event-subscription"]),
     ),
     (
         "FerroEHR: Audit",

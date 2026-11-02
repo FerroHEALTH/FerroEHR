@@ -85,7 +85,7 @@ output.
    ```
 
 4. **A secret in `config:` is refused, not rendered.** The chart classifies every
-   key it renders: one with a `secrets:` route (the DSN, the AMQP URLs, a Basic
+   key it renders: one with a `secrets:` route (the DSN, the audit feed URL, a Basic
    user's hash, a signing passphrase, a terminology client
    secret) **fails the render** naming the key that carries it. One with no route
    at all would move the whole `ferroehr.toml` into a Secret and render no
@@ -442,7 +442,7 @@ docker exec desktop-control-plane sh -c "conntrack -L 2>/dev/null | grep $PIP"
 # udp … dport=53             (cluster DNS)
 ```
 
-Every additional integration adds a target — an OTLP collector, an AMQP broker, a
+Every additional integration adds a target — an OTLP collector, a
 terminology server, S3 — and a blocked one fails SILENTLY (step 9).
 
 ## 8. Pod Security admission, replicas, load balancing, autoscaling

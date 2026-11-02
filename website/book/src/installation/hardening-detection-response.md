@@ -25,7 +25,6 @@ you can judge the exposure rather than reading "secrets" generically.
 | A Basic user's Argon2id hash | `secrets.basicUserPasswordHashes` | an offline cracking target, not a usable password |
 | The version-signing passphrase (plus the PGP key via `config.files`) | `config.signing.mode: pgp` | the ability to forge version signatures, breaking the integrity guarantee |
 | A terminology `client_secret` | `secrets.terminologyClientSecret` | access to the terminology server as this client |
-| The AMQP broker URL | `secrets.eventsUrl` | access to the change-event stream, which is PHI-free by design |
 | The audit repository URL | `secrets.auditFhirFeedUrl` | the ability to read or forge audit records at the repository |
 | S3 credentials | `secrets.multimediaSecretAccessKey` (with `secrets.multimediaAccessKeyId`) | offloaded `DV_MULTIMEDIA` blobs, which **are PHI** |
 | The viewer's OIDC client secret | `viewer.existingSecret`, when the viewer is enabled | the ability to impersonate the viewer at your identity provider |
@@ -250,7 +249,6 @@ annotation and rolls the Deployment by itself.)
 |---|---|---|
 | Database DSN | update the Secret, then `rollout restart` | rotate the **database** password too, or the old one still works; `maxUnavailable: 0` keeps the old pods serving on the old credential until the new ones are ready, so grant both briefly or accept a gap |
 | Terminology `client_secret` | update, then restart | rotate at the identity provider in the same window |
-| AMQP broker URLs | update, then restart | the credential is inside the URL |
 | S3 credentials | update, then restart | or remove them entirely with IRSA or Workload Identity |
 | Audit repository URL | update, then restart | still an environment value (no `*_file` sibling) |
 | Basic user password hash | update, then restart | rotate the password and re-hash at the OWASP Argon2id floor, which the server checks at boot |

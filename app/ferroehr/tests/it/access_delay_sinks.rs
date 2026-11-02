@@ -9,23 +9,19 @@
 //! health data access services" (`docs/law/eu/ehds/text.html`). The syslog
 //! and FHIR feeds deliver to an Audit Record Repository, which "receives
 //! event audit reports and stores them" (IHE ITI TF-1 §9.1.1.3), and the
-//! change events go to the deployment's broker: none of the three reaches
+//! change events go to the outbox feed's readers: none of the three reaches
 //! the person, so each carries the records and events about a held
 //! composition while the hold is in force. The tests pin that: a hold does
 //! not filter a controller feed, and only the person's own ITI-81 read
 //! honours it. No openEHR spec governs it: our own design/extension.
 
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use async_trait::async_trait;
-use serde_json::Value;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::fixtures::{composition, uv};
-use ferroehr::extensions::events::config::EventsConfig;
-use ferroehr::extensions::events::publisher::start_with_publisher;
+use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::access_delay::config::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::system_log::categories::CategoryMapConfig;
@@ -34,7 +30,6 @@ use ferroehr::system_log::event::{
     AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
 };
 use ferroehr::system_log::sender::{AuditHandle, AuditSender, start};
-use ferroehr_ext::events::{EventError, EventPublisher};
 use testkit::syslog_tls::SyslogTlsListener;
 
 /// A service that holds patient summaries for 72 hours and audits to the
@@ -201,63 +196,30 @@ async fn the_fhir_feed_carries_a_record_about_a_held_composition() {
     handle.shutdown(Duration::from_secs(2)).await;
 }
 
-/// A publisher that records the envelope of every event it is handed.
-#[derive(Default)]
-struct Recording(Mutex<Vec<Value>>);
-
-#[async_trait]
-impl EventPublisher for Recording {
-    async fn publish(&self, _routing_key: &str, payload: &[u8]) -> Result<(), EventError> {
-        let envelope = serde_json::from_slice(payload).expect("payload json");
-        self.0.lock().expect("mutex").push(envelope);
-        Ok(())
-    }
-}
-
-/// The change-event stream publishes the commit of a held composition while
-/// the hold is in force: the drain withholds only what a professional may not
-/// see (EHDS Art. 8, GDPR Art. 18 and 21), and the hold is the person's.
+/// The outbox feed carries the commit of a held composition while the hold
+/// is in force: a commit withholds its event only for what a professional may
+/// not see (EHDS Art. 8, GDPR Art. 18 and 21), and the hold is the person's.
 #[tokio::test]
 async fn the_event_stream_carries_the_commit_of_a_held_composition() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
+    reconcile(&pool, &["ferrobridge".to_owned()])
+        .await
+        .expect("register the reader");
     let (svc, _sender, audit) = service(&pool, None, None).await;
     let (_ehr, vo) = held(&svc).await;
 
-    let recording = Arc::new(Recording::default());
-    let seam: Arc<dyn EventPublisher> = Arc::<Recording>::clone(&recording);
-    let config = EventsConfig {
-        enabled: true,
-        poll_interval_ms: 50,
-        publish_max_retries: 0,
-        prune_interval_secs: 3_600,
-        ..EventsConfig::default()
-    };
-    let events = start_with_publisher(
-        config,
-        pool.clone(),
-        ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party),
-        seam,
-    );
-
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    loop {
-        let published = recording.0.lock().expect("mutex").iter().any(|envelope| {
-            envelope["versions"]
-                .as_array()
-                .is_some_and(|versions| versions.iter().any(|v| v["vo_id"] == vo.as_str()))
-        });
-        if published {
-            break;
-        }
-        assert!(
-            std::time::Instant::now() < deadline,
-            "the commit of the held composition is published"
-        );
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    let events = svc
+        .outbox_events(OutboxDomain::Clinical, "ferrobridge", 100)
+        .await
+        .expect("read the feed");
+    let carried = events.iter().any(|event| {
+        event.envelope["versions"]
+            .as_array()
+            .is_some_and(|versions| versions.iter().any(|v| v["vo_id"] == vo.as_str()))
+    });
+    assert!(carried, "the commit of the held composition is in the feed");
     assert_held(&svc, &vo).await;
-    events.shutdown(Duration::from_secs(2)).await;
     drop(svc);
     audit.shutdown(Duration::from_secs(2)).await;
 }

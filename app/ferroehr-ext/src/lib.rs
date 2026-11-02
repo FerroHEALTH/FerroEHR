@@ -3,13 +3,9 @@
 
 //! The optional-integration extensions of FerroEHR.
 //!
-//! Events and multimedia are carved out of the platform library behind one
-//! additive cargo feature each, `events` and `multimedia`
-//! (tracker #1890; no openEHR spec governs these surfaces — our own
-//! design/extensions).
+//! Multimedia is carved out of the platform library behind the additive
+//! `multimedia` cargo feature (tracker #1890; no openEHR spec governs this
+//! surface — our own design/extension).
 
 #[cfg(feature = "multimedia")]
 pub mod multimedia;
-
-#[cfg(feature = "events")]
-pub mod events;

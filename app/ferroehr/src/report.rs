@@ -410,7 +410,6 @@ async fn read_facts(config: &FerroEhrConfig) -> Result<DatabaseFacts, DbError> {
 /// The optional-integration cargo features compiled into this build.
 fn enabled_features() -> Vec<&'static str> {
     [
-        ("events", cfg!(feature = "events")),
         ("fhir", cfg!(feature = "fhir")),
         ("multimedia", cfg!(feature = "multimedia")),
     ]
