@@ -27,7 +27,7 @@ pub(crate) fn adl2_source(keyword: &str, hrid: &str, specialize: Option<&str>) -
     format!(
         "{keyword} (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n{spec}\n\
          language\n    original_language = <[ISO_639-1::en]>\n\n\
-         description\n    lifecycle_state = <\"published\">\n    details = <\n        \
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    lifecycle_state = <\"published\">\n    details = <\n        \
          [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
          definition\n    {rm_type}[{root}] matches {{ *}}\n\n\
          terminology\n    term_definitions = <\n        [\"en\"] = <\n            \

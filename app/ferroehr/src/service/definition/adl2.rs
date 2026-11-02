@@ -28,6 +28,7 @@ use openehr_adl::meta::{ArtefactSummary, summarize};
 use openehr_adl::opt::{OptError, create_opt, unresolved_constituents};
 use openehr_adl::parse::Dialect;
 use openehr_adl::validate::catalogue::Severity;
+use openehr_adl::validate::resource_meta::check_base_description;
 use openehr_adl::validate::rm::{ProductionRmModel, production_model_governs};
 use openehr_adl::validate::{validate_source, validate_source_integrity};
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
@@ -107,7 +108,10 @@ impl FerroEhrService {
     /// test model skips the RM pass, which would false-fire VCORM
     /// (`AOM2/master04.3` §Reference Model Type Matching). External term
     /// bindings are verified through the terminology-service resolver (VETDF,
-    /// `master03` §Validity Rules; see `adl2_terminology_resolver`).
+    /// `master03` §Validity Rules; see `adl2_terminology_resolver`). Under a
+    /// `spec_profile` whose BASE states them (BASE 1.3.0,
+    /// `org.openehr.base.resource.resource_description.adoc` §Invariants), an
+    /// empty `original_author` or `lifecycle_state` is such a failure too.
     /// This is `POST /definition/template/adl2`, which declares
     /// `409_template_already_exists.yaml` for an existing HRID.
     ///
@@ -136,12 +140,13 @@ impl FerroEhrService {
         adl2_write_lock(&mut tx).await?;
         let repo = self.adl2_repository(&mut tx).await?;
         let owned = source.to_owned();
-        let issues = on_engine_stack(move || match resolver {
+        let mut issues = on_engine_stack(move || match resolver {
             Some(resolver) => validate_source(&owned, Some(&repo), &ProductionRmModel, &resolver),
             None => validate_source_integrity(&owned, Dialect::Adl2, Some(&repo)),
         })
         .await?
         .map_err(|errs| syntax_bad_request(&errs))?;
+        issues.extend(check_base_description(&archetype, self.spec_profile.base()));
 
         let errors: Vec<InvariantViolation> = issues
             .iter()

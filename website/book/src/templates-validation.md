@@ -124,6 +124,11 @@ declares for the upload besides the 409 duplicate:
 - **A source that parses but fails validation** lists the AOM2 validity
   (`V`-prefixed) rule codes in its `errors`: `VARD`, `VCORM`, `VCARM`, `VACSD`
   and friends.
+- **A description without an author or a lifecycle state** fails validation
+  under the default `development` profile, and the `errors` name
+  `RESOURCE_DESCRIPTION.Original_author_valid` or
+  `RESOURCE_DESCRIPTION.Lifecycle_state_valid`. BASE 1.3.0 states both; the
+  `stable` profile's BASE 1.2.0 states neither, so it accepts such a source.
 
 Every archetype a template or archetype fills a slot with or references
 through `use_archetype` must already be loaded (AOM2 rule `VARXR`), so upload

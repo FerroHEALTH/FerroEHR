@@ -23,15 +23,10 @@
 //! master00-amendment_record.adoc`, issue 1.0, above the `RM Release 1.1.0`
 //! marker), so the two generations disagree about exactly this body.
 
-use std::sync::Arc;
-
-use axum::Router;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 
 use ferroehr::config::profile::SpecProfile;
-use ferroehr::service::FerroEhrService;
-use ferroehr_rest::config::AppConfig;
 
 use crate::common;
 use crate::common::send_body;
@@ -82,31 +77,13 @@ fn development_only_composition() -> Value {
     })
 }
 
-/// A router over the given profile, on an existing pool.
-async fn router_for(profile: SpecProfile, pool: &sqlx::PgPool) -> Router {
-    let mut config = AppConfig {
-        server: common::server(),
-        ..AppConfig::default()
-    };
-    config.auth.enabled = false;
-    config.spec_profile = profile;
-    common::router_with(
-        config,
-        Arc::new(
-            FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
-                .with_spec_profile(profile),
-        ),
-    )
-    .await
-}
-
 /// A stored version the active profile cannot express is a `409`, not a served
 /// body and not a down-conversion; the same object reads normally on the
 /// profile that accepted it.
 #[tokio::test]
 async fn a_development_only_composition_is_a_conflict_under_the_stable_profile() {
     let db = common::test_db().await;
-    let development = router_for(SpecProfile::Development, &db.pool()).await;
+    let development = common::router_for_profile(SpecProfile::Development, &db.pool()).await;
 
     let (status, body) = send_body(
         &development,
@@ -155,7 +132,7 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
     assert_eq!(status, StatusCode::OK);
 
     // The stable profile refuses it — loudly, with the remedy in the body.
-    let stable = router_for(SpecProfile::Stable, &db.pool()).await;
+    let stable = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
     let (status, body) = send_body(
         &stable,
         common::req("GET", format!("{BASE}/ehr/{ehr_id}/composition/{vo_id}"))
@@ -187,7 +164,7 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
 #[tokio::test]
 async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile() {
     let db = common::test_db().await;
-    let development = router_for(SpecProfile::Development, &db.pool()).await;
+    let development = common::router_for_profile(SpecProfile::Development, &db.pool()).await;
 
     let (status, body) = send_body(
         &development,
@@ -239,7 +216,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
         assert_eq!(status, StatusCode::OK, "{uri}: {body}");
     }
 
-    let stable = router_for(SpecProfile::Stable, &db.pool()).await;
+    let stable = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
     let (status, body) = send_body(
         &stable,
         common::req("GET", &whole_object)
