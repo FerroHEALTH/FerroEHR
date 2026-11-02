@@ -47,9 +47,8 @@ use utoipa_axum::routes;
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::service::admin::integrity::rebuild::{NodeRebuildOutcome, NodeRebuildReport};
-use ferroehr::service::admin::integrity::{
-    StorageParityEvent, StorageParityReport, StorageParityScope,
-};
+use ferroehr::service::admin::integrity::{StorageParityEvent, StorageParityReport};
+use ferroehr::storage::integrity::StorageParityScope;
 
 use super::body::{AdminDisabled, AdminUnauthenticated, NotAdminClass};
 use crate::api::{BoxResponse, RequestParts, guarded_dispatch};

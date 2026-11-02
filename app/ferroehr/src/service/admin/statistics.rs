@@ -9,49 +9,28 @@
 //! against the CONTRIBUTION / version audit `time_committed`. No openEHR spec
 //! governs the calls or the SQL that answers them —
 //! our own design over the greenfield `contribution` / `version` /
-//! `commit_audit` tables (`clinical/0003_change_control.sql`).
+//! `commit_audit` tables (`clinical/0003_change_control.sql`), whose
+//! statements are `crate::storage::statistics`.
 
-use crate::db::acquire::{acquire, lease};
 use crate::service::FerroEhrService;
 use crate::service::admin::types::StatTimeRange;
 use crate::service::error::ServiceError;
 use crate::service::platform_service::PlatformService;
+use crate::storage::statistics::{self, CompositionCount, ContributionScope};
 
-/// The distinct versioned COMPOSITIONs, unbounded.
-const VO_COUNT: &str = "SELECT count(DISTINCT vo_id) FROM version WHERE kind = 'COMPOSITION'";
-
-/// The distinct versioned COMPOSITIONs committed within `$1..=$2`.
-const VO_COUNT_IN_RANGE: &str = "SELECT count(DISTINCT v.vo_id) FROM version v \
-     JOIN commit_audit a ON a.id = v.commit_audit_id \
-     WHERE v.kind = 'COMPOSITION' \
-       AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-       AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)";
-
-/// The COMPOSITION version rows, unbounded.
-const VERSION_COUNT: &str = "SELECT count(*) FROM version WHERE kind = 'COMPOSITION'";
-
-/// The COMPOSITION version rows committed within `$1..=$2`.
-const VERSION_COUNT_IN_RANGE: &str = "SELECT count(*) FROM version v \
-     JOIN commit_audit a ON a.id = v.commit_audit_id \
-     WHERE v.kind = 'COMPOSITION' \
-       AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-       AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)";
-
-/// Whether a [`PlatformService`]'s CONTRIBUTIONs are EHR-scoped (`Some(true)` →
-/// `ehr_id IS NOT NULL`), ehr-less (`Some(false)` → `ehr_id IS NULL`), or the
-/// service is not a versioned-content service (`None` → statistics are trivially
-/// empty/0).
+/// The contributions a [`PlatformService`] holds: the EHR-scoped ones, the
+/// ehr-less ones, or none when the service is not a versioned-content service
+/// (statistics are then trivially empty/0).
 ///
 /// `a_service` names a versioned-content service. Only `Ehr` (EHR-scoped) and
 /// `Demographic` (ehr-less) hold contributions in this CDR; the remaining
 /// members (`Admin`/`Definitions`/`Ehr_index`/`Message`/`Query`/`System_log`)
 /// are not versioned-content services and yield nothing — a defensible reading,
-/// not a gap. Returned as a bool so the SQL stays static (parameterized), never
-/// string-built.
-fn contribution_ehr_scoped(service: PlatformService) -> Option<bool> {
+/// not a gap.
+fn contribution_scope(service: PlatformService) -> Option<ContributionScope> {
     match service {
-        PlatformService::Ehr => Some(true),
-        PlatformService::Demographic => Some(false),
+        PlatformService::Ehr => Some(ContributionScope::Ehr),
+        PlatformService::Demographic => Some(ContributionScope::Demographic),
         _ => None,
     }
 }
@@ -72,33 +51,16 @@ impl FerroEhrService {
         time_range: StatTimeRange,
     ) -> Result<Vec<String>, ServiceError> {
         let (lo, hi) = super::parse_range(time_range)?;
-        let Some(ehr_scoped) = contribution_ehr_scoped(a_service) else {
+        let Some(scope) = contribution_scope(a_service) else {
             return Ok(Vec::new());
         };
-        // Two static shapes selected in Rust (the in-SQL `$3 AND … OR …`
-        // scoping resisted index planning at the measured corpus scale —
-        // see admin_contribution_count). The listing always joins `audit`:
-        // its ORDER BY is the commit time.
-        let sql = if ehr_scoped {
-            "SELECT c.id::text FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
-             WHERE c.ehr_id IS NOT NULL \
-               AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-               AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz) \
-             ORDER BY a.time_committed, c.id"
-        } else {
-            "SELECT c.id::text FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
-             WHERE c.ehr_id IS NULL \
-               AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-               AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz) \
-             ORDER BY a.time_committed, c.id"
-        };
-        let ids: Vec<String> = sqlx::query_scalar(sql)
-            .bind(lo)
-            .bind(hi)
-            .fetch_all(&mut *acquire(self.contribution_pool(ehr_scoped)).await?)
-            .await
-            .map_err(ServiceError::from)?;
-        Ok(ids)
+        Ok(statistics::contribution_ids(
+            self.contribution_pool(scope),
+            scope,
+            lo.as_deref(),
+            hi.as_deref(),
+        )
+        .await?)
     }
 
     /// The count of all CONTRIBUTIONs of the named
@@ -115,138 +77,55 @@ impl FerroEhrService {
         time_range: StatTimeRange,
     ) -> Result<i64, ServiceError> {
         let (lo, hi) = super::parse_range(time_range)?;
-        let Some(ehr_scoped) = contribution_ehr_scoped(a_service) else {
+        let Some(scope) = contribution_scope(a_service) else {
             return Ok(0);
         };
-        // Two static shapes, selected in Rust rather than by an in-SQL OR: a
-        // `($3 AND …) OR (NOT $3 AND …)` scoping predicate resists index
-        // planning. Unbounded takes an index-only count over
-        // `idx_contribution_ehr_id`, bounded the audit join behind
-        // `idx_commit_audit_time_committed`
-        // (clinical/0003_change_control.sql).
-        let count: i64 = if lo.is_none() && hi.is_none() {
-            let sql = if ehr_scoped {
-                "SELECT count(*) FROM contribution WHERE ehr_id IS NOT NULL"
-            } else {
-                "SELECT count(*) FROM contribution WHERE ehr_id IS NULL"
-            };
-            sqlx::query_scalar(sql)
-                .fetch_one(self.contribution_pool(ehr_scoped))
-                .await
-                .map_err(ServiceError::from)?
-        } else {
-            let sql = if ehr_scoped {
-                "SELECT count(*) FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
-                 WHERE c.ehr_id IS NOT NULL \
-                   AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-                   AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)"
-            } else {
-                "SELECT count(*) FROM contribution c JOIN commit_audit a ON a.id = c.commit_audit_id \
-                 WHERE c.ehr_id IS NULL \
-                   AND ($1::timestamptz IS NULL OR a.time_committed >= $1::timestamptz) \
-                   AND ($2::timestamptz IS NULL OR a.time_committed <= $2::timestamptz)"
-            };
-            sqlx::query_scalar(sql)
-                .bind(lo)
-                .bind(hi)
-                .fetch_one(self.contribution_pool(ehr_scoped))
-                .await
-                .map_err(ServiceError::from)?
-        };
-        Ok(count)
+        Ok(statistics::contribution_count(
+            self.contribution_pool(scope),
+            scope,
+            lo.as_deref(),
+            hi.as_deref(),
+        )
+        .await?)
     }
 
-    /// The pool holding the CONTRIBUTIONs of a service: the clinical one for an
-    /// EHR-scoped service, the demographic one otherwise.
+    /// The pool holding the CONTRIBUTIONs of `scope`: the clinical one for the
+    /// EHR-scoped ones, the demographic one otherwise.
     ///
     /// The two pseudonymisation domains keep their own `contribution` and
     /// `audit` relations, so a statistic over demographic change control is
     /// answered where that change control lives. No openEHR spec governs
     /// storage layout — our own design/extension.
-    fn contribution_pool(&self, ehr_scoped: bool) -> &sqlx::PgPool {
-        if ehr_scoped {
-            &self.pool
-        } else {
-            &self.demographic_pool
+    fn contribution_pool(&self, scope: ContributionScope) -> &sqlx::PgPool {
+        match scope {
+            ContributionScope::Ehr => &self.pool,
+            ContributionScope::Demographic => &self.demographic_pool,
         }
     }
 
-    /// The count of distinct COMPOSITION
-    /// versioned objects with a version committed within the (optional) range.
+    /// The COMPOSITION count `what` names within the (optional) range: the
+    /// distinct versioned COMPOSITIONs with a version committed in it, or the
+    /// COMPOSITION version rows committed in it.
     ///
     /// COMPOSITIONs are EHR-scoped, so only `a_service = Ehr` yields a
-    /// non-zero count; every
-    /// other member → 0 (COMPOSITIONs are not in its scope).
+    /// non-zero count; every other member → 0 (COMPOSITIONs are not in its
+    /// scope).
     ///
     /// # Errors
     /// - `precondition_violation` (`400`) — a bound of `time_range` is not a
     ///   valid ISO 8601 date-time, or the bounded pair has its lower bound
     ///   after its upper bound (BASE `Interval` invariant `Limits_consistent`).
     /// - `exception` — a database fault while querying.
-    pub async fn versioned_composition_count(
+    pub async fn composition_count(
         &self,
         a_service: PlatformService,
         time_range: StatTimeRange,
+        what: CompositionCount,
     ) -> Result<i64, ServiceError> {
         let (lo, hi) = super::parse_range(time_range)?;
         if a_service != PlatformService::Ehr {
             return Ok(0);
         }
-        // A lease: a caller that gives up on a long count frees its connection.
-        let mut lease = lease(&self.pool).await?;
-        let count: i64 = if lo.is_none() && hi.is_none() {
-            // Unbounded: no reason to touch `audit` at all.
-            lease
-                .run(|conn| sqlx::query_scalar(VO_COUNT).fetch_one(conn))
-                .await
-        } else {
-            lease
-                .run(|conn| {
-                    sqlx::query_scalar(VO_COUNT_IN_RANGE)
-                        .bind(lo)
-                        .bind(hi)
-                        .fetch_one(conn)
-                })
-                .await
-        }
-        .map_err(ServiceError::from)?;
-        Ok(count)
-    }
-
-    /// The count of individual COMPOSITION
-    /// version rows committed within the (optional) range. Scope gate as
-    /// [`Self::versioned_composition_count`].
-    ///
-    /// # Errors
-    /// - `precondition_violation` (`400`) — a bound of `time_range` is not a
-    ///   valid ISO 8601 date-time, or the bounded pair has its lower bound
-    ///   after its upper bound (BASE `Interval` invariant `Limits_consistent`).
-    /// - `exception` — a database fault while querying.
-    pub async fn composition_version_count(
-        &self,
-        a_service: PlatformService,
-        time_range: StatTimeRange,
-    ) -> Result<i64, ServiceError> {
-        let (lo, hi) = super::parse_range(time_range)?;
-        if a_service != PlatformService::Ehr {
-            return Ok(0);
-        }
-        let mut lease = lease(&self.pool).await?;
-        let count: i64 = if lo.is_none() && hi.is_none() {
-            lease
-                .run(|conn| sqlx::query_scalar(VERSION_COUNT).fetch_one(conn))
-                .await
-        } else {
-            lease
-                .run(|conn| {
-                    sqlx::query_scalar(VERSION_COUNT_IN_RANGE)
-                        .bind(lo)
-                        .bind(hi)
-                        .fetch_one(conn)
-                })
-                .await
-        }
-        .map_err(ServiceError::from)?;
-        Ok(count)
+        Ok(statistics::composition_count(&self.pool, what, lo.as_deref(), hi.as_deref()).await?)
     }
 }

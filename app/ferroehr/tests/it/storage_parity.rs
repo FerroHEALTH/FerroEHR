@@ -23,10 +23,9 @@ use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::integrity::StorageDomain;
 use ferroehr::service::admin::integrity::rebuild::NodeRebuildOutcome;
-use ferroehr::service::admin::integrity::{
-    StorageParityDefect, StorageParityEvent, StorageParityScope,
-};
+use ferroehr::service::admin::integrity::{StorageParityDefect, StorageParityEvent};
 use ferroehr::storage::codec::reassemble;
+use ferroehr::storage::integrity::StorageParityScope;
 use ferroehr::storage::row::ReadRow;
 
 use crate::fixtures::{composition, folder, uv};

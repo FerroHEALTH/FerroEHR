@@ -18,8 +18,8 @@ use uuid::Uuid;
 
 use ferroehr::ids::VoId;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::admin::integrity::StorageParityScope;
 use ferroehr::service::query::request::AqlQueryRequest;
+use ferroehr::storage::integrity::StorageParityScope;
 
 use crate::storage_parity::seed_typed_value_compositions;
 

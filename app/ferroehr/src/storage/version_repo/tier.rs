@@ -24,7 +24,7 @@
 
 use sqlx::PgConnection;
 
-use crate::ids::VoId;
+use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
 /// Moves every version of `vo_ids` to the cold tier, and records the move on
@@ -122,4 +122,61 @@ pub async fn demographic_kind(
             .fetch_optional(conn)
             .await?,
     )
+}
+
+/// The versioned objects of `ehr_id` that are in the hot tier, the ones an
+/// archive of the EHR moves; an object already cold is not among them, which
+/// is what makes archiving twice a no-op.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn hot_objects(
+    conn: &mut PgConnection,
+    ehr_id: EhrId,
+) -> Result<Vec<VoId>, StorageError> {
+    Ok(
+        sqlx::query_scalar("SELECT vo_id FROM vo_head WHERE ehr_id = $1 AND tier = 'hot'")
+            .bind(ehr_id)
+            .fetch_all(conn)
+            .await?,
+    )
+}
+
+/// The versioned objects of `ehr_id` that are in the cold tier, the ones a
+/// restore of the EHR moves back.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn cold_objects(
+    conn: &mut PgConnection,
+    ehr_id: EhrId,
+) -> Result<Vec<VoId>, StorageError> {
+    Ok(
+        sqlx::query_scalar("SELECT vo_id FROM vo_head WHERE ehr_id = $1 AND tier = 'cold'")
+            .bind(ehr_id)
+            .fetch_all(conn)
+            .await?,
+    )
+}
+
+/// Lock the head row of `vo_id` when the object is in the cold tier and
+/// return its archive reason (`Some(None)` for an archive without one), or
+/// `None` when the object is hot.
+///
+/// A rebuild thaws an archived object first, since a write never splits an
+/// object across tiers; the marker read here is re-stamped when it freezes the
+/// object again.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn lock_cold_marker(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+) -> Result<Option<Option<String>>, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT archive_reason FROM vo_head WHERE vo_id = $1 AND tier = 'cold' FOR UPDATE",
+    )
+    .bind(vo_id)
+    .fetch_optional(tx)
+    .await?)
 }
