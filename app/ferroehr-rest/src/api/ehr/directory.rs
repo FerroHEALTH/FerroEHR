@@ -80,14 +80,14 @@ async fn get_at_time(state: AppState, parts: RequestParts) -> Result<Response, R
     // A deleted directory is a 204
     // (directory_get_at_time.yaml `204_because_deleted_at_time`).
     if resp.body.is_null() {
-        return Ok(negotiate::empty(no_content));
+        return Ok(negotiate::body::empty(no_content));
     }
     let mut resp = resp;
     resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
     let mut out =
-        negotiate::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
+        negotiate::body::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
     if let Some(meta) = &resp.meta {
-        negotiate::set_versioning_headers(&mut out, meta);
+        negotiate::resource::set_versioning_headers(&mut out, meta);
     }
     Ok(out)
 }
@@ -106,7 +106,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
         DirectoryUpdateParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = negotiate::rm_value::<Folder>(h, &parts.body)?;
+    let body = negotiate::decode::rm_value::<Folder>(h, &parts.body)?;
     let uv = crate::overview::committal::write_request(
         h,
         super::committer_proxy(),
@@ -128,17 +128,18 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 pending_tags,
             )
             .await?;
-            let repr = if negotiate::prefers_representation(h) {
-                state
-                    .backend()
-                    .get_directory_at_time(ehr_id, None, None)
-                    .await?
-                    .body
-            } else {
-                Value::Null
-            };
+            let repr =
+                if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
+                    state
+                        .backend()
+                        .get_directory_at_time(ehr_id, None, None)
+                        .await?
+                        .body
+                } else {
+                    Value::Null
+                };
             let resp = ServiceResponse::new(repr, meta);
-            let mut resp = negotiate::write_rm::<Folder>(
+            let mut resp = negotiate::resource::write_rm::<Folder>(
                 h,
                 &base,
                 no_content,
@@ -157,10 +158,8 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .await
                 .ok()
                 .flatten();
-            Ok(negotiate::error_with_meta(
+            Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
-                &base,
-                Some("directory"),
                 meta.as_ref(),
             ))
         }
@@ -181,7 +180,7 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
         DirectoryCreateParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = negotiate::rm_value::<Folder>(h, &parts.body)?;
+    let body = negotiate::decode::rm_value::<Folder>(h, &parts.body)?;
     let uv = crate::overview::committal::write_request(h, super::committer_proxy(), body, None)?;
     let pending_tags = item_tags::pending(h)?;
     let meta = state.backend().create_directory(ehr_id, uv).await?;
@@ -195,7 +194,7 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
         pending_tags,
     )
     .await?;
-    let repr = if negotiate::prefers_representation(h) {
+    let repr = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
         state
             .backend()
             .get_directory_at_time(ehr_id, None, None)
@@ -205,7 +204,7 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
         Value::Null
     };
     let resp = ServiceResponse::new(repr, meta);
-    let mut resp = negotiate::write_rm::<Folder>(
+    let mut resp = negotiate::resource::write_rm::<Folder>(
         h,
         &base,
         created,
@@ -225,7 +224,6 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 /// The parameter, precondition and commit rejections the operation declares.
 async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let base = state.config().rest.base_path.clone();
     let p = parts.decode(
         DirectoryDeleteParams::from_request,
         DirectoryDeleteParams::PARAMS,
@@ -239,11 +237,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     match state.backend().delete_directory(ehr_id, request).await {
         // The 204 carries the new deleted version's weak `ETag` and
         // `Last-Modified` (RM common master06 §Logical Deletion).
-        Ok(resp) => Ok(negotiate::deleted_with_headers(
-            &base,
-            Some("directory"),
-            &resp,
-        )),
+        Ok(resp) => Ok(negotiate::resource::deleted_with_headers(&resp)),
         Err(e @ ServiceError::VersionConflict(_)) => {
             let meta = state
                 .backend()
@@ -251,10 +245,8 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .await
                 .ok()
                 .flatten();
-            Ok(negotiate::error_with_meta(
+            Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
-                &base,
-                Some("directory"),
                 meta.as_ref(),
             ))
         }
@@ -282,14 +274,14 @@ async fn get_by_version_id(state: AppState, parts: RequestParts) -> Result<Respo
         .get_directory_at_version(ehr_id, ovid, p.path.as_deref())
         .await?;
     if resp.body.is_null() {
-        return Ok(negotiate::empty(no_content));
+        return Ok(negotiate::body::empty(no_content));
     }
     let mut resp = resp;
     resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
     let mut out =
-        negotiate::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
+        negotiate::body::respond_rm::<Folder>(h, ok, &resp.body, openehr_its::xml::LOCATABLE_ROOT);
     if let Some(meta) = &resp.meta {
-        negotiate::set_versioning_headers(&mut out, meta);
+        negotiate::resource::set_versioning_headers(&mut out, meta);
     }
     Ok(out)
 }

@@ -63,7 +63,7 @@ pub(super) async fn run(
                 PartyKind::Role => uid_based_id!(RoleTagsGetParams),
             };
             let tags = state.backend().party_tags_get(kind, uid_based_id).await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
                 &openehr_its::json::to_canonical_value(&tags),
@@ -86,7 +86,7 @@ pub(super) async fn run(
             // with the tag list on `Prefer: return=representation`; 204
             // (204_updated) when `Prefer` is missing or `return=minimal`,
             // with `Preference-Applied` declaring which.
-            Ok(negotiate::write_collection(
+            Ok(negotiate::prefer::write_collection(
                 h,
                 StatusCode::NO_CONTENT,
                 StatusCode::OK,
@@ -135,7 +135,7 @@ pub(super) async fn run(
                 .backend()
                 .party_tags_delete(kind, uid_based_id, key)
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted demographic tag operation: {seg}_{other}"
@@ -162,7 +162,7 @@ pub(super) async fn run_collection(
             p.tag_target_path.as_deref(),
         )
         .await?;
-    Ok(negotiate::respond(
+    Ok(negotiate::body::respond(
         h,
         StatusCode::OK,
         &openehr_its::json::to_canonical_value(&tags),

@@ -321,28 +321,28 @@ async fn run(
                 .backend()
                 .admin_list_contributions(a_service, range)
                 .await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &ids))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &ids))
         }
         "admin_report_contribution_count" => {
             let count = state
                 .backend()
                 .admin_contribution_count(a_service, range)
                 .await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &count))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
         }
         "admin_report_versioned_composition_count" => {
             let count = state
                 .backend()
                 .versioned_composition_count(a_service, range)
                 .await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &count))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
         }
         "admin_report_composition_version_count" => {
             let count = state
                 .backend()
                 .composition_version_count(a_service, range)
                 .await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &count))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin report operation: {other}"

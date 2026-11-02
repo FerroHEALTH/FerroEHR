@@ -38,7 +38,6 @@ pub(super) async fn run(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let base = state.config().rest.base_path.clone();
 
     match op {
         "versioned_ehr_status_get" => {
@@ -48,10 +47,8 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let resp = state.backend().versioned_ehr_status(ehr_id).await?;
-            Ok(negotiate::read_rm::<VersionedEhrStatus>(
+            Ok(negotiate::resource::read_rm::<VersionedEhrStatus>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSIONED_EHR_STATUS_ROOT_TAG,
             ))
@@ -63,10 +60,8 @@ pub(super) async fn run(
             )?;
             let ehr_id = parse_ehr_id(&p.ehr_id)?;
             let resp = state.backend().ehr_status_revision_history(ehr_id).await?;
-            Ok(negotiate::read_rm::<RevisionHistory>(
+            Ok(negotiate::resource::read_rm::<RevisionHistory>(
                 h,
-                &base,
-                None,
                 &resp,
                 REVISION_HISTORY_ROOT_TAG,
             ))
@@ -84,10 +79,8 @@ pub(super) async fn run(
             // The envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
             resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::read_rm::<Version<EhrStatus>>(
+            Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSION_ROOT_TAG,
             ))
@@ -109,10 +102,8 @@ pub(super) async fn run(
             // The VERSION envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
             resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::read_rm::<Version<EhrStatus>>(
+            Ok(negotiate::resource::read_rm::<Version<EhrStatus>>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSION_ROOT_TAG,
             ))

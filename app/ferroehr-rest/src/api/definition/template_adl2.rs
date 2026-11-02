@@ -39,7 +39,8 @@ use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
 use crate::negotiate;
-use crate::negotiate::{AppliedPreference, WireFormat};
+use crate::negotiate::WireFormat;
+use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
@@ -79,7 +80,7 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
     )?;
     let (filter, page) =
         list_filter_and_page(p.template_id, p.concept, p.version, p.offset, p.fetch);
-    Ok(negotiate::respond(
+    Ok(negotiate::body::respond(
         h,
         StatusCode::OK,
         &state.backend().template_adl2_list(filter, page).await?,
@@ -105,8 +106,8 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
     // type, so a payload declaring another media type is refused `415` before
     // parsing (`Resources.md` §format rules). An absent `Content-Type` declares
     // nothing to refuse.
-    negotiate::require_text_plain(h)?;
-    let source = negotiate::text_body(&parts.body)?;
+    negotiate::decode::require_text_plain(h)?;
+    let source = negotiate::decode::text_body(&parts.body)?;
     // An unparseable or AOM2-invalid source is a `400`, the invalid one carrying
     // its rule codes as violations, and a duplicate HRID a `409`.
     let hrid = state
@@ -204,14 +205,9 @@ pub(super) async fn example_get(
                 &wt,
             )
         }
-        Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => {
-            Ok(negotiate::respond_rm::<Composition>(
-                h,
-                StatusCode::OK,
-                &comp,
-                "composition",
-            ))
-        }
+        Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => Ok(
+            negotiate::body::respond_rm::<Composition>(h, StatusCode::OK, &comp, "composition"),
+        ),
         _ => Err(RestError::from(ApiError::NotAcceptable(
             "the template example is available as application/json, application/xml, \
              application/openehr.wt.flat+json, or application/openehr.wt.structured+json"
@@ -230,10 +226,10 @@ pub(super) async fn example_get(
 /// other resources that have versioning or unique state identifiers", and the
 /// `ETag` "is considered to be of weak-type and should have a weakness
 /// indicator `W/` prefix" — constructed by the shared
-/// [`negotiate::set_etag`] helper so upload and GET share one
+/// [`negotiate::resource::set_etag`] helper so upload and GET share one
 /// implementation.
 fn set_template_etag(resp: &mut Response, hrid: &str) {
-    negotiate::set_etag(resp, hrid);
+    negotiate::resource::set_etag(resp, hrid);
 }
 
 /// Resolve + render one ADL2 template in the `Accept`-negotiated representation.
@@ -338,22 +334,23 @@ fn json_response(status: StatusCode, json: String) -> Response {
 /// (text/plain); `return=identifier` → a `{template_id}` JSON body
 /// (`schemas/others/TemplateIdentifier.yaml`); missing/`return=minimal` → an
 /// empty body. `Location` is set on every case, and the applied preference is
-/// declared through the shared [`negotiate::set_preference_applied`] seam
+/// declared through the shared [`negotiate::prefer::set_preference_applied`] seam
 /// (`Requests_and_responses.md` §Representation details negotiation).
 ///
 /// A template is not `uid`-versioned, so the identifier body is the
 /// `template_id` object rather than the generic `{uid}` of
-/// [`negotiate::write_negotiated`]; every upload outcome is `201 Created`, so
+/// [`negotiate::prefer::write_negotiated`]; every upload outcome is `201 Created`, so
 /// the identifier variant's never-`204` rule (§"Prefer only identifier") holds
 /// trivially.
 fn upload_response(headers: &HeaderMap, location: &str, hrid: &str, source: String) -> Response {
-    let applied = if negotiate::prefers_representation(headers) {
-        AppliedPreference::Representation
-    } else if negotiate::prefers_identifier(headers) {
-        AppliedPreference::Identifier(hrid)
-    } else {
-        AppliedPreference::Minimal
-    };
+    let applied =
+        if negotiate::prefer::prefers(headers, negotiate::prefer::Preference::Representation) {
+            AppliedPreference::Representation
+        } else if negotiate::prefer::prefers(headers, negotiate::prefer::Preference::Identifier) {
+            AppliedPreference::Identifier(hrid)
+        } else {
+            AppliedPreference::Minimal
+        };
     let mut resp = match applied {
         AppliedPreference::Representation => {
             text_response(StatusCode::CREATED, Some(location), source)
@@ -366,8 +363,10 @@ fn upload_response(headers: &HeaderMap, location: &str, hrid: &str, source: Stri
             }
             resp
         }
-        AppliedPreference::Minimal => negotiate::empty_with_location(StatusCode::CREATED, location),
+        AppliedPreference::Minimal => {
+            negotiate::body::empty_with_location(StatusCode::CREATED, location)
+        }
     };
-    negotiate::set_preference_applied(&mut resp, applied);
+    negotiate::prefer::set_preference_applied(&mut resp, applied);
     resp
 }

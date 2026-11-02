@@ -69,12 +69,12 @@ impl QueryScope {
 /// Decodes a JSON request body into `T`.
 ///
 /// The QUERY operations declare `application/json` only, so a non-JSON
-/// `Content-Type` is rejected by [`negotiate::json_value`].
+/// `Content-Type` is rejected by [`negotiate::decode::json_value`].
 pub(super) fn decode_body<T: serde::de::DeserializeOwned>(
     h: &HeaderMap,
     body: &bytes::Bytes,
 ) -> Result<T, RestError> {
-    let value = negotiate::json_value(h, body).map_err(RestError::from)?;
+    let value = negotiate::decode::json_value(h, body).map_err(RestError::from)?;
     serde_json::from_value(value).map_err(|e| {
         RestError::from(ApiError::BadRequest(format!(
             "invalid query request body: {e}"
@@ -160,10 +160,10 @@ pub(super) fn path_segment(parts: &RequestParts, key: &str) -> Result<String, Re
 /// (`headers/ETag_RESULT_SET.yaml`). The vendored `ResultSet` schema carries no
 /// `id` field, so the tag is a stable digest of the document's
 /// result-determining content ([`result_set_etag`]): identical result sets get
-/// identical tags. The body is negotiated by [`negotiate::respond`] — JSON only,
+/// identical tags. The body is negotiated by [`negotiate::body::respond`] — JSON only,
 /// the QUERY operations declaring no canonical-XML representation.
 pub(super) fn respond_result_set(headers: &HeaderMap, result_set: &serde_json::Value) -> Response {
-    let mut resp = negotiate::respond(headers, StatusCode::OK, result_set);
+    let mut resp = negotiate::body::respond(headers, StatusCode::OK, result_set);
     // Only a genuine 200 carries a RESULT_SET identifier; a negotiated 406 is an
     // error body and gets no `ETag`.
     if resp.status().is_success()

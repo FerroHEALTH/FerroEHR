@@ -53,7 +53,7 @@ fn party_example_response(
     headers: &http::HeaderMap,
     example: &serde_json::Value,
 ) -> Option<axum::response::Response> {
-    use crate::negotiate::respond_rm;
+    use crate::negotiate::body::respond_rm;
     use openehr_rm::prelude::{Agent, Group, Organisation, Person, Role};
     let ok = http::StatusCode::OK;
     let response = match example.get("_type").and_then(serde_json::Value::as_str)? {

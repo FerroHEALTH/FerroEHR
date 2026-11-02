@@ -576,7 +576,7 @@ async fn run(
 
     match op {
         "admin_restrict_processing" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             state
                 .backend()
                 .restrict_processing(
@@ -586,7 +586,7 @@ async fn run(
                     optional_str(&body, "note")?,
                 )
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_restriction_register" => {
             let ehr_id = required_query(&parts, "ehr_id")?;
@@ -605,14 +605,14 @@ async fn run(
                     })
                 })
                 .collect();
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
                 &serde_json::json!({ "restrictions": body }),
             ))
         }
         "admin_lift_restriction" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             state
                 .backend()
                 .lift_restriction(
@@ -620,10 +620,10 @@ async fn run(
                     optional_str(&body, "vo_id")?,
                 )
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_research_objection" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             let objected = body
                 .get("objected")
                 .and_then(serde_json::Value::as_bool)
@@ -641,7 +641,7 @@ async fn run(
                     optional_str(&body, "ground")?,
                 )
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_retention_policies" => {
             let rows = state.backend().retention_policies().await?;
@@ -659,14 +659,14 @@ async fn run(
                     })
                 })
                 .collect();
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
                 &serde_json::json!({ "policies": body }),
             ))
         }
         "admin_put_retention_policy" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             state
                 .backend()
                 .put_retention_policy(RetentionPeriod {
@@ -679,10 +679,10 @@ async fn run(
                     source: required_str(&body, "source")?,
                 })
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_retention_anchor" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             let hold = match (
                 optional_str(&body, "hold_at")?,
                 optional_str(&body, "hold_ground")?,
@@ -706,10 +706,10 @@ async fn run(
                     hold,
                 )
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_retention_hold" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             let held = body
                 .get("held")
                 .and_then(serde_json::Value::as_bool)
@@ -723,7 +723,7 @@ async fn run(
                 .backend()
                 .set_retention_hold(required_str(&body, "vo_id")?, held)
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_retention_due" => {
             let limit = match params::query_param(parts.query.as_deref(), "limit") {
@@ -751,14 +751,14 @@ async fn run(
                     })
                 })
                 .collect();
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
                 &serde_json::json!({ "due": body }),
             ))
         }
         "admin_restrict_access" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             state
                 .backend()
                 .restrict_access(
@@ -767,7 +767,7 @@ async fn run(
                     optional_str(&body, "note")?,
                 )
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "admin_access_restriction_register" => {
             let ehr_id = required_query(&parts, "ehr_id")?;
@@ -785,14 +785,14 @@ async fn run(
                     })
                 })
                 .collect();
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 h,
                 StatusCode::OK,
                 &serde_json::json!({ "access_restrictions": body }),
             ))
         }
         "admin_lift_access_restriction" => {
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             state
                 .backend()
                 .lift_access_restriction(
@@ -800,7 +800,7 @@ async fn run(
                     optional_str(&body, "vo_id")?,
                 )
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted admin marks operation: {other}"

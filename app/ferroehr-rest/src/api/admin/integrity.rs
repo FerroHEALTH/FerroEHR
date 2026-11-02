@@ -268,7 +268,7 @@ async fn run(
                 return Ok(stream_parity(&state, scope));
             }
             let report = state.backend().verify_storage_parity(scope).await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 &parts.headers,
                 StatusCode::OK,
                 &parity_report(&report),
@@ -277,7 +277,7 @@ async fn run(
         "admin_rebuild_version_nodes" => {
             let scope = parity_scope(parts.query.as_deref())?;
             let report = state.backend().rebuild_version_nodes(scope).await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 &parts.headers,
                 StatusCode::OK,
                 &rebuild_report(&report),

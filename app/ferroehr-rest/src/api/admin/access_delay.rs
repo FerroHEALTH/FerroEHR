@@ -169,9 +169,13 @@ impl super::body::RegisterRoutes for AccessDelayRoutes {
             let ehr_id = required_query(parts, "ehr_id")?;
             let rows = backend.access_delay_register(&ehr_id).await?;
             let body = serde_json::json!({ "access_delays": rows });
-            return Ok(negotiate::respond(&parts.headers, StatusCode::OK, &body));
+            return Ok(negotiate::body::respond(
+                &parts.headers,
+                StatusCode::OK,
+                &body,
+            ));
         }
-        let body = negotiate::json_value(&parts.headers, &parts.body)?;
+        let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
         let ehr_id = required_str(&body, "ehr_id")?;
         let vo_id = required_str(&body, "vo_id")?;
         if op == "admin_delay_access" {
@@ -183,6 +187,6 @@ impl super::body::RegisterRoutes for AccessDelayRoutes {
         } else {
             backend.release_person_access(ehr_id, vo_id).await?;
         }
-        Ok(negotiate::empty(StatusCode::NO_CONTENT))
+        Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
     }
 }

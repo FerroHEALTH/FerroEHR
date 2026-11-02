@@ -39,7 +39,8 @@ use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
-use crate::negotiate::{AppliedPreference, WireFormat};
+use crate::negotiate::WireFormat;
+use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
 use crate::overview::version_id::{
     object_id_uuid, parse_ehr_id, parse_version_uid, require_if_match,
@@ -71,7 +72,7 @@ async fn decode_composition_body(
 ) -> Result<Composition, RestError> {
     match negotiate::content_type_format(h) {
         Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => {
-            Ok(negotiate::rm_value::<Composition>(h, body)?)
+            Ok(negotiate::decode::rm_value::<Composition>(h, body)?)
         }
         // The converted fragment re-enters through the same strict reader as a
         // canonical body: one decode, one refusal class.
@@ -175,7 +176,6 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     let q = parts.query.as_deref();
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let base = state.config().rest.base_path.clone();
     let p = parts.decode(
         CompositionGetParams::from_request,
         CompositionGetParams::PARAMS,
@@ -200,9 +200,9 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     let accept = negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson);
     let mut body = match body {
         ReadBody::RawJson(text) if !expand && accept == Some(WireFormat::CanonicalJson) => {
-            let mut out = negotiate::raw_json_body(ok, text);
+            let mut out = negotiate::body::body(ok, negotiate::APPLICATION_JSON, text);
             if let Some(meta) = &meta {
-                negotiate::set_versioning_headers(&mut out, meta);
+                negotiate::resource::set_versioning_headers(&mut out, meta);
             }
             return Ok(out);
         }
@@ -211,7 +211,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     // A deleted version resolves to a null body → 204 No Content
     // (composition_get.yaml `204_because_deleted*`).
     if body.is_null() {
-        return Ok(negotiate::empty(no_content));
+        return Ok(negotiate::body::empty(no_content));
     }
     body = super::expand_multimedia_if_requested(&state, q, body).await?;
     // "The `ETag` value is independent of its resource serialization format
@@ -222,7 +222,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
             let mut out =
                 crate::formats::dispatch::composition_flat_response(&state, ok, &body).await?;
             if let Some(meta) = &meta {
-                negotiate::set_versioning_headers(&mut out, meta);
+                negotiate::resource::set_versioning_headers(&mut out, meta);
             }
             return Ok(out);
         }
@@ -231,7 +231,7 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
                 crate::formats::dispatch::composition_structured_response(&state, ok, &body)
                     .await?;
             if let Some(meta) = &meta {
-                negotiate::set_versioning_headers(&mut out, meta);
+                negotiate::resource::set_versioning_headers(&mut out, meta);
             }
             return Ok(out);
         }
@@ -240,10 +240,8 @@ async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError
     // `ETag` and `Last-Modified` both SHOULD accompany a resource with a
     // unique state identifier (§"ETag and Last-Modified").
     let resp = ServiceResponse { body, meta };
-    Ok(negotiate::read_rm::<Composition>(
+    Ok(negotiate::resource::read_rm::<Composition>(
         h,
-        &base,
-        Some("composition"),
         &resp,
         "composition",
     ))
@@ -327,10 +325,8 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .await
                 .ok()
                 .flatten();
-            Ok(negotiate::error_with_meta(
+            Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
-                &base,
-                Some("composition"),
                 meta.as_ref(),
             ))
         }
@@ -344,7 +340,6 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
 /// The parameter, precondition and commit rejections the operation declares.
 async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let base = state.config().rest.base_path.clone();
     let p = parts.decode(
         CompositionDeleteParams::from_request,
         CompositionDeleteParams::PARAMS,
@@ -405,11 +400,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
             let resp = ServiceResponse::deleted(
                 commit_meta(ehr_id, uid, &committed).with_content(deleted),
             );
-            Ok(negotiate::deleted_with_headers(
-                &base,
-                Some("composition"),
-                &resp,
-            ))
+            Ok(negotiate::resource::deleted_with_headers(&resp))
         }
         // The 409 and the volunteered-If-Match 412 both carry the latest
         // `version_uid` in `ETag` (overview §"If-Match and accidental
@@ -424,10 +415,8 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
                 .await
                 .ok()
                 .flatten();
-            Ok(negotiate::error_with_meta(
+            Ok(negotiate::resource::error_with_meta(
                 crate::overview::service_error::api_error(e),
-                &base,
-                Some("composition"),
                 meta.as_ref(),
             ))
         }
@@ -460,7 +449,7 @@ async fn tags_get(state: AppState, parts: RequestParts) -> Result<Response, Rest
         .backend()
         .target_tags_get(ehr_id, p.uid_based_id, "COMPOSITION")
         .await?;
-    let mut resp = negotiate::respond(h, ok, &openehr_its::json::to_canonical_value(&tags));
+    let mut resp = negotiate::body::respond(h, ok, &openehr_its::json::to_canonical_value(&tags));
     resp.extensions_mut().insert(object);
     Ok(resp)
 }
@@ -486,7 +475,7 @@ async fn tags_update(state: AppState, parts: RequestParts) -> Result<Response, R
         .await?;
     // composition_tags_update.yaml: 200 on `Prefer: return=representation`,
     // 204 when `Prefer` is missing or `return=minimal` (overview §Prefer).
-    Ok(negotiate::write_collection(
+    Ok(negotiate::prefer::write_collection(
         h,
         no_content,
         ok,
@@ -509,7 +498,7 @@ async fn tags_delete(state: AppState, parts: RequestParts) -> Result<Response, R
         .backend()
         .target_tag_delete(ehr_id, p.uid_based_id, "COMPOSITION", p.key)
         .await?;
-    Ok(negotiate::empty(no_content))
+    Ok(negotiate::body::empty(no_content))
 }
 
 /// Returns the committed version's [`ResourceMeta`]: its `OBJECT_VERSION_ID`
@@ -563,14 +552,14 @@ async fn composition_write_response(
         // `Location` is required on a `201` regardless of body form
         // (RFC 7231 §6.3.2), so the simplified representations get the same
         // version-identity headers.
-        negotiate::set_resource_headers(&mut out, base, Some("composition"), &meta);
+        negotiate::resource::set_resource_headers(&mut out, base, Some("composition"), &meta);
         // NOTE: a Simplified-Formats commit returns the body in the negotiated
         // form (`Accept` decides, not `Prefer`), so the applied preference is
         // representation (§Representation details negotiation).
-        negotiate::set_preference_applied(&mut out, AppliedPreference::Representation);
+        negotiate::prefer::set_preference_applied(&mut out, AppliedPreference::Representation);
         return Ok(out);
     }
-    let body = if negotiate::prefers_representation(h) {
+    let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
         let ovid = parse_version_uid(&meta.uid)?;
         stored_body(
             state
@@ -583,7 +572,7 @@ async fn composition_write_response(
         Value::Null
     };
     let resp = ServiceResponse::new(body, meta);
-    Ok(negotiate::write_rm::<Composition>(
+    Ok(negotiate::resource::write_rm::<Composition>(
         h,
         base,
         minimal,
