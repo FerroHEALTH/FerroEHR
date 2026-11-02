@@ -167,14 +167,16 @@ where
 ///
 /// Any scheme must carry a non-empty concrete `_type`, which `scheme()` names
 /// (`Scheme_valid`, RM `org.openehr.rm.ehr.ehr_access.adoc`); the RM demands
-/// nothing else of the abstract slot. Settings of this scheme must also name a
-/// versioned object in every privacy override, so the operator sees the
-/// mistake at write time.
+/// nothing else of the abstract slot. Settings of this scheme must also parse
+/// as it and name a versioned object in every privacy override, so the
+/// operator sees the mistake at write time; settings that do not parse would
+/// hold the EHR closed ([`EhrAccessSettings::held_closed`]).
 ///
 /// # Errors
 /// [`ServiceError::content_invalid`] (422) for settings without a `_type`, and
 /// [`ServiceError::bad_request`] (400) naming the first override whose `uid`
-/// is neither a UUID nor an `OBJECT_VERSION_ID` whose `object_id` is one.
+/// is neither a UUID nor an `OBJECT_VERSION_ID` whose `object_id` is one, or
+/// the first setting that does not parse as this scheme.
 pub fn check_written_settings(settings: &Value) -> Result<(), ServiceError> {
     let scheme = settings.get("_type").and_then(Value::as_str);
     if scheme.is_none_or(str::is_empty) {
@@ -203,7 +205,52 @@ pub fn check_written_settings(settings: &Value) -> Result<(), ServiceError> {
             ));
         }
     }
-    Ok(())
+    refuse_unreadable_setting(settings)
+}
+
+/// Refuse settings of this scheme that do not parse as it, naming the first
+/// setting that does not.
+///
+/// # Errors
+/// [`ServiceError::bad_request`] (400) naming the setting, with the parse
+/// error as its source.
+fn refuse_unreadable_setting(settings: &Value) -> Result<(), ServiceError> {
+    type Parses = fn(Value) -> Result<(), serde_json::Error>;
+    let checks: [(&str, Parses); 4] = [
+        ("gate_keeper", parses::<Option<String>>),
+        ("default_access", parses::<DefaultAccess>),
+        ("access_list", parses::<Vec<AccessEntry>>),
+        ("privacy", parses::<Privacy>),
+    ];
+    for (name, check) in checks {
+        if let Some(value) = settings.get(name)
+            && let Err(error) = check(value.clone())
+        {
+            return Err(ServiceError::bad_request(
+                format!(
+                    "EHR_ACCESS.settings.{name} does not parse as the \
+                     {EHR_ACCESS_CONTROL_V1_SCHEME} scheme: {error}"
+                ),
+                error,
+            ));
+        }
+    }
+    serde_json::from_value::<EhrAccessSettings>(settings.clone())
+        .map(drop)
+        .map_err(|error| {
+            ServiceError::bad_request(
+                format!(
+                    "EHR_ACCESS.settings do not parse as the {EHR_ACCESS_CONTROL_V1_SCHEME} \
+                     scheme: {error}"
+                ),
+                error,
+            )
+        })
+}
+
+/// Whether `value` parses as a `T`.
+fn parses<T: serde::de::DeserializeOwned>(value: Value) -> Result<(), serde_json::Error> {
+    serde_json::from_value::<T>(value).map(drop)
 }
 
 /// The EHRs whose `EHR_ACCESS` carries settings this server understands, with
@@ -408,6 +455,35 @@ mod tests {
         );
         check_written_settings(&json!({ "_type": "SOME_OTHER_SCHEME", "privacy": 1 }))
             .expect("another scheme is not this scheme's to judge");
+    }
+
+    /// Written settings of this scheme that do not parse are refused with a
+    /// `400` naming the first setting that does not.
+    #[test]
+    fn written_settings_that_do_not_parse_are_refused_by_name() {
+        let refused = |settings: Value| match check_written_settings(&settings) {
+            Err(ServiceError::BadRequest(refusal)) => refusal.message,
+            other => panic!("a 400 for {settings}, got {other:?}"),
+        };
+        let typed = |field: &str, value: Value| {
+            let mut settings = json!({ "_type": EHR_ACCESS_CONTROL_V1_TYPE });
+            settings[field] = value;
+            settings
+        };
+        for (field, value) in [
+            ("gate_keeper", json!(7)),
+            ("default_access", json!("bogus")),
+            ("access_list", json!([{ "principal": "user:bob" }])),
+            ("privacy", json!({ "default_level": "high" })),
+        ] {
+            let message = refused(typed(field, value));
+            assert!(
+                message.contains(&format!("EHR_ACCESS.settings.{field} ")),
+                "the refusal names {field}: {message}"
+            );
+        }
+        check_written_settings(&typed("default_access", json!("restricted")))
+            .expect("settings that parse are accepted");
     }
 
     #[test]
