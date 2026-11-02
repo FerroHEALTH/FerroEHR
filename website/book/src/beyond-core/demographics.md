@@ -123,9 +123,9 @@ Two limits are worth knowing because they are deliberate rather than accidental:
 - There is **no demographic archetype or template store**, so a party is checked
   against the Reference Model but not against an archetype. The service model's
   "definitions valid" precondition therefore does not apply here.
-- `PARTY.reverse_relationships` is a derived attribute the server leaves
-  unpopulated: it is the computed inverse of `relationships`, and the server
-  re-derives rather than storing a client's copy.
+- `PARTY.reverse_relationships` is derived, never stored from a client's copy:
+  it is the inverse of the `relationships` other parties carry. The next
+  section says when a read serves it.
 
 ## The specification generation a body is read against
 
@@ -140,7 +140,11 @@ attribute:
   `PARTY.reverse_relationships`: the released generation defines it, so
   refusing a valid instance of the generation the server advertises would invent
   a prohibition. The value is accepted and then dropped, because the server
-  derives that attribute itself.
+  derives that attribute itself. A canonical-JSON read of a party lists, in
+  `reverse_relationships`, one `LOCATABLE_REF` per relationship another party's
+  current version carries with this party as its target: the reference names
+  that party's version container and the relationship's path in its data.
+  The canonical-XML read does not carry it yet.
 - Under **`development`**, the attribute is not part of the model and a body
   carrying it is refused as an undeclared field, like any other unknown key.
 

@@ -1762,6 +1762,9 @@ impl FerroEhrService {
         load_attestations(&mut tx, &record.attestations).await?;
         insert_item_tag_rows(&mut tx, None, &record.item_tags).await?;
         restore_archive_placement(&mut tx, &record.archives).await?;
+        // The archive carries no index row: the target side is rebuilt from
+        // the loaded current version, as every commit rebuilds it.
+        crate::storage::party_reverse::reindex(&mut tx, record.vo_id).await?;
         tx.commit().await?;
         Ok(None)
     }
