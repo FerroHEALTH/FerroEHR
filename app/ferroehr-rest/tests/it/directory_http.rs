@@ -44,14 +44,13 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use http::header::HeaderName;
 use http::{HeaderMap, Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
-use tower::ServiceExt;
 use uuid::Uuid;
 
 use crate::common;
+use crate::common::header;
+use crate::common::{create_ehr, send};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A syntactically valid EHR id that is never created — the "unknown" probe.
@@ -60,31 +59,11 @@ const FOLDER_ARCHETYPE: &str = "openEHR-EHR-FOLDER.directory.v1";
 
 // ── request/response plumbing ────────────────────────────────────────────────
 
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
-fn header_str(h: &HeaderMap, name: HeaderName) -> Option<String> {
-    h.get(name).and_then(|v| v.to_str().ok()).map(str::to_owned)
-}
-
-fn raw_header(h: &HeaderMap, name: &'static str) -> Option<String> {
-    h.get(name).and_then(|v| v.to_str().ok()).map(str::to_owned)
-}
-
 /// The version uid carried by the `ETag`: the weak `W/"<uid>"` form
 /// (overview §"`ETag` and Last-Modified" — the `W/` weakness indicator is a
 /// MUST), stripped to the bare `OBJECT_VERSION_ID`.
 fn etag_uid(h: &HeaderMap) -> String {
-    let raw = header_str(h, header::ETAG).expect("ETag present");
+    let raw = header(h, header::ETAG).expect("ETag present");
     assert!(
         raw.starts_with("W/\""),
         "ETag MUST carry the weakness indicator W/ (overview §ETag and Last-Modified): {raw:?}"
@@ -169,19 +148,6 @@ fn folder_with_items(name: &str, subfolders: Vec<Value>, item_ids: &[&str]) -> V
 }
 
 // ── setup helpers ────────────────────────────────────────────────────────────
-
-/// Create a real EHR through the wire; return its server-assigned id (parsed
-/// from the create `ETag`, which for `/ehr` is the `ehr_id`).
-async fn create_ehr(app: &Router) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
-    let (status, h, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::CREATED, "create ehr: {body}");
-    etag_uid(&h)
-}
 
 /// `POST /ehr/{id}/directory` with the given folder + optional `Prefer`; return
 /// the full response.
@@ -269,14 +235,14 @@ async fn create_returns_201_weak_etag_location_empty_body() {
     let (status, h, body) = create_directory(&app, &ehr, &folder, None).await;
 
     assert_eq!(status, StatusCode::CREATED, "create: {body}");
-    let raw_etag = header_str(&h, header::ETAG).expect("201_directory declares ETag");
+    let raw_etag = header(&h, header::ETAG).expect("201_directory declares ETag");
     assert!(
         raw_etag.starts_with("W/\""),
         "ETag MUST carry the weakness indicator W/: {raw_etag:?}"
     );
     let uid = etag_uid(&h);
     assert_eq!(
-        header_str(&h, header::LOCATION).as_deref(),
+        header(&h, header::LOCATION),
         Some(&*format!("{BASE}/ehr/{ehr}/directory/{uid}")),
         "Location_directory: .../ehr/{{id}}/directory/{{version_uid}}"
     );
@@ -300,10 +266,7 @@ async fn create_representation_returns_folder_body() {
         create_directory(&app, &ehr, &folder, Some("return=representation")).await;
 
     assert_eq!(status, StatusCode::CREATED, "create repr: {body}");
-    assert_eq!(
-        header_str(&h, header::CONTENT_TYPE).as_deref(),
-        Some("application/json")
-    );
+    assert_eq!(header(&h, header::CONTENT_TYPE), Some("application/json"));
     let v: Value = serde_json::from_str(&body).expect("FOLDER json");
     assert_eq!(
         v["_type"], "FOLDER",
@@ -332,10 +295,7 @@ async fn create_identifier_returns_uid_only() {
     let uid = etag_uid(&h);
     let v: Value = serde_json::from_str(&body).expect("identifier json");
     assert_eq!(v, json!({ "uid": uid }), "body is exactly {{uid}}: {body}");
-    assert_eq!(
-        raw_header(&h, "preference-applied").as_deref(),
-        Some("return=identifier")
-    );
+    assert_eq!(header(&h, "preference-applied"), Some("return=identifier"));
 }
 
 // ── 4. create on EHR-with-directory → 409; create on unknown EHR → 404 ────────
@@ -380,14 +340,14 @@ async fn last_modified_present_on_create_and_get() {
 
     let (status, h, _b) = create_directory(&app, &ehr, &folder_json("root", vec![]), None).await;
     assert_eq!(status, StatusCode::CREATED);
-    let lm = header_str(&h, header::LAST_MODIFIED)
+    let lm = header(&h, header::LAST_MODIFIED)
         .expect("Last-Modified SHOULD be present on the create 201");
     assert!(lm.ends_with("GMT"), "Last-Modified is an HTTP-date: {lm:?}");
 
     let (status, h, _b) = send(&app, get(format!("{BASE}/ehr/{ehr}/directory"), None)).await;
     assert_eq!(status, StatusCode::OK);
-    let lm = header_str(&h, header::LAST_MODIFIED)
-        .expect("Last-Modified SHOULD be present on the GET 200");
+    let lm =
+        header(&h, header::LAST_MODIFIED).expect("Last-Modified SHOULD be present on the GET 200");
     assert!(lm.ends_with("GMT"), "Last-Modified is an HTTP-date: {lm:?}");
 }
 
@@ -482,7 +442,7 @@ async fn update_stale_if_match_is_412_with_latest_etag() {
     .await;
     assert_eq!(status, StatusCode::PRECONDITION_FAILED, "412_directory");
     assert_eq!(
-        header_str(&h, header::ETAG).as_deref(),
+        header(&h, header::ETAG),
         Some(&*weak(&v2)),
         "the 412 carries the latest version_uid in ETag"
     );
@@ -673,7 +633,7 @@ async fn delete_stale_if_match_is_412_with_latest_etag() {
     let (status, h, _b) = delete_directory(&app, &ehr, Some(&quoted(&v1))).await;
     assert_eq!(status, StatusCode::PRECONDITION_FAILED, "412_directory");
     assert_eq!(
-        header_str(&h, header::ETAG).as_deref(),
+        header(&h, header::ETAG),
         Some(&*weak(&v2)),
         "the 412 carries the latest version_uid in ETag"
     );
@@ -1034,10 +994,7 @@ async fn get_directory_as_xml() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "xml get: {body}");
-    assert_eq!(
-        header_str(&h, header::CONTENT_TYPE).as_deref(),
-        Some("application/xml")
-    );
+    assert_eq!(header(&h, header::CONTENT_TYPE), Some("application/xml"));
     assert!(
         body.trim_start().starts_with('<'),
         "an XML document: {body}"
@@ -1265,7 +1222,7 @@ async fn delete_204_carries_the_deleted_versions_identity() {
         "the delete committed the next trunk version: {deleted_uid}"
     );
     assert!(
-        header_str(&h, header::LAST_MODIFIED).is_some(),
+        header(&h, header::LAST_MODIFIED).is_some(),
         "Last-Modified accompanies the deleted version's identity"
     );
 }

@@ -38,10 +38,8 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use sqlx::PgPool;
-use tower::ServiceExt;
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing_subscriber::layer::{Context, Layer};
@@ -49,6 +47,7 @@ use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry::LookupSpan;
 
 use crate::common;
+use crate::common::{etag_uid, ips_opt_xml, send};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const IPS: &str = "International Patient Summary";
@@ -116,14 +115,6 @@ fn composition(archetype: &str) -> Value {
     })
 }
 
-fn opt_xml() -> String {
-    std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../crates/openehr-its/tests/fixtures/sdk/ips.v0.opt"),
-    )
-    .expect("ips.v0.opt vendored in openehr-its")
-}
-
 /// The IPS canonical composition, its stored `uid` removed.
 fn ips_composition() -> Value {
     let text = std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
@@ -188,7 +179,7 @@ async fn app(
         &app,
         Request::post(format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(opt_xml()))
+            .body(Body::from(ips_opt_xml()))
             .unwrap(),
     )
     .await;
@@ -201,30 +192,8 @@ async fn app(
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "EHR create");
-    let ehr = etag(&headers);
+    let ehr = etag_uid(&headers);
     (db, pool, app, ehr)
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, http::HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
-fn etag(headers: &http::HeaderMap) -> String {
-    headers
-        .get(header::ETAG)
-        .and_then(|v| v.to_str().ok())
-        .expect("ETag")
-        .trim_start_matches("W/")
-        .trim_matches('"')
-        .to_owned()
 }
 
 /// Commit a canonical composition; returns its versioned-object id.
@@ -238,7 +207,7 @@ async fn commit(app: &Router, ehr: &str, body: &Value) -> String {
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "commit: {text}");
-    etag(&headers).split("::").next().unwrap().to_owned()
+    etag_uid(&headers).split("::").next().unwrap().to_owned()
 }
 
 /// Run an ad-hoc AQL query.
@@ -466,7 +435,7 @@ async fn a_flat_write_is_classified_by_its_template() {
     let templates = json!({ IPS: ["Patient-Summaries"] });
     let (_db, pool, app, ehr) = app(map(&templates), Observability::default()).await;
 
-    let opt = openehr_its::opt14::from_xml(&opt_xml()).expect("parse OPT");
+    let opt = openehr_its::opt14::from_xml(&ips_opt_xml()).expect("parse OPT");
     let web_template =
         openehr_sdt::flat::webtemplate::builder::build_web_template(&opt).expect("web template");
     let flat = openehr_sdt::flat::convert::composition_to_flat(&ips_composition(), &web_template)
@@ -500,7 +469,7 @@ async fn commit_version(app: &Router, ehr: &str, body: &Value) -> String {
     )
     .await;
     assert_eq!(status, StatusCode::CREATED, "commit: {text}");
-    etag(&headers)
+    etag_uid(&headers)
 }
 
 /// A logical delete writes no content, so its record carries the categories of

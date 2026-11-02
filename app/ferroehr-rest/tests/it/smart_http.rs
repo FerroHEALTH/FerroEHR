@@ -21,7 +21,6 @@
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use wiremock::matchers::{method, path};
@@ -32,6 +31,7 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common;
+use crate::common::send_body;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const EXT: &str = "/ferroehr/rest/extensions/v1";
@@ -108,13 +108,6 @@ async fn open_app() -> (testkit::TestDb, Router) {
     app(cfg).await
 }
 
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (status, String::from_utf8_lossy(&bytes).into_owned())
-}
-
 fn get(uri: &str, credential: Option<&str>) -> Request<Body> {
     let mut builder = Request::builder()
         .method("GET")
@@ -156,7 +149,7 @@ fn capabilities(doc: &Value) -> Vec<&str> {
 async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
-    let (status, body) = send(&app, get(DISCOVERY, None)).await;
+    let (status, body) = send_body(&app, get(DISCOVERY, None)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let doc: Value = serde_json::from_str(&body).unwrap();
     let base = doc["services"]["org.openehr.rest"]["baseUrl"]
@@ -186,7 +179,7 @@ async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
 async fn discovery_drops_deprecated_flows_plain_pkce_and_the_issuer_s_scopes() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
-    let (_status, body) = send(&app, get(DISCOVERY, None)).await;
+    let (_status, body) = send_body(&app, get(DISCOVERY, None)).await;
     let doc: Value = serde_json::from_str(&body).unwrap();
     assert_eq!(
         doc["grant_types_supported"],
@@ -209,7 +202,7 @@ async fn discovery_drops_deprecated_flows_plain_pkce_and_the_issuer_s_scopes() {
 async fn a_bound_issuer_declares_patient_permission() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), true, true)).await;
-    let (_status, body) = send(&app, get(DISCOVERY, None)).await;
+    let (_status, body) = send_body(&app, get(DISCOVERY, None)).await;
     let doc: Value = serde_json::from_str(&body).unwrap();
     assert!(capabilities(&doc).contains(&"permission-patient"));
 }
@@ -218,7 +211,7 @@ async fn a_bound_issuer_declares_patient_permission() {
 async fn discovery_absent_when_disabled() {
     let issuer = issuer().await;
     let (_pg, app) = app(config(&issuer.uri(), false, false)).await;
-    let (status, _b) = send(&app, get(DISCOVERY, None)).await;
+    let (status, _b) = send_body(&app, get(DISCOVERY, None)).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "zero wire drift when off");
 }
 
@@ -232,9 +225,10 @@ async fn the_template_family_needs_a_template_grant() {
     let uri = issuer.uri();
     let (_pg, app) = app(config(&uri, false, false)).await;
     let list = format!("{BASE}/definition/template/adl1.4");
-    let (status, body) = send(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
+    let (status, body) =
+        send_body(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get(&list, Some(&token(&uri, "user/template-*.r", &json!({})))),
     )
@@ -258,9 +252,10 @@ async fn the_query_family_needs_an_aql_grant() {
             .body(Body::from(r#"{"q": "SELECT e/ehr_id/value FROM EHR e"}"#))
             .unwrap()
     };
-    let (status, body) = send(&app, query(&token(&uri, "user/template-*.r", &json!({})))).await;
+    let (status, body) =
+        send_body(&app, query(&token(&uri, "user/template-*.r", &json!({})))).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    let (status, body) = send(&app, query(&token(&uri, "user/aql-*.s", &json!({})))).await;
+    let (status, body) = send_body(&app, query(&token(&uri, "user/aql-*.s", &json!({})))).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }
 
@@ -282,11 +277,11 @@ async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
         );
         get(&uri, Some(&credential))
     };
-    let (status, body) = send(&app, query(None)).await;
+    let (status, body) = send_body(&app, query(None)).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    let (status, body) = send(&app, query(Some("0b8f7c5e-0000-4000-8000-000000000001"))).await;
+    let (status, body) = send_body(&app, query(Some("0b8f7c5e-0000-4000-8000-000000000001"))).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "another EHR: {body}");
-    let (status, _body) = send(&app, query(Some(launched))).await;
+    let (status, _body) = send_body(&app, query(Some(launched))).await;
     assert_ne!(
         status,
         StatusCode::FORBIDDEN,
@@ -312,7 +307,7 @@ async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
         &json!({ "ehrId": launched }),
     );
     for (base, route) in [(BASE, ""), (BASE, "/ehr_status"), (EXT, "/contribution")] {
-        let (status, body) = send(
+        let (status, body) = send_body(
             &app,
             get(&format!("{base}/ehr/{launched}{route}"), Some(&credential)),
         )
@@ -322,7 +317,7 @@ async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
             StatusCode::FORBIDDEN,
             "GET /ehr/{{ehr_id}}{route} of the launch context's EHR: {body}"
         );
-        let (status, body) = send(
+        let (status, body) = send_body(
             &app,
             get(&format!("{base}/ehr/{other}{route}"), Some(&credential)),
         )
@@ -343,7 +338,7 @@ async fn a_user_grant_reaches_the_contribution_list() {
     let uri = issuer.uri();
     let (_pg, app) = app(config(&uri, false, false)).await;
     let ehr = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get(
             &format!("{EXT}/ehr/{ehr}/contribution"),
@@ -361,7 +356,7 @@ async fn a_user_grant_reaches_the_contribution_list() {
 #[tokio::test]
 async fn authentication_off_leaves_the_families_ungated() {
     let (_pg, app) = open_app().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get(&format!("{BASE}/definition/template/adl1.4"), None),
     )
@@ -408,9 +403,9 @@ async fn an_unserved_method_is_405_with_allow_whatever_the_grants() {
         assert!(allow.contains("POST"), "{allow}");
         assert!(!allow.contains("DELETE"), "{allow}");
     }
-    let (status, body) = send(&app, request("POST", &unauthorized)).await;
+    let (status, body) = send_body(&app, request("POST", &unauthorized)).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    let (status, body) = send(&app, request("POST", &authorized)).await;
+    let (status, body) = send_body(&app, request("POST", &authorized)).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
 }
 
@@ -426,7 +421,7 @@ async fn an_unserved_method_without_a_credential_is_401() {
         .uri(format!("{BASE}/ehr"))
         .body(Body::empty())
         .unwrap();
-    let (status, body) = send(&app, req).await;
+    let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
 }
 
@@ -469,16 +464,18 @@ async fn a_system_scoped_token_without_a_role_reaches_what_its_scopes_cover() {
     let (_pg, app) = rbac_app(&uri).await;
     let list = format!("{BASE}/definition/template/adl1.4");
     for scope in ["system/template-*.r", "system/template-*.crud"] {
-        let (status, body) = send(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
+        let (status, body) =
+            send_body(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
         assert_eq!(status, StatusCode::OK, "{scope}: {body}");
     }
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get(&list, Some(&token(&uri, "system/aql-*.s", &json!({})))),
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN, "an uncovering scope: {body}");
-    let (status, body) = send(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
+    let (status, body) =
+        send_body(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
     assert_eq!(
         status,
         StatusCode::FORBIDDEN,
@@ -501,10 +498,11 @@ async fn a_person_scoped_token_without_a_role_is_refused() {
         "patient/template-*.r",
         "system/template-*.r user/template-*.r",
     ] {
-        let (status, body) = send(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
+        let (status, body) =
+            send_body(&app, get(&list, Some(&token(&uri, scope, &json!({}))))).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{scope}: {body}");
     }
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get(
             &list,

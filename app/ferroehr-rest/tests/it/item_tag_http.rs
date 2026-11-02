@@ -34,47 +34,13 @@
 use axum::Router;
 use axum::body::Body;
 use http::{HeaderMap, Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
-use tower::ServiceExt;
 
 use crate::common;
+use crate::common::{create_ehr, etag_uid, send};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const FOLDER_ARCHETYPE: &str = "openEHR-EHR-FOLDER.directory.v1";
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
-/// The version uid carried by a weak `ETag`.
-fn etag_uid(h: &HeaderMap) -> String {
-    h.get(header::ETAG)
-        .and_then(|v| v.to_str().ok())
-        .expect("ETag")
-        .trim_start_matches("W/")
-        .trim_matches('"')
-        .to_owned()
-}
-
-async fn create_ehr(app: &Router) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
-    let (status, h, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::CREATED, "create ehr: {body}");
-    etag_uid(&h)
-}
 
 fn folder(name: &str) -> Value {
     json!({

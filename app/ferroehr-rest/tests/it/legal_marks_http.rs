@@ -18,14 +18,6 @@
 //!
 //! The obligation under test is GDPR Art. 18(2), which leaves storage as the
 //! only processing a restriction admits (`docs/law/eu/gdpr/text.html`).
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
 
 use axum::Router;
 use axum::body::Body;
@@ -33,6 +25,7 @@ use http::{Request, StatusCode};
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::{create_ehr, send_body};
 
 async fn app() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
@@ -40,10 +33,6 @@ async fn app() -> (testkit::TestDb, Router) {
         pg,
         common::router_with(common::api_config(true), service).await,
     )
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
-    common::send_body(app, req).await
 }
 
 fn get(path: &str) -> Request<Body> {
@@ -60,23 +49,6 @@ fn put_json(path: &str, body: &str) -> Request<Body> {
     req
 }
 
-/// Create an EHR through the released wire and return its id.
-async fn create_ehr(app: &Router) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .header("Prefer", "return=representation")
-        .body(Body::empty())
-        .expect("request");
-    let (status, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
-    let value: serde_json::Value = serde_json::from_str(&body).expect("EHR json");
-    value["ehr_id"]["value"]
-        .as_str()
-        .expect("ehr_id")
-        .to_owned()
-}
-
 /// Every released operation a whole-EHR restriction reaches answers `403`, and
 /// the same operations answer normally once it is lifted.
 ///
@@ -89,7 +61,7 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
 
     // The directory has to exist before the restriction, or its refusal would
     // be indistinguishable from a 404.
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json(
             &format!("/ehr/{ehr_id}/directory"),
@@ -109,7 +81,7 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
     let mut status_body = serde_json::Value::Null;
     let mut status_uid = String::new();
     for path in &reads {
-        let (status, body) = send(&app, get(path)).await;
+        let (status, body) = send_body(&app, get(path)).await;
         assert_eq!(status, StatusCode::OK, "before the mark, {path}: {body}");
         if path.ends_with("/ehr_status") {
             let mut value: serde_json::Value = serde_json::from_str(&body).expect("status json");
@@ -122,7 +94,7 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
         }
     }
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json(
             "/admin/restriction",
@@ -133,7 +105,7 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
     assert_eq!(status, StatusCode::NO_CONTENT, "restrict: {body}");
 
     for path in &reads {
-        let (status, body) = send(&app, get(path)).await;
+        let (status, body) = send_body(&app, get(path)).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{path}: {body}");
         assert!(
             body.contains("restricted"),
@@ -152,11 +124,11 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
         .header(http::header::IF_MATCH, format!("\"{status_uid}\""))
         .body(Body::from(status_body.to_string()))
         .expect("request");
-    let (status, body) = send(&app, req).await;
+    let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "a write is refused: {body}");
 
     // Lifting restores every one of them.
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json(
             "/admin/restriction/lift",
@@ -166,7 +138,7 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "lift: {body}");
     for path in &reads {
-        let (status, body) = send(&app, get(path)).await;
+        let (status, body) = send_body(&app, get(path)).await;
         assert_eq!(status, StatusCode::OK, "after the lift, {path}: {body}");
     }
 }
@@ -178,7 +150,7 @@ async fn the_register_keeps_the_request_after_the_lift() {
     let (_pg, app) = app().await;
     let ehr_id = create_ehr(&app).await;
 
-    send(
+    send_body(
         &app,
         post_json(
             "/admin/restriction",
@@ -186,7 +158,7 @@ async fn the_register_keeps_the_request_after_the_lift() {
         ),
     )
     .await;
-    send(
+    send_body(
         &app,
         post_json(
             "/admin/restriction/lift",
@@ -195,7 +167,7 @@ async fn the_register_keeps_the_request_after_the_lift() {
     )
     .await;
 
-    let (status, body) = send(&app, get(&format!("/admin/restriction?ehr_id={ehr_id}"))).await;
+    let (status, body) = send_body(&app, get(&format!("/admin/restriction?ehr_id={ehr_id}"))).await;
     assert_eq!(status, StatusCode::OK, "register: {body}");
     let value: serde_json::Value = serde_json::from_str(&body).expect("register json");
     let rows = value["restrictions"].as_array().expect("restrictions");
@@ -245,11 +217,11 @@ async fn the_mark_routes_refuse_a_bad_request_before_recording_anything() {
         ),
     ];
     for (path, body, expected) in cases {
-        let (status, answer) = send(&app, post_json(path, &body)).await;
+        let (status, answer) = send_body(&app, post_json(path, &body)).await;
         assert_eq!(status, expected, "{path} with {body}: {answer}");
     }
 
-    let (status, body) = send(&app, get(&format!("/admin/restriction?ehr_id={ehr_id}"))).await;
+    let (status, body) = send_body(&app, get(&format!("/admin/restriction?ehr_id={ehr_id}"))).await;
     assert_eq!(status, StatusCode::OK);
     assert!(
         body.contains("\"restrictions\":[]"),
@@ -264,7 +236,7 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
     let (_pg, app) = app().await;
     let ehr_id = create_ehr(&app).await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         put_json(
             "/admin/retention/policy",
@@ -275,7 +247,7 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "declare: {body}");
 
-    let (status, body) = send(&app, get("/admin/retention/policy")).await;
+    let (status, body) = send_body(&app, get("/admin/retention/policy")).await;
     assert_eq!(status, StatusCode::OK);
     assert!(
         body.contains("EPDV Art. 10 Abs. 1 lit. d"),
@@ -284,7 +256,7 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
 
     // A hold with only half its pair is refused: a hold with no stated reason
     // is not a record of anything.
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         put_json(
             "/admin/retention/anchor",
@@ -296,7 +268,7 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "half a hold: {body}");
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         put_json(
             "/admin/retention/anchor",
@@ -309,7 +281,7 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "anchor: {body}");
 
-    let (status, body) = send(&app, get("/admin/retention/due?limit=10")).await;
+    let (status, body) = send_body(&app, get("/admin/retention/due?limit=10")).await;
     assert_eq!(status, StatusCode::OK, "due: {body}");
     let value: serde_json::Value = serde_json::from_str(&body).expect("due json");
     let rows = value["due"].as_array().expect("due rows");
@@ -318,14 +290,14 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
     assert_eq!(rows[0]["objects_held"], serde_json::json!(0));
 
     // Listing deleted nothing: the record still serves its content.
-    let (status, body) = send(&app, get(&format!("/ehr/{ehr_id}/ehr_status"))).await;
+    let (status, body) = send_body(&app, get(&format!("/ehr/{ehr_id}/ehr_status"))).await;
     assert_eq!(
         status,
         StatusCode::OK,
         "the due EHR is a list entry, not a disposal: {body}"
     );
 
-    let (status, body) = send(&app, get("/admin/retention/due?limit=nonsense")).await;
+    let (status, body) = send_body(&app, get("/admin/retention/due?limit=nonsense")).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "bad limit: {body}");
 }
 
@@ -350,7 +322,7 @@ async fn the_mark_routes_are_behind_the_admin_switch() {
             r#"{"ehr_id":"x","objected":true}"#,
         ),
     ] {
-        let (status, body) = common::send_body(&app, req).await;
+        let (status, body) = send_body(&app, req).await;
         assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED, "{body}");
     }
 }
@@ -369,7 +341,7 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
         .header(http::header::CONTENT_TYPE, "application/xml")
         .body(Body::from(common::ips_opt_xml()))
         .expect("request");
-    let (status, body) = send(&app, req).await;
+    let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 
     let ehr_id = create_ehr(&app).await;
@@ -381,7 +353,7 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
         "Prefer",
         http::HeaderValue::from_static("return=representation"),
     );
-    let (status, body) = send(&app, commit).await;
+    let (status, body) = send_body(&app, commit).await;
     assert_eq!(status, StatusCode::CREATED, "composition commit: {body}");
     let value: serde_json::Value = serde_json::from_str(&body).expect("composition json");
     let ovid = value["uid"]["value"].as_str().expect("uid").to_owned();
@@ -394,11 +366,11 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
         format!("/ehr/{ehr_id}/versioned_composition/{vo_id}/version/{ovid}"),
     ];
     for path in &reads {
-        let (status, body) = send(&app, get(path)).await;
+        let (status, body) = send_body(&app, get(path)).await;
         assert_eq!(status, StatusCode::OK, "before the mark, {path}: {body}");
     }
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json(
             "/admin/restriction",
@@ -409,7 +381,7 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
     assert_eq!(status, StatusCode::NO_CONTENT, "restrict: {body}");
 
     for path in &reads {
-        let (status, body) = send(&app, get(path)).await;
+        let (status, body) = send_body(&app, get(path)).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{path}: {body}");
         assert!(body.contains("restricted"), "{path}: {body}");
     }
@@ -421,7 +393,7 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
         .uri(format!("{BASE}/ehr/{ehr_id}/composition/{ovid}"))
         .body(Body::empty())
         .expect("request");
-    let (status, body) = send(&app, req).await;
+    let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "a delete is refused: {body}");
     // The write raises the restriction as a `ServiceError`, and it answers
     // with the restriction's own problem type, as the reads above do.
@@ -436,10 +408,10 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
 
     // The rest of the record is untouched: this is the grain the whole issue
     // turns on.
-    let (status, body) = send(&app, get(&format!("/ehr/{ehr_id}/ehr_status"))).await;
+    let (status, body) = send_body(&app, get(&format!("/ehr/{ehr_id}/ehr_status"))).await;
     assert_eq!(status, StatusCode::OK, "the EHR_STATUS still reads: {body}");
 
-    send(
+    send_body(
         &app,
         post_json(
             "/admin/restriction/lift",
@@ -447,6 +419,6 @@ async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
         ),
     )
     .await;
-    let (status, body) = send(&app, get(&reads[0])).await;
+    let (status, body) = send_body(&app, get(&reads[0])).await;
     assert_eq!(status, StatusCode::OK, "after the lift: {body}");
 }

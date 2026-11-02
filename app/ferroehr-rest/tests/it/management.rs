@@ -32,6 +32,7 @@ use ferrohealth_smart::config::AuthSection;
 use ferrohealth_telemetry::request_log::RequestLog;
 
 use crate::common;
+use crate::common::get;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use tower::ServiceExt;
@@ -125,10 +126,6 @@ async fn app_with(
 
 async fn status_of(app: Router, req: Request<Body>) -> StatusCode {
     app.oneshot(req).await.expect("response").status()
-}
-
-fn get(path: &str) -> Request<Body> {
-    common::get(path)
 }
 
 fn get_auth(path: &str) -> Request<Body> {

@@ -14,7 +14,6 @@
 //! `versioned_object_does_not_exist` (the
 //! bundle provider's convention), which the adapter maps to HTTP `404`.
 #![expect(
-    clippy::unwrap_used,
     clippy::expect_used,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
@@ -26,9 +25,7 @@ use axum::Router;
 use axum::body::Body;
 use base64::Engine;
 use http::{Request, StatusCode};
-use http_body_util::BodyExt;
 use serde_json::Value;
-use tower::ServiceExt;
 
 use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
@@ -36,6 +33,7 @@ use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 use crate::common::EXT;
+use crate::common::{get, send_body};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A terminology the bundle knows; anything else is `versioned_object_does_not_exist`.
@@ -75,27 +73,12 @@ async fn app(terminology_enabled: bool) -> (testkit::TestDb, Router) {
     )
 }
 
-async fn send(app: Router, req: Request<Body>) -> (StatusCode, String) {
-    let resp = app.oneshot(req).await.expect("response");
-    let status = resp.status();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (status, String::from_utf8_lossy(&bytes).into_owned())
-}
-
-fn get(uri: String) -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(uri)
-        .body(Body::empty())
-        .unwrap()
-}
-
 #[tokio::test]
 async fn disabled_terminology_is_404() {
     // Gate off → 404 before any backend work (the config gate short-circuits;
     // the real bundle is never consulted).
     let (_pg, app) = app(false).await;
-    let (status, _) = send(app, get(format!("{EXT}/terminology"))).await;
+    let (status, _) = send_body(&app, get(&format!("{EXT}/terminology"))).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -119,7 +102,7 @@ async fn disabled_group_answers_401_before_404_when_unauthenticated() {
         .await
         .expect("router builds");
 
-    let (status, _) = send(app, get(format!("{EXT}/terminology"))).await;
+    let (status, _) = send_body(&app, get(&format!("{EXT}/terminology"))).await;
     assert_eq!(
         status,
         StatusCode::UNAUTHORIZED,
@@ -151,14 +134,14 @@ async fn disabled_group_answers_404_when_authenticated() {
         )
         .body(Body::empty())
         .unwrap();
-    let (status, _) = send(app, req).await;
+    let (status, _) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn terminology_ids_returns_list() {
     let (_pg, app) = app(true).await;
-    let (status, body) = send(app, get(format!("{EXT}/terminology"))).await;
+    let (status, body) = send_body(&app, get(&format!("{EXT}/terminology"))).await;
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).expect("json body");
     let ids = v["terminology_ids"].as_array().expect("terminology_ids");
@@ -173,7 +156,7 @@ async fn terminology_ids_returns_list() {
 #[tokio::test]
 async fn terminology_description_found_is_200() {
     let (_pg, app) = app(true).await;
-    let (status, body) = send(app, get(format!("{EXT}/terminology/{KNOWN}"))).await;
+    let (status, body) = send_body(&app, get(&format!("{EXT}/terminology/{KNOWN}"))).await;
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).expect("json body");
     // Real bundle values (was Mock-scripted "openEHR"/"http://openehr.org/...").
@@ -185,7 +168,7 @@ async fn terminology_description_found_is_200() {
 async fn terminology_description_unknown_maps_to_404() {
     let (_pg, app) = app(true).await;
     // The bundle's `versioned_object_does_not_exist` surfaces as HTTP 404.
-    let (status, _) = send(app, get(format!("{EXT}/terminology/{UNKNOWN}"))).await;
+    let (status, _) = send_body(&app, get(&format!("{EXT}/terminology/{UNKNOWN}"))).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -194,9 +177,9 @@ async fn get_term_lookup_returns_extract() {
     let (_pg, app) = app(true).await;
     // 249 is `creation` in the audit_change_type group (a real openEHR code).
     // `at_date` is accepted but a no-op for the single-version bundle.
-    let (status, body) = send(
-        app,
-        get(format!(
+    let (status, body) = send_body(
+        &app,
+        get(&format!(
             "{EXT}/terminology/{KNOWN}/term/249?at_date=2024-01-01"
         )),
     )
@@ -212,9 +195,9 @@ async fn subsumes_returns_bool() {
     let (_pg, app) = app(true).await;
     // The openEHR bundle is flat and `subsumes` is strict, so subsumption is
     // uniformly false — even the identity case (was Mock-scripted identity→true).
-    let (status, body) = send(
-        app,
-        get(format!(
+    let (status, body) = send_body(
+        &app,
+        get(&format!(
             "{EXT}/terminology/{KNOWN}/subsumes?ref_code=249&candidate=249"
         )),
     )
@@ -228,9 +211,9 @@ async fn subsumes_returns_bool() {
 async fn subsumes_missing_required_query_is_400() {
     let (_pg, app) = app(true).await;
     // `candidate` absent → 400 before the backend is consulted.
-    let (status, _) = send(
-        app,
-        get(format!("{EXT}/terminology/{KNOWN}/subsumes?ref_code=249")),
+    let (status, _) = send_body(
+        &app,
+        get(&format!("{EXT}/terminology/{KNOWN}/subsumes?ref_code=249")),
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -240,9 +223,9 @@ async fn subsumes_missing_required_query_is_400() {
 async fn get_value_set_expand_returns_extract() {
     let (_pg, app) = app(true).await;
     // `audit_change_type` is a real openEHR group addressable as a value set.
-    let (status, body) = send(
-        app,
-        get(format!(
+    let (status, body) = send_body(
+        &app,
+        get(&format!(
             "{EXT}/terminology/{KNOWN}/value_set/audit_change_type"
         )),
     )
@@ -256,9 +239,11 @@ async fn get_value_set_expand_returns_extract() {
 #[tokio::test]
 async fn get_value_set_unknown_maps_to_404() {
     let (_pg, app) = app(true).await;
-    let (status, _) = send(
-        app,
-        get(format!("{EXT}/terminology/{KNOWN}/value_set/no_such_group")),
+    let (status, _) = send_body(
+        &app,
+        get(&format!(
+            "{EXT}/terminology/{KNOWN}/value_set/no_such_group"
+        )),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -268,9 +253,9 @@ async fn get_value_set_unknown_maps_to_404() {
 async fn value_set_validate_returns_valid() {
     let (_pg, app) = app(true).await;
     // 249 is a member of audit_change_type → valid.
-    let (status, body) = send(
-        app,
-        get(format!(
+    let (status, body) = send_body(
+        &app,
+        get(&format!(
             "{EXT}/terminology/{KNOWN}/value_set/audit_change_type/validate?candidate_code=249"
         )),
     )
@@ -283,9 +268,9 @@ async fn value_set_validate_returns_valid() {
 #[tokio::test]
 async fn value_set_validate_missing_candidate_is_400() {
     let (_pg, app) = app(true).await;
-    let (status, _) = send(
-        app,
-        get(format!(
+    let (status, _) = send_body(
+        &app,
+        get(&format!(
             "{EXT}/terminology/{KNOWN}/value_set/audit_change_type/validate"
         )),
     )
@@ -299,7 +284,7 @@ async fn enabled_terminology_group_serves_real_bundle() {
     // concrete service the terminology group is always implemented, so an enabled
     // group serves the real bundle (200), never the trait-default 501.
     let (_pg, app) = app(true).await;
-    let (status, _) = send(app, get(format!("{EXT}/terminology"))).await;
+    let (status, _) = send_body(&app, get(&format!("{EXT}/terminology"))).await;
     assert_eq!(status, StatusCode::OK);
 }
 
@@ -337,9 +322,9 @@ async fn terminology_server_refusals_keep_their_wire_status() {
         .mount(&server)
         .await;
     let (_pg, app) = app_with_server(&server.uri()).await;
-    let (status, body) = send(
-        app,
-        get(format!(
+    let (status, body) = send_body(
+        &app,
+        get(&format!(
             "{EXT}/terminology/urn:test:system/value_set/urn:test:vs"
         )),
     )
@@ -352,9 +337,9 @@ async fn terminology_server_refusals_keep_their_wire_status() {
         .mount(&server)
         .await;
     let (_pg, app) = app_with_server(&server.uri()).await;
-    let (status, body) = send(
-        app,
-        get(format!(
+    let (status, body) = send_body(
+        &app,
+        get(&format!(
             "{EXT}/terminology/urn:test:system/value_set/urn:test:vs"
         )),
     )

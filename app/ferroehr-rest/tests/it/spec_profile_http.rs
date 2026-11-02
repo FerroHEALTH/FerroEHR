@@ -23,38 +23,21 @@
 //! master00-amendment_record.adoc`, issue 1.0, above the `RM Release 1.1.0`
 //! marker), so the two generations disagree about exactly this body.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
-use tower::ServiceExt;
 
 use ferroehr::config::profile::SpecProfile;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 
 use crate::common;
+use crate::common::send_body;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
-
-/// Send one request and collect status + body text.
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (status, String::from_utf8_lossy(&bytes).into_owned())
-}
 
 /// A COMPOSITION whose one content item is a `GENERIC_ENTRY` carrying a
 /// `CLUSTER` — surface only the development generation set defines.
@@ -126,7 +109,7 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
     let db = common::test_db().await;
     let development = router_for(SpecProfile::Development, &db.pool()).await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &development,
         Request::builder()
             .method("POST")
@@ -144,7 +127,7 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
         .expect("ehr_id")
         .to_owned();
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &development,
         Request::builder()
             .method("POST")
@@ -169,7 +152,7 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
         .to_owned();
 
     // The profile that accepted it still serves it.
-    let (status, _) = send(
+    let (status, _) = send_body(
         &development,
         Request::builder()
             .method("GET")
@@ -183,7 +166,7 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
 
     // The stable profile refuses it — loudly, with the remedy in the body.
     let stable = router_for(SpecProfile::Stable, &db.pool()).await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &stable,
         Request::builder()
             .method("GET")
@@ -200,7 +183,7 @@ async fn a_development_only_composition_is_a_conflict_under_the_stable_profile()
 
     // An `Accept` change cannot make the refusal go away — this is not content
     // negotiation (RFC 9110 §15.5.7), which is why it is not a `406`.
-    let (status, _) = send(
+    let (status, _) = send_body(
         &stable,
         Request::builder()
             .method("GET")
@@ -222,7 +205,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
     let db = common::test_db().await;
     let development = router_for(SpecProfile::Development, &db.pool()).await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &development,
         Request::builder()
             .method("POST")
@@ -240,7 +223,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
         .expect("ehr_id")
         .to_owned();
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &development,
         Request::builder()
             .method("POST")
@@ -270,7 +253,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
 
     // The profile that accepted the body answers both projections.
     for uri in [&whole_object, &leaf] {
-        let (status, body) = send(
+        let (status, body) = send_body(
             &development,
             Request::builder()
                 .method("GET")
@@ -284,7 +267,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
     }
 
     let stable = router_for(SpecProfile::Stable, &db.pool()).await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &stable,
         Request::builder()
             .method("GET")
@@ -299,7 +282,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
     assert!(body.contains(&version_uid), "{body}");
     assert!(body.contains("development"), "{body}");
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &stable,
         Request::builder()
             .method("GET")
@@ -321,7 +304,7 @@ async fn an_aql_whole_object_projection_is_a_conflict_under_the_stable_profile()
 #[tokio::test]
 async fn the_served_openapi_declares_the_profile_conflict_on_the_query_operations() {
     let (_db, app) = common::test_router().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         Request::builder()
             .method("GET")
@@ -364,7 +347,7 @@ async fn the_served_openapi_declares_the_profile_conflict_on_the_query_operation
 #[tokio::test]
 async fn the_served_openapi_declares_the_profile_conflict_on_version_reads() {
     let (_db, app) = common::test_router().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         Request::builder()
             .method("GET")

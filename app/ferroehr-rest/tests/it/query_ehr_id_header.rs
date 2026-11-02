@@ -27,19 +27,15 @@
     clippy::unwrap_used,
     clippy::expect_used,
     clippy::indexing_slicing,
-    clippy::missing_assert_message,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions and direct \
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use std::path::PathBuf;
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
@@ -48,6 +44,7 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::{create_ehr, etag_uid, ips_canonical_composition, ips_opt_xml, send_body};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// The `ehr_id` scope header (`Request.md` §Common Headers and Query
@@ -62,24 +59,6 @@ const STORED_NAME: &str = "org.openehr.test::ehr_id_header";
 
 // The IPS OPT + its canonical composition — the pair driven end-to-end through
 // the real `FerroEhrService` elsewhere in this suite, so they commit cleanly.
-fn opt_xml() -> String {
-    std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../crates/openehr-its/tests/fixtures/sdk/ips.v0.opt"),
-    )
-    .expect("ips.v0.opt vendored in openehr-its")
-}
-
-fn canonical_composition() -> Value {
-    let text = std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
-            "../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json/ips_canonical.json",
-        ),
-    )
-    .expect("ips_canonical.json vendored in openehr-its");
-    serde_json::from_str(&text).expect("valid canonical composition")
-}
-
 fn config() -> AppConfig {
     AppConfig {
         server: common::server(),
@@ -98,42 +77,14 @@ fn config() -> AppConfig {
     }
 }
 
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (status, String::from_utf8_lossy(&bytes).into_owned())
-}
-
-fn etag_uid(resp_headers: &header::HeaderMap) -> String {
-    resp_headers
-        .get(header::ETAG)
-        .and_then(|v| v.to_str().ok())
-        .expect("ETag present")
-        .trim_start_matches("W/")
-        .trim_matches('"')
-        .to_owned()
-}
-
-async fn create_ehr(app: &Router) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .body(Body::empty())
-        .unwrap();
-    let resp = app.clone().oneshot(req).await.expect("response");
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    etag_uid(resp.headers())
-}
-
 async fn upload_opt(app: &Router) {
     let req = Request::builder()
         .method("POST")
         .uri(format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
-        .body(Body::from(opt_xml()))
+        .body(Body::from(ips_opt_xml()))
         .unwrap();
-    let (status, body) = send(app, req).await;
+    let (status, body) = send_body(app, req).await;
     assert_eq!(status, StatusCode::CREATED, "OPT upload: {body}");
 }
 
@@ -143,7 +94,7 @@ async fn commit_composition(app: &Router, ehr_id: &str) -> String {
         .method("POST")
         .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
         .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(canonical_composition().to_string()))
+        .body(Body::from(ips_canonical_composition().to_string()))
         .unwrap();
     let resp = app.clone().oneshot(req).await.expect("response");
     assert_eq!(resp.status(), StatusCode::CREATED, "composition commit");
@@ -240,7 +191,7 @@ fn execute(
 #[tokio::test]
 async fn unscoped_population_query_sees_both_ehrs() {
     let w = world().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute("GET", format!("{BASE}/query/aql?q={}", q()), None, None),
     )
@@ -258,7 +209,7 @@ async fn unscoped_population_query_sees_both_ehrs() {
 #[tokio::test]
 async fn get_adhoc_is_scoped_by_the_header_alone() {
     let w = world().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute(
             "GET",
@@ -284,7 +235,7 @@ async fn get_adhoc_accepts_the_deprecated_header_spelling() {
         .header("openEHR-EHR-id", &w.ehr_a)
         .body(Body::empty())
         .unwrap();
-    let (status, body) = send(&w.app, req).await;
+    let (status, body) = send_body(&w.app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(uids(&body), vec![w.uid_a.clone()]);
 }
@@ -293,7 +244,7 @@ async fn get_adhoc_accepts_the_deprecated_header_spelling() {
 async fn get_stored_query_is_scoped_by_the_header_alone() {
     let w = world().await;
     store_query(&w.app).await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute(
             "GET",
@@ -311,7 +262,7 @@ async fn get_stored_query_is_scoped_by_the_header_alone() {
 async fn get_stored_query_version_is_scoped_by_the_header_alone() {
     let w = world().await;
     let version = store_query(&w.app).await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute(
             "GET",
@@ -331,7 +282,7 @@ async fn post_adhoc_is_scoped_by_the_header_alone() {
     // stay one behaviour.
     let w = world().await;
     let body = serde_json::json!({ "q": POPULATION_AQL }).to_string();
-    let (status, out) = send(
+    let (status, out) = send_body(
         &w.app,
         execute(
             "POST",
@@ -350,7 +301,7 @@ async fn post_stored_query_is_scoped_by_the_header_alone() {
     let w = world().await;
     store_query(&w.app).await;
     let body = serde_json::json!({ "offset": 0, "fetch": 100, "query_parameters": {} }).to_string();
-    let (status, out) = send(
+    let (status, out) = send_body(
         &w.app,
         execute(
             "POST",
@@ -370,7 +321,7 @@ async fn post_stored_query_is_scoped_by_the_header_alone() {
 async fn matching_parameter_and_header_execute_normally() {
     // The request names ONE EHR twice — nothing to arbitrate, so it executes.
     let w = world().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute(
             "GET",
@@ -426,7 +377,8 @@ async fn conflicting_parameter_and_header_are_bad_request() {
     ];
     for (method, uri, body) in cases {
         // The header names EHR A while the query parameter names EHR B.
-        let (status, out) = send(&w.app, execute(method, uri.clone(), Some(&w.ehr_a), body)).await;
+        let (status, out) =
+            send_body(&w.app, execute(method, uri.clone(), Some(&w.ehr_a), body)).await;
         assert_eq!(
             status,
             StatusCode::BAD_REQUEST,
@@ -440,7 +392,7 @@ async fn an_empty_header_value_does_not_conflict() {
     // RFC 9110 §5.5 permits empty field values; an empty `openehr-ehr-id`
     // carries no EHR identifier, so the query parameter still scopes.
     let w = world().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute(
             "GET",
@@ -460,7 +412,7 @@ async fn an_empty_header_value_does_not_conflict() {
 async fn header_scope_naming_no_ehr_is_not_found() {
     let w = world().await;
     let absent = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute(
             "GET",
@@ -478,7 +430,7 @@ async fn header_scope_naming_no_ehr_is_not_found() {
 #[tokio::test]
 async fn malformed_header_scope_is_bad_request() {
     let w = world().await;
-    let (status, body) = send(
+    let (status, body) = send_body(
         &w.app,
         execute(
             "GET",

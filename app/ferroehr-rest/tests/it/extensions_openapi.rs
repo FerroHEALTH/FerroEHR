@@ -40,6 +40,7 @@ use ferroehr_rest::extensions::openapi::extensions_document;
 use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common;
+use crate::common::get;
 
 /// The issuer the served document is described for; its key set is a file.
 const ISSUER: &str = "https://issuer.example";
@@ -498,14 +499,6 @@ fn concretize(template: &str, metric_name: &str) -> String {
     }
     out.push_str(rest);
     out
-}
-
-fn get(uri: &str) -> Request<Body> {
-    Request::builder()
-        .method("GET")
-        .uri(uri)
-        .body(Body::empty())
-        .expect("request")
 }
 
 /// The first metric name the management list endpoint reports (after warmup).

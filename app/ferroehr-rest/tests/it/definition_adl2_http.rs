@@ -27,16 +27,15 @@
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::Value;
 use std::fmt::Write;
-use tower::ServiceExt;
 
 use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::send;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const HRID: &str = "openEHR-EHR-COMPOSITION.t_clinical_info.v1.0.0";
@@ -88,18 +87,6 @@ fn config() -> AppConfig {
 async fn app() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (pg, common::router_with(config(), service).await)
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
 }
 
 /// The `Preference-Applied` field value, which every write path declares —

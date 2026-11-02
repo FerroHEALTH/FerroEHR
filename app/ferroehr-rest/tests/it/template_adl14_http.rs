@@ -27,8 +27,6 @@
               intended shape here (the Rust Book ch11)"
 )]
 
-use std::path::PathBuf;
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
@@ -41,18 +39,13 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::demo_vitals_opt_xml;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const TEMPLATE_ID: &str = "Demo Vitals";
 const JSON_MIME: &str = "application/json";
 const XML_MIME: &str = "application/xml";
 const WT_MIME: &str = "application/openehr.wt+json";
-
-fn opt_xml() -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../crates/openehr-sdt/tests/fixtures/better/Demo Vitals.opt");
-    std::fs::read_to_string(path).expect("Demo Vitals.opt vendored in openehr-its")
-}
 
 fn config() -> AppConfig {
     AppConfig {
@@ -89,7 +82,7 @@ async fn upload(app: &Router, content_type: Option<&str>) -> (StatusCode, String
     }
     let resp = app
         .clone()
-        .oneshot(builder.body(Body::from(opt_xml())).unwrap())
+        .oneshot(builder.body(Body::from(demo_vitals_opt_xml())).unwrap())
         .await
         .expect("response");
     let status = resp.status();
@@ -405,7 +398,7 @@ async fn opt_upload_with_an_empty_typed_default_value_names_the_place() {
 /// `POST …/definition/template/adl1.4` with `Prefer: return=representation`
 /// and an `Accept`.
 async fn upload_accepting(app: &Router, accept: &str) -> (StatusCode, header::HeaderMap, String) {
-    upload_source_accepting(app, accept, opt_xml()).await
+    upload_source_accepting(app, accept, demo_vitals_opt_xml()).await
 }
 
 /// `POST …/definition/template/adl1.4` of `source` with
@@ -473,7 +466,8 @@ async fn upload_representation_follows_accept() {
 #[tokio::test]
 async fn an_upload_is_refused_before_the_store_or_answered_201_after_it() {
     let (_pg, app) = empty_app().await;
-    let refused = opt_xml().replacen("<concept>Vitals</concept>", "<concept></concept>", 1);
+    let refused =
+        demo_vitals_opt_xml().replacen("<concept>Vitals</concept>", "<concept></concept>", 1);
     let (status, _h, body) = upload_source_accepting(&app, WT_MIME, refused).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     let (status, _ct, _body) = get(&app, Some(XML_MIME)).await;

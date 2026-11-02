@@ -27,6 +27,7 @@ use http::{Request, StatusCode, header};
 
 use crate::common;
 use crate::common::BASE;
+use crate::common::{create_ehr, send_body};
 use tower::ServiceExt;
 
 /// A syntactically valid id that is never created — the "unknown" probe.
@@ -40,10 +41,6 @@ async fn app(admin_enabled: bool) -> (testkit::TestDb, Router) {
     )
 }
 
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, String) {
-    common::send_body(app, req).await
-}
-
 /// A bodyless `GET` of the [`BASE`]-relative `path`.
 fn get(path: &str) -> Request<Body> {
     common::get(&common::full(path))
@@ -52,23 +49,6 @@ fn get(path: &str) -> Request<Body> {
 /// A JSON `POST` of `body` to the [`BASE`]-relative `path`.
 fn post_json(path: &str, body: &str) -> Request<Body> {
     common::post_json(&common::full(path), body)
-}
-
-/// Create an EHR through the released wire and return its id.
-async fn create_ehr(app: &Router) -> String {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/ehr"))
-        .header("Prefer", "return=representation")
-        .body(Body::empty())
-        .expect("request");
-    let (status, body) = send(app, req).await;
-    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
-    let value: serde_json::Value = serde_json::from_str(&body).expect("EHR json");
-    value["ehr_id"]["value"]
-        .as_str()
-        .expect("ehr_id")
-        .to_owned()
 }
 
 // ── the activity report ──────────────────────────────────────────────────────
@@ -81,18 +61,19 @@ async fn create_ehr(app: &Router) -> String {
 async fn the_activity_report_counts_what_the_released_wire_committed() {
     let (_pg, app) = app(true).await;
 
-    let (status, body) = send(&app, get("/admin/report/contribution?a_service=Ehr")).await;
+    let (status, body) = send_body(&app, get("/admin/report/contribution?a_service=Ehr")).await;
     assert_eq!(status, StatusCode::OK, "empty-server list: {body}");
     assert_eq!(body, "[]", "an empty server has committed nothing");
 
     let _ehr_id = create_ehr(&app).await;
 
-    let (status, body) = send(&app, get("/admin/report/contribution?a_service=Ehr")).await;
+    let (status, body) = send_body(&app, get("/admin/report/contribution?a_service=Ehr")).await;
     assert_eq!(status, StatusCode::OK);
     let ids: Vec<String> = serde_json::from_str(&body).expect("id list");
     assert_eq!(ids.len(), 1, "the EHR create committed one CONTRIBUTION");
 
-    let (status, body) = send(&app, get("/admin/report/contribution/count?a_service=Ehr")).await;
+    let (status, body) =
+        send_body(&app, get("/admin/report/contribution/count?a_service=Ehr")).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, "1", "the count is a bare JSON integer");
 
@@ -104,7 +85,7 @@ async fn the_activity_report_counts_what_the_released_wire_committed() {
         "/admin/report/composition_version/count?a_service=Ehr",
         "/admin/report/contribution/count?a_service=Query",
     ] {
-        let (status, body) = send(&app, get(path)).await;
+        let (status, body) = send_body(&app, get(path)).await;
         assert_eq!(status, StatusCode::OK, "{path}");
         assert_eq!(body, "0", "{path}");
     }
@@ -118,7 +99,7 @@ async fn the_report_time_interval_filters_the_commit_window() {
     let (_pg, app) = app(true).await;
     let _ehr_id = create_ehr(&app).await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get("/admin/report/contribution/count?a_service=Ehr&time_interval=2000-01-01T00:00:00Z/2000-12-31T00:00:00Z"),
     )
@@ -126,7 +107,7 @@ async fn the_report_time_interval_filters_the_commit_window() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, "0", "the commit is outside the range");
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get("/admin/report/contribution/count?a_service=Ehr&time_interval=2000-01-01T00:00:00Z/"),
     )
@@ -147,7 +128,7 @@ async fn the_report_refuses_an_unknown_service_and_a_malformed_interval() {
         "/admin/report/contribution?a_service=Ehr&time_interval=2020-01-01T00:00:00Z",
         "/admin/report/contribution?a_service=Ehr&time_interval=not-a-date/",
     ] {
-        let (status, body) = send(&app, get(path)).await;
+        let (status, body) = send_body(&app, get(path)).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{path}: {body}");
     }
 }
@@ -173,13 +154,13 @@ async fn the_report_refuses_an_interval_whose_lower_bound_is_after_its_upper() {
         "/admin/report/composition_version/count",
     ] {
         let path = format!("{route}?a_service=Ehr&{inverted}");
-        let (status, body) = send(&app, get(&path)).await;
+        let (status, body) = send_body(&app, get(&path)).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{path}: {body}");
     }
 
     // The equal-bounds pair satisfies `lower <= upper` and is a legitimate
     // (closed, single-instant) interval — the refusal must not swallow it.
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         get("/admin/report/contribution/count\
              ?a_service=Ehr&time_interval=2026-01-01T00:00:00Z/2026-01-01T00:00:00Z"),
@@ -200,11 +181,11 @@ async fn archiving_an_ehr_is_read_neutral_and_idempotent() {
 
     let body = format!(r#"{{"ehr_ids":["{ehr_id}"]}}"#);
     for _ in 0..2 {
-        let (status, reply) = send(&app, post_json("/admin/archive/ehrs", &body)).await;
+        let (status, reply) = send_body(&app, post_json("/admin/archive/ehrs", &body)).await;
         assert_eq!(status, StatusCode::NO_CONTENT, "archive: {reply}");
     }
 
-    let (status, _) = send(&app, get(&format!("/ehr/{ehr_id}"))).await;
+    let (status, _) = send_body(&app, get(&format!("/ehr/{ehr_id}"))).await;
     assert_eq!(
         status,
         StatusCode::OK,
@@ -224,14 +205,14 @@ async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
         ("/admin/archive/ehrs", "ehr_ids"),
         ("/admin/archive/parties", "party_ids"),
     ] {
-        let (status, body) = send(
+        let (status, body) = send_body(
             &app,
             post_json(path, &format!(r#"{{"{field}":["{ABSENT}"]}}"#)),
         )
         .await;
         assert_eq!(status, StatusCode::NOT_FOUND, "{path} unknown id: {body}");
 
-        let (status, body) = send(
+        let (status, body) = send_body(
             &app,
             post_json(path, &format!(r#"{{"{field}":["not-a-uuid"]}}"#)),
         )
@@ -242,7 +223,7 @@ async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
             "{path} malformed id: {body}"
         );
 
-        let (status, body) = send(&app, post_json(path, r#"{"wrong":[]}"#)).await;
+        let (status, body) = send_body(&app, post_json(path, r#"{"wrong":[]}"#)).await;
         assert_eq!(
             status,
             StatusCode::BAD_REQUEST,
@@ -251,7 +232,8 @@ async fn the_archive_routes_refuse_unknown_malformed_and_shapeless_requests() {
 
         // An EMPTY list archives nothing and succeeds — the parameter is a
         // list, and an empty one names no target to fail on.
-        let (status, body) = send(&app, post_json(path, &format!(r#"{{"{field}":[]}}"#))).await;
+        let (status, body) =
+            send_body(&app, post_json(path, &format!(r#"{{"{field}":[]}}"#))).await;
         assert_eq!(status, StatusCode::NO_CONTENT, "{path} empty list: {body}");
     }
 }
@@ -363,7 +345,7 @@ async fn archiving_a_party_relationship_id_is_refused_like_an_unknown_party() {
     )
     .await;
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json(
             "/admin/archive/parties",
@@ -380,7 +362,7 @@ async fn archiving_a_party_relationship_id_is_refused_like_an_unknown_party() {
     // Alongside a real party the refusal still covers the whole request, and
     // that same party archives on its own — so the refusal is about the id's
     // kind, not about the call.
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json(
             "/admin/archive/parties",
@@ -394,7 +376,7 @@ async fn archiving_a_party_relationship_id_is_refused_like_an_unknown_party() {
         "all-or-nothing: one relationship id refuses the whole set: {body}"
     );
 
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json(
             "/admin/archive/parties",
@@ -419,7 +401,7 @@ async fn aql_rows(app: &Router, aql: &str) -> usize {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(serde_json::json!({ "q": aql }).to_string()))
         .expect("request");
-    let (status, body) = send(app, request).await;
+    let (status, body) = send_body(app, request).await;
     assert_eq!(status, StatusCode::OK, "AQL {aql}: {body}");
     let result: serde_json::Value = serde_json::from_str(&body).expect("RESULT_SET json");
     result["rows"].as_array().expect("rows array").len()
@@ -457,7 +439,7 @@ async fn restoring_an_archived_ehr_makes_it_queryable_again() {
 
     assert_eq!(aql_rows(&app, aql).await, 1, "the fresh EHR is queryable");
 
-    let (status, reply) = send(&app, post_json("/admin/archive/ehrs", &body)).await;
+    let (status, reply) = send_body(&app, post_json("/admin/archive/ehrs", &body)).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "archive: {reply}");
     assert_eq!(
         aql_rows(&app, aql).await,
@@ -465,7 +447,7 @@ async fn restoring_an_archived_ehr_makes_it_queryable_again() {
         "an archived EHR leaves the queryable store"
     );
 
-    let (status, reply) = send(&app, post_json("/admin/archive/ehrs/restore", &body)).await;
+    let (status, reply) = send_body(&app, post_json("/admin/archive/ehrs/restore", &body)).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "restore: {reply}");
     assert_eq!(
         aql_rows(&app, aql).await,
@@ -473,7 +455,7 @@ async fn restoring_an_archived_ehr_makes_it_queryable_again() {
         "the restored EHR is queryable again"
     );
 
-    let (status, _) = send(&app, get(&format!("/ehr/{ehr_id}"))).await;
+    let (status, _) = send_body(&app, get(&format!("/ehr/{ehr_id}"))).await;
     assert_eq!(
         status,
         StatusCode::OK,
@@ -499,12 +481,12 @@ async fn restoring_an_archived_party_moves_its_rows_back_to_the_primary_tier() {
     let hot = vo_rows(&pool, "party.version_hot", &party).await;
     assert!(hot > 0, "the party has stored versions");
 
-    let (status, reply) = send(&app, post_json("/admin/archive/parties", &body)).await;
+    let (status, reply) = send_body(&app, post_json("/admin/archive/parties", &body)).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "archive: {reply}");
     assert_eq!(vo_rows(&pool, "party.version_hot", &party).await, 0);
     assert_eq!(vo_rows(&pool, "party.version_cold", &party).await, hot);
 
-    let (status, reply) = send(&app, post_json("/admin/archive/parties/restore", &body)).await;
+    let (status, reply) = send_body(&app, post_json("/admin/archive/parties/restore", &body)).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "restore: {reply}");
     assert_eq!(vo_rows(&pool, "party.version_hot", &party).await, hot);
     assert_eq!(vo_rows(&pool, "party.version_cold", &party).await, 0);
@@ -544,7 +526,7 @@ async fn restoring_an_unarchived_record_succeeds_and_changes_nothing() {
             format!(r#"{{"party_ids":["{party}"]}}"#),
         ),
     ] {
-        let (status, reply) = send(&app, post_json(path, &body)).await;
+        let (status, reply) = send_body(&app, post_json(path, &body)).await;
         assert_eq!(status, StatusCode::NO_CONTENT, "{path}: {reply}");
     }
 
@@ -554,7 +536,7 @@ async fn restoring_an_unarchived_record_succeeds_and_changes_nothing() {
         "an unarchived party is left exactly as it was"
     );
     assert_eq!(vo_rows(&pool, "party.version_cold", &party).await, 0);
-    let (status, _) = send(&app, get(&format!("/ehr/{ehr_id}"))).await;
+    let (status, _) = send_body(&app, get(&format!("/ehr/{ehr_id}"))).await;
     assert_eq!(status, StatusCode::OK);
 }
 
@@ -569,14 +551,14 @@ async fn the_restore_routes_refuse_unknown_malformed_and_shapeless_requests() {
         ("/admin/archive/ehrs/restore", "ehr_ids"),
         ("/admin/archive/parties/restore", "party_ids"),
     ] {
-        let (status, body) = send(
+        let (status, body) = send_body(
             &app,
             post_json(path, &format!(r#"{{"{field}":["{ABSENT}"]}}"#)),
         )
         .await;
         assert_eq!(status, StatusCode::NOT_FOUND, "{path} unknown id: {body}");
 
-        let (status, body) = send(
+        let (status, body) = send_body(
             &app,
             post_json(path, &format!(r#"{{"{field}":["not-a-uuid"]}}"#)),
         )
@@ -587,14 +569,15 @@ async fn the_restore_routes_refuse_unknown_malformed_and_shapeless_requests() {
             "{path} malformed id: {body}"
         );
 
-        let (status, body) = send(&app, post_json(path, r#"{"wrong":[]}"#)).await;
+        let (status, body) = send_body(&app, post_json(path, r#"{"wrong":[]}"#)).await;
         assert_eq!(
             status,
             StatusCode::BAD_REQUEST,
             "{path} wrong shape: {body}"
         );
 
-        let (status, body) = send(&app, post_json(path, &format!(r#"{{"{field}":[]}}"#))).await;
+        let (status, body) =
+            send_body(&app, post_json(path, &format!(r#"{{"{field}":[]}}"#))).await;
         assert_eq!(status, StatusCode::NO_CONTENT, "{path} empty list: {body}");
     }
 }
@@ -630,14 +613,14 @@ async fn dump_and_load_round_trip_in_both_containers() {
         if let Some(member) = compression {
             spec["compression_format"] = serde_json::Value::String(member.to_owned());
         }
-        let (status, body) = send(&app, post_json("/admin/dump", &spec.to_string())).await;
+        let (status, body) = send_body(&app, post_json("/admin/dump", &spec.to_string())).await;
         assert_eq!(status, StatusCode::OK, "dump {compression:?}: {body}");
         assert_eq!(body, "[]", "a clean dump reports no failures");
 
         // Loading the archive back into the SAME repository is the duplicate
         // case, where an EHR whose id already exists fails: the call succeeds
         // and reports the entity, never a fatal.
-        let (status, body) = send(
+        let (status, body) = send_body(
             &app,
             post_json("/admin/load", &format!(r#"{{"file_sys_loc":{dir:?}}}"#)),
         )
@@ -693,7 +676,7 @@ async fn dump_refuses_every_unrepresentable_request_shape() {
             serde_json::json!({ "file_sys_loc": dir, "segment_split_size": 0 }),
         ),
     ] {
-        let (status, response) = send(&app, post_json("/admin/dump", &body.to_string())).await;
+        let (status, response) = send_body(&app, post_json("/admin/dump", &body.to_string())).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{label}: {response}");
     }
     let _cleanup = std::fs::remove_dir_all(&dir);
@@ -706,7 +689,7 @@ async fn load_refusals_name_no_server_path() {
     let (_pg, app) = app(true).await;
     let empty = archive_dir();
     std::fs::create_dir_all(&empty).expect("create the empty location");
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json("/admin/load", &format!(r#"{{"file_sys_loc":{empty:?}}}"#)),
     )
@@ -717,14 +700,14 @@ async fn load_refusals_name_no_server_path() {
     let _ehr = create_ehr(&app).await;
     let dir = archive_dir();
     let spec = serde_json::json!({ "file_sys_loc": dir, "segment_split_size": 1024 });
-    let (status, body) = send(&app, post_json("/admin/dump", &spec.to_string())).await;
+    let (status, body) = send_body(&app, post_json("/admin/dump", &spec.to_string())).await;
     assert_eq!(status, StatusCode::OK, "dump: {body}");
     std::fs::write(
         std::path::Path::new(&dir).join("manifest.json"),
         b"{\"trunc",
     )
     .expect("mangle the manifest");
-    let (status, body) = send(
+    let (status, body) = send_body(
         &app,
         post_json("/admin/load", &format!(r#"{{"file_sys_loc":{dir:?}}}"#)),
     )
@@ -762,13 +745,13 @@ async fn dump_serves_every_declared_enumeration_member() {
             if let Some(member) = compression {
                 spec["compression_format"] = serde_json::Value::String(member.to_owned());
             }
-            let (status, body) = send(&app, post_json("/admin/dump", &spec.to_string())).await;
+            let (status, body) = send_body(&app, post_json("/admin/dump", &spec.to_string())).await;
             assert_eq!(status, StatusCode::OK, "{logical}/{compression:?}: {body}");
             assert_eq!(body, "[]", "a clean dump reports no failures");
 
             // The format-less `load_ehrs` reads it back whatever the export
             // asked for: every archived EHR is a duplicate.
-            let (status, body) = send(
+            let (status, body) = send_body(
                 &app,
                 post_json("/admin/load", &format!(r#"{{"file_sys_loc":{dir:?}}}"#)),
             )
@@ -795,27 +778,27 @@ async fn dump_serves_every_declared_enumeration_member() {
 async fn the_admin_gate_covers_the_extension_groups() {
     let (_pg, app) = app(false).await;
 
-    let (status, _) = send(&app, get("/admin/report/contribution?a_service=Ehr")).await;
+    let (status, _) = send_body(&app, get("/admin/report/contribution?a_service=Ehr")).await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
 
-    let (status, _) = send(&app, post_json("/admin/archive/ehrs", r#"{"ehr_ids":[]}"#)).await;
+    let (status, _) = send_body(&app, post_json("/admin/archive/ehrs", r#"{"ehr_ids":[]}"#)).await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
 
-    let (status, _) = send(
+    let (status, _) = send_body(
         &app,
         post_json("/admin/archive/ehrs/restore", r#"{"ehr_ids":[]}"#),
     )
     .await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
 
-    let (status, _) = send(
+    let (status, _) = send_body(
         &app,
         post_json("/admin/dump", r#"{"file_sys_loc":"/tmp/never"}"#),
     )
     .await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
 
-    let (status, _) = send(
+    let (status, _) = send_body(
         &app,
         post_json("/admin/load", r#"{"file_sys_loc":"/tmp/never"}"#),
     )

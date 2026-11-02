@@ -24,20 +24,17 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
-use std::path::PathBuf;
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::Value;
-use tower::ServiceExt;
 
 use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
+use crate::common::{etag_uid, ips_canonical_composition, ips_opt_xml, send};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A syntactically valid EHR/VO id for the malformed-If-Match probes (the
@@ -46,24 +43,6 @@ const EHR_ID: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
 const VO_ID: &str = "8849182c-82ad-4088-a07f-48ead4180515";
 /// The client-supplied EHR id the `PUT /ehr/{ehr_id}` committal test creates.
 const CREATED_EHR_ID: &str = "1f4d1a3e-24bb-4a1f-9e6f-2f0dcb0a5c11";
-
-fn opt_xml() -> String {
-    std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../crates/openehr-its/tests/fixtures/sdk/ips.v0.opt"),
-    )
-    .expect("ips.v0.opt vendored in openehr-its")
-}
-
-fn canonical_composition() -> Value {
-    let text = std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
-            "../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json/ips_canonical.json",
-        ),
-    )
-    .expect("ips_canonical.json vendored in openehr-its");
-    serde_json::from_str(&text).expect("valid canonical composition")
-}
 
 fn config() -> AppConfig {
     AppConfig {
@@ -86,27 +65,6 @@ fn config() -> AppConfig {
 async fn app() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (pg, common::router_with(config(), service).await)
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
-fn etag_uid(h: &header::HeaderMap) -> String {
-    h.get(header::ETAG)
-        .and_then(|v| v.to_str().ok())
-        .expect("ETag present")
-        .trim_start_matches("W/")
-        .trim_matches('"')
-        .to_owned()
 }
 
 fn vo_of(ovid: &str) -> &str {
@@ -133,7 +91,7 @@ async fn commit_composition_body(app: &Router, body: Value) -> (String, String) 
             .method("POST")
             .uri(format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(opt_xml()))
+            .body(Body::from(ips_opt_xml()))
             .unwrap(),
     )
     .await;
@@ -174,7 +132,7 @@ async fn commit_ips_composition(app: &Router) -> (String, String) {
             .method("POST")
             .uri(format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(opt_xml()))
+            .body(Body::from(ips_opt_xml()))
             .unwrap(),
     )
     .await;
@@ -186,7 +144,7 @@ async fn commit_ips_composition(app: &Router) -> (String, String) {
             .method("POST")
             .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
             .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(canonical_composition().to_string()))
+            .body(Body::from(ips_canonical_composition().to_string()))
             .unwrap(),
     )
     .await;
@@ -239,7 +197,7 @@ async fn committal_headers_merge_into_the_commit() {
 
     // Update the composition, supplying the committal metadata via the MUST-level
     // request headers; re-post the canonical body (strip the server-owned uid).
-    let mut body = canonical_composition();
+    let mut body = ips_canonical_composition();
     body.as_object_mut().unwrap().remove("uid");
     let req = Request::builder()
         .method("PUT")
@@ -330,7 +288,7 @@ async fn a_deleted_lifecycle_header_on_a_content_commit_is_refused() {
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
-    let mut body = canonical_composition();
+    let mut body = ips_canonical_composition();
     body.as_object_mut().unwrap().remove("uid");
     let req = Request::builder()
         .method("PUT")
@@ -419,7 +377,7 @@ async fn client_change_type_amendment_is_merged() {
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
-    let mut body = canonical_composition();
+    let mut body = ips_canonical_composition();
     body.as_object_mut().unwrap().remove("uid");
     let req = Request::builder()
         .method("PUT")
@@ -462,7 +420,7 @@ async fn client_change_type_mismatch_and_out_of_group_are_rejected() {
     let (_pg, app) = app().await;
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
-    let mut body = canonical_composition();
+    let mut body = ips_canonical_composition();
     body.as_object_mut().unwrap().remove("uid");
 
     for (token, expected) in [
@@ -729,7 +687,7 @@ async fn bare_deprecated_audit_details_header_is_accepted() {
     let (ehr_id, v1) = commit_ips_composition(&app).await;
     let vo = vo_of(&v1).to_owned();
 
-    let mut body = canonical_composition();
+    let mut body = ips_canonical_composition();
     body.as_object_mut().unwrap().remove("uid");
     let req = Request::builder()
         .method("PUT")
@@ -900,7 +858,7 @@ async fn composition_get_serves_stored_json_verbatim() {
     let (_pg, app) = app().await;
     // The committed body must be uid-less so the stamped-field PLACEMENT is
     // what the byte comparison exercises (the borutjures case on #2913).
-    let mut fixture = canonical_composition();
+    let mut fixture = ips_canonical_composition();
     fixture
         .as_object_mut()
         .expect("a JSON object")
@@ -1007,7 +965,7 @@ async fn versioned_composition_version_by_id_is_container_scoped() {
             .method("POST")
             .uri(format!("{BASE}/ehr/{ehr_id}/composition"))
             .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(canonical_composition().to_string()))
+            .body(Body::from(ips_canonical_composition().to_string()))
             .unwrap(),
     )
     .await;

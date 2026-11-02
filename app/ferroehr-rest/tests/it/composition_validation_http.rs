@@ -14,64 +14,21 @@
 //! `Inv_null_flavour_indicated`.
 #![expect(
     clippy::unwrap_used,
-    clippy::expect_used,
     reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
               reaches `#[test]`-annotated functions, so it misses this integration \
               module's helpers and async bodies; panicking assertions are the \
               intended shape here (the Rust Book ch11)"
 )]
 
-use std::path::PathBuf;
-
 use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
 use serde_json::{Value, json};
-use tower::ServiceExt;
 
 use crate::common;
+use crate::common::{etag_uid, ips_canonical_composition, ips_opt_xml, send};
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
-
-fn opt_xml() -> String {
-    std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../crates/openehr-its/tests/fixtures/sdk/ips.v0.opt"),
-    )
-    .expect("ips.v0.opt vendored in openehr-its")
-}
-
-fn canonical_composition() -> Value {
-    let text = std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
-            "../../crates/openehr-its/tests/vendor/openehr_sdk/composition/canonical_json/ips_canonical.json",
-        ),
-    )
-    .expect("ips_canonical.json vendored in openehr-its");
-    serde_json::from_str(&text).expect("valid canonical composition")
-}
-
-async fn send(app: &Router, req: Request<Body>) -> (StatusCode, header::HeaderMap, String) {
-    let resp = app.clone().oneshot(req).await.expect("response");
-    let status = resp.status();
-    let headers = resp.headers().clone();
-    let bytes = resp.into_body().collect().await.expect("body").to_bytes();
-    (
-        status,
-        headers,
-        String::from_utf8_lossy(&bytes).into_owned(),
-    )
-}
-
-fn etag_uid(h: &header::HeaderMap) -> String {
-    h.get(header::ETAG)
-        .and_then(|v| v.to_str().ok())
-        .expect("ETag present")
-        .trim_start_matches("W/")
-        .trim_matches('"')
-        .to_owned()
-}
 
 /// A fresh EHR with the IPS operational template uploaded.
 async fn app_with_template() -> (testkit::TestDb, Router, String) {
@@ -94,7 +51,7 @@ async fn app_with_template() -> (testkit::TestDb, Router, String) {
             .method("POST")
             .uri(format!("{BASE}/definition/template/adl1.4"))
             .header(header::CONTENT_TYPE, "application/xml")
-            .body(Body::from(opt_xml()))
+            .body(Body::from(ips_opt_xml()))
             .unwrap(),
     )
     .await;
@@ -138,7 +95,7 @@ fn strip_first_element_value(v: &mut Value) -> bool {
 async fn composition_with_a_value_less_element_is_422_naming_the_invariant() {
     let (_pg, app, ehr_id) = app_with_template().await;
 
-    let mut broken = canonical_composition();
+    let mut broken = ips_canonical_composition();
     assert!(
         strip_first_element_value(&mut broken),
         "the IPS composition carries a valued ELEMENT to empty"
@@ -373,7 +330,7 @@ fn empty_first_history_events(v: &mut Value) -> bool {
 #[tokio::test]
 async fn a_history_with_an_empty_events_array_is_400() {
     let (_pg, app, ehr_id) = app_with_template().await;
-    let mut broken = canonical_composition();
+    let mut broken = ips_canonical_composition();
     assert!(
         empty_first_history_events(&mut broken),
         "the IPS composition carries a HISTORY"
