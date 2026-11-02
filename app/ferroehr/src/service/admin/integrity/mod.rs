@@ -41,11 +41,11 @@ use std::time::Instant;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::storage::codec::{decompose, reassemble};
+use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::read_version_rows_all;
 use crate::storage::row::ReadRow;
 
@@ -221,28 +221,6 @@ impl StorageParityReport {
     pub fn is_clean(&self) -> bool {
         self.mismatch_count == 0
     }
-}
-
-/// Which stored versions a sweep covers.
-///
-/// A sweep reads every byte of the versions it covers, so an operator
-/// verifying one record, one object, or everything committed since an
-/// incident, should not have to read the whole repository to do it. Every
-/// bound is optional and they compose; the default covers everything.
-///
-/// No openEHR spec governs storage mechanics — our own design/extension.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct StorageParityScope {
-    /// Cover only versions belonging to this EHR.
-    pub ehr_id: Option<Uuid>,
-    /// Cover only versions whose validity begins at or after this instant.
-    pub committed_since: Option<jiff::Timestamp>,
-    /// Cover only versions of this versioned object.
-    pub vo_id: Option<Uuid>,
-    /// Cover only this version of it. Ignored without [`Self::vo_id`], which
-    /// is what makes a `sys_version` alone meaningless: the ordinal is
-    /// per-object, so on its own it names one version of every object.
-    pub sys_version: Option<i32>,
 }
 
 /// One page row of the sweep cursor: the identifiers of a stored version plus
@@ -450,17 +428,8 @@ impl FerroEhrService {
     ) -> Result<HashMap<(VoId, i32), Value>, ServiceError> {
         let vo_ids: Vec<Uuid> = keys.iter().map(|(vo_id, _)| vo_id.0).collect();
         let sys_versions: Vec<i32> = keys.iter().map(|(_, version)| *version).collect();
-        let rows: Vec<(Uuid, i32, String)> = sqlx::query_as(
-            "SELECT v.vo_id, v.sys_version, v.body \
-             FROM unnest($1::uuid[], $2::int[]) AS k(vo_id, sys_version) \
-             JOIN version v \
-               ON v.vo_id = k.vo_id AND v.sys_version = k.sys_version \
-             WHERE v.body IS NOT NULL",
-        )
-        .bind(&vo_ids)
-        .bind(&sys_versions)
-        .fetch_all(&mut *acquire(self.domain_pool(domain)).await?)
-        .await?;
+        let rows =
+            integrity::stored_bodies(self.domain_pool(domain), &vo_ids, &sys_versions).await?;
         let mut out = HashMap::with_capacity(rows.len());
         for (vo_id, sys_version, text) in rows {
             let body = serde_json::from_str(&text)
@@ -479,30 +448,8 @@ impl FerroEhrService {
         cursor: Option<(Uuid, i32)>,
         scope: StorageParityScope,
     ) -> Result<Vec<VersionKey>, ServiceError> {
-        let (after_vo, after_version) = match cursor {
-            Some((vo_id, sys_version)) => (Some(vo_id), Some(sys_version)),
-            None => (None, None),
-        };
-        let rows: Vec<(Uuid, i32, String, bool)> = sqlx::query_as(
-            "SELECT vo_id, sys_version, kind, body IS NOT NULL \
-             FROM version \
-             WHERE ($1::uuid IS NULL OR (vo_id, sys_version) > ($1::uuid, $2::int)) \
-               AND ($4::uuid IS NULL OR ehr_id = $4::uuid) \
-               AND ($5::timestamptz IS NULL OR committed_at >= $5::timestamptz) \
-               AND ($6::uuid IS NULL OR vo_id = $6::uuid) \
-               AND ($6::uuid IS NULL OR $7::int IS NULL OR sys_version = $7::int) \
-             ORDER BY vo_id, sys_version \
-             LIMIT $3",
-        )
-        .bind(after_vo)
-        .bind(after_version)
-        .bind(PAGE_SIZE)
-        .bind(scope.ehr_id)
-        .bind(scope.committed_since.map(jiff_sqlx::Timestamp::from))
-        .bind(scope.vo_id)
-        .bind(scope.sys_version)
-        .fetch_all(&mut *acquire(self.domain_pool(domain)).await?)
-        .await?;
+        let rows =
+            integrity::parity_page(self.domain_pool(domain), cursor, PAGE_SIZE, scope).await?;
         Ok(rows
             .into_iter()
             .map(|(vo_id, sys_version, kind, has_body)| VersionKey {

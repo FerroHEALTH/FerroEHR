@@ -45,14 +45,7 @@ impl FerroEhrService {
         let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
         for &ehr_id in ehr_ids {
-            // The still-hot objects of this EHR: what the move addresses.
-            // An object already cold matches nothing, which is what makes
-            // re-archiving a no-op.
-            let vo_ids: Vec<VoId> =
-                sqlx::query_scalar("SELECT vo_id FROM vo_head WHERE ehr_id = $1 AND tier = 'hot'")
-                    .bind(ehr_id)
-                    .fetch_all(&mut *tx)
-                    .await?;
+            let vo_ids = tier::hot_objects(&mut tx, ehr_id).await?;
             tier::freeze(&mut tx, &vo_ids, Some("archive_ehrs")).await?;
         }
         tx.commit().await?;
@@ -108,11 +101,7 @@ impl FerroEhrService {
         let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
         for &ehr_id in ehr_ids {
-            let vo_ids: Vec<VoId> =
-                sqlx::query_scalar("SELECT vo_id FROM vo_head WHERE ehr_id = $1 AND tier = 'cold'")
-                    .bind(ehr_id)
-                    .fetch_all(&mut *tx)
-                    .await?;
+            let vo_ids = tier::cold_objects(&mut tx, ehr_id).await?;
             tier::thaw(&mut tx, &vo_ids).await?;
         }
         tx.commit().await?;
