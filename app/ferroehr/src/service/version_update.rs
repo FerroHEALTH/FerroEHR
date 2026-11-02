@@ -22,7 +22,8 @@
 //!   `x-discriminator-value` of its own and a `discriminator.mapping` to
 //!   `UPDATE_ATTESTATION`, the `AUDIT_DETAILS`/`ATTESTATION` pair of RM common
 //!   `master06-change_control_package.adoc` §Committal and Audits, so
-//!   [`audit_base`] reads the inherited attributes of whichever form arrived.
+//!   [`crate::versioning::audit::audit_base`] reads the inherited attributes of
+//!   whichever form arrived.
 //! - `description` is a `DV_TEXT` object on the wire (`UpdateAudit.yaml`), so a
 //!   body-borne commit audit can carry a coded description. The
 //!   `openehr-audit-details` header
@@ -104,95 +105,6 @@ pub fn unstated_code() -> DvCodedText {
     openehr_coded(String::new(), "")
 }
 
-/// The `UPDATE_AUDIT`-declared attributes of a commit audit, whichever
-/// concrete form the wire carried.
-///
-/// The OAS models `UPDATE_ATTESTATION` as an `allOf` extension of
-/// `UPDATE_AUDIT`, so both forms carry these four members; this borrow lets a
-/// commit path read them without caring which arrived.
-#[derive(Debug)]
-pub struct AuditBase<'a> {
-    /// `AUDIT_DETAILS.change_type` (1..1), coded from the openEHR *audit
-    /// change type* group (`AUDIT_DETAILS.Change_type_valid` — enforced at the
-    /// service boundary against `openehr-term`, not by the type).
-    pub change_type: &'a DvCodedText,
-    /// `AUDIT_DETAILS.description` (0..1).
-    pub description: Option<&'a DvText>,
-    /// `AUDIT_DETAILS.committer` (1..1).
-    pub committer: &'a PartyProxy,
-    /// `AUDIT_DETAILS.system_id`, when the client supplied one. ITS-REST
-    /// overview §"openehr-version and openehr-audit-details": "clients MAY
-    /// supply values for the `AUDIT_DETAILS` attributes … and `system_id`";
-    /// when absent "the server MUST set it to its own configured system
-    /// identifier". The server default is asserted at the versioning seam.
-    pub system_id: Option<&'a str>,
-}
-
-/// The mutable twin of [`AuditBase`] — what the committal-header merge writes
-/// through.
-#[derive(Debug)]
-pub struct AuditBaseMut<'a> {
-    /// `AUDIT_DETAILS.change_type` (1..1).
-    pub change_type: &'a mut DvCodedText,
-    /// `AUDIT_DETAILS.description` (0..1).
-    pub description: &'a mut Option<DvText>,
-    /// `AUDIT_DETAILS.committer` (1..1).
-    pub committer: &'a mut PartyProxy,
-    /// `AUDIT_DETAILS.system_id` (0..1 on the wire).
-    pub system_id: &'a mut Option<String>,
-}
-
-/// Borrow the inherited `UPDATE_AUDIT` attributes of a commit audit.
-#[must_use]
-pub fn audit_base(audit: &UpdateAudit) -> AuditBase<'_> {
-    match audit {
-        UpdateAudit::UpdateAudit(a) => AuditBase {
-            change_type: &a.change_type,
-            description: a.description.as_ref(),
-            committer: &a.committer,
-            system_id: a.system_id.as_deref(),
-        },
-        UpdateAudit::UpdateAttestation(a) => AuditBase {
-            change_type: &a.change_type,
-            description: a.description.as_ref(),
-            committer: &a.committer,
-            system_id: a.system_id.as_deref(),
-        },
-    }
-}
-
-/// Borrow the inherited `UPDATE_AUDIT` attributes of a commit audit mutably.
-#[must_use]
-pub fn audit_base_mut(audit: &mut UpdateAudit) -> AuditBaseMut<'_> {
-    match audit {
-        UpdateAudit::UpdateAudit(a) => AuditBaseMut {
-            change_type: &mut a.change_type,
-            description: &mut a.description,
-            committer: &mut a.committer,
-            system_id: &mut a.system_id,
-        },
-        UpdateAudit::UpdateAttestation(a) => AuditBaseMut {
-            change_type: &mut a.change_type,
-            description: &mut a.description,
-            committer: &mut a.committer,
-            system_id: &mut a.system_id,
-        },
-    }
-}
-
-/// Returns the displayable `value` of a `DV_TEXT`, in whichever concrete form.
-///
-/// `DV_CODED_TEXT` declares the same attribute as "the rubric of the complete
-/// term" (RM `data_types`
-/// `UML/classes/org.openehr.rm.data_types.dv_coded_text.adoc`).
-#[must_use]
-pub fn text_value(text: &DvText) -> &str {
-    match text {
-        DvText::DvText(t) => &t.value,
-        DvText::DvCodedText(t) => &t.value,
-    }
-}
-
 /// A plain (uncoded) `DV_TEXT` — the only `AUDIT_DETAILS.description` form a
 /// server default or a committal header can produce.
 #[must_use]
@@ -217,7 +129,7 @@ pub fn plain_text(value: &str) -> DvText {
 pub fn system_committer() -> PartyProxy {
     PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(PartyIdentifiedData {
         external_ref: None,
-        name: Some(crate::service::SYSTEM_COMMITTER_NAME.to_owned()),
+        name: Some(crate::versioning::committer::SYSTEM_COMMITTER_NAME.to_owned()),
         identifiers: None,
     }))
 }
@@ -289,6 +201,7 @@ impl<T> WriteRequest<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::versioning::audit::audit_base;
     use openehr_its::rest::generated::common::UpdateVersion;
     use openehr_its::rest::generated::ehr::Versionable;
 

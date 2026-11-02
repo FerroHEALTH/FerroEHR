@@ -17,8 +17,8 @@ use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::committer::{CommitterIdentity, with_committer};
 use ferroehr::service::version_update::WriteRequest;
+use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use openehr_its::rest::generated::common::UpdateAudit;
 use serde_json::{Value, json};
 

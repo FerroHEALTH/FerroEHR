@@ -215,7 +215,7 @@ impl AuditInput {
     /// - `description` — the caller's when supplied, else the server default;
     /// - `committer` — the caller's `PARTY_PROXY` (defaulted by the adapter to
     ///   the principal / system identity), or the person's own `PARTY_SELF`
-    ///   ([`crate::service::committer::attributed`]);
+    ///   ([`crate::versioning::committer::attributed`]);
     /// - `system_id` — the caller's when supplied, else this server's.
     ///
     /// The audit is a plain `UPDATE_AUDIT` ([`plain_audit`]), as on the
@@ -249,7 +249,7 @@ impl AuditInput {
             .clone()
             .unwrap_or_else(|| fallback_system_id.to_owned());
         validate_system_id(&system_id)?;
-        let committer = crate::service::committer::attributed(base.committer.clone());
+        let committer = crate::versioning::committer::attributed(base.committer.clone());
         check_committer(&committer)?;
         Ok(Self {
             system_id,
@@ -262,7 +262,7 @@ impl AuditInput {
             description: Some(
                 base.description
                     .as_ref()
-                    .filter(|d| !crate::service::version_update::text_value(d).is_empty())
+                    .filter(|d| !text_value(d).is_empty())
                     .cloned()
                     .unwrap_or_else(|| dv_text(default_description)),
             ),
@@ -297,7 +297,7 @@ impl AuditInput {
                 .unwrap_or_else(|| default_system_id.to_owned()),
             change_type,
             description: update.description.clone(),
-            committer: crate::service::committer::attributed(update.committer.clone()),
+            committer: crate::versioning::committer::attributed(update.committer.clone()),
             attestation: None,
         }
     }
@@ -566,7 +566,7 @@ pub(crate) fn validate_commit_audit(audit: &AuditInput) -> Result<(), ServiceErr
 
 /// The one committer check every write path runs: the committer's own RM
 /// invariants ([`validate_committer`]), then whether it is the authenticated
-/// caller ([`crate::service::committer::refuse_impersonation`]).
+/// caller ([`crate::versioning::committer::refuse_impersonation`]).
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] for a committer that breaks its invariants;
@@ -574,7 +574,7 @@ pub(crate) fn validate_commit_audit(audit: &AuditInput) -> Result<(), ServiceErr
 /// the caller.
 pub(crate) fn check_committer(committer: &PartyProxy) -> Result<(), ServiceError> {
     validate_committer(committer)?;
-    crate::service::committer::refuse_impersonation(committer)
+    crate::versioning::committer::refuse_impersonation(committer)
 }
 
 /// Run the committer `PARTY_PROXY`'s OWN RM class invariants + terminology
@@ -619,6 +619,94 @@ pub(crate) fn validate_committer(committer: &PartyProxy) -> Result<(), ServiceEr
             .with_path("AUDIT_DETAILS.committer")
             .with_causes(violations),
     ))
+}
+/// The `UPDATE_AUDIT`-declared attributes of a commit audit, whichever
+/// concrete form the wire carried.
+///
+/// The OAS models `UPDATE_ATTESTATION` as an `allOf` extension of
+/// `UPDATE_AUDIT`, so both forms carry these four members; this borrow lets a
+/// commit path read them without caring which arrived.
+#[derive(Debug)]
+pub struct AuditBase<'a> {
+    /// `AUDIT_DETAILS.change_type` (1..1), coded from the openEHR *audit
+    /// change type* group (`AUDIT_DETAILS.Change_type_valid` — enforced at the
+    /// service boundary against `openehr-term`, not by the type).
+    pub change_type: &'a DvCodedText,
+    /// `AUDIT_DETAILS.description` (0..1).
+    pub description: Option<&'a DvText>,
+    /// `AUDIT_DETAILS.committer` (1..1).
+    pub committer: &'a PartyProxy,
+    /// `AUDIT_DETAILS.system_id`, when the client supplied one. ITS-REST
+    /// overview §"openehr-version and openehr-audit-details": "clients MAY
+    /// supply values for the `AUDIT_DETAILS` attributes … and `system_id`";
+    /// when absent "the server MUST set it to its own configured system
+    /// identifier". The server default is asserted at the versioning seam.
+    pub system_id: Option<&'a str>,
+}
+
+/// The mutable twin of [`AuditBase`] — what the committal-header merge writes
+/// through.
+#[derive(Debug)]
+pub struct AuditBaseMut<'a> {
+    /// `AUDIT_DETAILS.change_type` (1..1).
+    pub change_type: &'a mut DvCodedText,
+    /// `AUDIT_DETAILS.description` (0..1).
+    pub description: &'a mut Option<DvText>,
+    /// `AUDIT_DETAILS.committer` (1..1).
+    pub committer: &'a mut PartyProxy,
+    /// `AUDIT_DETAILS.system_id` (0..1 on the wire).
+    pub system_id: &'a mut Option<String>,
+}
+
+/// Borrow the inherited `UPDATE_AUDIT` attributes of a commit audit.
+#[must_use]
+pub fn audit_base(audit: &UpdateAudit) -> AuditBase<'_> {
+    match audit {
+        UpdateAudit::UpdateAudit(a) => AuditBase {
+            change_type: &a.change_type,
+            description: a.description.as_ref(),
+            committer: &a.committer,
+            system_id: a.system_id.as_deref(),
+        },
+        UpdateAudit::UpdateAttestation(a) => AuditBase {
+            change_type: &a.change_type,
+            description: a.description.as_ref(),
+            committer: &a.committer,
+            system_id: a.system_id.as_deref(),
+        },
+    }
+}
+
+/// Borrow the inherited `UPDATE_AUDIT` attributes of a commit audit mutably.
+#[must_use]
+pub fn audit_base_mut(audit: &mut UpdateAudit) -> AuditBaseMut<'_> {
+    match audit {
+        UpdateAudit::UpdateAudit(a) => AuditBaseMut {
+            change_type: &mut a.change_type,
+            description: &mut a.description,
+            committer: &mut a.committer,
+            system_id: &mut a.system_id,
+        },
+        UpdateAudit::UpdateAttestation(a) => AuditBaseMut {
+            change_type: &mut a.change_type,
+            description: &mut a.description,
+            committer: &mut a.committer,
+            system_id: &mut a.system_id,
+        },
+    }
+}
+
+/// Returns the displayable `value` of a `DV_TEXT`, in whichever concrete form.
+///
+/// `DV_CODED_TEXT` declares the same attribute as "the rubric of the complete
+/// term" (RM `data_types`
+/// `UML/classes/org.openehr.rm.data_types.dv_coded_text.adoc`).
+#[must_use]
+pub fn text_value(text: &DvText) -> &str {
+    match text {
+        DvText::DvText(t) => &t.value,
+        DvText::DvCodedText(t) => &t.value,
+    }
 }
 
 #[cfg(test)]

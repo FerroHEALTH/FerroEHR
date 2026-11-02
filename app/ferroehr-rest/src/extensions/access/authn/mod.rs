@@ -584,7 +584,7 @@ pub(crate) async fn middleware(
                     Some(principal),
                     ferroehr::system_log::access_context::with_roles(
                         roles,
-                        ferroehr::service::committer::with_committer(
+                        ferroehr::versioning::committer::with_committer(
                             Some(committer),
                             next.run(req),
                         ),
@@ -756,8 +756,8 @@ fn patient_data_refusal(
 /// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
 /// Bearer subject was minted by the identity provider, so the audit records the
 /// validated token issuer; Basic credentials are local and carry none.
-fn committer_identity(principal: &Principal) -> ferroehr::service::committer::CommitterIdentity {
-    ferroehr::service::committer::CommitterIdentity {
+fn committer_identity(principal: &Principal) -> ferroehr::versioning::committer::CommitterIdentity {
+    ferroehr::versioning::committer::CommitterIdentity {
         subject: principal.subject.clone(),
         id_type: match principal.method {
             AuthMethod::Basic => "basic",

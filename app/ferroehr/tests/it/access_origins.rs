@@ -203,7 +203,7 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
     )
     .expect("the register parses");
     let svc = svc.with_origins(origins);
-    let as_client = |client: &str| ferroehr::service::committer::CommitterIdentity {
+    let as_client = |client: &str| ferroehr::versioning::committer::CommitterIdentity {
         subject: "dr.jansen".to_owned(),
         id_type: "oauth2",
         issuer: Some("https://idp.example".to_owned()),
@@ -211,7 +211,7 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
         person: false,
     };
 
-    let (registered, _) = ferroehr::service::committer::with_committer(
+    let (registered, _) = ferroehr::versioning::committer::with_committer(
         Some(as_client("lab-gateway")),
         Box::pin(commit(&svc, ehr_id, &composition("from the gateway"))),
     )
@@ -221,7 +221,7 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
         Some(json!(["lab.example"]))
     );
 
-    let (other, creating_system) = ferroehr::service::committer::with_committer(
+    let (other, creating_system) = ferroehr::versioning::committer::with_committer(
         Some(as_client("a-portal")),
         Box::pin(commit(&svc, ehr_id, &composition("from a portal"))),
     )
@@ -233,7 +233,7 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
 
     let mut imported = composition("fed by the lab, sent by the gateway");
     imported["feeder_audit"] = feeder_audit("pacs.example");
-    let (fed, _) = ferroehr::service::committer::with_committer(
+    let (fed, _) = ferroehr::versioning::committer::with_committer(
         Some(as_client("lab-gateway")),
         Box::pin(commit(&svc, ehr_id, &imported)),
     )

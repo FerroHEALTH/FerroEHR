@@ -48,7 +48,6 @@ use uuid::Uuid;
 
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::runtime::ApiError;
-use openehr_rm::prelude::PartyProxy;
 
 use crate::overview::error::RestError;
 use crate::overview::params::query_param;
@@ -101,15 +100,6 @@ pub(super) async fn expand_multimedia_if_requested(
         return Ok(state.backend().expand_multimedia(body).await?);
     }
     Ok(body)
-}
-
-/// The committer `PARTY_PROXY` a write states when the client sent none: the
-/// service's default committer for the request's authenticated caller
-/// ([`ferroehr::service::committer::default_committer`]), so this adapter and
-/// the service stamp the same identity, naming the token issuer for a Bearer
-/// caller and `ferroehr` for a Basic one.
-pub(crate) fn committer_proxy() -> PartyProxy {
-    ferroehr::service::committer::request_committer()
 }
 
 /// Decomposes an [`ObjectVersionId`] into the `(versioned-object uuid,

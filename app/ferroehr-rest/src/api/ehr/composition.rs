@@ -143,7 +143,12 @@ async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let body = decode_composition_body(&state, h, &parts.body).await?;
-    let uv = crate::overview::committal::write_request(h, super::committer_proxy(), body, None)?;
+    let uv = crate::overview::committal::write_request(
+        h,
+        ferroehr::versioning::committer::request_committer(),
+        body,
+        None,
+    )?;
     // Tags are judged before the commit, so a defective tag refuses while
     // nothing is durable; the write itself stays post-commit.
     let pending_tags = item_tags::pending(h)?;
@@ -288,7 +293,7 @@ async fn update(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     }
     let uv = crate::overview::committal::write_request(
         h,
-        super::committer_proxy(),
+        ferroehr::versioning::committer::request_committer(),
         body,
         Some(require_if_match(&p.if_match)?),
     )?;
@@ -367,7 +372,7 @@ async fn delete(state: AppState, parts: RequestParts) -> Result<Response, RestEr
     // apply here too (overview §"openehr-version and openehr-audit-details").
     let request = crate::overview::committal::delete_request(
         h,
-        super::committer_proxy(),
+        ferroehr::versioning::committer::request_committer(),
         volunteered_if_match,
     )?;
     match state

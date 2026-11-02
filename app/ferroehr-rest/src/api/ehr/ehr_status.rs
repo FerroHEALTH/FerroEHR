@@ -116,7 +116,7 @@ pub(super) async fn run(
             let body = negotiate::decode::rm_value::<EhrStatus>(h, &parts.body)?;
             let uv = crate::overview::committal::write_request(
                 h,
-                super::committer_proxy(),
+                ferroehr::versioning::committer::request_committer(),
                 body,
                 Some(require_if_match(&p.if_match)?),
             )?;

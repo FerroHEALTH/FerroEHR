@@ -289,7 +289,7 @@ impl FerroEhrService {
         event.result_count = Some(u64::from(resolved.is_some()));
         event.purpose = crate::system_log::access_context::current_purpose();
         event.permit = crate::system_log::access_context::current_permit();
-        if let Some(committer) = crate::service::committer::current_committer() {
+        if let Some(committer) = crate::versioning::committer::current_committer() {
             event.user_id = committer.subject;
         }
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
