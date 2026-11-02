@@ -1738,11 +1738,12 @@ pub(crate) async fn query_execute_stored_query_version_body(
 /// OUR OWN EXTENSION — no openEHR spec governs this operation. ITS-REST 1.1.0
 /// publishes an ad-hoc and a stored query and nothing else, and AQL is defined
 /// over the clinical domain alone (QUERY `master03-syntax.adoc`), with no
-/// demographic source. The operation runs in three steps, each on its own
-/// database credential: a predicate from the deployment's `[cohort.predicates]`
-/// allow-list selects parties in the demographic domain, the linkage domain
-/// resolves those parties to the EHRs they are the subject of, and the AQL runs
-/// over exactly those EHRs. Only identifiers cross between the steps — no name,
+/// demographic source. The operation runs in three steps: a predicate from the
+/// deployment's `[cohort.predicates]` allow-list selects parties in the
+/// demographic domain, on the demographic database credential; the clinical
+/// domain resolves those parties to the EHRs whose `EHR_STATUS.subject` names
+/// one of them; and the AQL runs over exactly those EHRs, both on the clinical
+/// credential. Only identifiers cross between the steps — no name,
 /// address or national identifier leaves the demographic domain, and the caller
 /// never receives a party id.
 ///
