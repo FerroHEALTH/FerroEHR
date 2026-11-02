@@ -7,11 +7,14 @@
 //! database that accepts connections slowly is never taken for down (#4782).
 
 use std::str::FromStr;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use sqlx::PgPool;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use tokio::net::{TcpListener, TcpSocket, TcpStream};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::task::JoinHandle;
 
 use ferroehr::db::acquire::{AcquireError, acquire};
 
@@ -23,19 +26,35 @@ fn is_outage(error: &AcquireError) -> bool {
     error.to_string() == "the database is down; no connection was attempted"
 }
 
-/// A loopback socket bound to a free port and not listening, with its port.
+/// A loopback port that stands for a database which is down until the
+/// returned switch is set, and up from then on, with the task holding it.
 ///
-/// A connect to it is refused as long as it does not listen, and holding it
-/// keeps another process from binding the port: a port released between the
-/// outage and the return could be taken by a parallel test's server, which
-/// would answer the driver in its own protocol.
-fn closed_port() -> (TcpSocket, u16) {
-    let socket = TcpSocket::new_v4().expect("a socket");
-    socket
-        .bind(([127, 0, 0, 1], 0).into())
-        .expect("a loopback port");
-    let port = socket.local_addr().expect("its address").port();
-    (socket, port)
+/// While the switch is clear, every connection is accepted and reset at once
+/// (`SO_LINGER` 0), which every platform reports to the client as a reset; a
+/// bound socket that does not listen is refused on Linux but left unanswered
+/// on macOS. Once the switch is set, every connection is forwarded to the
+/// database at `target`. The listener holds the port throughout, so no
+/// parallel test's server can take it between the outage and the return.
+async fn outage_port(target: String) -> (Arc<AtomicBool>, JoinHandle<()>, u16) {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("a loopback listener");
+    let port = listener.local_addr().expect("its address").port();
+    let back = Arc::new(AtomicBool::new(false));
+    let up = Arc::clone(&back);
+    let task = tokio::spawn(async move {
+        while let Ok((inbound, _)) = listener.accept().await {
+            if up.load(Ordering::SeqCst) {
+                tokio::spawn(relay(inbound, target.clone()));
+            } else {
+                inbound
+                    .set_zero_linger()
+                    .expect("SO_LINGER 0 on the accepted connection");
+                drop(inbound);
+            }
+        }
+    });
+    (back, task, port)
 }
 
 /// A lazy pool for the test database, reached through `port` on loopback.
@@ -51,28 +70,21 @@ fn pool_through(url: &str, port: u16) -> PgPool {
         .connect_lazy_with(options)
 }
 
-/// Forwards every connection on `listener` to the database at `target`.
-async fn forward(listener: TcpListener, target: String) {
-    while let Ok((mut inbound, _)) = listener.accept().await {
-        let target = target.clone();
-        tokio::spawn(async move {
-            if let Ok(mut outbound) = TcpStream::connect(&target).await {
-                let _copied = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
-            }
-        });
+/// Forwards `inbound` to the database at `target`.
+async fn relay(mut inbound: TcpStream, target: String) {
+    if let Ok(mut outbound) = TcpStream::connect(&target).await {
+        let _copied = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
     }
 }
 
 /// Forwards every connection on `listener` to the database at `target`,
 /// holding each one `delay` before the handshake reaches the database.
 async fn forward_slowly(listener: TcpListener, target: String, delay: Duration) {
-    while let Ok((mut inbound, _)) = listener.accept().await {
+    while let Ok((inbound, _)) = listener.accept().await {
         let target = target.clone();
         tokio::spawn(async move {
             tokio::time::sleep(delay).await;
-            if let Ok(mut outbound) = TcpStream::connect(&target).await {
-                let _copied = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
-            }
+            relay(inbound, target).await;
         });
     }
 }
@@ -82,7 +94,7 @@ async fn a_down_database_answers_at_once_and_a_returning_one_serves_again() {
     let db = testkit::db().await.expect("testkit database");
     let real = PgConnectOptions::from_str(db.url()).expect("the test DSN parses");
     let target = format!("{}:{}", real.get_host(), real.get_port());
-    let (socket, port) = closed_port();
+    let (back, proxy, port) = outage_port(target).await;
     let pool = pool_through(db.url(), port);
 
     let started = Instant::now();
@@ -106,9 +118,8 @@ async fn a_down_database_answers_at_once_and_a_returning_one_serves_again() {
         "a known outage answers at once, took {second_took:?}"
     );
 
-    // The database comes back on the same address, the socket held since.
-    let listener = socket.listen(16).expect("the held port listens");
-    let proxy = tokio::spawn(forward(listener, target));
+    // The database comes back on the same address, the port held since.
+    back.store(true, Ordering::SeqCst);
     let started = Instant::now();
     let conn = loop {
         match acquire(&pool).await {
@@ -196,5 +207,33 @@ async fn a_slow_connect_past_the_probe_bound_is_served_after_the_delay() {
     );
     eprintln!("served after {first_took:?}, and again after {second_took:?}");
     drop((first, second));
+    proxy.abort();
+}
+
+#[tokio::test]
+async fn a_reset_connect_is_recorded_as_an_outage_and_the_next_acquire_answers_at_once() {
+    let db = testkit::db().await.expect("testkit database");
+    let real = PgConnectOptions::from_str(db.url()).expect("the test DSN parses");
+    let target = format!("{}:{}", real.get_host(), real.get_port());
+    let (_back, proxy, port) = outage_port(target).await;
+    let pool = pool_through(db.url(), port);
+
+    let started = Instant::now();
+    let first = acquire(&pool).await.expect_err("every connect is reset");
+    let first_took = started.elapsed();
+    assert!(is_outage(&first), "the reset recorded an outage: {first:?}");
+    assert!(
+        first_took < Duration::from_secs(1),
+        "the pool's own reset connect answered before any probe, took {first_took:?}"
+    );
+
+    let started = Instant::now();
+    let second = acquire(&pool).await.expect_err("still reset");
+    let second_took = started.elapsed();
+    assert!(is_outage(&second), "{second:?}");
+    assert!(
+        second_took < Duration::from_millis(200),
+        "a known outage answers at once, took {second_took:?}"
+    );
     proxy.abort();
 }
