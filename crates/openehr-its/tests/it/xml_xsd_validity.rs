@@ -672,16 +672,6 @@ const V1_MEMBER_DIVERGENCES: &[(&str, &str, &str)] = &[
         "workflow_id",
         "ENTRY.workflow_id — as ACTION.workflow_id",
     ),
-    (
-        "TRANSLATION_DETAILS",
-        "accreditaton",
-        "SPELLING, ours: both lineages spell it accreditation, and so does BASE \
-         UML/classes/org.openehr.base.resource.translation_details.adoc — BASE \
-         resource/master00-amendment_record.adoc records SPECPUB-6 \"Correct spelling error in \
-         TRANSLATION_DETAILS._accreditation_\". openehr-base carries the corrected spelling; the \
-         RM BMM's own stale copy of the resource package still carries the typo, and that copy is \
-         what openehr_rm::v1_2::common::resource emits",
-    ),
 ];
 
 /// The same sweep against the nsv2 RM+BASE `latest` bundle. Every entry here is
@@ -718,11 +708,6 @@ const V2_MEMBER_DIVERGENCES: &[(&str, &str, &str)] = &[
          copyright on RESOURCE_DESCRIPTION, and BASE/latest/Resource.xsd agrees; the RM BMM's stale \
          copy of the resource package puts it on RESOURCE_DESCRIPTION_ITEM, and that copy is what \
          openehr_rm::v1_2::common::resource emits",
-    ),
-    (
-        "TRANSLATION_DETAILS",
-        "accreditaton",
-        "SPELLING, ours: see the nsv1 entry (SPECPUB-6)",
     ),
 ];
 

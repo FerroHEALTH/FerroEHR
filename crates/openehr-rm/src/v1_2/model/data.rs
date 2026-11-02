@@ -17596,7 +17596,7 @@ pub(super) static CLASSES: &[RmClass] = &[
                 ref_target: None,
             },
             RmAttribute {
-                name: "accreditaton",
+                name: "accreditation",
                 declared_type: "String",
                 container: Container::None,
                 is_mandatory: false,
