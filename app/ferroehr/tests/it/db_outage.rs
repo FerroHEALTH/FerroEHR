@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 
 use sqlx::PgPool;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpSocket, TcpStream};
 
 use ferroehr::db::acquire::{AcquireError, acquire};
 
@@ -30,10 +30,19 @@ fn is_outage(error: &AcquireError) -> bool {
     error.to_string() == "the database is down; no connection was attempted"
 }
 
-/// A loopback port nothing listens on.
-async fn closed_port() -> u16 {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("a port");
-    listener.local_addr().expect("its address").port()
+/// A loopback socket bound to a free port and not listening, with its port.
+///
+/// A connect to it is refused as long as it does not listen, and holding it
+/// keeps another process from binding the port: a port released between the
+/// outage and the return could be taken by a parallel test's server, which
+/// would answer the driver in its own protocol.
+fn closed_port() -> (TcpSocket, u16) {
+    let socket = TcpSocket::new_v4().expect("a socket");
+    socket
+        .bind(([127, 0, 0, 1], 0).into())
+        .expect("a loopback port");
+    let port = socket.local_addr().expect("its address").port();
+    (socket, port)
 }
 
 /// A lazy pool for the test database, reached through `port` on loopback.
@@ -66,7 +75,7 @@ async fn a_down_database_answers_at_once_and_a_returning_one_serves_again() {
     let db = testkit::db().await.expect("testkit database");
     let real = PgConnectOptions::from_str(db.url()).expect("the test DSN parses");
     let target = format!("{}:{}", real.get_host(), real.get_port());
-    let port = closed_port().await;
+    let (socket, port) = closed_port();
     let pool = pool_through(db.url(), port);
 
     let started = Instant::now();
@@ -90,10 +99,8 @@ async fn a_down_database_answers_at_once_and_a_returning_one_serves_again() {
         "a known outage answers at once, took {second_took:?}"
     );
 
-    // The database comes back on the same address.
-    let listener = TcpListener::bind(("127.0.0.1", port))
-        .await
-        .expect("the port is free again");
+    // The database comes back on the same address, the socket held since.
+    let listener = socket.listen(16).expect("the held port listens");
     let proxy = tokio::spawn(forward(listener, target));
     let started = Instant::now();
     let conn = loop {
