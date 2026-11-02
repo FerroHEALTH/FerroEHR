@@ -38,11 +38,11 @@ use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
+use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, Write, ensure_preceding, lock_current, tip_uid};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components};
-use crate::versioning::read::{read_version, version_at};
 
 use super::validation::check_folder_item_refs;
 use crate::service::datetime::parse_at_time;
@@ -128,13 +128,18 @@ impl FerroEhrService {
         let read = match at {
             Some(at) => {
                 let vo_id = self.directory_vo(ehr_id).await?;
-                version_at(&self.pool, self.spec_profile, vo_id, at).await?
-            }
-            None => {
-                crate::versioning::read::read_current_directory(
+                crate::versioning::read::read(
                     &self.pool,
                     self.spec_profile,
-                    ehr_id,
+                    VersionAt::Instant(vo_id, at),
+                )
+                .await?
+            }
+            None => {
+                crate::versioning::read::read(
+                    &self.pool,
+                    self.spec_profile,
+                    VersionAt::Directory(ehr_id),
                 )
                 .await?
             }
@@ -188,12 +193,16 @@ impl FerroEhrService {
         version: TreeId,
         path: Option<&str>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let read = read_version(&self.pool, self.spec_profile, vo_id, version)
-            .await?
-            .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
-            .ok_or_else(|| {
-                ServiceError::not_found(Missing::Version, format!("directory {vo_id} v{version}"))
-            })?;
+        let read = crate::versioning::read::read(
+            &self.pool,
+            self.spec_profile,
+            VersionAt::Tree(vo_id, version),
+        )
+        .await?
+        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
+        .ok_or_else(|| {
+            ServiceError::not_found(Missing::Version, format!("directory {vo_id} v{version}"))
+        })?;
         if read.deleted() {
             return Ok(ServiceResponse::plain(Value::Null));
         }

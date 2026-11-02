@@ -42,9 +42,10 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
+use crate::storage::version_repo::read::VersionAt;
 use crate::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use crate::system_log::event::EventActionCode;
-use crate::versioning::read::{read_currents, read_version_by_ordinal};
+use crate::versioning::read::read_currents;
 use crate::versioning::wire::{original_version, revision_history, versioned_object};
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
@@ -579,14 +580,18 @@ impl FerroEhrService {
 
         let mut versions = Vec::with_capacity(selected.len());
         for sv in &selected {
-            let read = read_version_by_ordinal(&self.pool, self.spec_profile, vo_id, *sv)
-                .await?
-                .ok_or_else(|| {
-                    ServiceError::not_found(
-                        Missing::ObjectVersion,
-                        format!("version {vo_id}::{sv} for extract"),
-                    )
-                })?;
+            let read = crate::versioning::read::read(
+                &self.pool,
+                self.spec_profile,
+                VersionAt::Ordinal(vo_id, *sv),
+            )
+            .await?
+            .ok_or_else(|| {
+                ServiceError::not_found(
+                    Missing::ObjectVersion,
+                    format!("version {vo_id}::{sv} for extract"),
+                )
+            })?;
             served.push(read.content.clone());
             let mut version = original_version(&read, self.signer())?;
             if !sel.include_multimedia {

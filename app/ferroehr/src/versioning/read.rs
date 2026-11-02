@@ -23,6 +23,7 @@ use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
 use crate::service::error::{ServiceError, Violation};
+use crate::storage::version_repo::read::{Body, VersionAt, read_one};
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::lifecycle;
@@ -276,20 +277,20 @@ fn version_read(
     })
 }
 
-/// Read the current version of an object by id (any kind). `None` if it never
-/// existed; a deleted current version is returned with `canonical = Null` and a
-/// `523` lifecycle so callers can distinguish 404 (never existed) from a
+/// The read gate: the one version `at` addresses, through the restriction
+/// and `spec_profile` gates every served version passes ([`version_read`]).
+/// `None` when no such version exists; a deleted version is returned with
+/// `canonical = Null` and a `523` lifecycle, so a caller can tell a 404 from a
 /// deleted read (RM common master06 §Logical Deletion).
 ///
 /// # Errors
-/// The storage read error of `version_repo::read::read_current`, or the
-/// `spec_profile` refusal of [`version_read`].
-pub(crate) async fn read_current(
+/// The storage read error, or the [`version_read`] refusals.
+pub(crate) async fn read(
     pool: &sqlx::PgPool,
     profile: crate::config::profile::SpecProfile,
-    vo_id: VoId,
+    at: VersionAt,
 ) -> Result<Option<VersionRead>, ServiceError> {
-    crate::storage::version_repo::read::read_current(pool, vo_id)
+    read_one(pool, at, Body::Parsed)
         .await?
         .map(|stored| version_read(profile, stored))
         .transpose()
@@ -346,37 +347,17 @@ fn raw_version_read(
     })
 }
 
-/// [`read_current`] with the body kept as the stored jsonb text when nothing
-/// needs it parsed — the JSON-accept passthrough read.
+/// [`read`] with the body kept as the stored jsonb text when nothing needs it
+/// parsed: the JSON-accept passthrough read.
 ///
 /// # Errors
-/// The storage read error of `version_repo::read::read_current_raw`, or the
-/// [`raw_version_read`] rejections.
-pub(crate) async fn read_current_raw(
+/// The storage read error, or the [`raw_version_read`] rejections.
+pub(crate) async fn read_raw(
     pool: &sqlx::PgPool,
     profile: crate::config::profile::SpecProfile,
-    vo_id: VoId,
+    at: VersionAt,
 ) -> Result<Option<RawVersionRead>, ServiceError> {
-    crate::storage::version_repo::read::read_current_raw(pool, vo_id)
-        .await?
-        .map(|stored| raw_version_read(profile, stored))
-        .transpose()
-}
-
-/// [`read_version`] with the body kept as the stored jsonb text when nothing
-/// needs it parsed — the JSON-accept passthrough read.
-///
-/// # Errors
-/// The storage read error of `version_repo::read::read_version_raw`, or the
-/// [`raw_version_read`] rejections.
-pub(crate) async fn read_version_raw(
-    pool: &sqlx::PgPool,
-    profile: crate::config::profile::SpecProfile,
-    vo_id: VoId,
-    tree: TreeId,
-) -> Result<Option<RawVersionRead>, ServiceError> {
-    let (t, b, v) = tree.columns();
-    crate::storage::version_repo::read::read_version_raw(pool, vo_id, t, b, v)
+    read_one(pool, at, Body::Text)
         .await?
         .map(|stored| raw_version_read(profile, stored))
         .transpose()
@@ -402,44 +383,6 @@ pub(crate) async fn read_currents(
         out.insert(vo_id, version_read(profile, s)?);
     }
     Ok(out)
-}
-
-/// Read a specific version of an object by its STORAGE ORDINAL (`sys_version`)
-/// — for internal callers that key rows by ordinal (extract export
-/// iteration), never for wire version ids.
-///
-/// # Errors
-/// The storage read error of `version_repo::read::read_version_by_ordinal`, or
-/// the `spec_profile` refusal of [`version_read`].
-pub(crate) async fn read_version_by_ordinal(
-    pool: &sqlx::PgPool,
-    profile: crate::config::profile::SpecProfile,
-    vo_id: VoId,
-    ordinal: i32,
-) -> Result<Option<VersionRead>, ServiceError> {
-    crate::storage::version_repo::read::read_version_by_ordinal(pool, vo_id, ordinal)
-        .await?
-        .map(|stored| version_read(profile, stored))
-        .transpose()
-}
-
-/// Read a specific version of an object by its `VERSION_TREE_ID`
-/// (`.../version/{version_uid}` — trunk or branch).
-///
-/// # Errors
-/// The storage read error of `version_repo::read::read_version`, or the
-/// `spec_profile` refusal of [`version_read`].
-pub(crate) async fn read_version(
-    pool: &sqlx::PgPool,
-    profile: crate::config::profile::SpecProfile,
-    vo_id: VoId,
-    tree: TreeId,
-) -> Result<Option<VersionRead>, ServiceError> {
-    let (t, b, v) = tree.columns();
-    crate::storage::version_repo::read::read_version(pool, vo_id, t, b, v)
-        .await?
-        .map(|stored| version_read(profile, stored))
-        .transpose()
 }
 
 /// Read a SET of specific versions in ONE statement (the
@@ -471,79 +414,6 @@ pub(crate) async fn read_versions(
     Ok(out)
 }
 
-/// Read the version of an object that was current at a given instant
-/// (time-travel; RM common master08 §Change Management — any previous state is
-/// reconstructable): the trunk row with the greatest `committed_at` at or
-/// before `at`.
-///
-/// # Errors
-/// The storage read error of `version_repo::read::version_at`, or the
-/// `spec_profile` refusal of [`version_read`].
-pub(crate) async fn version_at(
-    pool: &sqlx::PgPool,
-    profile: crate::config::profile::SpecProfile,
-    vo_id: VoId,
-    at: jiff::Timestamp,
-) -> Result<Option<VersionRead>, ServiceError> {
-    crate::storage::version_repo::read::version_at(pool, vo_id, at)
-        .await?
-        .map(|stored| version_read(profile, stored))
-        .transpose()
-}
-
-/// Read the current version of the EHR's one container of `kind` — the
-/// container resolution and the version read in ONE statement (`EHR_STATUS`;
-/// see the storage fn's single-container precondition).
-///
-/// # Errors
-/// The storage read error, or the `spec_profile` refusal of [`version_read`].
-pub(crate) async fn read_current_of_kind(
-    pool: &sqlx::PgPool,
-    profile: crate::config::profile::SpecProfile,
-    ehr_id: EhrId,
-    kind: Kind,
-) -> Result<Option<VersionRead>, ServiceError> {
-    crate::storage::version_repo::read::read_current_of_kind(pool, ehr_id, kind.as_str())
-        .await?
-        .map(|stored| version_read(profile, stored))
-        .transpose()
-}
-
-/// [`read_current_of_kind`]'s time-travel form (the container's TRUNK version
-/// whose validity contains `at`).
-///
-/// # Errors
-/// The storage read error, or the `spec_profile` refusal of [`version_read`].
-pub(crate) async fn version_at_of_kind(
-    pool: &sqlx::PgPool,
-    profile: crate::config::profile::SpecProfile,
-    ehr_id: EhrId,
-    kind: Kind,
-    at: jiff::Timestamp,
-) -> Result<Option<VersionRead>, ServiceError> {
-    crate::storage::version_repo::read::version_at_of_kind(pool, ehr_id, kind.as_str(), at)
-        .await?
-        .map(|stored| version_read(profile, stored))
-        .transpose()
-}
-
-/// Read the current version of the EHR's DIRECTORY folder — the `ehr_folder`
-/// slot resolution and the version read in ONE statement, with the same slot
-/// choice `storage::ehr_repo::directory_vo` makes.
-///
-/// # Errors
-/// The storage read error, or the `spec_profile` refusal of [`version_read`].
-pub(crate) async fn read_current_directory(
-    pool: &sqlx::PgPool,
-    profile: crate::config::profile::SpecProfile,
-    ehr_id: EhrId,
-) -> Result<Option<VersionRead>, ServiceError> {
-    crate::storage::version_repo::read::read_current_directory(pool, ehr_id)
-        .await?
-        .map(|stored| version_read(profile, stored))
-        .transpose()
-}
-
 /// The kind of the current version of an object, or `None` if it does not
 /// exist.
 ///
@@ -564,7 +434,7 @@ pub(crate) async fn object_kind(
 /// lifecycle-derived `deleted` flag — from ONE `version`⋈`audit` read, with
 /// no node reassembly or attestation load. The wire seam uses this both for the
 /// `If-Match` `ETag` and the not-deleted write gate without the full
-/// [`read_current`] node read (RM common master06 §Version Identification /
+/// [`read`] node read (RM common master06 §Version Identification /
 /// §Logical Deletion).
 #[derive(Debug, Clone)]
 pub(crate) struct DemographicCurrent {

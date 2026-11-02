@@ -37,6 +37,7 @@ use crate::service::refusal::Missing;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::storage::version_repo;
 use crate::storage::version_repo::placement::TipRow;
+use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::Committed;
@@ -45,7 +46,7 @@ use crate::versioning::object_version_id::{
     TreeId, VersionIdError, expected_from_if_match, hier_object_id, if_match_token,
     object_version_id, version_id,
 };
-use crate::versioning::read::{VersionRead, read_current, read_version, version_at};
+use crate::versioning::read::VersionRead;
 use crate::versioning::wire::version_envelope;
 
 /// The versioned-object [`Kind`] for a REST [`PartyKind`].
@@ -101,9 +102,15 @@ pub(super) async fn load_ehrless(
     at: Option<jiff::Timestamp>,
 ) -> Result<Option<VersionRead>, ServiceError> {
     let read = match (version, at) {
-        (Some(v), _) => read_version(pool, profile, vo_id, v).await?,
-        (None, Some(at)) => version_at(pool, profile, vo_id, at).await?,
-        (None, None) => read_current(pool, profile, vo_id).await?,
+        (Some(v), _) => {
+            crate::versioning::read::read(pool, profile, VersionAt::Tree(vo_id, v)).await?
+        }
+        (None, Some(at)) => {
+            crate::versioning::read::read(pool, profile, VersionAt::Instant(vo_id, at)).await?
+        }
+        (None, None) => {
+            crate::versioning::read::read(pool, profile, VersionAt::Current(vo_id)).await?
+        }
     };
     Ok(read.filter(|r| r.ehr_id.is_none()))
 }

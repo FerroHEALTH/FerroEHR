@@ -7,7 +7,7 @@
 //! `ETag`/`If-Match` identity reads, revision-history enumeration, and the
 //! existence, kind, ownership and count lookups. None of them pays the node
 //! reassembly or attestation aggregation the full
-//! [`crate::storage::version_repo::read::read_current`] does.
+//! [`crate::storage::version_repo::read::read_one`] does.
 //!
 //! No openEHR spec governs the SQL — our own design. The version identity these
 //! reads serve is RM common master06 §Version Identification and the commit
@@ -544,7 +544,7 @@ pub async fn ehr_access_bodies_with_settings(
 /// full-`OBJECT_VERSION_ID` compare needs (`VERSION_TREE_ID` column ints + the
 /// stored per-version `creating_system_id` + the audit `time_committed`),
 /// **without** node reassembly or the attestation read the
-/// full [`crate::storage::version_repo::read::read_current`] pays. `None` when the
+/// full [`crate::storage::version_repo::read::read_one`] pays. `None` when the
 /// object has no current trunk version. The version identity is RM common
 /// master06 §Version Identification; the commit instant is master06 §Committal
 /// and Audits.
@@ -581,7 +581,7 @@ fn current_meta_row(row: &PgRow) -> Result<CurrentMeta, StorageError> {
 ///
 /// Resolved and read in **one** `version`⋈`audit` statement (no
 /// node/attestation reads) — the metadata-only replacement for [`current_vo`] +
-/// [`crate::storage::version_repo::read::read_current`] on the `ETag`/`If-Match`
+/// [`crate::storage::version_repo::read::read_one`] on the `ETag`/`If-Match`
 /// path.
 ///
 /// # Errors
@@ -640,7 +640,7 @@ pub async fn current_version_meta_scoped(
 /// `ETag`/`If-Match` identity parts (`VERSION_TREE_ID` ints + the stored
 /// per-version `creating_system_id`) and the commit instant, **without** the
 /// node reassembly the full
-/// [`crate::storage::version_repo::read::read_current`] pays.
+/// [`crate::storage::version_repo::read::read_one`] pays.
 /// `ehr_id IS NULL` scopes the read to the demographic repository (a party /
 /// `PARTY_RELATIONSHIP` has no owning EHR — our own design; no openEHR spec
 /// governs the SQL). The caller gates the route on `kind` (a wrong-kind or

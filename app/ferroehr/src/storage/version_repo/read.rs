@@ -31,6 +31,7 @@ use uuid::Uuid;
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
+use crate::versioning::object_version_id::TreeId;
 
 /// A loaded `version`⋈`audit` row plus its reassembled content and
 /// attestations — the storage read shape the versioning layer maps into a
@@ -127,7 +128,7 @@ pub struct StoredVersion {
     /// on a raw read that populated [`Self::canonical_text`] instead.
     pub canonical: Value,
     /// The body as the database's own jsonb text rendering, populated ONLY by
-    /// the raw read variants ([`read_current_raw`] / [`read_version_raw`]) —
+    /// a [`Body::Text`] read ([`read_one`]) —
     /// the JSON-accept passthrough source. `None` on every parsed read and on
     /// a logically deleted version.
     pub canonical_text: Option<String>,
@@ -193,38 +194,6 @@ macro_rules! version_select {
     };
 }
 
-/// [`version_select!`] — with the body column already text, the
-/// raw-read list for the JSON-accept passthrough ([`read_current_raw`] /
-/// [`read_version_raw`]) is the same column list; the macro pair survives so
-/// the two intents keep their own names.
-macro_rules! version_select_raw {
-    ($tail:literal) => {
-        concat!(
-            "SELECT v.vo_id, v.kind, v.ehr_id, v.sys_version, v.trunk_version, v.branch_number, ",
-            "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
-            "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
-            "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, ",
-            "v.origins, v.body, h.restricted_at, h.access_restricted_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
-            "(SELECT COALESCE(n.data->>'archetype_node_id', n.archetype) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
-            "AND n.sys_version = v.sys_version AND n.num = 0) AS root_archetype, ",
-            "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
-            "a.time_committed, ",
-            "att.attestations_at_committal, att.attestations_after_committal ",
-            "FROM version v JOIN vo_head h ON h.vo_id = v.vo_id ",
-            audit_of_version!(),
-            "LEFT JOIN LATERAL (",
-            "SELECT coalesce(jsonb_agg(x.data ORDER BY x.time_committed, x.id) ",
-            "FILTER (WHERE x.at_committal), '[]'::jsonb) AS attestations_at_committal, ",
-            "coalesce(jsonb_agg(x.data ORDER BY x.time_committed, x.id) ",
-            "FILTER (WHERE NOT x.at_committal), '[]'::jsonb) AS attestations_after_committal ",
-            "FROM vo_attestation x ",
-            "WHERE x.vo_id = v.vo_id AND x.sys_version = v.sys_version",
-            ") att ON true ",
-            $tail
-        )
-    };
-}
-
 /// Whether `stored` may be served to the current request: an object under an
 /// EHDS Art. 8 access restriction is absent while the request enforces it, and
 /// one an Art. 3(3) delay withholds is absent to a patient-context request
@@ -243,12 +212,12 @@ fn visible(stored: &StoredVersion) -> bool {
 // what it explains is the statement the read path emits and not a copy that can
 // drift away from it.
 
-/// The statement [`read_current`] runs: the current trunk version of an object
+/// The statement [`read_one`] runs for [`VersionAt::Current`]: the current trunk version of an object
 /// by id, resolved through the head row's `trunk_head_sys_version`.
 pub const READ_CURRENT_SQL: &str =
     version_select!("WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version");
 
-/// The statement [`version_at`] runs: the trunk version of an object in force
+/// The statement [`read_one`] runs for [`VersionAt::Instant`]: the trunk version of an object in force
 /// at an instant.
 pub const VERSION_AT_SQL: &str = version_select!(
     "WHERE v.vo_id = $1 AND v.branch_number = 0 \
@@ -259,12 +228,12 @@ pub const VERSION_AT_SQL: &str = version_select!(
                        AND s.committed_at <= $2::timestamptz)"
 );
 
-/// The statement [`read_version_by_ordinal`] runs: one version of an object by
+/// The statement [`read_one`] runs for [`VersionAt::Ordinal`]: one version of an object by
 /// its storage ordinal, addressed on the partitioned parent.
 pub const READ_VERSION_BY_ORDINAL_SQL: &str =
     version_select!("WHERE v.vo_id = $1 AND v.sys_version = $2");
 
-/// The statement [`read_version`] runs: one version of an object by its
+/// The statement [`read_one`] runs for [`VersionAt::Tree`]: one version of an object by its
 /// `VERSION_TREE_ID` columns, addressed on the partitioned parent.
 pub const READ_VERSION_SQL: &str = version_select!(
     "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
@@ -459,76 +428,6 @@ pub async fn read_profile_gate_candidates(
     Ok(out)
 }
 
-/// Read the current TRUNK version of an object by id (any kind).
-///
-/// `None` if it never existed (`latest_trunk_version`, master06 §Versioned
-/// Objects). A deleted current version returns with `canonical = Null` and
-/// its `523` lifecycle so the caller can distinguish 404 from a deleted read.
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver/reassembly failure.
-pub async fn read_current(
-    pool: &PgPool,
-    vo_id: VoId,
-) -> Result<Option<StoredVersion>, StorageError> {
-    sqlx::query(READ_CURRENT_SQL)
-        .bind(vo_id)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .map(|row| stored_version(vo_id, &row))
-        .transpose()
-        .map(|found| found.filter(visible))
-}
-
-/// [`read_current`] with the body as its stored jsonb text — the
-/// JSON-accept passthrough read ([`StoredVersion::canonical_text`] carries
-/// the text; `canonical` is [`Value::Null`]).
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver failure.
-pub async fn read_current_raw(
-    pool: &PgPool,
-    vo_id: VoId,
-) -> Result<Option<StoredVersion>, StorageError> {
-    const SQL: &str =
-        version_select_raw!("WHERE v.vo_id = $1 AND h.trunk_head_sys_version = v.sys_version");
-    sqlx::query(SQL)
-        .bind(vo_id)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .map(|row| stored_version_raw(vo_id, &row))
-        .transpose()
-        .map(|found| found.filter(visible))
-}
-
-/// [`read_version`] with the body as its stored jsonb text — the
-/// JSON-accept passthrough read.
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver failure.
-pub async fn read_version_raw(
-    pool: &PgPool,
-    vo_id: VoId,
-    trunk_version: i32,
-    branch_number: i32,
-    branch_version: i32,
-) -> Result<Option<StoredVersion>, StorageError> {
-    const SQL: &str = version_select_raw!(
-        "WHERE v.vo_id = $1 AND v.trunk_version = $2 \
-         AND v.branch_number = $3 AND v.branch_version = $4"
-    );
-    sqlx::query(SQL)
-        .bind(vo_id)
-        .bind(trunk_version)
-        .bind(branch_number)
-        .bind(branch_version)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .map(|row| stored_version_raw(vo_id, &row))
-        .transpose()
-        .map(|found| found.filter(visible))
-}
-
 /// Read the current TRUNK versions of a SET of objects in ONE statement.
 ///
 /// The extract export's demographics chapter resolves every referenced party
@@ -558,51 +457,6 @@ pub async fn read_currents(
         })
         .filter(|decoded| decoded.as_ref().map_or(true, visible))
         .collect()
-}
-
-/// Read a specific version by its STORAGE ORDINAL (`sys_version`) — for internal
-/// callers that key rows by ordinal (extract export iteration), never for wire
-/// version ids.
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver/reassembly failure.
-pub async fn read_version_by_ordinal(
-    pool: &PgPool,
-    vo_id: VoId,
-    ordinal: i32,
-) -> Result<Option<StoredVersion>, StorageError> {
-    sqlx::query(READ_VERSION_BY_ORDINAL_SQL)
-        .bind(vo_id)
-        .bind(ordinal)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .map(|row| stored_version(vo_id, &row))
-        .transpose()
-        .map(|found| found.filter(visible))
-}
-
-/// Read a specific version by its `VERSION_TREE_ID` column ints (for
-/// `.../version/{version_uid}` — trunk or branch; master05 §Syntaxes).
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver/reassembly failure.
-pub async fn read_version(
-    pool: &PgPool,
-    vo_id: VoId,
-    trunk_version: i32,
-    branch_number: i32,
-    branch_version: i32,
-) -> Result<Option<StoredVersion>, StorageError> {
-    sqlx::query(READ_VERSION_SQL)
-        .bind(vo_id)
-        .bind(trunk_version)
-        .bind(branch_number)
-        .bind(branch_version)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .map(|row| stored_version(vo_id, &row))
-        .transpose()
-        .map(|found| found.filter(visible))
 }
 
 /// Read a SET of specific versions in ONE statement.
@@ -647,142 +501,125 @@ pub async fn read_versions_by_tree(
         .collect()
 }
 
-/// Read the version of an object current at a given instant (time-travel).
-///
-/// The TRUNK row in force at `at` is the one with the greatest `committed_at`
-/// at or before it (master08 §Change Management — any previous state
-/// reconstructable).
-///
-/// `None` if the object had no trunk version then.
-///
-/// NOTE: `VERSIONED_OBJECT.version_at_time (a_time): VERSION[1]` returns exactly
-/// one version (`UML/classes/org.openehr.rm.common.versioned_object.adoc`
-/// §Functions), while a container may hold several valid tips at an instant, so
-/// the read is restricted to the trunk, the lineage that makes the answer
-/// unique.
-///
-/// A container holding branches but no trunk version is a state RM common
-/// `master06-change_control_package.adoc` §Copying §Subsequent Local
-/// Modifications rules out, branch versions never being copied without their
-/// trunk versions, so every branch in a well-formed container has its trunk
-/// ancestry beside it.
-///
-/// NOTE: the tie is unrepresentable rather than resolved — two trunk rows at one
-/// `committed_at` would both satisfy the strict `>`, and the one path that
-/// writes historical instants (the archive load) refuses that record outright.
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver/reassembly failure.
-pub async fn version_at(
-    pool: &PgPool,
-    vo_id: VoId,
-    at: jiff::Timestamp,
-) -> Result<Option<StoredVersion>, StorageError> {
-    let at = at.to_string();
-    sqlx::query(VERSION_AT_SQL)
-        .bind(vo_id)
-        .bind(&at)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .map(|row| stored_version(vo_id, &row))
-        .transpose()
-        .map(|found| found.filter(visible))
+/// The statement [`read_one`] runs for [`VersionAt::CurrentOfKind`]: the
+/// current trunk version of the EHR's one container of a kind.
+const READ_CURRENT_OF_KIND_SQL: &str = version_select!(
+    "WHERE v.ehr_id = $1 AND v.kind = $2 AND h.trunk_head_sys_version = v.sys_version"
+);
+
+/// The statement [`read_one`] runs for [`VersionAt::InstantOfKind`]: the trunk
+/// version of the EHR's one container of a kind in force at an instant.
+const VERSION_AT_OF_KIND_SQL: &str = version_select!(
+    "WHERE v.ehr_id = $1 AND v.kind = $2 AND v.branch_number = 0 \
+     AND v.committed_at <= $3::timestamptz \
+     AND NOT EXISTS (SELECT 1 FROM version s \
+                     WHERE s.vo_id = v.vo_id AND s.branch_number = 0 \
+                       AND s.committed_at > v.committed_at \
+                       AND s.committed_at <= $3::timestamptz)"
+);
+
+/// The statement [`read_one`] runs for [`VersionAt::Directory`]: the current
+/// version of the EHR's DIRECTORY folder, with the same slot choice
+/// `crate::storage::ehr_repo::directory_vo` makes (prefer a live slot over a
+/// logically deleted one, then the lowest `rank`, so a read after a logical
+/// delete resolves to the deleted version → 204, never 404).
+const READ_CURRENT_DIRECTORY_SQL: &str = version_select!(
+    "JOIN ehr_folder f ON f.vo_id = v.vo_id \
+     WHERE f.ehr_id = $1 AND h.trunk_head_sys_version = v.sys_version \
+     ORDER BY (v.lifecycle_state = '523'), f.rank LIMIT 1"
+);
+
+/// The one stored version a point read addresses.
+#[derive(Debug, Clone, Copy)]
+pub enum VersionAt {
+    /// The current TRUNK version of an object (`latest_trunk_version`, RM
+    /// common master06 §Versioned Objects).
+    Current(VoId),
+    /// One version of an object by its `VERSION_TREE_ID`, trunk or branch
+    /// (`.../version/{version_uid}`; BASE master05 §Syntaxes).
+    Tree(VoId, TreeId),
+    /// One version of an object by its STORAGE ORDINAL (`sys_version`), for
+    /// the internal callers that key rows by ordinal, never a wire version id.
+    Ordinal(VoId, i32),
+    /// The TRUNK version of an object in force at an instant: the one with the
+    /// greatest `committed_at` at or before it (master08 §Change Management,
+    /// any previous state reconstructable).
+    ///
+    /// NOTE: `VERSIONED_OBJECT.version_at_time (a_time): VERSION[1]` returns
+    /// exactly one version, so the read keeps to the trunk, the lineage that
+    /// makes the answer unique (`org.openehr.rm.common.versioned_object.adoc`).
+    Instant(VoId, jiff::Timestamp),
+    /// The current TRUNK version of the EHR's one container of `kind`, the
+    /// container resolution merged into the read. Valid only for the kinds an
+    /// EHR holds one container of (`EHR_STATUS`, RM ehr `ehr.adoc`).
+    CurrentOfKind(EhrId, &'static str),
+    /// [`VersionAt::CurrentOfKind`] in force at an instant.
+    InstantOfKind(EhrId, &'static str, jiff::Timestamp),
+    /// The current version of the EHR's DIRECTORY folder, the `ehr_folder`
+    /// slot resolution merged into the read.
+    Directory(EhrId),
 }
 
-/// Decode a scoped-read row through [`stored_version`], keyed by the row's
-/// own `vo_id` (the scoped reads resolve the container and the version in the
-/// same statement, so no caller-supplied id exists).
-fn stored_version_by_row(row: &PgRow) -> Result<StoredVersion, StorageError> {
+/// How [`read_one`] returns the version body.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Body {
+    /// Parsed into [`StoredVersion::canonical`].
+    Parsed,
+    /// Kept as the stored text in [`StoredVersion::canonical_text`], with
+    /// `canonical` [`Value::Null`]: the JSON-accept passthrough source.
+    Text,
+}
+
+/// Read the one stored version `at` addresses, in one statement, with the body
+/// as `body` asks.
+///
+/// `None` when no such version exists, or when the object is absent to the
+/// current request (an EHDS access restriction or delay). A logically deleted
+/// version returns with a `Null` body and its `523` lifecycle, so the caller
+/// can tell a 404 from a deleted read (RM common master06 §Logical Deletion).
+///
+/// # Errors
+/// Returns [`StorageError`] on a driver failure, or
+/// [`StorageError::BodyDecode`] when a stored body does not parse.
+pub async fn read_one(
+    pool: &PgPool,
+    at: VersionAt,
+    body: Body,
+) -> Result<Option<StoredVersion>, StorageError> {
+    let query = match at {
+        VersionAt::Current(vo_id) => sqlx::query(READ_CURRENT_SQL).bind(vo_id),
+        VersionAt::Tree(vo_id, tree) => {
+            let (trunk, branch, branch_version) = tree.columns();
+            sqlx::query(READ_VERSION_SQL)
+                .bind(vo_id)
+                .bind(trunk)
+                .bind(branch)
+                .bind(branch_version)
+        }
+        VersionAt::Ordinal(vo_id, ordinal) => sqlx::query(READ_VERSION_BY_ORDINAL_SQL)
+            .bind(vo_id)
+            .bind(ordinal),
+        VersionAt::Instant(vo_id, at) => {
+            sqlx::query(VERSION_AT_SQL).bind(vo_id).bind(at.to_string())
+        }
+        VersionAt::CurrentOfKind(ehr_id, kind) => sqlx::query(READ_CURRENT_OF_KIND_SQL)
+            .bind(ehr_id)
+            .bind(kind),
+        VersionAt::InstantOfKind(ehr_id, kind, at) => sqlx::query(VERSION_AT_OF_KIND_SQL)
+            .bind(ehr_id)
+            .bind(kind)
+            .bind(at.to_string()),
+        VersionAt::Directory(ehr_id) => sqlx::query(READ_CURRENT_DIRECTORY_SQL).bind(ehr_id),
+    };
+    let Some(row) = query.fetch_optional(&mut *acquire(pool).await?).await? else {
+        return Ok(None);
+    };
     let vo_id: VoId = row.try_get("vo_id")?;
-    stored_version(vo_id, row)
-}
-
-/// Read the current TRUNK version of the EHR's one container of `kind` in ONE
-/// statement — the container resolution and the version read merged.
-///
-/// Valid only for the kinds an EHR holds exactly one container of
-/// (`EHR_STATUS` — RM ehr `ehr.adoc` declares `ehr_status` singular);
-/// `None` when the EHR has no such container.
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver/decode failure.
-pub async fn read_current_of_kind(
-    pool: &PgPool,
-    ehr_id: EhrId,
-    kind: &str,
-) -> Result<Option<StoredVersion>, StorageError> {
-    const SQL: &str = version_select!(
-        "WHERE v.ehr_id = $1 AND v.kind = $2 AND h.trunk_head_sys_version = v.sys_version"
-    );
-    sqlx::query(SQL)
-        .bind(ehr_id)
-        .bind(kind)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .as_ref()
-        .map(stored_version_by_row)
-        .transpose()
-        .map(|found| found.filter(visible))
-}
-
-/// [`read_current_of_kind`]'s time-travel form: the TRUNK version of the
-/// EHR's one container of `kind` in force at `at`.
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver/decode failure.
-pub async fn version_at_of_kind(
-    pool: &PgPool,
-    ehr_id: EhrId,
-    kind: &str,
-    at: jiff::Timestamp,
-) -> Result<Option<StoredVersion>, StorageError> {
-    const SQL: &str = version_select!(
-        "WHERE v.ehr_id = $1 AND v.kind = $2 AND v.branch_number = 0 \
-         AND v.committed_at <= $3::timestamptz \
-         AND NOT EXISTS (SELECT 1 FROM version s \
-                         WHERE s.vo_id = v.vo_id AND s.branch_number = 0 \
-                           AND s.committed_at > v.committed_at \
-                           AND s.committed_at <= $3::timestamptz)"
-    );
-    let at = at.to_string();
-    sqlx::query(SQL)
-        .bind(ehr_id)
-        .bind(kind)
-        .bind(&at)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .as_ref()
-        .map(stored_version_by_row)
-        .transpose()
-        .map(|found| found.filter(visible))
-}
-
-/// Read the current version of the EHR's DIRECTORY folder in ONE statement.
-///
-/// The `ehr_folder` slot resolution folds into the version read, with the
-/// same slot choice `crate::storage::ehr_repo::directory_vo` makes (prefer a
-/// live slot over a logically deleted one, then the lowest `rank`, so a read
-/// after a logical delete resolves to the deleted version → 204, never 404).
-///
-/// # Errors
-/// Returns [`StorageError`] on a driver/decode failure.
-pub async fn read_current_directory(
-    pool: &PgPool,
-    ehr_id: EhrId,
-) -> Result<Option<StoredVersion>, StorageError> {
-    const SQL: &str = version_select!(
-        "JOIN ehr_folder f ON f.vo_id = v.vo_id \
-         WHERE f.ehr_id = $1 AND h.trunk_head_sys_version = v.sys_version \
-         ORDER BY (v.lifecycle_state = '523'), f.rank LIMIT 1"
-    );
-    sqlx::query(SQL)
-        .bind(ehr_id)
-        .fetch_optional(&mut *acquire(pool).await?)
-        .await?
-        .as_ref()
-        .map(stored_version_by_row)
-        .transpose()
-        .map(|found| found.filter(visible))
+    let stored = match body {
+        Body::Parsed => stored_version(vo_id, &row)?,
+        Body::Text => stored_version_raw(vo_id, &row)?,
+    };
+    Ok(Some(stored).filter(visible))
 }
 
 /// The stored canonical body BYTES of one version, across both storage tiers
