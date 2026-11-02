@@ -29,6 +29,7 @@
               fixture indexing are the intended shape here (the Rust Book ch11)"
 )]
 
+use ferroehr::service::refusal::{Malformed, Missing};
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -36,7 +37,6 @@ use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::query::request::AqlQueryRequest;
-use ferroehr::service::status::ServiceStatus;
 use ferroehr::storage::marks::RetentionPeriod;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender;
@@ -331,13 +331,15 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
         .restrict_processing(&ehr_id.to_string(), None, "because-we-felt-like-it", None)
         .await
         .expect_err("a ground outside the closed list is refused");
-    assert_eq!(bad_ground.status, ServiceStatus::PreconditionViolation);
+    assert!(
+        matches!(&bad_ground, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition)
+    );
 
     let unknown_ehr = svc
         .restrict_processing(&uuid::Uuid::now_v7().to_string(), None, "national", None)
         .await
         .expect_err("an unknown EHR is refused");
-    assert_eq!(unknown_ehr.status, ServiceStatus::EhrIdDoesNotExist);
+    assert!(matches!(&unknown_ehr, ServiceError::NotFound(r) if r.kind == Missing::Ehr));
 
     let foreign = svc
         .restrict_processing(
@@ -352,7 +354,7 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
         )
         .await
         .expect_err("an object in another EHR is refused");
-    assert_eq!(foreign.status, ServiceStatus::VersionedObjectDoesNotExist);
+    assert!(matches!(&foreign, ServiceError::NotFound(r) if r.kind == Missing::VersionedObject));
 
     assert!(
         svc.restriction_register(&ehr_id.to_string())
@@ -426,7 +428,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         .set_research_objection(&ehr_id.to_string(), false, Some("still important"))
         .await
         .expect_err("a withdrawal with a ground is refused");
-    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
+    assert!(matches!(&bad, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
     svc.set_research_objection(&ehr_id.to_string(), false, None)
         .await
         .expect("withdraw");
@@ -471,7 +473,7 @@ async fn the_retention_register_lists_what_is_due_and_deletes_nothing() {
         })
         .await
         .expect_err("an unknown content category is refused");
-    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
+    assert!(matches!(&bad, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
 
     // Anchored in the past, the EHR falls due.
     svc.put_retention_anchor(
@@ -610,7 +612,7 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         .put_retention_policy(de_composition(Some("laboratory"), "1 year"))
         .await
         .expect_err("an unknown category is refused");
-    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
+    assert!(matches!(&bad, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
     let policies = svc.retention_policies().await.expect("register");
     assert_eq!(
         policies.len(),
@@ -726,7 +728,7 @@ async fn an_origin_keyed_period_lists_the_objects_of_its_origin() {
         .put_retention_policy(period(Some("pacs.example"), "1 year"))
         .await
         .expect_err("an unregistered origin is refused");
-    assert_eq!(bad.status, ServiceStatus::PreconditionViolation);
+    assert!(matches!(&bad, ServiceError::BadRequest(r) if r.kind == Malformed::Precondition));
     svc.put_retention_policy(period(Some("lab.example"), "10 years"))
         .await
         .expect("declare the origin period");

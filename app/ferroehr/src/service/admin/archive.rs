@@ -29,7 +29,7 @@ use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::{ServiceStatus, StatusError};
+use crate::service::refusal::Missing;
 use crate::storage::version_repo::tier;
 
 impl FerroEhrService {
@@ -42,12 +42,12 @@ impl FerroEhrService {
     /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown
     ///   (`ehr_id_does_not_exist`); nothing is archived.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn archive_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), StatusError> {
+    pub async fn archive_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), ServiceError> {
         let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
             .into_iter()
             .map(EhrId)
             .collect();
-        Ok(self.archive_ehr_vos(&ids).await?)
+        self.archive_ehr_vos(&ids).await
     }
 
     /// Move each party's versioned object to the cold
@@ -65,9 +65,9 @@ impl FerroEhrService {
     ///   demographic PARTY root (`party_id_does_not_exist`); nothing is
     ///   archived.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn archive_parties(&self, party_ids: Vec<String>) -> Result<(), StatusError> {
+    pub async fn archive_parties(&self, party_ids: Vec<String>) -> Result<(), ServiceError> {
         let ids = super::parse_uuid_list(&party_ids, "party")?;
-        Ok(self.archive_party_vos(&ids).await?)
+        self.archive_party_vos(&ids).await
     }
 
     /// Bring every archived versioned object of each EHR back from the cold
@@ -82,12 +82,12 @@ impl FerroEhrService {
     /// - `precondition_violation` (`400`) — any id is not a well-formed UUID.
     /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn restore_archived_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), StatusError> {
+    pub async fn restore_archived_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), ServiceError> {
         let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
             .into_iter()
             .map(EhrId)
             .collect();
-        Ok(self.restore_ehr_vos(&ids).await?)
+        self.restore_ehr_vos(&ids).await
     }
 
     /// Bring each archived party's versioned object back from the cold tier to
@@ -105,9 +105,9 @@ impl FerroEhrService {
     pub async fn restore_archived_parties(
         &self,
         party_ids: Vec<String>,
-    ) -> Result<(), StatusError> {
+    ) -> Result<(), ServiceError> {
         let ids = super::parse_uuid_list(&party_ids, "party")?;
-        Ok(self.restore_party_vos(&ids).await?)
+        self.restore_party_vos(&ids).await
     }
 
     /// Mark and move every versioned object of each EHR, all-or-nothing: every
@@ -142,8 +142,8 @@ impl FerroEhrService {
         for &party_id in party_ids {
             let kind = party_kind_any_tier(&mut tx, party_id).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
-                return Err(ServiceError::new(
-                    ServiceStatus::PartyIdDoesNotExist,
+                return Err(ServiceError::not_found(
+                    Missing::Party,
                     format!("party {party_id}"),
                 ));
             }
@@ -179,8 +179,8 @@ impl FerroEhrService {
         for &party_id in party_ids {
             let kind = party_kind_any_tier(&mut tx, party_id).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
-                return Err(ServiceError::new(
-                    ServiceStatus::PartyIdDoesNotExist,
+                return Err(ServiceError::not_found(
+                    Missing::Party,
                     format!("party {party_id}"),
                 ));
             }
@@ -222,8 +222,8 @@ async fn require_ehrs_exist(
             .fetch_one(&mut *tx)
             .await?;
         if !exists {
-            return Err(ServiceError::new(
-                ServiceStatus::EhrIdDoesNotExist,
+            return Err(ServiceError::not_found(
+                Missing::Ehr,
                 format!("EHR {ehr_id}"),
             ));
         }

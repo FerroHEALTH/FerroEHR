@@ -88,14 +88,20 @@ impl TerminologyExpander for StoreTimeTerminology {
 // ── the single-version delete ────────────────────────────────────────────────
 
 impl FerroEhrService {
-    /// Delete exactly one stored-query version — the `(name, version)` row —
-    /// case-insensitive on the qualified name (matching the PUT store path at
-    /// [`Self::store_query_version`]), exact on `version`. Absent → 404.
+    /// Admin extension `DELETE /admin/query/{qualified_name}/{version}`:
+    /// physically delete exactly one stored query (a single version row),
+    /// case-insensitive on the qualified name (matching the PUT store path),
+    /// exact on the version.
     ///
-    /// NOTE: no openEHR spec governs this admin surface (the ITS-REST Admin API
-    /// defines only EHR deletes) — our own design/extension. It is addressed
-    /// exactly as `DELETE /admin/query/{qualified_name}/{version}`.
-    pub(crate) async fn delete_stored_query_version(
+    /// NOTE: no openEHR spec governs this operation, the ITS-REST Admin API
+    /// defining only EHR deletes — our own design/extension; it targets a
+    /// single `(name, version)` row.
+    ///
+    /// # Errors
+    /// - `versioned_object_does_not_exist` (`404`) — no stored query at that
+    ///   name + version.
+    /// - `exception` — a database fault.
+    pub async fn admin_query_delete(
         &self,
         qualified_name: &str,
         version: &str,

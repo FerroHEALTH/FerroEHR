@@ -21,7 +21,6 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::types::TemplateListFilter;
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
-use ferroehr::service::status::{ServiceStatus, StatusError};
 
 use ferroehr::service::list::Page;
 
@@ -369,7 +368,7 @@ async fn opt_upload_get_list_filter_delete() {
     );
 
     // delete (present, then removed).
-    svc.admin_template_delete(OPT_TEMPLATE_ID.to_owned())
+    svc.admin_template_delete(OPT_TEMPLATE_ID)
         .await
         .expect("delete opt");
     assert!(svc.template_adl14_get(OPT_TEMPLATE_ID).await.is_err());
@@ -415,13 +414,13 @@ async fn opt_delete_refuses_while_referenced() {
     );
 
     // Referenced → refused with the friendly 409 naming the count.
-    let res = svc.admin_template_delete(OPT_TEMPLATE_ID.to_owned()).await;
+    let res = svc.admin_template_delete(OPT_TEMPLATE_ID).await;
     match res {
-        Err(StatusError {
-            status: ServiceStatus::Conflict,
+        Err(ServiceError::Conflict(Refusal {
+            kind: Clash::State,
             ref message,
             ..
-        }) => {
+        })) => {
             assert!(
                 message.contains(&format!("referenced by {referenced} committed version")),
                 "the 409 names the reference count ({referenced}), got {message:?}"
@@ -440,7 +439,7 @@ async fn opt_delete_refuses_while_referenced() {
         .execute(&pool)
         .await
         .expect("dereference template");
-    svc.admin_template_delete(OPT_TEMPLATE_ID.to_owned())
+    svc.admin_template_delete(OPT_TEMPLATE_ID)
         .await
         .expect("delete opt");
     assert!(svc.template_adl14_get(OPT_TEMPLATE_ID).await.is_err());
@@ -750,16 +749,16 @@ async fn opt_errors() {
         "got {get_missing:?}"
     );
     let del_missing = svc
-        .admin_template_delete(absent)
+        .admin_template_delete(&absent)
         .await
         .expect_err("delete absent opt");
     assert!(
         matches!(
             del_missing,
-            StatusError {
-                status: ServiceStatus::TemplateDoesNotExist,
+            ServiceError::NotFound(Refusal {
+                kind: Missing::Template,
                 ..
-            }
+            })
         ),
         "got {del_missing:?}"
     );
@@ -974,7 +973,7 @@ async fn query_store_get_list_delete() {
         svc.query_store(name.to_owned(), None, formalism.to_owned(), good.to_owned())
             .await
             .unwrap_or_else(|e| panic!("{formalism} stores: {e:?}"));
-        svc.admin_query_delete(name.to_owned(), "1.0.0".to_owned())
+        svc.admin_query_delete(name, "1.0.0")
             .await
             .expect("delete the formalism probe");
     }
@@ -1057,7 +1056,7 @@ async fn query_store_get_list_delete() {
         .await
         .expect("qualified wire GET resolves the bare-name store");
     assert_eq!(fetched["version"], "1.0.0");
-    svc.admin_query_delete("wire_bare".to_owned(), "1.0.0".to_owned())
+    svc.admin_query_delete("wire_bare", "1.0.0")
         .await
         .expect("admin delete addresses the same canonical row by the bare name");
     assert!(
@@ -1077,7 +1076,7 @@ async fn query_store_get_list_delete() {
     );
 
     // delete → the query is gone.
-    svc.admin_query_delete("ehr::over_50".to_owned(), version.clone())
+    svc.admin_query_delete("ehr::over_50", &version)
         .await
         .expect("delete");
     assert!(
@@ -1088,16 +1087,16 @@ async fn query_store_get_list_delete() {
     assert_eq!(svc.query_list("").await.unwrap().len(), 1);
     // Deleting an absent query → 404.
     let del_missing = svc
-        .admin_query_delete("ehr::over_50".to_owned(), version)
+        .admin_query_delete("ehr::over_50", &version)
         .await
         .expect_err("delete absent");
     assert!(
         matches!(
             del_missing,
-            StatusError {
-                status: ServiceStatus::ArtefactDoesNotExist,
+            ServiceError::NotFound(Refusal {
+                kind: Missing::Artefact,
                 ..
-            }
+            })
         ),
         "got {del_missing:?}"
     );

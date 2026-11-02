@@ -39,8 +39,9 @@ use crate::fixtures::uid;
 use crate::fixtures::uv;
 use crate::typed_body::typed;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::error::ServiceError;
 use ferroehr::service::platform_service::PlatformService;
-use ferroehr::service::status::{ServiceStatus, StatusError};
+use ferroehr::service::refusal::{Clash, Malformed, Missing, Refusal};
 
 /// Row counts scoped to one EHR across every table a physical delete must clear.
 /// `audit` has no `ehr_id`, so it is counted by the audit ids the EHR's
@@ -147,10 +148,10 @@ async fn admin_delete_unknown_ehr_is_not_found() {
     assert!(
         matches!(
             res,
-            Err(StatusError {
-                status: ServiceStatus::EhrIdDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::Ehr,
                 ..
-            })
+            }))
         ),
         "unknown EHR must be ehr_id_does_not_exist, got {res:?}"
     );
@@ -160,10 +161,10 @@ async fn admin_delete_unknown_ehr_is_not_found() {
     assert!(
         matches!(
             bad,
-            Err(StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            Err(ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            })
+            }))
         ),
         "malformed id must be BadRequest, got {bad:?}"
     );
@@ -204,10 +205,10 @@ async fn admin_delete_all_deletes_present_and_skips_missing() {
     assert!(
         matches!(
             res,
-            Err(StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            Err(ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            })
+            }))
         ),
         "a malformed id must be BadRequest, got {res:?}"
     );
@@ -275,8 +276,8 @@ async fn template_rows(pool: &PgPool, template_id: &str) -> i64 {
 /// Whether the call failed with the expected granular does-not-exist status
 /// (a wire `404`; the `ServiceError` round-trip preserves the status the
 /// construction site named).
-fn is_not_found(res: &Result<(), StatusError>, status: ServiceStatus) -> bool {
-    matches!(res, Err(StatusError { status: got, .. }) if *got == status)
+fn is_not_found(res: &Result<(), ServiceError>, missing: Missing) -> bool {
+    matches!(res, Err(ServiceError::NotFound(r)) if r.kind == missing)
 }
 
 #[tokio::test]
@@ -285,11 +286,9 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
     let pool = &pool;
 
     // Unknown id → NotFound (→ 404).
-    let res = svc
-        .admin_template_delete("no-such-template.v9".to_owned())
-        .await;
+    let res = svc.admin_template_delete("no-such-template.v9").await;
     assert!(
-        is_not_found(&res, ServiceStatus::TemplateDoesNotExist),
+        is_not_found(&res, Missing::Template),
         "unknown template → template_does_not_exist, got {res:?}"
     );
 
@@ -298,7 +297,7 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
         .await
         .expect("upload opt");
     assert_eq!(template_rows(pool, OPT_TEMPLATE_ID).await, 1);
-    svc.admin_template_delete(OPT_TEMPLATE_ID.to_ascii_uppercase())
+    svc.admin_template_delete(&OPT_TEMPLATE_ID.to_ascii_uppercase())
         .await
         .expect("delete template (case-insensitive)");
     assert_eq!(
@@ -334,14 +333,14 @@ async fn admin_template_delete_happy_unknown_and_referenced() {
         "a version row must now reference the template"
     );
 
-    let res = svc.admin_template_delete(OPT_TEMPLATE_ID.to_owned()).await;
+    let res = svc.admin_template_delete(OPT_TEMPLATE_ID).await;
     assert!(
         matches!(
             res,
-            Err(StatusError {
-                status: ServiceStatus::Conflict,
+            Err(ServiceError::Conflict(Refusal {
+                kind: Clash::State,
                 ..
-            })
+            }))
         ),
         "referenced template must be refused (409), got {res:?}"
     );
@@ -368,24 +367,20 @@ async fn admin_query_delete_exact_version_and_unknown() {
     .expect("store query 1.0.0");
 
     // Unknown (name, version) → NotFound.
-    let res = svc
-        .admin_query_delete(name.to_owned(), "9.9.9".to_owned())
-        .await;
+    let res = svc.admin_query_delete(name, "9.9.9").await;
     assert!(
-        is_not_found(&res, ServiceStatus::ArtefactDoesNotExist),
+        is_not_found(&res, Missing::Artefact),
         "unknown version → artefact_does_not_exist, got {res:?}"
     );
 
     // Exact-version delete succeeds (case-insensitive on the name); the row is
     // gone, so a second delete is NotFound.
-    svc.admin_query_delete("ORG.EXAMPLE::MY_QUERY".to_owned(), "1.0.0".to_owned())
+    svc.admin_query_delete("ORG.EXAMPLE::MY_QUERY", "1.0.0")
         .await
         .expect("delete version 1.0.0 (case-insensitive name)");
-    let again = svc
-        .admin_query_delete(name.to_owned(), "1.0.0".to_owned())
-        .await;
+    let again = svc.admin_query_delete(name, "1.0.0").await;
     assert!(
-        is_not_found(&again, ServiceStatus::ArtefactDoesNotExist),
+        is_not_found(&again, Missing::Artefact),
         "already-deleted version → artefact_does_not_exist, got {again:?}"
     );
 }
@@ -543,10 +538,10 @@ async fn admin_statistics_per_service_and_time_range() {
     assert!(
         matches!(
             bad,
-            Err(StatusError {
-                status: ServiceStatus::PreconditionViolation,
+            Err(ServiceError::BadRequest(Refusal {
+                kind: Malformed::Precondition,
                 ..
-            })
+            }))
         ),
         "invalid ISO bound must be BadRequest, got {bad:?}"
     );
@@ -747,10 +742,10 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     assert!(
         matches!(
             unknown,
-            Err(StatusError {
-                status: ServiceStatus::PartyIdDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::Party,
                 ..
-            })
+            }))
         ),
         "unknown party must be party_id_does_not_exist, got {unknown:?}"
     );
@@ -759,10 +754,10 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
     let bad = svc.physical_party_delete("not-a-uuid".to_owned()).await;
     assert!(matches!(
         bad,
-        Err(StatusError {
-            status: ServiceStatus::PreconditionViolation,
+        Err(ServiceError::BadRequest(Refusal {
+            kind: Malformed::Precondition,
             ..
-        })
+        }))
     ));
 }
 
@@ -851,10 +846,10 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     assert!(
         matches!(
             res,
-            Err(StatusError {
-                status: ServiceStatus::EhrIdDoesNotExist,
+            Err(ServiceError::NotFound(Refusal {
+                kind: Missing::Ehr,
                 ..
-            })
+            }))
         ),
         "an unknown EHR aborts the batch, got {res:?}"
     );
@@ -869,10 +864,10 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     let bad_party = svc.archive_parties(vec![Uuid::now_v7().to_string()]).await;
     assert!(matches!(
         bad_party,
-        Err(StatusError {
-            status: ServiceStatus::PartyIdDoesNotExist,
+        Err(ServiceError::NotFound(Refusal {
+            kind: Missing::Party,
             ..
-        })
+        }))
     ));
 }
 

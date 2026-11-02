@@ -45,7 +45,6 @@ use crate::db::acquire::acquire;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
-use crate::service::status::StatusError;
 use crate::storage::codec::{decompose, reassemble};
 use crate::storage::node_repo::read_version_rows_all;
 use crate::storage::row::ReadRow;
@@ -286,38 +285,6 @@ fn rows_are_current(stored: &[ReadRow], body: &Value) -> bool {
 }
 
 impl FerroEhrService {
-    /// Re-derives every stored version's content from its `node` rows and
-    /// compares it to the materialized `version.body`, reporting every
-    /// disagreement.
-    ///
-    /// A version whose two copies agree is then decomposed once more from its
-    /// body, so rows carrying the right content in a shape an older
-    /// decomposition wrote are reported as
-    /// [`StorageParityDefect::StaleDecomposition`] rather than passed as
-    /// healthy.
-    ///
-    /// The sweep reads BOTH storage tiers: it names the partitioned parents
-    /// `version` and `node` and pins no tier, so archived content is checked
-    /// like everything else. It
-    /// takes no lock and holds no transaction: a version committed while the
-    /// sweep runs is simply checked or not, and a version read mid-commit
-    /// cannot be seen half-written because a commit writes both copies in one
-    /// transaction.
-    ///
-    /// NOTE: no openEHR spec governs storage mechanics — our own
-    /// design/extension (the module docs carry the full derivation).
-    ///
-    /// # Errors
-    /// - `exception` — a database fault while enumerating or reading versions.
-    ///   A version whose node rows are unreadable is a REPORTED mismatch, not
-    ///   an error: one damaged record must not abort the sweep that found it.
-    pub async fn verify_storage_parity(
-        &self,
-        scope: StorageParityScope,
-    ) -> Result<StorageParityReport, StatusError> {
-        Ok(self.collect_storage_parity(scope).await?)
-    }
-
     /// Starts a sweep the caller advances itself, one batch of events at a
     /// time.
     ///
@@ -344,8 +311,32 @@ impl FerroEhrService {
         }
     }
 
-    /// Drain a sweep into the aggregated report.
-    async fn collect_storage_parity(
+    /// Re-derives every stored version's content from its `node` rows and
+    /// compares it to the materialized `version.body`, reporting every
+    /// disagreement.
+    ///
+    /// A version whose two copies agree is then decomposed once more from its
+    /// body, so rows carrying the right content in a shape an older
+    /// decomposition wrote are reported as
+    /// [`StorageParityDefect::StaleDecomposition`] rather than passed as
+    /// healthy.
+    ///
+    /// The sweep reads BOTH storage tiers: it names the partitioned parents
+    /// `version` and `node` and pins no tier, so archived content is checked
+    /// like everything else. It
+    /// takes no lock and holds no transaction: a version committed while the
+    /// sweep runs is simply checked or not, and a version read mid-commit
+    /// cannot be seen half-written because a commit writes both copies in one
+    /// transaction.
+    ///
+    /// NOTE: no openEHR spec governs storage mechanics — our own
+    /// design/extension (the module docs carry the full derivation).
+    ///
+    /// # Errors
+    /// - `exception` — a database fault while enumerating or reading versions.
+    ///   A version whose node rows are unreadable is a REPORTED mismatch, not
+    ///   an error: one damaged record must not abort the sweep that found it.
+    pub async fn verify_storage_parity(
         &self,
         scope: StorageParityScope,
     ) -> Result<StorageParityReport, ServiceError> {

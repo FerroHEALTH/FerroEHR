@@ -74,7 +74,7 @@ async fn run(
             let template_id = path_segment(&parts, "template_id")?;
             // A template still referenced by a committed version is a 409:
             // never orphan clinical data.
-            state.backend().admin_template_delete(template_id).await?;
+            state.backend().admin_template_delete(&template_id).await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }
         // The party with its relationships; a malformed id is 400, an unknown
@@ -89,7 +89,7 @@ async fn run(
             let version = path_segment(&parts, "version")?;
             state
                 .backend()
-                .admin_query_delete(qualified_name, version)
+                .admin_query_delete(&qualified_name, &version)
                 .await?;
             Ok(negotiate::empty(StatusCode::NO_CONTENT))
         }

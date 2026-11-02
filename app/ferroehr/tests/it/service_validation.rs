@@ -549,7 +549,7 @@ async fn deleting_a_template_invalidates_its_web_template_cache() {
 
     // Delete the OPT through the admin delete, which invalidates the cache
     // entry.
-    svc.admin_template_delete(template_id.clone())
+    svc.admin_template_delete(&template_id)
         .await
         .expect("delete opt");
 
