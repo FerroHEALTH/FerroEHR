@@ -479,10 +479,12 @@ async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
         ferroehr_viewer::paging::PAGING_ROUTE,
     ]
     .map(str::to_owned);
-    for (path, back) in pages
-        .map(|page| (page.clone(), page))
-        .chain(handlers.map(|handler| (handler, "/".to_owned())))
-    {
+    for path in pages.chain(handlers) {
+        let back = if ferroehr_viewer::routes::Page::of(&path).is_some() {
+            path.as_str()
+        } else {
+            "/"
+        };
         let answer = viewer
             .send(
                 http::Method::POST,
@@ -492,7 +494,7 @@ async fn a_post_without_a_session_gets_the_sign_in_answer_on_every_page() {
             )
             .await;
         assert_eq!(answer.status, http::StatusCode::FOUND, "{path}");
-        let next = urlencoding::encode(&back).into_owned();
+        let next = urlencoding::encode(back).into_owned();
         assert_eq!(
             answer.location(),
             format!("/login?expired=1&next={next}"),
