@@ -702,17 +702,21 @@ async fn commit_import_scoped(
     // open lineage before that row's lower bound. This ONE audit row is the
     // local act of committal for the CONTRIBUTION and every IMPORTED_VERSION it
     // carries (master06 §Committal and Audits).
-    let (contribution_commit_audit_id, import_time) =
-        crate::storage::version_repo::commit::insert_audit(tx, &import_audit.row()).await?;
-    let base = import_time;
-    let local_commit_audit = import_audit.canonical(&import_time);
-    let contribution_id = crate::storage::version_repo::commit::insert_contribution(
+    let crate::storage::version_repo::commit::FoldedRows {
+        contribution_id,
+        commit_audit_id: contribution_commit_audit_id,
+        time_committed: import_time,
+    } = crate::storage::version_repo::commit::commit_folded(
         tx,
-        ctx.stamp.mint(),
-        ehr_id,
-        contribution_commit_audit_id,
+        &import_audit.row(),
+        crate::storage::version_repo::commit::Folded::Contribution {
+            id: ctx.stamp.mint(),
+            ehr_id,
+        },
     )
     .await?;
+    let base = import_time;
+    let local_commit_audit = import_audit.canonical(&import_time);
     let act = ImportAct {
         ctx,
         privacy,

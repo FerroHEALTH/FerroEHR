@@ -106,7 +106,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Recipients | *yours*: the local repository, plus any syslog or FHIR-feed Audit Record Repository configured |
 | Third-country transfers | *yours* |
 | Retention | `[audit.store] retention_days`, `0` meaning forever, reaped hourly otherwise. Where an active identifier rule names a jurisdiction with a registered floor, a shorter value is refused at boot |
-| Security measures | Records are hash-chained and verifiable with `audit.verify_audit_chain()`; the runtime role may insert and stamp delivery and nothing else; the `audit` schema sits outside all three pseudonymisation domains; the syslog feed can run over RFC 5425 TLS with a client certificate |
+| Security measures | Records are hash-chained and verifiable with `audit.verify_audit_chain()`; the runtime role may insert and stamp delivery and nothing else; the `audit` schema sits outside both pseudonymisation domains; the syslog feed can run over RFC 5425 TLS with a client certificate |
 
 ## 6. Change-event publication (off by default)
 
