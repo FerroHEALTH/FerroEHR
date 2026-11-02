@@ -311,7 +311,7 @@ enum PartiesModel {
 /// index.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_parties() -> Result<PartiesModel, ViewerError> {
     crate::session::require_session()?;
     Ok(read_parties().await)
@@ -514,7 +514,7 @@ enum Creating<T> {
 /// Loads New party: answers its post (Discard, Start over, Create).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_new_party() -> Result<Creating<NewParty>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_new_party().await)
@@ -1070,7 +1070,7 @@ enum PartyModel {
 /// hold, or a kind it has not, answers `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_party(
     // The kind of party the route names, as its segment.
     kind: String,
@@ -1620,7 +1620,7 @@ enum Editing<T> {
 /// version.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_edit_party(
     // The kind of party the route names, as its segment.
     kind: String,
@@ -1879,7 +1879,7 @@ enum RelationshipModel {
 /// one the CDR does not hold answers `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_relationship(
     // The id the route names.
     uid: String,
@@ -2143,7 +2143,7 @@ struct NewRelationship {
 /// source party.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_new_relationship() -> Result<Creating<NewRelationship>, ViewerError> {
     crate::session::require_session()?;
     Ok(read_new_relationship().await)
@@ -2355,7 +2355,7 @@ struct RelationshipEditor {
 /// current version.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_edit_relationship(
     // The id the route names.
     uid: String,
@@ -2559,7 +2559,7 @@ pub async fn edit_relationship_page() -> Drawn {
 /// answers `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load_party_contribution(
     // The id the route names.
     uid: String,

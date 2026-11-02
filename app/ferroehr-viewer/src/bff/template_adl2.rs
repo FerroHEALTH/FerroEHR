@@ -45,9 +45,7 @@ use crate::locale::tr_with;
 /// renders, not a failure.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn fetch_adl2_source(
     // The ADL2 template to read (a full HRID, or a partial that resolves to
     // the latest matching version).
@@ -56,20 +54,16 @@ pub async fn fetch_adl2_source(
     // `template_id` itself resolves to.
     version: Option<String>,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&crate::adl2::template_path(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&crate::adl2::template_path(
         &template_id,
         version.as_deref(),
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "text/plain")
-        .await?;
+    let response = cdr.get(&url).accept("text/plain").send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
     }
-    Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
+    Ok(Some(response.ok()?.body))
 }
 
 /// What the CDR answers when it compiles a stored ADL2 template into its
@@ -128,29 +122,22 @@ pub fn missing_constituents(body: &str) -> Vec<String> {
 /// [`Compiled::Absent`].
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn fetch_adl2_compiled(
     // The ADL2 template to read.
     template_id: String,
     // The release version to pin the read to, or `None`.
     version: Option<String>,
 ) -> Result<Compiled, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&crate::adl2::template_path(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&crate::adl2::template_path(
         &template_id,
         version.as_deref(),
     ));
-    let response = state
-        .cdr
-        .get_with(
-            &session.credential,
-            &url,
-            "application/json",
-            &[("Prefer", "return=representation")],
-        )
+    let response = cdr
+        .get(&url)
+        .headers(&[("Prefer", "return=representation")])
+        .send()
         .await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(Compiled::Absent);
@@ -161,9 +148,7 @@ pub async fn fetch_adl2_compiled(
             return Ok(Compiled::Missing(missing));
         }
     }
-    Ok(Compiled::Json(
-        crate::cdr::CdrClient::expect_success(response)?.body,
-    ))
+    Ok(Compiled::Json(response.ok()?.body))
 }
 
 /// Build the Web-Template path catalog of one `OperationalTemplateV2`
@@ -239,10 +224,10 @@ pub async fn fetch_adl2_catalog(
 /// `404` → `Ok(None)`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR (a template that cannot be
-/// compiled into a Web Template answers `422`).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
+/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] from the CDR (a
+/// template that cannot be compiled into a Web Template answers `422`).
 pub async fn fetch_adl2_example(
     // The ADL2 template to generate an example composition for.
     template_id: String,
@@ -253,19 +238,13 @@ pub async fn fetch_adl2_example(
     // Which form the example is shaped for (`type`).
     kind: ExampleType,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state
-        .cdr
-        .rest_v1(&crate::adl2::example_path(&template_id, detail, kind));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, format.media_type())
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&crate::adl2::example_path(&template_id, detail, kind));
+    let response = cdr.get(&url).accept(format.media_type()).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
     }
-    Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
+    Ok(Some(response.ok()?.body))
 }
 
 #[cfg(test)]

@@ -73,12 +73,12 @@ pub struct AuditPage {
 /// `date=ge…`/`date=le…` bounds; values are percent-encoded.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::CdrUnauthorized`] when the CDR no longer accepts this
 /// session, [`ViewerError::Forbidden`] when the caller lacks the CDR's admin
 /// role (the audit trail is an operator surface); [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// on an unparseable Bundle.
+/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`] on
+/// an unparseable Bundle.
 pub async fn search_audit(
     // Inclusive lower bound on the record instant; empty means unbounded.
     from: String,
@@ -95,8 +95,7 @@ pub async fn search_audit(
     // First record of the page to return.
     offset: u32,
 ) -> Result<AuditPage, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
 
     let mut params: Vec<String> = Vec::new();
     let mut push = |key: &str, value: &str| {
@@ -120,11 +119,8 @@ pub async fn search_audit(
     params.push(format!("_count={PAGE_SIZE}"));
     params.push(format!("_offset={offset}"));
 
-    let url = format!("{}?{}", state.cdr.fhir_r4("AuditEvent"), params.join("&"));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/fhir+json")
-        .await?;
+    let url = format!("{}?{}", cdr.fhir_r4("AuditEvent"), params.join("&"));
+    let response = cdr.get(&url).accept("application/fhir+json").send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         // The local Audit Record Repository is disabled ([audit.store]) —
         // a rendered state, never an error.
@@ -135,7 +131,7 @@ pub async fn search_audit(
             rows: Vec::new(),
         });
     }
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = response.ok()?.body;
     parse_bundle(&body, offset)
 }
 

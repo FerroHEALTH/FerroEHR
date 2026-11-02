@@ -63,12 +63,11 @@ pub struct ContributionPage {
 /// `{rows, total}` envelope are the CDR's own.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success) — a
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
+/// normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok) — a
 /// `404`/`405` from an older CDR that lacks the list route surfaces there as
-/// [`ViewerError::Cdr`] (the tab renders it inline);
-/// [`ViewerError::Internal`] when the page is not valid JSON.
+/// [`ViewerError::Cdr`] (the tab renders it inline); [`ViewerError::Internal`]
+/// when the page is not valid JSON.
 pub async fn list_contributions(
     // The EHR whose contributions to list.
     ehr_id: String,
@@ -77,17 +76,12 @@ pub async fn list_contributions(
     // How many rows the page holds.
     fetch: u32,
 ) -> Result<ContributionPage, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.extensions_v1(&format!(
         "ehr/{}/contribution?offset={offset}&fetch={fetch}",
         urlencoding::encode(&ehr_id),
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     parse_contributions(&response.body)
 }
 
@@ -151,25 +145,18 @@ fn contribution_field(value: &Value, key: &str) -> String {
 /// `AUDIT_DETAILS.time_committed`).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] when the page is not valid JSON.
 pub async fn contribution_activity(
     // The EHR whose contribution instants feed the timeline.
     ehr_id: String,
 ) -> Result<Vec<ActivityPoint>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/contribution?offset=0&fetch={ACTIVITY_FETCH}",
         urlencoding::encode(&ehr_id),
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     let page = parse_contributions(&response.body)?;
     let times: Vec<String> = page
         .rows
@@ -186,28 +173,23 @@ pub async fn contribution_activity(
 /// Returns the raw canonical JSON.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (a `404` for an unknown uid
-/// included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a
+/// `404` for an unknown uid included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn fetch_contribution(
     // The EHR holding the contribution.
     ehr_id: String,
     // The CONTRIBUTION uid to read.
     contribution_uid: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/contribution/{}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(&contribution_uid)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    Ok(crate::cdr::CdrClient::expect_success(response)?.body)
+    let response = cdr.get(&url).send().await?;
+    Ok(response.ok()?.body)
 }
 
 #[cfg(test)]

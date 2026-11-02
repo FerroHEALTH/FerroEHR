@@ -142,11 +142,10 @@ impl EhrTargetKind {
 /// not exist is a `404`.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on a kind that has no tag routes; CDR transport
-/// errors pass through; a non-2xx CDR answer (the `404` for an unknown
-/// `ehr_id`/`uid_based_id` included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on a kind that has no tag routes; a non-2xx CDR
+/// answer (the `404` for an unknown `ehr_id`/`uid_based_id` included)
+/// normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok);
 /// [`ViewerError::Internal`] when the list is not valid JSON.
 pub async fn fetch_ehr_tags(
     // The EHR that owns the tagged object.
@@ -156,14 +155,9 @@ pub async fn fetch_ehr_tags(
     // The addressed `uid_based_id` — a container id or one `OBJECT_VERSION_ID`.
     uid: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = tags_url(&state, &ehr_id, &kind, &uid)?;
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let cdr = crate::bff::cdr()?;
+    let url = tags_url(&cdr, &ehr_id, &kind, &uid)?;
+    let response = cdr.get(&url).ok().await?;
     crate::bff::item_tags::parse_item_tags(&response.body)
 }
 
@@ -180,12 +174,12 @@ pub async fn fetch_ehr_tags(
 /// 1).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on a kind that has no tag routes or a blank key;
-/// CDR transport errors pass through; any non-2xx CDR answer (the `422` for a
-/// tag that breaks an `ITEM_TAG` invariant included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the current list is not valid JSON.
+/// any non-2xx CDR answer (the `422` for a tag that breaks an `ITEM_TAG`
+/// invariant included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the current list is not valid JSON.
 pub async fn set_ehr_tag(
     // The EHR that owns the tagged object.
     ehr_id: String,
@@ -200,63 +194,25 @@ pub async fn set_ehr_tag(
     // The tag's `target_path`; blank tags the whole object.
     target_path: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = tags_url(&state, &ehr_id, &kind, &uid)?;
-    set_tag_at(
-        &state,
-        &session.credential,
-        &url,
-        &key,
-        &value,
-        &target_path,
-    )
-    .await
-}
-
-/// Insert-or-replace one tag in the collection at `url`.
-///
-/// The plain function behind [`set_ehr_tag`].
-///
-/// # Errors
-/// [`ViewerError::Invalid`] on a blank key; CDR transport errors pass through;
-/// any non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the current list is not valid JSON.
-async fn set_tag_at(
-    state: &crate::state::AppState,
-    credential: &crate::session::Credential,
-    url: &str,
-    key: &str,
-    value: &str,
-    target_path: &str,
-) -> Result<(), ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let url = tags_url(&cdr, &ehr_id, &kind, &uid)?;
     let key = key.trim();
     if key.is_empty() {
-        return Err(ViewerError::Invalid(
-            { tr(Msg::TagKeyRequiredItemTagInvariant) }.clone(),
-        ));
+        return Err(ViewerError::Invalid(tr(
+            Msg::TagKeyRequiredItemTagInvariant,
+        )));
     }
-    let response = state.cdr.get(credential, url, "application/json").await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
-    let existing = crate::bff::item_tags::parse_item_tags(&response.body)?;
+    let existing = crate::bff::item_tags::parse_item_tags(&cdr.get(&url).ok().await?.body)?;
     let body =
         crate::bff::item_tags::merged_tag_body(&existing, key, value.trim(), target_path.trim());
     // NOTE: clients are "strongly encouraged to always include the `Prefer`
     // request header explicitly" — ITS-REST
     // `specifications/docs/overview/Requests_and_responses.md` §Deprecated headers.
-    let response = state
-        .cdr
-        .put(
-            credential,
-            url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=minimal")],
-            body,
-        )
+    cdr.put(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=minimal")])
+        .ok()
         .await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
     Ok(())
 }
 
@@ -271,10 +227,8 @@ async fn set_tag_at(
 /// the OTHER collection of the same versioned object.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] on a kind that has no tag routes or a blank key;
-/// CDR transport errors pass through; any non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] on a kind that has no tag routes or a blank key.
 pub async fn delete_ehr_tag(
     // The EHR that owns the tagged object.
     ehr_id: String,
@@ -285,33 +239,15 @@ pub async fn delete_ehr_tag(
     // The tag key to remove.
     key: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = tags_url(&state, &ehr_id, &kind, &uid)?;
-    delete_tag_at(&state, &session.credential, &url, &key).await
-}
-
-/// Delete every tag under `key` from the collection at `url`.
-///
-/// The plain function behind [`delete_ehr_tag`].
-///
-/// # Errors
-/// [`ViewerError::Invalid`] on a blank key; CDR transport errors pass through;
-/// any non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-async fn delete_tag_at(
-    state: &crate::state::AppState,
-    credential: &crate::session::Credential,
-    url: &str,
-    key: &str,
-) -> Result<(), ViewerError> {
+    let cdr = crate::bff::cdr()?;
+    let url = tags_url(&cdr, &ehr_id, &kind, &uid)?;
     let key = key.trim();
     if key.is_empty() {
         return Err(ViewerError::Invalid(tr(Msg::TagKeyRequired)));
     }
-    let url = format!("{url}/{}", urlencoding::encode(key));
-    let response = state.cdr.delete(credential, &url, &[]).await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
+    cdr.delete(&format!("{url}/{}", urlencoding::encode(key)))
+        .ok()
+        .await?;
     Ok(())
 }
 
@@ -325,11 +261,10 @@ async fn delete_tag_at(
 /// the released "omitted parameter constrains nothing" behaviour.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (the `404` for an unknown
-/// `ehr_id`) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when the list is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer
+/// (the `404` for an unknown `ehr_id`) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when the list is not valid JSON.
 pub async fn list_ehr_tags(
     // The EHR whose tags to list.
     ehr_id: String,
@@ -340,17 +275,10 @@ pub async fn list_ehr_tags(
     // Exact `ITEM_TAG.target_path` filter; empty constrains nothing.
     target_path: String,
 ) -> Result<Vec<ItemTagRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let query = crate::bff::item_tags::tag_filter_query(&key, &value, &target_path);
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}/tags{query}", urlencoding::encode(&ehr_id)));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let url = cdr.rest_v1(&format!("ehr/{}/tags{query}", urlencoding::encode(&ehr_id)));
+    let response = cdr.get(&url).ok().await?;
     crate::bff::item_tags::parse_item_tags(&response.body)
 }
 
@@ -369,49 +297,40 @@ pub async fn list_ehr_tags(
 /// as "not a composition".
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when `uid` is empty; CDR transport errors pass
-/// through; a refusal or any non-`404` failure normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when `uid` is empty.
 pub async fn resolve_ehr_target(
     // The EHR that owns the tagged object.
     ehr_id: String,
     // The tag's target, in either `uid_based_id` form.
     uid: String,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let container = container_uid_of(&uid);
     if container.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::TagTargetIdRequired)));
     }
-    if ehr_status_container(&state, &session.credential, &ehr_id).await? == container {
+    if ehr_status_container(&cdr, &ehr_id).await? == container {
         return Ok(Some(EhrTargetKind::EhrStatus.segment().to_owned()));
     }
     let ehr = urlencoding::encode(&ehr_id).into_owned();
-    let directory = state.cdr.rest_v1(&format!("ehr/{ehr}/directory"));
-    let response = state
-        .cdr
-        .get(&session.credential, &directory, "application/json")
-        .await?;
+    let directory = cdr.rest_v1(&format!("ehr/{ehr}/directory"));
+    let response = cdr.get(&directory).send().await?;
     if response.is(http::StatusCode::OK)
         && container_uid_of(&crate::uid::uid_value_of(&response.body)) == container
     {
         return Ok(Some(EhrTargetKind::Directory.segment().to_owned()));
     }
-    let composition = state.cdr.rest_v1(&format!(
+    let composition = cdr.rest_v1(&format!(
         "ehr/{ehr}/composition/{}",
         urlencoding::encode(&container)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &composition, "application/json")
-        .await?;
+    let response = cdr.get(&composition).send().await?;
     if response.is(http::StatusCode::OK) || response.is(http::StatusCode::NO_CONTENT) {
         return Ok(Some(EhrTargetKind::Composition.segment().to_owned()));
     }
     if !response.is(http::StatusCode::NOT_FOUND) {
-        drop(crate::cdr::CdrClient::expect_success(response)?);
+        response.ok()?;
     }
     Ok(None)
 }
@@ -423,7 +342,7 @@ pub async fn resolve_ehr_target(
 /// [`ViewerError::Invalid`] when the segment is outside the closed kind set or
 /// names a kind the release publishes no tag route for (the directory).
 fn tags_url(
-    state: &crate::state::AppState,
+    cdr: &crate::cdr::CdrClient,
     ehr_id: &str,
     kind: &str,
     uid: &str,
@@ -435,7 +354,7 @@ fn tags_url(
                 "{kind:?} is not an EHR object the openEHR tag operations address"
             ))
         })?;
-    Ok(state.cdr.rest_v1(&format!(
+    Ok(cdr.rest_v1(&format!(
         "ehr/{}/{route}/{}/tags",
         urlencoding::encode(ehr_id),
         urlencoding::encode(uid)
@@ -457,17 +376,10 @@ fn tags_url(
 ///
 /// # Errors
 /// CDR transport errors pass through; a non-2xx answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
-async fn ehr_status_container(
-    state: &crate::state::AppState,
-    credential: &crate::session::Credential,
-    ehr_id: &str,
-) -> Result<String, ViewerError> {
-    let url = state
-        .cdr
-        .rest_v1(&format!("ehr/{}", urlencoding::encode(ehr_id)));
-    let response = state.cdr.get(credential, &url, "application/json").await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
+async fn ehr_status_container(cdr: &crate::bff::Cdr, ehr_id: &str) -> Result<String, ViewerError> {
+    let url = cdr.rest_v1(&format!("ehr/{}", urlencoding::encode(ehr_id)));
+    let response = cdr.get(&url).ok().await?;
     let doc: serde_json::Value = serde_json::from_str(&response.body).map_err(|e| {
         ViewerError::Internal(tr_with(Msg::EhrJson2, &[("e", (e).to_string().into())]))
     })?;

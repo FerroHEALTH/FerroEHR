@@ -214,7 +214,7 @@ pub struct Templates {
 /// both families' lists.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn load_templates(
     // The family the page shows.
     family: TemplateFamily,
@@ -855,7 +855,7 @@ pub struct Template {
 /// its releases and what its tab `tab` draws, the example as `ask` names it.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 pub async fn load_template(
     // The template's id.
     template_id: String,

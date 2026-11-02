@@ -227,7 +227,7 @@ async fn tagged(ehr_id: &str, groups: Vec<TagGroup>) -> Result<Vec<Tagged>, View
 /// Loads the tab: the tags the request's filters find.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)).
 async fn load(
     // The EHR the route names.
     ehr_id: String,

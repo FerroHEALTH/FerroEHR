@@ -170,29 +170,24 @@ pub fn falls_back_to_public_readiness(status: http::StatusCode) -> bool {
 /// exactly what the panel renders.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::CdrUnauthorized`] when the CDR no longer accepts this
-/// session; [`ViewerError::CdrUnreachable`] on transport failure;
-/// [`ViewerError::Cdr`] on any other status than `200`/`503`;
+/// session; [`ViewerError::Cdr`] on any other status than `200`/`503`;
 /// [`ViewerError::Internal`] when the body is not JSON.
 pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.management_url("health");
-    let detailed = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.management_url("health");
+    let detailed = cdr.get(&url).send().await?;
     let (response, is_detailed) = if falls_back_to_public_readiness(detailed.status) {
-        let url = state.cdr.origin_url("health/readiness");
-        (state.cdr.get_public(&url, "application/json").await?, false)
+        let url = cdr.origin_url("health/readiness");
+        (cdr.public(http::Method::GET, &url).send().await?, false)
     } else {
         (detailed, true)
     };
     let body = if response.is(http::StatusCode::SERVICE_UNAVAILABLE) {
         response.body
     } else {
-        crate::cdr::CdrClient::expect_success(response)?.body
+        response.ok()?.body
     };
     readiness_view(&body, is_detailed).map_err(|e| {
         ViewerError::Internal(tr_served_with(
@@ -214,16 +209,12 @@ pub async fn fetch_readiness() -> Result<ReadinessView, ViewerError> {
 /// the panel's presence rests on one cheap, stable answer.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::CdrUnreachable`] when the management listener is unreachable.
 pub async fn probe_management_api() -> Result<ManagementAvailability, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.management_url("info");
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.management_url("info");
+    let response = cdr.get(&url).send().await?;
     Ok(availability_of_status(response.status))
 }
 
@@ -303,11 +294,11 @@ fn leaf_text(value: &serde_json::Value) -> String {
 /// not an error.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::CdrUnauthorized`] when the CDR no longer accepts this
-/// session, [`ViewerError::Forbidden`] when the endpoint's access level
-/// refuses it; [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] from the
-/// CDR; [`ViewerError::Internal`] when the body is not JSON.
+/// session, [`ViewerError::Forbidden`] when the endpoint's access level refuses
+/// it; [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] from the CDR;
+/// [`ViewerError::Internal`] when the body is not JSON.
 pub async fn fetch_build_info() -> Result<Option<BuildInfoView>, ViewerError> {
     let Some(body) = management_get("info").await? else {
         return Ok(None);
@@ -585,37 +576,28 @@ pub async fn fetch_loggers() -> Result<Option<LoggerView>, ViewerError> {
 /// carries its own diagnostic verbatim.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for an empty filter;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// when the body is not JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for an empty filter; [`ViewerError::Internal`] when
+/// the body is not JSON.
 pub async fn set_log_filter(
     // The replacement log filter, one or more `target=level` directives.
     filter: String,
 ) -> Result<LoggerView, ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     let filter = filter.trim().to_owned();
     if filter.is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             Msg::LogFilterNeedsLeastOneDirective,
         )));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.management_url("loggers");
+    let url = cdr.management_url("loggers");
     let body = serde_json::json!({ "filter": filter }).to_string();
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = cdr
+        .post(&url)
+        .body("application/json", body)
+        .ok()
+        .await?
+        .body;
     let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             Msg::LoggersJson2,
@@ -630,11 +612,9 @@ pub async fn set_log_filter(
 /// # Errors
 /// As [`set_log_filter`], minus the empty-input case.
 pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.management_url("loggers");
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.management_url("loggers");
+    let body = cdr.delete(&url).ok().await?.body;
     let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             Msg::LoggersJson3,
@@ -651,17 +631,13 @@ pub async fn reset_log_filter() -> Result<LoggerView, ViewerError> {
 /// Guards the viewer session first: the pages reading through the reads
 /// above are publicly reachable endpoints, and this is the one place their CDR call is made.
 async fn management_get(path: &str) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.management_url(path);
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.management_url(path);
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
     }
-    Ok(Some(crate::cdr::CdrClient::expect_success(response)?.body))
+    Ok(Some(response.ok()?.body))
 }
 
 #[cfg(test)]

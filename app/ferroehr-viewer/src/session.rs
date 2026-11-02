@@ -343,7 +343,7 @@ pub fn commit(session: &CookieSession) -> Result<(), ViewerError> {
 /// [`ViewerError::Unauthenticated`].
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a live session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] outside a request (a bug).
 pub fn require_session() -> Result<ViewerSession, ViewerError> {
     let session = http_session()?

@@ -72,16 +72,13 @@ impl ConformanceManifest {
 /// surfaces.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnreachable`] on transport failure;
-/// [`ViewerError::Cdr`] when the CDR answers non-2xx;
-/// [`ViewerError::Internal`] when the body is not the `Options` shape.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); [`ViewerError::Cdr`]
+/// when the CDR answers non-2xx; [`ViewerError::Internal`] when the body is not
+/// the `Options` shape.
 pub async fn fetch_conformance_manifest() -> Result<ConformanceManifest, ViewerError> {
-    crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1_root();
-    let response = state.cdr.options_public(&url, "application/json").await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1_root();
+    let body = cdr.public(http::Method::OPTIONS, &url).ok().await?.body;
     serde_json::from_str::<ConformanceManifest>(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             ServerMsg::ConformanceManifestJson,
@@ -100,8 +97,12 @@ pub async fn fetch_conformance_document(
     state: &crate::state::AppState,
 ) -> Result<String, ViewerError> {
     let url = state.cdr.rest_v1_root();
-    let response = state.cdr.options_public(&url, "application/json").await?;
-    Ok(crate::cdr::CdrClient::expect_success(response)?.body)
+    Ok(state
+        .cdr
+        .public(http::Method::OPTIONS, &url)
+        .ok()
+        .await?
+        .body)
 }
 
 #[cfg(test)]

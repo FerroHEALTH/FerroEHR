@@ -80,19 +80,12 @@ fn root_is_composition(archetype_id: &str) -> bool {
 /// show every stored version, not just the latest.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// when the CDR body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Internal`] when the CDR body is not valid JSON.
 pub async fn list_templates() -> Result<Vec<TemplateRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1("definition/template/adl1.4?version=*");
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1("definition/template/adl1.4?version=*");
+    let body = cdr.get(&url).ok().await?.body;
     let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             Msg::TemplateListJson,
@@ -132,33 +125,28 @@ fn template_row(item: &serde_json::Value) -> TemplateRow {
 /// ([`TemplateUpload::Invalid`]), and the `201` carries the stored OPT, so
 /// the `template_id` is read from its `ETag`, else from its `Location`. The
 /// other refusals (a `400` without violations, `409` duplicate) surface through
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for empty content;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for empty content; [`ViewerError::CdrUnauthorized`]
+/// / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR (the diagnostic verbatim).
 pub async fn upload_template(
     // The operational-template XML to upload, as read in the browser.
     opt_xml: String,
 ) -> Result<TemplateUpload, ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if opt_xml.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::SelectedFileWasEmpty)));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1("definition/template/adl1.4");
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "application/xml",
-            "application/xml",
-            &[("Prefer", "return=representation")],
-            opt_xml,
-        )
+    let url = cdr.rest_v1("definition/template/adl1.4");
+    let response = cdr
+        .post(&url)
+        .accept("application/xml")
+        .body("application/xml", opt_xml)
+        .headers(&[("Prefer", "return=representation")])
+        .send()
         .await?;
     upload_answer(response)
 }
@@ -175,19 +163,12 @@ pub async fn upload_template(
 /// ADL2 artefact from a management client.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
-/// [`ViewerError::CdrUnreachable`] from the CDR; [`ViewerError::Internal`]
-/// when the CDR body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Internal`] when the CDR body is not valid JSON.
 pub async fn list_adl2_templates() -> Result<Vec<TemplateRow>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1("definition/template/adl2?version=*");
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1("definition/template/adl2?version=*");
+    let body = cdr.get(&url).ok().await?.body;
     let value = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| {
         ViewerError::Internal(tr_served_with(
             Msg::Adl2TemplateListJson,
@@ -277,35 +258,30 @@ struct ProblemError {
 /// segment of its `Location` (§Prefer minimal, identifier or full
 /// representation response). The other refusals (a `400` without violations
 /// for an unparseable source, `409` duplicate HRID) surface through
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for empty content;
-/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for empty content; [`ViewerError::CdrUnauthorized`]
+/// / [`ViewerError::Forbidden`] / [`ViewerError::Cdr`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR (the diagnostic verbatim).
 pub async fn upload_adl2_template(
     // The ADL2 operational-template source, pasted or read from a file.
     adl2_source: String,
 ) -> Result<TemplateUpload, ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if adl2_source.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(
             Msg::ThereNoAdl2SourceUpload,
         )));
     }
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1("definition/template/adl2");
-    let response = state
-        .cdr
-        .post(
-            &session.credential,
-            &url,
-            "text/plain",
-            "text/plain",
-            &[("Prefer", "return=representation")],
-            adl2_source,
-        )
+    let url = cdr.rest_v1("definition/template/adl2");
+    let response = cdr
+        .post(&url)
+        .accept("text/plain")
+        .body("text/plain", adl2_source)
+        .headers(&[("Prefer", "return=representation")])
+        .send()
         .await?;
     upload_answer(response)
 }
@@ -321,7 +297,7 @@ fn upload_answer(response: crate::cdr::CdrResponse) -> Result<TemplateUpload, Vi
             return Ok(TemplateUpload::Invalid(found));
         }
     }
-    let stored = crate::cdr::CdrClient::expect_success(response)?;
+    let stored = response.ok()?;
     Ok(TemplateUpload::Stored(stored_id(&stored)))
 }
 
@@ -349,24 +325,20 @@ fn stored_id(response: &crate::cdr::CdrResponse) -> Option<String> {
 /// verbatim.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] for an empty id;
-/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] for an empty id; [`ViewerError::Cdr`] /
+/// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] /
 /// [`ViewerError::CdrUnreachable`] from the CDR.
 pub async fn delete_adl2_artefact(
     // The AOM2 artefact HRID to remove.
     artefact_id: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
+    let cdr = crate::bff::cdr()?;
     if artefact_id.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::NoAdl2ArtefactIdDelete)));
     }
-    let state = crate::scope::state()?;
-    let url = state
-        .cdr
-        .extensions_v1(&crate::adl2::artefact_path(&artefact_id));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    crate::cdr::CdrClient::expect_success(response)?;
+    let url = cdr.extensions_v1(&crate::adl2::artefact_path(&artefact_id));
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 
@@ -385,22 +357,19 @@ const COMPOSITIONS_OF_TEMPLATE_AQL: &str = "SELECT COUNT(*) FROM EHR e CONTAINS 
 /// [`FANOUT_CONCURRENCY`](crate::cdr::FANOUT_CONCURRENCY).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; each count
-/// carries its own CDR error.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); each count carries its
+/// own CDR error.
 pub async fn count_compositions(
     // The templates to count the compositions of.
     template_ids: Vec<String>,
 ) -> Result<Vec<Result<Count, ViewerError>>, ViewerError> {
     use futures::stream::StreamExt;
 
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let (state, session) = (&state, &session);
+    let cdr = &crate::bff::cdr()?;
     Ok(
         futures::stream::iter(template_ids.into_iter().map(|template_id| async move {
             crate::bff::dashboard::run_count_aql(
-                state,
-                session,
+                cdr,
                 COMPOSITIONS_OF_TEMPLATE_AQL,
                 serde_json::json!({ "template_id": template_id }),
             )

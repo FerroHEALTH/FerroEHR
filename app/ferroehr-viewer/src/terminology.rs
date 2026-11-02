@@ -213,17 +213,13 @@ fn string_list(value: Option<&serde_json::Value>) -> Vec<String> {
 /// Guards the viewer session first: the pages reading through the reads
 /// below are publicly reachable endpoints, and this is the one place their CDR call is made.
 async fn terminology_get(path: &str) -> Result<Option<serde_json::Value>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.extensions_v1(path);
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.extensions_v1(path);
+    let response = cdr.get(&url).send().await?;
     if response.is(http::StatusCode::NOT_FOUND) {
         return Ok(None);
     }
-    let body = crate::cdr::CdrClient::expect_success(response)?.body;
+    let body = response.ok()?.body;
     serde_json::from_str::<serde_json::Value>(&body)
         .map(Some)
         .map_err(|e| {
@@ -265,11 +261,10 @@ fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
 /// the routes were unmounted), not an error.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::CdrUnauthorized`] / [`ViewerError::Forbidden`] when the CDR
-/// refuses this session;
-/// [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`] from the CDR;
-/// [`ViewerError::Internal`] when the body is not JSON.
+/// refuses this session; [`ViewerError::Cdr`] / [`ViewerError::CdrUnreachable`]
+/// from the CDR; [`ViewerError::Internal`] when the body is not JSON.
 pub async fn list_terminologies() -> Result<Option<Vec<String>>, ViewerError> {
     let Some(body) = terminology_get("terminology").await? else {
         return Ok(None);

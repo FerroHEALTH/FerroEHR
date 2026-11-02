@@ -99,16 +99,10 @@ async fn run(
     let body = serde_json::json!({ "q": form.q, "query_parameters": parameters }).to_string();
     let response = state
         .cdr
-        .post(
-            &admin.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[],
-            body,
-        )
+        .call(http::Method::POST, &url, &admin.credential)
+        .body("application/json", body)
+        .ok()
         .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
 
     match format {
         "json" => Ok(download(

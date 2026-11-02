@@ -40,9 +40,7 @@ use crate::locale::{tr_served, tr_served_with};
 /// The revision history of a versioned composition, newest-first.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Internal`] when the history is not valid JSON.
 pub async fn fetch_versions(
     // The EHR holding the versioned composition.
@@ -50,18 +48,13 @@ pub async fn fetch_versions(
     // The `VERSIONED_COMPOSITION` uid whose revision history to read.
     uid: String,
 ) -> Result<Vec<VersionEntry>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/versioned_composition/{}/revision_history",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(&uid)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     // NOTE: REVISION_HISTORY.items arrives most-recent-LAST on the wire (RM
     // common, generic package — the `items` attribute documentation); the
     // selector presents newest-first, so reverse here.
@@ -84,10 +77,9 @@ pub async fn fetch_versions(
 /// absence rather than a failure.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (a `406` for a declined
-/// representation included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a
+/// `406` for a declined representation included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn fetch_composition(
     // The EHR holding the composition.
     ehr_id: String,
@@ -97,21 +89,17 @@ pub async fn fetch_composition(
     // Which representation to negotiate for the document body.
     format: ReprFormat,
 ) -> Result<Option<String>, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
-    let url = state.cdr.rest_v1(&format!(
+    let cdr = crate::bff::cdr()?;
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/composition/{}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(&version_uid)
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, format.media_type())
-        .await?;
+    let response = cdr.get(&url).accept(format.media_type()).send().await?;
     if response.is(http::StatusCode::NO_CONTENT) {
         return Ok(None);
     }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = response.ok()?;
     Ok(Some(crate::bff::pretty_body(&response.body, format)))
 }
 
@@ -128,11 +116,11 @@ pub async fn fetch_composition(
 /// `OBJECT_VERSION_ID`); that string is returned so the caller can select it.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when `at_time` is empty; CDR transport errors pass
-/// through; a non-2xx CDR answer (a `404` for no version at that time included,
-/// which the UI renders as an inline note) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when `at_time` is empty; a non-2xx CDR answer (a
+/// `404` for no version at that time included, which the UI renders as an
+/// inline note) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn fetch_version_at_time(
     // The EHR holding the versioned composition.
     ehr_id: String,
@@ -141,23 +129,18 @@ pub async fn fetch_version_at_time(
     // The instant to resolve, as a `datetime-local` input value.
     at_time: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let at_time = crate::format::datetime_local_to_rfc3339(&at_time);
     if at_time.is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::PickDateTimeTravel)));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/versioned_composition/{}/version?version_at_time={}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(&versioned_object_uid),
         urlencoding::encode(&at_time),
     ));
-    let response = state
-        .cdr
-        .get(&session.credential, &url, "application/json")
-        .await?;
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = cdr.get(&url).ok().await?;
     // The VERSION envelope's `uid.value` is the `OBJECT_VERSION_ID`.
     Ok(crate::uid::uid_value_of(&response.body))
 }
@@ -177,12 +160,11 @@ pub async fn fetch_version_at_time(
 /// the editor would name the wrong version.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
 /// [`ViewerError::Invalid`] on an empty body, a missing current version, or a
 /// `412` mid-air collision (prefixed with a reload hint, the CDR diagnostic
-/// appended); CDR transport errors pass through; any other non-2xx CDR answer
-/// (its validation diagnostics included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// appended); any other non-2xx CDR answer (its validation diagnostics
+/// included) normalizes via [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn update_composition(
     // The EHR holding the composition.
     ehr_id: String,
@@ -193,8 +175,7 @@ pub async fn update_composition(
     // The replacement composition document, as canonical JSON text.
     body: String,
 ) -> Result<String, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     if body.trim().is_empty() {
         return Err(ViewerError::Invalid(tr_served(Msg::CompositionBodyEmpty)));
     }
@@ -206,27 +187,23 @@ pub async fn update_composition(
     }
     // If-Match value is the version_uid in double quotes (composition_update).
     let if_match = format!("\"{current_version_uid}\"");
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/composition/{}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(&versioned_object_uid)
     ));
-    let response = state
-        .cdr
-        .put(
-            &session.credential,
-            &url,
-            "application/json",
-            "application/json",
-            &[("Prefer", "return=representation"), ("If-Match", &if_match)],
-            body,
-        )
+    let response = cdr
+        .put(&url)
+        .body("application/json", body)
+        .headers(&[("Prefer", "return=representation"), ("If-Match", &if_match)])
+        .send()
         .await?;
     // 412 Precondition Failed = a mid-air collision (the latest version moved
     // since this page loaded); give it a friendly prefix, the CDR diagnostic
     // appended verbatim.
     if response.is(http::StatusCode::PRECONDITION_FAILED) {
-        let detail = crate::cdr::CdrClient::expect_success(response)
+        let detail = response
+            .ok()
             .err()
             .map(|e| e.to_string())
             .unwrap_or_default();
@@ -235,7 +212,7 @@ pub async fn update_composition(
             &[("detail", detail.clone().into())],
         )));
     }
-    let response = crate::cdr::CdrClient::expect_success(response)?;
+    let response = response.ok()?;
     Ok(crate::uid::uid_value_of(&response.body))
 }
 
@@ -255,32 +232,30 @@ pub async fn update_composition(
 /// committed and the history stays readable.
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session;
-/// [`ViewerError::Invalid`] when no full `OBJECT_VERSION_ID` is known; CDR
-/// transport errors pass through; a non-2xx CDR answer (the `409` stale-uid
-/// branch and the `400` for an already-deleted version included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success).
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// [`ViewerError::Invalid`] when no full `OBJECT_VERSION_ID` is known; a
+/// non-2xx CDR answer (the `409` stale-uid branch and the `400` for an
+/// already-deleted version included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok).
 pub async fn delete_composition(
     // The EHR holding the composition.
     ehr_id: String,
     // The latest version's full `OBJECT_VERSION_ID`, which the delete requires.
     version_uid: String,
 ) -> Result<(), ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let version_uid = version_uid.trim();
     if version_uid.is_empty() || !version_uid.contains("::") {
         return Err(ViewerError::Invalid(tr_served(
             Msg::LatestVersionSFullObjectVersion,
         )));
     }
-    let url = state.cdr.rest_v1(&format!(
+    let url = cdr.rest_v1(&format!(
         "ehr/{}/composition/{}",
         urlencoding::encode(&ehr_id),
         urlencoding::encode(version_uid)
     ));
-    let response = state.cdr.delete(&session.credential, &url, &[]).await?;
-    drop(crate::cdr::CdrClient::expect_success(response)?);
+    cdr.delete(&url).ok().await?;
     Ok(())
 }
 
@@ -335,11 +310,10 @@ pub struct VersionedCompositionDetails {
 /// §description).
 ///
 /// # Errors
-/// [`ViewerError::Unauthenticated`] without a viewer session; CDR transport
-/// errors pass through; a non-2xx CDR answer (a `404` for an unknown
-/// object/version included) normalizes via
-/// [`CdrClient::expect_success`](crate::cdr::CdrClient::expect_success);
-/// [`ViewerError::Internal`] when either body is not valid JSON.
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)); a non-2xx CDR answer (a
+/// `404` for an unknown object/version included) normalizes via
+/// [`CdrResponse::ok`](crate::cdr::CdrResponse::ok); [`ViewerError::Internal`]
+/// when either body is not valid JSON.
 pub async fn fetch_versioned_composition(
     // The EHR holding the versioned composition.
     ehr_id: String,
@@ -348,35 +322,22 @@ pub async fn fetch_versioned_composition(
     // The specific version within that versioned object.
     version_uid: String,
 ) -> Result<VersionedCompositionDetails, ViewerError> {
-    let session = crate::session::require_session()?;
-    let state = crate::scope::state()?;
+    let cdr = crate::bff::cdr()?;
     let ehr = urlencoding::encode(&ehr_id);
     let object = urlencoding::encode(&versioned_object_uid);
-    let object_url = state
-        .cdr
-        .rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}"));
-    let object_response = state
-        .cdr
-        .get(&session.credential, &object_url, "application/json")
-        .await?;
-    let object_body = crate::cdr::CdrClient::expect_success(object_response)?.body;
+    let object_url = cdr.rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}"));
+    let object_body = cdr.get(&object_url).ok().await?.body;
 
     let version_uid = version_uid.trim();
     let version_url = if version_uid.is_empty() {
-        state
-            .cdr
-            .rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}/version"))
+        cdr.rest_v1(&format!("ehr/{ehr}/versioned_composition/{object}/version"))
     } else {
-        state.cdr.rest_v1(&format!(
+        cdr.rest_v1(&format!(
             "ehr/{ehr}/versioned_composition/{object}/version/{}",
             urlencoding::encode(version_uid)
         ))
     };
-    let version_response = state
-        .cdr
-        .get(&session.credential, &version_url, "application/json")
-        .await?;
-    let version_body = crate::cdr::CdrClient::expect_success(version_response)?.body;
+    let version_body = cdr.get(&version_url).ok().await?.body;
     parse_versioned_details(&object_body, &version_body)
 }
 
