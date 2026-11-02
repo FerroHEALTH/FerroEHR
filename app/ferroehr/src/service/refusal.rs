@@ -211,6 +211,20 @@ impl super::error::ServiceError {
         })
     }
 
+    /// A `503` whose curated `message` reaches the body
+    /// ([`Overloaded`](super::error::ServiceError::Overloaded)), its cause kept
+    /// as the source.
+    #[must_use]
+    pub fn overloaded(
+        message: &'static str,
+        source: impl std::error::Error + Send + Sync + 'static,
+    ) -> Self {
+        Self::Overloaded(Curated {
+            message,
+            source: Some(Arc::new(source)),
+        })
+    }
+
     /// The client-visible text of this error: a refusal's message, the
     /// rendered violation of a `422`, the joined validation violations, and the
     /// `Display` text of every other variant.
@@ -226,7 +240,7 @@ impl super::error::ServiceError {
             | E::Unrecorded(r)
             | E::Restricted(r)
             | E::Forbidden(r) => r.message.clone(),
-            E::Fault(f) => f.message.to_owned(),
+            E::Fault(f) | E::Overloaded(f) => f.message.to_owned(),
             E::Unprocessable { violation, .. } => violation.to_string(),
             E::ValidationFailed(v) => v
                 .iter()

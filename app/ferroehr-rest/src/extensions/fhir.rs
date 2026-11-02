@@ -224,11 +224,7 @@ async fn searched(
     if subject_scoped {
         state.backend().person_audit_event_search(filter).await
     } else {
-        state
-            .backend()
-            .audit_event_search(filter)
-            .await
-            .map_err(ferroehr::service::error::ServiceError::from)
+        state.backend().audit_event_search(filter).await
     }
 }
 

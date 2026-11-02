@@ -188,10 +188,9 @@ pub(crate) fn version_id(
 
 /// Why a version-id string was rejected.
 ///
-/// Converts into [`ApiError`] (`400`, path/header parameters),
-/// [`ServiceError`] (`422`, payload fields) and
-/// [`crate::service::status::StatusError`] (`400`, service-call arguments) at each
-/// call site's natural severity.
+/// Converts into [`ApiError`] (`400`, path/header parameters) and
+/// [`ServiceError`] (`422`, payload fields), and
+/// [`VersionIdError::into_argument`] makes a service-call argument's `400`.
 #[derive(Debug, thiserror::Error)]
 pub enum VersionIdError {
     /// Not a well-formed BASE `OBJECT_VERSION_ID` (wrong part count, empty
@@ -245,15 +244,6 @@ impl VersionIdError {
 impl From<VersionIdError> for ServiceError {
     fn from(e: VersionIdError) -> Self {
         ServiceError::content_invalid(crate::service::error::Violation::new(e.wire_message()))
-    }
-}
-
-impl From<VersionIdError> for crate::service::status::StatusError {
-    /// A malformed version id in a service-call argument is an argument-validity
-    /// precondition failure (→ `400` at the wire, matching the
-    /// [`From<VersionIdError> for ApiError`] `BadRequest` row).
-    fn from(e: VersionIdError) -> Self {
-        crate::service::status::StatusError::precondition(e.wire_message())
     }
 }
 

@@ -10,6 +10,9 @@
 
 use uuid::Uuid;
 
+use crate::service::error::ServiceError;
+use crate::service::refusal::{Clash, Refusal};
+
 /// Errors produced by the node-storage codec and the row repositories.
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
@@ -102,58 +105,47 @@ pub enum StorageError {
     BodyDecode(#[source] serde_json::Error),
 }
 
-impl From<StorageError> for crate::service::status::StatusError {
-    /// Bridge a storage failure to the call-status model. Constraint/
-    /// concurrency detail is preserved via `classify_sqlx` for the raw `sqlx`
-    /// case; the typed conflicts keep their specific `409` meaning; codec faults
-    /// are genuine server faults (`exception` → `500`). No openEHR spec governs
-    /// the persistence mechanism; the HTTP mapping the resulting status drives
-    /// is the ITS-REST-governed one (overview §HTTP status codes).
-    fn from(e: StorageError) -> Self {
-        use crate::service::status::{ServiceStatus, StatusError};
-        match e {
-            // A raw driver/pool/query error carries SQLSTATE + constraint detail
-            // — classify it instead of collapsing to a blanket 500.
-            StorageError::Database(db) => classify_sqlx(&db).with_source(db),
-            // Nothing ran: a temporary unavailability whatever the driver error.
-            StorageError::Acquire(acquire) => classify_acquire(&acquire).with_source(acquire),
-            // Two conflicts with content this repository already holds →
-            // `409`: a client-supplied CONTRIBUTION uid already in use
-            // (normally intercepted at the versioning call site; this is the
-            // correct fallback should it propagate), and an archive record
-            // claiming an occupied trunk position of a version container.
-            StorageError::ContributionUidInUse(_) | StorageError::TrunkPositionInUse { .. } => {
-                StatusError::new(ServiceStatus::Conflict, e.to_string())
-            }
-            // The one-EHR-per-subject index → `409` (normally intercepted in
-            // `service::ehr` to build the ITS-REST `409_EHR` body).
-            StorageError::SubjectInUse(_, _) => {
-                StatusError::new(ServiceStatus::EhrForSubjectAlreadyExists, e.to_string())
-            }
-            // Codec faults (a non-structure root, a mixed array, malformed node
-            // rows) are our own bugs, not client errors → `500`. Their text
-            // names RM attributes and the internal node-row shape, so the wire
-            // body carries the curated message and the detail is traced.
-            StorageError::NotAStructureRoot(_)
-            | StorageError::MixedArray { .. }
-            | StorageError::InvalidRows(_)
-            | StorageError::TrunklessContainer { .. }
-            | StorageError::BodyDecode(_) => {
-                // A `dyn Error` field records the source chain beside the message.
-                let error: &(dyn std::error::Error + 'static) = &e;
-                tracing::error!(error, "storage bridge: node-codec invariant violated → 500");
-                StatusError::new(ServiceStatus::Exception, CODEC_MESSAGE.to_owned())
-            }
+/// Classify a storage failure into the [`ServiceError`] it surfaces as.
+///
+/// Constraint/concurrency detail is preserved via [`classify_sqlx`] for the raw
+/// `sqlx` case; the typed conflicts keep their specific `409` meaning; codec
+/// faults are genuine server faults (`500`). No openEHR spec governs the
+/// persistence mechanism; the HTTP mapping is the ITS-REST-governed one
+/// (overview §HTTP status codes).
+pub(crate) fn classify_storage(e: StorageError) -> ServiceError {
+    match e {
+        // A raw driver/pool/query error carries SQLSTATE + constraint detail
+        // — classify it instead of collapsing to a blanket 500.
+        StorageError::Database(db) => classify_sqlx(db),
+        // Nothing ran: a temporary unavailability whatever the driver error.
+        StorageError::Acquire(acquire) => classify_acquire(acquire),
+        // Two conflicts with content this repository already holds →
+        // `409`: a client-supplied CONTRIBUTION uid already in use
+        // (normally intercepted at the versioning call site; this is the
+        // correct fallback should it propagate), and an archive record
+        // claiming an occupied trunk position of a version container.
+        StorageError::ContributionUidInUse(_) | StorageError::TrunkPositionInUse { .. } => {
+            ServiceError::Conflict(Refusal::new(Clash::State, e.to_string()).with_source(e))
         }
-    }
-}
-
-impl From<crate::db::acquire::AcquireError> for crate::service::status::StatusError {
-    /// Bridges a failure to obtain a connection to the call-status model:
-    /// `service_overloaded` (→ `503` plus `Retry-After`), through
-    /// `classify_acquire`, with the pool's error kept as the source.
-    fn from(e: crate::db::acquire::AcquireError) -> Self {
-        classify_acquire(&e).with_source(e)
+        // The one-EHR-per-subject index → `409` (normally intercepted in
+        // `service::ehr` to build the ITS-REST `409_EHR` body).
+        StorageError::SubjectInUse(_, _) => {
+            ServiceError::Conflict(Refusal::new(Clash::EhrForSubject, e.to_string()).with_source(e))
+        }
+        // Codec faults (a non-structure root, a mixed array, malformed node
+        // rows) are our own bugs, not client errors → `500`. Their text
+        // names RM attributes and the internal node-row shape, so the wire
+        // body carries the curated message and the detail is traced.
+        StorageError::NotAStructureRoot(_)
+        | StorageError::MixedArray { .. }
+        | StorageError::InvalidRows(_)
+        | StorageError::TrunklessContainer { .. }
+        | StorageError::BodyDecode(_) => {
+            // A `dyn Error` field records the source chain beside the message.
+            let error: &(dyn std::error::Error + 'static) = &e;
+            tracing::error!(error, "storage bridge: node-codec invariant violated → 500");
+            ServiceError::fault_caused(CODEC_MESSAGE, e)
+        }
     }
 }
 
@@ -213,49 +205,67 @@ const CODEC_MESSAGE: &str = "the server encountered an internal storage-codec er
 ///
 /// - `23505` `unique_violation`, `23503` `foreign_key_violation`, `23001`
 ///   `restrict_violation`, `23P01` `exclusion_violation` →
-///   `ServiceStatus::Conflict` (`409`): collisions with data the repository
+///   a conflict (`409`): collisions with data the repository
 ///   already holds, which is what `409` means (ITS-REST overview §HTTP status
 ///   codes).
 /// - `23514` `check_violation`, `23502` `not_null_violation`, the generic
-///   `23000` and any other class-23 code → `ServiceStatus::Exception` (`500`):
+///   `23000` and any other class-23 code → a fault (`500`):
 ///   a CHECK or NOT NULL reaching the driver is a violated server-side
 ///   invariant, either a value the service layer failed to refuse or a drift
 ///   between schema and code, and presenting it as `409` would invite an endless
 ///   retry against an optimistic-lock failure that never happened.
 /// - `40001` `serialization_failure` and `40P01` `deadlock_detected` →
-///   `ServiceStatus::Conflict` (`409`, retryable).
-/// - [`sqlx::Error::PoolTimedOut`] → `ServiceStatus::ServiceOverloaded` (`503`
+///   a conflict (`409`, retryable).
+/// - [`sqlx::Error::PoolTimedOut`] → overloaded (`503`
 ///   plus `Retry-After`, the admission contract).
 /// - a failure only opening a connection can produce ([`is_connect_failure`])
-///   → `ServiceStatus::ServiceOverloaded` (`503` plus `Retry-After`): no
+///   → overloaded (`503` plus `Retry-After`): no
 ///   statement ran, so repeating the request is safe once the database answers.
 /// - a session the database or the network cut ([`is_cut_session`]: a
 ///   database restart, a crash, a reset connection) →
-///   `ServiceStatus::ServiceOverloaded` (`503` plus `Retry-After`): the
+///   overloaded (`503` plus `Retry-After`): the
 ///   outage is temporary, which is what `503` says (RFC 9110 §15.6.4). A
 ///   transaction the cut interrupted is rolled back by the server; only a
 ///   `COMMIT` cut between its execution and its reply leaves the outcome
 ///   unknown, as it would behind a `500`.
-/// - `57014` `query_canceled` → `ServiceStatus::ServiceOverloaded` (`503`
+/// - `57014` `query_canceled` → overloaded (`503`
 ///   plus `Retry-After`): the cancelled statement rolled back, so repeating the
 ///   request is safe. By default the `[server]` request timeout (30 s)
 ///   answers a request before the `[db]` `statement_timeout` backstop (60 s)
 ///   fires, so on a request path an operator's cancel or a forward step of the
 ///   database host's wall clock, which `PostgreSQL` measures its timeouts
 ///   against, raises it.
-/// - anything else → `ServiceStatus::Exception` (`500`, a genuine fault),
+/// - anything else → a fault (`500`, a genuine fault),
 ///   including a protocol error, which no restart produces.
-pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusError {
-    use crate::service::status::{ServiceStatus, StatusError};
+pub(crate) fn classify_sqlx(e: sqlx::Error) -> ServiceError {
+    match verdict(&e) {
+        Verdict::Overloaded(message) => ServiceError::overloaded(message, e),
+        Verdict::Conflict(message) => {
+            ServiceError::Conflict(Refusal::new(Clash::State, message).with_source(e))
+        }
+        Verdict::Fault => ServiceError::fault_caused(INTERNAL_MESSAGE, e),
+    }
+}
+
+/// What [`classify_sqlx`] makes of a driver error: the HTTP class and its
+/// curated message.
+enum Verdict {
+    /// `503` plus `Retry-After`: nothing the request needs ran or it rolled back.
+    Overloaded(&'static str),
+    /// `409`: the request collided with stored data or a concurrent transaction.
+    Conflict(&'static str),
+    /// `500`: a server-side fault.
+    Fault,
+}
+
+/// The [`Verdict`] of `e`, with its one trace record.
+fn verdict(e: &sqlx::Error) -> Verdict {
     if is_connect_failure(e) {
         tracing::error!(
             error = %e,
             "storage bridge: the database refused or could not take a new connection → 503"
         );
-        return StatusError::new(
-            ServiceStatus::ServiceOverloaded,
-            UNAVAILABLE_MESSAGE.to_owned(),
-        );
+        return Verdict::Overloaded(UNAVAILABLE_MESSAGE);
     }
     if let Some(cancelled) = cancelled(e) {
         return cancelled;
@@ -265,10 +275,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
             error = %e,
             "storage bridge: the database or the network cut an open session → 503"
         );
-        return StatusError::new(
-            ServiceStatus::ServiceOverloaded,
-            UNAVAILABLE_MESSAGE.to_owned(),
-        );
+        return Verdict::Overloaded(UNAVAILABLE_MESSAGE);
     }
     match e {
         sqlx::Error::PoolTimedOut => {
@@ -276,10 +283,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
                 error = %e,
                 "storage bridge: connection-pool acquire timed out — shedding as service-overloaded (503)"
             );
-            StatusError::new(
-                ServiceStatus::ServiceOverloaded,
-                OVERLOADED_MESSAGE.to_owned(),
-            )
+            Verdict::Overloaded(OVERLOADED_MESSAGE)
         }
         sqlx::Error::Database(db) => {
             let sqlstate = db.code();
@@ -297,7 +301,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
                         error = %e,
                         "storage bridge: integrity-constraint violation → 409 conflict"
                     );
-                    StatusError::new(ServiceStatus::Conflict, CONFLICT_MESSAGE.to_owned())
+                    Verdict::Conflict(CONFLICT_MESSAGE)
                 }
                 "40001" | "40P01" => {
                     tracing::warn!(
@@ -307,10 +311,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
                         error = %e,
                         "storage bridge: serialization/deadlock failure → 409 conflict (retryable)"
                     );
-                    StatusError::new(
-                        ServiceStatus::Conflict,
-                        RETRYABLE_CONFLICT_MESSAGE.to_owned(),
-                    )
+                    Verdict::Conflict(RETRYABLE_CONFLICT_MESSAGE)
                 }
                 // A CHECK / NOT NULL / generic integrity violation reaching the
                 // driver is OUR broken invariant, not the client's conflict.
@@ -323,7 +324,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
                         "storage bridge: server-side integrity invariant violated \
                          (CHECK/NOT NULL reached the driver) → 500"
                     );
-                    StatusError::new(ServiceStatus::Exception, INTERNAL_MESSAGE.to_owned())
+                    Verdict::Fault
                 }
                 _ => {
                     tracing::error!(
@@ -333,7 +334,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
                         error = %e,
                         "storage bridge: unclassified database error → 500"
                     );
-                    StatusError::new(ServiceStatus::Exception, INTERNAL_MESSAGE.to_owned())
+                    Verdict::Fault
                 }
             }
         }
@@ -342,7 +343,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
                 error = %other,
                 "storage bridge: non-database sqlx error → 500"
             );
-            StatusError::new(ServiceStatus::Exception, INTERNAL_MESSAGE.to_owned())
+            Verdict::Fault
         }
     }
 }
@@ -350,8 +351,7 @@ pub(crate) fn classify_sqlx(e: &sqlx::Error) -> crate::service::status::StatusEr
 /// The status of a statement the database cancelled (`57014`
 /// `query_canceled`, by `statement_timeout` or a cancel request), with its
 /// trace record; `None` for any other failure.
-fn cancelled(e: &sqlx::Error) -> Option<crate::service::status::StatusError> {
-    use crate::service::status::{ServiceStatus, StatusError};
+fn cancelled(e: &sqlx::Error) -> Option<Verdict> {
     let sqlx::Error::Database(db) = e else {
         return None;
     };
@@ -365,14 +365,11 @@ fn cancelled(e: &sqlx::Error) -> Option<crate::service::status::StatusError> {
         "storage bridge: the database cancelled the statement \
          (statement_timeout or a cancel request) → 503"
     );
-    Some(StatusError::new(
-        ServiceStatus::ServiceOverloaded,
-        CANCELLED_MESSAGE.to_owned(),
-    ))
+    Some(Verdict::Overloaded(CANCELLED_MESSAGE))
 }
 
 /// Classifies a failure to obtain a pooled connection as the call status it
-/// surfaces: always `ServiceStatus::ServiceOverloaded` (`503` plus
+/// surfaces: always overloaded (`503` plus
 /// `Retry-After`), because no statement of the request ran.
 ///
 /// The phase is known from the type ([`crate::db::acquire::AcquireError`]), so
@@ -383,10 +380,7 @@ fn cancelled(e: &sqlx::Error) -> Option<crate::service::status::StatusError> {
 /// connection keeps its overload message. One structured trace record carries
 /// the driver error. No openEHR spec governs this — our own design; RFC 9110
 /// §15.6.4 is the HTTP authority for the `503`.
-pub(crate) fn classify_acquire(
-    e: &crate::db::acquire::AcquireError,
-) -> crate::service::status::StatusError {
-    use crate::service::status::{ServiceStatus, StatusError};
+pub(crate) fn classify_acquire(e: crate::db::acquire::AcquireError) -> ServiceError {
     let message = if e.is_pool_timeout() {
         tracing::warn!(
             error = %e.driver(),
@@ -400,7 +394,7 @@ pub(crate) fn classify_acquire(
         );
         UNAVAILABLE_MESSAGE
     };
-    StatusError::new(ServiceStatus::ServiceOverloaded, message.to_owned())
+    ServiceError::overloaded(message, e)
 }
 
 /// Returns whether `e` is a failure that only establishing a new connection
@@ -480,9 +474,9 @@ pub(crate) mod tests {
 
     use sqlx::error::{DatabaseError, ErrorKind};
 
-    use crate::service::status::{ServiceStatus, StatusError};
+    use crate::service::error::ServiceError;
 
-    use super::{StorageError, classify_sqlx};
+    use super::{StorageError, classify_sqlx, classify_storage};
 
     /// A driver-error double carrying one SQLSTATE plus the schema names a real
     /// PostgreSQL error would carry, so the classification and the
@@ -549,8 +543,8 @@ pub(crate) mod tests {
     fn pool_timeout_is_service_overloaded() {
         // Pool exhaustion under load → 503 semantics (our admission
         // contract), never a blanket 500.
-        let err = classify_sqlx(&sqlx::Error::PoolTimedOut);
-        assert_eq!(err.status, ServiceStatus::ServiceOverloaded);
+        let err = classify_sqlx(sqlx::Error::PoolTimedOut);
+        assert!(matches!(err, ServiceError::Overloaded(_)));
     }
 
     /// The bridge keeps the driver error as the call status's source: the
@@ -561,7 +555,7 @@ pub(crate) mod tests {
     #[test]
     fn the_curated_status_keeps_the_driver_error_as_its_source() {
         use std::error::Error as _;
-        let err: StatusError = StorageError::Database(sqlx::Error::PoolTimedOut).into();
+        let err = classify_storage(StorageError::Database(sqlx::Error::PoolTimedOut));
         let source = err
             .source()
             .expect("the driver error travels as the source");
@@ -570,7 +564,7 @@ pub(crate) mod tests {
             "the source is the sqlx error itself, not a wrapper: {source}"
         );
         assert_eq!(
-            err.message,
+            err.message(),
             "the server is temporarily overloaded; retry shortly"
         );
     }
@@ -590,13 +584,13 @@ pub(crate) mod tests {
             db_error("57P03"),
         ];
         for failure in failures {
-            let err = classify_sqlx(&failure);
-            assert_eq!(
-                err.status,
-                ServiceStatus::ServiceOverloaded,
-                "a connect-time failure is a temporary unavailability: {failure}"
+            let shown = failure.to_string();
+            let err = classify_sqlx(failure);
+            assert!(
+                matches!(err, ServiceError::Overloaded(_)),
+                "a connect-time failure is a temporary unavailability: {shown}"
             );
-            assert_eq!(err.message, super::UNAVAILABLE_MESSAGE);
+            assert_eq!(err.message(), super::UNAVAILABLE_MESSAGE);
         }
     }
 
@@ -621,13 +615,13 @@ pub(crate) mod tests {
             sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::UnexpectedEof)),
         ];
         for failure in failures {
-            let err = classify_sqlx(&failure);
-            assert_eq!(
-                err.status,
-                ServiceStatus::ServiceOverloaded,
-                "a cut session is a temporary unavailability: {failure}"
+            let shown = failure.to_string();
+            let err = classify_sqlx(failure);
+            assert!(
+                matches!(err, ServiceError::Overloaded(_)),
+                "a cut session is a temporary unavailability: {shown}"
             );
-            assert_eq!(err.message, super::UNAVAILABLE_MESSAGE);
+            assert_eq!(err.message(), super::UNAVAILABLE_MESSAGE);
         }
     }
 
@@ -659,9 +653,10 @@ pub(crate) mod tests {
             super::is_cut_session(&failure),
             "a cut session: {failure:?}"
         );
-        let err = classify_sqlx(&failure);
-        assert_eq!(err.status, ServiceStatus::ServiceOverloaded, "{failure}");
-        assert_eq!(err.message, super::UNAVAILABLE_MESSAGE);
+        let shown = failure.to_string();
+        let err = classify_sqlx(failure);
+        assert!(matches!(err, ServiceError::Overloaded(_)), "{shown}");
+        assert_eq!(err.message(), super::UNAVAILABLE_MESSAGE);
     }
 
     /// A failure on an established connection that no outage produces stays
@@ -676,11 +671,11 @@ pub(crate) mod tests {
             db_error("42P01"),
         ];
         for failure in failures {
-            let err = classify_sqlx(&failure);
-            assert_eq!(
-                err.status,
-                ServiceStatus::Exception,
-                "a failure on an open session is a server fault: {failure}"
+            let shown = failure.to_string();
+            let err = classify_sqlx(failure);
+            assert!(
+                matches!(err, ServiceError::Fault(_)),
+                "a failure on an open session is a server fault: {shown}"
             );
         }
     }
@@ -691,9 +686,9 @@ pub(crate) mod tests {
     /// cancel reaches it (#4338).
     #[test]
     fn a_cancelled_statement_is_unavailable() {
-        let err = classify_sqlx(&db_error("57014"));
-        assert_eq!(err.status, ServiceStatus::ServiceOverloaded);
-        assert_eq!(err.message, super::CANCELLED_MESSAGE);
+        let err = classify_sqlx(db_error("57014"));
+        assert!(matches!(err, ServiceError::Overloaded(_)));
+        assert_eq!(err.message(), super::CANCELLED_MESSAGE);
     }
 
     /// The storage and database errors keep their cause as the source and out
@@ -734,9 +729,9 @@ pub(crate) mod tests {
         let failure = crate::db::acquire::acquire(&unresolvable_pool())
             .await
             .expect_err("the `.invalid` top-level domain never resolves");
-        let err = StatusError::from(StorageError::from(failure));
-        assert_eq!(err.status, ServiceStatus::ServiceOverloaded);
-        assert_eq!(err.message, super::UNAVAILABLE_MESSAGE);
+        let err = classify_storage(StorageError::from(failure));
+        assert!(matches!(err, ServiceError::Overloaded(_)));
+        assert_eq!(err.message(), super::UNAVAILABLE_MESSAGE);
     }
 
     /// The identities a connect can share with an open session stay `500` when
@@ -749,16 +744,16 @@ pub(crate) mod tests {
             sqlx::Error::Io(std::io::Error::from(std::io::ErrorKind::HostUnreachable)),
         ];
         for failure in failures {
-            let err = StatusError::from(StorageError::Database(failure));
-            assert_eq!(err.status, ServiceStatus::Exception, "{err:?}");
+            let err = classify_storage(StorageError::Database(failure));
+            assert!(matches!(err, ServiceError::Fault(_)), "{err:?}");
         }
     }
 
     #[test]
     fn non_database_error_is_exception() {
         // A row-not-found or other non-database sqlx error is a genuine fault.
-        let err = classify_sqlx(&sqlx::Error::RowNotFound);
-        assert_eq!(err.status, ServiceStatus::Exception);
+        let err = classify_sqlx(sqlx::Error::RowNotFound);
+        assert!(matches!(err, ServiceError::Fault(_)));
     }
 
     #[test]
@@ -766,10 +761,9 @@ pub(crate) mod tests {
         // unique / foreign-key / restrict / exclusion are genuinely
         // client-caused collisions with data the repository already holds.
         for sqlstate in ["23505", "23503", "23001", "23P01"] {
-            let err = classify_sqlx(&db_error(sqlstate));
-            assert_eq!(
-                err.status,
-                ServiceStatus::Conflict,
+            let err = classify_sqlx(db_error(sqlstate));
+            assert!(
+                matches!(err, ServiceError::Conflict(_)),
                 "SQLSTATE {sqlstate} should stay a conflict"
             );
         }
@@ -778,12 +772,12 @@ pub(crate) mod tests {
     #[test]
     fn serialization_and_deadlock_stay_retryable_conflicts() {
         for sqlstate in ["40001", "40P01"] {
-            let err = classify_sqlx(&db_error(sqlstate));
-            assert_eq!(err.status, ServiceStatus::Conflict);
+            let err = classify_sqlx(db_error(sqlstate));
+            assert!(matches!(err, ServiceError::Conflict(_)));
             assert!(
-                err.message.contains("retry"),
+                err.message().contains("retry"),
                 "the retryable conflict should tell the client to retry, got {:?}",
-                err.message
+                err.message()
             );
         }
     }
@@ -793,10 +787,9 @@ pub(crate) mod tests {
         // A CHECK or NOT NULL reaching the driver is a violated SERVER-side
         // invariant — never an optimistic-lock conflict the client can resolve.
         for sqlstate in ["23514", "23502", "23000"] {
-            let err = classify_sqlx(&db_error(sqlstate));
-            assert_eq!(
-                err.status,
-                ServiceStatus::Exception,
+            let err = classify_sqlx(db_error(sqlstate));
+            assert!(
+                matches!(err, ServiceError::Fault(_)),
                 "SQLSTATE {sqlstate} is a server-side invariant failure, not a 409"
             );
         }
@@ -816,17 +809,16 @@ pub(crate) mod tests {
         ];
         for fault in faults {
             let rendered = fault.to_string();
-            let err = StatusError::from(fault);
-            assert_eq!(
-                err.status,
-                ServiceStatus::Exception,
+            let err = classify_storage(fault);
+            assert!(
+                matches!(err, ServiceError::Fault(_)),
                 "a codec fault is a server fault, not a client error"
             );
             for leaked in ["DV_TEXT", "content", "num", "structure", "array", "rows"] {
                 assert!(
-                    !err.message.contains(leaked),
+                    !err.message().contains(leaked),
                     "codec fault {rendered:?} leaked {leaked:?} into the client message {:?}",
-                    err.message
+                    err.message()
                 );
             }
         }
@@ -840,7 +832,7 @@ pub(crate) mod tests {
             "23505", "23503", "23001", "23P01", "23514", "23502", "23000", "40001", "40P01",
             "42P01", "08006",
         ] {
-            let err = classify_sqlx(&db_error(sqlstate));
+            let err = classify_sqlx(db_error(sqlstate));
             for leaked in [
                 "ck_item_tag_target_type",
                 "item_tag",
@@ -848,9 +840,9 @@ pub(crate) mod tests {
                 "relation",
             ] {
                 assert!(
-                    !err.message.contains(leaked),
+                    !err.message().contains(leaked),
                     "SQLSTATE {sqlstate} leaked {leaked:?} into the client message {:?}",
-                    err.message
+                    err.message()
                 );
             }
         }

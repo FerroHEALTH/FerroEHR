@@ -100,7 +100,6 @@ use event::{AuditEvent, EmitOutcome};
 use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::service::refusal::Refusal;
-use crate::service::status::StatusError;
 
 /// Errors raised while rendering or shipping an audit record.
 ///
@@ -346,11 +345,11 @@ impl FerroEhrService {
     /// carry it.
     ///
     /// # Errors
-    /// [`StatusError`] when the read fails.
+    /// [`ServiceError`] when the read fails.
     pub async fn audit_content_of_objects(
         &self,
         vo_ids: &[crate::ids::VoId],
-    ) -> Result<Vec<categories::ContentIds>, StatusError> {
+    ) -> Result<Vec<categories::ContentIds>, ServiceError> {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
@@ -367,11 +366,11 @@ impl FerroEhrService {
     /// Empty without a reading when auditing is off.
     ///
     /// # Errors
-    /// [`StatusError`] when the read fails.
+    /// [`ServiceError`] when the read fails.
     pub async fn audit_content_of_contribution(
         &self,
         contribution_id: uuid::Uuid,
-    ) -> Result<Vec<categories::ContentIds>, StatusError> {
+    ) -> Result<Vec<categories::ContentIds>, ServiceError> {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
@@ -398,21 +397,22 @@ impl FerroEhrService {
     /// on `AuditEvent`).
     ///
     /// # Errors
-    /// [`StatusError`] `precondition_violation` when no local store is wired, or
-    /// `exception` when the store query fails.
+    /// [`ServiceError::BadRequest`] when no local store is wired, or a server
+    /// fault when the store query fails.
     #[cfg(feature = "fhir")]
     pub async fn audit_event_search(
         &self,
         filter: &store::AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), StatusError> {
+    ) -> Result<(i64, Vec<serde_json::Value>), ServiceError> {
         let Some(audit_store) = &self.audit_store else {
-            return Err(StatusError::precondition(
+            return Err(ServiceError::precondition(
                 "the local audit record repository is not enabled ([audit.store])",
             ));
         };
-        audit_store.search(filter).await.map_err(|e| {
-            crate::service::error::internal_fault_caused("search the audit record repository", &e)
-        })
+        audit_store
+            .search(filter)
+            .await
+            .map_err(|e| ServiceError::internal("search the audit record repository", e))
     }
 }
 

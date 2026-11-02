@@ -285,6 +285,15 @@ impl StatusError {
         }
     }
 
+    /// The `service_overloaded` status error an overload becomes, its cause kept.
+    pub(crate) fn from_overloaded(overloaded: &Curated) -> Self {
+        Self {
+            status: ServiceStatus::ServiceOverloaded,
+            source: overloaded.shared_source(),
+            message: overloaded.message.to_owned(),
+        }
+    }
+
     /// The `exception` a query timeout becomes on the status bridge, its
     /// message tagged with [`QUERY_TIMEOUT_TAG`] so the wire still answers `408`.
     pub(crate) fn from_timeout(timeout: &Refusal) -> Self {
