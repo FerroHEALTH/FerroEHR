@@ -154,7 +154,7 @@ when there is at least one secret value to carry).
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url }}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . }}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl }}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.fhirOutboundUrl .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.basicUserPasswordHashes .Values.secrets.signingKeyPassphrase .Values.secrets.auditFhirFeedUrl .Values.secrets.multimediaAccessKeyId .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret -}}
 true
 {{- end -}}
 {{- end }}
@@ -181,7 +181,7 @@ names a Secret nothing created makes the pod fail to mount.
 {{- $inlineDb := and (not .Values.database.existingSecret) .Values.database.url -}}
 {{- $inlineDomain := include "ferroehr.hasInlineDomainDsn" . -}}
 {{- $inlineMigrate := and (not .Values.database.migrateExistingSecret) .Values.database.migrateUrl -}}
-{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret .Values.secrets.basicUserPasswordHashes .Values.secrets.fhirOutboundUrl -}}
+{{- if or $inlineDb (eq $inlineDomain "true") $inlineMigrate .Values.secrets.signingKeyPassphrase .Values.secrets.multimediaSecretAccessKey .Values.secrets.terminologyClientSecret .Values.secrets.ehrIndexClientSecret .Values.secrets.basicUserPasswordHashes -}}
 true
 {{- end -}}
 {{- end }}
