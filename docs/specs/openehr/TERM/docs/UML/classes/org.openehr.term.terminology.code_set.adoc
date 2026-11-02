@@ -22,7 +22,7 @@ a|Identifier used for code set in the openEHR Reference Model. The value is infe
 
 Valid values take the form of an xs:NCName value, i.e. cannot contain:
 
-* symbol characters `:, @, $, %, &, /, +, ,, ;`;
+* symbol characters `:, @, $, %, &, /, {plus}, ,, ;`;
 * whitespace characters or different parentheses. 
 
 An NCName cannot begin with a number, dot or minus character although these can appear later in the value.
@@ -41,7 +41,7 @@ a|An optional identifier assumed by openEHR to be the identifier of this code se
 
 Valid values take the form of an xs:NCName value, i.e. cannot contain:
 
-* symbol characters `:, @, $, %, &, /, +, ,, ;`;
+* symbol characters `:, @, $, %, &, /, {plus}, ,, ;`;
 * whitespace characters or different parentheses. 
 
 An NCName cannot begin with a number, dot or minus character although these can appear later in the value.
