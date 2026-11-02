@@ -420,3 +420,50 @@ async fn a_deployment_without_the_delay_withholds_nothing() {
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert_eq!(read(&app, &ehr, &vo, &patient(&ehr)).await, StatusCode::OK);
 }
+
+/// A malformed EHR or object id is refused `400` on placing, releasing and
+/// reading a hold, on the admin routes and the clinical release route alike.
+#[tokio::test]
+async fn a_malformed_id_is_refused_on_every_access_delay_route() {
+    let (_db, _pool, _svc, app) = app(true).await;
+    let (ehr, vo) = record(&app).await;
+    let cases = [
+        (
+            json!({ "ehr_id": "not-a-uuid", "vo_id": vo }),
+            "invalid EHR id: not-a-uuid",
+        ),
+        (
+            json!({ "ehr_id": ehr, "vo_id": "not-a-uuid" }),
+            "invalid versioned object id: not-a-uuid",
+        ),
+    ];
+    for path in ["access-delay", "access-delay/release"] {
+        for (body, message) in &cases {
+            let (status, answer) = admin(&app, path, body).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{path} {body}: {answer}");
+            assert!(answer.contains(message), "{path} {body}: {answer}");
+        }
+    }
+    let (status, answer) = send(
+        &app,
+        "GET",
+        &format!("{EXT}/admin/access-delay?ehr_id=not-a-uuid"),
+        &professional(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "register: {answer}");
+    assert!(answer.contains("invalid EHR id: not-a-uuid"), "{answer}");
+
+    let release = format!("{EXT}/ehr/{ehr}/versioned_composition/not-a-uuid/access-delay/release");
+    let (status, answer) = send(&app, "POST", &release, &professional(), None).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "clinical release: {answer}"
+    );
+    assert!(
+        answer.contains("invalid versioned object id: not-a-uuid"),
+        "{answer}"
+    );
+}

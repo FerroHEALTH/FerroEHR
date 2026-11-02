@@ -27,6 +27,7 @@ use crate::extensions::access::authn::current_principal;
 use crate::extensions::access::delay;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::version_id::{parse_ehr_id, parse_vo_id};
 use crate::state::AppState;
 
 /// The operation id of the release; its `composition_` prefix and `_update`
@@ -97,6 +98,9 @@ async fn run(state: &AppState, parts: &RequestParts) -> Result<Response, RestErr
         .path
         .get("versioned_object_uid")
         .map_or("", String::as_str);
-    state.backend().release_person_access(ehr_id, vo_id).await?;
+    state
+        .backend()
+        .release_person_access(parse_ehr_id(ehr_id)?, parse_vo_id(vo_id)?)
+        .await?;
     Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }

@@ -462,3 +462,26 @@ async fn recording_is_refused_while_no_access_service_is_declared() {
         StatusCode::OK
     );
 }
+
+/// A malformed EHR id is refused `400` on recording, reversing and reading the
+/// opt-out alike.
+#[tokio::test]
+async fn a_malformed_ehr_id_is_refused_on_every_opt_out_route() {
+    let (_db, _pool, app) = app(true).await;
+    for reverse in [false, true] {
+        let (status, body) = opt_out(&app, "not-a-uuid", reverse).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "reverse={reverse}: {body}");
+        assert!(body.contains("invalid EHR id: not-a-uuid"), "{body}");
+    }
+    let (status, body) = send(
+        &app,
+        "GET",
+        &format!("{EXT}/admin/access-opt-out?ehr_id=not-a-uuid"),
+        "root",
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "register: {body}");
+    assert!(body.contains("invalid EHR id: not-a-uuid"), "{body}");
+}

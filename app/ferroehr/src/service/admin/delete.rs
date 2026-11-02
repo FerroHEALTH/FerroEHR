@@ -33,37 +33,6 @@ use crate::service::error::ServiceError;
 use crate::service::refusal::Missing;
 
 impl FerroEhrService {
-    /// Physically delete one EHR and every trace of
-    /// it.
-    ///
-    /// # Errors
-    /// - `precondition_violation` (`400`) — `ehr_id` is not a well-formed UUID.
-    /// - `versioned_object_does_not_exist` (`404`) — no EHR with that id
-    ///   (`ehr_id_does_not_exist`).
-    /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn admin_ehr_delete(&self, ehr_id: String) -> Result<(), ServiceError> {
-        self.delete_ehr(EhrId(super::parse_uuid(&ehr_id, "EHR")?))
-            .await
-    }
-
-    /// The `admin_ehr_delete_all` extension: physically delete a set of EHRs
-    /// (each with the full [`Self::admin_ehr_delete`] cascade), returning the
-    /// count actually deleted. An **empty** list means "delete ALL EHRs" (the
-    /// ITS-REST admin `DELETE /admin/ehr` types `ehr_id` as an **optional**
-    /// subset selector, so an absent/empty list denotes the full set).
-    ///
-    /// # Errors
-    /// - `precondition_violation` (`400`) — any id in the list is malformed
-    ///   (the whole bulk request is rejected before any deletion runs).
-    /// - `exception` — a database fault while deleting.
-    pub async fn admin_ehr_delete_all(&self, ehr_ids: Vec<String>) -> Result<u64, ServiceError> {
-        let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
-            .into_iter()
-            .map(EhrId)
-            .collect();
-        self.delete_ehr_set(&ids).await
-    }
-
     /// Admin extension `DELETE /admin/template/{template_id}`: physically delete
     /// one operational template by its wire `template_id` (case-insensitive,
     /// §Composite Identifiers and Case), evicting its `WebTemplate` cache entry.
@@ -133,21 +102,6 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Physically delete a demographic PARTY "along
-    /// with related Party relationships".
-    ///
-    /// # Errors
-    /// - `precondition_violation` (`400`) — `a_party_id` is not a well-formed
-    ///   UUID.
-    /// - `versioned_object_does_not_exist` (`404`) — the id names no
-    ///   demographic PARTY root (`party_id_does_not_exist`; a
-    ///   `PARTY_RELATIONSHIP` or unknown id is also this failure).
-    /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn physical_party_delete(&self, a_party_id: String) -> Result<(), ServiceError> {
-        self.physical_delete_party(VoId(super::parse_uuid(&a_party_id, "party")?))
-            .await
-    }
-
     /// Physically delete one EHR and every trace of it.
     ///
     /// The sequence, in order, is the erasure reach: one clinical transaction,
@@ -177,7 +131,12 @@ impl FerroEhrService {
     ///
     /// NOTE: ITS-REST `operations/admin_ehr_delete.yaml` answers `404` for an
     /// unknown id, so `ehr_id_does_not_exist` maps to `NotFound`.
-    async fn delete_ehr(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
+    ///
+    /// # Errors
+    /// - `versioned_object_does_not_exist` (`404`) — no EHR with that id
+    ///   (`ehr_id_does_not_exist`).
+    /// - `exception` — a database fault mid-transaction (rolled back).
+    pub async fn admin_ehr_delete(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
         // Read before the delete: the reference rows go with the versions that
         // carry them.
         #[cfg(feature = "multimedia")]
@@ -238,7 +197,7 @@ impl FerroEhrService {
     }
 
     /// Physically delete a set of EHRs, each with the full erasure reach of
-    /// [`Self::delete_ehr`]. Missing ids are skipped (idempotent bulk delete);
+    /// [`Self::admin_ehr_delete`]. Missing ids are skipped (idempotent bulk delete);
     /// the count of EHRs actually deleted is returned.
     ///
     /// The reach is the same, chunked: one transaction per chunk carries the
@@ -247,7 +206,10 @@ impl FerroEhrService {
     /// NOTE: the idempotent skip-missing semantics + returned count are
     /// our own design (no openEHR spec governs bulk-delete internals); a
     /// partial success is observable at the REST edge.
-    async fn delete_ehr_set(&self, ehr_ids: &[EhrId]) -> Result<u64, ServiceError> {
+    ///
+    /// # Errors
+    /// - `exception` — a database fault while deleting.
+    pub async fn admin_ehr_delete_all(&self, ehr_ids: &[EhrId]) -> Result<u64, ServiceError> {
         // Chunking bounds each transaction's lock/WAL footprint on a
         // full-store wipe.
         const CHUNK: usize = 128;
@@ -437,7 +399,7 @@ impl FerroEhrService {
 
     /// Physically delete a
     /// PARTY "along with related Party relationships", in one transaction —
-    /// mirroring [`Self::delete_ehr`]'s capture-then-cascade approach.
+    /// mirroring [`Self::admin_ehr_delete`]'s capture-then-cascade approach.
     ///
     /// The target must be a demographic PARTY root (any version, ehr-less); a
     /// `PARTY_RELATIONSHIP` or a non-party/unknown id is `party_id_does_not_exist`
@@ -452,7 +414,13 @@ impl FerroEhrService {
     /// identifier row of the deleted objects, live and retired, goes in the
     /// same transaction: `national_identifier` carries no foreign key to the
     /// versions that reference it.
-    async fn physical_delete_party(&self, party_id: VoId) -> Result<(), ServiceError> {
+    ///
+    /// # Errors
+    /// - `versioned_object_does_not_exist` (`404`) — the id names no
+    ///   demographic PARTY root (`party_id_does_not_exist`; a
+    ///   `PARTY_RELATIONSHIP` or unknown id is also this failure).
+    /// - `exception` — a database fault mid-transaction (rolled back).
+    pub async fn physical_party_delete(&self, party_id: VoId) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
 
@@ -512,7 +480,7 @@ impl FerroEhrService {
         .await?;
 
         // The blob keys these rows reference, before the delete removes the
-        // rows that name them (#3180). `delete_ehr` has always done this; a
+        // rows that name them (#3180). `admin_ehr_delete` has always done this; a
         // party physically deleted without it left its blobs in the object
         // store forever, which is both a leak and a delete that did not
         // delete — a blob is content.

@@ -1791,11 +1791,7 @@ fn bench_lifecycle(
     corpus: &Corpus,
 ) -> Vec<Value> {
     const GROUP: &str = "storage_lifecycle";
-    let subject = corpus
-        .ehrs
-        .last()
-        .expect("the corpus holds an EHR")
-        .to_string();
+    let subject = *corpus.ehrs.last().expect("the corpus holds an EHR");
     let mut group = c.benchmark_group(GROUP);
     configure(&mut group);
     let ops = vec![
@@ -1807,11 +1803,9 @@ fn bench_lifecycle(
                     let mut total = Duration::ZERO;
                     for _ in 0..iters {
                         let start = Instant::now();
-                        svc.archive_ehrs(vec![subject.clone()])
-                            .await
-                            .expect("archive the EHR");
+                        svc.archive_ehrs(&[subject]).await.expect("archive the EHR");
                         total += start.elapsed();
-                        svc.restore_archived_ehrs(vec![subject.clone()])
+                        svc.restore_archived_ehrs(&[subject])
                             .await
                             .expect("restore the EHR");
                     }
@@ -1824,11 +1818,9 @@ fn bench_lifecycle(
                 rt.block_on(async {
                     let mut total = Duration::ZERO;
                     for _ in 0..iters {
-                        svc.archive_ehrs(vec![subject.clone()])
-                            .await
-                            .expect("archive the EHR");
+                        svc.archive_ehrs(&[subject]).await.expect("archive the EHR");
                         let start = Instant::now();
-                        svc.restore_archived_ehrs(vec![subject.clone()])
+                        svc.restore_archived_ehrs(&[subject])
                             .await
                             .expect("restore the EHR");
                         total += start.elapsed();

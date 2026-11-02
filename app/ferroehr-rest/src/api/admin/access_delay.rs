@@ -33,6 +33,7 @@ use super::body::{AdminRefusal, RegisterReadRefusal, optional_str, required_quer
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use crate::overview::version_id::{parse_ehr_id, parse_vo_id};
 use crate::state::AppState;
 
 /// The access-delay extension routes — **no ITS-REST contract** (module docs).
@@ -167,7 +168,9 @@ impl super::body::RegisterRoutes for AccessDelayRoutes {
         let backend = state.backend();
         if op == "admin_access_delay_register" {
             let ehr_id = required_query(parts, "ehr_id")?;
-            let rows = backend.access_delay_register(&ehr_id).await?;
+            let rows = backend
+                .access_delay_register(parse_ehr_id(&ehr_id)?)
+                .await?;
             let body = serde_json::json!({ "access_delays": rows });
             return Ok(negotiate::body::respond(
                 &parts.headers,
@@ -182,10 +185,12 @@ impl super::body::RegisterRoutes for AccessDelayRoutes {
             let until = optional_str(&body, "until")?;
             let note = optional_str(&body, "note")?;
             backend
-                .delay_person_access(ehr_id, vo_id, until, note)
+                .delay_person_access(parse_ehr_id(ehr_id)?, parse_vo_id(vo_id)?, until, note)
                 .await?;
         } else {
-            backend.release_person_access(ehr_id, vo_id).await?;
+            backend
+                .release_person_access(parse_ehr_id(ehr_id)?, parse_vo_id(vo_id)?)
+                .await?;
         }
         Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
     }

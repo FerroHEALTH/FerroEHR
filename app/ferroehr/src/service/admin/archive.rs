@@ -33,86 +33,15 @@ use crate::service::refusal::Missing;
 use crate::storage::version_repo::tier;
 
 impl FerroEhrService {
-    /// Move every versioned object of each EHR to the cold
-    /// archival tier (idempotent).
+    /// Move every versioned object of each EHR to the cold archival tier
+    /// (idempotent), all-or-nothing: every EHR is existence-checked before
+    /// anything is written.
     ///
     /// # Errors
-    /// - `precondition_violation` (`400`) — any id in the list is not a
-    ///   well-formed UUID (the whole request is rejected).
     /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown
     ///   (`ehr_id_does_not_exist`); nothing is archived.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn archive_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), ServiceError> {
-        let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
-            .into_iter()
-            .map(EhrId)
-            .collect();
-        self.archive_ehr_vos(&ids).await
-    }
-
-    /// Move each party's versioned object to the cold
-    /// archival tier (idempotent).
-    ///
-    /// NOTE: no specification governs archiving: our own design; only the
-    /// party VO is moved, and the related
-    /// `PARTY_RELATIONSHIP`s stay independently addressable versioned objects a
-    /// caller archives in their own right.
-    ///
-    /// # Errors
-    /// - `precondition_violation` (`400`) — any id in the list is not a
-    ///   well-formed UUID (the whole request is rejected).
-    /// - `versioned_object_does_not_exist` (`404`) — any id names no
-    ///   demographic PARTY root (`party_id_does_not_exist`); nothing is
-    ///   archived.
-    /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn archive_parties(&self, party_ids: Vec<String>) -> Result<(), ServiceError> {
-        let ids = super::parse_uuid_list(&party_ids, "party")?;
-        self.archive_party_vos(&ids).await
-    }
-
-    /// Bring every archived versioned object of each EHR back from the cold
-    /// tier to the primary tier, dropping its archive marker — the exact
-    /// reverse of [`Self::archive_ehrs`], and idempotent in the same way (an
-    /// EHR with nothing archived restores nothing and succeeds).
-    ///
-    /// NOTE: no specification governs archiving: this operation and its admin
-    /// route (`POST /admin/archive/ehrs/restore`) are our own extension.
-    ///
-    /// # Errors
-    /// - `precondition_violation` (`400`) — any id is not a well-formed UUID.
-    /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown.
-    /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn restore_archived_ehrs(&self, ehr_ids: Vec<String>) -> Result<(), ServiceError> {
-        let ids: Vec<EhrId> = super::parse_uuid_list(&ehr_ids, "EHR")?
-            .into_iter()
-            .map(EhrId)
-            .collect();
-        self.restore_ehr_vos(&ids).await
-    }
-
-    /// Bring each archived party's versioned object back from the cold tier to
-    /// the primary tier, dropping its archive marker — the exact reverse of
-    /// [`Self::archive_parties`].
-    ///
-    /// Spec-silent like its EHR twin above; served at
-    /// `POST /admin/archive/parties/restore`, our own extension.
-    ///
-    /// # Errors
-    /// - `precondition_violation` (`400`) — any id is not a well-formed UUID.
-    /// - `versioned_object_does_not_exist` (`404`) — any id names no
-    ///   demographic PARTY root.
-    /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn restore_archived_parties(
-        &self,
-        party_ids: Vec<String>,
-    ) -> Result<(), ServiceError> {
-        let ids = super::parse_uuid_list(&party_ids, "party")?;
-        self.restore_party_vos(&ids).await
-    }
-
-    /// Mark and move every versioned object of each EHR, all-or-nothing: every
-    /// EHR is existence-checked before anything is written.
-    async fn archive_ehr_vos(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
+    pub async fn archive_ehrs(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
@@ -131,31 +60,51 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Mark and move each party's versioned object, all-or-nothing: every id is
-    /// checked to name a demographic PARTY root before anything is written. An
-    /// unknown or non-party id (e.g. a `PARTY_RELATIONSHIP`) is
-    /// `party_id_does_not_exist`.
-    async fn archive_party_vos(&self, party_ids: &[Uuid]) -> Result<(), ServiceError> {
+    /// Move each party's versioned object to the cold archival tier
+    /// (idempotent), all-or-nothing: every id is checked to name a demographic
+    /// PARTY root before anything is written.
+    ///
+    /// NOTE: no specification governs archiving: our own design; only the
+    /// party VO is moved, and the related
+    /// `PARTY_RELATIONSHIP`s stay independently addressable versioned objects a
+    /// caller archives in their own right.
+    ///
+    /// # Errors
+    /// - `versioned_object_does_not_exist` (`404`) — any id names no
+    ///   demographic PARTY root (`party_id_does_not_exist`); nothing is
+    ///   archived.
+    /// - `exception` — a database fault mid-transaction (rolled back).
+    pub async fn archive_parties(&self, party_ids: &[VoId]) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let mut live: Vec<VoId> = Vec::new();
         for &party_id in party_ids {
-            let kind = party_kind_any_tier(&mut tx, party_id).await?;
+            let kind = party_kind_any_tier(&mut tx, party_id.0).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
                 return Err(ServiceError::not_found(
                     Missing::Party,
                     format!("party {party_id}"),
                 ));
             }
-            live.push(VoId(party_id));
+            live.push(party_id);
         }
         tier::freeze(&mut tx, &live, Some("archive_parties")).await?;
         tx.commit().await?;
         Ok(())
     }
 
-    /// Restore every archived versioned object of each EHR, all-or-nothing.
-    async fn restore_ehr_vos(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
+    /// Bring every archived versioned object of each EHR back from the cold
+    /// tier to the primary tier, dropping its archive marker — the exact
+    /// reverse of [`Self::archive_ehrs`], and idempotent in the same way (an
+    /// EHR with nothing archived restores nothing and succeeds).
+    ///
+    /// NOTE: no specification governs archiving: this operation and its admin
+    /// route (`POST /admin/archive/ehrs/restore`) are our own extension.
+    ///
+    /// # Errors
+    /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown.
+    /// - `exception` — a database fault mid-transaction (rolled back).
+    pub async fn restore_archived_ehrs(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
@@ -171,20 +120,30 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Restore each archived party's versioned object, all-or-nothing.
-    async fn restore_party_vos(&self, party_ids: &[Uuid]) -> Result<(), ServiceError> {
+    /// Bring each archived party's versioned object back from the cold tier to
+    /// the primary tier, dropping its archive marker, all-or-nothing: the exact
+    /// reverse of [`Self::archive_parties`].
+    ///
+    /// Spec-silent like its EHR twin above; served at
+    /// `POST /admin/archive/parties/restore`, our own extension.
+    ///
+    /// # Errors
+    /// - `versioned_object_does_not_exist` (`404`) — any id names no
+    ///   demographic PARTY root.
+    /// - `exception` — a database fault mid-transaction (rolled back).
+    pub async fn restore_archived_parties(&self, party_ids: &[VoId]) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let mut ids: Vec<VoId> = Vec::new();
         for &party_id in party_ids {
-            let kind = party_kind_any_tier(&mut tx, party_id).await?;
+            let kind = party_kind_any_tier(&mut tx, party_id.0).await?;
             if !kind.as_deref().is_some_and(super::is_party_kind) {
                 return Err(ServiceError::not_found(
                     Missing::Party,
                     format!("party {party_id}"),
                 ));
             }
-            ids.push(VoId(party_id));
+            ids.push(party_id);
         }
         tier::thaw(&mut tx, &ids).await?;
         tx.commit().await?;

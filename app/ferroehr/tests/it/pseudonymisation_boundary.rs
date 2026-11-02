@@ -1781,7 +1781,7 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
     );
 
     service
-        .physical_party_delete(vo)
+        .physical_party_delete(party)
         .await
         .expect("physically erase the person");
     let left: i64 =

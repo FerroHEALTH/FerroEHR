@@ -320,6 +320,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::integrity::integrity_routes())
         .merge(admin::marks::marks_routes())
         .merge(admin::access_delay::access_delay_routes())
+        .merge(admin::access_restriction::access_restriction_routes())
         .merge(admin::opt_out::opt_out_routes())
         .merge(admin::identifiers::identifier_routes())
         .merge(admin::outbox::outbox_routes())

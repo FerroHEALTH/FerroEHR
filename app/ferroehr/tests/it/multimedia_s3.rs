@@ -29,6 +29,7 @@ use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 use uuid::Uuid;
 
 use ferroehr::extensions::multimedia::config::MultimediaConfig;
+use ferroehr::ids::VoId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
 use ferroehr::service::demographic::types::PartyKind;
@@ -492,18 +493,14 @@ async fn gc_removes_unreferenced_but_keeps_shared_blobs() {
     assert!(sw.engine().store().exists(&key).await.unwrap());
 
     // Deleting ehr1 leaves the blob (still referenced by ehr2).
-    svc.admin_ehr_delete(ehr1.to_string())
-        .await
-        .expect("delete ehr1");
+    svc.admin_ehr_delete(ehr1).await.expect("delete ehr1");
     assert!(
         sw.engine().store().exists(&key).await.unwrap(),
         "a shared blob must survive while another EHR references it"
     );
 
     // Deleting ehr2 removes the last reference → the blob is GC'd.
-    svc.admin_ehr_delete(ehr2.to_string())
-        .await
-        .expect("delete ehr2");
+    svc.admin_ehr_delete(ehr2).await.expect("delete ehr2");
     assert!(
         !sw.engine().store().exists(&key).await.unwrap(),
         "an unreferenced blob must be GC'd on physical delete"
@@ -560,7 +557,7 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
     assert!(sw.engine().store().exists(&solo_key).await.unwrap());
     assert!(sw.engine().store().exists(&shared_key).await.unwrap());
 
-    svc.physical_party_delete(solo.clone())
+    svc.physical_party_delete(VoId(solo.parse().expect("a uuid")))
         .await
         .expect("delete the solo party");
     assert!(
@@ -569,7 +566,7 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
          content, and the operator asked for a physical delete"
     );
 
-    svc.physical_party_delete(sharer.clone())
+    svc.physical_party_delete(VoId(sharer.parse().expect("a uuid")))
         .await
         .expect("delete the sharing party");
     assert!(
