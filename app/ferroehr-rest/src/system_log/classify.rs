@@ -4,21 +4,24 @@
 //! Operation → DICOM audit classification for the IHE ATNA system log.
 //!
 //! ATNA records, per audited access, who did what to which resource with what
-//! outcome, as a DICOM Audit Message (PS3.15 §A.5). This table supplies the
-//! what-and-which half for one ITS-REST operation: its `EventActionCode`
-//! (§A.5.1) and the resource `ObjectClass` driving the participant-object
-//! rendering in the platform emitter. openEHR is silent on audit-record shape,
-//! so the mapping here is our own design over those external standards.
+//! outcome, as a DICOM Audit Message (PS3.15 §A.5). The operation's row in
+//! `crate::api::operation` supplies the what-and-which half for one ITS-REST
+//! operation: its `EventActionCode` (§A.5.1) and the resource `ObjectClass`
+//! driving the participant-object rendering in the platform emitter. openEHR is
+//! silent on audit-record shape, so the mapping is our own design over those
+//! external standards.
 //!
 //! Every operation id in every generated `ROUTES` table is explicitly
 //! classified, and the completeness test fails the build the moment a newly
-//! generated one is not. An id absent from the table — an extension route or a
-//! future operation — resolves through the conservative [`DEFAULT`], so it is
+//! generated one is not. An id without an audit class (an extension route or a
+//! future operation) resolves through the conservative [`DEFAULT`], so it is
 //! still recorded, attributing the caller and outcome without asserting a false
 //! resource class. An operation is left unaudited only by an explicit
 //! [`Classification::Unaudited`] entry.
 
 use ferroehr::system_log::event::{EventActionCode, ObjectClass};
+
+use crate::api::operation::{Operation, operation};
 
 /// The audit classification of an ITS-REST operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,217 +54,16 @@ impl Classification {
 /// `ApplicationActivity` class rather than silently dropped; extension routes
 /// and future operations land here until given an explicit entry.
 pub const DEFAULT: Classification =
-    Classification::audited(Execute, ObjectClass::ApplicationActivity);
+    Classification::audited(EventActionCode::Execute, ObjectClass::ApplicationActivity);
 
-use EventActionCode::{Create, Delete, Execute, Read, Update};
-use ObjectClass::{Composition, Contribution, Demographic, Directory, Ehr, Query, Template};
-
-/// The management surface's operation ids (#3244): reads of the node's own
-/// state are application-activity Executes; a runtime filter change is an
-/// Update and its reset a Delete, so the trail says which act it recorded.
-fn management_lookup(op: &str) -> Option<Classification> {
-    let c = match op {
-        "management"
-        | "management_info"
-        | "management_prometheus"
-        | "management_metrics"
-        | "management_env"
-        | "management_flamegraph"
-        | "management_health"
-        | "management_status"
-        | "management_loggers_get" => {
-            Classification::audited(Execute, ObjectClass::ApplicationActivity)
-        }
-        "management_loggers_set" => {
-            Classification::audited(Update, ObjectClass::ApplicationActivity)
-        }
-        "management_loggers_reset" => {
-            Classification::audited(Delete, ObjectClass::ApplicationActivity)
-        }
-        _ => return None,
-    };
-    Some(c)
-}
-
-/// The extension routes recorded like a released operation.
-///
-/// The physical party delete records what `admin_ehr_delete` records for an
-/// EHR: a `D` on the deleted record, here a demographic party, and the
-/// protected-identifier read an `R` on the party it expands, and the ADL 1.4
-/// template conversion an `R` on the template it reads. Every other id falls
-/// through to the management table.
-fn extension_lookup(op: &str) -> Option<Classification> {
-    match op {
-        "admin_party_delete" => Some(Classification::audited(Delete, Demographic)),
-        "admin_party_identifiers" => Some(Classification::audited(Read, Demographic)),
-        // NOTE: no specification governs the conversion route: our own design,
-        // a read of the stored template audited as the template reads are.
-        "definition_template_adl14_convert" => Some(Classification::audited(Read, Template)),
-        _ => management_lookup(op),
-    }
-}
-
-/// Look up the **explicit** classification for an operation id, or `None`
-/// when the id is not in the table.
-///
-/// This is the raw table probe used by the coverage guard; the request path
-/// uses [`classify`], which applies the fail-closed [`DEFAULT`] to a `None`.
-#[must_use]
-#[expect(
-    clippy::match_same_arms,
-    reason = "the arms are grouped by audited resource, so naming every operation \
-              explicitly is the point — merging equal arms would hide which \
-              operations belong to which DICOM EventID"
-)]
-pub fn lookup(op: &str) -> Option<Classification> {
-    let c = match op {
-        // ── SYSTEM (the OPTIONS-and-Conformance manifest) ────────────────────
-        // A conformance probe touches no clinical resource: audited as an
-        // application-activity Execute (the same class the fail-closed
-        // default uses, made EXPLICIT so the completeness gate covers it).
-        "options" => Classification::audited(Execute, ObjectClass::ApplicationActivity),
-
-        // ── EHR / Patient Record (DICOM EventID 110110) ──────────────────────
-        "ehr_create" | "ehr_create_with_id" => Classification::audited(Create, Ehr),
-        "ehr_get_by_subject" | "ehr_get_by_id" => Classification::audited(Read, Ehr),
-
-        // EHR_STATUS is a facet of the EHR / Patient Record.
-        "ehr_status_get_by_version_id"
-        | "ehr_status_get_at_time"
-        | "versioned_ehr_status_get"
-        | "versioned_ehr_status_revision_history"
-        | "versioned_ehr_status_version_get_at_time"
-        | "versioned_ehr_status_version_get_by_id" => Classification::audited(Read, Ehr),
-        "ehr_status_update" => Classification::audited(Update, Ehr),
-
-        // ── COMPOSITION ──────────────────────────────────────────────────────
-        "composition_create" => Classification::audited(Create, Composition),
-        "composition_update" => Classification::audited(Update, Composition),
-        "composition_delete" => Classification::audited(Delete, Composition),
-        "composition_get"
-        | "versioned_composition_get"
-        | "versioned_composition_revision_history"
-        | "versioned_composition_version_get_at_time"
-        | "versioned_composition_version_get_by_id" => Classification::audited(Read, Composition),
-
-        // ── DIRECTORY (FOLDER) ───────────────────────────────────────────────
-        "directory_create" => Classification::audited(Create, Directory),
-        "directory_update" => Classification::audited(Update, Directory),
-        "directory_delete" => Classification::audited(Delete, Directory),
-        "directory_get_at_time" | "directory_get_by_version_id" => {
-            Classification::audited(Read, Directory)
-        }
-
-        // The released OAS reuses these CONTRIBUTION `operationId`s in both
-        // bundles, and one classification is correct for both: RM common
-        // master06 change control governs every VERSIONED_OBJECT, demographic
-        // content included. The `adjudicated_shared_ids` gate below fails on any
-        // new cross-group duplicate.
-        "contribution_create" => Classification::audited(Create, Contribution),
-        "contribution_get" => Classification::audited(Read, Contribution),
-
-        // NOTE: RM ehr `master04-ehr_package.adoc` §Tags puts ITEM_TAGs outside
-        // change control, so auditing them at all is our own design/extension:
-        // each is audited under its parent's DICOM class.
-        "ehr_tags_get" | "ehr_status_tags_get" => Classification::audited(Read, Ehr),
-        "ehr_status_tags_update" => Classification::audited(Update, Ehr),
-        "ehr_status_tags_delete" => Classification::audited(Delete, Ehr),
-        "composition_tags_get" => Classification::audited(Read, Composition),
-        "composition_tags_update" => Classification::audited(Update, Composition),
-        "composition_tags_delete" => Classification::audited(Delete, Composition),
-
-        // ── DEFINITION: stored queries ───────────────────────────────────────
-        "definition_query_list" | "definition_query_version_get" => {
-            Classification::audited(Read, Query)
-        }
-        // The ".yaml" suffix is the generated operationId verbatim.
-        "definition_query_store.yaml" | "definition_query_version_store.yaml" => {
-            Classification::audited(Create, Query)
-        }
-
-        // ── QUERY execution (ad-hoc AQL + stored-query invocation) ───────────
-        "query_execute_adhoc_query"
-        | "query_execute_adhoc_query_body"
-        | "query_execute_stored_query"
-        | "query_execute_stored_query_body"
-        | "query_execute_stored_query_version"
-        | "query_execute_stored_query_version_body"
-        // The cohort extension executes AQL like the six released operations;
-        // the service layer records the boundary crossing separately.
-        | "query_execute_cohort" => Classification::audited(Execute, Query),
-
-        // ── DEFINITION: operational templates (OPT provisioning) ─────────────
-        "definition_template_adl1.4_upload" | "definition_template_adl2_upload" => {
-            Classification::audited(Create, Template)
-        }
-        "definition_template_adl1.4_list"
-        | "definition_template_adl1.4_get"
-        | "definition_template_adl1.4_example_get"
-        | "definition_template_adl2_list"
-        | "definition_template_adl2_get"
-        | "definition_template_adl2_example_get"
-        | "definition_template_adl2_version_get" => Classification::audited(Read, Template),
-
-        // ── ADMIN (physical deletion of EHRs; bulk delete-all) ───────────────
-        "admin_ehr_delete" | "admin_ehr_delete_all" => Classification::audited(Delete, Ehr),
-
-        // ── DEMOGRAPHIC (person-identifiable; audited under the Patient-Record
-        //    EventID family per our ATNA design) ───────────────────────────────
-        "agent_create"
-        | "group_create"
-        | "organisation_create"
-        | "person_create"
-        | "role_create" => Classification::audited(Create, Demographic),
-        "agent_get"
-        | "group_get"
-        | "organisation_get"
-        | "person_get"
-        | "role_get"
-        | "versioned_party_get"
-        | "versioned_party_revision_history"
-        | "versioned_party_version_get_at_time"
-        | "versioned_party_version_get_by_id"
-        | "demographic_tags_get"
-        | "agent_tags_get"
-        | "group_tags_get"
-        | "organisation_tags_get"
-        | "person_tags_get"
-        | "role_tags_get" => Classification::audited(Read, Demographic),
-        "agent_update"
-        | "group_update"
-        | "organisation_update"
-        | "person_update"
-        | "role_update"
-        | "agent_tags_update"
-        | "group_tags_update"
-        | "organisation_tags_update"
-        | "person_tags_update"
-        | "role_tags_update" => Classification::audited(Update, Demographic),
-        "agent_delete"
-        | "group_delete"
-        | "organisation_delete"
-        | "person_delete"
-        | "role_delete"
-        | "agent_tags_delete"
-        | "group_tags_delete"
-        | "organisation_tags_delete"
-        | "person_tags_delete"
-        | "role_tags_delete" => Classification::audited(Delete, Demographic),
-
-        // The extension and management ids live in their own tables (#3244).
-        _ => return extension_lookup(op),
-    };
-    Some(c)
-}
-
-/// Classifies an operation id for the request path: its explicit [`lookup`]
-/// entry, or the fail-closed [`DEFAULT`] when the id is unrecognised.
+/// Classifies an operation id for the request path: its explicit audit class,
+/// or the fail-closed [`DEFAULT`] when the id has none.
 ///
 /// Never yields "unknown": an unrecognised operation is audited under the
 /// generic class rather than dropped.
 #[must_use]
 pub fn classify(op: &str) -> Classification {
-    lookup(op).unwrap_or(DEFAULT)
+    operation(op).and_then(Operation::audit).unwrap_or(DEFAULT)
 }
 
 /// Returns the `(action, object)` an operation is audited under, or `None` for
@@ -280,7 +82,14 @@ pub fn audit_for(op: &str) -> Option<(EventActionCode, ObjectClass)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use EventActionCode::{Create, Delete, Execute, Read, Update};
+    use ObjectClass::{Composition, Contribution, Demographic, Directory, Ehr, Query, Template};
     use ferroehr::system_log::event::AccessDomain;
+
+    /// The explicit audit class of `op`, or `None` when its row names none.
+    fn lookup(op: &str) -> Option<Classification> {
+        operation(op).and_then(Operation::audit)
+    }
 
     /// Every operation id in every generated ITS-REST `ROUTES` table.
     fn all_route_ops() -> Vec<&'static str> {
@@ -302,7 +111,7 @@ mod tests {
 
     /// The op ids the released OAS deliberately reuses across group bundles,
     /// each adjudicated to ONE family-invariant classification (see the
-    /// CONTRIBUTION block in [`lookup`]). A NEW cross-group duplicate fails
+    /// CONTRIBUTION row note in [`crate::api::operation`]). A NEW cross-group duplicate fails
     /// [`adjudicated_shared_ids`] until it is adjudicated here (#1707).
     const ADJUDICATED_SHARED: &[&str] = &["contribution_create", "contribution_get"];
 
@@ -370,7 +179,7 @@ mod tests {
         assert!(
             missing.is_empty(),
             "generated ITS-REST operations with no explicit audit classification \
-             (add them to app/ferroehr-rest/src/system_log/classify.rs): {missing:?}"
+             (add them to app/ferroehr-rest/src/api/operation.rs): {missing:?}"
         );
     }
 

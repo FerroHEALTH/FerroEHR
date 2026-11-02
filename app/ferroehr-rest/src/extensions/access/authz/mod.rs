@@ -38,7 +38,8 @@ pub mod classify;
 pub mod request;
 pub mod roles;
 
-use crate::extensions::access::authz::classify::{OperationClass, class_of, is_write};
+use crate::api::operation::{Operation, operation};
+use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::{RbacDecision, authorize, authorize_readonly};
 use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::{
@@ -397,15 +398,14 @@ impl AbacGate {
 #[derive(Debug)]
 pub(crate) struct RbacGate {
     rules: RbacConfig,
-    /// `(method, full-path-template)` → (class, operation id), keyed by
+    /// `(method, full-path-template)` → operation, keyed by
     /// `base_path` + [`crate::api::normalize_path`] so a request's `MatchedPath`
-    /// matches. The op id feeds the read-only write classifier
-    /// ([`classify::is_write`]).
-    routes: HashMap<(Method, String), (OperationClass, &'static str)>,
+    /// matches. Its row gives the class and the write class ([`Operation::is_write`]).
+    routes: HashMap<(Method, String), &'static Operation>,
 }
 
 /// Extension routes whose HTTP verb MUTATES NOTHING — the read-only gate's
-/// counterpart to [`is_write`]'s `query_execute_*` arm, for the surfaces
+/// counterpart to the `Search` verb of [`Operation::is_write`], for the surfaces
 /// outside the generated ITS-REST tables.
 ///
 /// Matched by method + path SUFFIX so the deployment's configured base path is
@@ -486,14 +486,12 @@ impl RbacGate {
             openehr_its::rest::generated::system::ROUTES,
         ] {
             for (method, path, op) in table {
-                let (Ok(method), Some(class)) = (method.parse::<Method>(), class_of(op)) else {
-                    // An unparsable method or unclassified op is impossible for the
-                    // generated tables (the coverage guard proves classification);
-                    // skip defensively rather than panic in a constructor.
+                let (Ok(method), Some(row)) = (method.parse::<Method>(), operation(op)) else {
+                    // The coverage guard proves every generated op parses and has a class.
                     continue;
                 };
                 let full = format!("{base_path}{}", crate::api::normalize_path(path));
-                routes.insert((method, full), (class, *op));
+                routes.insert((method, full), row);
             }
         }
         Self { rules, routes }
@@ -510,25 +508,23 @@ impl RbacGate {
             Some(mp) => self
                 .routes
                 .get(&(method.clone(), mp.to_owned()))
-                .map_or_else(
-                    || {
-                        let admin = mp.contains("/admin/")
-                            || EXTENSION_ADMIN_ROUTES.iter().any(|(verb, suffix)| {
-                                method.as_str() == *verb && mp.ends_with(suffix)
-                            });
-                        if admin {
-                            OperationClass::Admin
-                        } else {
-                            OperationClass::Clinical
-                        }
-                    },
-                    |(class, _op)| *class,
-                ),
+                .and_then(|row| row.class)
+                .unwrap_or_else(|| {
+                    let admin = mp.contains("/admin/")
+                        || EXTENSION_ADMIN_ROUTES
+                            .iter()
+                            .any(|(verb, suffix)| method.as_str() == *verb && mp.ends_with(suffix));
+                    if admin {
+                        OperationClass::Admin
+                    } else {
+                        OperationClass::Clinical
+                    }
+                }),
         }
     }
 
     /// Whether the matched request is a **write** operation, for the read-only
-    /// gate. A mapped route classifies via its op id ([`classify::is_write`]); an
+    /// gate. A mapped route classifies via its operation ([`Operation::is_write`]); an
     /// unmapped route (an extension surface outside the generated tables) falls
     /// back to its HTTP method — only `GET`/`HEAD` are reads, every mutating verb
     /// is a write so the read-only restriction cannot be bypassed there. A
@@ -539,10 +535,7 @@ impl RbacGate {
             Some(mp) => self
                 .routes
                 .get(&(method.clone(), mp.to_owned()))
-                .map_or_else(
-                    || extension_is_write(method, mp),
-                    |(_class, op)| is_write(op),
-                ),
+                .map_or_else(|| extension_is_write(method, mp), |row| row.is_write()),
         }
     }
 

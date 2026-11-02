@@ -38,6 +38,7 @@ use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
 use http::{HeaderMap, Method, Uri};
 use openehr_its::rest::decode::query_component_octets;
 
+use crate::api::operation::{CompositionGate, Operation, operation};
 use crate::extensions::access::authn::Principal;
 
 /// When a route's requirement is checked.
@@ -136,6 +137,8 @@ impl SmartRoutes {
     /// The requirement of a generated operation.
     fn need_of_op(&self, op: &str, group: Group, template: &str, path: &str) -> Need {
         let named = |name: &str| path_param(template, path, name);
+        let row = operation(op);
+        let permission = row.map_or(Permission::Read, Operation::permission);
         let requirement = match group {
             Group::Admin => self.product(),
             Group::Demographic => self.demographic(),
@@ -147,22 +150,18 @@ impl SmartRoutes {
             },
             Group::Definition if op.starts_with("definition_query_") => Requirement::OpenEhr {
                 family: ResourceFamily::Aql,
-                permission: permission_of_op(op),
+                permission,
                 resource: named("qualified_query_name"),
             },
             Group::Definition => Requirement::OpenEhr {
                 family: ResourceFamily::Template,
-                permission: permission_of_op(op),
+                permission,
                 resource: named("template_id"),
             },
-            Group::Ehr
-                if !op.contains("_tags_")
-                    && (op.starts_with("composition_")
-                        || op.starts_with("versioned_composition_")) =>
-            {
-                return Need::Composition(permission_of_op(op));
+            Group::Ehr if row.is_some_and(|row| row.composition != CompositionGate::None) => {
+                return Need::Composition(permission);
             }
-            Group::Ehr => ehr_data(permission_of_op(op)),
+            Group::Ehr => ehr_data(permission),
         };
         Need::Now(requirement)
     }
@@ -267,23 +266,6 @@ const fn ehr_data(permission: Permission) -> Requirement {
         family: ResourceFamily::Composition,
         permission,
         resource: None,
-    }
-}
-
-/// The permission letter an operation exercises (master08 §Resource Scopes:
-/// `c` create, `r` read, `u` update, `d` delete, `s` search or execute).
-#[must_use]
-pub(crate) fn permission_of_op(op: &str) -> Permission {
-    if op.starts_with("query_execute_") {
-        Permission::Search
-    } else if op.contains("_create") || op.contains("_upload") || op.contains("_store") {
-        Permission::Create
-    } else if op.contains("_update") {
-        Permission::Update
-    } else if op.contains("_delete") {
-        Permission::Delete
-    } else {
-        Permission::Read
     }
 }
 
@@ -400,6 +382,11 @@ mod tests {
     use super::*;
 
     const BASE: &str = "/ferroehr/rest/openehr/v1";
+
+    /// The permission letter `op` exercises, `r` for an operation without a row.
+    fn permission_of_op(op: &str) -> Permission {
+        operation(op).map_or(Permission::Read, Operation::permission)
+    }
 
     fn routes() -> SmartRoutes {
         SmartRoutes::new(

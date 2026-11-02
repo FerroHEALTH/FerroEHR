@@ -33,7 +33,8 @@
 
 use axum::response::{IntoResponse, Response};
 
-use crate::extensions::access::authz::classify::{Mode, access_of, kind_of, mode_of};
+use crate::api::operation::{CompositionGate, Operation, Verb, operation};
+use crate::extensions::access::authz::classify::Mode;
 use crate::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
 use ferrohealth_authz::request::Attr;
 use openehr_its::rest::runtime::ApiError;
@@ -55,7 +56,7 @@ use ferroehr::aql::subject::{EhrSubject, TouchedSubjects};
 use ferroehr::service::status::{ServiceStatus, StatusError};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use ferrohealth_smart::guard::Requirement;
-use ferrohealth_smart::openehr::smart_scopes::ResourceFamily;
+use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
 
 /// Prepares a query execution: the patient subject scope to thread into the
 /// SQL, and whether the executor collects the touched EHR/template sets for the
@@ -73,7 +74,7 @@ pub(crate) fn query_pre(
     let Some(abac) = handle.abac() else {
         return Ok((None, false));
     };
-    if kind_of(op) != Some(ResourceKind::Query) {
+    if operation(op).and_then(|row| row.kind) != Some(ResourceKind::Query) {
         return Ok((None, false));
     }
     let principal = current_principal().ok_or_else(|| {
@@ -118,7 +119,7 @@ pub(crate) async fn query_post(
     let Some(abac) = handle.abac() else {
         return Ok(());
     };
-    if kind_of(op) != Some(ResourceKind::Query) {
+    if operation(op).and_then(|row| row.kind) != Some(ResourceKind::Query) {
         return Ok(());
     }
     // Empty result set → nothing touched → permit.
@@ -196,10 +197,10 @@ async fn abac_pre(
     let Some(abac) = handle.abac() else {
         return Ok(());
     };
-    if mode_of(op) != Mode::Pre {
-        return Ok(());
-    }
-    let Some(kind) = kind_of(op) else {
+    let Some((row, kind)) = operation(op)
+        .filter(|row| row.pep == Mode::Pre)
+        .and_then(|row| row.kind.map(|kind| (row, kind)))
+    else {
         return Ok(());
     };
     // DIRECTORY is gated only when `abac.check_directory` says so — engine-
@@ -226,7 +227,7 @@ async fn abac_pre(
     )
     .await?;
 
-    let content = pre_content(abac, &principal, op, parts).await?;
+    let content = pre_content(abac, &principal, row, parts).await?;
 
     let req = AuthzRequest {
         operation_id: op,
@@ -234,7 +235,7 @@ async fn abac_pre(
         roles: &principal.roles,
         scopes: &principal.scopes,
         kind,
-        access: access_of(op).unwrap_or(AccessMode::Read),
+        access: row.access().unwrap_or(AccessMode::Read),
         organization: organization(abac, &principal),
         subject_patient: abac.subject_patient(patient.as_ref()),
         patient: patient.map(Attr::One),
@@ -273,10 +274,10 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
     let Some(abac) = handle.abac() else {
         return resp;
     };
-    if mode_of(op) != Mode::Post {
-        return resp;
-    }
-    let Some(kind) = kind_of(op) else {
+    let Some((row, kind)) = operation(op)
+        .filter(|row| row.pep == Mode::Post)
+        .and_then(|row| row.kind.map(|kind| (row, kind)))
+    else {
         return resp;
     };
     let Some(principal) = current_principal() else {
@@ -314,7 +315,7 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
         roles: &principal.roles,
         scopes: &principal.scopes,
         kind,
-        access: access_of(op).unwrap_or(AccessMode::Read),
+        access: row.access().unwrap_or(AccessMode::Read),
         organization: organization(abac, &principal),
         subject_patient: abac.subject_patient(patient.as_ref()),
         patient: patient.map(Attr::One),
@@ -491,15 +492,12 @@ fn stored_attrs(rules: &ContentRules, content: VersionContent, written: bool) ->
 async fn pre_content(
     abac: &AbacGate,
     principal: &Principal,
-    op: &str,
+    row: &Operation,
     parts: &RequestParts,
 ) -> Result<ContentAttrs, Response> {
     let rules = &abac.resolvers.content;
-    match op {
-        "composition_create" | "composition_update" => {
-            Ok(composition_content(rules, principal, parts))
-        }
-        "composition_delete" => {
+    match (row.composition, row.verb) {
+        (CompositionGate::Write, Verb::Delete) => {
             // The content of the preceding (current) version being deleted.
             let Some(uid) = parts.path.get("uid_based_id") else {
                 return Ok(ContentAttrs::default());
@@ -512,7 +510,8 @@ async fn pre_content(
                 stored_attrs(rules, content, true)
             }))
         }
-        "contribution_create" => contribution_content(rules, parts, principal),
+        (CompositionGate::Write, _) => Ok(composition_content(rules, principal, parts)),
+        _ if row.commits_contribution() => contribution_content(rules, parts, principal),
         // EHR / EHR_STATUS / DIRECTORY carry no template.
         _ => Ok(ContentAttrs::default()),
     }
@@ -789,13 +788,6 @@ fn engine_error(
     resp
 }
 
-/// Whether `op` is a COMPOSITION operation whose SMART requirement the
-/// policy-enforcement point checks (`crate::smart::routes`, `Need::Composition`).
-fn smart_composition_op(op: &str) -> bool {
-    !op.contains("_tags_")
-        && (op.starts_with("composition_") || op.starts_with("versioned_composition_"))
-}
-
 /// The SMART gate of a COMPOSITION write, on the template its body names or,
 /// for a delete, the template of the version it deletes (master08 §Resource
 /// Scopes, `composition-<templateId>`). Inert without an authenticated
@@ -805,25 +797,21 @@ async fn smart_pre(
     op: &'static str,
     parts: &RequestParts,
 ) -> Result<(), Response> {
-    if !matches!(
-        op,
-        "composition_create" | "composition_update" | "composition_delete"
-    ) {
+    let Some(row) = operation(op).filter(|row| row.composition == CompositionGate::Write) else {
         return Ok(());
-    }
+    };
     let Some(principal) = current_principal() else {
         return Ok(());
     };
-    let template = match op {
-        "composition_delete" => {
-            composition_template_of(
-                state,
-                &principal,
-                parts.path.get("uid_based_id").map(String::as_str),
-            )
-            .await?
-        }
-        _ => composition_template(parts),
+    let template = if row.verb == Verb::Delete {
+        composition_template_of(
+            state,
+            &principal,
+            parts.path.get("uid_based_id").map(String::as_str),
+        )
+        .await?
+    } else {
+        composition_template(parts)
     };
     smart_composition(
         &principal,
@@ -840,7 +828,7 @@ async fn smart_post(
     op: &'static str,
     object: Option<crate::system_log::middleware::AuditObject>,
 ) -> Result<(), Response> {
-    if !smart_composition_op(op) {
+    if operation(op).is_none_or(|row| row.composition == CompositionGate::None) {
         return Ok(());
     }
     let Some(principal) = current_principal() else {
@@ -865,7 +853,7 @@ fn smart_composition(
 ) -> Result<(), Response> {
     let requirement = Requirement::OpenEhr {
         family: ResourceFamily::Composition,
-        permission: routes::permission_of_op(op),
+        permission: operation(op).map_or(Permission::Read, Operation::permission),
         resource: template.map(str::to_owned),
     };
     routes::check(&requirement, principal, ehr_id).map_err(|reason| {
@@ -916,6 +904,10 @@ mod tests {
 
     use super::*;
     use crate::extensions::access::authz::{AuthzResolvers, ResolveError};
+
+    fn mode_of(op: &str) -> Mode {
+        operation(op).map_or(Mode::Skip, |row| row.pep)
+    }
 
     /// A bearer principal for `subject` carrying `claims`.
     fn bearer_principal(
@@ -1196,7 +1188,7 @@ mod tests {
         // The contribution-list extension is pre-checked (EHR-scoped read).
         assert_eq!(mode_of("contribution_list"), Mode::Pre);
         assert_eq!(
-            kind_of("contribution_list"),
+            operation("contribution_list").and_then(|row| row.kind),
             Some(ResourceKind::Contribution)
         );
         assert_eq!(mode_of("ehr_status_update"), Mode::Pre);
@@ -1453,6 +1445,8 @@ mod tests {
     /// every template by the middleware.
     #[test]
     fn smart_composition_ops_are_the_composition_family() {
+        let smart_composition_op =
+            |op| operation(op).is_some_and(|row| row.composition != CompositionGate::None);
         assert!(smart_composition_op("composition_get"));
         assert!(smart_composition_op(
             "versioned_composition_revision_history"
