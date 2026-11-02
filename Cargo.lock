@@ -2482,7 +2482,6 @@ dependencies = [
  "openehr-am",
  "openehr-base",
  "openehr-its",
- "openehr-lang",
  "openehr-query",
  "openehr-rm",
  "openehr-sdt",

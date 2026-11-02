@@ -17,14 +17,6 @@
 //! patient is a PERSON whose `relationships` holds a `PARTY_RELATIONSHIP` to a
 //! shared ROLE; `ROLE.performer` is mandatory
 //! (`UML/classes/org.openehr.rm.demographic.role.adoc`, `performer` 1..1).
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::path::PathBuf;
 
 use axum::Router;

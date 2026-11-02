@@ -6,8 +6,8 @@
 //! A plain BFF axum route: each export of the results pane is a submit of the
 //! query's own form with `formaction`, so the download needs no script.
 //!
-//! The route enforces the viewer session exactly like every page and runs
-//! the AQL through the same CDR client.
+//! The session guard admits only a request with a viewer session, and the
+//! route runs the AQL through the same CDR client as every page.
 //!
 //! The query is sent to the CDR as-is (no `fetch`/`offset` paging): a
 //! query carrying its own `LIMIT` exports that window, and an unbounded
@@ -19,7 +19,7 @@
               (#1694)"
 )]
 
-use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
+use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 
 use crate::error::ViewerError;
@@ -40,33 +40,21 @@ pub struct ExportForm {
     pub parameters_json: String,
 }
 
-/// `POST /export/aql/{format}` — run the query and answer with a file
+/// `POST /export/aql/{format}`: run the query and answer with a file
 /// download in `format`, `csv` or `json`.
 ///
-/// Callers without a viewer session are redirected to `/login` (the form is
-/// a full-page navigation, so a redirect is the correct UX and the correct
-/// security answer) — a missing, tampered or idle-expired cookie all read as
-/// no session. A CDR-side refusal of the session's credential instead
-/// answers the error branch below (the download never navigates away on a
-/// mid-flight CDR 401).
+/// The session guard ([`crate::server::login_guard`]) sends a request without
+/// a viewer session to sign in before this runs and hands the session over.
+/// A CDR-side refusal of the session's credential answers `502`, so the
+/// download never navigates away on a mid-flight CDR `401`.
 pub async fn export_aql(
     axum::Extension(state): axum::Extension<crate::state::AppState>,
+    axum::Extension(viewer): axum::Extension<crate::session::ViewerSession>,
     axum::extract::Path(format): axum::extract::Path<String>,
-    headers: HeaderMap,
     axum::Form(form): axum::Form<ExportForm>,
 ) -> Response {
-    let session = crate::session::unseal(
-        &state.session_keys,
-        &headers,
-        state.config.session.idle_minutes,
-    );
-    let Some(admin) = session.get::<crate::session::ViewerSession>(crate::session::SESSION_KEY)
-    else {
-        return axum::response::Redirect::to("/login").into_response();
-    };
-    match run(&state, &admin, &form, &format).await {
+    match run(&state, &viewer, &form, &format).await {
         Ok(response) => response,
-        Err(ViewerError::Unauthenticated) => axum::response::Redirect::to("/login").into_response(),
         Err(e) => plain(
             StatusCode::BAD_GATEWAY,
             &tr_with(ServerMsg::ExportFailed, &[("e", (e).to_string().into())]),

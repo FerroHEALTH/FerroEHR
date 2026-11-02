@@ -12,14 +12,6 @@
 //! in `data`, the columns `NULL`), and reads again: the two answers must be
 //! the same bytes. No openEHR spec governs storage: our own design.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              fixture helpers; a failing fixture must panic at the fixture (the \
-              Rust Book ch11)"
-)]
-
 use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;

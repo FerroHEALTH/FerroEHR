@@ -13,14 +13,6 @@
 //! not persisted. The FLAT and STRUCTURED bodies reach the same commit after
 //! conversion, so one constraint is driven through each of them too.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only reaches \
-              `#[test]`-annotated functions, so it misses this module's helpers and async \
-              bodies; panicking assertions are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 

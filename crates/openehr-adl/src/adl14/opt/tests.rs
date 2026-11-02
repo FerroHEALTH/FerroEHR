@@ -633,7 +633,7 @@ fn rendered_operators_are_adl_surface_syntax() {
     let matches = binary_symbol(opt14::types::OperatorKind::Matches)
         .expect("`matches` has a surface rendering");
     let text = format!("archetype_id/value {matches} {{/openEHR-EHR-OBSERVATION\\.minimal\\.v1/}}");
-    let parsed = crate::rules::parse_slot_assertions(&text)
+    let parsed = crate::rules::parse_slot_assertions(&text, crate::codes::NodeCoding::At)
         .unwrap_or_else(|e| panic!("rendered assertion {text:?} did not parse: {e:?}"));
     assert_eq!(parsed.len(), 1, "expected one assertion from {text:?}");
 
@@ -644,7 +644,7 @@ fn rendered_operators_are_adl_surface_syntax() {
         opt14::types::OperatorKind::Matches.as_wire()
     );
     assert!(
-        crate::rules::parse_slot_assertions(&raw).is_err(),
+        crate::rules::parse_slot_assertions(&raw, crate::codes::NodeCoding::At).is_err(),
         "the raw XSD facet id must not be accepted as an operator"
     );
 }

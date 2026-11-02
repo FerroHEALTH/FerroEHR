@@ -13,14 +13,6 @@
 //! §`PARTY_SELF`): our own design. A subject is resolved through the cohort
 //! query that names it, the production path a subject resolution takes.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::path::Path;
 use std::sync::Arc;
 

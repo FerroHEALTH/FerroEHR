@@ -10,16 +10,6 @@
 //! and the `UPDATE_VERSION` commit envelope — so the seeds and probes live
 //! here once rather than once per suite.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;

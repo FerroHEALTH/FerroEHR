@@ -8,19 +8,6 @@
 //! REST layer calls it, asserting both the RM payload (`.body`) and the resource
 //! metadata (`.meta`, from which the HTTP edge derives `ETag`/`Location`).
 
-#![expect(
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-#![expect(
-    clippy::too_many_lines,
-    reason = "an end-to-end suite drives one long lifecycle per test on purpose: \
-              splitting a case would hide the order its assertions depend on"
-)]
-
 use serde_json::{Value, json};
 
 use openehr_base::prelude::ObjectVersionId;
@@ -2530,7 +2517,7 @@ async fn the_default_ehr_status_satisfies_the_locatable_root_invariants() {
         details["rm_version"]
             .as_str()
             .is_some_and(|v| !v.is_empty()),
-        "ARCHETYPED.rm_version is 1..1, got {details}"
+        "ARCHETYPED.rm_version is 1..1 and must be a non-empty string"
     );
     // Our own defaults for the generated status.
     assert_eq!(status["is_modifiable"], json!(true));

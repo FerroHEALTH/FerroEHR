@@ -20,17 +20,6 @@
 //! the four cohorts are 100 / 1 000 / 10 000 / N EHRs out of the same corpus,
 //! and the four measurements differ only in how wide the crossing is.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::print_stdout,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11), and a measurement \
-              reports its record on stdout"
-)]
-
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;

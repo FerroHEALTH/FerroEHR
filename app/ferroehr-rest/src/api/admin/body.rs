@@ -100,88 +100,85 @@ pub(super) fn dispatch<R: RegisterRoutes>(
 }
 
 /// The answers of a register read beside [`AdminRefusal`], as one response
-/// map for the OpenAPI document.
-#[derive(utoipa::IntoResponses)]
-#[expect(
-    dead_code,
-    reason = "a response map the OpenAPI document reads; the answers themselves are built \
-              by the register routes"
-)]
-pub(super) enum RegisterReadRefusal {
-    #[response(status = 400, description = "`ehr_id` is missing or not a UUID.")]
-    BadEhrId(#[to_schema] serde_json::Value),
-    #[response(status = 404, description = "No such EHR.")]
-    UnknownEhr(#[to_schema] serde_json::Value),
+/// map for the OpenAPI document; the register routes build the answers.
+pub(super) struct RegisterReadRefusal;
+
+impl utoipa::IntoResponses for RegisterReadRefusal {
+    fn responses() -> ResponseMap {
+        json_responses(&[
+            (400, "`ehr_id` is missing or not a UUID."),
+            (404, "No such EHR."),
+        ])
+    }
 }
 
 /// The refusals every admin register route answers before it reads its
-/// request, as one response map for the OpenAPI document.
-#[derive(utoipa::IntoResponses)]
-#[expect(
-    dead_code,
-    reason = "a response map the OpenAPI document reads; the refusals themselves are built \
-              by the authentication layer and the admin gate"
-)]
-pub(super) enum AdminRefusal {
-    #[response(status = 401, description = "Unauthenticated.")]
-    Unauthenticated(#[to_schema] serde_json::Value),
-    #[response(status = 403, description = "Not in the Admin class.")]
-    NotAdmin(#[to_schema] serde_json::Value),
-    #[response(
-        status = 405,
-        description = "The admin API is disabled on this server."
-    )]
-    Disabled(#[to_schema] serde_json::Value),
+/// request, as one response map for the OpenAPI document; the authentication
+/// layer and the admin gate build the refusals.
+pub(super) struct AdminRefusal;
+
+impl utoipa::IntoResponses for AdminRefusal {
+    fn responses() -> ResponseMap {
+        json_responses(&[
+            (401, "Unauthenticated."),
+            (403, "Not in the Admin class."),
+            (405, "The admin API is disabled on this server."),
+        ])
+    }
+}
+
+/// The responses of an [`utoipa::IntoResponses`] map, by status.
+type ResponseMap =
+    std::collections::BTreeMap<String, utoipa::openapi::RefOr<utoipa::openapi::response::Response>>;
+
+/// One `application/json` response per `(status, description)`, whose body is
+/// any JSON value.
+fn json_responses(answers: &[(u16, &str)]) -> ResponseMap {
+    answers
+        .iter()
+        .map(|&(status, description)| {
+            let content = utoipa::openapi::ContentBuilder::new()
+                .schema(Some(<serde_json::Value as utoipa::PartialSchema>::schema()))
+                .build();
+            let response = utoipa::openapi::ResponseBuilder::new()
+                .description(description)
+                .content("application/json", content)
+                .build();
+            (status.to_string(), response.into())
+        })
+        .collect()
 }
 
 /// An admin route's unauthenticated refusal, with the released operations' `security: []` named.
 #[derive(utoipa::IntoResponses)]
-#[expect(
-    dead_code,
-    reason = "a response map the OpenAPI document reads; the refusal itself is built by the authentication layer"
+#[response(
+    status = 401,
+    description = "Unauthenticated (auth enabled, no valid \
+                  principal). Our own authorization design \
+                  — the released admin operations carry \
+                  `security: []` and declare no such \
+                  branch."
 )]
-pub(super) enum AdminUnauthenticated {
-    #[response(
-        status = 401,
-        description = "Unauthenticated (auth enabled, no valid \
-                      principal). Our own authorization design \
-                      — the released admin operations carry \
-                      `security: []` and declare no such \
-                      branch."
-    )]
-    Unauthenticated,
-}
+pub(super) struct AdminUnauthenticated;
 
 /// An admin route's refusal of a caller outside the Admin class.
 #[derive(utoipa::IntoResponses)]
-#[expect(
-    dead_code,
-    reason = "a response map the OpenAPI document reads; the refusal itself is built by the access layer"
+#[response(
+    status = 403,
+    description = "Authenticated but not in the Admin class \
+                  (`OperationClass::Admin`, keyed off the \
+                  `/admin/` path). Our own authorization \
+                  design."
 )]
-pub(super) enum NotAdminClass {
-    #[response(
-        status = 403,
-        description = "Authenticated but not in the Admin class \
-                      (`OperationClass::Admin`, keyed off the \
-                      `/admin/` path). Our own authorization \
-                      design."
-    )]
-    NotAdmin,
-}
+pub(super) struct NotAdminClass;
 
 /// An admin route's refusal while the admin API is disabled.
 #[derive(utoipa::IntoResponses)]
-#[expect(
-    dead_code,
-    reason = "a response map the OpenAPI document reads; the refusal itself is built by the admin gate"
+#[response(
+    status = 405,
+    description = "The admin API is disabled on this server \
+                  (`AppConfig::admin.enabled`, default \
+                  false), answered with an empty `Allow` \
+                  per RFC 9110 §10.2.1."
 )]
-pub(super) enum AdminDisabled {
-    #[response(
-        status = 405,
-        description = "The admin API is disabled on this server \
-                      (`AppConfig::admin.enabled`, default \
-                      false), answered with an empty `Allow` \
-                      per RFC 9110 §10.2.1."
-    )]
-    Disabled,
-}
+pub(super) struct AdminDisabled;

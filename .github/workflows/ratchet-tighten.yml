@@ -145,8 +145,10 @@ jobs:
           tree_args=()
           while IFS= read -r f; do
             [ -n "$f" ] || continue
-            blob=$(gh api "repos/${REPO}/git/blobs" \
-                     -f encoding=base64 -f content="$(base64 -w0 "$f")" --jq .sha)
+            # The body goes through a file: a ratchet file's base64 content
+            # passed as one argument exceeds the kernel's limit (#4790).
+            base64 -w0 "$f" | jq -Rs '{encoding: "base64", content: .}' >blob.json
+            blob=$(gh api "repos/${REPO}/git/blobs" --input blob.json --jq .sha)
             tree_args+=( -f "tree[][path]=$f" -f "tree[][mode]=100644" \
                          -f "tree[][type]=blob" -f "tree[][sha]=$blob" )
             echo "staged $f ($blob)"
@@ -192,9 +194,14 @@ jobs:
             fi
           } >pr-body.md
 
-          url=$(gh pr create --repo "$REPO" --base main --head "$branch" \
-                  --title "chore(checks): lower the ratchet counts" \
-                  --body-file pr-body.md)
+          # The workflow token may not open a pull request where the repository
+          # forbids it; the branch is then the hand-off and a maintainer opens it.
+          if ! url=$(gh pr create --repo "$REPO" --base main --head "$branch" \
+                       --title "chore(checks): lower the ratchet counts" \
+                       --body-file pr-body.md); then
+            echo "::notice::Pushed ${branch}; open its pull request by hand (Actions may not create one here)."
+            exit 0
+          fi
           echo "::notice::Opened $url"
           echo "$url" >>"$GITHUB_STEP_SUMMARY"
           gh pr merge "$url" --repo "$REPO" --auto --squash

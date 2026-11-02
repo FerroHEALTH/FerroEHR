@@ -11,14 +11,6 @@
 //! `400` in the openEHR error shape, and a deployment that binds nothing
 //! answers `404` as if the surface were not there.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

@@ -11,16 +11,6 @@
 //! occurs here because auth is disabled), and (3) a set of representative
 //! extension paths are present so the document cannot silently shrink.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    clippy::string_slice,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 
 use axum::Router;

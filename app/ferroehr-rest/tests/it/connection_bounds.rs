@@ -13,14 +13,6 @@
 //! No openEHR spec governs connection handling — our own design; the control is
 //! the OWASP Denial of Service Cheat Sheet's "minimum ingress rate threshold".
 
-#![allow(
-    clippy::panic_in_result_fn,
-    clippy::panic,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "test assertions and fixtures"
-)]
-
 use std::time::Duration;
 
 use ferrohealth_health::lifecycle::Lifecycle;

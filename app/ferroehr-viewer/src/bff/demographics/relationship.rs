@@ -23,13 +23,13 @@
 //!   a party.
 //!
 //! The two are not synchronized by the CDR, and neither is a view of the other.
-//! One consequence is visible on every screen here: **the TARGET side of a
-//! relationship is not enumerable.** `PARTY.reverse_relationships` —
-//! "References to relationships in which this Party takes part as target" — is
-//! a derived `0..1` function in the RM, and the CDR leaves it unpopulated, so
-//! no request answers "which relationships point AT this party". A party's tab
-//! says so rather than implying the list it shows is complete; the relationship
-//! detail links BOTH endpoints, which is the reachable direction.
+//! The TARGET side of a relationship depends on the CDR's `spec_profile`.
+//! `PARTY.reverse_relationships` ("References to relationships in which this
+//! Party takes part as target") is an attribute in RM 1.1.0 and a function in
+//! RM 1.2.0 (SPECRM-124): a CDR on the `stable` profile lists the references
+//! in a canonical-JSON party read, and one on `development` serves none. A
+//! party's tab therefore never implies the list it shows is complete, and the
+//! relationship detail links BOTH endpoints, which is reachable either way.
 
 #![expect(
     clippy::disallowed_types,

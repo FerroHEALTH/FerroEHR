@@ -13,21 +13,6 @@
 //! `node`, `contribution`, `audit`, and `item_tag`, while a second EHR is left
 //! entirely untouched.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-#![expect(
-    clippy::too_many_lines,
-    reason = "an end-to-end suite drives one long lifecycle per test on purpose: \
-              splitting a case would hide the order its assertions depend on"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::{AssertSqlSafe, PgPool};

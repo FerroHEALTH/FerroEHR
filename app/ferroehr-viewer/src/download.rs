@@ -12,11 +12,10 @@
 //! route enforces the viewer session like every page (the public
 //! endpoint rule). No openEHR spec governs the viewer: our own design.
 
-use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
+use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 
 use crate::adl2::TemplateFamily;
-use crate::error::ViewerError;
 
 /// The route a template's Download reads from, followed by the family and
 /// the template id: `/download/template/adl14/{id}`.
@@ -90,23 +89,15 @@ fn cdr_path(family: &str, template_id: &str) -> Option<(TemplateFamily, String)>
 /// `GET /download/template/{family}/{id}`: the template as the CDR stores
 /// it, as a file.
 ///
-/// A request with no viewer session is sent to `/login`; a family or an id
-/// that names no template is a `404` before any CDR call; a CDR refusal
-/// answers `502` with the CDR's words.
+/// The session guard ([`crate::server::login_guard`]) sends a request with
+/// no viewer session to sign in before this runs and hands the session over.
+/// A family or an id that names no template is a `404` before any CDR call,
+/// and a CDR refusal answers `502` with the CDR's words.
 pub async fn download_template(
     axum::Extension(state): axum::Extension<crate::state::AppState>,
+    axum::Extension(viewer): axum::Extension<crate::session::ViewerSession>,
     axum::extract::Path((family, template_id)): axum::extract::Path<(String, String)>,
-    headers: HeaderMap,
 ) -> Response {
-    let session = crate::session::unseal(
-        &state.session_keys,
-        &headers,
-        state.config.session.idle_minutes,
-    );
-    let Some(viewer) = session.get::<crate::session::ViewerSession>(crate::session::SESSION_KEY)
-    else {
-        return axum::response::Redirect::to("/login").into_response();
-    };
     let Some((family, path)) = cdr_path(&family, &template_id) else {
         return StatusCode::NOT_FOUND.into_response();
     };
@@ -136,7 +127,6 @@ pub async fn download_template(
                 Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             }
         }
-        Err(ViewerError::Unauthenticated) => axum::response::Redirect::to("/login").into_response(),
         Err(error) => (StatusCode::BAD_GATEWAY, error.to_string()).into_response(),
     }
 }

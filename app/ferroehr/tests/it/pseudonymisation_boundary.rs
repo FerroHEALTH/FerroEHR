@@ -24,14 +24,6 @@
 //! `demographic` and nowhere else, that the boot self-check refuses a
 //! database whose grants cross the boundary and passes once they do not.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              fixture helpers; a failing fixture must panic at the fixture (the \
-              Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;

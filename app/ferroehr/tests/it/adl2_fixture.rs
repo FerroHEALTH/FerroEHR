@@ -8,13 +8,6 @@
 //! Helper module, not a test module (`.claude/rules/testing.md` §Where tests
 //! live).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this shared \
-              fixture helper; a malformed fixture argument must fail loudly"
-)]
-
 /// Build a minimal spec-valid ADL2 source: header, HRID, optional
 /// `specialize`, `language`, `definition` (root node `id1`, or `id1.1` when
 /// specialised — AOM2 master08 VARCN), `terminology` (ADL2 master02

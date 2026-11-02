@@ -69,15 +69,6 @@
 //! `[a-zA-Z][a-zA-Z0-9_]*`, so a quote, semicolon, comment sequence or jsonpath
 //! metacharacter in a path position is a lex failure, not a payload.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this module's \
-              helpers and async bodies; panicking assertions are the intended \
-              shape here (the Rust Book ch11)"
-)]
-
 use crate::fixtures::plan_ok;
 use std::sync::Arc;
 

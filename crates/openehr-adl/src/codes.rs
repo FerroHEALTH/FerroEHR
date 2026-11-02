@@ -54,11 +54,13 @@ impl CodePrefix {
     }
 }
 
-/// The code system an archetype identifies its nodes in: at-codes, the openEHR
-/// primary system and that of ADL 1.4, or the id-codes ADL2 was first released
-/// with (`org.openehr.am.aom2.adl_code_definitions` §Description, NOTE).
+/// The code system an archetype identifies its nodes in.
+///
+/// At-codes are the openEHR primary system and that of ADL 1.4; id-codes are
+/// the ones ADL2 was first released with
+/// (`org.openehr.am.aom2.adl_code_definitions` §Description, NOTE).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum NodeCoding {
+pub enum NodeCoding {
     /// Nodes carry at-codes (`At_code_leader`).
     At,
     /// Nodes carry id-codes (`Id_code_leader`).
@@ -68,7 +70,8 @@ pub(crate) enum NodeCoding {
 impl NodeCoding {
     /// The coding of the archetype whose root node carries `root_node_id`:
     /// id-coded roots start `id1`, at-coded ones `at0000` (`Root_code_regex_pattern`).
-    pub(crate) fn of_root(root_node_id: &str) -> Self {
+    #[must_use]
+    pub fn of_root(root_node_id: &str) -> Self {
         if AdlCodeDefinitionsData::is_id_code(root_node_id) {
             Self::Id
         } else {

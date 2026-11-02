@@ -9,14 +9,6 @@
 //! Each test takes a fresh, fully-migrated database from the shared `testkit`
 //! harness (`tools/testkit`); the returned guard releases the clone on drop.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::path::Path;
 
 use ferroehr::db;
@@ -88,7 +80,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(applied("ext").await, 9);
     assert_eq!(applied("clinical").await, 29);
     assert_eq!(applied("party").await, 22);
-    assert_eq!(applied("audit").await, 21);
+    assert_eq!(applied("audit").await, 22);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();

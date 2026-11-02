@@ -5,15 +5,6 @@
 //! validation: an operational template the writer builds from CKM archetypes
 //! is one FerroEHR accepts, unless the archetype itself breaks a rule.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers; panicking assertions are the intended shape here \
-              (the Rust Book ch11)"
-)]
-
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 

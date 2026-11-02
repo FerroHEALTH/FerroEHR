@@ -11,15 +11,6 @@
 //! none of the four classes is a `LOCATABLE` or an `X_VERSIONED_OBJECT`. No
 //! specification governs these roots: FerroEHR's own design names each after
 //! its class and puts no `xsi:type` on it, pending the upstream report #4652.
-#![expect(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use axum::Router;
 use http::{StatusCode, header};
 

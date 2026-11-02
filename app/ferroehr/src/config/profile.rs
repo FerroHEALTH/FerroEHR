@@ -21,16 +21,16 @@ use serde::{Deserialize, Serialize};
 /// The openEHR specification generation set the server runs.
 ///
 /// Selected by the top-level `spec_profile` configuration key. Each variant
-/// maps to one coherent generation triple; the accessors return the
+/// maps to one coherent RM and BASE generation pair; the accessors return the
 /// generated crates' own [`openehr_rm::Generation`]-family values, so the
 /// profile can never name a generation the crates do not emit.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SpecProfile {
-    /// The latest RELEASED generations: RM 1.1.0 + BASE 1.2.0 + LANG 1.0.0.
+    /// The latest RELEASED generations: RM 1.1.0 + BASE 1.2.0.
     Stable,
     /// The development pins this workspace is built against: RM 1.2.0 +
-    /// BASE 1.3.0 + LANG 1.1.0. The default — today's behaviour.
+    /// BASE 1.3.0. The default.
     #[default]
     Development,
 }
@@ -51,15 +51,6 @@ impl SpecProfile {
         match self {
             Self::Stable => openehr_base::Generation::V1_2,
             Self::Development => openehr_base::Generation::V1_3,
-        }
-    }
-
-    /// Returns the LANG generation this profile selects.
-    #[must_use]
-    pub const fn lang(self) -> openehr_lang::Generation {
-        match self {
-            Self::Stable => openehr_lang::Generation::V1_0,
-            Self::Development => openehr_lang::Generation::V1_1,
         }
     }
 
@@ -129,22 +120,16 @@ mod tests {
             SpecProfile::default().base(),
             openehr_base::Generation::default()
         );
-        assert_eq!(
-            SpecProfile::default().lang(),
-            openehr_lang::Generation::default()
-        );
     }
 
-    /// The coherent triples (owner hard rule 2026-08-05): stable = the
+    /// The coherent pairs (owner hard rule 2026-08-05): stable = the
     /// released generations, development = the current pins.
     #[test]
-    fn profiles_map_to_the_coherent_triples() {
+    fn profiles_map_to_the_coherent_pairs() {
         assert_eq!(SpecProfile::Stable.rm().spec_version(), "1.1.0");
         assert_eq!(SpecProfile::Stable.base().spec_version(), "1.2.0");
-        assert_eq!(SpecProfile::Stable.lang().spec_version(), "1.0.0");
         assert_eq!(SpecProfile::Development.rm().spec_version(), "1.2.0");
         assert_eq!(SpecProfile::Development.base().spec_version(), "1.3.0");
-        assert_eq!(SpecProfile::Development.lang().spec_version(), "1.1.0");
     }
 
     /// `Display`/`FromStr` round-trip the configuration token, and serde uses

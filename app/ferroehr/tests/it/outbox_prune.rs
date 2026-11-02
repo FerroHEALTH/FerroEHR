@@ -10,11 +10,6 @@
 //! the lowest active cursor go once past the window, rows above it stay, and an
 //! inactive reader holds nothing.
 
-#![expect(
-    clippy::expect_used,
-    reason = "integration tests fail loudly on harness errors"
-)]
-
 use ferroehr::extensions::outbox::OutboxReader;
 use ferroehr::extensions::outbox::{advance, cursor, prune};
 use ferroehr::service::FerroEhrService;

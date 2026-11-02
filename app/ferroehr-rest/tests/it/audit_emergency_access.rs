@@ -17,16 +17,6 @@
 //! (`docs/law/eu/gdpr/text.html Art. 18(2)`). No openEHR spec governs the
 //! read-side access log — our own design/extension.
 
-#![expect(
-    clippy::expect_used,
-    clippy::unwrap_used,
-    clippy::indexing_slicing,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use std::sync::Arc;
 use std::time::Duration;
 

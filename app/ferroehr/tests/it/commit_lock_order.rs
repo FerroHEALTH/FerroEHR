@@ -11,15 +11,6 @@
 //! openEHR spec governs the locking — our own storage design; the advisory-lock
 //! semantics are PostgreSQL docs §13.3.5 Advisory Locks.
 
-#![expect(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers; a failing fixture or wait panics there (the Rust \
-              Book ch11)"
-)]
-
 use std::time::Duration;
 
 use serde_json::{Value, json};

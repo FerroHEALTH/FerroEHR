@@ -20,15 +20,6 @@
 //! Every identifier here is synthetic, constructed by running a published
 //! algorithm forward over a chosen prefix. None is issued to anyone.
 
-#![expect(
-    clippy::expect_used,
-    clippy::indexing_slicing,
-    clippy::panic,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only reaches \
-              `#[test]`-annotated functions, so it misses this module's fixture helpers; a \
-              failing fixture must panic at the fixture (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 

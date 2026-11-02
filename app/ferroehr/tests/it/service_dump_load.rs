@@ -30,17 +30,6 @@
 //!    storage-JSON → RM → canonical XML → RM → storage-JSON is byte-equal at
 //!    the served-version level, in all three containers.
 
-#![expect(
-    clippy::expect_used,
-    clippy::unwrap_used,
-    clippy::indexing_slicing,
-    let_underscore_drop,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::error::ServiceError;
 use ferroehr::service::refusal::Malformed;
 use ferroehr::service::version_update::WriteRequest;

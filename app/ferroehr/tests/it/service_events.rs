@@ -14,14 +14,6 @@
 //! seam with a toggled fake, so the retry/no-loss logic is deterministic; the
 //! real-broker end-to-end lives in `events_amqp.rs`).
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions and direct \
-              fixture indexing are the intended shape here (the Rust Book ch11)"
-)]
-
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

@@ -13,21 +13,13 @@
 //! verification, a record that disappears is NAMED, and the role the server
 //! actually connects as cannot do either — nor run any DDL.
 
-#![expect(
-    clippy::expect_used,
-    reason = "clippy's in-test lint scoping (clippy.toml `allow-*-in-tests`) only \
-              reaches `#[test]`-annotated functions, so it misses this integration \
-              module's helpers and async bodies; panicking assertions are the \
-              intended shape here (the Rust Book ch11)"
-)]
-
 use jiff::Timestamp;
 use sqlx::{AssertSqlSafe, Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
 
 use ferroehr::db;
 use ferroehr::system_log::chain_check::{ChainCheck, ChainCheckState};
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
+use ferroehr::system_log::config::{AuditConfig, Retention, StoreConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
@@ -179,7 +171,16 @@ async fn retention_reaping_leaves_a_verifiable_trail() {
         store.insert(&event, None).await.expect("insert");
     }
 
-    assert_eq!(store.reap(30).await.expect("reap"), 2);
+    assert_eq!(
+        store
+            .reap_due(
+                Timestamp::now().to_zoned(jiff::tz::TimeZone::UTC).date(),
+                Retention::Days(30),
+            )
+            .await
+            .expect("reap"),
+        2
+    );
     assert!(
         crate::fixtures::verify_chain(&pool)
             .await
@@ -988,7 +989,16 @@ async fn an_incremental_run_verifies_across_a_reaped_checkpoint() {
     insert(now - jiff::SignedDuration::from_hours(40 * 24)).await;
     insert(now).await;
 
-    assert_eq!(store.reap(30).await.expect("reap"), 3);
+    assert_eq!(
+        store
+            .reap_due(
+                Timestamp::now().to_zoned(jiff::tz::TimeZone::UTC).date(),
+                Retention::Days(30),
+            )
+            .await
+            .expect("reap"),
+        3
+    );
     let after = store
         .verify_chain_advancing(VerifyScope::SinceCheckpoint)
         .await
