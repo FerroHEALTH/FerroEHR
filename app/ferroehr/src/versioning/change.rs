@@ -30,15 +30,19 @@ use crate::ids::{EhrId, VoId};
 use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
 use crate::service::error::{ServiceError, Violation};
 use crate::service::refusal::{Clash, Missing, Refusal};
-use crate::storage::codec::{decompose, reassemble};
+use crate::storage::codec::reassemble;
 use crate::storage::row::NodeRow;
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
 use crate::versioning::lifecycle::{
-    self, reject_deleted_with_data, resolve_lifecycle, validate_transition,
+    reject_deleted_with_data, resolve_lifecycle, validate_transition,
 };
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id};
-use crate::versioning::{Kind, SigningCtx, integrity, person, profile, restriction};
+use crate::versioning::{Kind, SigningCtx, integrity, restriction};
+
+mod resolve;
+
+use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -702,11 +706,6 @@ pub(crate) fn protection_refusal(error: StoreError) -> ServiceError {
     }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "the three change arms build one resolved write; splitting them \
-              would hide that they are alternatives on the same transaction"
-)]
 async fn apply_change(
     tx: &mut PgConnection,
     scope: CommitScope<'_>,
@@ -721,74 +720,36 @@ async fn apply_change(
         preplaced,
     } = scope;
     restriction::ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
+    let at = Placing {
+        ehr_id,
+        known_now,
+        preplaced,
+    };
     let resolved = match change {
         Change::Create {
             kind,
-            mut canonical,
+            canonical,
             template_id,
             signature,
             lifecycle_state,
             attestations,
             other_input_version_uids,
         } => {
-            // Externalize large inline DV_MULTIMEDIA before decompose/sign, so
-            // the stored, served and signed form is the offloaded one.
-            #[cfg(feature = "multimedia")]
-            if let Some(engine) = ctx.multimedia {
-                engine
-                    .offload(&mut canonical)
-                    .await
-                    .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
-            }
-            let lifecycle = resolve_lifecycle(lifecycle_state)?;
-            // This arm commits CONTENT, so the deleted state is refused here
-            // before the state machine speaks (master06 §Logical Deletion:
-            // deleting the data and setting the state are one act).
-            reject_deleted_with_data(&lifecycle)?;
-            // a first version can only be `complete`/`incomplete`.
-            validate_transition(None, &lifecycle)?;
-            person::refuse_composing_for_others(kind, &canonical)?;
-            let vo_id = VoId::minted(ctx.stamp);
-            seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
-            stamp_version_uid(
-                &mut canonical,
-                &object_version_id(vo_id, &ctx.system_id, TreeId::trunk(1)),
-            )?;
-            // Asked of the ACCEPTED body, before it is decomposed: the stored
-            // node rows reassemble to these bytes, and the released-generation
-            // reader's answer is what a later `stable` deployment reads back.
-            let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
-            let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
-            let canonical_text = Some(canonical_body_text(&canonical)?);
-            let rows = decompose(canonical)?;
-            let time_committed = match known_now {
-                Some(ts) => ts,
-                None => crate::storage::version_repo::placement::tx_now(tx).await?,
-            };
-            ResolvedWrite {
+            let content = Content {
                 kind,
-                vo_id,
-                ehr_id,
-                ordinal: 1,
-                tree: TreeId::trunk(1),
-                lifecycle,
-                preceding_uid: None,
-                other_input_version_uids,
+                canonical,
+                lifecycle_state,
                 template_id,
-                client_signature: signature,
-                rows,
-                canonical_text,
-                stable_compatible,
-                origins,
+                signature,
                 attestations,
-                is_first_folder: kind == Kind::Folder && ehr_id.is_some(),
-                time_committed,
-            }
+                other_input_version_uids,
+            };
+            resolve_create(tx, ctx, at, content).await?
         }
         Change::Modify {
             vo_id,
             kind,
-            mut canonical,
+            canonical,
             expected,
             template_id,
             signature,
@@ -796,53 +757,16 @@ async fn apply_change(
             attestations,
             other_input_version_uids,
         } => {
-            #[cfg(feature = "multimedia")]
-            if let Some(engine) = ctx.multimedia {
-                engine
-                    .offload(&mut canonical)
-                    .await
-                    .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
-            }
-            let lifecycle = resolve_lifecycle(lifecycle_state)?;
-            // A modification carries content, so it can never be the `deleted`
-            // version (master06 §Logical Deletion) — refused before the
-            // placement read, so a data-carrying `523` never reaches storage.
-            reject_deleted_with_data(&lifecycle)?;
-            let next =
-                next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
-            person::refuse_composing_for_others(kind, &canonical)?;
-            person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
-            // the transition from the preceding version's state must be
-            // legal (master06 §Version Lifecycle state machine).
-            validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
-            seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
-            stamp_version_uid(
-                &mut canonical,
-                &object_version_id(vo_id, &ctx.system_id, next.tree),
-            )?;
-            let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
-            let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
-            let canonical_text = Some(canonical_body_text(&canonical)?);
-            let rows = decompose(canonical)?;
-            ResolvedWrite {
+            let content = Content {
                 kind,
-                vo_id,
-                ehr_id,
-                ordinal: next.ordinal,
-                tree: next.tree,
-                lifecycle,
-                preceding_uid: Some(next.preceding_uid),
-                other_input_version_uids,
+                canonical,
+                lifecycle_state,
                 template_id,
-                client_signature: signature,
-                rows,
-                canonical_text,
-                stable_compatible,
-                origins,
+                signature,
                 attestations,
-                is_first_folder: false,
-                time_committed: known_now.unwrap_or(next.now),
-            }
+                other_input_version_uids,
+            };
+            resolve_modify(tx, ctx, at, vo_id, expected, content).await?
         }
         Change::Delete {
             vo_id,
@@ -851,36 +775,17 @@ async fn apply_change(
             signature,
             other_input_version_uids,
         } => {
-            let next =
-                next_version(tx, ehr_id, vo_id, kind, expected, &ctx.system_id, preplaced).await?;
-            person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
-            lifecycle::refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
-            retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
-            // A deleted version carries no data — its `ORIGINAL_VERSION.data` is
-            // Void (master06 §Logical Deletion); the signature is over the
-            // data-less version wrapper.
-            ResolvedWrite {
-                kind,
+            resolve_delete(
+                tx,
+                ctx,
+                at,
                 vo_id,
-                ehr_id,
-                ordinal: next.ordinal,
-                tree: next.tree,
-                lifecycle: lifecycle::state::DELETED.to_owned(),
-                preceding_uid: Some(next.preceding_uid),
+                kind,
+                expected,
+                signature,
                 other_input_version_uids,
-                template_id: None,
-                client_signature: signature,
-                rows: Vec::new(),
-                canonical_text: None,
-                // A deleted version's data is Void (master06 §Logical
-                // Deletion): there is no body a generation could fail to
-                // express.
-                stable_compatible: true,
-                origins: Vec::new(),
-                attestations: Vec::new(),
-                is_first_folder: false,
-                time_committed: known_now.unwrap_or(next.now),
-            }
+            )
+            .await?
         }
     };
     let committed = commit_resolved(tx, ctx, audit, contribution, resolved).await?;
@@ -1194,22 +1099,132 @@ pub(crate) async fn ensure_content_writable_tx(
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the write parameters, named individually; a parameter struct \
-              would not read clearer at the service call sites"
-)]
-pub(crate) async fn create(
+/// One single-object write under its own CONTRIBUTION.
+pub(crate) struct Write<'a> {
+    /// The owning EHR, or `None` for an ehr-less object (a demographic party).
+    pub(crate) ehr_id: Option<EhrId>,
+    /// What the write commits.
+    pub(crate) change: Change,
+    /// This version's own `commit_audit`.
+    pub(crate) audit: &'a AuditInput,
+    /// The transaction timestamp the caller already read, if any.
+    pub(crate) known_now: Option<jiff::Timestamp>,
+    /// A placement the caller already read under the per-object lock it holds
+    /// (the composition-update mega-read); `None` makes the write take the lock
+    /// and read its own.
+    pub(crate) placement: Option<crate::storage::version_repo::placement::Placement>,
+}
+
+impl<'a> Write<'a> {
+    /// A write of `change` to the object in `ehr_id` (or an ehr-less one),
+    /// reading its own commit instant and placement.
+    pub(crate) fn new(ehr_id: Option<EhrId>, change: Change, audit: &'a AuditInput) -> Self {
+        Self {
+            ehr_id,
+            change,
+            audit,
+            known_now: None,
+            placement: None,
+        }
+    }
+
+    /// The same write at the commit instant `now` the caller already read.
+    pub(crate) fn at(self, now: jiff::Timestamp) -> Self {
+        Self {
+            known_now: Some(now),
+            ..self
+        }
+    }
+
+    /// The same write off the placement the caller already read under the
+    /// per-object lock it holds.
+    pub(crate) fn placed(
+        self,
+        placement: crate::storage::version_repo::placement::Placement,
+    ) -> Self {
+        Self {
+            placement: Some(placement),
+            ..self
+        }
+    }
+}
+
+impl Change {
+    /// A [`Change::Create`] of `canonical` with the caller's envelope.
+    pub(crate) fn create(
+        kind: Kind,
+        canonical: Value,
+        template_id: Option<String>,
+        envelope: WriteEnvelope,
+    ) -> Self {
+        Change::Create {
+            kind,
+            canonical,
+            template_id,
+            signature: envelope.signature,
+            lifecycle_state: envelope.lifecycle_state,
+            attestations: envelope.attestations,
+            other_input_version_uids: Vec::new(),
+        }
+    }
+
+    /// A [`Change::Modify`] of `vo_id` to `canonical` with the caller's
+    /// envelope; `expected` is the tip the caller's `If-Match` names.
+    pub(crate) fn modify(
+        vo_id: VoId,
+        kind: Kind,
+        canonical: Value,
+        expected: Option<TreeId>,
+        template_id: Option<String>,
+        envelope: WriteEnvelope,
+    ) -> Self {
+        Change::Modify {
+            vo_id,
+            kind,
+            canonical,
+            expected,
+            template_id,
+            signature: envelope.signature,
+            lifecycle_state: envelope.lifecycle_state,
+            attestations: envelope.attestations,
+            other_input_version_uids: Vec::new(),
+        }
+    }
+
+    /// A [`Change::Delete`] of `vo_id`. Deletion fixes the lifecycle state at
+    /// `523|deleted|` itself (master06 §Logical Deletion), so it takes no
+    /// envelope lifecycle.
+    pub(crate) fn delete(vo_id: VoId, kind: Kind, expected: Option<TreeId>) -> Self {
+        Change::Delete {
+            vo_id,
+            kind,
+            expected,
+            signature: None,
+            other_input_version_uids: Vec::new(),
+        }
+    }
+}
+
+/// Commit one change under its own contribution, with its event-outbox row.
+///
+/// # Errors
+/// [`ServiceError::NotFound`] when a modify or delete does not address a stored
+/// object; [`ServiceError::VersionConflict`] when `expected` is not the open
+/// lineage tip; [`ServiceError::BadRequest`] when a delete's preceding version
+/// is already deleted; [`ServiceError::Unprocessable`] for an illegal lifecycle
+/// state; plus the [`commit_resolved`] storage/signing errors.
+pub(crate) async fn commit(
     tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    kind: Kind,
-    canonical: Value,
-    template_id: Option<&str>,
-    audit: &AuditInput,
-    envelope: WriteEnvelope,
+    write: Write<'_>,
     ctx: &SigningCtx<'_>,
-    known_now: Option<jiff::Timestamp>,
 ) -> Result<Committed, ServiceError> {
+    let Write {
+        ehr_id,
+        change,
+        audit,
+        known_now,
+        placement,
+    } = write;
     let (committed, contribution_id) = apply_change(
         tx,
         CommitScope {
@@ -1218,168 +1233,23 @@ pub(crate) async fn create(
             audit,
             ctx,
             known_now,
-            preplaced: None,
-        },
-        Change::Create {
-            kind,
-            canonical,
-            template_id: template_id.map(str::to_owned),
-            signature: envelope.signature,
-            lifecycle_state: envelope.lifecycle_state,
-            attestations: envelope.attestations,
-            other_input_version_uids: Vec::new(),
-        },
-    )
-    .await?;
-    write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
-    Ok(committed)
-}
-
-/// Commit a new version of an existing object under its own contribution.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] when `(ehr_id, kind, vo_id)` does not address a
-/// stored object; [`ServiceError::VersionConflict`] when `expected` is not the
-/// open lineage tip; [`ServiceError::Unprocessable`] for an illegal lifecycle
-/// transition; plus the [`commit_resolved`] storage/signing errors.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the write parameters, named individually; a parameter struct \
-              would not read clearer at the service call sites"
-)]
-pub(crate) async fn update(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    vo_id: VoId,
-    kind: Kind,
-    canonical: Value,
-    expected: Option<TreeId>,
-    template_id: Option<&str>,
-    audit: &AuditInput,
-    envelope: WriteEnvelope,
-    ctx: &SigningCtx<'_>,
-) -> Result<Committed, ServiceError> {
-    update_with_placement(
-        tx,
-        ehr_id,
-        vo_id,
-        kind,
-        canonical,
-        expected,
-        template_id,
-        audit,
-        envelope,
-        ctx,
-        None,
-    )
-    .await
-}
-
-/// [`update`] with the advisory lock and placement read already taken by the
-/// caller — the composition-update mega-read path.
-///
-/// The caller has opened the write transaction, taken the per-vo advisory
-/// lock, and run the merged placement + pre-check statement
-/// ([`crate::storage::version_repo::placement::update_placement`]); this
-/// commits the new version off that placement without re-reading. `expected`
-/// must equal the placement tip's tree id (the caller's `If-Match` gate pins
-/// it; [`next_version`] re-checks). `None` reads the placement here.
-///
-/// # Errors
-/// The [`update`] errors, minus the placement read's own.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the write parameters, named individually; a parameter struct \
-              would not read clearer at the service call sites"
-)]
-pub(crate) async fn update_with_placement(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    vo_id: VoId,
-    kind: Kind,
-    canonical: Value,
-    expected: Option<TreeId>,
-    template_id: Option<&str>,
-    audit: &AuditInput,
-    envelope: WriteEnvelope,
-    ctx: &SigningCtx<'_>,
-    placement: Option<crate::storage::version_repo::placement::Placement>,
-) -> Result<Committed, ServiceError> {
-    let (committed, contribution_id) = apply_change(
-        tx,
-        CommitScope {
-            ehr_id,
-            contribution: ContributionCtx::New,
-            audit,
-            ctx,
-            known_now: None,
             preplaced: placement,
         },
-        Change::Modify {
-            vo_id,
-            kind,
-            canonical,
-            expected,
-            template_id: template_id.map(str::to_owned),
-            signature: envelope.signature,
-            lifecycle_state: envelope.lifecycle_state,
-            attestations: envelope.attestations,
-            other_input_version_uids: Vec::new(),
-        },
+        change,
     )
     .await?;
     write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
     Ok(committed)
 }
 
-/// Logically delete an object under its own contribution (master06 §Logical
-/// Deletion).
-///
-/// Takes only the client `signature` rather than a whole [`WriteEnvelope`]:
-/// deletion fixes the lifecycle state at `523|deleted|` itself, so an
-/// envelope lifecycle here would be a silently dropped instruction.
-///
-/// # Errors
-/// [`ServiceError::NotFound`] when `(ehr_id, kind, vo_id)` does not address a
-/// stored object; [`ServiceError::VersionConflict`] when `expected` is not the
-/// open lineage tip; [`ServiceError::BadRequest`] when the preceding version is
-/// already deleted; plus the [`commit_resolved`] storage/signing errors.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the write parameters, named individually; a parameter struct \
-              would not read clearer at the service call sites"
-)]
-pub(crate) async fn delete(
-    tx: &mut PgConnection,
-    ehr_id: Option<EhrId>,
-    vo_id: VoId,
-    kind: Kind,
-    expected: Option<TreeId>,
-    audit: &AuditInput,
-    signature: Option<String>,
-    ctx: &SigningCtx<'_>,
-) -> Result<Committed, ServiceError> {
-    let (committed, contribution_id) = apply_change(
-        tx,
-        CommitScope {
-            ehr_id,
-            contribution: ContributionCtx::New,
-            audit,
-            ctx,
-            known_now: None,
-            preplaced: None,
-        },
-        Change::Delete {
-            vo_id,
-            kind,
-            expected,
-            signature,
-            other_input_version_uids: Vec::new(),
-        },
-    )
-    .await?;
-    write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
-    Ok(committed)
+/// Record a committed single-object write: the database-transaction counter
+/// and [`meter_committed`]. Called after the transaction commits, so a
+/// rolled-back write is never counted.
+pub(crate) fn record_commit(committed: &Committed) {
+    crate::telemetry::metrics::metrics()
+        .db_transactions
+        .add(1, &[opentelemetry::KeyValue::new("outcome", "commit")]);
+    meter_committed(committed);
 }
 
 /// Commits a set of changes atomically under one CONTRIBUTION (RM common

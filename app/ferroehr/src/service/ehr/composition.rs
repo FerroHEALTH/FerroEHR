@@ -32,7 +32,7 @@ use crate::service::refusal::Missing;
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{create, delete, update_with_placement};
+use crate::versioning::change::{Change, Write, commit, record_commit};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
 use crate::versioning::read::{read_current, read_version, version_at};
 use crate::versioning::wire::{revision_history, version_envelope, versioned_object};
@@ -103,39 +103,34 @@ impl FerroEhrService {
         // node-decomposition machinery on every caller's stack.
         let signing_ctx = self.signing_ctx();
         let committed = if envelope.attestations.is_empty() && !signing_ctx.outbox_enabled {
-            Box::pin(create(
+            Box::pin(commit(
                 &mut conn,
-                Some(ehr_id),
-                Kind::Composition,
-                composition,
-                template_id.as_deref(),
-                &audit,
-                envelope,
+                Write::new(
+                    Some(ehr_id),
+                    Change::create(Kind::Composition, composition, template_id, envelope),
+                    &audit,
+                )
+                .at(commit_now),
                 &signing_ctx,
-                Some(commit_now),
             ))
             .await?
         } else {
             let mut tx = sqlx::Connection::begin(&mut *conn).await?;
-            let committed = Box::pin(create(
+            let committed = Box::pin(commit(
                 &mut tx,
-                Some(ehr_id),
-                Kind::Composition,
-                composition,
-                template_id.as_deref(),
-                &audit,
-                envelope,
+                Write::new(
+                    Some(ehr_id),
+                    Change::create(Kind::Composition, composition, template_id, envelope),
+                    &audit,
+                )
+                .at(commit_now),
                 &signing_ctx,
-                Some(commit_now),
             ))
             .await?;
             tx.commit().await?;
             committed
         };
-        crate::telemetry::metrics::metrics()
-            .db_transactions
-            .add(1, &[opentelemetry::KeyValue::new("outcome", "commit")]);
-        crate::versioning::change::meter_committed(&committed);
+        record_commit(&committed);
 
         Ok(committed)
     }
@@ -484,25 +479,26 @@ impl FerroEhrService {
         // VERSIONED_COMPOSITION cross-version invariants (RM ehr
         // `versioned_composition.adoc`), checked off the same merged read.
         super::validation::check_versioned_composition_first_root(pre.first_root, &composition)?;
-        let committed = update_with_placement(
+        let committed = commit(
             &mut tx,
-            Some(ehr_id),
-            vo_id,
-            Kind::Composition,
-            composition,
-            expected,
-            template_id.as_deref(),
-            &audit,
-            envelope,
+            Write::new(
+                Some(ehr_id),
+                Change::modify(
+                    vo_id,
+                    Kind::Composition,
+                    composition,
+                    expected,
+                    template_id,
+                    envelope,
+                ),
+                &audit,
+            )
+            .placed(pre.placement),
             &self.signing_ctx(),
-            Some(pre.placement),
         )
         .await?;
         tx.commit().await?;
-        crate::telemetry::metrics::metrics()
-            .db_transactions
-            .add(1, &[opentelemetry::KeyValue::new("outcome", "commit")]);
-        crate::versioning::change::meter_committed(&committed);
+        record_commit(&committed);
 
         Ok(committed)
     }
@@ -720,22 +716,18 @@ impl FerroEhrService {
             )?,
             None => self.audit(change_type::DELETED, "COMPOSITION delete"),
         };
-        let committed = delete(
+        let committed = commit(
             &mut tx,
-            Some(ehr_id),
-            vo_id,
-            Kind::Composition,
-            Some(expected),
-            &audit,
-            None,
+            Write::new(
+                Some(ehr_id),
+                Change::delete(vo_id, Kind::Composition, Some(expected)),
+                &audit,
+            ),
             &self.signing_ctx(),
         )
         .await?;
         tx.commit().await?;
-        crate::telemetry::metrics::metrics()
-            .db_transactions
-            .add(1, &[opentelemetry::KeyValue::new("outcome", "commit")]);
-        crate::versioning::change::meter_committed(&committed);
+        record_commit(&committed);
         Ok(committed)
     }
 

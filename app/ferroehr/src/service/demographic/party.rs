@@ -30,7 +30,7 @@ use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::Committal;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::WriteEnvelope;
-use crate::versioning::change::{create, delete, update};
+use crate::versioning::change::{Change, Write, commit, record_commit};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
 use openehr_its::rest::generated::common::UpdateAudit;
@@ -163,23 +163,26 @@ impl FerroEhrService {
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
-        let committed = create(
+        let committed = commit(
             &mut tx,
-            None,
-            support::kind_of(kind),
-            body,
-            None,
-            &audit,
-            WriteEnvelope {
-                lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
-                ..WriteEnvelope::default()
-            },
+            Write::new(
+                None,
+                Change::create(
+                    support::kind_of(kind),
+                    body,
+                    None,
+                    WriteEnvelope {
+                        lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
+                        ..WriteEnvelope::default()
+                    },
+                ),
+                &audit,
+            ),
             &ctx,
-            None,
         )
         .await?;
         tx.commit().await?;
-        support::record_commit();
+        record_commit(&committed);
 
         match repr_body {
             Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
@@ -263,24 +266,28 @@ impl FerroEhrService {
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
-        let committed = update(
+        let committed = commit(
             &mut tx,
-            None,
-            current.vo_id,
-            support::kind_of(kind),
-            body,
-            expected,
-            None,
-            &audit,
-            WriteEnvelope {
-                lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
-                ..WriteEnvelope::default()
-            },
+            Write::new(
+                None,
+                Change::modify(
+                    current.vo_id,
+                    support::kind_of(kind),
+                    body,
+                    expected,
+                    None,
+                    WriteEnvelope {
+                        lifecycle_state: committal.and_then(|c| c.lifecycle_state.clone()),
+                        ..WriteEnvelope::default()
+                    },
+                ),
+                &audit,
+            ),
             &ctx,
         )
         .await?;
         tx.commit().await?;
-        support::record_commit();
+        record_commit(&committed);
 
         match repr_body {
             Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
@@ -325,19 +332,22 @@ impl FerroEhrService {
         let ctx = self.signing_ctx();
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
-        let committed = delete(
+        let committed = commit(
             &mut tx,
-            None,
-            current.vo_id,
-            support::kind_of(current.kind),
-            Some(current.tree),
-            &audit,
-            None,
+            Write::new(
+                None,
+                Change::delete(
+                    current.vo_id,
+                    support::kind_of(current.kind),
+                    Some(current.tree),
+                ),
+                &audit,
+            ),
             &ctx,
         )
         .await?;
         tx.commit().await?;
-        support::record_commit();
+        record_commit(&committed);
 
         Ok(ServiceResponse::deleted(ResourceMeta::new(
             String::new(),

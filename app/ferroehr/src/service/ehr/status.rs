@@ -32,7 +32,7 @@ use crate::service::FerroEhrService;
 use crate::service::error::ServiceError;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::update;
+use crate::versioning::change::{Change, Write, commit, record_commit};
 use crate::versioning::object_version_id::{
     TreeId, VersionIdError, expected_from_if_match, parse_tree_id,
 };
@@ -146,16 +146,20 @@ impl FerroEhrService {
 
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let committed = update(
+        let committed = commit(
             &mut tx,
-            Some(ehr_id),
-            vo_id,
-            Kind::EhrStatus,
-            body.clone(),
-            expected,
-            None,
-            &audit,
-            envelope,
+            Write::new(
+                Some(ehr_id),
+                Change::modify(
+                    vo_id,
+                    Kind::EhrStatus,
+                    body.clone(),
+                    expected,
+                    None,
+                    envelope,
+                ),
+                &audit,
+            ),
             &self.signing_ctx(),
         )
         .await?;
@@ -163,6 +167,7 @@ impl FerroEhrService {
         // changed); the is_queryable promotion rides this same UPDATE.
         self.sync_ehr_subject(&mut tx, ehr_id, &body).await?;
         tx.commit().await?;
+        record_commit(&committed);
 
         Ok(committed)
     }
