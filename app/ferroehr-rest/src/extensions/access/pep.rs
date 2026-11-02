@@ -578,7 +578,7 @@ fn composition_content(
     // The same typed decode the commit seam performs: the ids come off the
     // typed value, never a JSON pointer a shape change could silently stop
     // matching. An undecodable body is the dispatch's 400; nothing to check.
-    let Ok(composition) = negotiate::rm_value::<Composition>(h, &parts.body) else {
+    let Ok(composition) = negotiate::decode::rm_value::<Composition>(h, &parts.body) else {
         return ContentAttrs::default();
     };
     composition_attrs(rules, principal, &composition)
@@ -622,7 +622,7 @@ fn composition_template(parts: &RequestParts) -> Option<String> {
     // The same typed decode the commit seam performs: the template id comes off
     // `ARCHETYPED.template_id`, never a JSON pointer a shape change could
     // silently stop matching.
-    let composition = negotiate::rm_value::<Composition>(h, &parts.body).ok()?;
+    let composition = negotiate::decode::rm_value::<Composition>(h, &parts.body).ok()?;
     composition
         .archetype_details
         .and_then(|a| a.template_id)
@@ -639,7 +639,7 @@ fn contribution_content(
     parts: &RequestParts,
     principal: &Principal,
 ) -> Result<ContentAttrs, Response> {
-    let Ok(value) = negotiate::json_value(&parts.headers, &parts.body) else {
+    let Ok(value) = negotiate::decode::json_value(&parts.headers, &parts.body) else {
         // A malformed body: let the dispatch return the 400; nothing to check.
         return Ok(ContentAttrs::default());
     };

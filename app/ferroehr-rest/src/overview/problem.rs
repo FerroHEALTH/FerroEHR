@@ -25,17 +25,16 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse as _, Response};
 use ferrohealth_server::problem::{Problem, ProblemError, ProblemType, ProblemTypes};
 use ferrohealth_telemetry::request_log::RequestId;
-use http::{HeaderMap, HeaderName, HeaderValue, StatusCode, header};
+use http::{HeaderValue, StatusCode, header};
+
+use crate::overview::negotiate::prefer::{
+    AppliedPreference, PREFERENCE_APPLIED, Preference, prefers,
+};
+use crate::overview::version_id::strip_etag;
 
 /// The base URI every FerroEHR problem type is under: the book page that
 /// documents each type at the anchor of its slug.
 pub const BASE: &str = "https://ferroehr.eu/docs/latest/using-the-api/problems.html#";
-
-/// The `Preference-Applied` header (RFC 7240 §3).
-const PREFERENCE_APPLIED: HeaderName = HeaderName::from_static("preference-applied");
-
-/// The preference that asks for the additional error details.
-const REPRESENTATION: &str = "return=representation";
 
 /// FerroEHR's problem types, one per refusal a client can act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -336,34 +335,9 @@ impl Refused {
     }
 }
 
-/// Whether `headers` carry the `return=representation` preference (RFC 7240
-/// §4.2): one `Prefer` field or several, each a comma-separated list whose
-/// items may carry parameters after `;`.
-#[must_use]
-pub fn prefers_representation(headers: &HeaderMap) -> bool {
-    headers
-        .get_all(HeaderName::from_static("prefer"))
-        .iter()
-        .filter_map(|value| value.to_str().ok())
-        .flat_map(|value| value.split(','))
-        .filter_map(|item| item.split(';').next())
-        .any(|item| {
-            item.split('=')
-                .map(str::trim)
-                .collect::<Vec<_>>()
-                .join("=")
-                .eq_ignore_ascii_case(REPRESENTATION)
-        })
-}
-
 /// The version an `ETag` names, without the weak marker and the quotes.
 fn version_of(etag: &HeaderValue) -> Option<String> {
-    let text = etag.to_str().ok()?.trim();
-    let text = text.strip_prefix("W/").unwrap_or(text);
-    let text = text
-        .strip_prefix('"')
-        .and_then(|rest| rest.strip_suffix('"'))
-        .unwrap_or(text);
+    let text = strip_etag(etag.to_str().ok()?);
     (!text.is_empty()).then(|| text.to_owned())
 }
 
@@ -442,7 +416,7 @@ pub fn stack_answer(
 /// as `current_version` too. On a route under the FHIR base the refusal is
 /// an `OperationOutcome`.
 pub async fn finish(State(fhir): State<FhirBase>, request: Request, next: Next) -> Response {
-    let representation = prefers_representation(request.headers());
+    let representation = prefers(request.headers(), Preference::Representation);
     let request_id = request
         .extensions()
         .get::<RequestId>()
@@ -474,9 +448,10 @@ pub async fn finish(State(fhir): State<FhirBase>, request: Request, next: Next) 
         }
     }
     if representation && !fhir {
-        parts
-            .headers
-            .insert(PREFERENCE_APPLIED, HeaderValue::from_static(REPRESENTATION));
+        parts.headers.insert(
+            PREFERENCE_APPLIED,
+            HeaderValue::from_static(AppliedPreference::Representation.token()),
+        );
     }
     Response::from_parts(parts, body)
 }
@@ -488,11 +463,9 @@ pub async fn finish(State(fhir): State<FhirBase>, request: Request, next: Next) 
               §Test-fixture construction)"
 )]
 mod tests {
-    use http::{HeaderMap, HeaderValue, StatusCode};
+    use http::{HeaderValue, StatusCode};
 
-    use super::{
-        BASE, Detail, Kind, Refused, Violation, prefers_representation, registry, version_of,
-    };
+    use super::{BASE, Detail, Kind, Refused, Violation, registry, version_of};
 
     #[test]
     fn every_kind_is_registered_under_the_book_page() {
@@ -535,22 +508,6 @@ mod tests {
                 "{heading} names its title"
             );
         }
-    }
-
-    #[test]
-    fn the_preference_is_read_from_every_prefer_field() {
-        let mut headers = HeaderMap::new();
-        assert!(!prefers_representation(&headers));
-        headers.append("prefer", HeaderValue::from_static("respond-async, wait=10"));
-        assert!(!prefers_representation(&headers));
-        headers.append(
-            "prefer",
-            HeaderValue::from_static("return = representation; x=1"),
-        );
-        assert!(prefers_representation(&headers));
-        let mut minimal = HeaderMap::new();
-        minimal.insert("prefer", HeaderValue::from_static("return=minimal"));
-        assert!(!prefers_representation(&minimal));
     }
 
     #[test]

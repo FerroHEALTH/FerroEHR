@@ -19,7 +19,8 @@ use openehr_its::rest::generated::ehr::{ContributionCreateParams, ContributionGe
 use openehr_its::rest::runtime::ApiError;
 
 use crate::api::RequestParts;
-use crate::negotiate::{AppliedPreference, WireFormat};
+use crate::negotiate::WireFormat;
+use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
 use crate::overview::version_id::{parse_ehr_id, parse_uuid};
 use crate::state::AppState;
@@ -66,7 +67,7 @@ pub(super) async fn run(
             // canonical RM value with a defined canonical-XML shape — so it is
             // accepted as JSON only.
             let body = match negotiate::content_type_format(h) {
-                Some(WireFormat::CanonicalJson) => negotiate::json_value(h, &parts.body)?,
+                Some(WireFormat::CanonicalJson) => negotiate::decode::json_value(h, &parts.body)?,
                 Some(fmt @ (WireFormat::Flat | WireFormat::Structured)) => {
                     crate::formats::dispatch::contribution_from_simplified(
                         &state,
@@ -88,7 +89,8 @@ pub(super) async fn run(
             // Under `return=minimal` the response is headers-only, so the
             // composite body and its post-commit re-read are skipped
             // (`Requests_and_responses` §Representation details).
-            let want_repr = negotiate::prefers_representation(h);
+            let want_repr =
+                negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation);
             let resp = state
                 .backend()
                 .ehr_contribution_commit(ehr_id, body, want_repr)
@@ -102,7 +104,7 @@ pub(super) async fn run(
                     )
                     .await?;
                     if let Some(meta) = &resp.meta {
-                        negotiate::set_resource_headers(
+                        negotiate::resource::set_resource_headers(
                             &mut out,
                             &base,
                             Some("contribution"),
@@ -112,10 +114,13 @@ pub(super) async fn run(
                     // This branch is `want_repr` only, so the applied
                     // preference is representation (§Representation details
                     // negotiation).
-                    negotiate::set_preference_applied(&mut out, AppliedPreference::Representation);
+                    negotiate::prefer::set_preference_applied(
+                        &mut out,
+                        AppliedPreference::Representation,
+                    );
                     Ok(out)
                 }
-                _ => Ok(negotiate::write_json(
+                _ => Ok(negotiate::resource::write_json(
                     h,
                     &base,
                     created,
@@ -134,7 +139,8 @@ pub(super) async fn run(
             let cid = parse_uuid(&p.contribution_uid, "contribution id")?;
             // `Prefer: resolve_refs` (Requests_and_responses §Representation
             // details negotiation): versions as full ORIGINAL_VERSIONs.
-            let body = if negotiate::prefers_resolve_refs(h) {
+            let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::ResolveRefs)
+            {
                 state.backend().ehr_contribution(ehr_id, cid, true).await?
             } else {
                 state.backend().ehr_contribution(ehr_id, cid, false).await?
@@ -172,9 +178,9 @@ pub(super) async fn run(
                         crate::formats::dispatch::contribution_to_simplified(&state, ok, &body, fmt)
                             .await?
                     }
-                    _ => negotiate::respond(h, ok, &body),
+                    _ => negotiate::body::respond(h, ok, &body),
                 };
-            negotiate::set_versioning_headers(&mut out, &meta);
+            negotiate::resource::set_versioning_headers(&mut out, &meta);
             Ok(out)
         }
         "contribution_list" => {
@@ -202,7 +208,7 @@ pub(super) async fn run(
                 .ehr_contribution_list_page(ehr_id, offset, fetch)
                 .await?;
             // A JSON-only DTO (no spec-typed canonical-XML shape) → `respond`.
-            Ok(negotiate::respond(h, ok, &body))
+            Ok(negotiate::body::respond(h, ok, &body))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted ehr operation: {other}"

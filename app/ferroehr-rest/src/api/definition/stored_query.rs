@@ -41,7 +41,7 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
         DefinitionQueryListParams::from_request,
         DefinitionQueryListParams::PARAMS,
     )?;
-    Ok(negotiate::respond(
+    Ok(negotiate::body::respond(
         h,
         StatusCode::OK,
         &state.backend().query_list(&p.qualified_query_name).await?,
@@ -60,7 +60,7 @@ pub(super) async fn list_all(
     state: &AppState,
     parts: &RequestParts,
 ) -> Result<Response, RestError> {
-    Ok(negotiate::respond(
+    Ok(negotiate::body::respond(
         &parts.headers,
         StatusCode::OK,
         &state.backend().query_list("").await?,
@@ -89,8 +89,8 @@ pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Resp
     // (`operations/definition_query_store.yaml`); a payload DECLARING another
     // media type is refused 415 before parsing (`Resources.md` §format rules
     // MUST), an absent `Content-Type` declares nothing to refuse.
-    negotiate::require_text_plain(h)?;
-    let body = negotiate::text_body(&parts.body)?;
+    negotiate::decode::require_text_plain(h)?;
+    let body = negotiate::decode::text_body(&parts.body)?;
     // The `DefinitionAdapter::query_store` impl honours `query_type`: an AQL
     // formalism runs the syntactic check, while an unsupported non-AQL
     // formalism is rejected as a distinct unsupported-formalism `400`
@@ -107,7 +107,10 @@ pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Resp
         "{}/definition/query/{name}/{version}",
         state.config().rest.base_path
     );
-    Ok(negotiate::empty_with_location(StatusCode::OK, &location))
+    Ok(negotiate::body::empty_with_location(
+        StatusCode::OK,
+        &location,
+    ))
 }
 
 /// `GET …/definition/query/{qualified_query_name}/{version}` — the registered
@@ -121,7 +124,7 @@ pub(super) async fn version_get(
         DefinitionQueryVersionGetParams::from_request,
         DefinitionQueryVersionGetParams::PARAMS,
     )?;
-    Ok(negotiate::respond(
+    Ok(negotiate::body::respond(
         h,
         StatusCode::OK,
         &state
@@ -154,8 +157,8 @@ pub(super) async fn version_store(
     // operation omits the Content-Type parameter but carries the identical
     // text/plain body) — a declared foreign media type is 415 (`Resources.md`
     // §format rules MUST).
-    negotiate::require_text_plain(h)?;
-    let body = negotiate::text_body(&parts.body)?;
+    negotiate::decode::require_text_plain(h)?;
+    let body = negotiate::decode::text_body(&parts.body)?;
     // As in `store`, the `query_store` impl honours `query_type`: the AQL
     // syntactic check runs only for the AQL formalism, and an unsupported
     // non-AQL formalism is an honest unsupported-formalism reject. The
@@ -169,5 +172,8 @@ pub(super) async fn version_store(
         "{}/definition/query/{name}/{stored}",
         state.config().rest.base_path
     );
-    Ok(negotiate::empty_with_location(StatusCode::OK, &location))
+    Ok(negotiate::body::empty_with_location(
+        StatusCode::OK,
+        &location,
+    ))
 }

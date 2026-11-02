@@ -53,7 +53,7 @@ pub(super) async fn run(
             // named outright; the instant is the version spine's, never
             // scraped from the container body, which exposes no commit
             // audit — the EHR-side container reads' pattern).
-            let mut out = negotiate::respond(h, ok, &resp.body);
+            let mut out = negotiate::body::respond(h, ok, &resp.body);
             super::set_versioning_headers(&mut out, resp.meta.as_ref());
             Ok(out)
         }
@@ -82,7 +82,7 @@ pub(super) async fn run(
                 .backend()
                 .versioned_party_version_get_at_time(p.versioned_object_uid, p.version_at_time)
                 .await?;
-            let mut out = negotiate::respond(h, ok, &resp.body);
+            let mut out = negotiate::body::respond(h, ok, &resp.body);
             super::set_versioning_headers(&mut out, resp.meta.as_ref());
             Ok(out)
         }

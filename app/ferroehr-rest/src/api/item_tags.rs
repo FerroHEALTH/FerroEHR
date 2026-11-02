@@ -294,5 +294,5 @@ pub(crate) fn write_body(
     headers: &HeaderMap,
     body: &Bytes,
 ) -> Result<Vec<UpdateItemTag>, ApiError> {
-    negotiate::typed_json_vec::<UpdateItemTag>(headers, body)
+    negotiate::decode::typed_json_vec::<UpdateItemTag>(headers, body)
 }

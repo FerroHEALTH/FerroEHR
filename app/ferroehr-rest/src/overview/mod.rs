@@ -18,8 +18,8 @@
 //! MAY. Status below is *descriptive* of what this layer does today:
 //!
 //! - **`ETag` weakness indicator — DONE.** Every resource-identifier `ETag`
-//!   is emitted as the weak `W/"{uid}"` form (`negotiate::resource_etag`,
-//!   used by `negotiate::set_versioning_headers` and the template path).
+//!   is emitted as the weak `W/"{uid}"` form (`negotiate::resource::resource_etag`,
+//!   used by `negotiate::resource::set_versioning_headers` and the template path).
 //!   Inbound `If-Match` accepts both the weak and the deprecated bare quoted
 //!   forms (`version_id::strip_etag`).
 //! - **Committal headers — DONE.** The development-edition value forms
@@ -32,11 +32,11 @@
 //!   `UpdateAudit.system_id`; when absent "the server MUST set it to its own
 //!   configured system identifier" — asserted at the versioning seam.
 //! - **Location — DONE.** `Location` is set only on create/update writes
-//!   (`negotiate::set_resource_headers`); reads, deletes, and the `409`/`412`
+//!   (`negotiate::resource::set_resource_headers`); reads, deletes, and the `409`/`412`
 //!   error path emit versioning headers without `Location`
-//!   (`negotiate::set_versioning_headers`).
-//! - **`return=identifier` — DONE.** `negotiate::write_rm` /
-//!   `negotiate::write_json` honour `return=identifier` with a
+//!   (`negotiate::resource::set_versioning_headers`).
+//! - **`return=identifier` — DONE.** `negotiate::resource::write_rm` /
+//!   `negotiate::resource::write_json` honour `return=identifier` with a
 //!   `{ "uid": … }` body at a `200`/`201` status (never `204`) — exactly the
 //!   overview §"Prefer only identifier" shape ("a single JSON object with a
 //!   single `uid` attribute"). That generic `{uid}` body is the realization for
@@ -48,8 +48,8 @@
 //!   in that group's handlers.
 //! - **`Preference-Applied` — DONE.** Every write path declares the preference
 //!   it actually applied through the one seam
-//!   (`negotiate::set_preference_applied`, a MAY): the canonical/JSON writes
-//!   via `negotiate::write_negotiated`, plus the demographic writes, the
+//!   (`negotiate::prefer::set_preference_applied`, a MAY): the canonical/JSON writes
+//!   via `negotiate::prefer::write_negotiated`, plus the demographic writes, the
 //!   template uploads, the `ITEM_TAG` collection writes, and the
 //!   Simplified-Formats commit. A request with no `Prefer` gets the applied
 //!   default, `return=minimal`.

@@ -476,22 +476,22 @@ async fn run(
     match op {
         "definition_archetype_adl14_list" => {
             let ids = state.backend().list_archetypes_adl14(page(q)?).await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &ids))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &ids))
         }
         "definition_archetype_adl14_upload" => {
             // The archetype arrives as ADL source text — the one body form of
             // this route. A payload DECLARING another media type cannot be
             // processed as ADL, so it is refused before parsing; an absent
             // `Content-Type` declares nothing to refuse.
-            negotiate::require_text_plain(h)?;
-            let adl = negotiate::text_body(&parts.body)?;
+            negotiate::decode::require_text_plain(h)?;
+            let adl = negotiate::decode::text_body(&parts.body)?;
             let archetype_id = state.backend().upload_archetype(adl).await?;
             let location = format!(
                 "{}/definition/archetype/adl1.4/{}",
                 state.config().rest.extensions_path(),
                 urlencoding::encode(&archetype_id)
             );
-            let mut resp = negotiate::respond(h, StatusCode::CREATED, &archetype_id);
+            let mut resp = negotiate::body::respond(h, StatusCode::CREATED, &archetype_id);
             if let Ok(value) = HeaderValue::from_str(&location) {
                 resp.headers_mut().insert(header::LOCATION, value);
             }
@@ -505,28 +505,28 @@ async fn run(
         "definition_archetype_adl14_delete" => {
             let archetype_id = path_segment(&parts, "archetype_id")?;
             state.backend().delete_archetype(&archetype_id).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         "definition_archetype_adl2_list" => {
             let ids = state.backend().list_archetypes_adl2(page(q)?).await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &ids))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &ids))
         }
         "definition_archetype_adl2_count" => {
             let count = state.backend().archetypes_count_adl2().await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &count))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
         }
         "definition_artefact_adl2_list" => {
             let ids = state.backend().list_artefacts(page(q)?).await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &ids))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &ids))
         }
         "definition_artefact_adl2_count" => {
             let count = state.backend().artefacts_count().await?;
-            Ok(negotiate::respond(h, StatusCode::OK, &count))
+            Ok(negotiate::body::respond(h, StatusCode::OK, &count))
         }
         "definition_artefact_adl2_delete" => {
             let artefact_id = path_segment(&parts, "artefact_id")?;
             state.backend().delete_artefact(&artefact_id).await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted definition archetype operation: {other}"

@@ -167,14 +167,14 @@ impl super::body::RegisterRoutes for OptOutRoutes {
                 .access_opt_out_register(&required_query(parts, "ehr_id")?)
                 .await?;
             let register = serde_json::json!({ "access_opt_outs": rows });
-            return Ok(negotiate::respond(
+            return Ok(negotiate::body::respond(
                 &parts.headers,
                 StatusCode::OK,
                 &register,
             ));
         }
         let backend = state.backend();
-        let body = negotiate::json_value(&parts.headers, &parts.body)?;
+        let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
         let ehr_id = required_str(&body, "ehr_id")?;
         if op == "admin_access_opt_out" {
             let declared = &state.config().rbac.access_service_roles;
@@ -191,6 +191,6 @@ impl super::body::RegisterRoutes for OptOutRoutes {
         } else {
             backend.reverse_access_opt_out(ehr_id).await?;
         }
-        Ok(negotiate::empty(StatusCode::NO_CONTENT))
+        Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
     }
 }

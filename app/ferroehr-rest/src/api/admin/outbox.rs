@@ -189,19 +189,19 @@ async fn run(
         READ => {
             let limit = limit(parts.query.as_deref())?;
             let events = state.backend().outbox_events(domain, reader, limit).await?;
-            Ok(negotiate::respond(
+            Ok(negotiate::body::respond(
                 &parts.headers,
                 StatusCode::OK,
                 &FeedPage { reader, events },
             ))
         }
         ACK => {
-            let ack: Ack = negotiate::typed_json(&parts.headers, &parts.body)?;
+            let ack: Ack = negotiate::decode::typed_json(&parts.headers, &parts.body)?;
             state
                 .backend()
                 .outbox_acknowledge(domain, reader, ack.last_seq)
                 .await?;
-            Ok(negotiate::empty(StatusCode::NO_CONTENT))
+            Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
         }
         other => Err(RestError::from(ApiError::Internal(format!(
             "unrouted outbox operation: {other}"

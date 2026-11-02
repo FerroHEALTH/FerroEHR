@@ -40,7 +40,6 @@ pub(super) async fn run(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let base = state.config().rest.base_path.clone();
 
     match op {
         "versioned_composition_get" => {
@@ -57,10 +56,8 @@ pub(super) async fn run(
             // 3.2(c)).
             let content = state.backend().audit_content_of_objects(&[vo_id]).await?;
             resp.meta = resp.meta.map(|meta| meta.with_content(content));
-            Ok(negotiate::read_rm::<VersionedComposition>(
+            Ok(negotiate::resource::read_rm::<VersionedComposition>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSIONED_COMPOSITION_ROOT_TAG,
             ))
@@ -76,10 +73,8 @@ pub(super) async fn run(
                 .backend()
                 .composition_revision_history(ehr_id, ferroehr::ids::VoId(vo_id))
                 .await?;
-            Ok(negotiate::read_rm::<RevisionHistory>(
+            Ok(negotiate::resource::read_rm::<RevisionHistory>(
                 h,
-                &base,
-                None,
                 &resp,
                 REVISION_HISTORY_ROOT_TAG,
             ))
@@ -98,10 +93,8 @@ pub(super) async fn run(
             // The VERSION envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
             resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::read_rm::<Version<Composition>>(
+            Ok(negotiate::resource::read_rm::<Version<Composition>>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSION_ROOT_TAG,
             ))
@@ -131,10 +124,8 @@ pub(super) async fn run(
             // The VERSION envelope carries the same externalized media the bare
             // resource does, so it re-inlines on the same request.
             resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-            Ok(negotiate::read_rm::<Version<Composition>>(
+            Ok(negotiate::resource::read_rm::<Version<Composition>>(
                 h,
-                &base,
-                None,
                 &resp,
                 VERSION_ROOT_TAG,
             ))

@@ -135,7 +135,7 @@ async fn run(
             ))
         })?;
     let (version, schemes) = state.backend().read_party_identifiers(&version_uid).await?;
-    Ok(negotiate::respond(
+    Ok(negotiate::body::respond(
         &parts.headers,
         StatusCode::OK,
         &serde_json::json!({

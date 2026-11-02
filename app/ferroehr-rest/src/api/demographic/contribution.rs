@@ -36,7 +36,7 @@ pub(super) async fn run(
     match op {
         "contribution_create" => {
             // A CONTRIBUTION commit is a `NewContribution` wrapper DTO, JSON only.
-            let body = negotiate::json_value(h, &parts.body)?;
+            let body = negotiate::decode::json_value(h, &parts.body)?;
             let resp = state
                 .backend()
                 .demographic_contribution_create(body)
@@ -79,7 +79,7 @@ pub(super) async fn run(
             {
                 meta = meta.with_last_modified(at);
             }
-            let mut out = negotiate::respond(h, StatusCode::OK, &resp.body);
+            let mut out = negotiate::body::respond(h, StatusCode::OK, &resp.body);
             super::set_versioning_headers(&mut out, Some(&meta));
             Ok(out)
         }
@@ -94,7 +94,7 @@ pub(super) async fn run(
 /// §Location — `201 Created` is exactly the case it scopes the header to).
 ///
 /// The body + `Preference-Applied` go through the shared
-/// [`negotiate::write_negotiated`] seam: `return=representation` → the
+/// [`negotiate::prefer::write_negotiated`] seam: `return=representation` → the
 /// CONTRIBUTION, `return=identifier` → the `{uid}` body at a `201`/`200`
 /// (never `204`, §"Prefer only identifier"), otherwise the applied default
 /// `return=minimal`.
@@ -106,12 +106,12 @@ fn write_shared(
     repr_status: StatusCode,
     resp: &ServiceResponse,
 ) -> Response {
-    let mut out = negotiate::write_negotiated(
+    let mut out = negotiate::prefer::write_negotiated(
         h,
         minimal_status,
         repr_status,
         resp.meta.as_ref().map(|m| m.uid.as_str()),
-        |status| negotiate::respond(h, status, &resp.body),
+        |status| negotiate::body::respond(h, status, &resp.body),
     );
     super::set_write_headers(&mut out, base, segment, resp.meta.as_ref());
     out
