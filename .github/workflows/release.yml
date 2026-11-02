@@ -482,6 +482,8 @@ jobs:
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
       - name: The coverage check refuses what it claims to refuse
         run: bash scripts/checks/vex-coverage.sh --self-test
+      - name: The record scans what it claims to scan
+        run: bash scripts/security/vulnerability-record.sh --self-test
       - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
         with:
           version: v${{ env.TRIVY_VERSION }}
@@ -491,7 +493,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Scan every image and binary, every severity, fixed or not
+      # The same script runs on a release PR (ci.yml) and every day
+      # (image-scan.yml), so a finding without a judgement is refused before
+      # the tag; this run reads security/vex/ from the tag's tree.
+      - name: Scan every image and binary, every severity, fixed or not, and judge every finding
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.plan.outputs.tag }}
@@ -500,47 +505,16 @@ jobs:
           POSTGRES_DIGEST: ${{ needs.postgres-image.outputs.digest }}
         run: |
           set -euo pipefail
-          # An explicit empty config and ignore file: trivy reads ./trivy.yaml
-          # and its ignore file by default, which would put the gate's floor
-          # and its exceptions back into the record.
-          : > "$RUNNER_TEMP/empty.yaml"
-          : > "$RUNNER_TEMP/empty.ignore"
-          scan=(--config "$RUNNER_TEMP/empty.yaml" --ignorefile "$RUNNER_TEMP/empty.ignore"
-            --scanners vuln --severity "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
-            --ignore-unfixed=false --format json --quiet)
-          mkdir -p reports
-          targets=()
-          for entry in "ferroehr|$APP_DIGEST" "ferroehr-viewer|$VIEWER_DIGEST" "ferroehr-postgres|$POSTGRES_DIGEST"; do
-            image="${entry%%|*}"
-            digest="${entry#*|}"
-            [ -n "$digest" ] || { echo "::error::no pushed digest for ${image}"; exit 1; }
-            for platform in linux/amd64 linux/arm64; do
-              report="reports/${image}-${platform##*/}.json"
-              trivy image "${scan[@]}" --platform "$platform" --output "$report" \
-                "ghcr.io/ferrohealth/${image}@${digest}"
-              targets+=("pkg:oci/${image}=${report}")
-            done
-          done
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --pattern "ferroehr-${TAG}-*-unknown-linux-gnu.tar.gz" --dir binaries
-          for arch in x86_64 aarch64; do
-            root="binaries/${arch}"
-            mkdir -p "$root"
-            tar -C "$root" -xzf "binaries/ferroehr-${TAG}-${arch}-unknown-linux-gnu.tar.gz"
-            report="reports/ferroehr-${arch}-unknown-linux-gnu.json"
-            trivy rootfs "${scan[@]}" --output "$report" "$root"
-            targets+=("pkg:cargo/ferroehr-server=${report}")
-          done
-          printf '%s\n' "${targets[@]}" > targets.txt
-      - name: Every finding carries an exploitability judgement
+          bash scripts/security/vulnerability-record.sh \
+            --reports reports --record "ferroehr-${TAG}-vulnerability-record.json" \
+            --image "ferroehr=ghcr.io/ferrohealth/ferroehr@${APP_DIGEST}" \
+            --image "ferroehr-viewer=ghcr.io/ferrohealth/ferroehr-viewer@${VIEWER_DIGEST}" \
+            --image "ferroehr-postgres=ghcr.io/ferrohealth/ferroehr-postgres@${POSTGRES_DIGEST}" \
+            --release-binaries "$TAG"
+      - name: Pack the reports for the release
         env:
           TAG: ${{ needs.plan.outputs.tag }}
-        run: |
-          set -euo pipefail
-          mapfile -t targets < targets.txt
-          bash scripts/checks/vex-coverage.sh \
-            --record "ferroehr-${TAG}-vulnerability-record.json" "${targets[@]}"
-          tar -czf "ferroehr-${TAG}-trivy-reports.tar.gz" reports
+        run: tar -czf "ferroehr-${TAG}-trivy-reports.tar.gz" reports
       # Kept for a refused run too, so the findings to judge are one download
       # away rather than one re-run away.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
