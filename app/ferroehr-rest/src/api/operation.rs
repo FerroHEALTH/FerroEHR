@@ -127,6 +127,12 @@ impl Operation {
             .map(|object| Classification::Audited { action, object })
     }
 
+    /// Whether the operation commits a CONTRIBUTION.
+    #[must_use]
+    pub(crate) fn commits_contribution(&self) -> bool {
+        self.kind == Some(ResourceKind::Contribution) && self.verb == Verb::Create
+    }
+
     /// Whether the operation reads a COMPOSITION, the set the `EHR_ACCESS`
     /// privacy ceiling and the ABAC post-check share.
     #[must_use]
@@ -404,6 +410,37 @@ mod tests {
         assert!(
             missing.is_empty(),
             "generated operations missing from the record: {missing:?}"
+        );
+    }
+
+    /// The rows the policy-enforcement point and the `EHR_ACCESS` gate-keeper
+    /// select by their fields are exactly the operations they named before.
+    #[test]
+    fn the_content_and_gate_keeper_selections_name_their_operations() {
+        let ids = |keep: fn(&Operation) -> bool| -> Vec<&str> {
+            let mut ids: Vec<&str> = OPERATIONS
+                .iter()
+                .filter(|row| keep(row))
+                .map(|row| row.id)
+                .collect();
+            ids.sort_unstable();
+            ids
+        };
+        assert_eq!(
+            ids(|row| row.composition == CompositionGate::Write),
+            [
+                "composition_create",
+                "composition_delete",
+                "composition_update"
+            ]
+        );
+        assert_eq!(
+            ids(|row| row.composition == CompositionGate::Write && row.verb == Verb::Delete),
+            ["composition_delete"]
+        );
+        assert_eq!(
+            ids(Operation::commits_contribution),
+            ["contribution_create"]
         );
     }
 

@@ -33,7 +33,7 @@
 
 use axum::response::{IntoResponse, Response};
 
-use crate::api::operation::{CompositionGate, Operation, operation};
+use crate::api::operation::{CompositionGate, Operation, Verb, operation};
 use crate::extensions::access::authz::classify::Mode;
 use crate::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
 use ferrohealth_authz::request::Attr;
@@ -227,7 +227,7 @@ async fn abac_pre(
     )
     .await?;
 
-    let content = pre_content(abac, &principal, op, parts).await?;
+    let content = pre_content(abac, &principal, row, parts).await?;
 
     let req = AuthzRequest {
         operation_id: op,
@@ -492,15 +492,12 @@ fn stored_attrs(rules: &ContentRules, content: VersionContent, written: bool) ->
 async fn pre_content(
     abac: &AbacGate,
     principal: &Principal,
-    op: &str,
+    row: &Operation,
     parts: &RequestParts,
 ) -> Result<ContentAttrs, Response> {
     let rules = &abac.resolvers.content;
-    match op {
-        "composition_create" | "composition_update" => {
-            Ok(composition_content(rules, principal, parts))
-        }
-        "composition_delete" => {
+    match (row.composition, row.verb) {
+        (CompositionGate::Write, Verb::Delete) => {
             // The content of the preceding (current) version being deleted.
             let Some(uid) = parts.path.get("uid_based_id") else {
                 return Ok(ContentAttrs::default());
@@ -513,7 +510,8 @@ async fn pre_content(
                 stored_attrs(rules, content, true)
             }))
         }
-        "contribution_create" => contribution_content(rules, parts, principal),
+        (CompositionGate::Write, _) => Ok(composition_content(rules, principal, parts)),
+        _ if row.commits_contribution() => contribution_content(rules, parts, principal),
         // EHR / EHR_STATUS / DIRECTORY carry no template.
         _ => Ok(ContentAttrs::default()),
     }
@@ -799,22 +797,21 @@ async fn smart_pre(
     op: &'static str,
     parts: &RequestParts,
 ) -> Result<(), Response> {
-    if operation(op).is_none_or(|row| row.composition != CompositionGate::Write) {
+    let Some(row) = operation(op).filter(|row| row.composition == CompositionGate::Write) else {
         return Ok(());
-    }
+    };
     let Some(principal) = current_principal() else {
         return Ok(());
     };
-    let template = match op {
-        "composition_delete" => {
-            composition_template_of(
-                state,
-                &principal,
-                parts.path.get("uid_based_id").map(String::as_str),
-            )
-            .await?
-        }
-        _ => composition_template(parts),
+    let template = if row.verb == Verb::Delete {
+        composition_template_of(
+            state,
+            &principal,
+            parts.path.get("uid_based_id").map(String::as_str),
+        )
+        .await?
+    } else {
+        composition_template(parts)
     };
     smart_composition(
         &principal,

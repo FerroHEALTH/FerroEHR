@@ -256,7 +256,9 @@ pub(crate) async fn enforce(
     }
 
     // 3. The gate-keeper preflight (CONTRIBUTION commits touching EHR_ACCESS).
-    if op == "contribution_create" && contribution_targets_ehr_access(parts) {
+    if operation(op).is_some_and(Operation::commits_contribution)
+        && contribution_targets_ehr_access(parts)
+    {
         EhrAccessGate::gate_keeper_gate(settings, subject, roles)
             .map_err(|reason| Box::new(forbidden(principal.as_ref(), &reason)))?;
     }
