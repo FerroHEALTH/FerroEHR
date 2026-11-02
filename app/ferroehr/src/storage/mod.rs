@@ -52,6 +52,8 @@
 //! - [`adl2_repo`] — the ADL2 `adl2_artefact` store and its specialisation
 //!   edges.
 //! - [`stored_query_repo`] — the registered queries of `stored_query`.
+//! - [`erasure`] — the physical erasure of an EHR or a party: what the cascade
+//!   leaves behind, what it reads first, and the erasure tombstone.
 //!
 //! The seam with the versioning layer is a value contract rather than shared
 //! SQL: versioning owns the semantics (classify, tree placement, lifecycle,
@@ -65,6 +67,7 @@ pub mod blob_ref;
 pub mod codec;
 pub mod ddl_template;
 pub mod ehr_repo;
+pub mod erasure;
 pub mod error;
 pub mod header;
 pub mod marks;
