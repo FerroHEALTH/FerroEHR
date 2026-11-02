@@ -1138,7 +1138,7 @@ pub fn decision_maps() -> Vec<DeclMap> {
         DeclMap {
             map: "xml_bmm_only_allowlist",
             check_existence: true,
-            entries: overrides::XML_BMM_ONLY_ALLOWLIST
+            entries: crate::plan::xml_overrides::XML_BMM_ONLY_ALLOWLIST
                 .iter()
                 .map(|e| DeclEntry {
                     key: format!("{}.{}", e.spec, e.wire_name),

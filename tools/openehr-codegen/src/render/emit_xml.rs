@@ -9,17 +9,18 @@
 //! element split for serialization, `xsi:type` slots) comes from the
 //! [`XsdModel`]. Fields are matched to XSD elements/attributes by openEHR
 //! property name; a struct absent from the XSD serializes in BMM field order
-//! with no attributes. Deserialization dispatches child elements by name (order
-//! -independent) and polymorphic slots by `xsi:type`.
+//! with no attributes, unless an override gives it an XSD ancestor's shape.
+//! Deserialization dispatches child elements by name (order-independent) and
+//! polymorphic slots by `xsi:type`.
 
 use crate::analyze::Model;
 use crate::load::bmm::BmmSchema;
 use crate::load::xsd::XsdModel;
 use crate::plan::construction;
-use crate::plan::overrides::{
-    resolve_default, xml_bmm_only_allowed, xml_tool_extensions, xml_value_wrapped,
-};
+use crate::plan::overrides::resolve_default;
+use crate::plan::xml_overrides::{xml_ancestor_shape, xml_tool_extensions, xml_value_wrapped};
 use crate::plan::{XmlField, XmlType};
+use crate::render::emit_xml_guards::Guards;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
@@ -118,18 +119,10 @@ pub(crate) fn emit_file(
          )]\n\
          use crate::xml::runtime::{ToXml, FromXml, XmlEvent, XmlError};\n\n",
     );
-    let mut locatable_violations: Vec<String> = Vec::new();
-    let mut bmm_only_violations: Vec<String> = Vec::new();
-    let mut appended: Vec<String> = Vec::new();
+    let mut guards = Guards::default();
     for s in schemas {
         for ty in s.model.xml_types(s.schema) {
-            check_locatable_attr(&ty, xsd, &mut locatable_violations);
-            check_bmm_field_coverage(&ty, xsd, &mut bmm_only_violations);
-            if let XmlType::Struct { spec, fields, .. } = &ty {
-                for f in bmm_only_fields(spec, fields, xsd) {
-                    appended.push(format!("{spec}.{}", f.wire_name));
-                }
-            }
+            guards.observe(&ty, xsd);
             let path = format!(
                 "{}::{}",
                 s.root,
@@ -139,54 +132,8 @@ pub(crate) fn emit_file(
             emit_from_xml(&mut b, &ty, &path, xsd, Some(s), RM_XML_SCHEMA);
         }
     }
-    if !appended.is_empty() {
-        eprintln!(
-            "emit-xml: {} allowlisted BMM-only field(s) appended as trailing \
-             canonical-XML elements (RM 1.2.0 / BASE 1.3.0 vs vendored ITS-XML skew): {}",
-            appended.len(),
-            appended.join(", ")
-        );
-    }
-    if !locatable_violations.is_empty() {
-        return Err(format!(
-            "emit-xml LOCATABLE-attribute guard: {} LOCATABLE subtype(s) have no XSD closure, so \
-             `archetype_node_id` would serialize as a child element instead of the required \
-             XML attribute: {}. Extend the XSD input (tools/openehr-codegen/src/load/xsd.rs) so \
-             these types reach `LOCATABLE`.",
-            locatable_violations.len(),
-            locatable_violations.join(", ")
-        ));
-    }
-    if !bmm_only_violations.is_empty() {
-        return Err(format!(
-            "emit-xml BMM-field-coverage guard: {} BMM field(s) of XSD-covered type(s) have no \
-             matching XSD element/attribute, so the XSD-driven `ToXml` would silently drop them \
-             while the BMM-driven `FromXml` still reads them (an undetectable JSON/XML \
-             divergence). Either extend the driving XSD input (tools/openehr-codegen/src/load/xsd.rs) \
-             so the field gets a deterministic slot, or add it to `XML_BMM_ONLY_ALLOWLIST` in \
-             plan/overrides.rs (with a spec-delta citation) to have it appended as a trailing \
-             canonical-XML element. Fields: {}.",
-            bmm_only_violations.len(),
-            bmm_only_violations.join(", ")
-        ));
-    }
+    guards.verdict(xsd)?;
     Ok(b)
-}
-
-/// The LOCATABLE-attribute guard: any emitted struct carrying an
-/// `archetype_node_id` field (per the BMM, a LOCATABLE subtype) must have that
-/// field classified as an XML **attribute** by the driving XSD. `LOCATABLE`
-/// declares `archetype_node_id`
-/// `use="required"` (an attribute); a type whose XSD closure is missing falls
-/// back to attribute-less BMM field order and would emit it as a child element —
-/// invalid canonical XML. Record the violation so codegen fails loudly.
-fn check_locatable_attr(ty: &XmlType, xsd: &XsdModel, violations: &mut Vec<String>) {
-    if let XmlType::Struct { spec, fields, .. } = ty {
-        let has_archetype_node_id = fields.iter().any(|f| f.wire_name == "archetype_node_id");
-        if has_archetype_node_id && !attr_names(spec, xsd).contains("archetype_node_id") {
-            violations.push(spec.clone());
-        }
-    }
 }
 
 /// `(impl<…: Bound> , <…>)` — the impl-generics header and the type-args suffix.
@@ -209,16 +156,26 @@ fn acc_var(rust_name: &str) -> String {
     format!("__{}", rust_name.trim_start_matches("r#"))
 }
 
-/// XSD attribute names for a type (empty if the type is not in the XSD).
-fn attr_names(spec: &str, xsd: &XsdModel) -> BTreeSet<String> {
+/// The XSD type whose shape `spec` is written in: `spec` itself when the XSD
+/// declares it, else the ancestor [`xml_ancestor_shape`] names for it, else
+/// none.
+pub(super) fn xsd_shape<'a>(spec: &'a str, xsd: &XsdModel) -> Option<&'a str> {
     if xsd.types.contains_key(spec) {
-        xsd.flattened(spec)
+        return Some(spec);
+    }
+    xml_ancestor_shape(spec).filter(|a| xsd.types.contains_key(*a))
+}
+
+/// XSD attribute names for a type (empty if the type has no XSD shape).
+pub(super) fn attr_names(spec: &str, xsd: &XsdModel) -> BTreeSet<String> {
+    match xsd_shape(spec, xsd) {
+        Some(shape) => xsd
+            .flattened(shape)
             .0
             .iter()
             .map(|a| a.name.clone())
-            .collect()
-    } else {
-        BTreeSet::new()
+            .collect(),
+        None => BTreeSet::new(),
     }
 }
 
@@ -228,11 +185,15 @@ fn attr_names(spec: &str, xsd: &XsdModel) -> BTreeSet<String> {
 /// reads. For a struct **not** in the XSD the emitter already walks the full BMM
 /// field set (attribute-less BMM order), so nothing is dropped there and this
 /// returns empty.
-fn bmm_only_fields<'a>(spec: &str, fields: &'a [XmlField], xsd: &XsdModel) -> Vec<&'a XmlField> {
-    if !xsd.types.contains_key(spec) {
+pub(super) fn bmm_only_fields<'a>(
+    spec: &str,
+    fields: &'a [XmlField],
+    xsd: &XsdModel,
+) -> Vec<&'a XmlField> {
+    let Some(shape) = xsd_shape(spec, xsd) else {
         return Vec::new();
-    }
-    let (attrs, elems) = xsd.flattened(spec);
+    };
+    let (attrs, elems) = xsd.flattened(shape);
     let mut covered: BTreeSet<&str> = BTreeSet::new();
     for a in &attrs {
         covered.insert(a.name.as_str());
@@ -244,23 +205,6 @@ fn bmm_only_fields<'a>(spec: &str, fields: &'a [XmlField], xsd: &XsdModel) -> Ve
         .iter()
         .filter(|f| !covered.contains(f.wire_name.as_str()))
         .collect()
-}
-
-/// The BMM-field-coverage guard: for every emitted XSD-covered struct, any BMM
-/// field with no XSD slot must be on the
-/// [`crate::plan::overrides::XML_BMM_ONLY_ALLOWLIST`]. An un-allowlisted field
-/// would be dropped by the XSD-driven `ToXml` while still read by the BMM-driven
-/// `FromXml` (a silent JSON/XML divergence no round-trip gate can see, because
-/// both serializations omit it). Record every such field so codegen fails with
-/// the complete reconciliation list — the mirror of [`check_locatable_attr`].
-fn check_bmm_field_coverage(ty: &XmlType, xsd: &XsdModel, violations: &mut Vec<String>) {
-    if let XmlType::Struct { spec, fields, .. } = ty {
-        for f in bmm_only_fields(spec, fields, xsd) {
-            if !xml_bmm_only_allowed(spec, &f.wire_name) {
-                violations.push(format!("{spec}.{}", f.wire_name));
-            }
-        }
-    }
 }
 
 // ── serialization ─────────────────────────────────────────────────────────────
@@ -369,8 +313,8 @@ fn emit_struct_to_xml(
          let mut __attrs: Vec<(&str, String)> = Vec::new();\n\
          if let Some(d) = declared {{ if d != \"{spec}\" {{ __attrs.push((\"xsi:type\", \"{spec}\".to_string())); }} }}\n"
     );
-    let (attrs, mut elems): (Vec<String>, Vec<String>) = if xsd.types.contains_key(spec) {
-        let (a, e) = xsd.flattened(spec);
+    let (attrs, mut elems): (Vec<String>, Vec<String>) = if let Some(shape) = xsd_shape(spec, xsd) {
+        let (a, e) = xsd.flattened(shape);
         (
             a.iter().map(|x| x.name.clone()).collect(),
             e.iter().map(|x| x.name.clone()).collect(),
@@ -716,11 +660,11 @@ fn emit_read_accumulators(b: &mut String, fields: &[XmlField], attrs: &BTreeSet<
 /// model, so the reader skips them; an element that is neither a field nor one
 /// of these is refused.
 fn xsd_unmodeled_elements(spec: &str, fields: &[XmlField], xsd: &XsdModel) -> Vec<String> {
-    if !xsd.types.contains_key(spec) {
+    let Some(shape) = xsd_shape(spec, xsd) else {
         return Vec::new();
-    }
+    };
     let modeled: BTreeSet<&str> = fields.iter().map(|f| f.wire_name.as_str()).collect();
-    let (_, elems) = xsd.flattened(spec);
+    let (_, elems) = xsd.flattened(shape);
     elems
         .into_iter()
         .map(|e| e.name)

@@ -350,15 +350,20 @@ pub(crate) fn cmd_emit_xml() -> Result<(), Box<dyn std::error::Error>> {
 /// Returns an error if the RM/BASE compositions or the vendored XSD bundles
 /// cannot be loaded, or if the XML emission itself fails.
 pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Error>> {
-    // The XML codec covers the CURRENT RM/BASE generations (the wire the
-    // server serves).
-    let base = compose("base")?;
-    let rm = compose("rm")?;
-    let base_root = format!("openehr_base::{}", base.current().spec.module);
-    let rm_root = format!("openehr_rm::{}", rm.current().spec.module);
-    let base_unit = base.current().unit()?;
-    let rm_unit = rm.current().unit()?;
-    let rm_aug = augmented_schema(rm.current(), rm_unit);
+    // The XML codec covers EVERY RM/BASE generation, so a profile that serves
+    // the released RM 1.1.0 shape serves it in canonical XML too, and the
+    // crate's re-emitted closure twins (the BASE Interval/Iso8601 family
+    // re-emitted into openehr-rm): an impl exists for every type a field of
+    // the augmented schema names.
+    let (base, rm) = (compose("base")?, compose("rm")?);
+    let mut generations = Vec::new();
+    for (krate, composed) in [("openehr_base", &base), ("openehr_rm", &rm)] {
+        for g in &composed.generations {
+            let unit = g.unit()?;
+            let root = format!("{krate}::{}", g.spec.module);
+            generations.push((root, unit, augmented_schema(g, unit), g));
+        }
+    }
 
     // The two ITS-XML lineages differ only by the root `xmlns`, so ONE `ToXml`
     // impl set serves both. The v1 `ALL/` bundle is not a complete RM closure
@@ -371,24 +376,15 @@ pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Erro
         Path::new(XSD_V2_DIR),
     ))?;
 
-    let schemas = [
-        emit_xml::XmlSchema {
-            model: &base_unit.model,
-            schema: &base_unit.schema,
-            root: &base_root,
-            external: &base.current().external,
-        },
-        emit_xml::XmlSchema {
-            model: &rm_unit.model,
-            // The XML codec covers the crate's re-emitted closure twins too
-            // (the BASE Interval/Iso8601 family re-emitted into openehr-rm):
-            // the impls must exist for every type a field of the augmented
-            // schema names.
-            schema: &rm_aug,
-            root: &rm_root,
-            external: &rm.current().external,
-        },
-    ];
+    let schemas: Vec<emit_xml::XmlSchema<'_>> = generations
+        .iter()
+        .map(|(root, unit, schema, g)| emit_xml::XmlSchema {
+            model: &unit.model,
+            schema,
+            root,
+            external: &g.external,
+        })
+        .collect();
     let mut unmatched = Vec::new();
     let body = emit_xml::emit_file(&schemas, &v1, &mut unmatched)?;
 
