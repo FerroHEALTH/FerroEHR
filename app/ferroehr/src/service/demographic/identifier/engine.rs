@@ -18,12 +18,14 @@ use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use crate::ids::VoId;
 use crate::service::demographic::identifier::body;
 use crate::service::demographic::identifier::config::IdentifierProtectionConfig;
 use crate::service::demographic::identifier::crypto::{
     CryptoError, DomainKeys, KeyDomain, RootKey,
 };
 use crate::service::demographic::identifier::store::{IdentifierStore, StoreError};
+use crate::storage::identifier_repo::{self, IdentifierRepoError};
 
 /// The national-identifier protection engine.
 #[derive(Debug)]
@@ -95,12 +97,12 @@ impl IdentifierProtection {
     /// carrying one.
     ///
     /// # Errors
-    /// [`StoreError::UnknownScheme`] naming the first unregistered scheme, and
-    /// [`StoreError::Acquire`] or [`StoreError::Database`] when the registry
-    /// cannot be read.
-    pub async fn verify_registered(&self) -> Result<(), StoreError> {
-        match self.store.unregistered(&self.schemes).await? {
-            Some(scheme) => Err(StoreError::UnknownScheme { scheme }),
+    /// [`IdentifierRepoError::UnknownScheme`] naming the first unregistered
+    /// scheme, and [`IdentifierRepoError::Acquire`] or
+    /// [`IdentifierRepoError::Database`] when the registry cannot be read.
+    pub async fn verify_registered(&self) -> Result<(), IdentifierRepoError> {
+        match identifier_repo::unregistered(self.store.pool(), &self.schemes).await? {
+            Some(scheme) => Err(IdentifierRepoError::UnknownScheme { scheme }),
             None => Ok(()),
         }
     }
@@ -121,8 +123,9 @@ impl IdentifierProtection {
     /// # Errors
     /// [`StoreError::ForeignReference`] when the body references a row that is
     /// not this party's or that holds another scheme,
-    /// [`StoreError::SchemeRepeated`] when it carries two values in one scheme,
-    /// [`StoreError::ValueTaken`] when a value is live for another party, and
+    /// [`IdentifierRepoError::SchemeRepeated`] when it carries two values in one
+    /// scheme and [`IdentifierRepoError::ValueTaken`] when a value is live for
+    /// another party, both as [`StoreError::Repo`], and
     /// [`StoreError`] when a value cannot be opened, sealed or stored. The
     /// write fails rather than proceeding: storing the body with the value
     /// still in it is precisely what this exists to prevent.
@@ -155,7 +158,7 @@ impl IdentifierProtection {
                 pointer,
             });
         }
-        IdentifierStore::retire_live(&mut *conn, party).await?;
+        identifier_repo::retire_live(&mut *conn, VoId(party)).await?;
         // One row per scheme: the same value written twice shares it, and two
         // values in one scheme are refused before anything is written.
         let mut sealed: BTreeMap<String, (String, Uuid)> = BTreeMap::new();
@@ -164,9 +167,9 @@ impl IdentifierProtection {
             let row = match sealed.get(&identifier.scheme) {
                 Some((value, row)) if *value == identifier.value => *row,
                 Some(_) => {
-                    return Err(StoreError::SchemeRepeated {
+                    return Err(StoreError::Repo(IdentifierRepoError::SchemeRepeated {
                         scheme: identifier.scheme,
-                    });
+                    }));
                 }
                 None => {
                     let row = IdentifierStore::seal(

@@ -29,6 +29,7 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::identifier::store::StoreError;
 use crate::service::error::ServiceError;
+use crate::storage::identifier_repo::IdentifierRepoError;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -70,7 +71,7 @@ impl FerroEhrService {
         };
         let mut version = self.party_version(party, tree).await?;
         let schemes = engine.expand(&mut version).await.map_err(|error| {
-            if let StoreError::Acquire(acquire) = error {
+            if let StoreError::Repo(IdentifierRepoError::Acquire(acquire)) = error {
                 return ServiceError::Acquire(acquire);
             }
             ServiceError::fault_caused(
