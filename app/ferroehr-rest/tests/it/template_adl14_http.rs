@@ -34,10 +34,6 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 use crate::common::demo_vitals_opt_xml;
 
@@ -47,28 +43,13 @@ const JSON_MIME: &str = "application/json";
 const XML_MIME: &str = "application/xml";
 const WT_MIME: &str = "application/openehr.wt+json";
 
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
 /// A router over a fresh real service with no template loaded.
 async fn empty_app() -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(), service).await)
+    (
+        pg,
+        common::router_with(common::api_config(false), service).await,
+    )
 }
 
 /// `POST /definition/template/adl1.4` with the given `Content-Type` (absent

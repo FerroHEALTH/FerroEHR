@@ -22,14 +22,6 @@ fn out_of_range(vo: &str) -> String {
 /// A versioned-object id no write ever creates.
 const VO: &str = "5b4a1c1e-8f0e-4d4b-9a3a-0c0d0e0f1a2b";
 
-async fn app() -> (testkit::TestDb, Router) {
-    let (db, service) = common::test_service().await;
-    (
-        db,
-        common::router_with(common::api_config(false), service).await,
-    )
-}
-
 /// `GET` `relative` under its own namespace and expect a `400`.
 async fn assert_400(app: &Router, relative: &str, what: &str) {
     let req = common::get(&common::full(relative));
@@ -43,7 +35,7 @@ async fn assert_400(app: &Router, relative: &str, what: &str) {
 
 #[tokio::test]
 async fn an_ehr_status_version_argument_out_of_range_is_400() {
-    let (_db, app) = app().await;
+    let (_db, app) = common::app(common::api_config(false)).await;
     let ehr = common::create_ehr(&app).await;
     let uri = format!("/ehr/{ehr}/ehr_status/{}", out_of_range(VO));
     assert_400(&app, &uri, "EHR_STATUS by version").await;
@@ -56,7 +48,7 @@ async fn an_ehr_status_version_argument_out_of_range_is_400() {
 
 #[tokio::test]
 async fn a_composition_version_argument_out_of_range_is_400() {
-    let (_db, app) = app().await;
+    let (_db, app) = common::app(common::api_config(false)).await;
     let ehr = common::create_ehr(&app).await;
     let uri = format!(
         "/ehr/{ehr}/versioned_composition/{VO}/version/{}",
@@ -67,7 +59,7 @@ async fn a_composition_version_argument_out_of_range_is_400() {
 
 #[tokio::test]
 async fn a_directory_version_argument_out_of_range_is_400() {
-    let (_db, app) = app().await;
+    let (_db, app) = common::app(common::api_config(false)).await;
     let ehr = common::create_ehr(&app).await;
     let uri = format!("/ehr/{ehr}/directory/{}", out_of_range(VO));
     assert_400(&app, &uri, "DIRECTORY by version").await;
@@ -75,7 +67,7 @@ async fn a_directory_version_argument_out_of_range_is_400() {
 
 #[tokio::test]
 async fn a_malformed_contribution_uid_is_400() {
-    let (_db, app) = app().await;
+    let (_db, app) = common::app(common::api_config(false)).await;
     let ehr = common::create_ehr(&app).await;
     let uri = format!("/ehr/{ehr}/contribution/not-a-uuid");
     assert_400(&app, &uri, "EHR CONTRIBUTION").await;
@@ -89,7 +81,7 @@ async fn a_malformed_contribution_uid_is_400() {
 
 #[tokio::test]
 async fn a_party_version_argument_out_of_range_is_400() {
-    let (_db, app) = app().await;
+    let (_db, app) = common::app(common::api_config(false)).await;
     let uri = format!("/demographic/person/{}", out_of_range(VO));
     assert_400(&app, &uri, "PERSON by version").await;
     assert_400(&app, "/demographic/person/not-a-uuid", "PERSON by uid").await;
@@ -97,7 +89,7 @@ async fn a_party_version_argument_out_of_range_is_400() {
 
 #[tokio::test]
 async fn a_relationship_version_argument_out_of_range_is_400() {
-    let (_db, app) = app().await;
+    let (_db, app) = common::app(common::api_config(false)).await;
     let uri = format!("/demographic/party_relationship/{}", out_of_range(VO));
     assert_400(&app, &uri, "PARTY_RELATIONSHIP by version").await;
     assert_400(

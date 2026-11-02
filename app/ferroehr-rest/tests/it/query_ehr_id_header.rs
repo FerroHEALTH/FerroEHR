@@ -39,10 +39,6 @@ use http::{Request, StatusCode, header};
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 use crate::common::{create_ehr, etag_uid, ips_canonical_composition, ips_opt_xml, send_body};
 
@@ -59,24 +55,6 @@ const STORED_NAME: &str = "org.openehr.test::ehr_id_header";
 
 // The IPS OPT + its canonical composition — the pair driven end-to-end through
 // the real `FerroEhrService` elsewhere in this suite, so they commit cleanly.
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
 async fn upload_opt(app: &Router) {
     let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(header::CONTENT_TYPE, "application/xml")
@@ -125,8 +103,7 @@ struct World {
 }
 
 async fn world() -> World {
-    let (pg, service) = common::test_service().await;
-    let app = common::router_with(config(), service).await;
+    let (pg, app) = common::app(common::api_config(false)).await;
     upload_opt(&app).await;
     let ehr_a = create_ehr(&app).await;
     let uid_a = commit_composition(&app, &ehr_a).await;

@@ -26,15 +26,12 @@ use base64::Engine;
 use http::StatusCode;
 use serde_json::Value;
 
-use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 use crate::common::EXT;
 use crate::common::{get, send_body};
 
-const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A terminology the bundle knows; anything else is `versioned_object_does_not_exist`.
 const KNOWN: &str = "openehr";
 const UNKNOWN: &str = "no-such-terminology";
@@ -44,20 +41,8 @@ const OPENEHR_TERM_URI: &str = "https://github.com/openEHR/terminology";
 
 fn config(terminology_enabled: bool) -> AppConfig {
     AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
         terminology_api_enabled: terminology_enabled,
-        ..Default::default()
+        ..common::api_config(false)
     }
 }
 

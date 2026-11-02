@@ -17,42 +17,14 @@
               intended shape here (the Rust Book ch11)"
 )]
 
-use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
-
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 use crate::common::send;
 
 const BASE: &str = "/ferroehr/rest/openehr/v1";
 const AQL: &str = "SELECT e/ehr_id/value FROM EHR e";
-
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(), service).await)
-}
 
 fn put(uri: String) -> Request<Body> {
     common::req("PUT", uri)
@@ -71,7 +43,7 @@ fn location(h: &header::HeaderMap) -> &str {
 
 #[tokio::test]
 async fn versionless_store_location_names_the_default_slot() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, headers, body) =
         send(&app, put(format!("{BASE}/definition/query/org.test::a"))).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -85,7 +57,7 @@ async fn versionless_store_location_names_the_default_slot() {
 
 #[tokio::test]
 async fn versionless_store_location_ignores_higher_stored_versions() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // A higher version exists first…
     let (status, _h, body) = send(
         &app,
@@ -108,7 +80,7 @@ async fn versionless_store_location_ignores_higher_stored_versions() {
 
 #[tokio::test]
 async fn versionless_store_updates_in_place() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let uri = format!("{BASE}/definition/query/org.test::c");
     let (status, _h, body) = send(&app, put(uri.clone())).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -123,7 +95,7 @@ async fn versionless_store_updates_in_place() {
 
 #[tokio::test]
 async fn versioned_store_accepts_exact_semver_and_conflicts_on_duplicate() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let uri = format!("{BASE}/definition/query/org.test::d/1.2.3");
     let (status, headers, body) = send(&app, put(uri.clone())).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -140,7 +112,7 @@ async fn versioned_store_accepts_exact_semver_and_conflicts_on_duplicate() {
 
 #[tokio::test]
 async fn versioned_store_rejects_non_exact_versions() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // The prefix forms are read-side resolution patterns
     // (parameters/path/version.yaml) that resolve to nothing writable on a
     // store, and the released identifier format is three numeric parts
@@ -164,7 +136,7 @@ async fn versioned_store_rejects_non_exact_versions() {
 
 #[tokio::test]
 async fn version_get_resolves_prefixes_to_highest() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     for v in ["1.0.0", "1.0.9", "1.2.0"] {
         let (status, _h, body) = send(
             &app,
@@ -192,7 +164,7 @@ async fn version_get_resolves_prefixes_to_highest() {
 
 #[tokio::test]
 async fn version_reads_refuse_a_malformed_version_before_any_lookup() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _h, body) = send(
         &app,
         put(format!("{BASE}/definition/query/org.test::v/1.2.0")),
@@ -243,7 +215,7 @@ async fn version_reads_refuse_a_malformed_version_before_any_lookup() {
 
 #[tokio::test]
 async fn stores_refuse_a_declared_foreign_body_type_with_415() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // Both store forms declare text/plain as the single body type; a payload
     // declaring another media type cannot be processed as it (`Resources.md`
     // §format rules: the service "MUST respond with HTTP status code 415
@@ -260,7 +232,7 @@ async fn stores_refuse_a_declared_foreign_body_type_with_415() {
 
 #[tokio::test]
 async fn stores_accept_an_absent_content_type() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // An absent Content-Type declares nothing to refuse (the header is a
     // client MAY) — the operation's own body type applies.
     let req = common::req("PUT", format!("{BASE}/definition/query/org.test::h/1.0.0"))
@@ -281,7 +253,7 @@ fn put_text(uri: String, aql: &str) -> Request<Body> {
 
 #[tokio::test]
 async fn store_accepts_a_query_the_engine_plans() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // Parameters (a temporal bound among them) are bound at execution; the
     // store analyses the text without them.
     let aql = "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c \
@@ -298,7 +270,7 @@ async fn store_accepts_a_query_the_engine_plans() {
 
 #[tokio::test]
 async fn store_refuses_a_query_the_engine_refuses_and_stores_nothing() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // Reading a variable declared under NOT CONTAINS is refused at SQL
     // generation (QUERY master03 §Containment); the store refuses it with the
     // operation's only error status (definition_query_store.yaml: `400`).
@@ -325,7 +297,7 @@ async fn store_refuses_a_query_the_engine_refuses_and_stores_nothing() {
 /// execution of a stored query ever meets one (#4284).
 #[tokio::test]
 async fn store_refuses_a_query_nested_beyond_the_depth_bound() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let aql = format!(
         "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE {}c/name/value = 'x'",
         "NOT ".repeat(20_000)

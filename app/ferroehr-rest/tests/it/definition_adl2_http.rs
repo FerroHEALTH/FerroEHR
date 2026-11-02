@@ -24,15 +24,10 @@
               intended shape here (the Rust Book ch11)"
 )]
 
-use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode, header};
 use serde_json::Value;
 use std::fmt::Write;
-
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 use crate::common::send;
@@ -66,29 +61,6 @@ fn source() -> String {
     adl2_source("operational_template", HRID)
 }
 
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(), service).await)
-}
-
 /// The `Preference-Applied` field value, which every write path declares —
 /// "The service MAY include a `Preference-Applied` header in the response …
 /// to indicate that the client's preference has been honored" (ITS-REST
@@ -110,7 +82,7 @@ fn upload_req(prefer: Option<&str>) -> Request<Body> {
 
 #[tokio::test]
 async fn upload_minimal_returns_201_and_location_only() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, headers, body) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
     assert_eq!(
@@ -131,7 +103,7 @@ async fn upload_minimal_returns_201_and_location_only() {
 
 #[tokio::test]
 async fn upload_representation_returns_source_text() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, headers, body) = send(&app, upload_req(Some("return=representation"))).await;
     assert_eq!(status, StatusCode::CREATED);
     assert!(
@@ -149,7 +121,7 @@ async fn upload_representation_returns_source_text() {
 
 #[tokio::test]
 async fn upload_identifier_returns_template_id_json() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, headers, body) = send(&app, upload_req(Some("return=identifier"))).await;
     assert_eq!(status, StatusCode::CREATED);
     assert!(headers.contains_key(header::LOCATION));
@@ -160,7 +132,7 @@ async fn upload_identifier_returns_template_id_json() {
 
 #[tokio::test]
 async fn get_serves_source_as_text_and_404s_unknown() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // Upload first so the artefact exists.
     let (status, _h, _b) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
@@ -189,7 +161,7 @@ async fn get_serves_source_as_text_and_404s_unknown() {
 
 #[tokio::test]
 async fn list_returns_template_metadata() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _h, _b) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
 
@@ -213,7 +185,7 @@ async fn list_returns_template_metadata() {
 
 #[tokio::test]
 async fn get_serves_operational_template_v2_json() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _h, _b) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
 
@@ -244,7 +216,7 @@ async fn get_serves_operational_template_v2_json() {
 
 #[tokio::test]
 async fn get_406_when_only_xml_acceptable() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _h, _b) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
 
@@ -258,7 +230,7 @@ async fn get_406_when_only_xml_acceptable() {
 
 #[tokio::test]
 async fn version_get_resolves_and_serves_both_representations() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _h, _b) = send(&app, upload_req(None)).await;
     assert_eq!(status, StatusCode::CREATED);
 
@@ -308,7 +280,7 @@ async fn version_get_resolves_and_serves_both_representations() {
 
 #[tokio::test]
 async fn version_get_refuses_a_malformed_version_before_any_lookup() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     assert_eq!(send(&app, upload_req(None)).await.0, StatusCode::CREATED);
     let family = "openEHR-EHR-COMPOSITION.t_clinical_info";
     let get = |version: &str| {
@@ -352,7 +324,7 @@ fn example_req(accept: Option<&str>, query: &str) -> Request<Body> {
 
 #[tokio::test]
 async fn example_get_serves_all_four_accept_forms() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     assert_eq!(send(&app, upload_req(None)).await.0, StatusCode::CREATED);
 
     // Default (no Accept) → canonical JSON COMPOSITION.
@@ -384,7 +356,7 @@ async fn example_get_serves_all_four_accept_forms() {
 
 #[tokio::test]
 async fn example_get_honours_type_and_detail_level() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     assert_eq!(send(&app, upload_req(None)).await.0, StatusCode::CREATED);
 
     // `type=output` carries a populated uid; every detail level is served.
@@ -404,7 +376,7 @@ async fn example_get_honours_type_and_detail_level() {
 
 #[tokio::test]
 async fn example_get_400_on_bad_enum_404_unknown_406_wrong_accept() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     assert_eq!(send(&app, upload_req(None)).await.0, StatusCode::CREATED);
 
     // Out-of-enum detail_level → 400.
@@ -436,7 +408,7 @@ async fn example_get_400_on_bad_enum_404_unknown_406_wrong_accept() {
 /// source is the `400` of `responses/400.yaml`, its rule codes kept.
 #[tokio::test]
 async fn upload_invalid_source_is_400_with_rule_codes() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // A source missing the mandatory `description` section → VARD (AOM2
     // master03 §Validity Rules). The engine rejects it; the wire renders a 400
     // problem whose `errors` carry the rule code.
@@ -478,7 +450,7 @@ async fn upload_invalid_source_is_400_with_rule_codes() {
 /// addressed prefix — otherwise one `ETag` would span two different versions.
 #[tokio::test]
 async fn etag_is_the_resolved_hrid_on_upload_and_every_get() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let expected = format!("W/\"{HRID}\"");
 
     let (status, headers, body) = send(&app, upload_req(None)).await;
@@ -544,7 +516,7 @@ async fn etag_is_the_resolved_hrid_on_upload_and_every_get() {
 
 #[tokio::test]
 async fn adl2_upload_with_xml_content_type_is_415() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _headers, body) = send(
         &app,
         common::req("POST", format!("{BASE}/definition/template/adl2"))
@@ -562,7 +534,7 @@ async fn adl2_upload_with_xml_content_type_is_415() {
 
 #[tokio::test]
 async fn adl2_upload_without_content_type_is_created() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _headers, body) = send(
         &app,
         common::req("POST", format!("{BASE}/definition/template/adl2"))
@@ -580,7 +552,7 @@ async fn adl2_upload_without_content_type_is_created() {
 
 #[tokio::test]
 async fn adl2_upload_with_charset_parameter_is_created() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, _headers, body) = send(
         &app,
         common::req("POST", format!("{BASE}/definition/template/adl2"))
@@ -598,7 +570,7 @@ async fn adl2_upload_with_charset_parameter_is_created() {
 
 #[tokio::test]
 async fn upload_unparseable_source_is_400() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // Content that fails the ADL2 grammar outright is *syntactically invalid
     // content* — the released 400 branch declared on the upload
     // (`responses/400.yaml`: "the request could not be parsed or is invalid
@@ -617,7 +589,7 @@ async fn upload_unparseable_source_is_400() {
 
 #[tokio::test]
 async fn upload_empty_source_is_400() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/definition/template/adl2"))
         .header(header::CONTENT_TYPE, "text/plain")
         .build();
@@ -638,7 +610,7 @@ async fn upload_empty_source_is_400() {
 /// would let a child uploaded before its parent skip conformance for good.
 #[tokio::test]
 async fn upload_with_absent_parent_is_400_with_vasid() {
-    let (_db, app) = app().await;
+    let (_db, app) = common::app(common::api_config(false)).await;
     let src = "archetype (adl_version=2.0.6; rm_release=1.1.0)\n    \
          openEHR-EHR-CLUSTER.orphan-child.v1.0.0\n\n\
          specialise\n    openEHR-EHR-CLUSTER.orphan.v1.0.0\n\n\
@@ -668,7 +640,7 @@ async fn upload_with_absent_parent_is_400_with_vasid() {
 /// content" (`docs/specs/openehr/ITS-REST/specifications/responses/400.yaml`).
 #[tokio::test]
 async fn upload_nested_past_the_engine_bound_is_a_400_naming_the_bound() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let levels = openehr_lang::nesting::MAX_NESTING_DEPTH + 2;
     let mut open = String::new();
     for k in 0..levels {
@@ -773,7 +745,7 @@ fn varxr_details(body: &str) -> Vec<String> {
 /// 409 (`operations/definition_template_adl2_upload.yaml`).
 #[tokio::test]
 async fn upload_with_unheld_constituents_is_400_naming_each_with_varxr() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let hrid = "openEHR-EHR-COMPOSITION.t_unheld.v1.0.0";
     let missing = [
         "openEHR-EHR-OBSERVATION.unheld_a.v1",
@@ -811,7 +783,7 @@ async fn upload_with_unheld_constituents_is_400_naming_each_with_varxr() {
 /// written before the guard.
 #[tokio::test]
 async fn a_template_whose_constituent_is_deleted_names_it_on_every_compiled_read() {
-    let (pg, app) = app().await;
+    let (pg, app) = common::app(common::api_config(false)).await;
     let constituent = "openEHR-EHR-OBSERVATION.held_then_gone.v1.0.0";
     let hrid = "openEHR-EHR-COMPOSITION.t_held_then_gone.v1.0.0";
     let (status, _h, body) = send(&app, upload_source(adl2_source("archetype", constituent))).await;

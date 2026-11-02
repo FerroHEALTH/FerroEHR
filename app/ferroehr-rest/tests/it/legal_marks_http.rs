@@ -19,21 +19,12 @@
 //! The obligation under test is GDPR Art. 18(2), which leaves storage as the
 //! only processing a restriction admits (`docs/law/eu/gdpr/text.html`).
 
-use axum::Router;
 use axum::body::Body;
 use http::{Request, StatusCode};
 
 use crate::common;
 use crate::common::BASE;
 use crate::common::{create_ehr, send_body};
-
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (
-        pg,
-        common::router_with(common::api_config(true), service).await,
-    )
-}
 
 fn get(path: &str) -> Request<Body> {
     common::get(&common::full(path))
@@ -56,7 +47,7 @@ fn put_json(path: &str, body: &str) -> Request<Body> {
 /// the operation whose gate is missing.
 #[tokio::test]
 async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let ehr_id = create_ehr(&app).await;
 
     // The directory has to exist before the restriction, or its refusal would
@@ -145,7 +136,7 @@ async fn a_restricted_ehr_refuses_every_released_read_and_write_with_403() {
 /// — the sequence GDPR Art. 18(3) turns on.
 #[tokio::test]
 async fn the_register_keeps_the_request_after_the_lift() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let ehr_id = create_ehr(&app).await;
 
     send_body(
@@ -179,7 +170,7 @@ async fn the_register_keeps_the_request_after_the_lift() {
 /// the closed list before anything is recorded.
 #[tokio::test]
 async fn the_mark_routes_refuse_a_bad_request_before_recording_anything() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let ehr_id = create_ehr(&app).await;
 
     let cases = [
@@ -231,7 +222,7 @@ async fn the_mark_routes_refuse_a_bad_request_before_recording_anything() {
 /// the per-object hold counts.
 #[tokio::test]
 async fn the_retention_register_round_trips_and_lists_what_is_due() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let ehr_id = create_ehr(&app).await;
 
     let (status, body) = send_body(
@@ -303,8 +294,7 @@ async fn the_retention_register_round_trips_and_lists_what_is_due() {
 /// route under the same switch.
 #[tokio::test]
 async fn the_mark_routes_are_behind_the_admin_switch() {
-    let (pg, service) = common::test_service().await;
-    let app = common::router_with(common::api_config(false), service).await;
+    let (pg, app) = common::app(common::api_config(false)).await;
     drop(pg);
 
     for req in [
@@ -331,7 +321,7 @@ async fn the_mark_routes_are_behind_the_admin_switch() {
 /// subject contesting the accuracy of one entry.
 #[tokio::test]
 async fn a_restricted_composition_is_refused_while_the_record_stays_in_use() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
 
     let req = common::req("POST", format!("{BASE}/definition/template/adl1.4"))
         .header(http::header::CONTENT_TYPE, "application/xml")

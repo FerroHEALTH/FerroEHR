@@ -37,10 +37,6 @@ use axum::Router;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 use crate::common::{etag_uid, ips_opt_xml, send};
 
@@ -71,24 +67,6 @@ fn canonical_composition() -> Value {
 fn web_template() -> openehr_sdt::flat::webtemplate::model::WebTemplate {
     let opt = openehr_its::opt14::from_xml(&ips_opt_xml()).expect("parse OPT");
     openehr_sdt::flat::webtemplate::builder::build_web_template(&opt).expect("build web template")
-}
-
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
 }
 
 /// The full `OBJECT_VERSION_ID` carried in the weak `ETag` (`W/"<uid>"`).
@@ -124,8 +102,7 @@ fn without_uids(map: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
 /// A router over a fresh real service with the IPS OPT uploaded; returns the
 /// router and a created EHR id.
 async fn app_with_ehr() -> (testkit::TestDb, Router, String) {
-    let (pg, service) = common::test_service().await;
-    let app = common::router_with(config(), service).await;
+    let (pg, app) = common::app(common::api_config(false)).await;
     let (status, _h, body) = send(
         &app,
         common::req("POST", format!("{BASE}/definition/template/adl1.4"))

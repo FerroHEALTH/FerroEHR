@@ -35,7 +35,7 @@ use axum::body::Body;
 use ehds_logging::balp::{EMERGENCY_DESCRIPTION, EMERGENCY_ENTITY};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
+use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
 };
@@ -70,18 +70,9 @@ fn basic(name: &str) -> String {
 async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
-        enabled: true,
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
+        ..common::local_audit()
     };
     let resolver: SubjectResolver = Arc::new(|_ehr_id| {
         Box::pin(async {

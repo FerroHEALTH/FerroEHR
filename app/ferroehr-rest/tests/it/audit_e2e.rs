@@ -863,18 +863,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
     use ferroehr::system_log::sender::AuditHandle;
 
     let (_pg, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
+    let audit = common::local_audit();
     let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");

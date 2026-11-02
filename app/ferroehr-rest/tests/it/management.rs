@@ -748,22 +748,10 @@ async fn flamegraph_over_cap_is_400() {
 /// unrecorded administrative act.
 #[tokio::test]
 async fn a_management_request_is_recorded_in_the_audit_trail() {
-    use ferroehr::system_log::config::{AuditConfig, StoreConfig};
     use ferroehr::system_log::sender::{AuditHandle, start};
 
     let (pg, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
+    let audit = common::local_audit();
     let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");

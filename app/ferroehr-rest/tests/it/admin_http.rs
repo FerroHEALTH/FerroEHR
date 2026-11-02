@@ -36,14 +36,6 @@ use crate::common::EXT;
 /// A syntactically valid EHR id that is never created — the "unknown" probe.
 const OTHER: &str = "11111111-2222-3333-4444-555555555555";
 
-async fn app(admin_enabled: bool) -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (
-        pg,
-        common::router_with(common::api_config(admin_enabled), service).await,
-    )
-}
-
 /// The `Allow` field value of a `405`, which RFC 9110 §15.5.6 makes mandatory:
 /// "The origin server MUST generate an Allow header field in a 405 response
 /// containing a list of the target resource's currently supported methods."
@@ -68,7 +60,7 @@ async fn ehr_exists(app: &Router, id: &str) -> bool {
 
 #[tokio::test]
 async fn disabled_admin_is_405_and_never_deletes() {
-    let (_pg, app) = app(false).await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     // Create a real EHR, then attempt the (disabled) admin delete.
     let id = common::create_ehr(&app).await;
     let (status, headers, _) =
@@ -91,7 +83,7 @@ async fn disabled_admin_is_405_and_never_deletes() {
 
 #[tokio::test]
 async fn enabled_delete_is_204() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let id = common::create_ehr(&app).await;
     let (status, body) =
         common::send_body(&app, common::delete(&format!("{BASE}/admin/ehr/{id}"))).await;
@@ -103,7 +95,7 @@ async fn enabled_delete_is_204() {
 
 #[tokio::test]
 async fn enabled_delete_unknown_maps_to_404() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     // The backend's NotFound (ehr_id_does_not_exist) surfaces as HTTP 404.
     let (status, _) =
         common::send_body(&app, common::delete(&format!("{BASE}/admin/ehr/{OTHER}"))).await;
@@ -114,7 +106,7 @@ async fn enabled_delete_unknown_maps_to_404() {
 async fn enabled_delete_all_is_204_bodyless() {
     // `admin_ehr_delete_all.yaml:18-26`: the only declared success responses are
     // `202` (async) and `204 No Content` (sync) — both bodyless.
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let a = common::create_ehr(&app).await;
     let b = common::create_ehr(&app).await;
     let (status, body) = common::send_body(
@@ -135,7 +127,7 @@ async fn enabled_delete_all_repeated_param_reaches_backend_with_both_ids() {
     // Option<String> param would otherwise keep only the first). RE-TARGET (was
     // a recorder of the ids handed to the mock): both EHRs being deleted proves
     // the RFC 6570 `{?ehr_id*}` list handling passed both ids to the backend.
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let a = common::create_ehr(&app).await;
     let b = common::create_ehr(&app).await;
     let (status, body) = common::send_body(
@@ -159,7 +151,7 @@ async fn disabled_admin_config_is_405() {
     // declares for a disabled admin operation
     // (`admin_ehr_delete_all.yaml` + `responses/405.yaml`), applied
     // uniformly across the group.
-    let (_pg, app) = app(false).await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, headers, body) =
         common::send(&app, common::get(&format!("{EXT}/admin/config"))).await;
     assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
@@ -178,7 +170,7 @@ async fn enabled_admin_config_is_200_json() {
     // returns 200 with a JSON body. The redaction of every secret field is
     // proven by the unit test on `FerroEhrConfig::to_redacted_json`; here the
     // point is the route is mounted and served under the enabled gate.
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let (status, _body) =
         common::send_body(&app, common::get(&format!("{EXT}/admin/config"))).await;
     assert_eq!(status, StatusCode::OK);
@@ -190,7 +182,7 @@ async fn enabled_delete_all_missing_list_deletes_all() {
     // to perform the operation on a subset of EHRs" — an absent list means
     // "delete ALL EHRs" (`admin_ehr_delete_all.yaml:5`), expressed to the
     // backend as the empty list.
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let a = common::create_ehr(&app).await;
     let b = common::create_ehr(&app).await;
     let (status, body) =
@@ -225,7 +217,7 @@ fn ips_template_path() -> String {
 
 #[tokio::test]
 async fn template_delete_is_204_and_the_template_is_gone() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     upload_ips_template(&app).await;
     let (status, body) = common::send_body(&app, common::delete(&ips_template_path())).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "template delete: {body}");
@@ -246,7 +238,7 @@ async fn template_delete_is_204_and_the_template_is_gone() {
 
 #[tokio::test]
 async fn template_delete_unknown_is_404() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let (status, _body) = common::send_body(
         &app,
         common::delete(&format!("{EXT}/admin/template/no-such-template")),
@@ -260,7 +252,7 @@ async fn template_delete_still_referenced_is_409() {
     // A template referenced by a committed version is never orphaned: the
     // committed COMPOSITION's archetype_details names the template, so the
     // physical delete refuses with 409 and the template stays served.
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     upload_ips_template(&app).await;
     let ehr_id = common::create_ehr(&app).await;
     let (status, body) = common::send_body(
@@ -294,7 +286,7 @@ async fn template_delete_still_referenced_is_409() {
 
 #[tokio::test]
 async fn query_version_delete_is_204_and_that_version_is_gone() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let req = common::req(
         "PUT",
         format!("{BASE}/definition/query/cnf.admin::probe/1.0.0"),
@@ -329,7 +321,7 @@ async fn query_version_delete_is_204_and_that_version_is_gone() {
 
 #[tokio::test]
 async fn query_version_delete_unknown_is_404() {
-    let (_pg, app) = app(true).await;
+    let (_pg, app) = common::app(common::api_config(true)).await;
     let (status, _body) = common::send_body(
         &app,
         common::delete(&format!("{EXT}/admin/query/cnf.admin::absent/9.9.9")),

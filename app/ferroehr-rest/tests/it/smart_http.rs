@@ -26,7 +26,6 @@ use tower::ServiceExt;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
@@ -74,19 +73,12 @@ async fn issuer() -> MockServer {
 /// `smart_enabled`, its `patient/` grants bound when `patient_bound`.
 fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
     let mut cfg = AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
         auth: AuthSection {
             issuer: IssuerKey::Flat(issuer.to_owned()),
             audience: vec![AUDIENCE.to_owned()],
             ..AuthSection::default()
         },
-        ..Default::default()
+        ..common::api_config(false)
     };
     cfg.smart.enabled = smart_enabled;
     cfg.smart.public_base_url = Some("https://cdr.example.com".to_owned());
@@ -96,16 +88,11 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
     cfg
 }
 
-async fn app(cfg: AppConfig) -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (pg, common::router_with(cfg, service).await)
-}
-
 /// A server with authentication off.
 async fn open_app() -> (testkit::TestDb, Router) {
     let mut cfg = common::api_config(false);
     BASE.clone_into(&mut cfg.rest.base_path);
-    app(cfg).await
+    common::app(cfg).await
 }
 
 fn get(uri: &str, credential: Option<&str>) -> Request<Body> {
@@ -148,7 +135,7 @@ fn capabilities(doc: &Value) -> Vec<&str> {
 #[tokio::test]
 async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
     let issuer = issuer().await;
-    let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
+    let (_pg, app) = common::app(config(&issuer.uri(), true, false)).await;
     let (status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
     assert_eq!(status, StatusCode::OK, "{doc}");
     let base = doc["services"]["org.openehr.rest"]["baseUrl"]
@@ -177,7 +164,7 @@ async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
 #[tokio::test]
 async fn discovery_drops_deprecated_flows_plain_pkce_and_the_issuer_s_scopes() {
     let issuer = issuer().await;
-    let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
+    let (_pg, app) = common::app(config(&issuer.uri(), true, false)).await;
     let (_status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
     assert_eq!(
         doc["grant_types_supported"],
@@ -199,7 +186,7 @@ async fn discovery_drops_deprecated_flows_plain_pkce_and_the_issuer_s_scopes() {
 #[tokio::test]
 async fn a_bound_issuer_declares_patient_permission() {
     let issuer = issuer().await;
-    let (_pg, app) = app(config(&issuer.uri(), true, true)).await;
+    let (_pg, app) = common::app(config(&issuer.uri(), true, true)).await;
     let (_status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
     assert!(capabilities(&doc).contains(&"permission-patient"));
 }
@@ -207,7 +194,7 @@ async fn a_bound_issuer_declares_patient_permission() {
 #[tokio::test]
 async fn discovery_absent_when_disabled() {
     let issuer = issuer().await;
-    let (_pg, app) = app(config(&issuer.uri(), false, false)).await;
+    let (_pg, app) = common::app(config(&issuer.uri(), false, false)).await;
     let (status, _b) = send_body(&app, get(DISCOVERY, None)).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "zero wire drift when off");
 }
@@ -220,7 +207,7 @@ async fn discovery_absent_when_disabled() {
 async fn the_template_family_needs_a_template_grant() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = app(config(&uri, false, false)).await;
+    let (_pg, app) = common::app(config(&uri, false, false)).await;
     let list = format!("{BASE}/definition/template/adl1.4");
     let (status, body) =
         send_body(&app, get(&list, Some(&token(&uri, "openid", &json!({}))))).await;
@@ -239,7 +226,7 @@ async fn the_template_family_needs_a_template_grant() {
 async fn the_query_family_needs_an_aql_grant() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = app(config(&uri, false, false)).await;
+    let (_pg, app) = common::app(config(&uri, false, false)).await;
     let query = |credential: &str| {
         common::req("POST", format!("{BASE}/query/aql"))
             .auth(credential)
@@ -260,7 +247,7 @@ async fn the_query_family_needs_an_aql_grant() {
 async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = app(config(&uri, false, true)).await;
+    let (_pg, app) = common::app(config(&uri, false, true)).await;
     let launched = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
     let credential = token(&uri, "patient/aql-*.s", &json!({ "ehrId": launched }));
     let query = |ehr: Option<&str>| {
@@ -292,7 +279,7 @@ async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
 async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = app(config(&uri, false, true)).await;
+    let (_pg, app) = common::app(config(&uri, false, true)).await;
     let launched = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
     let other = "0b8f7c5e-0000-4000-8000-000000000001";
     let credential = token(
@@ -330,7 +317,7 @@ async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
 async fn a_user_grant_reaches_the_contribution_list() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = app(config(&uri, false, false)).await;
+    let (_pg, app) = common::app(config(&uri, false, false)).await;
     let ehr = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
     let (status, body) = send_body(
         &app,
@@ -369,7 +356,7 @@ async fn authentication_off_leaves_the_families_ungated() {
 async fn an_unserved_method_is_405_with_allow_whatever_the_grants() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = app(config(&uri, true, false)).await;
+    let (_pg, app) = common::app(config(&uri, true, false)).await;
     let request = |method: &str, credential: &str| {
         common::req(method, format!("{BASE}/ehr"))
             .accept("application/json")
@@ -406,7 +393,7 @@ async fn an_unserved_method_is_405_with_allow_whatever_the_grants() {
 #[tokio::test]
 async fn an_unserved_method_without_a_credential_is_401() {
     let issuer = issuer().await;
-    let (_pg, app) = app(config(&issuer.uri(), true, false)).await;
+    let (_pg, app) = common::app(config(&issuer.uri(), true, false)).await;
     let req = common::req("DELETE", format!("{BASE}/ehr")).build();
     let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");

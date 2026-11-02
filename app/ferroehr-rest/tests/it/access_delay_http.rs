@@ -34,7 +34,6 @@ use axum::body::Body;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::access_delay::config::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::system_log::categories::CategoryMapConfig;
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::extensions::management::Observability;
@@ -55,18 +54,7 @@ const PROFESSIONAL: &str = "dr-jansen";
 /// the local store, and the IPS template uploaded.
 async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
+    let audit = common::local_audit();
     let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");

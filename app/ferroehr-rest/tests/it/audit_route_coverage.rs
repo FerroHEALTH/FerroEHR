@@ -33,7 +33,6 @@ use ferroehr::config::management::AccessLevel;
 use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender::start;
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::config::AppConfig;
@@ -236,18 +235,7 @@ fn config() -> AppConfig {
 /// An audited app over a fresh database with the local store on.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention_days: 0,
-            retention_years: None,
-            sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
-        },
-        ..AuditConfig::default()
-    };
+    let audit = common::local_audit();
     let (sender, _handle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");

@@ -22,10 +22,6 @@ use axum::Router;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 
-use ferroehr::config::rest::RestConfig;
-use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::AuthSection;
-
 use crate::common;
 use crate::common::EXT;
 use crate::common::send;
@@ -60,29 +56,6 @@ fn person_body() -> Value {
             }
         }]
     })
-}
-
-fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
-            ..Default::default()
-        },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
-        ..Default::default()
-    }
-}
-
-async fn app() -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
-    (pg, common::router_with(config(), service).await)
 }
 
 /// Create a person, returning its full `version_uid` (from the create `ETag`).
@@ -133,7 +106,7 @@ fn keys(body: &str) -> Vec<String> {
 
 #[tokio::test]
 async fn container_and_version_tag_collections_are_disjoint() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create_person(&app).await;
     let vo = vo_of(&ovid).to_owned();
 
@@ -182,7 +155,7 @@ async fn container_and_version_tag_collections_are_disjoint() {
 
 #[tokio::test]
 async fn tags_get_on_unknown_party_is_404() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let (status, body) = get_tags(&app, "person", "00000000-0000-4000-8000-000000000000").await;
     assert_eq!(
         status,
@@ -194,7 +167,7 @@ async fn tags_get_on_unknown_party_is_404() {
 
 #[tokio::test]
 async fn tags_routes_are_kind_checked() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create_person(&app).await;
     let vo = vo_of(&ovid).to_owned();
     // A person's container addressed through the agent tag route → 404
@@ -213,7 +186,7 @@ async fn tags_routes_are_kind_checked() {
 
 #[tokio::test]
 async fn tags_get_on_unknown_version_is_404() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create_person(&app).await;
     let vo = vo_of(&ovid);
     let system = ovid.split("::").nth(1).expect("system id");
@@ -229,7 +202,7 @@ async fn tags_get_on_unknown_version_is_404() {
 
 #[tokio::test]
 async fn wrapper_headers_write_distinct_collections_on_update() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let v1 = create_person(&app).await;
     let vo = vo_of(&v1).to_owned();
     // The released update declares `openehr-version-item-tag`; its prose says
@@ -272,7 +245,7 @@ async fn wrapper_headers_write_distinct_collections_on_update() {
 
 #[tokio::test]
 async fn relationship_stale_delete_conflict_echoes_latest_etag() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let source = create_person(&app).await;
     let target = create_person(&app).await;
     let rel = json!({
@@ -349,7 +322,7 @@ async fn relationship_stale_delete_conflict_echoes_latest_etag() {
 /// fix since #369; this seam did not).
 #[tokio::test]
 async fn same_key_tags_on_different_target_paths_coexist() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     let ovid = create_person(&app).await;
     let vo = vo_of(&ovid).to_owned();
     let (status, body) = put_tags(
@@ -418,7 +391,7 @@ fn party_body(kind: &str) -> Value {
 /// on a tag collection's identifier and RFC 7240 §4.2 lets the server choose).
 #[tokio::test]
 async fn a_party_tag_put_preferring_an_identifier_answers_the_stored_list() {
-    let (_pg, app) = app().await;
+    let (_pg, app) = common::app(common::api_config(false)).await;
     for kind in ["agent", "group", "organisation", "person", "role"] {
         let req = common::req("POST", format!("{BASE}/demographic/{kind}"))
             .json(party_body(kind).to_string())
