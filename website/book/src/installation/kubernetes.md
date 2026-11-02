@@ -41,7 +41,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version 21.0.0-rc8 -n ferroehr \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
-  --set image.tag=5.6.0-rc7 \
+  --set image.tag=5.6.0-rc8 \
   --set ferropix.enabled=false --set config.ehr_index.provider=local
 ```
 
@@ -82,7 +82,7 @@ against.
 | | Selects | Pin with | Line |
 |---|---|---|---|
 | Chart version | templates, values schema, defaults | `--version 21.0.0-rc8` | SemVer over the chart's own contract |
-| Image tag | the server binary | `--set image.tag=5.6.0-rc7` (or `image.digest`) | the application's SemVer line |
+| Image tag | the server binary | `--set image.tag=5.6.0-rc8` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
 never `latest`. Pin the two deliberately: the `config` tree is passed through to
@@ -347,11 +347,11 @@ validation renders the overlay and asserts each separation above, and its
 boot check has the server evaluate the posture from the rendered
 configuration. Neither reaches a database. The deployment probe
 (`scripts/deploy-probe-k8s.sh --production-only`) installs the overlay on a
-real cluster against four PostgreSQL clusters that refuse a connection without
-encryption: it observes the migration Job prepare all four and the server start
+real cluster against three PostgreSQL clusters that refuse a connection without
+encryption: it observes the migration Job prepare all three and the server start
 under `production` with `plaintext_listener` as its only gap, both over
 `sslmode=verify-full` against the CA the overlay mounts, and the server refuse
-all four domains on one cluster by naming `shared_cluster`. Against your own databases, `shared_cluster` is first
+all three domains on one cluster by naming `shared_cluster`. Against your own databases, `shared_cluster` is first
 judged when the pod starts.
 
 ## Database roles — who runs migrations
@@ -1336,7 +1336,7 @@ The check that closes that gap runs the image against your rendered
 configuration:
 
 ```shell
-FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:5.6.0-rc7 \
+FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:5.6.0-rc8 \
   deploy/helm/ci/boot-check.sh my-values.yaml
 ```
 

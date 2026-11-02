@@ -4,7 +4,7 @@
   nothing. A cohort predicate and the AQL demographic join resolve a party to
   the EHRs whose `EHR_STATUS.subject` names it. The `EHR_STATUS` subject is
   now the one source of which EHR belongs to which subject. **Upgrade note:**
-  the `linkage` migration `0006` drops `linkage.subject_ehr` and the
-  `linkage.erase_ehr` function. Rows written there through the service API are
-  dropped with the table; the EHRs they named keep their subject in their own
-  `EHR_STATUS`.
+  `linkage.subject_ehr` and the `linkage.erase_ehr` function go with the
+  `linkage` schema, which audit migration `0021` drops with the linkage
+  domain. Rows written there through the service API are dropped with the
+  table; the EHRs they named keep their subject in their own `EHR_STATUS`.

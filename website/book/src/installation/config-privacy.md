@@ -126,8 +126,9 @@ class's own paradigm case, and the simplified formats build exactly that from
 schemas exists to prevent is the *subject's* national identifier on the
 clinical side, and that is caught in two places: a `self` party's
 `identifiers` slot is refused by this rule, and a national-identifier *value*
-is refused by the identifier scanner below wherever it sits, `DV_IDENTIFIER.id`
-included.
+is refused by the identifier scanner below in free text and in every
+`DV_IDENTIFIER.id` the scanner reads by its `type`
+([identifiers that declare their own type](#identifiers-that-declare-their-own-type)).
 
 `PARTY_RELATED` is the "Proxy type for identifying a party **and its
 relationship to the subject** of the record", and that relationship "is coded

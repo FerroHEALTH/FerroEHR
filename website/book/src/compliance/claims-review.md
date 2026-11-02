@@ -1050,3 +1050,81 @@ versions (#4565); the response texts without the Service Model vocabulary
   stands, and no text claims a green record.
 - The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
   serves the old paths and the old error body until 5.6.0 ships.
+
+## The review of 2026-11-02, for 5.6.0-rc8
+
+Read on the tree after commit `e7422c4b9`, for the FerroEHR release candidate
+5.6.0-rc8. The facts added since 5.6.0-rc7 and checked in every text in scope:
+the published Veredictum 0.3.3 record with no failed and no errored row under
+the released profile, the Veredictum 0.1.6 documents removed, and the
+released-profile verdict required in the merge queue and the release (#4451,
+#4455); `conformance_profile` derived from that record (#4672); the read-only
+ADL 1.4 to ADL 2 conversion routes (#4655); a template upload that answers
+`400` for every invalid template and never refuses a stored one (#4643,
+#4647); the ITS-JSON `minItems` of `folders`, `events` and `languages`
+(#4644, #4648); the canonical XML `items` root of a LOCATABLE (#4645); an AQL
+parent archetype that admits a child release only through that release's own
+parent release (#4637); a subject resolved through the EHR subject columns and
+the empty linkage domain removed (#4675, #4684, #4697); the
+`processing-restricted` type on a refused write and the curated `500` texts
+(#4657); the identifier scan reading a `DV_IDENTIFIER`'s declared type
+(#4702); the validation refusal's `Prefer` advice (#4597); the inline
+primitive's node id (#4739); the viewer's session gate on every unsafe method
+and `LEPTOS_SITE_ADDR` no longer read (#4724, #4725); chart 21.0.0-rc8 with
+`appVersion` 5.6.0-rc8.
+
+### Changed on 2026-11-02, for 5.6.0-rc8
+
+- **[Privacy configuration](../installation/config-privacy.md)**: the
+  identifier scanner was said to refuse a national-identifier value "wherever
+  it sits, `DV_IDENTIFIER.id` included". Since #4702 a `DV_IDENTIFIER` whose
+  `type` declares an item is not scanned, and one in a `FEEDER_AUDIT` only when
+  its `type` names a person, which the same page's table states. The sentence
+  now points at that table.
+- **[Kubernetes installation](../installation/kubernetes.md)**: the production
+  deployment probe was said to run against four PostgreSQL clusters. With the
+  linkage domain gone (#4684) it runs against three, and the text says so.
+- **[Records of processing](../security/records-of-processing.md)**: the audit
+  schema was said to sit outside "all three" pseudonymisation domains; since
+  #4684 there are two, the clinical and the demographic.
+
+### Read and kept on 2026-11-02, for 5.6.0-rc8
+
+- **The conformance pages**: [conformance](../conformance.md), the landing
+  page and the README show the Veredictum 0.3.3 badges and the record's counts
+  per part from the committed record, and state that the released run decides
+  the job. No text types a number the record does not carry.
+- **The API pages**: [using the API](../using-the-api/index.md) derives
+  `conformance_profile` from the record and names no configuration key for it;
+  [problem types](../using-the-api/problems.md) states the `400` of a template
+  upload and the `processing-restricted` type; [templates and
+  validation](../templates-validation.md) describes the conversion routes as
+  FerroEHR's own design with their `404` and `422`;
+  [content negotiation](../using-the-api/content-negotiation.md) names the
+  root elements no ITS-XML schema publishes.
+- **The storage and configuration pages**: the
+  [server configuration](../installation/config-server.md) refuses
+  `[storage.linkage]` as an unknown key, [operations](../operations.md) carries
+  the upgrade past the linkage domain, and [the audit trail](../audit.md) keeps
+  the `linkage` access-record domain for a crossing, which the code still
+  writes.
+- **The hazard log and the technical documentation**: the logging component
+  changed since 5.6.0-rc7 (the operation table, the conversion routes' access
+  records, the service error type, the batch insert, audit migration 0021), so
+  the hazard log gains review 16 and the technical documentation its 5.6.0-rc8
+  row; no control changed and every named test exists.
+- **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
+  the chart README and [verifying releases](../verifying-releases.md) name chart
+  21.0.0-rc8 and image 5.6.0-rc8 in the book of main.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-02, for 5.6.0-rc8
+
+- The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+  serves the old paths and the old error body until 5.6.0 ships.
+- The [performance](../performance.md) page keeps the figures the
+  Veredictum 0.1 line measured until a `perf-result` record measured on the
+  reference host replaces them, as the page says.
